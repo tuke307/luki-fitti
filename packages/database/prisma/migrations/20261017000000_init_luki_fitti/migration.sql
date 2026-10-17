@@ -1,5 +1,3 @@
-yarn run v1.22.22
-$ /Users/MEISSTO/source/luki-fitti/node_modules/.bin/prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
 
@@ -474,5 +472,3 @@ ALTER TABLE "SessionSet" ADD CONSTRAINT "SessionSet_sessionExerciseId_fkey" FORE
 
 -- AddForeignKey
 ALTER TABLE "ImportJob" ADD CONSTRAINT "ImportJob_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
-Done in 1.28s.
