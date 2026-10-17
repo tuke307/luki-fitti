@@ -81,22 +81,23 @@ export function PwaShell() {
     <div className="bg-background text-foreground flex min-h-dvh flex-col">
       {/* Top Safe-Area Header */}
       <header className="bg-card/85 pt-safe sticky top-0 z-40 border-b backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 py-2.5 sm:px-4 sm:py-3">
           {/* Brand Logo */}
           <Button
             type="button"
             variant="ghost"
             onClick={() => setActiveTab('home')}
-            className="h-auto gap-2.5 p-0 text-left hover:bg-transparent"
+            aria-label="LukiFitti Home"
+            className="h-auto shrink-0 gap-2 p-0 text-left hover:bg-transparent sm:gap-2.5"
           >
-            <div className="bg-primary text-primary-foreground flex h-9 w-9 items-center justify-center rounded-xl font-extrabold shadow-sm">
-              <Dumbbell className="h-5 w-5" />
+            <div className="bg-primary text-primary-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-xl font-extrabold shadow-sm sm:h-9 sm:w-9">
+              <Dumbbell className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
-            <div>
-              <span className="font-display text-foreground text-base font-extrabold tracking-tight">
+            <div className={restInfo.isRunning || restInfo.isPaused ? 'hidden sm:block' : 'block'}>
+              <span className="font-display text-foreground text-sm font-extrabold tracking-tight sm:text-base">
                 LUKI<span className="text-primary">FITTI</span>
               </span>
-              <span className="text-muted-foreground block text-[10px] leading-none font-normal">
+              <span className="text-muted-foreground hidden text-[10px] leading-none font-normal sm:block">
                 Personal Gym & Workout PWA
               </span>
             </div>
@@ -131,12 +132,12 @@ export function PwaShell() {
           </nav>
 
           {/* Right Status Indicators: Rest Timer Pill, Offline/Sync Badge, Theme Toggle */}
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
             {(restInfo.isRunning || restInfo.isPaused) && (
               <Badge
                 asChild
                 variant="accent"
-                className="font-mono-tabular cursor-pointer rounded-full px-3 py-1 text-xs font-extrabold"
+                className="font-mono-tabular shrink-0 cursor-pointer rounded-full px-2.5 py-1 text-xs font-extrabold sm:px-3"
               >
                 <button type="button" onClick={() => setActiveTab('session')}>
                   <Timer className="h-3.5 w-3.5" />
@@ -160,7 +161,7 @@ export function PwaShell() {
                         ? 'accent'
                         : 'success'
               }
-              className="cursor-pointer rounded-full px-2.5 py-1 text-[11px] font-semibold"
+              className="shrink-0 cursor-pointer rounded-full px-2 py-1 text-[11px] font-semibold sm:px-2.5"
             >
               <button
                 type="button"
@@ -182,15 +183,19 @@ export function PwaShell() {
                     <WifiOff className="h-3.5 w-3.5" />
                     <span>
                       Offline
-                      {isAuthenticated && pendingSyncCount > 0
-                        ? ` (${pendingSyncCount} queued)`
-                        : ' Ready'}
+                      {isAuthenticated && pendingSyncCount > 0 ? (
+                        ` (${pendingSyncCount})`
+                      ) : (
+                        <span className="hidden sm:inline"> Ready</span>
+                      )}
                     </span>
                   </>
                 ) : !isAuthenticated ? (
                   <>
                     <UserCircle className="h-3.5 w-3.5" />
-                    <span>Guest (Local Only)</span>
+                    <span>
+                      Guest<span className="hidden sm:inline"> (Local Only)</span>
+                    </span>
                   </>
                 ) : syncState === 'SYNCING' ? (
                   <>
@@ -200,12 +205,18 @@ export function PwaShell() {
                 ) : syncState === 'SAVED_LOCALLY' ? (
                   <>
                     <Wifi className="h-3.5 w-3.5" />
-                    <span>Saved Locally{pendingSyncCount > 0 ? ` (${pendingSyncCount})` : ''}</span>
+                    <span>
+                      <span className="sm:hidden">Local</span>
+                      <span className="hidden sm:inline">Saved Locally</span>
+                      {pendingSyncCount > 0 ? ` (${pendingSyncCount})` : ''}
+                    </span>
                   </>
                 ) : syncState === 'AUTH_EXPIRED' ? (
                   <>
                     <AlertTriangle className="h-3.5 w-3.5" />
-                    <span>Local Safe (Sign In to Sync)</span>
+                    <span>
+                      Local Safe<span className="hidden sm:inline"> (Sign In to Sync)</span>
+                    </span>
                   </>
                 ) : (
                   <>
