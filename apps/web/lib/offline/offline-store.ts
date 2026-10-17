@@ -381,6 +381,9 @@ export async function removeFromSyncQueue(clientSessionId: string): Promise<void
 }
 
 export async function saveLocalHistorySession(session: WorkoutSessionDto): Promise<void> {
+  if (session.status !== SessionStatus.COMPLETED) {
+    return;
+  }
   memoryHistory.set(session.clientSessionId, session);
   if (!hasIndexedDb()) return;
   const db = await openDatabase();
@@ -393,11 +396,29 @@ export async function saveLocalHistorySession(session: WorkoutSessionDto): Promi
   });
 }
 
+export async function removeLocalHistorySession(clientSessionId: string): Promise<void> {
+  memoryHistory.delete(clientSessionId);
+  for (const [k, v] of memoryHistory.entries()) {
+    if (v.id === clientSessionId || v.clientSessionId === clientSessionId) {
+      memoryHistory.delete(k);
+    }
+  }
+  if (!hasIndexedDb()) return;
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.SESSION_HISTORY, 'readwrite');
+    const store = tx.objectStore(STORES.SESSION_HISTORY);
+    const req = store.delete(clientSessionId);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
 export async function getLocalHistorySessions(): Promise<WorkoutSessionDto[]> {
   if (!hasIndexedDb()) {
-    return Array.from(memoryHistory.values()).sort((a, b) =>
-      b.startedAt.localeCompare(a.startedAt),
-    );
+    return Array.from(memoryHistory.values())
+      .filter((s) => s.status === SessionStatus.COMPLETED)
+      .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
   }
   const db = await openDatabase();
   return new Promise((resolve, reject) => {
@@ -405,7 +426,9 @@ export async function getLocalHistorySessions(): Promise<WorkoutSessionDto[]> {
     const store = tx.objectStore(STORES.SESSION_HISTORY);
     const req = store.getAll();
     req.onsuccess = () => {
-      const list = (req.result as WorkoutSessionDto[]) ?? [];
+      const list = ((req.result as WorkoutSessionDto[]) ?? []).filter(
+        (s) => s.status === SessionStatus.COMPLETED,
+      );
       resolve(list.sort((a, b) => b.startedAt.localeCompare(a.startedAt)));
     };
     req.onerror = () => reject(req.error);

@@ -23,6 +23,7 @@ import {
   getSyncQueue,
   recalculateSessionTotals,
   removeFromSyncQueue,
+  removeLocalHistorySession,
   saveLocalActiveSession,
   saveLocalHistorySession,
   setCachedCatalog,
@@ -154,6 +155,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
   );
 
   const isFlushingRef = useRef(false);
+  const deletedSessionIdsRef = useRef<Set<string>>(new Set());
 
   const flushSyncQueue = useCallback(
     async (forceOverwrite = false) => {
@@ -182,10 +184,22 @@ export function GymProvider({ children }: { children: ReactNode }) {
 
       try {
         for (const item of queue) {
+          if (deletedSessionIdsRef.current.has(item.clientSessionId)) {
+            await removeFromSyncQueue(item.clientSessionId);
+            continue;
+          }
+
           const payload = forceOverwrite
             ? { ...item.payload, forceOverwrite: true }
             : item.payload;
           const res = await api.sessions.sync(payload);
+
+          if (deletedSessionIdsRef.current.has(item.clientSessionId)) {
+            await removeFromSyncQueue(item.clientSessionId);
+            await api.sessions.remove(item.clientSessionId).catch(() => undefined);
+            continue;
+          }
+
           if (res.success && res.data) {
             if (res.data.conflictDetected) {
               setConflictServerSession(res.data.session);
@@ -197,12 +211,15 @@ export function GymProvider({ children }: { children: ReactNode }) {
             await removeFromSyncQueue(item.clientSessionId);
             if (res.data.session.status === SessionStatus.COMPLETED) {
               await saveLocalHistorySession(res.data.session);
-            } else if (
-              activeSession &&
-              activeSession.clientSessionId === res.data.session.clientSessionId
-            ) {
-              await saveLocalActiveSession(res.data.session);
-              setActiveSession(res.data.session);
+            } else {
+              const currentLocalActive = await getLocalActiveSession();
+              if (
+                currentLocalActive &&
+                currentLocalActive.clientSessionId === res.data.session.clientSessionId
+              ) {
+                await saveLocalActiveSession(res.data.session);
+                setActiveSession(res.data.session);
+              }
             }
           }
         }
@@ -220,7 +237,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
         isFlushingRef.current = false;
       }
     },
-    [activeSession, isAuthenticated],
+    [isAuthenticated],
   );
 
   const refreshAllData = useCallback(async () => {
@@ -238,12 +255,29 @@ export function GymProvider({ children }: { children: ReactNode }) {
     setFolders(localWorkouts.folders);
     setUnfiledTemplates(localWorkouts.unfiledTemplates);
     setStretchingRoutines(localStretch);
-    if (localActive) setActiveSession(localActive);
-    setHistorySessions(localHistory);
+    if (localActive && !deletedSessionIdsRef.current.has(localActive.clientSessionId)) {
+      setActiveSession(localActive);
+    }
+    setHistorySessions(
+      localHistory.filter(
+        (s) =>
+          s.status === SessionStatus.COMPLETED &&
+          !deletedSessionIdsRef.current.has(s.clientSessionId) &&
+          !deletedSessionIdsRef.current.has(s.id),
+      ),
+    );
     setPendingSyncCount(isAuthenticated ? queue.length : 0);
 
     if (!navigator.onLine || !isAuthenticated) {
-      setSyncState(!navigator.onLine ? 'OFFLINE' : !isAuthenticated ? 'SAVED_LOCALLY' : queue.length > 0 ? 'SAVED_LOCALLY' : 'SYNCED');
+      setSyncState(
+        !navigator.onLine
+          ? 'OFFLINE'
+          : !isAuthenticated
+            ? 'SAVED_LOCALLY'
+            : queue.length > 0
+              ? 'SAVED_LOCALLY'
+              : 'SYNCED',
+      );
       return;
     }
 
@@ -252,7 +286,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
         api.exercises.list(),
         api.workouts.getOverview(),
         api.stretching.listRoutines(),
-        api.sessions.list(),
+        api.sessions.list({ status: SessionStatus.COMPLETED }),
         api.sessions.getActive(),
       ]);
 
@@ -271,16 +305,36 @@ export function GymProvider({ children }: { children: ReactNode }) {
       }
       if (sessRes.success && sessRes.data) {
         const mergedMap = new Map<string, WorkoutSessionDto>();
-        for (const s of localHistory) mergedMap.set(s.clientSessionId, s);
+        for (const s of localHistory) {
+          if (
+            s.status === SessionStatus.COMPLETED &&
+            !deletedSessionIdsRef.current.has(s.clientSessionId) &&
+            !deletedSessionIdsRef.current.has(s.id)
+          ) {
+            mergedMap.set(s.clientSessionId, s);
+          }
+        }
         for (const s of sessRes.data) {
-          mergedMap.set(s.clientSessionId, s);
-          await saveLocalHistorySession(s);
+          if (
+            s.status === SessionStatus.COMPLETED &&
+            !deletedSessionIdsRef.current.has(s.clientSessionId) &&
+            !deletedSessionIdsRef.current.has(s.id)
+          ) {
+            mergedMap.set(s.clientSessionId, s);
+            await saveLocalHistorySession(s);
+          }
         }
         setHistorySessions(
           Array.from(mergedMap.values()).sort((a, b) => b.startedAt.localeCompare(a.startedAt)),
         );
       }
-      if (!localActive && activeRes.success && activeRes.data) {
+      if (
+        !localActive &&
+        activeRes.success &&
+        activeRes.data &&
+        !deletedSessionIdsRef.current.has(activeRes.data.clientSessionId) &&
+        !deletedSessionIdsRef.current.has(activeRes.data.id)
+      ) {
         setActiveSession(activeRes.data);
         await saveLocalActiveSession(activeRes.data);
       }
@@ -323,7 +377,10 @@ export function GymProvider({ children }: { children: ReactNode }) {
   // Register PWA service worker
   useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then((reg) => reg.update())
+        .catch(() => undefined);
     }
   }, []);
 
@@ -1135,10 +1192,20 @@ export function GymProvider({ children }: { children: ReactNode }) {
 
   const abandonSession = async () => {
     if (!activeSession) return;
-    const clientSessionId = activeSession.clientSessionId;
-    await saveLocalActiveSession(null);
-    await removeFromSyncQueue(clientSessionId);
+    const { clientSessionId, id } = activeSession;
+    deletedSessionIdsRef.current.add(clientSessionId);
+    if (id) deletedSessionIdsRef.current.add(id);
+
     setActiveSession(null);
+    setHistorySessions((prev) =>
+      prev.filter((s) => s.clientSessionId !== clientSessionId && s.id !== id),
+    );
+    await saveLocalActiveSession(null);
+    await removeLocalHistorySession(clientSessionId);
+    await removeFromSyncQueue(clientSessionId);
+    const remaining = await getSyncQueue();
+    setPendingSyncCount(isAuthenticated ? remaining.length : 0);
+
     if (navigator.onLine && isAuthenticated) {
       try {
         await api.sessions.remove(clientSessionId);
@@ -1166,10 +1233,35 @@ export function GymProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteHistoricalSession = async (clientSessionId: string) => {
-    setHistorySessions((prev) => prev.filter((s) => s.clientSessionId !== clientSessionId));
+    const target = historySessions.find(
+      (s) => s.clientSessionId === clientSessionId || s.id === clientSessionId,
+    );
+    const resolvedClientId = target?.clientSessionId ?? clientSessionId;
+    deletedSessionIdsRef.current.add(clientSessionId);
+    deletedSessionIdsRef.current.add(resolvedClientId);
+    if (target?.id) deletedSessionIdsRef.current.add(target.id);
+
+    setHistorySessions((prev) =>
+      prev.filter(
+        (s) =>
+          s.clientSessionId !== clientSessionId &&
+          s.clientSessionId !== resolvedClientId &&
+          s.id !== clientSessionId,
+      ),
+    );
+    await removeLocalHistorySession(resolvedClientId);
+    await removeFromSyncQueue(resolvedClientId);
+    if (
+      activeSession &&
+      (activeSession.clientSessionId === resolvedClientId || activeSession.id === clientSessionId)
+    ) {
+      setActiveSession(null);
+      await saveLocalActiveSession(null);
+    }
+
     if (navigator.onLine && isAuthenticated) {
       try {
-        await api.sessions.remove(clientSessionId);
+        await api.sessions.remove(resolvedClientId);
       } catch {
         // Ignore offline error
       }

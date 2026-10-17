@@ -8,9 +8,13 @@ import {
   enqueueSessionSync,
   getCachedCatalog,
   getLocalActiveSession,
+  getLocalHistorySessions,
   getSyncQueue,
   recalculateSessionTotals,
+  removeFromSyncQueue,
+  removeLocalHistorySession,
   saveLocalActiveSession,
+  saveLocalHistorySession,
   substituteExerciseInSession,
 } from './offline-store';
 import {
@@ -286,5 +290,53 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
     assert.equal(insight.setSuggestions[0]!.suggestedWeight, 87.5);
     assert.equal(insight.setSuggestions[0]!.weightDelta, 2.5);
     assert.equal(formatCompactDelta(insight.setSuggestions[0]!.weightDelta), '+2.5');
+  });
+
+  it('ignores non-completed sessions in history and permanently removes abandoned or deleted sessions', async () => {
+    const catalog = await getCachedCatalog();
+    const { folders } = buildDefaultFoldersAndTemplates('user-1');
+    const template = folders[0]!.templates[0]!;
+
+    const inProgress = createOfflineSessionFromTemplate(template, catalog, 'user-1');
+    await saveLocalHistorySession(inProgress);
+    await enqueueSessionSync(inProgress);
+
+    // Non-completed session must not pollute local history
+    const afterInProgress = await getLocalHistorySessions();
+    assert.equal(
+      afterInProgress.some((s) => s.clientSessionId === inProgress.clientSessionId),
+      false,
+    );
+
+    // Abandoning removes it from active session and sync queue
+    await saveLocalActiveSession(null);
+    await removeFromSyncQueue(inProgress.clientSessionId);
+    const queueAfterAbandon = await getSyncQueue();
+    assert.equal(
+      queueAfterAbandon.some((q) => q.clientSessionId === inProgress.clientSessionId),
+      false,
+    );
+
+    // Completing a session saves to history, and deleting removes it permanently
+    const completed: WorkoutSessionDto = {
+      ...inProgress,
+      status: SessionStatus.COMPLETED,
+      completedAt: new Date().toISOString(),
+    };
+    await saveLocalHistorySession(completed);
+    assert.equal(
+      (await getLocalHistorySessions()).some(
+        (s) => s.clientSessionId === completed.clientSessionId,
+      ),
+      true,
+    );
+
+    await removeLocalHistorySession(completed.clientSessionId);
+    assert.equal(
+      (await getLocalHistorySessions()).some(
+        (s) => s.clientSessionId === completed.clientSessionId,
+      ),
+      false,
+    );
   });
 });
