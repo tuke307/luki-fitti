@@ -81,3 +81,6 @@ apps/mcp-server/content/
 
 # Python 
 __pycache__/
+
+# Gymlife imports
+gymlife-extracted
