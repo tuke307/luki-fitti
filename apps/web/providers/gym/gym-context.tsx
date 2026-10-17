@@ -156,6 +156,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
 
   const isFlushingRef = useRef(false);
   const isRefreshingRef = useRef(false);
+  const lastRefreshAtRef = useRef<number>(0);
   const syncTimerRef = useRef<number | null>(null);
   const deletedSessionIdsRef = useRef<Set<string>>(new Set());
 
@@ -333,17 +334,35 @@ export function GymProvider({ children }: { children: ReactNode }) {
           Array.from(mergedMap.values()).sort((a, b) => b.startedAt.localeCompare(a.startedAt)),
         );
       }
-      if (
-        !localActive &&
-        activeRes.success &&
-        activeRes.data &&
-        !deletedSessionIdsRef.current.has(activeRes.data.clientSessionId) &&
-        !deletedSessionIdsRef.current.has(activeRes.data.id)
-      ) {
-        setActiveSession(activeRes.data);
-        await saveLocalActiveSession(activeRes.data);
+      // Reconcile active session across multiple devices (e.g., Mac + iPhone)
+      const hasPendingLocalActiveSync = Boolean(
+        localActive && queue.some((q) => q.clientSessionId === localActive.clientSessionId),
+      );
+
+      if (activeRes.success) {
+        const serverActive = activeRes.data;
+        if (
+          serverActive &&
+          !deletedSessionIdsRef.current.has(serverActive.clientSessionId) &&
+          !deletedSessionIdsRef.current.has(serverActive.id)
+        ) {
+          if (
+            !localActive ||
+            (!hasPendingLocalActiveSync &&
+              (localActive.clientSessionId !== serverActive.clientSessionId ||
+                serverActive.version >= localActive.version))
+          ) {
+            setActiveSession(serverActive);
+            await saveLocalActiveSession(serverActive);
+          }
+        } else if (!serverActive && localActive && !hasPendingLocalActiveSync) {
+          // Session was finished or abandoned on another device
+          setActiveSession(null);
+          await saveLocalActiveSession(null);
+        }
       }
 
+      lastRefreshAtRef.current = Date.now();
       await flushSyncQueue();
     } catch {
       // Keep offline cached data
@@ -359,7 +378,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      flushSyncQueue();
+      void refreshAllData();
     };
     const handleOffline = () => {
       setIsOnline(false);
@@ -367,7 +386,11 @@ export function GymProvider({ children }: { children: ReactNode }) {
     };
     const handleVisibility = () => {
       if (document.visibilityState === 'visible' && navigator.onLine) {
-        flushSyncQueue();
+        if (Date.now() - lastRefreshAtRef.current > 3000) {
+          void refreshAllData();
+        } else {
+          void flushSyncQueue();
+        }
       }
     };
 
@@ -379,7 +402,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('offline', handleOffline);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [flushSyncQueue]);
+  }, [flushSyncQueue, refreshAllData]);
 
   // Register PWA service worker
   useEffect(() => {
