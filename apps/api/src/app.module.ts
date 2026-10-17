@@ -20,8 +20,8 @@ import { NODE_ENV } from './config/env.config';
     }),
     ThrottlerModule.forRoot([
       {
-        ttl: 15 * 60 * 1000,
-        limit: NODE_ENV === 'production' ? 150 : 1000,
+        ttl: 60 * 1000,
+        limit: NODE_ENV === 'production' ? 300 : 1000,
       },
     ]),
     DatabaseModule,
