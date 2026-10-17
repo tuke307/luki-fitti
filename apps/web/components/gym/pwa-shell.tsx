@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   Sun,
   Moon,
+  Monitor,
   Timer,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
@@ -42,7 +43,7 @@ export type NavTab = 'home' | 'workouts' | 'session' | 'diary' | 'exercises' | '
 export function PwaShell() {
   const [activeTab, setActiveTab] = useState<NavTab>('home');
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
-  const { resolvedTheme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const { isAuthenticated } = useAuth();
   const {
     activeSession,
@@ -217,13 +218,20 @@ export function PwaShell() {
               type="button"
               variant="secondary"
               size="icon"
-              aria-label="Toggle color theme"
-              onClick={() => setTheme(resolvedTheme === 'light' ? 'dark' : 'light')}
+              aria-label={`Color theme: ${theme ?? 'system'} (click to cycle dark, light, system)`}
+              title={`Theme: ${theme ?? 'system'} (click to switch)`}
+              onClick={() => {
+                const nextTheme =
+                  theme === 'dark' ? 'light' : theme === 'light' ? 'system' : 'dark';
+                setTheme(nextTheme);
+              }}
             >
-              {resolvedTheme === 'light' ? (
+              {theme === 'light' ? (
+                <Sun className="h-4 w-4" />
+              ) : theme === 'dark' ? (
                 <Moon className="h-4 w-4" />
               ) : (
-                <Sun className="h-4 w-4" />
+                <Monitor className="h-4 w-4" />
               )}
             </Button>
           </div>
