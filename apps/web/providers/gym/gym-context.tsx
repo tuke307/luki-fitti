@@ -155,6 +155,8 @@ export function GymProvider({ children }: { children: ReactNode }) {
   );
 
   const isFlushingRef = useRef(false);
+  const isRefreshingRef = useRef(false);
+  const syncTimerRef = useRef<number | null>(null);
   const deletedSessionIdsRef = useRef<Set<string>>(new Set());
 
   const flushSyncQueue = useCallback(
@@ -241,47 +243,50 @@ export function GymProvider({ children }: { children: ReactNode }) {
   );
 
   const refreshAllData = useCallback(async () => {
-    const [localCat, localWorkouts, localStretch, localActive, localHistory, queue] =
-      await Promise.all([
-        getCachedCatalog(),
-        getCachedWorkouts(),
-        getCachedStretchingRoutines(),
-        getLocalActiveSession(),
-        getLocalHistorySessions(),
-        getSyncQueue(),
-      ]);
-
-    setCatalog(localCat);
-    setFolders(localWorkouts.folders);
-    setUnfiledTemplates(localWorkouts.unfiledTemplates);
-    setStretchingRoutines(localStretch);
-    if (localActive && !deletedSessionIdsRef.current.has(localActive.clientSessionId)) {
-      setActiveSession(localActive);
-    }
-    setHistorySessions(
-      localHistory.filter(
-        (s) =>
-          s.status === SessionStatus.COMPLETED &&
-          !deletedSessionIdsRef.current.has(s.clientSessionId) &&
-          !deletedSessionIdsRef.current.has(s.id),
-      ),
-    );
-    setPendingSyncCount(isAuthenticated ? queue.length : 0);
-
-    if (!navigator.onLine || !isAuthenticated) {
-      setSyncState(
-        !navigator.onLine
-          ? 'OFFLINE'
-          : !isAuthenticated
-            ? 'SAVED_LOCALLY'
-            : queue.length > 0
-              ? 'SAVED_LOCALLY'
-              : 'SYNCED',
-      );
-      return;
-    }
+    if (isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
 
     try {
+      const [localCat, localWorkouts, localStretch, localActive, localHistory, queue] =
+        await Promise.all([
+          getCachedCatalog(),
+          getCachedWorkouts(),
+          getCachedStretchingRoutines(),
+          getLocalActiveSession(),
+          getLocalHistorySessions(),
+          getSyncQueue(),
+        ]);
+
+      setCatalog(localCat);
+      setFolders(localWorkouts.folders);
+      setUnfiledTemplates(localWorkouts.unfiledTemplates);
+      setStretchingRoutines(localStretch);
+      if (localActive && !deletedSessionIdsRef.current.has(localActive.clientSessionId)) {
+        setActiveSession(localActive);
+      }
+      setHistorySessions(
+        localHistory.filter(
+          (s) =>
+            s.status === SessionStatus.COMPLETED &&
+            !deletedSessionIdsRef.current.has(s.clientSessionId) &&
+            !deletedSessionIdsRef.current.has(s.id),
+        ),
+      );
+      setPendingSyncCount(isAuthenticated ? queue.length : 0);
+
+      if (!navigator.onLine || !isAuthenticated) {
+        setSyncState(
+          !navigator.onLine
+            ? 'OFFLINE'
+            : !isAuthenticated
+              ? 'SAVED_LOCALLY'
+              : queue.length > 0
+                ? 'SAVED_LOCALLY'
+                : 'SYNCED',
+        );
+        return;
+      }
+
       const [catRes, wkRes, stRes, sessRes, activeRes] = await Promise.all([
         api.exercises.list(),
         api.workouts.getOverview(),
@@ -342,6 +347,8 @@ export function GymProvider({ children }: { children: ReactNode }) {
       await flushSyncQueue();
     } catch {
       // Keep offline cached data
+    } finally {
+      isRefreshingRef.current = false;
     }
   }, [flushSyncQueue, isAuthenticated]);
 
@@ -399,7 +406,13 @@ export function GymProvider({ children }: { children: ReactNode }) {
         setPendingSyncCount(q.length);
         setSyncState(navigator.onLine ? 'SAVED_LOCALLY' : 'OFFLINE');
         if (navigator.onLine) {
-          void flushSyncQueue();
+          if (syncTimerRef.current !== null) {
+            window.clearTimeout(syncTimerRef.current);
+          }
+          syncTimerRef.current = window.setTimeout(() => {
+            syncTimerRef.current = null;
+            void flushSyncQueue();
+          }, 400);
         }
       } else {
         setSyncState(navigator.onLine ? 'SAVED_LOCALLY' : 'OFFLINE');
@@ -1148,6 +1161,10 @@ export function GymProvider({ children }: { children: ReactNode }) {
 
   const finishSession = async (notes?: string): Promise<WorkoutSessionDto | null> => {
     if (!activeSession) return null;
+    if (syncTimerRef.current !== null) {
+      window.clearTimeout(syncTimerRef.current);
+      syncTimerRef.current = null;
+    }
     const nowIso = new Date().toISOString();
     const elapsedSec = Math.max(
       60,
@@ -1192,6 +1209,10 @@ export function GymProvider({ children }: { children: ReactNode }) {
 
   const abandonSession = async () => {
     if (!activeSession) return;
+    if (syncTimerRef.current !== null) {
+      window.clearTimeout(syncTimerRef.current);
+      syncTimerRef.current = null;
+    }
     const { clientSessionId, id } = activeSession;
     deletedSessionIdsRef.current.add(clientSessionId);
     if (id) deletedSessionIdsRef.current.add(id);
