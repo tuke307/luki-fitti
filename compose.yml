@@ -65,8 +65,6 @@ services:
     depends_on:
       luki-fitti-db-migrate:
         condition: service_completed_successfully
-      luki-fitti-redis:
-        condition: service_healthy
     networks:
       - luki_fitti_network
     healthcheck:
@@ -88,18 +86,6 @@ services:
       - 'caddy_1.0_handle.reverse_proxy={{upstreams 3001}}'
       - 'app.project=luki-fitti'
       - 'app.service=api'
-
-  luki-fitti-redis:
-    image: redis:alpine
-    restart: always
-    command: redis-server --appendonly yes
-    networks:
-      - luki_fitti_network
-    healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
 networks:
   luki_fitti_network:
