@@ -489,7 +489,17 @@ export function ActiveSessionView({
                       : 'bg-card text-muted-foreground hover:text-foreground'
               }`}
             >
-              <span className="font-mono-tabular font-bold">{idx + 1}.</span>
+              <span
+                className={`font-mono-tabular flex h-6 w-6 items-center justify-center rounded-lg text-xs font-black ${
+                  isCurrent
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : ex.status === SessionExerciseStatus.COMPLETED
+                      ? 'bg-emerald-500/25 text-emerald-300'
+                      : 'bg-secondary text-foreground/80'
+                }`}
+              >
+                {idx + 1}
+              </span>
               <span className="max-w-[140px] truncate">{ex.exerciseNameSnapshot}</span>
               <span className="font-mono-tabular rounded-md bg-black/30 px-1.5 py-0.5 text-[10px]">
                 {doneSets}/{ex.sets.length}
@@ -510,129 +520,184 @@ export function ActiveSessionView({
 
       {/* Active Exercise Card & Fast Set Entry */}
       {currentExercise ? (
-        <Card className="space-y-4 rounded-3xl p-4 sm:p-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="default" className="text-[11px] uppercase">
-                  {MUSCLE_GROUP_LABELS[currentExercise.primaryMuscleSnapshot]}
-                </Badge>
-                {currentExercise.origin === SessionExerciseOrigin.SUBSTITUTED && (
-                  <Badge variant="warning" className="text-[11px]">
-                    Replaced: {currentExercise.replacedExerciseName}
-                  </Badge>
-                )}
-                {currentExercise.origin === SessionExerciseOrigin.ADDED && (
-                  <Badge variant="accent" className="text-[11px]">
-                    Added Unplanned
-                  </Badge>
-                )}
-                {currentExercise.status === SessionExerciseStatus.SKIPPED && (
-                  <Badge variant="destructive" className="text-[11px]">
-                    Skipped
-                  </Badge>
-                )}
+        <Card className="border-primary/25 from-card via-card to-secondary/20 relative space-y-5 overflow-hidden rounded-3xl border bg-gradient-to-b p-4 shadow-lg sm:p-6">
+          {/* Card Header: Upper-Left Number Badge + Title + Upper-Right Red Trash Button */}
+          <div className="flex flex-col gap-4 border-b border-white/5 pb-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3.5">
+                {/* Upper-Left Corner Exercise Number Badge */}
+                <div className="border-primary/40 from-primary/25 to-accent/15 text-primary flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl border bg-gradient-to-br shadow-inner">
+                  <span className="text-primary/70 text-[9px] font-extrabold uppercase leading-none tracking-wider">
+                    Ex
+                  </span>
+                  <span className="font-mono-tabular text-lg font-black leading-tight">
+                    {safeIdx + 1}
+                  </span>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="default" className="text-[11px] uppercase tracking-wider">
+                      {MUSCLE_GROUP_LABELS[currentExercise.primaryMuscleSnapshot]}
+                    </Badge>
+                    <span className="text-muted-foreground font-mono-tabular text-xs font-semibold">
+                      of {activeSession.exercises.length} exercises
+                    </span>
+                    {currentExercise.origin === SessionExerciseOrigin.SUBSTITUTED && (
+                      <Badge variant="warning" className="text-[11px]">
+                        Replaced: {currentExercise.replacedExerciseName}
+                      </Badge>
+                    )}
+                    {currentExercise.origin === SessionExerciseOrigin.ADDED && (
+                      <Badge variant="accent" className="text-[11px]">
+                        Added Unplanned
+                      </Badge>
+                    )}
+                    {currentExercise.status === SessionExerciseStatus.SKIPPED && (
+                      <Badge variant="destructive" className="text-[11px]">
+                        Skipped
+                      </Badge>
+                    )}
+                  </div>
+
+                  <h2 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
+                    {currentExercise.exerciseNameSnapshot}
+                  </h2>
+                </div>
               </div>
 
-              <h2 className="font-display mt-2 text-2xl font-bold">
-                {currentExercise.exerciseNameSnapshot}
-              </h2>
-              <p className="text-muted-foreground mt-0.5 text-xs">
-                Target:{' '}
-                <strong className="text-foreground">
-                  {currentExercise.plannedSets} sets ×{' '}
-                  {currentExercise.targetRepsMin &&
-                  currentExercise.targetRepsMax &&
-                  currentExercise.targetRepsMin !== currentExercise.targetRepsMax
-                    ? `${currentExercise.targetRepsMin}–${currentExercise.targetRepsMax}`
-                    : (currentExercise.targetRepsMin ?? 10)}{' '}
-                  reps
-                  {currentExercise.targetWeight
-                    ? ` @ ${currentExercise.targetWeight}${activeSession.weightUnit.toLowerCase()}`
-                    : ''}
-                </strong>{' '}
-                • Rest {currentExercise.restSeconds}s
-              </p>
-              {progressionInsight?.lastSession && (
-                <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
-                  <span className="text-muted-foreground">
-                    Last ({progressionInsight.lastSession.workoutName}):
-                  </span>
-                  {progressionInsight.lastSession.workingSets.slice(0, 4).map((ws, i) => (
-                    <Badge
-                      key={i}
-                      variant="secondary"
-                      className="font-mono-tabular px-1.5 py-0.5 text-[10px] font-semibold"
-                    >
-                      {ws.weightNormalized}
-                      {activeSession.weightUnit.toLowerCase()} × {ws.reps}
-                    </Badge>
-                  ))}
-                  {progressionInsight.ewma1RM > 0 && (
-                    <span className="text-muted-foreground font-mono-tabular text-[10px]">
-                      • e1RM {progressionInsight.ewma1RM}
-                      {activeSession.weightUnit.toLowerCase()}
-                    </span>
-                  )}
-                </div>
-              )}
-              {currentExercise.notes && (
-                <p className="text-accent mt-1 text-xs">Note: {currentExercise.notes}</p>
-              )}
-            </div>
-
-            {/* Exercise-level Controls: Substitute, Skip, Reorder, Remove */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => setShowSubstituteFor(currentExercise.clientExerciseId)}
-              >
-                <ArrowRightLeft className="text-primary h-3.5 w-3.5" />
-                Swap / Alternative
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => void skipExercise(currentExercise.clientExerciseId)}
-              >
-                <SkipForward className="h-3.5 w-3.5" />
-                {currentExercise.status === SessionExerciseStatus.SKIPPED ? 'Unskip' : 'Skip'}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="icon"
-                onClick={() => void reorderExercise(currentExercise.clientExerciseId, 'UP')}
-                disabled={safeIdx === 0}
-                title="Move Earlier"
-                className="size-8"
-              >
-                <ArrowUp className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="icon"
-                onClick={() => void reorderExercise(currentExercise.clientExerciseId, 'DOWN')}
-                disabled={safeIdx === activeSession.exercises.length - 1}
-                title="Move Later"
-                className="size-8"
-              >
-                <ArrowDown className="h-3.5 w-3.5" />
-              </Button>
+              {/* Upper-Right Corner Red Trash Button */}
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 onClick={() => void removeExerciseFromSession(currentExercise.clientExerciseId)}
+                aria-label="Remove exercise from session"
                 title="Remove from current session (keeps template untouched)"
-                className="text-muted-foreground hover:text-destructive size-8"
+                className="border-destructive/30 bg-destructive/15 text-destructive hover:bg-destructive hover:text-destructive-foreground size-9 shrink-0 rounded-xl border transition"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
+            </div>
+
+            {/* Structured Target & Benchmark Strip */}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="bg-secondary/40 rounded-2xl border border-white/5 px-3 py-2">
+                <span className="text-muted-foreground block text-[10px] font-semibold uppercase tracking-wider">
+                  Target Sets × Reps
+                </span>
+                <span className="font-mono-tabular text-foreground mt-0.5 block text-sm font-extrabold">
+                  {currentExercise.plannedSets} ×{' '}
+                  {currentExercise.targetRepsMin &&
+                  currentExercise.targetRepsMax &&
+                  currentExercise.targetRepsMin !== currentExercise.targetRepsMax
+                    ? `${currentExercise.targetRepsMin}–${currentExercise.targetRepsMax}`
+                    : (currentExercise.targetRepsMin ?? 10)}
+                </span>
+              </div>
+
+              <div className="bg-secondary/40 rounded-2xl border border-white/5 px-3 py-2">
+                <span className="text-muted-foreground block text-[10px] font-semibold uppercase tracking-wider">
+                  Rest Interval
+                </span>
+                <span className="font-mono-tabular text-foreground mt-0.5 block text-sm font-extrabold">
+                  {currentExercise.restSeconds}s
+                  {currentExercise.targetWeight
+                    ? ` • ${currentExercise.targetWeight}${activeSession.weightUnit.toLowerCase()}`
+                    : ''}
+                </span>
+              </div>
+
+              <div className="bg-secondary/40 col-span-2 rounded-2xl border border-white/5 px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
+                    {progressionInsight?.lastSession
+                      ? `Last (${progressionInsight.lastSession.workoutName})`
+                      : 'Previous Benchmark'}
+                  </span>
+                  {progressionInsight && progressionInsight.ewma1RM > 0 && (
+                    <span className="text-primary font-mono-tabular text-[10px] font-bold">
+                      e1RM {progressionInsight.ewma1RM}
+                      {activeSession.weightUnit.toLowerCase()}
+                    </span>
+                  )}
+                </div>
+                {progressionInsight?.lastSession ? (
+                  <div className="mt-1 flex flex-wrap items-center gap-1">
+                    {progressionInsight.lastSession.workingSets.slice(0, 4).map((ws, i) => (
+                      <Badge
+                        key={i}
+                        variant="secondary"
+                        className="font-mono-tabular px-1.5 py-0.5 text-[10px] font-semibold"
+                      >
+                        {ws.weightNormalized}
+                        {activeSession.weightUnit.toLowerCase()} × {ws.reps}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground mt-0.5 block text-xs">
+                    First logged session for this exercise
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {currentExercise.notes && (
+              <p className="border-accent/30 bg-accent/10 text-accent rounded-xl border px-3 py-1.5 text-xs font-medium">
+                Note: {currentExercise.notes}
+              </p>
+            )}
+
+            {/* Exercise Action Bar: Swap, Skip, Reorder */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowSubstituteFor(currentExercise.clientExerciseId)}
+                  className="h-8 rounded-xl text-xs font-semibold"
+                >
+                  <ArrowRightLeft className="text-primary h-3.5 w-3.5" />
+                  Swap / Alternative
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void skipExercise(currentExercise.clientExerciseId)}
+                  className="h-8 rounded-xl text-xs font-semibold"
+                >
+                  <SkipForward className="h-3.5 w-3.5" />
+                  {currentExercise.status === SessionExerciseStatus.SKIPPED ? 'Unskip' : 'Skip'}
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  onClick={() => void reorderExercise(currentExercise.clientExerciseId, 'UP')}
+                  disabled={safeIdx === 0}
+                  title="Move Earlier"
+                  className="size-8 rounded-xl"
+                >
+                  <ArrowUp className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  onClick={() => void reorderExercise(currentExercise.clientExerciseId, 'DOWN')}
+                  disabled={safeIdx === activeSession.exercises.length - 1}
+                  title="Move Later"
+                  className="size-8 rounded-xl"
+                >
+                  <ArrowDown className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -678,6 +743,49 @@ export function ActiveSessionView({
                 : null;
               const repsBadgeLabel = !set.completed ? formatCompactDelta(dynamicRepsDelta) : null;
 
+              const intensityLevel =
+                set.rpe === null || set.rpe === undefined
+                  ? 0
+                  : set.rpe <= 7.5
+                    ? 1
+                    : set.rpe < 9.5
+                      ? 2
+                      : 3;
+
+              const intensityMeta =
+                intensityLevel === 1
+                  ? {
+                      label: 'Light',
+                      hint: 'Light effort — push harder next time (cycles to Sweet Spot)',
+                      nextRpe: 8,
+                      containerClass: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
+                      activeBarClass: 'bg-emerald-400',
+                    }
+                  : intensityLevel === 2
+                    ? {
+                        label: 'Sweet Spot',
+                        hint: 'Sweet Spot — right on target (cycles to Limit)',
+                        nextRpe: 9.5,
+                        containerClass: 'border-amber-500/40 bg-amber-500/10 text-amber-300',
+                        activeBarClass: 'bg-amber-400',
+                      }
+                    : intensityLevel === 3
+                      ? {
+                          label: 'Limit',
+                          hint: 'Limit — high fatigue / hold weight (cycles to clear)',
+                          nextRpe: null,
+                          containerClass: 'border-rose-500/40 bg-rose-500/10 text-rose-300',
+                          activeBarClass: 'bg-rose-400',
+                        }
+                      : {
+                          label: 'Effort',
+                          hint: 'Tap to log set effort: Light → Sweet Spot → Limit',
+                          nextRpe: 7,
+                          containerClass:
+                            'border-border bg-background text-muted-foreground hover:text-foreground',
+                          activeBarClass: 'bg-muted-foreground/30',
+                        };
+
               return (
                 <div
                   key={set.clientSetId}
@@ -689,7 +797,17 @@ export function ActiveSessionView({
                 >
                   {/* Set Number & Set Type Selector */}
                   <div className="flex items-center gap-2">
-                    <span className="font-mono-tabular bg-background flex h-8 w-8 items-center justify-center rounded-xl text-xs font-extrabold">
+                    <span
+                      className={`font-mono-tabular flex h-9 w-9 items-center justify-center rounded-xl border text-sm font-black transition ${
+                        set.completed
+                          ? 'border-emerald-500/40 bg-emerald-500/20 text-emerald-300'
+                          : set.setType === SetType.WARMUP
+                            ? 'border-amber-500/40 bg-amber-500/15 text-amber-300'
+                            : set.setType === SetType.STRETCH
+                              ? 'border-accent/40 bg-accent/15 text-accent'
+                              : 'border-primary/35 bg-primary/15 text-primary'
+                      }`}
+                    >
                       {sIdx + 1}
                     </span>
                     <NativeSelect
@@ -878,24 +996,37 @@ export function ActiveSessionView({
                       )}
                     </div>
 
-                    {/* Optional RPE */}
-                    <NativeSelect
-                      aria-label={`Set ${sIdx + 1} RPE`}
-                      value={set.rpe ?? ''}
-                      onChange={(e) =>
+                    {/* 3-Bar Intensity Meter */}
+                    <button
+                      type="button"
+                      aria-label={`Set ${sIdx + 1} intensity: ${intensityMeta.label}`}
+                      title={intensityMeta.hint}
+                      onClick={() =>
                         void updateSet(currentExercise.clientExerciseId, set.clientSetId, {
-                          rpe: e.target.value === '' ? null : Number(e.target.value),
+                          rpe: intensityMeta.nextRpe,
                         })
                       }
-                      className="h-9 px-2 pr-6 text-xs"
+                      className={`flex h-9 items-center gap-2 rounded-xl border px-2.5 text-xs font-bold transition active:scale-95 ${intensityMeta.containerClass}`}
                     >
-                      <option value="">RPE</option>
-                      {[6, 7, 7.5, 8, 8.5, 9, 9.5, 10].map((r) => (
-                        <option key={r} value={r}>
-                          RPE {r}
-                        </option>
-                      ))}
-                    </NativeSelect>
+                      <span className="flex items-end gap-0.5" aria-hidden="true">
+                        {[1, 2, 3].map((barIdx) => {
+                          const barHeight =
+                            barIdx === 1 ? 'h-2' : barIdx === 2 ? 'h-3' : 'h-4';
+                          const isFilled = barIdx <= intensityLevel;
+                          return (
+                            <span
+                              key={barIdx}
+                              className={`w-1 rounded-full transition-colors ${barHeight} ${
+                                isFilled
+                                  ? intensityMeta.activeBarClass
+                                  : 'bg-muted-foreground/25'
+                              }`}
+                            />
+                          );
+                        })}
+                      </span>
+                      <span>{intensityMeta.label}</span>
+                    </button>
                   </div>
 
                   {/* Complete Set Large Tap Button & Delete Set */}
@@ -925,7 +1056,7 @@ export function ActiveSessionView({
                         )
                       }
                       aria-label={`Delete set ${sIdx + 1}`}
-                      className="text-muted-foreground hover:text-destructive size-8"
+                      className="text-destructive/80 hover:bg-destructive/15 hover:text-destructive size-8 rounded-xl"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
