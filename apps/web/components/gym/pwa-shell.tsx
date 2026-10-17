@@ -42,7 +42,7 @@ export type NavTab = 'home' | 'workouts' | 'session' | 'diary' | 'exercises' | '
 export function PwaShell() {
   const [activeTab, setActiveTab] = useState<NavTab>('home');
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const { isAuthenticated } = useAuth();
   const {
     activeSession,
@@ -218,9 +218,13 @@ export function PwaShell() {
               variant="secondary"
               size="icon"
               aria-label="Toggle color theme"
-              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+              onClick={() => setTheme(resolvedTheme === 'light' ? 'dark' : 'light')}
             >
-              {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+              {resolvedTheme === 'light' ? (
+                <Moon className="h-4 w-4" />
+              ) : (
+                <Sun className="h-4 w-4" />
+              )}
             </Button>
           </div>
         </div>

@@ -53,7 +53,8 @@
 }
 
 @layer base {
-  :root {
+  :root,
+  .dark {
     --background: 216 22% 5%;
     --foreground: 210 20% 98%;
     --card: 216 20% 9%;
