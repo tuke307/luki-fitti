@@ -1,0 +1,12 @@
+{
+  "extends": "@luki-fitti/typescript-config/react-library.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "paths": {
+      "~/*": ["./src/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist"],
+  "include": ["src", "src/**/*.json", "../../apps/web/components/providers"]
+}

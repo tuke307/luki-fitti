@@ -1,0 +1,82 @@
+services:
+  db:
+    image: postgres:latest
+    restart: always
+    ports:
+      - 5436:5432 # offset from kds (5434), marienmuehle (5435), and langfuse (5437)
+    env_file:
+      - ./packages/database/.env.production.local
+    environment:
+      # Pin the Postgres session timezone to UTC so timestamp storage and
+      # CURRENT_TIMESTAMP match the app's UTC convention.
+      - TZ=UTC
+      - PGTZ=UTC
+    networks:
+      - luki_fitti_network
+  db-migrate:
+    build:
+      context: .
+      dockerfile: ./packages/database/Dockerfile.migration
+    restart: 'no' # Run once and exit
+    env_file:
+      - ./packages/database/.env.production.local
+    depends_on:
+      - db
+      - redis
+    networks:
+      - luki_fitti_network
+  caddy:
+    image: caddy:alpine
+    restart: always
+    ports:
+      - 8082:80 # offset from kds (80)
+    volumes:
+      - ./Caddyfile.dev:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - web
+      - api
+    networks:
+      - luki_fitti_network
+  web:
+    build:
+      context: .
+      dockerfile: ./apps/web/Dockerfile
+    restart: always
+    env_file:
+      - ./apps/web/.env.production.local
+    ports:
+      - 3002:3000 # offset from kds/marienmuehle (3000) and langfuse (3004)
+    networks:
+      - luki_fitti_network
+  api:
+    build:
+      context: .
+      dockerfile: ./apps/api/Dockerfile
+    restart: always
+    env_file:
+      - ./apps/api/.env.production.local
+    ports:
+      - 3003:3001 # offset from kds/marienmuehle (3001)
+    depends_on:
+      - db-migrate
+      - redis
+    networks:
+      - luki_fitti_network
+  redis:
+    image: redis:alpine
+    restart: always
+    ports:
+      - 6382:6379 # offset from langfuse (6379), kds (6380), and marienmuehle (6381)
+    command: redis-server --appendonly yes
+    networks:
+      - luki_fitti_network
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  luki_fitti_network:
+    driver: bridge

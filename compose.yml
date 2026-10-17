@@ -1,0 +1,106 @@
+services:
+  luki-fitti-db-migrate:
+    image: ghcr.io/tuke307/luki-fitti-db-migrate:latest
+    pull_policy: always
+    restart: 'no'
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    networks:
+      - luki_fitti_network
+    healthcheck:
+      test: ['CMD', 'echo', 'Migration container - no persistent health check needed']
+      interval: 30s
+      timeout: 10s
+      retries: 1
+      start_period: 10s
+
+  luki-fitti-web:
+    image: ghcr.io/tuke307/luki-fitti-web:latest
+    pull_policy: always
+    restart: always
+    environment:
+      - TZ=UTC
+      - NODE_ENV=${NODE_ENV}
+      - HOSTNAME=0.0.0.0
+      - API_URL=http://luki-fitti-api:3001/api
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      luki-fitti-api:
+        condition: service_healthy
+    networks:
+      - luki_fitti_network
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - 'app.project=luki-fitti'
+      - 'app.service=web'
+
+  luki-fitti-api:
+    image: ghcr.io/tuke307/luki-fitti-api:latest
+    pull_policy: always
+    restart: always
+    environment:
+      - API_PORT=${API_PORT}
+      - TZ=UTC
+      - NODE_ENV=${NODE_ENV}
+      - BCRYPT_SALT_ROUNDS=${BCRYPT_SALT_ROUNDS}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - ACCESS_TOKEN_EXPIRY_MS=${ACCESS_TOKEN_EXPIRY_MS}
+      - REFRESH_TOKEN_EXPIRY_MS=${REFRESH_TOKEN_EXPIRY_MS}
+      - DATABASE_URL=${DATABASE_URL}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - COOKIE_DOMAIN=${COOKIE_DOMAIN}
+      - REDIS_URL=${REDIS_URL}
+    depends_on:
+      luki-fitti-db-migrate:
+        condition: service_completed_successfully
+      luki-fitti-redis:
+        condition: service_healthy
+    networks:
+      - luki_fitti_network
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:'+(process.env.API_PORT||3001)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    labels:
+      # Attach to the same caddy_1 site block as web, routing /api/* to this container
+      - 'caddy_1=https://luki-fitti.tony-luke.de'
+      - 'caddy_1.0_handle=/api/*'
+      - 'caddy_1.0_handle.reverse_proxy={{upstreams 3001}}'
+      - 'app.project=luki-fitti'
+      - 'app.service=api'
+
+  luki-fitti-redis:
+    image: redis:alpine
+    restart: always
+    command: redis-server --appendonly yes
+    networks:
+      - luki_fitti_network
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  luki_fitti_network:
+    driver: bridge

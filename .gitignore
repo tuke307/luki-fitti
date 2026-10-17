@@ -1,0 +1,83 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+node_modules
+.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# testing
+coverage
+.playwright-mcp
+
+# vercel
+.vercel
+
+# next.js
+.next/
+.next-extract/
+out/
+build
+
+# other
+dist/
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# local env files
+**/.env*
+**/.env*.local
+!.env.sample
+
+# local git identity override
+.gitconfig.local
+
+# turbo
+.turbo
+
+# drawio
+*.drawio.dtmp
+*.drawio.bkp
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# prisma generated client
+packages/database/src/generated/
+
+# api uploads
+**/uploads
+
+# APM dependencies
+apm_modules/
+
+# tests
+playwright-report
+test-results
+.playwright-mcp
+
+# generated doc screenshots
+apps/web/tests/e2e/doc-screenshots/
+apps/web/docs/*.pdf
+apps/web/tests/e2e/fixtures
+
+# impeccable code quality reports
+.impeccable
+
+# Graphify
+graphify-out
+
+# Generated site-content index for the mcp-server (created by extract:content)
+apps/mcp-server/content/
+
+# Python 
+__pycache__/

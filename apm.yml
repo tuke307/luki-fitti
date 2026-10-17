@@ -1,0 +1,9 @@
+name: luki-fitti
+version: 1.0.0
+description: Coding standards and AI agent instructions for LukiFitti — TypeScript, NestJS, Next.js, React, Tailwind, and security guidelines
+author: Tony Meissner
+license: MIT
+type: instructions
+target: claude,copilot
+dependencies:
+  apm: []

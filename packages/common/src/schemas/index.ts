@@ -1,0 +1,617 @@
+import { z } from 'zod';
+import {
+  DistanceUnit,
+  EquipmentType,
+  ExerciseCategory,
+  ExerciseType,
+  MuscleGroup,
+  SessionExerciseOrigin,
+  SessionExerciseStatus,
+  SessionStatus,
+  SessionType,
+  SetType,
+  WeightUnit,
+} from '../enums';
+
+export const PASSWORD_RULES = {
+  minLength: 8,
+  description: 'At least 8 characters, containing at least one letter and one number.',
+};
+
+export const PasswordSchema = z
+  .string()
+  .min(PASSWORD_RULES.minLength, 'Password must be at least 8 characters')
+  .regex(/[a-zA-Z]/, 'Password must contain at least one letter')
+  .regex(/[0-9]/, 'Password must contain at least one number');
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Auth & Preferences Schemas
+// ─────────────────────────────────────────────────────────────────────────────
+export const RegisterSchema = z.object({
+  email: z.email('Please enter a valid email address'),
+  password: PasswordSchema,
+  name: z.string().trim().min(1, 'Name is required').max(80).optional(),
+  weightUnit: z.enum(WeightUnit).default(WeightUnit.KG).optional(),
+});
+
+export const LoginSchema = z.object({
+  email: z.email('Please enter a valid email address'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+export const ChangePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Current password is required'),
+    newPassword: PasswordSchema,
+  })
+  .refine((data) => data.newPassword !== data.currentPassword, {
+    message: 'New password must be different from current password',
+    path: ['newPassword'],
+  });
+
+export const UpdatePreferencesSchema = z.object({
+  name: z.string().trim().min(1).max(80).optional(),
+  weightUnit: z.enum(WeightUnit).optional(),
+  distanceUnit: z.enum(DistanceUnit).optional(),
+  defaultRestSeconds: z.number().int().min(10).max(600).optional(),
+  theme: z.enum(['dark', 'light', 'system']).optional(),
+  restTimerSound: z.boolean().optional(),
+  weeklyGoalSessions: z.number().int().min(1).max(14).optional(),
+});
+
+export const UserPreferencesSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  weightUnit: z.enum(WeightUnit),
+  distanceUnit: z.enum(DistanceUnit),
+  defaultRestSeconds: z.number(),
+  theme: z.string(),
+  restTimerSound: z.boolean(),
+  weeklyGoalSessions: z.number(),
+});
+
+export const UserSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  name: z.string().nullable(),
+  lastLoginAt: z.string().nullable().optional(),
+  createdAt: z.string().optional(),
+  preferences: UserPreferencesSchema.nullable().optional(),
+});
+
+export const UserPayloadSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+});
+
+export type RegisterDto = z.infer<typeof RegisterSchema>;
+export type LoginDto = z.infer<typeof LoginSchema>;
+export type ChangePasswordDto = z.infer<typeof ChangePasswordSchema>;
+export type UpdatePreferencesDto = z.infer<typeof UpdatePreferencesSchema>;
+export type UserPreferencesDto = z.infer<typeof UserPreferencesSchema>;
+export type UserDto = z.infer<typeof UserSchema>;
+export type UserPayloadDto = z.infer<typeof UserPayloadSchema>;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Exercise Library Schemas
+// ─────────────────────────────────────────────────────────────────────────────
+export const ExerciseQuerySchema = z.object({
+  search: z.string().trim().optional(),
+  muscleGroup: z.enum(MuscleGroup).optional(),
+  exerciseType: z.enum(ExerciseType).optional(),
+  equipment: z.enum(EquipmentType).optional(),
+  category: z.enum(ExerciseCategory).optional(),
+  page: z.coerce.number().int().min(1).default(1).optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(100).optional(),
+});
+
+export const CreateExerciseSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  description: z.string().trim().min(2).max(2000),
+  instructions: z.array(z.string().trim().min(1)).default([]),
+  category: z.enum(ExerciseCategory).default(ExerciseCategory.COMPOUND),
+  exerciseType: z.enum(ExerciseType).default(ExerciseType.STRENGTH),
+  primaryMuscleGroup: z.enum(MuscleGroup),
+  secondaryMuscleGroups: z.array(z.enum(MuscleGroup)).default([]),
+  equipment: z.enum(EquipmentType).default(EquipmentType.BARBELL),
+  recommendedDurationSeconds: z.number().int().min(5).max(7200).nullable().optional(),
+  tags: z.array(z.string().trim()).default([]),
+  alternativeExerciseIds: z.array(z.string()).default([]),
+  mediaUrl: z.string().trim().optional(),
+});
+
+export const UpdateExerciseSchema = CreateExerciseSchema.partial();
+
+export type ExerciseQueryDto = z.infer<typeof ExerciseQuerySchema>;
+export type CreateExerciseDto = z.infer<typeof CreateExerciseSchema>;
+export type UpdateExerciseDto = z.infer<typeof UpdateExerciseSchema>;
+
+export interface ExerciseDto {
+  id: string;
+  slug: string;
+  userId: string | null;
+  name: string;
+  description: string;
+  instructions: string[];
+  category: ExerciseCategory;
+  exerciseType: ExerciseType;
+  primaryMuscleGroup: MuscleGroup;
+  secondaryMuscleGroups: MuscleGroup[];
+  equipment: EquipmentType;
+  recommendedDurationSeconds: number | null;
+  tags: string[];
+  isSystem: boolean;
+  alternativeExerciseIds: string[];
+  alternatives?: Array<{
+    id: string;
+    name: string;
+    equipment: EquipmentType;
+    primaryMuscleGroup: MuscleGroup;
+    reason?: string | null;
+  }>;
+  media?: Array<{
+    id: string;
+    mediaType: string;
+    url: string;
+    caption?: string | null;
+    attribution?: string | null;
+    license?: string | null;
+  }>;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Workout Folders & Workout Templates Schemas
+// ─────────────────────────────────────────────────────────────────────────────
+export const CreateFolderSchema = z.object({
+  name: z.string().trim().min(1, 'Folder name is required').max(80),
+  color: z.string().trim().default('#CCFF00'),
+  sortOrder: z.number().int().min(0).default(0).optional(),
+});
+
+export const UpdateFolderSchema = CreateFolderSchema.partial();
+
+export const TemplateExerciseInputSchema = z.object({
+  id: z.string().optional(),
+  exerciseId: z.string().min(1, 'Exercise is required'),
+  orderIndex: z.number().int().min(0),
+  plannedSets: z.number().int().min(1).max(30).default(3),
+  warmupSets: z.number().int().min(0).max(10).default(0),
+  targetRepsMin: z.number().int().min(1).max(200).nullable().optional(),
+  targetRepsMax: z.number().int().min(1).max(200).nullable().optional(),
+  targetWeight: z.number().min(0).max(1500).nullable().optional(),
+  weightUnit: z.enum(WeightUnit).default(WeightUnit.KG),
+  restSeconds: z.number().int().min(0).max(900).default(90),
+  targetDurationSeconds: z.number().int().min(0).max(14400).nullable().optional(),
+  targetDistanceMeters: z.number().min(0).max(100000).nullable().optional(),
+  notes: z.string().max(500).nullable().optional(),
+  alternativeExerciseIds: z.array(z.string()).default([]),
+});
+
+export const CreateTemplateSchema = z.object({
+  name: z.string().trim().min(1, 'Workout name is required').max(100),
+  description: z.string().trim().max(500).nullable().optional(),
+  folderId: z.string().nullable().optional(),
+  estimatedDurationMinutes: z.number().int().min(5).max(360).default(60).optional(),
+  sortOrder: z.number().int().min(0).default(0).optional(),
+  exercises: z.array(TemplateExerciseInputSchema).default([]),
+});
+
+export const UpdateTemplateSchema = CreateTemplateSchema.partial();
+
+export const MoveTemplateSchema = z.object({
+  folderId: z.string().nullable(),
+});
+
+export type CreateFolderDto = z.infer<typeof CreateFolderSchema>;
+export type UpdateFolderDto = z.infer<typeof UpdateFolderSchema>;
+export type TemplateExerciseInputDto = z.infer<typeof TemplateExerciseInputSchema>;
+export type CreateTemplateDto = z.infer<typeof CreateTemplateSchema>;
+export type UpdateTemplateDto = z.infer<typeof UpdateTemplateSchema>;
+export type MoveTemplateDto = z.infer<typeof MoveTemplateSchema>;
+
+export interface WorkoutTemplateExerciseDto {
+  id: string;
+  templateId: string;
+  exerciseId: string;
+  orderIndex: number;
+  plannedSets: number;
+  warmupSets: number;
+  targetRepsMin: number | null;
+  targetRepsMax: number | null;
+  targetWeight: number | null;
+  weightUnit: WeightUnit;
+  restSeconds: number;
+  targetDurationSeconds: number | null;
+  targetDistanceMeters: number | null;
+  notes: string | null;
+  alternativeExerciseIds: string[];
+  exercise?: ExerciseDto;
+}
+
+export interface WorkoutTemplateDto {
+  id: string;
+  userId: string;
+  folderId: string | null;
+  name: string;
+  description: string | null;
+  estimatedDurationMinutes: number | null;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  exercises: WorkoutTemplateExerciseDto[];
+}
+
+export interface WorkoutFolderDto {
+  id: string;
+  userId: string;
+  name: string;
+  color: string;
+  sortOrder: number;
+  templates: WorkoutTemplateDto[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Stretching Routine Schemas
+// ─────────────────────────────────────────────────────────────────────────────
+export const StretchingRoutineExerciseInputSchema = z.object({
+  exerciseId: z.string().min(1),
+  orderIndex: z.number().int().min(0),
+  sets: z.number().int().min(1).max(10).default(1),
+  durationSeconds: z.number().int().min(5).max(1800).nullable().optional(),
+  reps: z.number().int().min(1).max(100).nullable().optional(),
+  transitionSeconds: z.number().int().min(0).max(120).default(15),
+  notes: z.string().max(500).nullable().optional(),
+});
+
+export const CreateStretchingRoutineSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  description: z.string().trim().max(500).nullable().optional(),
+  targetArea: z.string().trim().min(1).max(80).default('Full Body'),
+  estimatedDurationSeconds: z.number().int().min(30).max(7200).default(600),
+  exercises: z.array(StretchingRoutineExerciseInputSchema).default([]),
+});
+
+export const UpdateStretchingRoutineSchema = CreateStretchingRoutineSchema.partial();
+
+export type StretchingRoutineExerciseInputDto = z.infer<
+  typeof StretchingRoutineExerciseInputSchema
+>;
+export type CreateStretchingRoutineDto = z.infer<typeof CreateStretchingRoutineSchema>;
+export type UpdateStretchingRoutineDto = z.infer<typeof UpdateStretchingRoutineSchema>;
+
+export interface StretchingRoutineExerciseDto {
+  id: string;
+  routineId: string;
+  exerciseId: string;
+  orderIndex: number;
+  sets: number;
+  durationSeconds: number | null;
+  reps: number | null;
+  transitionSeconds: number;
+  notes: string | null;
+  exercise?: ExerciseDto;
+}
+
+export interface StretchingRoutineDto {
+  id: string;
+  userId: string;
+  name: string;
+  description: string | null;
+  targetArea: string;
+  estimatedDurationSeconds: number;
+  createdAt: string;
+  updatedAt: string;
+  exercises: StretchingRoutineExerciseDto[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Active Workout Session & Offline Synchronization Schemas
+// ─────────────────────────────────────────────────────────────────────────────
+export const SessionSetSyncSchema = z.object({
+  id: z.string().optional(),
+  clientSetId: z.string().min(1),
+  setNumber: z.number().int().min(1).max(100),
+  setType: z.enum(SetType).default(SetType.WORKING),
+  weight: z.number().min(0).max(2000).nullable().optional(),
+  weightUnit: z.enum(WeightUnit).default(WeightUnit.KG),
+  reps: z.number().int().min(0).max(1000).nullable().optional(),
+  durationSeconds: z.number().int().min(0).max(36000).nullable().optional(),
+  distanceMeters: z.number().min(0).max(200000).nullable().optional(),
+  rpe: z.number().min(1).max(10).nullable().optional(),
+  completed: z.boolean().default(false),
+  completedAt: z.string().nullable().optional(),
+  isPersonalRecord: z.boolean().default(false).optional(),
+  notes: z.string().max(500).nullable().optional(),
+});
+
+export const SessionExerciseSyncSchema = z.object({
+  id: z.string().optional(),
+  clientExerciseId: z.string().min(1),
+  exerciseId: z.string().nullable().optional(),
+  replacedExerciseId: z.string().nullable().optional(),
+  replacedExerciseName: z.string().nullable().optional(),
+  exerciseNameSnapshot: z.string().min(1).max(160),
+  primaryMuscleSnapshot: z.enum(MuscleGroup),
+  exerciseTypeSnapshot: z.enum(ExerciseType).default(ExerciseType.STRENGTH),
+  origin: z.enum(SessionExerciseOrigin).default(SessionExerciseOrigin.PLANNED),
+  status: z.enum(SessionExerciseStatus).default(SessionExerciseStatus.PENDING),
+  orderIndex: z.number().int().min(0),
+  plannedSets: z.number().int().min(1).max(30).default(3),
+  plannedWarmupSets: z.number().int().min(0).max(10).default(0),
+  targetRepsMin: z.number().int().nullable().optional(),
+  targetRepsMax: z.number().int().nullable().optional(),
+  targetWeight: z.number().nullable().optional(),
+  targetDurationSeconds: z.number().int().nullable().optional(),
+  restSeconds: z.number().int().min(0).max(1800).default(90),
+  alternativeExerciseIds: z.array(z.string()).default([]),
+  notes: z.string().max(500).nullable().optional(),
+  sets: z.array(SessionSetSyncSchema).default([]),
+});
+
+export const SyncSessionPayloadSchema = z.object({
+  id: z.string().optional(),
+  clientSessionId: z.string().min(1),
+  templateId: z.string().nullable().optional(),
+  stretchingRoutineId: z.string().nullable().optional(),
+  sessionType: z.enum(SessionType).default(SessionType.STRENGTH),
+  workoutNameSnapshot: z.string().min(1).max(160),
+  status: z.enum(SessionStatus).default(SessionStatus.IN_PROGRESS),
+  startedAt: z.string(),
+  pausedAt: z.string().nullable().optional(),
+  completedAt: z.string().nullable().optional(),
+  activeDurationSeconds: z.number().int().min(0).default(0),
+  weightUnit: z.enum(WeightUnit).default(WeightUnit.KG),
+  notes: z.string().max(2000).nullable().optional(),
+  restTimerEndsAt: z.string().nullable().optional(),
+  restTimerDurationSec: z.number().int().nullable().optional(),
+  restTimerPausedRemSec: z.number().int().nullable().optional(),
+  version: z.number().int().min(1).default(1),
+  forceOverwrite: z.boolean().default(false).optional(),
+  exercises: z.array(SessionExerciseSyncSchema).default([]),
+});
+
+export const StartSessionSchema = z.object({
+  clientSessionId: z.string().min(1),
+  templateId: z.string().nullable().optional(),
+  stretchingRoutineId: z.string().nullable().optional(),
+  workoutName: z.string().min(1).max(160).optional(),
+  sessionType: z.enum(SessionType).default(SessionType.STRENGTH).optional(),
+  weightUnit: z.enum(WeightUnit).default(WeightUnit.KG).optional(),
+});
+
+export type SessionSetSyncDto = z.infer<typeof SessionSetSyncSchema>;
+export type SessionExerciseSyncDto = z.infer<typeof SessionExerciseSyncSchema>;
+export type SyncSessionPayloadDto = z.infer<typeof SyncSessionPayloadSchema>;
+export type StartSessionDto = z.infer<typeof StartSessionSchema>;
+
+export interface SessionSetDto {
+  id: string;
+  clientSetId: string;
+  sessionExerciseId: string;
+  setNumber: number;
+  setType: SetType;
+  weight: number | null;
+  weightUnit: WeightUnit;
+  reps: number | null;
+  durationSeconds: number | null;
+  distanceMeters: number | null;
+  rpe: number | null;
+  completed: boolean;
+  completedAt: string | null;
+  isPersonalRecord: boolean;
+  notes: string | null;
+}
+
+export interface SessionExerciseDto {
+  id: string;
+  clientExerciseId: string;
+  sessionId: string;
+  exerciseId: string | null;
+  replacedExerciseId: string | null;
+  replacedExerciseName: string | null;
+  exerciseNameSnapshot: string;
+  primaryMuscleSnapshot: MuscleGroup;
+  exerciseTypeSnapshot: ExerciseType;
+  origin: SessionExerciseOrigin;
+  status: SessionExerciseStatus;
+  orderIndex: number;
+  plannedSets: number;
+  plannedWarmupSets: number;
+  targetRepsMin: number | null;
+  targetRepsMax: number | null;
+  targetWeight: number | null;
+  targetDurationSeconds: number | null;
+  restSeconds: number;
+  alternativeExerciseIds: string[];
+  notes: string | null;
+  sets: SessionSetDto[];
+}
+
+export interface WorkoutSessionDto {
+  id: string;
+  clientSessionId: string;
+  userId: string;
+  templateId: string | null;
+  stretchingRoutineId: string | null;
+  sessionType: SessionType;
+  workoutNameSnapshot: string;
+  status: SessionStatus;
+  startedAt: string;
+  pausedAt: string | null;
+  completedAt: string | null;
+  activeDurationSeconds: number;
+  weightUnit: WeightUnit;
+  totalVolumeKg: number;
+  totalSetsCompleted: number;
+  totalRepsCompleted: number;
+  totalStretchSeconds: number;
+  notes: string | null;
+  restTimerEndsAt: string | null;
+  restTimerDurationSec: number | null;
+  restTimerPausedRemSec: number | null;
+  version: number;
+  lastSyncedAt: string;
+  exercises: SessionExerciseDto[];
+}
+
+export interface SyncSessionResponseDto {
+  session: WorkoutSessionDto;
+  conflictDetected: boolean;
+  serverVersion: number;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Diary & Analytics Schemas
+// ─────────────────────────────────────────────────────────────────────────────
+export const AnalyticsQuerySchema = z.object({
+  from: z.string().optional(),
+  to: z.string().optional(),
+  exerciseId: z.string().optional(),
+  templateId: z.string().optional(),
+  muscleGroup: z.enum(MuscleGroup).optional(),
+  period: z.enum(['week', 'month', 'year', 'all']).default('month').optional(),
+});
+
+export type AnalyticsQueryDto = z.infer<typeof AnalyticsQuerySchema>;
+
+export interface PersonalRecordDto {
+  exerciseId: string;
+  exerciseName: string;
+  primaryMuscle: MuscleGroup;
+  maxWeightKg: number;
+  repsAtMaxWeight: number;
+  estimatedOneRepMaxKg: number;
+  bestVolumeSetKg: number;
+  achievedAt: string;
+}
+
+export interface AnalyticsSummaryDto {
+  totalSessionsCompleted: number;
+  totalStrengthSessions: number;
+  totalStretchingSessions: number;
+  totalSetsCompleted: number;
+  totalRepsCompleted: number;
+  totalVolumeKg: number;
+  totalDurationSeconds: number;
+  totalStretchSeconds: number;
+  currentStreakWeeks: number;
+  sessionsThisWeek: number;
+  weeklyGoalSessions: number;
+  frequencyByWeek: Array<{
+    weekStart: string;
+    label: string;
+    strengthSessions: number;
+    stretchingSessions: number;
+    totalVolumeKg: number;
+    totalSets: number;
+  }>;
+  muscleDistribution: Array<{
+    muscleGroup: MuscleGroup;
+    label: string;
+    completedSets: number;
+    totalVolumeKg: number;
+    percentage: number;
+  }>;
+  personalRecords: PersonalRecordDto[];
+  exerciseProgression: Array<{
+    date: string;
+    workoutName: string;
+    maxWeightKg: number;
+    totalVolumeKg: number;
+    bestSetReps: number;
+    estimated1RM: number;
+  }>;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Gymlife / Workout Import Schemas
+// ─────────────────────────────────────────────────────────────────────────────
+export const ImportFormatEnum = z.enum([
+  'AUTO',
+  'GYMLIFE_CSV',
+  'GYMLIFE_JSON',
+  'APPLE_HEALTH_JSON',
+]);
+
+export const ImportPreviewRequestSchema = z.object({
+  fileName: z.string().min(1).max(255),
+  format: ImportFormatEnum.default('AUTO'),
+  content: z.string().min(1, 'Export file content cannot be empty').max(5_000_000),
+});
+
+export const ExerciseMappingEntrySchema = z.object({
+  sourceName: z.string().min(1),
+  action: z.enum(['MAP', 'CREATE_CUSTOM', 'SKIP']),
+  targetExerciseId: z.string().optional(),
+  primaryMuscleGroup: z.enum(MuscleGroup).default(MuscleGroup.FULL_BODY).optional(),
+  equipment: z.enum(EquipmentType).default(EquipmentType.OTHER).optional(),
+});
+
+export const ImportCommitRequestSchema = z.object({
+  fileName: z.string().min(1).max(255),
+  format: ImportFormatEnum.default('AUTO'),
+  content: z.string().min(1).max(5_000_000),
+  exerciseMappings: z.array(ExerciseMappingEntrySchema).default([]),
+  skipDuplicates: z.boolean().default(true),
+  importTemplates: z.boolean().default(true),
+});
+
+export type ImportPreviewRequestDto = z.infer<typeof ImportPreviewRequestSchema>;
+export type ExerciseMappingEntryDto = z.infer<typeof ExerciseMappingEntrySchema>;
+export type ImportCommitRequestDto = z.infer<typeof ImportCommitRequestSchema>;
+
+export interface ParsedImportSet {
+  setNumber: number;
+  setType: SetType;
+  weight: number | null;
+  weightUnit: WeightUnit;
+  reps: number | null;
+  durationSeconds: number | null;
+  notes?: string | null;
+}
+
+export interface ParsedImportExercise {
+  sourceName: string;
+  matchedExerciseId: string | null;
+  matchedExerciseName: string | null;
+  sets: ParsedImportSet[];
+}
+
+export interface ParsedImportSession {
+  fingerprint: string;
+  workoutName: string;
+  folderName?: string | null;
+  startedAt: string;
+  durationSeconds: number;
+  isDuplicate: boolean;
+  exercises: ParsedImportExercise[];
+}
+
+export interface ImportPreviewResultDto {
+  detectedFormat: string;
+  fileName: string;
+  totalSessionsFound: number;
+  duplicateSessionsCount: number;
+  totalSetsFound: number;
+  templatesFound: string[];
+  unmappedExercises: string[];
+  exerciseSuggestions: Array<{
+    sourceName: string;
+    matchedExerciseId: string | null;
+    matchedExerciseName: string | null;
+    confidence: 'EXACT' | 'FUZZY' | 'UNMATCHED';
+  }>;
+  sessionsPreview: ParsedImportSession[];
+  validationErrors: string[];
+}
+
+export interface ImportCommitResultDto {
+  importJobId: string;
+  detectedFormat: string;
+  importedSessions: number;
+  importedSets: number;
+  importedTemplates: number;
+  createdCustomExercises: number;
+  skippedDuplicates: number;
+  errors: string[];
+}

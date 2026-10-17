@@ -1,0 +1,23 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "env": [
+        "BCRYPT_SALT_ROUNDS",
+        "JWT_REFRESH_SECRET",
+        "REFRESH_TOKEN_EXPIRY_MS",
+        "SEAWEEDFS_ENDPOINT",
+        "SEAWEEDFS_PORT",
+        "SEAWEEDFS_USE_SSL",
+        "SEAWEEDFS_ACCESS_KEY_API",
+        "SEAWEEDFS_SECRET_KEY_API",
+        "GA_PROPERTY_ID",
+        "GA_CREDENTIALS_PATH",
+        "EMAIL_MAX_ATTEMPTS",
+        "EMAIL_RETRY_DELAY_MS",
+        "REDIS_URL"
+      ]
+    }
+  }
+}

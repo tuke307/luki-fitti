@@ -1,0 +1,47 @@
+---
+applyTo: '**'
+description: 'Project orientation for luki-fitti — what the product is, monorepo map, toolchain, commands, local docker environment, deployment, and testing'
+---
+
+# Project Orientation — LukiFitti
+
+## What this is
+
+Personal gym and workout management Progressive Web App (`luki-fitti`), optimized for iPhone and Safari with durable IndexedDB offline workout execution, timestamp-based rest timers, stretching & mobility routines, training diary analytics, and Gymlife / Apple Health export migration.
+
+## Monorepo map
+
+- `apps/api` (`@luki-fitti/api`) — NestJS 12 REST API (Express 5). Domain modules under `src/modules/` (`auth`, `exercise`, `workout`, `session`, `stretching`, `analytics`, `import`, `database`, `health`). Listens on port 3001.
+- `apps/web` (`@luki-fitti/web`) — Next.js 16 App Router PWA (`app/`): main PWA shell (`components/gym/`), IndexedDB offline store (`lib/offline/offline-store.ts`), Service Worker (`public/sw.js`), Web App Manifest (`app/manifest.ts`), and components from `@luki-fitti/ui`.
+- `packages/common` (`@luki-fitti/common`) — shared Zod schemas (single source of truth), DTOs, enums, initial exercise catalog (`src/catalog/`), and utilities.
+- `packages/database` (`@luki-fitti/database`) — Prisma 7 schema, SQL migrations, client, and seed script (PostgreSQL).
+- `packages/logger` (`@luki-fitti/logger`) — Winston wrapper; log via `@luki-fitti/logger`, never `console.log`.
+- `packages/ui` (`@luki-fitti/ui`) — shared shadcn-style component library.
+- `packages/eslint-config`, `packages/typescript-config` — shared configs.
+
+## Toolchain facts
+
+- **yarn 1** workspaces + turbo. Never use npm or pnpm here.
+- Node ≥ 22, TypeScript strict, pure ESM (`"type": "module"`).
+- `@luki-fitti/api` builds via `nestgo`; `common`, `database`, `logger` build via `tsc` + `tsc-alias`.
+- `@luki-fitti/common` and `@luki-fitti/database` are consumed from `dist/` — after changing them, rebuild before dependents consume them.
+
+## Commands (repo root)
+
+- `yarn run dev` / `build` / `lint` / `test` / `format` — turbo pipelines
+- `yarn run db:generate` / `db:migrate -- <name>` / `db:deploy` / `db:push` / `db:seed` — Prisma tasks
+- `yarn workspace @luki-fitti/<name> run <script>` — run a script in one workspace
+
+## Local environment
+
+- `docker compose -f compose.dev.yml up -d` starts the stack: `db`, `redis`, `caddy`, `web`, `api`, `db-migrate`.
+- Env files per app: `<app>/.env.local` (samples in `<app>/.env.sample`). Never commit `.env*.local`.
+- Inside docker, services reach each other by **service name** (`db`, `redis`, `api`), not `localhost`.
+- Next.js server-side fetch needs the **absolute** API URL — set `SERVER_API_URL=http://api:3001/api` (mirrors `API_URL`).
+
+## Agent Instructions (APM)
+
+- This repository manages agent instructions with [APM](https://microsoft.github.io/apm/) (`apm.yml`). Do not edit generated files directly — they are overwritten on every `apm install` / `apm compile`.
+- Always-on rules live in `.claude/rules/` and `AGENTS.md` (repo root).
+- All authoring happens in `.apm/` (instructions in `.apm/instructions/*.instructions.md`, skills in `.apm/skills/`). After any change run `apm install && apm compile` and commit `.apm/` sources and generated outputs together.
+
