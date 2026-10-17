@@ -14,6 +14,10 @@ import {
   ArrowRightLeft,
   Dumbbell,
   AlertTriangle,
+  ChevronDown,
+  ChevronRight,
+  ChevronsDownUp,
+  ChevronsUpDown,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -28,6 +32,11 @@ import {
 import { Badge } from '@luki-fitti/ui/components/ui/badge';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import { Card } from '@luki-fitti/ui/components/ui/card';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@luki-fitti/ui/components/ui/collapsible';
 import {
   Dialog,
   DialogContent,
@@ -85,6 +94,34 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
     id: string;
     name: string;
   } | null>(null);
+
+  const [collapsedFolders, setCollapsedFolders] = useState<Record<string, boolean>>({});
+
+  const toggleFolderCollapsed = (folderId: string) => {
+    setCollapsedFolders((prev) => ({
+      ...prev,
+      [folderId]: !prev[folderId],
+    }));
+  };
+
+  const allFolderIds = [
+    ...folders.map((f) => f.id),
+    ...(unfiledTemplates.length > 0 ? ['__unfiled__'] : []),
+  ];
+  const areAllCollapsed =
+    allFolderIds.length > 0 && allFolderIds.every((id) => Boolean(collapsedFolders[id]));
+
+  const toggleAllFolders = () => {
+    if (areAllCollapsed) {
+      setCollapsedFolders({});
+    } else {
+      const next: Record<string, boolean> = {};
+      for (const id of allFolderIds) {
+        next[id] = true;
+      }
+      setCollapsedFolders(next);
+    }
+  };
 
   const openNewTemplateBuilder = (defaultFolderId: string | null = null) => {
     setEditingTemplate(null);
@@ -322,7 +359,28 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {allFolderIds.length > 1 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={toggleAllFolders}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              {areAllCollapsed ? (
+                <>
+                  <ChevronsUpDown className="h-4 w-4" />
+                  Expand All
+                </>
+              ) : (
+                <>
+                  <ChevronsDownUp className="h-4 w-4" />
+                  Collapse All
+                </>
+              )}
+            </Button>
+          )}
           <Button
             type="button"
             variant="secondary"
@@ -347,89 +405,126 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
       </div>
 
       {/* Folders Section */}
-      {folders.map((folder) => (
-        <section key={folder.id} className="space-y-3">
-          <div className="flex items-center justify-between border-b pb-2.5">
-            <div className="flex items-center gap-2.5">
-              <span
-                className="h-3.5 w-3.5 rounded-full"
-                style={{ backgroundColor: folder.color || '#CCFF00' }}
-              />
-              <Folder className="text-primary h-5 w-5" />
-              <h2 className="font-display text-lg font-bold">{folder.name}</h2>
-              <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 text-xs">
-                {folder.templates.length}
-              </Badge>
+      {folders.map((folder) => {
+        const isCollapsed = Boolean(collapsedFolders[folder.id]);
+        return (
+          <Collapsible
+            key={folder.id}
+            open={!isCollapsed}
+            onOpenChange={() => toggleFolderCollapsed(folder.id)}
+            className="space-y-3"
+          >
+            <div className="flex items-center justify-between border-b pb-2.5">
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} folder ${folder.name}`}
+                  className="hover:text-primary flex cursor-pointer items-center gap-2.5 text-left transition"
+                >
+                  {isCollapsed ? (
+                    <ChevronRight className="text-muted-foreground h-4 w-4 shrink-0" />
+                  ) : (
+                    <ChevronDown className="text-muted-foreground h-4 w-4 shrink-0" />
+                  )}
+                  <span
+                    className="h-3.5 w-3.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: folder.color || '#CCFF00' }}
+                  />
+                  <Folder className="text-primary h-5 w-5 shrink-0" />
+                  <h2 className="font-display text-lg font-bold">{folder.name}</h2>
+                  <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 text-xs">
+                    {folder.templates.length}
+                  </Badge>
+                </button>
+              </CollapsibleTrigger>
+
+              <div className="flex items-center gap-1.5">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => openNewTemplateBuilder(folder.id)}
+                  className="text-primary hover:bg-primary/10 font-semibold"
+                >
+                  + Add Workout
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setEditingFolderId(folder.id);
+                    setFolderName(folder.name);
+                    setFolderColor(folder.color);
+                    setShowFolderModal(true);
+                  }}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Rename
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Delete folder ${folder.name}`}
+                  onClick={() =>
+                    setConfirmDelete({ type: 'folder', id: folder.id, name: folder.name })
+                  }
+                  className="text-muted-foreground hover:text-destructive size-8"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
-            <div className="flex items-center gap-1.5">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => openNewTemplateBuilder(folder.id)}
-                className="text-primary hover:bg-primary/10 font-semibold"
-              >
-                + Add Workout
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setEditingFolderId(folder.id);
-                  setFolderName(folder.name);
-                  setFolderColor(folder.color);
-                  setShowFolderModal(true);
-                }}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Rename
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={`Delete folder ${folder.name}`}
-                onClick={() =>
-                  setConfirmDelete({ type: 'folder', id: folder.id, name: folder.name })
-                }
-                className="text-muted-foreground hover:text-destructive size-8"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          {folder.templates.length === 0 ? (
-            <Card className="bg-card/50 text-muted-foreground border-dashed p-6 text-center text-xs">
-              No workouts in this folder yet. Click &ldquo;+ Add Workout&rdquo; or move an existing
-              template here.
-            </Card>
-          ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {folder.templates.map(renderTemplateCard)}
-            </div>
-          )}
-        </section>
-      ))}
+            <CollapsibleContent>
+              {folder.templates.length === 0 ? (
+                <Card className="bg-card/50 text-muted-foreground border-dashed p-6 text-center text-xs">
+                  No workouts in this folder yet. Click &ldquo;+ Add Workout&rdquo; or move an
+                  existing template here.
+                </Card>
+              ) : (
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {folder.templates.map(renderTemplateCard)}
+                </div>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        );
+      })}
 
       {/* Unfiled Workouts Section */}
       {unfiledTemplates.length > 0 && (
-        <section className="space-y-3">
+        <Collapsible
+          open={!collapsedFolders['__unfiled__']}
+          onOpenChange={() => toggleFolderCollapsed('__unfiled__')}
+          className="space-y-3"
+        >
           <div className="flex items-center justify-between border-b pb-2.5">
-            <div className="flex items-center gap-2">
-              <Dumbbell className="text-muted-foreground h-5 w-5" />
-              <h2 className="font-display text-lg font-bold">Unfiled Workouts</h2>
-              <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 text-xs">
-                {unfiledTemplates.length}
-              </Badge>
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="hover:text-primary flex cursor-pointer items-center gap-2 text-left transition"
+              >
+                {collapsedFolders['__unfiled__'] ? (
+                  <ChevronRight className="text-muted-foreground h-4 w-4 shrink-0" />
+                ) : (
+                  <ChevronDown className="text-muted-foreground h-4 w-4 shrink-0" />
+                )}
+                <Dumbbell className="text-muted-foreground h-5 w-5" />
+                <h2 className="font-display text-lg font-bold">Unfiled Workouts</h2>
+                <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 text-xs">
+                  {unfiledTemplates.length}
+                </Badge>
+              </button>
+            </CollapsibleTrigger>
+          </div>
+          <CollapsibleContent>
+            <div className="grid gap-4 lg:grid-cols-2">
+              {unfiledTemplates.map(renderTemplateCard)}
             </div>
-          </div>
-          <div className="grid gap-4 lg:grid-cols-2">
-            {unfiledTemplates.map(renderTemplateCard)}
-          </div>
-        </section>
+          </CollapsibleContent>
+        </Collapsible>
       )}
 
       {/* Folder Create/Rename Modal */}
