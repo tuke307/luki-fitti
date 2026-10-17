@@ -322,6 +322,40 @@ export class SessionService {
     const metrics = this.computeSessionMetrics(payload.exercises);
     const nextVersion = existing ? Math.max(existing.version, payload.version) + 1 : 1;
 
+    let resolvedTemplateId = payload.templateId ?? null;
+    if (resolvedTemplateId && this.prisma.workoutTemplate?.findUnique) {
+      const tplExists = await this.prisma.workoutTemplate.findUnique({
+        where: { id: resolvedTemplateId },
+        select: { id: true },
+      });
+      if (!tplExists) resolvedTemplateId = null;
+    }
+
+    let resolvedStretchingRoutineId = payload.stretchingRoutineId ?? null;
+    if (resolvedStretchingRoutineId && this.prisma.stretchingRoutine?.findUnique) {
+      const routineExists = await this.prisma.stretchingRoutine.findUnique({
+        where: { id: resolvedStretchingRoutineId },
+        select: { id: true },
+      });
+      if (!routineExists) resolvedStretchingRoutineId = null;
+    }
+
+    const candidateExerciseIds = Array.from(
+      new Set(
+        payload.exercises
+          .map((e) => e.exerciseId)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+    let validExerciseIds: Set<string> | null = null;
+    if (candidateExerciseIds.length > 0 && this.prisma.exercise?.findMany) {
+      const foundExercises = await this.prisma.exercise.findMany({
+        where: { id: { in: candidateExerciseIds } },
+        select: { id: true },
+      });
+      validExerciseIds = new Set(foundExercises.map((e) => e.id));
+    }
+
     const synced = await this.prisma.$transaction(async (tx) => {
       const session = await tx.workoutSession.upsert({
         where: { clientSessionId: payload.clientSessionId },
@@ -348,8 +382,8 @@ export class SessionService {
         create: {
           clientSessionId: payload.clientSessionId,
           userId,
-          templateId: payload.templateId ?? null,
-          stretchingRoutineId: payload.stretchingRoutineId ?? null,
+          templateId: resolvedTemplateId,
+          stretchingRoutineId: resolvedStretchingRoutineId,
           sessionType: payload.sessionType,
           workoutNameSnapshot: payload.workoutNameSnapshot,
           status: payload.status,
@@ -380,10 +414,15 @@ export class SessionService {
       });
 
       for (const [idx, ex] of payload.exercises.entries()) {
+        const resolvedExerciseId =
+          ex.exerciseId && (!validExerciseIds || validExerciseIds.has(ex.exerciseId))
+            ? ex.exerciseId
+            : null;
+
         const upsertedEx = await tx.sessionExercise.upsert({
           where: { clientExerciseId: ex.clientExerciseId },
           update: {
-            exerciseId: ex.exerciseId ?? null,
+            exerciseId: resolvedExerciseId,
             replacedExerciseId: ex.replacedExerciseId ?? null,
             replacedExerciseName: ex.replacedExerciseName ?? null,
             exerciseNameSnapshot: ex.exerciseNameSnapshot,
@@ -405,7 +444,7 @@ export class SessionService {
           create: {
             clientExerciseId: ex.clientExerciseId,
             sessionId: session.id,
-            exerciseId: ex.exerciseId ?? null,
+            exerciseId: resolvedExerciseId,
             replacedExerciseId: ex.replacedExerciseId ?? null,
             replacedExerciseName: ex.replacedExerciseName ?? null,
             exerciseNameSnapshot: ex.exerciseNameSnapshot,
@@ -563,7 +602,7 @@ export class SessionService {
       },
     });
     if (!session) {
-      throw new NotFoundException('Workout session not found');
+      return { success: true };
     }
     if (session.userId !== userId) {
       throw new ForbiddenException('Access denied to this workout session');

@@ -1,6 +1,5 @@
-const CACHE_NAME = 'luki-fitti-shell-v1';
+const CACHE_NAME = 'luki-fitti-shell-v3';
 const STATIC_ASSETS = [
-  '/',
   '/manifest.webmanifest',
   '/icon-192.svg',
   '/icon-512.svg',
@@ -61,23 +60,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets (_next/static, icons, fonts): stale-while-revalidate
+  // Static assets (_next/static, icons, fonts): network-first with cache fallback for offline support
   if (
     url.pathname.startsWith('/_next/static/') ||
     url.pathname.endsWith('.svg') ||
     url.pathname.endsWith('.woff2')
   ) {
     event.respondWith(
-      caches.match(request).then((cached) => {
-        const networkFetch = fetch(request)
-          .then((response) => {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-            return response;
-          })
-          .catch(() => cached);
-        return cached || networkFetch;
-      }),
+      fetch(request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          return response;
+        })
+        .catch(() => caches.match(request)),
     );
   }
 });
