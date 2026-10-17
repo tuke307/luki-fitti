@@ -357,6 +357,19 @@ export class SessionService {
     }
 
     const synced = await this.prisma.$transaction(async (tx) => {
+      if (
+        (payload.status === SessionStatus.IN_PROGRESS || payload.status === SessionStatus.PAUSED) &&
+        tx.workoutSession.deleteMany
+      ) {
+        await tx.workoutSession.deleteMany({
+          where: {
+            userId,
+            status: { in: [SessionStatus.IN_PROGRESS, SessionStatus.PAUSED] },
+            clientSessionId: { not: payload.clientSessionId },
+          },
+        });
+      }
+
       const session = await tx.workoutSession.upsert({
         where: { clientSessionId: payload.clientSessionId },
         update: {
@@ -608,6 +621,17 @@ export class SessionService {
       throw new ForbiddenException('Access denied to this workout session');
     }
     await this.prisma.workoutSession.delete({ where: { id: session.id } });
+    if (
+      (session.status === SessionStatus.IN_PROGRESS || session.status === SessionStatus.PAUSED) &&
+      this.prisma.workoutSession.deleteMany
+    ) {
+      await this.prisma.workoutSession.deleteMany({
+        where: {
+          userId,
+          status: { in: [SessionStatus.IN_PROGRESS, SessionStatus.PAUSED] },
+        },
+      });
+    }
     return { success: true };
   }
 
