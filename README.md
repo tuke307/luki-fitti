@@ -69,7 +69,18 @@ yarn run db:seed
 
 ---
 
-## 5. Architectural Trade-Offs (PWA vs. Native)
+## 5. iPhone & Safari Home Screen Installation Guide & Architectural Trade-Offs (PWA vs. Native)
+
+See [`docs/pwa-setup-and-architecture.md`](./docs/pwa-setup-and-architecture.md) for the complete guide.
+
+### iPhone & Safari Home Screen Installation Guide
+
+1. **Open in Safari on iPhone:** Navigate to your LukiFitti URL in iOS Safari.
+2. **Add to Home Screen:** Tap the Safari **Share** icon in the bottom bar and select **Add to Home Screen**.
+3. **Standalone Full-Screen Launch:** Launch LukiFitti from your Home Screen — it runs in standalone mode without browser chrome, respecting the iPhone Dynamic Island and Home Indicator safe areas.
+4. **Offline Data Warning:** Active workouts are stored in IndexedDB. Avoid clearing Safari Website Data while offline with unsynchronized sessions.
+
+### PWA vs Native Architecture Trade-offs
 
 - **Option A — Pure PWA (Implemented Primary Architecture):**
   - *Advantages:* Zero Apple Developer Program cost ($99/yr saved), no 7-day Personal Team Xcode signing expiry, single unified TypeScript codebase, instant updates, and full offline gym execution via IndexedDB.
