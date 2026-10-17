@@ -159,7 +159,6 @@ export class AuthController {
   }
 
   @Post('refresh-token')
-  @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Rotate refresh token and issue new access token' })
   async refreshToken(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const refreshToken = req.cookies?.refreshToken;

@@ -69,7 +69,9 @@ export function PwaShell() {
   }> = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'workouts', label: 'Workouts', icon: FolderKanban },
-    { id: 'session', label: activeSession ? 'Live Gym' : 'Start', icon: PlayCircle },
+    ...(activeSession
+      ? [{ id: 'session' as const, label: 'Live Gym', icon: PlayCircle }]
+      : []),
     { id: 'diary', label: 'Diary', icon: CalendarDays },
     { id: 'exercises', label: 'Exercises', icon: Dumbbell },
     { id: 'profile', label: 'Profile', icon: UserCircle },
@@ -245,7 +247,10 @@ export function PwaShell() {
           <WorkoutsView onStartSessionNavigation={() => setActiveTab('session')} />
         )}
         {activeTab === 'session' && (
-          <ActiveSessionView onNavigateToDiary={() => setActiveTab('diary')} />
+          <ActiveSessionView
+            onNavigateToDiary={() => setActiveTab('diary')}
+            onNavigateToWorkouts={() => setActiveTab('workouts')}
+          />
         )}
         {activeTab === 'diary' && <DiaryAnalyticsView />}
         {activeTab === 'exercises' && (
@@ -259,7 +264,11 @@ export function PwaShell() {
         aria-label="Mobile Bottom Navigation"
         className="bg-card/95 pb-safe fixed right-0 bottom-0 left-0 z-40 border-t backdrop-blur-lg md:hidden"
       >
-        <div className="grid grid-cols-6 gap-1 px-2 py-1.5">
+        <div
+          className={`grid gap-1 px-2 py-1.5 ${
+            activeSession ? 'grid-cols-6' : 'grid-cols-5'
+          }`}
+        >
           {navItems.map((item) => {
             const Icon = item.icon;
             const isCurrent = activeTab === item.id;

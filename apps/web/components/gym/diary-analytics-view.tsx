@@ -41,6 +41,14 @@ import type { WorkoutSessionDto } from '@luki-fitti/common/schemas';
 
 const LBS_TO_KG = 0.45359237;
 
+function toLocalDateIso(dateInput: Date | string | number): string {
+  const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function DiaryAnalyticsView() {
   const {
     historySessions,
@@ -171,7 +179,7 @@ export function DiaryAnalyticsView() {
                   maxWeightKg: Math.round(wKg * 10) / 10,
                   reps,
                   est1RM: Math.round(est1RM * 10) / 10,
-                  date: s.startedAt.slice(0, 10),
+                  date: toLocalDateIso(s.startedAt),
                 });
               }
             }
@@ -181,7 +189,7 @@ export function DiaryAnalyticsView() {
 
         if (exMaxWeight > 0) {
           progression.push({
-            date: s.startedAt.slice(0, 10),
+            date: toLocalDateIso(s.startedAt),
             workoutName: s.workoutNameSnapshot,
             exerciseName: ex.exerciseNameSnapshot,
             maxWeightKg: Math.round(exMaxWeight * 10) / 10,
@@ -223,6 +231,8 @@ export function DiaryAnalyticsView() {
 
   // Dynamic activity breakdown matching the selected period ('week' | 'month' | 'year' | 'all')
   const activityData = useMemo(() => {
+    const nowDate = new Date(nowMs);
+
     if (period === 'week') {
       const days: Array<{
         iso: string;
@@ -231,13 +241,13 @@ export function DiaryAnalyticsView() {
         sessions: WorkoutSessionDto[];
       }> = [];
       for (let i = 6; i >= 0; i--) {
-        const d = new Date(nowMs - i * 86400000);
-        const iso = d.toISOString().slice(0, 10);
+        const d = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - i);
+        const iso = toLocalDateIso(d);
         days.push({
           iso,
           weekdayLabel: d.toLocaleDateString('en-US', { weekday: 'short' }),
           dayNum: d.getDate(),
-          sessions: filteredSessions.filter((s) => s.startedAt.slice(0, 10) === iso),
+          sessions: filteredSessions.filter((s) => toLocalDateIso(s.startedAt) === iso),
         });
       }
       return {
@@ -255,16 +265,20 @@ export function DiaryAnalyticsView() {
         dayNum: number;
         sessions: WorkoutSessionDto[];
       }> = [];
-      const firstDay = new Date(nowMs - 29 * 86400000);
+      const firstDay = new Date(
+        nowDate.getFullYear(),
+        nowDate.getMonth(),
+        nowDate.getDate() - 29,
+      );
       const leadingEmptyDays = (firstDay.getDay() + 6) % 7;
       for (let i = 29; i >= 0; i--) {
-        const d = new Date(nowMs - i * 86400000);
-        const iso = d.toISOString().slice(0, 10);
+        const d = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - i);
+        const iso = toLocalDateIso(d);
         days.push({
           iso,
           weekdayLabel: d.toLocaleDateString('en-US', { weekday: 'short' }),
           dayNum: d.getDate(),
-          sessions: filteredSessions.filter((s) => s.startedAt.slice(0, 10) === iso),
+          sessions: filteredSessions.filter((s) => toLocalDateIso(s.startedAt) === iso),
         });
       }
       return {
@@ -276,7 +290,6 @@ export function DiaryAnalyticsView() {
     }
 
     if (period === 'year') {
-      const nowDate = new Date(nowMs);
       const months: Array<{
         key: string;
         label: string;
@@ -285,14 +298,15 @@ export function DiaryAnalyticsView() {
         totalVolumeKg: number;
       }> = [];
       for (let i = 11; i >= 0; i--) {
-        const d = new Date(Date.UTC(nowDate.getUTCFullYear(), nowDate.getUTCMonth() - i, 1));
-        const ym = d.toISOString().slice(0, 7);
+        const d = new Date(nowDate.getFullYear(), nowDate.getMonth() - i, 1);
+        const ym = toLocalDateIso(d).slice(0, 7);
         const label = d.toLocaleDateString('en-US', {
           month: 'short',
           year: '2-digit',
-          timeZone: 'UTC',
         });
-        const monthSessions = filteredSessions.filter((s) => s.startedAt.slice(0, 7) === ym);
+        const monthSessions = filteredSessions.filter(
+          (s) => toLocalDateIso(s.startedAt).slice(0, 7) === ym,
+        );
         months.push({
           key: ym,
           label,
@@ -316,7 +330,7 @@ export function DiaryAnalyticsView() {
       }
     >();
     for (const s of filteredSessions) {
-      const yr = s.startedAt.slice(0, 4);
+      const yr = toLocalDateIso(s.startedAt).slice(0, 4);
       const cur = byYear.get(yr) ?? {
         key: yr,
         label: yr,
