@@ -55,6 +55,7 @@ export function DiaryAnalyticsView() {
   const [filterMuscle, setFilterMuscle] = useState<MuscleGroup | 'ALL'>('ALL');
   const [selectedExerciseId, setSelectedExerciseId] = useState<string>('ALL');
   const [inspectingSession, setInspectingSession] = useState<WorkoutSessionDto | null>(null);
+  const [visibleCount, setVisibleCount] = useState<number>(20);
 
   const filteredSessions = useMemo(() => {
     const cutoffMs =
@@ -220,24 +221,108 @@ export function DiaryAnalyticsView() {
     };
   }, [filteredSessions, filterMuscle, selectedExerciseId]);
 
-  // 28-day activity calendar heatmap cells
-  const last28Days = useMemo(() => {
-    const days: Array<{
-      iso: string;
-      dayNum: number;
-      sessions: WorkoutSessionDto[];
-    }> = [];
-    for (let i = 27; i >= 0; i--) {
-      const d = new Date(nowMs - i * 86400000);
-      const iso = d.toISOString().slice(0, 10);
-      days.push({
-        iso,
-        dayNum: d.getDate(),
-        sessions: historySessions.filter((s) => s.startedAt.slice(0, 10) === iso),
-      });
+  // Dynamic activity breakdown matching the selected period ('week' | 'month' | 'year' | 'all')
+  const activityData = useMemo(() => {
+    if (period === 'week') {
+      const days: Array<{
+        iso: string;
+        weekdayLabel: string;
+        dayNum: number;
+        sessions: WorkoutSessionDto[];
+      }> = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(nowMs - i * 86400000);
+        const iso = d.toISOString().slice(0, 10);
+        days.push({
+          iso,
+          weekdayLabel: d.toLocaleDateString('en-US', { weekday: 'short' }),
+          dayNum: d.getDate(),
+          sessions: filteredSessions.filter((s) => s.startedAt.slice(0, 10) === iso),
+        });
+      }
+      return { mode: 'days' as const, title: 'Last 7 Days Activity', items: days };
     }
-    return days;
-  }, [historySessions, nowMs]);
+
+    if (period === 'month') {
+      const days: Array<{
+        iso: string;
+        weekdayLabel: string;
+        dayNum: number;
+        sessions: WorkoutSessionDto[];
+      }> = [];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(nowMs - i * 86400000);
+        const iso = d.toISOString().slice(0, 10);
+        days.push({
+          iso,
+          weekdayLabel: d.toLocaleDateString('en-US', { weekday: 'short' }),
+          dayNum: d.getDate(),
+          sessions: filteredSessions.filter((s) => s.startedAt.slice(0, 10) === iso),
+        });
+      }
+      return { mode: 'days' as const, title: 'Last 30 Days Activity Calendar', items: days };
+    }
+
+    if (period === 'year') {
+      const nowDate = new Date(nowMs);
+      const months: Array<{
+        key: string;
+        label: string;
+        sessions: WorkoutSessionDto[];
+        totalSets: number;
+        totalVolumeKg: number;
+      }> = [];
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(Date.UTC(nowDate.getUTCFullYear(), nowDate.getUTCMonth() - i, 1));
+        const ym = d.toISOString().slice(0, 7);
+        const label = d.toLocaleDateString('en-US', {
+          month: 'short',
+          year: '2-digit',
+          timeZone: 'UTC',
+        });
+        const monthSessions = filteredSessions.filter((s) => s.startedAt.slice(0, 7) === ym);
+        months.push({
+          key: ym,
+          label,
+          sessions: monthSessions,
+          totalSets: monthSessions.reduce((acc, s) => acc + s.totalSetsCompleted, 0),
+          totalVolumeKg: Math.round(monthSessions.reduce((acc, s) => acc + s.totalVolumeKg, 0)),
+        });
+      }
+      return { mode: 'buckets' as const, title: 'Last 12 Months Activity', items: months };
+    }
+
+    // period === 'all' -> Group by Year
+    const byYear = new Map<
+      string,
+      {
+        key: string;
+        label: string;
+        sessions: WorkoutSessionDto[];
+        totalSets: number;
+        totalVolumeKg: number;
+      }
+    >();
+    for (const s of filteredSessions) {
+      const yr = s.startedAt.slice(0, 4);
+      const cur = byYear.get(yr) ?? {
+        key: yr,
+        label: yr,
+        sessions: [],
+        totalSets: 0,
+        totalVolumeKg: 0,
+      };
+      cur.sessions.push(s);
+      cur.totalSets += s.totalSetsCompleted;
+      cur.totalVolumeKg += s.totalVolumeKg;
+      byYear.set(yr, cur);
+    }
+    const years = Array.from(byYear.values())
+      .map((y) => ({ ...y, totalVolumeKg: Math.round(y.totalVolumeKg) }))
+      .sort((a, b) => a.key.localeCompare(b.key));
+
+    return { mode: 'buckets' as const, title: 'All-Time Yearly Training Activity', items: years };
+  }, [filteredSessions, period, nowMs]);
 
   return (
     <div className="space-y-6 pb-12">
@@ -254,7 +339,10 @@ export function DiaryAnalyticsView() {
 
         <Tabs
           value={period}
-          onValueChange={(val) => setPeriod(val as 'week' | 'month' | 'year' | 'all')}
+          onValueChange={(val) => {
+            setPeriod(val as 'week' | 'month' | 'year' | 'all');
+            setVisibleCount(20);
+          }}
         >
           <TabsList>
             {(['week', 'month', 'year', 'all'] as const).map((p) => (
@@ -342,11 +430,11 @@ export function DiaryAnalyticsView() {
         </Card>
       </div>
 
-      {/* 28-Day Training Calendar Strip */}
+      {/* Period-Aware Training Activity Strip / Breakdown */}
       <Card className="space-y-3 rounded-3xl p-5">
         <div className="flex items-center justify-between">
           <h2 className="font-display flex items-center gap-2 text-base font-bold">
-            <CalendarIcon className="text-primary h-4 w-4" /> Last 28 Days Activity Calendar
+            <CalendarIcon className="text-primary h-4 w-4" /> {activityData.title}
           </h2>
           <div className="flex items-center gap-3 text-[11px]">
             <span className="flex items-center gap-1">
@@ -358,33 +446,93 @@ export function DiaryAnalyticsView() {
           </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-2 sm:grid-cols-14">
-          {last28Days.map((day) => {
-            const hasStrength = day.sessions.some((s) => s.sessionType !== SessionType.STRETCHING);
-            const hasStretch = day.sessions.some((s) => s.sessionType === SessionType.STRETCHING);
-            return (
-              <div
-                key={day.iso}
-                onClick={() => {
-                  if (day.sessions[0]) setInspectingSession(day.sessions[0]);
-                }}
-                title={`${day.iso}: ${day.sessions.length} session(s)`}
-                className={`flex h-12 flex-col items-center justify-center rounded-xl border text-xs transition ${
-                  hasStrength
-                    ? 'border-primary/60 bg-primary/20 text-primary cursor-pointer font-bold'
-                    : hasStretch
-                      ? 'border-accent/60 bg-accent/20 text-accent cursor-pointer font-bold'
+        {activityData.mode === 'days' ? (
+          <div
+            className={
+              period === 'week'
+                ? 'grid grid-cols-7 gap-2'
+                : 'grid grid-cols-6 gap-2 sm:grid-cols-10 md:grid-cols-15'
+            }
+          >
+            {activityData.items.map((day) => {
+              const hasStrength = day.sessions.some(
+                (s) => s.sessionType !== SessionType.STRETCHING,
+              );
+              const hasStretch = day.sessions.some(
+                (s) => s.sessionType === SessionType.STRETCHING,
+              );
+              return (
+                <div
+                  key={day.iso}
+                  onClick={() => {
+                    if (day.sessions[0]) setInspectingSession(day.sessions[0]);
+                  }}
+                  title={`${day.iso}: ${day.sessions.length} session(s)`}
+                  className={`flex flex-col items-center justify-center rounded-xl border px-1.5 py-2 text-xs transition ${
+                    period === 'week' ? 'min-h-16' : 'h-12'
+                  } ${
+                    hasStrength
+                      ? 'border-primary/60 bg-primary/20 text-primary cursor-pointer font-bold'
+                      : hasStretch
+                        ? 'border-accent/60 bg-accent/20 text-accent cursor-pointer font-bold'
+                        : 'bg-secondary/30 text-muted-foreground'
+                  }`}
+                >
+                  {period === 'week' && (
+                    <span className="text-[10px] font-medium opacity-75">{day.weekdayLabel}</span>
+                  )}
+                  <span className="font-mono-tabular text-[11px]">{day.dayNum}</span>
+                  {day.sessions.length > 0 && (
+                    <span className="text-[9px]">{day.sessions.length}x</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : activityData.items.length === 0 ? (
+          <p className="text-muted-foreground py-4 text-center text-xs">
+            No sessions found for this filter selection.
+          </p>
+        ) : (
+          <div
+            className={
+              period === 'year'
+                ? 'grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-6'
+                : 'grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5'
+            }
+          >
+            {activityData.items.map((bucket) => {
+              const hasSessions = bucket.sessions.length > 0;
+              return (
+                <div
+                  key={bucket.key}
+                  onClick={() => {
+                    if (bucket.sessions[0]) setInspectingSession(bucket.sessions[0]);
+                  }}
+                  className={`flex flex-col justify-between rounded-2xl border p-3 text-xs transition ${
+                    hasSessions
+                      ? 'border-primary/50 bg-primary/15 cursor-pointer'
                       : 'bg-secondary/30 text-muted-foreground'
-                }`}
-              >
-                <span className="font-mono-tabular text-[11px]">{day.dayNum}</span>
-                {day.sessions.length > 0 && (
-                  <span className="text-[9px]">{day.sessions.length}x</span>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-display font-bold">{bucket.label}</span>
+                    <span
+                      className={`font-mono-tabular text-[11px] font-extrabold ${
+                        hasSessions ? 'text-primary' : 'text-muted-foreground'
+                      }`}
+                    >
+                      {bucket.sessions.length} sess.
+                    </span>
+                  </div>
+                  <div className="text-muted-foreground font-mono-tabular mt-2 text-[10px]">
+                    {bucket.totalSets} sets • {(bucket.totalVolumeKg / 1000).toFixed(1)}t vol
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </Card>
 
       {/* Muscle Distribution & Personal Records */}
@@ -468,7 +616,7 @@ export function DiaryAnalyticsView() {
           </Card>
         ) : (
           <div className="space-y-3">
-            {filteredSessions.map((session) => (
+            {filteredSessions.slice(0, visibleCount).map((session) => (
               <Card
                 key={session.clientSessionId}
                 className="hover:border-primary/40 flex-col justify-between gap-4 p-4 transition sm:flex-row sm:items-center"
@@ -549,6 +697,18 @@ export function DiaryAnalyticsView() {
                 </div>
               </Card>
             ))}
+
+            {filteredSessions.length > visibleCount && (
+              <div className="flex justify-center pt-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setVisibleCount((prev) => prev + 30)}
+                >
+                  Show More Sessions ({filteredSessions.length - visibleCount} remaining)
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>
