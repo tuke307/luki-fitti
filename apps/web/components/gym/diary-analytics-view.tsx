@@ -240,7 +240,12 @@ export function DiaryAnalyticsView() {
           sessions: filteredSessions.filter((s) => s.startedAt.slice(0, 10) === iso),
         });
       }
-      return { mode: 'days' as const, title: 'Last 7 Days Activity', items: days };
+      return {
+        mode: 'days' as const,
+        title: 'Last 7 Days Activity',
+        leadingEmptyDays: 0,
+        items: days,
+      };
     }
 
     if (period === 'month') {
@@ -250,6 +255,8 @@ export function DiaryAnalyticsView() {
         dayNum: number;
         sessions: WorkoutSessionDto[];
       }> = [];
+      const firstDay = new Date(nowMs - 29 * 86400000);
+      const leadingEmptyDays = (firstDay.getDay() + 6) % 7;
       for (let i = 29; i >= 0; i--) {
         const d = new Date(nowMs - i * 86400000);
         const iso = d.toISOString().slice(0, 10);
@@ -260,7 +267,12 @@ export function DiaryAnalyticsView() {
           sessions: filteredSessions.filter((s) => s.startedAt.slice(0, 10) === iso),
         });
       }
-      return { mode: 'days' as const, title: 'Last 30 Days Activity Calendar', items: days };
+      return {
+        mode: 'days' as const,
+        title: 'Last 30 Days Activity Calendar',
+        leadingEmptyDays,
+        items: days,
+      };
     }
 
     if (period === 'year') {
@@ -447,47 +459,62 @@ export function DiaryAnalyticsView() {
         </div>
 
         {activityData.mode === 'days' ? (
-          <div
-            className={
-              period === 'week'
-                ? 'grid grid-cols-7 gap-2'
-                : 'grid grid-cols-6 gap-2 sm:grid-cols-10 md:grid-cols-15'
-            }
-          >
-            {activityData.items.map((day) => {
-              const hasStrength = day.sessions.some(
-                (s) => s.sessionType !== SessionType.STRETCHING,
-              );
-              const hasStretch = day.sessions.some(
-                (s) => s.sessionType === SessionType.STRETCHING,
-              );
-              return (
+          <div className="space-y-2">
+            {period === 'month' && (
+              <div className="grid grid-cols-7 gap-2 text-center">
+                {(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const).map((weekday) => (
+                  <span
+                    key={weekday}
+                    className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase"
+                  >
+                    {weekday}
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="grid grid-cols-7 gap-2">
+              {Array.from({ length: activityData.leadingEmptyDays }).map((_, idx) => (
                 <div
-                  key={day.iso}
-                  onClick={() => {
-                    if (day.sessions[0]) setInspectingSession(day.sessions[0]);
-                  }}
-                  title={`${day.iso}: ${day.sessions.length} session(s)`}
-                  className={`flex flex-col items-center justify-center rounded-xl border px-1.5 py-2 text-xs transition ${
-                    period === 'week' ? 'min-h-16' : 'h-12'
-                  } ${
-                    hasStrength
-                      ? 'border-primary/60 bg-primary/20 text-primary cursor-pointer font-bold'
-                      : hasStretch
-                        ? 'border-accent/60 bg-accent/20 text-accent cursor-pointer font-bold'
-                        : 'bg-secondary/30 text-muted-foreground'
-                  }`}
-                >
-                  {period === 'week' && (
-                    <span className="text-[10px] font-medium opacity-75">{day.weekdayLabel}</span>
-                  )}
-                  <span className="font-mono-tabular text-[11px]">{day.dayNum}</span>
-                  {day.sessions.length > 0 && (
-                    <span className="text-[9px]">{day.sessions.length}x</span>
-                  )}
-                </div>
-              );
-            })}
+                  key={`empty-${idx}`}
+                  aria-hidden="true"
+                  className="h-12 rounded-xl border border-transparent"
+                />
+              ))}
+              {activityData.items.map((day) => {
+                const hasStrength = day.sessions.some(
+                  (s) => s.sessionType !== SessionType.STRETCHING,
+                );
+                const hasStretch = day.sessions.some(
+                  (s) => s.sessionType === SessionType.STRETCHING,
+                );
+                return (
+                  <div
+                    key={day.iso}
+                    onClick={() => {
+                      if (day.sessions[0]) setInspectingSession(day.sessions[0]);
+                    }}
+                    title={`${day.iso} (${day.weekdayLabel}): ${day.sessions.length} session(s)`}
+                    className={`flex flex-col items-center justify-center rounded-xl border px-1.5 py-2 text-xs transition ${
+                      period === 'week' ? 'min-h-16' : 'h-12'
+                    } ${
+                      hasStrength
+                        ? 'border-primary/60 bg-primary/20 text-primary cursor-pointer font-bold'
+                        : hasStretch
+                          ? 'border-accent/60 bg-accent/20 text-accent cursor-pointer font-bold'
+                          : 'bg-secondary/30 text-muted-foreground'
+                    }`}
+                  >
+                    {period === 'week' && (
+                      <span className="text-[10px] font-medium opacity-75">{day.weekdayLabel}</span>
+                    )}
+                    <span className="font-mono-tabular text-[11px]">{day.dayNum}</span>
+                    {day.sessions.length > 0 && (
+                      <span className="text-[9px]">{day.sessions.length}x</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         ) : activityData.items.length === 0 ? (
           <p className="text-muted-foreground py-4 text-center text-xs">
