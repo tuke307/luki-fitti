@@ -463,7 +463,7 @@ export function DiaryAnalyticsView() {
             <Dumbbell className="text-muted-foreground mx-auto mb-2 h-8 w-8 opacity-50" />
             <p className="font-display text-base font-bold">No training sessions recorded yet</p>
             <p className="text-muted-foreground mt-1 text-xs">
-              Start a workout session or import your Gymlife history from the Profile tab.
+              Start a workout session to begin tracking your training history.
             </p>
           </Card>
         ) : (

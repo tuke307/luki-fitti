@@ -238,7 +238,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
           {historySessions.length === 0 ? (
             <div className="bg-secondary/30 text-muted-foreground rounded-2xl p-6 text-center text-xs">
               <Dumbbell className="mx-auto mb-1.5 h-6 w-6 opacity-50" />
-              Complete your first workout or import Gymlife history in Profile.
+              Complete your first workout session to see your recent logs here.
             </div>
           ) : (
             <div className="space-y-2">
