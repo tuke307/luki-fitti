@@ -87,6 +87,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               // Fall through
             }
           }
+        } else if (err instanceof ApiClientError && err.isAuthError) {
+          localStorage.removeItem('luki_cached_user_profile');
+          setUser(DEFAULT_LOCAL_USER);
+          setAuthMode('OFFLINE_LOCAL');
+          setLoading(false);
+          return;
         }
       }
 

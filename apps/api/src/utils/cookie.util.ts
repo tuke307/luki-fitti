@@ -15,6 +15,7 @@ export const accessTokenCookieOptions: CookieOptions = {
   sameSite: NODE_ENV === 'production' ? 'lax' : 'strict', // same-origin in production
   maxAge: ACCESS_TOKEN_EXPIRY_MS,
   domain: cookieDomain,
+  path: '/',
 };
 
 // Common cookie options for refresh tokens
@@ -24,6 +25,7 @@ export const refreshTokenCookieOptions: CookieOptions = {
   sameSite: NODE_ENV === 'production' ? 'lax' : 'strict',
   maxAge: REFRESH_TOKEN_EXPIRY_MS,
   domain: cookieDomain,
+  path: '/',
 };
 
 // CSRF token cookie options (not httpOnly as it's accessible by JavaScript)
@@ -31,8 +33,9 @@ export const csrfCookieOptions: CookieOptions = {
   httpOnly: false, // CSRF token is accessible via JavaScript
   secure: NODE_ENV === 'production',
   sameSite: NODE_ENV === 'production' ? 'lax' : 'strict',
-  maxAge: ACCESS_TOKEN_EXPIRY_MS, // Aligned with access token expiry
+  maxAge: REFRESH_TOKEN_EXPIRY_MS, // Aligned with refresh token expiry so token refresh works after access token expires
   domain: cookieDomain,
+  path: '/',
 };
 
 // Utility function to set or clear cookies

@@ -4,6 +4,28 @@ import type { ApiResponse } from '@luki-fitti/common/api/responses/api.response'
 const isServer = typeof window === 'undefined';
 const API_URL = '/api';
 
+let refreshInFlight: Promise<boolean> | null = null;
+
+async function tryRefreshSession(): Promise<boolean> {
+  if (refreshInFlight) {
+    return refreshInFlight;
+  }
+  refreshInFlight = (async () => {
+    try {
+      const refreshed = await fetchClient('/auth/refresh-token', {
+        method: 'POST',
+        retry: false,
+      });
+      return Boolean(refreshed.success);
+    } catch {
+      return false;
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+  return refreshInFlight;
+}
+
 export class ApiClientError extends Error {
   status: number;
   isAuthError: boolean;
@@ -56,19 +78,16 @@ export async function fetchClient<T = null>(
       );
     }
 
-    if (response.status === 401 && retry && endpoint !== '/auth/login') {
-      if (csrfToken) {
-        try {
-          const refreshed = await fetchClient('/auth/refresh-token', {
-            method: 'POST',
-            retry: false,
-          });
-          if (refreshed.success) {
-            return fetchClient<T>(endpoint, { ...options, retry: false });
-          }
-        } catch {
-          // Proceed to auth error below
-        }
+    if (
+      response.status === 401 &&
+      retry &&
+      endpoint !== '/auth/login' &&
+      endpoint !== '/auth/register' &&
+      endpoint !== '/auth/refresh-token'
+    ) {
+      const refreshedOk = await tryRefreshSession();
+      if (refreshedOk) {
+        return fetchClient<T>(endpoint, { ...options, retry: false });
       }
 
       throw new ApiClientError('Authentication expired', {

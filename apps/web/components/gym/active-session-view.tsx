@@ -15,7 +15,6 @@ import {
   RotateCcw,
   CheckCircle2,
   Dumbbell,
-  Sparkles,
   Trophy,
   AlertTriangle,
 } from 'lucide-react';
@@ -61,19 +60,17 @@ import type { WorkoutSessionDto } from '@luki-fitti/common/schemas';
 
 interface ActiveSessionViewProps {
   onNavigateToDiary: () => void;
+  onNavigateToWorkouts: () => void;
 }
 
-export function ActiveSessionView({ onNavigateToDiary }: ActiveSessionViewProps) {
+export function ActiveSessionView({
+  onNavigateToDiary,
+  onNavigateToWorkouts,
+}: ActiveSessionViewProps) {
   const {
     catalog,
-    folders,
-    unfiledTemplates,
-    stretchingRoutines,
     activeSession,
     historySessions,
-    startWorkoutFromTemplate,
-    startStretchingSession,
-    startQuickSession,
     updateSet,
     toggleCompleteSet,
     addSetToExercise,
@@ -106,6 +103,12 @@ export function ActiveSessionView({ onNavigateToDiary }: ActiveSessionViewProps)
     const id = window.setInterval(() => setNowMs(Date.now()), 500);
     return () => window.clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (!activeSession && !completedSummary) {
+      onNavigateToWorkouts();
+    }
+  }, [activeSession, completedSummary, onNavigateToWorkouts]);
 
   if (completedSummary) {
     return (
@@ -169,107 +172,8 @@ export function ActiveSessionView({ onNavigateToDiary }: ActiveSessionViewProps)
     );
   }
 
-  // If no active session is running, show a fast Session Launcher
   if (!activeSession) {
-    const allTemplates = [...folders.flatMap((f) => f.templates), ...unfiledTemplates];
-
-    return (
-      <div className="space-y-6 pb-10">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-              Start Training Session
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              Select a saved workout template, stretching flow, or launch a freestyle gym session.
-              100% offline-resilient.
-            </p>
-          </div>
-          <Button
-            type="button"
-            size="lg"
-            onClick={() => void startQuickSession('Freestyle Strength Session')}
-            className="shadow-sm"
-          >
-            <Play className="h-4 w-4 fill-current" />
-            Quick Freestyle Session
-          </Button>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          {allTemplates.map((tpl) => (
-            <Card
-              key={tpl.id}
-              className="hover:border-primary/50 justify-between transition"
-            >
-              <div>
-                <div className="flex items-center justify-between">
-                  <Badge variant="default" className="text-[11px]">
-                    {folders.find((f) => f.id === tpl.folderId)?.name ?? 'Workout Template'}
-                  </Badge>
-                  <span className="font-mono-tabular text-muted-foreground text-xs">
-                    {tpl.exercises.length} exercises • ~{tpl.estimatedDurationMinutes ?? 60}m
-                  </span>
-                </div>
-                <h3 className="font-display mt-2 text-lg font-bold">{tpl.name}</h3>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  {tpl.exercises
-                    .map(
-                      (e) =>
-                        e.exercise?.name ?? catalog.find((c) => c.id === e.exerciseId)?.name,
-                    )
-                    .filter(Boolean)
-                    .join(' • ')}
-                </p>
-              </div>
-              <Button
-                type="button"
-                size="lg"
-                onClick={() => void startWorkoutFromTemplate(tpl.id)}
-                className="mt-4 w-full"
-              >
-                <Play className="h-4 w-4 fill-current" />
-                Start {tpl.name}
-              </Button>
-            </Card>
-          ))}
-        </div>
-
-        {stretchingRoutines.length > 0 && (
-          <div className="space-y-3 pt-2">
-            <h2 className="font-display flex items-center gap-2 text-lg font-bold">
-              <Sparkles className="text-accent h-5 w-5" /> Standalone Stretching & Mobility Flows
-            </h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              {stretchingRoutines.map((routine) => (
-                <Card
-                  key={routine.id}
-                  className="border-accent/30 flex-row items-center justify-between p-4"
-                >
-                  <div>
-                    <span className="text-accent text-[11px] font-bold uppercase">
-                      {routine.targetArea}
-                    </span>
-                    <h3 className="font-display text-base font-bold">{routine.name}</h3>
-                    <p className="text-muted-foreground text-xs">
-                      {routine.exercises.length} stretches • ~
-                      {Math.round(routine.estimatedDurationSeconds / 60)} min
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="accent"
-                    onClick={() => void startStretchingSession(routine.id)}
-                  >
-                    <Play className="h-3.5 w-3.5 fill-current" /> Start
-                  </Button>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    );
+    return null;
   }
 
   // ───────────────────────────────────────────────────────────────────────────
