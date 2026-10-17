@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { User, LogOut, LogIn, UserPlus } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { Badge } from '@luki-fitti/ui/components/ui/badge';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import { Card } from '@luki-fitti/ui/components/ui/card';
@@ -22,6 +23,7 @@ export function ProfileImportView() {
     error: authError,
     loading: authLoading,
   } = useAuth();
+  const { theme, setTheme } = useTheme();
 
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
@@ -146,6 +148,30 @@ export function ProfileImportView() {
           <h2 className="font-display text-lg font-bold">Units & Gym Preferences</h2>
 
           <div className="space-y-3 text-xs">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold">Appearance / Theme</p>
+                <p className="text-muted-foreground text-[11px]">
+                  Choose Dark, Light, or follow iOS System setting
+                </p>
+              </div>
+              <Tabs
+                value={theme ?? 'dark'}
+                onValueChange={(val) => {
+                  setTheme(val);
+                  if (val === 'dark' || val === 'light' || val === 'system') {
+                    void updatePreferences({ theme: val });
+                  }
+                }}
+              >
+                <TabsList>
+                  <TabsTrigger value="dark">Dark</TabsTrigger>
+                  <TabsTrigger value="light">Light</TabsTrigger>
+                  <TabsTrigger value="system">System</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-semibold">Weight Unit</p>
