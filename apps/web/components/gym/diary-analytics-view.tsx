@@ -997,10 +997,10 @@ export function DiaryAnalyticsView() {
           if (!open) setInspectingSession(null);
         }}
       >
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="max-h-[90dvh] overflow-hidden p-4 sm:max-w-2xl sm:p-6">
           {inspectingSession && (
-            <>
-              <DialogHeader>
+            <div className="flex max-h-[calc(90dvh-2.5rem)] min-w-0 flex-col gap-3 overflow-hidden">
+              <DialogHeader className="shrink-0">
                 <span className="text-muted-foreground font-mono-tabular text-xs">
                   {formatDateTime(inspectingSession.startedAt)}
                 </span>
@@ -1012,7 +1012,7 @@ export function DiaryAnalyticsView() {
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="min-w-0 space-y-4">
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-0.5">
                 {inspectingSession.exercises.map((ex, exIdx) => (
                   <div
                     key={ex.clientExerciseId}
@@ -1065,7 +1065,7 @@ export function DiaryAnalyticsView() {
                                   };
                                 });
                               }}
-                              className="bg-secondary font-mono-tabular h-7 w-16 px-2 text-center text-xs"
+                              className="bg-secondary font-mono-tabular h-8 w-16 px-2 text-center text-xs sm:h-7"
                             />
                             <Label className="text-muted-foreground text-[10px]">
                               {t.common.reps}
@@ -1094,7 +1094,7 @@ export function DiaryAnalyticsView() {
                                   };
                                 });
                               }}
-                              className="bg-secondary font-mono-tabular h-7 w-14 px-2 text-center text-xs"
+                              className="bg-secondary font-mono-tabular h-8 w-14 px-2 text-center text-xs sm:h-7"
                             />
                           </div>
                         </div>
@@ -1104,7 +1104,7 @@ export function DiaryAnalyticsView() {
                 ))}
               </div>
 
-              <DialogFooter className="pt-2">
+              <DialogFooter className="shrink-0 border-t pt-3">
                 <Button
                   type="button"
                   variant="secondary"
@@ -1122,7 +1122,7 @@ export function DiaryAnalyticsView() {
                   <Check className="h-4 w-4" /> {t.diary.saveCorrectionsBtn}
                 </Button>
               </DialogFooter>
-            </>
+            </div>
           )}
         </DialogContent>
       </Dialog>

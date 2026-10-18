@@ -710,10 +710,10 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
           if (!open) setSelectedExercise(null);
         }}
       >
-        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
+        <DialogContent className="max-h-[90dvh] overflow-hidden p-4 sm:max-w-xl sm:p-6">
           {selectedExercise && (
-            <>
-              <DialogHeader>
+            <div className="flex max-h-[calc(90dvh-2.5rem)] min-w-0 flex-col gap-3 overflow-hidden">
+              <DialogHeader className="shrink-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="default" className="text-xs">
                     {muscleLabel(selectedExercise.primaryMuscleGroup)}
@@ -728,123 +728,128 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                 <DialogTitle className="font-display pt-1 text-xl font-bold">
                   {selectedExercise.name}
                 </DialogTitle>
-                <DialogDescription className="text-sm leading-relaxed">
+                <DialogDescription className="text-xs leading-relaxed sm:text-sm">
                   {selectedExercise.description}
                 </DialogDescription>
               </DialogHeader>
 
-              {/* Animated Visual Demonstration + Anatomical Muscle Map + Video Links */}
-              <ExerciseVisual exercise={selectedExercise} variant="detail" />
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-0.5">
+                {/* Animated Visual Demonstration + Anatomical Muscle Map + Video Links */}
+                <ExerciseVisual exercise={selectedExercise} variant="detail" />
 
-              {selectedExercise.instructions.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="font-display text-sm font-bold">
-                    {t.exercises.executionCuesTitle}
-                  </h3>
-                  <ol className="space-y-2 text-xs leading-relaxed">
-                    {selectedExercise.instructions.map((step, idx) => (
-                      <li key={idx} className="bg-secondary/40 flex gap-2.5 rounded-xl p-2.5">
-                        <span className="bg-primary text-primary-foreground flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold">
-                          {idx + 1}
-                        </span>
-                        <span>{step}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              )}
-
-              {selectedExercise.alternativeExerciseIds.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="font-display text-sm font-bold">
-                    {t.exercises.recommendedBackupsTitle}
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedExercise.alternativeExerciseIds.map((altId) => {
-                      const alt = catalog.find((c) => c.id === altId);
-                      if (!alt) return null;
-                      return (
-                        <Button
-                          key={alt.id}
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => setSelectedExercise(alt)}
-                        >
-                          <ArrowRightLeft className="text-primary h-3.5 w-3.5" />
-                          <span>{alt.name}</span>
-                        </Button>
-                      );
-                    })}
+                {selectedExercise.instructions.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="font-display text-sm font-bold">
+                      {t.exercises.executionCuesTitle}
+                    </h3>
+                    <ol className="space-y-2 text-xs leading-relaxed">
+                      {selectedExercise.instructions.map((step, idx) => (
+                        <li key={idx} className="bg-secondary/40 flex gap-2.5 rounded-xl p-2.5">
+                          <span className="bg-primary text-primary-foreground flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold">
+                            {idx + 1}
+                          </span>
+                          <span>{step}</span>
+                        </li>
+                      ))}
+                    </ol>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Global Exercise History (Single Source of Truth across all workouts) */}
-              {(() => {
-                const insight = computeExerciseProgression({
-                  exerciseId: selectedExercise.id,
-                  exerciseName: selectedExercise.name,
-                  historySessions,
-                  catalogExercise: selectedExercise,
-                  weightUnit,
-                });
-                if (insight.history.length === 0) return null;
-                return (
-                  <div className="space-y-2 border-t pt-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-display text-sm font-bold">
-                        {format(t.exercises.globalHistoryTitle, { count: insight.sessionsCount })}
-                      </h3>
-                      {insight.ewma1RM > 0 && (
-                        <Badge variant="default" className="font-mono-tabular text-[11px]">
-                          e1RM {insight.ewma1RM} {weightUnit.toLowerCase()}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="space-y-1.5">
-                      {insight.history
-                        .slice(-4)
-                        .reverse()
-                        .map((entry) => (
-                          <div
-                            key={entry.clientSessionId}
-                            className="bg-secondary/40 flex flex-wrap items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs"
+                {selectedExercise.alternativeExerciseIds.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="font-display text-sm font-bold">
+                      {t.exercises.recommendedBackupsTitle}
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedExercise.alternativeExerciseIds.map((altId) => {
+                        const alt = catalog.find((c) => c.id === altId);
+                        if (!alt) return null;
+                        return (
+                          <Button
+                            key={alt.id}
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setSelectedExercise(alt)}
                           >
-                            <div>
-                              <p className="font-semibold">{entry.workoutName}</p>
-                              <p className="text-muted-foreground font-mono-tabular text-[10px]">
-                                {formatDateTime(entry.startedAt)}
-                              </p>
-                            </div>
-                            <div className="flex flex-wrap gap-1">
-                              {entry.workingSets.map((ws, i) => (
-                                <Badge
-                                  key={i}
-                                  variant="secondary"
-                                  className="bg-background font-mono-tabular px-1.5 py-0.5 text-[10px] font-bold"
-                                >
-                                  {ws.weightNormalized}
-                                  {weightUnit.toLowerCase()} × {ws.reps}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
+                            <ArrowRightLeft className="text-primary h-3.5 w-3.5" />
+                            <span>{alt.name}</span>
+                          </Button>
+                        );
+                      })}
                     </div>
                   </div>
-                );
-              })()}
-            </>
+                )}
+
+                {/* Global Exercise History (Single Source of Truth across all workouts) */}
+                {(() => {
+                  const insight = computeExerciseProgression({
+                    exerciseId: selectedExercise.id,
+                    exerciseName: selectedExercise.name,
+                    historySessions,
+                    catalogExercise: selectedExercise,
+                    weightUnit,
+                  });
+                  if (insight.history.length === 0) return null;
+                  return (
+                    <div className="space-y-2 border-t pt-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-display text-sm font-bold">
+                          {format(t.exercises.globalHistoryTitle, { count: insight.sessionsCount })}
+                        </h3>
+                        {insight.ewma1RM > 0 && (
+                          <Badge variant="default" className="font-mono-tabular text-[11px]">
+                            e1RM {insight.ewma1RM} {weightUnit.toLowerCase()}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="space-y-1.5">
+                        {insight.history
+                          .slice(-4)
+                          .reverse()
+                          .map((entry) => (
+                            <div
+                              key={entry.clientSessionId}
+                              className="bg-secondary/40 flex flex-wrap items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs"
+                            >
+                              <div>
+                                <p className="font-semibold">{entry.workoutName}</p>
+                                <p className="text-muted-foreground font-mono-tabular text-[10px]">
+                                  {formatDateTime(entry.startedAt)}
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {entry.workingSets.map((ws, i) => (
+                                  <Badge
+                                    key={i}
+                                    variant="secondary"
+                                    className="bg-background font-mono-tabular px-1.5 py-0.5 text-[10px] font-bold"
+                                  >
+                                    {ws.weightNormalized}
+                                    {weightUnit.toLowerCase()} × {ws.reps}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>
 
       {/* Create Custom Exercise Modal */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="sm:max-w-md">
-          <form onSubmit={handleCreateExercise} className="space-y-4">
-            <DialogHeader>
+        <DialogContent className="max-h-[90dvh] overflow-hidden p-4 sm:max-w-md sm:p-6">
+          <form
+            onSubmit={handleCreateExercise}
+            className="flex max-h-[calc(90dvh-2.5rem)] min-w-0 flex-col gap-3 overflow-hidden"
+          >
+            <DialogHeader className="shrink-0">
               <DialogTitle className="font-display text-lg font-bold">
                 {t.exercises.createCustomTitle}
               </DialogTitle>
@@ -853,161 +858,163 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="new-ex-name" className="text-xs font-semibold">
-                {t.exercises.exerciseNameLabel}
-              </Label>
-              <Input
-                id="new-ex-name"
-                required
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder={t.exercises.exerciseNamePlaceholder}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+            <div className="min-h-0 flex-1 space-y-3.5 overflow-y-auto pr-0.5">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">{t.exercises.primaryMuscleLabel}</Label>
-                <NativeSelect
-                  value={newPrimaryMuscle}
-                  onChange={(e) => setNewPrimaryMuscle(e.target.value as MuscleGroup)}
-                  className="w-full"
-                >
-                  {Object.values(MuscleGroup).map((mg) => (
-                    <option key={mg} value={mg}>
-                      {muscleLabel(mg)}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">{t.exercises.exerciseTypeLabel}</Label>
-                <NativeSelect
-                  value={newType}
-                  onChange={(e) => setNewType(e.target.value as ExerciseType)}
-                  className="w-full"
-                >
-                  {Object.values(ExerciseType).map((tp) => (
-                    <option key={tp} value={tp}>
-                      {exerciseTypeLabel(tp)}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">{t.exercises.equipmentLabel}</Label>
-              <NativeSelect
-                value={newEquipment}
-                onChange={(e) => setNewEquipment(e.target.value as EquipmentType)}
-                className="w-full"
-              >
-                {Object.values(EquipmentType).map((eq) => (
-                  <option key={eq} value={eq}>
-                    {equipmentLabel(eq)}
-                  </option>
-                ))}
-              </NativeSelect>
-            </div>
-
-            {(newType === ExerciseType.STRETCHING || newType === ExerciseType.MOBILITY) && (
-              <div className="space-y-1.5">
-                <Label htmlFor="new-ex-duration" className="text-xs font-semibold">
-                  {t.exercises.recommendedHoldLabel}
+                <Label htmlFor="new-ex-name" className="text-xs font-semibold">
+                  {t.exercises.exerciseNameLabel}
                 </Label>
-                <NumberInput
-                  id="new-ex-duration"
-                  min={10}
-                  max={600}
-                  fallbackValue={45}
-                  value={newDurationSec}
-                  onValueChange={(val) => setNewDurationSec(val)}
+                <Input
+                  id="new-ex-name"
+                  required
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder={t.exercises.exerciseNamePlaceholder}
                 />
               </div>
-            )}
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">{t.exercises.secondaryMusclesLabel}</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {Object.values(MuscleGroup).map((mg) => {
-                  const active = newSecondaryMuscles.includes(mg);
-                  return (
-                    <Button
-                      key={mg}
-                      type="button"
-                      variant={active ? 'default' : 'secondary'}
-                      size="xs"
-                      onClick={() =>
-                        setNewSecondaryMuscles((prev) =>
-                          active ? prev.filter((m) => m !== mg) : [...prev, mg],
-                        )
-                      }
-                    >
-                      {muscleLabel(mg)}
-                    </Button>
-                  );
-                })}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">{t.exercises.primaryMuscleLabel}</Label>
+                  <NativeSelect
+                    value={newPrimaryMuscle}
+                    onChange={(e) => setNewPrimaryMuscle(e.target.value as MuscleGroup)}
+                    className="w-full"
+                  >
+                    {Object.values(MuscleGroup).map((mg) => (
+                      <option key={mg} value={mg}>
+                        {muscleLabel(mg)}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">{t.exercises.exerciseTypeLabel}</Label>
+                  <NativeSelect
+                    value={newType}
+                    onChange={(e) => setNewType(e.target.value as ExerciseType)}
+                    className="w-full"
+                  >
+                    {Object.values(ExerciseType).map((tp) => (
+                      <option key={tp} value={tp}>
+                        {exerciseTypeLabel(tp)}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">{t.exercises.equipmentLabel}</Label>
+                <NativeSelect
+                  value={newEquipment}
+                  onChange={(e) => setNewEquipment(e.target.value as EquipmentType)}
+                  className="w-full"
+                >
+                  {Object.values(EquipmentType).map((eq) => (
+                    <option key={eq} value={eq}>
+                      {equipmentLabel(eq)}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </div>
+
+              {(newType === ExerciseType.STRETCHING || newType === ExerciseType.MOBILITY) && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="new-ex-duration" className="text-xs font-semibold">
+                    {t.exercises.recommendedHoldLabel}
+                  </Label>
+                  <NumberInput
+                    id="new-ex-duration"
+                    min={10}
+                    max={600}
+                    fallbackValue={45}
+                    value={newDurationSec}
+                    onValueChange={(val) => setNewDurationSec(val)}
+                  />
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">{t.exercises.secondaryMusclesLabel}</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {Object.values(MuscleGroup).map((mg) => {
+                    const active = newSecondaryMuscles.includes(mg);
+                    return (
+                      <Button
+                        key={mg}
+                        type="button"
+                        variant={active ? 'default' : 'secondary'}
+                        size="xs"
+                        onClick={() =>
+                          setNewSecondaryMuscles((prev) =>
+                            active ? prev.filter((m) => m !== mg) : [...prev, mg],
+                          )
+                        }
+                      >
+                        {muscleLabel(mg)}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="new-ex-desc" className="text-xs font-semibold">
+                  {t.exercises.descriptionLabel}
+                </Label>
+                <Textarea
+                  id="new-ex-desc"
+                  rows={2}
+                  value={newDesc}
+                  onChange={(e) => setNewDesc(e.target.value)}
+                  placeholder={t.exercises.descriptionPlaceholder}
+                  className="text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="new-ex-inst" className="text-xs font-semibold">
+                  {t.exercises.instructionsLabel}
+                </Label>
+                <Textarea
+                  id="new-ex-inst"
+                  rows={3}
+                  value={newInstructions}
+                  onChange={(e) => setNewInstructions(e.target.value)}
+                  placeholder="Step 1&#10;Step 2"
+                  className="text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="new-ex-tags" className="text-xs font-semibold">
+                  {t.exercises.searchTagsLabel}
+                </Label>
+                <Input
+                  id="new-ex-tags"
+                  value={newTags}
+                  onChange={(e) => setNewTags(e.target.value)}
+                  placeholder={t.exercises.searchTagsPlaceholder}
+                  className="text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="new-ex-media" className="text-xs font-semibold">
+                  {t.exercises.customMediaLabel}
+                </Label>
+                <Input
+                  id="new-ex-media"
+                  type="url"
+                  value={newMediaUrl}
+                  onChange={(e) => setNewMediaUrl(e.target.value)}
+                  placeholder="https://example.com/exercise-demo.gif"
+                  className="text-xs"
+                />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="new-ex-desc" className="text-xs font-semibold">
-                {t.exercises.descriptionLabel}
-              </Label>
-              <Textarea
-                id="new-ex-desc"
-                rows={2}
-                value={newDesc}
-                onChange={(e) => setNewDesc(e.target.value)}
-                placeholder={t.exercises.descriptionPlaceholder}
-                className="text-xs"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="new-ex-inst" className="text-xs font-semibold">
-                {t.exercises.instructionsLabel}
-              </Label>
-              <Textarea
-                id="new-ex-inst"
-                rows={3}
-                value={newInstructions}
-                onChange={(e) => setNewInstructions(e.target.value)}
-                placeholder="Step 1&#10;Step 2"
-                className="text-xs"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="new-ex-tags" className="text-xs font-semibold">
-                {t.exercises.searchTagsLabel}
-              </Label>
-              <Input
-                id="new-ex-tags"
-                value={newTags}
-                onChange={(e) => setNewTags(e.target.value)}
-                placeholder={t.exercises.searchTagsPlaceholder}
-                className="text-xs"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="new-ex-media" className="text-xs font-semibold">
-                {t.exercises.customMediaLabel}
-              </Label>
-              <Input
-                id="new-ex-media"
-                type="url"
-                value={newMediaUrl}
-                onChange={(e) => setNewMediaUrl(e.target.value)}
-                placeholder="https://example.com/exercise-demo.gif"
-                className="text-xs"
-              />
-            </div>
-
-            <DialogFooter className="pt-2">
+            <DialogFooter className="shrink-0 border-t pt-3">
               <Button type="button" variant="secondary" onClick={() => setShowCreateModal(false)}>
                 {t.common.cancel}
               </Button>
@@ -1019,9 +1026,12 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
 
       {/* Create Stretching Routine Modal */}
       <Dialog open={showCreateRoutineModal} onOpenChange={setShowCreateRoutineModal}>
-        <DialogContent className="sm:max-w-lg">
-          <form onSubmit={handleCreateStretchingRoutine} className="space-y-4">
-            <DialogHeader>
+        <DialogContent className="max-h-[90dvh] overflow-hidden p-4 sm:max-w-lg sm:p-6">
+          <form
+            onSubmit={handleCreateStretchingRoutine}
+            className="flex max-h-[calc(90dvh-2.5rem)] min-w-0 flex-col gap-3 overflow-hidden"
+          >
+            <DialogHeader className="shrink-0">
               <DialogTitle className="font-display text-lg font-bold">
                 {t.exercises.newRoutineTitle}
               </DialogTitle>
@@ -1030,147 +1040,149 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
               </DialogDescription>
             </DialogHeader>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label htmlFor="routine-name" className="text-xs font-semibold">
-                  {t.exercises.routineNameLabel}
-                </Label>
-                <Input
-                  id="routine-name"
-                  required
-                  value={routineName}
-                  onChange={(e) => setRoutineName(e.target.value)}
-                  placeholder={t.exercises.routineNamePlaceholder}
-                  className="text-xs"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="routine-area" className="text-xs font-semibold">
-                  {t.exercises.targetAreaLabel}
-                </Label>
-                <Input
-                  id="routine-area"
-                  value={routineArea}
-                  onChange={(e) => setRoutineArea(e.target.value)}
-                  placeholder={t.exercises.targetAreaPlaceholder}
-                  className="text-xs"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-semibold">{t.exercises.stretchesDrillsLabel}</Label>
-                <Button
-                  type="button"
-                  variant="link"
-                  size="xs"
-                  onClick={() => {
-                    const fallback = stretchExercises[0] ?? catalog[0];
-                    if (!fallback) return;
-                    setRoutineItems((prev) => [
-                      ...prev,
-                      {
-                        exerciseId: fallback.id,
-                        sets: 2,
-                        durationSeconds: 45,
-                        reps: null,
-                        transitionSeconds: 15,
-                      },
-                    ]);
-                  }}
-                  className="text-accent h-auto p-0 text-xs font-bold"
-                >
-                  {t.exercises.addStretchBtn}
-                </Button>
-              </div>
-
-              {routineItems.map((item, idx) => (
-                <div key={idx} className="bg-secondary/50 min-w-0 space-y-2 rounded-xl p-3">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <ExercisePicker
-                      exercises={prioritizedStretchCatalog}
-                      value={item.exerciseId}
-                      onValueChange={(newExId) =>
-                        setRoutineItems((prev) =>
-                          prev.map((p, i) => (i === idx ? { ...p, exerciseId: newExId } : p)),
-                        )
-                      }
-                      className="w-full flex-1"
-                      triggerClassName="h-8 text-xs"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="xs"
-                      onClick={() => setRoutineItems((prev) => prev.filter((_, i) => i !== idx))}
-                      className="text-destructive shrink-0"
-                    >
-                      {t.common.remove}
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    <div>
-                      <span className="text-muted-foreground text-[10px]">
-                        {t.exercises.setsLabel}
-                      </span>
-                      <NumberInput
-                        min={1}
-                        max={10}
-                        fallbackValue={2}
-                        value={item.sets}
-                        onValueChange={(val) =>
-                          setRoutineItems((prev) =>
-                            prev.map((p, i) => (i === idx ? { ...p, sets: val } : p)),
-                          )
-                        }
-                        className="h-8 text-xs"
-                      />
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground text-[10px]">
-                        {t.exercises.holdSecLabel}
-                      </span>
-                      <NumberInput
-                        min={10}
-                        max={600}
-                        fallbackValue={45}
-                        value={item.durationSeconds ?? 45}
-                        onValueChange={(val) =>
-                          setRoutineItems((prev) =>
-                            prev.map((p, i) =>
-                              i === idx ? { ...p, durationSeconds: val } : p,
-                            ),
-                          )
-                        }
-                        className="h-8 text-xs"
-                      />
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground text-[10px]">
-                        {t.exercises.transitionSecLabel}
-                      </span>
-                      <NumberInput
-                        min={0}
-                        max={120}
-                        fallbackValue={15}
-                        value={item.transitionSeconds}
-                        onValueChange={(val) =>
-                          setRoutineItems((prev) =>
-                            prev.map((p, i) =>
-                              i === idx ? { ...p, transitionSeconds: val } : p,
-                            ),
-                          )
-                        }
-                        className="h-8 text-xs"
-                      />
-                    </div>
-                  </div>
+            <div className="min-h-0 flex-1 space-y-3.5 overflow-y-auto pr-0.5">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label htmlFor="routine-name" className="text-xs font-semibold">
+                    {t.exercises.routineNameLabel}
+                  </Label>
+                  <Input
+                    id="routine-name"
+                    required
+                    value={routineName}
+                    onChange={(e) => setRoutineName(e.target.value)}
+                    placeholder={t.exercises.routineNamePlaceholder}
+                    className="text-xs"
+                  />
                 </div>
-              ))}
+                <div className="space-y-1">
+                  <Label htmlFor="routine-area" className="text-xs font-semibold">
+                    {t.exercises.targetAreaLabel}
+                  </Label>
+                  <Input
+                    id="routine-area"
+                    value={routineArea}
+                    onChange={(e) => setRoutineArea(e.target.value)}
+                    placeholder={t.exercises.targetAreaPlaceholder}
+                    className="text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold">{t.exercises.stretchesDrillsLabel}</Label>
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="xs"
+                    onClick={() => {
+                      const fallback = stretchExercises[0] ?? catalog[0];
+                      if (!fallback) return;
+                      setRoutineItems((prev) => [
+                        ...prev,
+                        {
+                          exerciseId: fallback.id,
+                          sets: 2,
+                          durationSeconds: 45,
+                          reps: null,
+                          transitionSeconds: 15,
+                        },
+                      ]);
+                    }}
+                    className="text-accent h-auto p-0 text-xs font-bold"
+                  >
+                    {t.exercises.addStretchBtn}
+                  </Button>
+                </div>
+
+                {routineItems.map((item, idx) => (
+                  <div key={idx} className="bg-secondary/50 min-w-0 space-y-2 rounded-xl p-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <ExercisePicker
+                        exercises={prioritizedStretchCatalog}
+                        value={item.exerciseId}
+                        onValueChange={(newExId) =>
+                          setRoutineItems((prev) =>
+                            prev.map((p, i) => (i === idx ? { ...p, exerciseId: newExId } : p)),
+                          )
+                        }
+                        className="w-full flex-1"
+                        triggerClassName="h-9 sm:h-8 text-xs"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => setRoutineItems((prev) => prev.filter((_, i) => i !== idx))}
+                        className="text-destructive shrink-0"
+                      >
+                        {t.common.remove}
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div>
+                        <span className="text-muted-foreground text-[10px]">
+                          {t.exercises.setsLabel}
+                        </span>
+                        <NumberInput
+                          min={1}
+                          max={10}
+                          fallbackValue={2}
+                          value={item.sets}
+                          onValueChange={(val) =>
+                            setRoutineItems((prev) =>
+                              prev.map((p, i) => (i === idx ? { ...p, sets: val } : p)),
+                            )
+                          }
+                          className="h-9 text-xs sm:h-8"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-[10px]">
+                          {t.exercises.holdSecLabel}
+                        </span>
+                        <NumberInput
+                          min={10}
+                          max={600}
+                          fallbackValue={45}
+                          value={item.durationSeconds ?? 45}
+                          onValueChange={(val) =>
+                            setRoutineItems((prev) =>
+                              prev.map((p, i) =>
+                                i === idx ? { ...p, durationSeconds: val } : p,
+                              ),
+                            )
+                          }
+                          className="h-9 text-xs sm:h-8"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-[10px]">
+                          {t.exercises.transitionSecLabel}
+                        </span>
+                        <NumberInput
+                          min={0}
+                          max={120}
+                          fallbackValue={15}
+                          value={item.transitionSeconds}
+                          onValueChange={(val) =>
+                            setRoutineItems((prev) =>
+                              prev.map((p, i) =>
+                                i === idx ? { ...p, transitionSeconds: val } : p,
+                              ),
+                            )
+                          }
+                          className="h-9 text-xs sm:h-8"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <DialogFooter className="pt-2">
+            <DialogFooter className="shrink-0 border-t pt-3">
               <Button
                 type="button"
                 variant="secondary"

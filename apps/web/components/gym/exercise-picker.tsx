@@ -148,7 +148,6 @@ export function ExercisePicker({
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
                 type="search"
-                autoFocus
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={t.picker.searchPlaceholder}
@@ -167,14 +166,14 @@ export function ExercisePicker({
               )}
             </div>
 
-            {/* Muscle Group Quick Filter Pills */}
-            <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+            {/* Muscle Group Quick Filter Pills — single-line horizontal scroll on mobile */}
+            <div className="scrollbar-hide -mx-1 flex shrink-0 items-center gap-1.5 overflow-x-auto px-1 pb-0.5 sm:flex-wrap sm:overflow-visible">
               <Button
                 type="button"
                 variant={selectedMuscle === 'ALL' ? 'default' : 'secondary'}
                 size="xs"
                 onClick={() => setSelectedMuscle('ALL')}
-                className="h-7 px-2.5 text-[11px]"
+                className="h-7 shrink-0 px-2.5 text-[11px]"
               >
                 {t.picker.allMuscles}
               </Button>
@@ -185,7 +184,7 @@ export function ExercisePicker({
                   variant={selectedMuscle === mg ? 'default' : 'secondary'}
                   size="xs"
                   onClick={() => setSelectedMuscle(mg)}
-                  className="h-7 px-2.5 text-[11px]"
+                  className="h-7 shrink-0 px-2.5 text-[11px]"
                 >
                   {muscleLabel(mg)}
                 </Button>
