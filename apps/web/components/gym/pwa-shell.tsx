@@ -93,7 +93,7 @@ export function PwaShell() {
                 LUKI<span className="text-primary">FITTI</span>
               </span>
               <span className="text-muted-foreground hidden text-[10px] leading-none font-normal sm:block">
-                Personal Gym & Workout PWA
+                Personal Gym & Workout Tracker
               </span>
             </div>
           </Button>

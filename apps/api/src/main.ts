@@ -69,7 +69,7 @@ async function bootstrap() {
   if (NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
       .setTitle('LukiFitti API')
-      .setDescription('Personal Gym & Workout Management PWA API')
+      .setDescription('Personal Gym & Workout Tracker API')
       .setVersion('1.0')
       .addBearerAuth()
       .addServer('/')

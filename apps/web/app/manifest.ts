@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'LukiFitti — Personal Gym & Workout Tracker',
     short_name: 'LukiFitti',
     description:
-      'Offline-first personal gym workout management, routine builder, stretching flows, and progress analytics PWA.',
+      'Offline-first personal gym workout tracker, routine builder, stretching flows, and progress analytics.',
     start_url: '/',
     scope: '/',
     display: 'standalone',

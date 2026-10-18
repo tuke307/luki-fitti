@@ -43,7 +43,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: 'LukiFitti — Personal Gym & Workout Management PWA',
+    default: 'LukiFitti — Personal Gym & Workout Tracker',
     template: '%s | LukiFitti',
   },
   description:
