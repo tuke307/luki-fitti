@@ -48,6 +48,7 @@ import { computeRemainingRestSeconds } from '@/lib/offline/offline-store';
 import {
   computeExerciseProgression,
   formatCompactDelta,
+  formatDateTime,
 } from '@luki-fitti/common/utils/client';
 import { ExerciseVisual } from './exercise-visual';
 import {
@@ -261,11 +262,7 @@ export function ActiveSessionView({
                 {activeSession.status === SessionStatus.PAUSED ? 'Paused' : 'Live Session'}
               </Badge>
               <span className="text-muted-foreground font-mono-tabular text-xs">
-                Started{' '}
-                {new Date(activeSession.startedAt).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+                Started {formatDateTime(activeSession.startedAt)}
               </span>
             </div>
             <h1 className="font-display mt-1.5 text-xl font-bold sm:text-2xl">

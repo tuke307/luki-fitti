@@ -27,6 +27,7 @@ import { Card } from '@luki-fitti/ui/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useGym } from '@/providers/gym/gym-context';
 import { useAuth } from '@/providers/auth/auth-context';
+import { formatShortDayMonth } from '@luki-fitti/common/utils/client';
 import {
   ExerciseType,
   MUSCLE_GROUP_LABELS,
@@ -106,7 +107,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
         currentMonday.getDate() - i * 7,
       );
       const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 7);
-      const label = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const label = formatShortDayMonth(start);
 
       const inWeek = historySessions.filter((s) => {
         const ms = Date.parse(s.startedAt);
