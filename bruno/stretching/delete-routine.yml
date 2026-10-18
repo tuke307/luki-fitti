@@ -1,0 +1,19 @@
+info:
+  name: delete-routine
+  type: http
+  seq: 5
+
+http:
+  method: DELETE
+  url: "{{API_URL}}:{{API_PORT}}/api/stretching/routines/:id"
+  params:
+    - name: id
+      value: "ROUTINE-ID"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

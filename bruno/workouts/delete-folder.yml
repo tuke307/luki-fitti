@@ -1,0 +1,19 @@
+info:
+  name: delete-folder
+  type: http
+  seq: 4
+
+http:
+  method: DELETE
+  url: "{{API_URL}}:{{API_PORT}}/api/workouts/folders/:id"
+  params:
+    - name: id
+      value: "FOLDER-ID"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

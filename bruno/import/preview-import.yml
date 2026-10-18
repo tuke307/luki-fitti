@@ -1,0 +1,23 @@
+info:
+  name: preview-import
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/import/preview"
+  body:
+    type: json
+    data: |-
+      {
+        "fileName": "gymlife-export.csv",
+        "format": "GYMLIFE_CSV",
+        "content": "Date,Workout,Folder,Exercise,Set,Weight,Unit,Reps\n2026-10-17T16:10:14Z,Day 2 - Beine,4er Split - My protein,Seated Machine Leg Extensions,1,80,KG,15"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

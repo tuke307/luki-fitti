@@ -1,0 +1,25 @@
+info:
+  name: update-preferences
+  type: http
+  seq: 6
+
+http:
+  method: PATCH
+  url: "{{API_URL}}:{{API_PORT}}/api/auth/preferences"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Tony",
+        "weightUnit": "KG",
+        "defaultRestSeconds": 90,
+        "theme": "dark",
+        "weeklyGoalSessions": 4
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

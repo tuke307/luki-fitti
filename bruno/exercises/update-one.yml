@@ -1,0 +1,26 @@
+info:
+  name: update-one
+  type: http
+  seq: 4
+
+http:
+  method: PUT
+  url: "{{API_URL}}:{{API_PORT}}/api/exercises/:id"
+  params:
+    - name: id
+      value: "CUSTOM-EXERCISE-ID"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Pendlay Barbell Row (Updated)",
+        "description": "Strict dead-stop horizontal barbell row."
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

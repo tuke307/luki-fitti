@@ -1,0 +1,32 @@
+info:
+  name: get-all
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{API_URL}}:{{API_PORT}}/api/exercises"
+  params:
+    - name: search
+      value: ""
+      type: query
+      disabled: true
+    - name: muscleGroup
+      value: "CHEST"
+      type: query
+      disabled: true
+    - name: exerciseType
+      value: "STRENGTH"
+      type: query
+      disabled: true
+    - name: equipment
+      value: "BARBELL"
+      type: query
+      disabled: true
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

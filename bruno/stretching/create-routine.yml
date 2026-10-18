@@ -1,0 +1,34 @@
+info:
+  name: create-routine
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/stretching/routines"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Evening Hip & Hamstring Decompression",
+        "description": "10-minute lower-body mobility flow after heavy squats.",
+        "targetArea": "Lower Body & Hips",
+        "estimatedDurationSeconds": 600,
+        "exercises": [
+          {
+            "exerciseId": "ex-couch-hip-flexor-stretch",
+            "orderIndex": 0,
+            "sets": 2,
+            "durationSeconds": 60,
+            "transitionSeconds": 15,
+            "notes": "Squeeze rear glute."
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

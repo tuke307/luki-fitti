@@ -1,0 +1,25 @@
+info:
+  name: move-template
+  type: http
+  seq: 9
+
+http:
+  method: PATCH
+  url: "{{API_URL}}:{{API_PORT}}/api/workouts/templates/:id/move"
+  params:
+    - name: id
+      value: "TEMPLATE-ID"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "folderId": "FOLDER-ID"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

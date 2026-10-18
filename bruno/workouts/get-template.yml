@@ -1,0 +1,19 @@
+info:
+  name: get-template
+  type: http
+  seq: 5
+
+http:
+  method: GET
+  url: "{{API_URL}}:{{API_PORT}}/api/workouts/templates/:id"
+  params:
+    - name: id
+      value: "TEMPLATE-ID"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

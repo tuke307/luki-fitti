@@ -1,0 +1,19 @@
+info:
+  name: delete-one
+  type: http
+  seq: 5
+
+http:
+  method: DELETE
+  url: "{{API_URL}}:{{API_PORT}}/api/exercises/:id"
+  params:
+    - name: id
+      value: "CUSTOM-EXERCISE-ID"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,50 @@
+info:
+  name: create-template
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/workouts/templates"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Day 2 - Beine",
+        "description": "Quad, hamstring, glute, and calf hypertrophy session.",
+        "folderId": null,
+        "estimatedDurationMinutes": 75,
+        "exercises": [
+          {
+            "exerciseId": "ex-leg-extension",
+            "orderIndex": 0,
+            "plannedSets": 5,
+            "warmupSets": 0,
+            "targetRepsMin": 11,
+            "targetRepsMax": 15,
+            "targetWeight": 140,
+            "weightUnit": "KG",
+            "restSeconds": 150,
+            "alternativeExerciseIds": ["ex-leg-press"]
+          },
+          {
+            "exerciseId": "ex-leg-press",
+            "orderIndex": 1,
+            "plannedSets": 4,
+            "warmupSets": 0,
+            "targetRepsMin": 12,
+            "targetRepsMax": 12,
+            "targetWeight": 310,
+            "weightUnit": "KG",
+            "restSeconds": 150,
+            "alternativeExerciseIds": ["ex-barbell-back-squat"]
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

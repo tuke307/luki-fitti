@@ -1,0 +1,27 @@
+info:
+  name: get-all
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{API_URL}}:{{API_PORT}}/api/sessions"
+  params:
+    - name: status
+      value: "COMPLETED"
+      type: query
+    - name: from
+      value: ""
+      type: query
+      disabled: true
+    - name: to
+      value: ""
+      type: query
+      disabled: true
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

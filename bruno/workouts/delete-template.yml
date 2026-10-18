@@ -1,0 +1,19 @@
+info:
+  name: delete-template
+  type: http
+  seq: 10
+
+http:
+  method: DELETE
+  url: "{{API_URL}}:{{API_PORT}}/api/workouts/templates/:id"
+  params:
+    - name: id
+      value: "TEMPLATE-ID"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

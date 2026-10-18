@@ -1,0 +1,64 @@
+info:
+  name: sync-session
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/sessions/sync"
+  body:
+    type: json
+    data: |-
+      {
+        "clientSessionId": "sess-demo-sync-001",
+        "sessionType": "STRENGTH",
+        "workoutNameSnapshot": "Day 2 - Beine",
+        "status": "COMPLETED",
+        "startedAt": "2026-10-17T16:10:14+02:00",
+        "completedAt": "2026-10-17T17:29:51+02:00",
+        "activeDurationSeconds": 4777,
+        "weightUnit": "KG",
+        "version": 1,
+        "exercises": [
+          {
+            "clientExerciseId": "sex-demo-1",
+            "exerciseId": "ex-leg-extension",
+            "exerciseNameSnapshot": "Seated Leg Extension",
+            "primaryMuscleSnapshot": "QUADRICEPS",
+            "exerciseTypeSnapshot": "STRENGTH",
+            "origin": "PLANNED",
+            "status": "COMPLETED",
+            "orderIndex": 0,
+            "plannedSets": 2,
+            "plannedWarmupSets": 0,
+            "restSeconds": 150,
+            "sets": [
+              {
+                "clientSetId": "cset-demo-1",
+                "setNumber": 1,
+                "setType": "WORKING",
+                "weight": 120,
+                "weightUnit": "KG",
+                "reps": 15,
+                "completed": true
+              },
+              {
+                "clientSetId": "cset-demo-2",
+                "setNumber": 2,
+                "setType": "WORKING",
+                "weight": 140,
+                "weightUnit": "KG",
+                "reps": 12,
+                "completed": true
+              }
+            ]
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
