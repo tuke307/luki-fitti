@@ -887,56 +887,108 @@ export function ActiveSessionView({
               return (
                 <div
                   key={set.clientSetId}
-                  className={`flex flex-wrap items-center justify-between gap-2 rounded-2xl border p-3 transition ${
+                  className={`flex flex-col gap-2.5 rounded-2xl border p-3 transition sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-2 ${
                     set.completed
                       ? 'border-primary/50 bg-primary/10'
                       : 'bg-secondary/30 border-border'
                   }`}
                 >
-                  {/* Set Number & Set Type Selector */}
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`font-mono-tabular flex h-9 w-9 items-center justify-center rounded-xl border text-sm font-black transition ${
-                        set.completed
-                          ? 'border-emerald-500/40 bg-emerald-500/20 text-emerald-300'
-                          : set.setType === SetType.WARMUP
-                            ? 'border-amber-500/40 bg-amber-500/15 text-amber-300'
+                  {/* Set Number, Set Type Selector, and Mobile-Right Intensity + Delete */}
+                  <div className="flex items-center justify-between gap-2 sm:justify-start">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`font-mono-tabular flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border text-sm font-black transition ${
+                          set.completed
+                            ? 'border-emerald-500/40 bg-emerald-500/20 text-emerald-300'
+                            : set.setType === SetType.WARMUP
+                              ? 'border-amber-500/40 bg-amber-500/15 text-amber-300'
+                              : set.setType === SetType.STRETCH
+                                ? 'border-accent/40 bg-accent/15 text-accent'
+                                : 'border-primary/35 bg-primary/15 text-primary'
+                        }`}
+                      >
+                        {sIdx + 1}
+                      </span>
+                      <NativeSelect
+                        aria-label={`Set ${sIdx + 1} type`}
+                        value={set.setType}
+                        onChange={(e) =>
+                          void updateSet(currentExercise.clientExerciseId, set.clientSetId, {
+                            setType: e.target.value as SetType,
+                          })
+                        }
+                        className={`h-8 rounded-lg px-2 py-1 pr-6 text-[11px] font-bold uppercase ${
+                          set.setType === SetType.WARMUP
+                            ? 'bg-amber-500/20 text-amber-300'
                             : set.setType === SetType.STRETCH
-                              ? 'border-accent/40 bg-accent/15 text-accent'
-                              : 'border-primary/35 bg-primary/15 text-primary'
-                      }`}
-                    >
-                      {sIdx + 1}
-                    </span>
-                    <NativeSelect
-                      aria-label={`Set ${sIdx + 1} type`}
-                      value={set.setType}
-                      onChange={(e) =>
-                        void updateSet(currentExercise.clientExerciseId, set.clientSetId, {
-                          setType: e.target.value as SetType,
-                        })
-                      }
-                      className={`h-8 rounded-lg px-2 py-1 pr-6 text-[11px] font-bold uppercase ${
-                        set.setType === SetType.WARMUP
-                          ? 'bg-amber-500/20 text-amber-300'
-                          : set.setType === SetType.STRETCH
-                            ? 'bg-accent/20 text-accent'
-                            : 'bg-background text-foreground'
-                      }`}
-                    >
-                      <option value={SetType.WARMUP}>{setTypeLabel(SetType.WARMUP)}</option>
-                      <option value={SetType.WORKING}>{setTypeLabel(SetType.WORKING)}</option>
-                      <option value={SetType.DROPSET}>{setTypeLabel(SetType.DROPSET)}</option>
-                      <option value={SetType.FAILURE}>{setTypeLabel(SetType.FAILURE)}</option>
-                      <option value={SetType.STRETCH}>{setTypeLabel(SetType.STRETCH)}</option>
-                    </NativeSelect>
+                              ? 'bg-accent/20 text-accent'
+                              : 'bg-background text-foreground'
+                        }`}
+                      >
+                        <option value={SetType.WARMUP}>{setTypeLabel(SetType.WARMUP)}</option>
+                        <option value={SetType.WORKING}>{setTypeLabel(SetType.WORKING)}</option>
+                        <option value={SetType.DROPSET}>{setTypeLabel(SetType.DROPSET)}</option>
+                        <option value={SetType.FAILURE}>{setTypeLabel(SetType.FAILURE)}</option>
+                        <option value={SetType.STRETCH}>{setTypeLabel(SetType.STRETCH)}</option>
+                      </NativeSelect>
+                    </div>
+
+                    {/* Mobile Top-Right: 3-Bar Intensity Meter + Delete Set */}
+                    <div className="flex items-center gap-1.5 sm:hidden">
+                      <button
+                        type="button"
+                        aria-label={`Set ${sIdx + 1} intensity: ${intensityMeta.label}`}
+                        title={intensityMeta.hint}
+                        onClick={() =>
+                          void updateSet(currentExercise.clientExerciseId, set.clientSetId, {
+                            rpe: intensityMeta.nextRpe,
+                          })
+                        }
+                        className={`flex h-8 items-center gap-1.5 rounded-xl border px-2.5 text-[11px] font-bold transition active:scale-95 ${intensityMeta.containerClass}`}
+                      >
+                        <span className="flex items-end gap-0.5" aria-hidden="true">
+                          {[1, 2, 3].map((barIdx) => {
+                            const barHeight =
+                              barIdx === 1 ? 'h-2' : barIdx === 2 ? 'h-3' : 'h-4';
+                            const isFilled = barIdx <= intensityLevel;
+                            return (
+                              <span
+                                key={barIdx}
+                                className={`w-1 rounded-full transition-colors ${barHeight} ${
+                                  isFilled
+                                    ? intensityMeta.activeBarClass
+                                    : 'bg-muted-foreground/25'
+                                }`}
+                              />
+                            );
+                          })}
+                        </span>
+                        <span>{intensityMeta.label}</span>
+                      </button>
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() =>
+                          void removeSetFromExercise(
+                            currentExercise.clientExerciseId,
+                            set.clientSetId,
+                          )
+                        }
+                        aria-label={`Delete set ${sIdx + 1}`}
+                        className="text-destructive/80 hover:bg-destructive/15 hover:text-destructive size-8 rounded-xl"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Weight / Duration & Reps Steppers */}
                   <div className="flex flex-wrap items-center gap-2">
                     {!isStretchSet ? (
                       <div className="flex items-center gap-1">
-                        <div className="bg-background flex items-center rounded-xl border px-1.5 py-1">
+                        <div className="bg-background flex h-10 items-center rounded-xl border px-1 sm:h-auto sm:px-1.5 sm:py-1">
                           <Button
                             type="button"
                             variant="ghost"
@@ -946,7 +998,7 @@ export function ActiveSessionView({
                                 weight: Math.max(0, (set.weight ?? 0) - 2.5),
                               })
                             }
-                            className="text-muted-foreground hover:text-foreground h-6 px-2 font-bold"
+                            className="text-muted-foreground hover:text-foreground h-8 px-2 font-bold sm:h-6"
                           >
                             -2.5
                           </Button>
@@ -963,7 +1015,7 @@ export function ActiveSessionView({
                               })
                             }
                             placeholder="0"
-                            className="font-mono-tabular w-14 bg-transparent text-center text-sm font-bold outline-none"
+                            className="font-mono-tabular w-13 bg-transparent text-center text-sm font-bold outline-none sm:w-14"
                           />
                           <span className="text-muted-foreground text-[10px] font-semibold">
                             {set.weightUnit.toLowerCase()}
@@ -977,7 +1029,7 @@ export function ActiveSessionView({
                                 weight: (set.weight ?? 0) + 2.5,
                               })
                             }
-                            className="text-primary h-6 px-2 font-bold"
+                            className="text-primary h-8 px-2 font-bold sm:h-6"
                           >
                             +2.5
                           </Button>
@@ -1013,7 +1065,7 @@ export function ActiveSessionView({
                           )}
                       </div>
                     ) : (
-                      <div className="bg-background flex items-center rounded-xl border px-2 py-1">
+                      <div className="bg-background flex h-10 items-center rounded-xl border px-2 py-1 sm:h-auto">
                         <NumberInput
                           variant="bare"
                           min={0}
@@ -1033,7 +1085,7 @@ export function ActiveSessionView({
 
                     {/* Reps Stepper */}
                     <div className="flex items-center gap-1">
-                      <div className="bg-background flex items-center rounded-xl border px-1.5 py-1">
+                      <div className="bg-background flex h-10 items-center rounded-xl border px-1 sm:h-auto sm:px-1.5 sm:py-1">
                         <Button
                           type="button"
                           variant="ghost"
@@ -1043,7 +1095,7 @@ export function ActiveSessionView({
                               reps: Math.max(0, (set.reps ?? 0) - 1),
                             })
                           }
-                          className="text-muted-foreground hover:text-foreground h-6 px-2 font-bold"
+                          className="text-muted-foreground hover:text-foreground h-8 px-2 font-bold sm:h-6"
                         >
                           -1
                         </Button>
@@ -1059,7 +1111,7 @@ export function ActiveSessionView({
                             })
                           }
                           placeholder={t.common.reps}
-                          className="font-mono-tabular w-12 bg-transparent text-center text-sm font-bold outline-none"
+                          className="font-mono-tabular w-11 bg-transparent text-center text-sm font-bold outline-none sm:w-12"
                         />
                         <span className="text-muted-foreground text-[10px] font-semibold">
                           {t.common.reps}
@@ -1073,7 +1125,7 @@ export function ActiveSessionView({
                               reps: (set.reps ?? 0) + 1,
                             })
                           }
-                          className="text-primary h-6 px-2 font-bold"
+                          className="text-primary h-8 px-2 font-bold sm:h-6"
                         >
                           +1
                         </Button>
@@ -1100,7 +1152,7 @@ export function ActiveSessionView({
                       )}
                     </div>
 
-                    {/* 3-Bar Intensity Meter */}
+                    {/* Desktop 3-Bar Intensity Meter */}
                     <button
                       type="button"
                       aria-label={`Set ${sIdx + 1} intensity: ${intensityMeta.label}`}
@@ -1110,7 +1162,7 @@ export function ActiveSessionView({
                           rpe: intensityMeta.nextRpe,
                         })
                       }
-                      className={`flex h-9 items-center gap-2 rounded-xl border px-2.5 text-xs font-bold transition active:scale-95 ${intensityMeta.containerClass}`}
+                      className={`hidden h-9 items-center gap-2 rounded-xl border px-2.5 text-xs font-bold transition active:scale-95 sm:flex ${intensityMeta.containerClass}`}
                     >
                       <span className="flex items-end gap-0.5" aria-hidden="true">
                         {[1, 2, 3].map((barIdx) => {
@@ -1131,10 +1183,26 @@ export function ActiveSessionView({
                       </span>
                       <span>{intensityMeta.label}</span>
                     </button>
+
+                    {/* Mobile Inline Log Set Button (fills remaining space or full width) */}
+                    <Button
+                      type="button"
+                      variant={set.completed ? 'default' : 'secondary'}
+                      onClick={() =>
+                        void toggleCompleteSet(currentExercise.clientExerciseId, set.clientSetId)
+                      }
+                      aria-label={set.completed ? 'Mark set incomplete' : 'Complete set'}
+                      className={`h-10 min-w-[88px] flex-1 font-extrabold sm:hidden ${
+                        !set.completed ? 'hover:bg-primary/20' : ''
+                      }`}
+                    >
+                      <Check className="h-4 w-4 stroke-[3]" />
+                      {set.completed ? t.session.doneSetBtn : t.session.logSetBtn}
+                    </Button>
                   </div>
 
-                  {/* Complete Set Large Tap Button & Delete Set */}
-                  <div className="flex items-center gap-1.5">
+                  {/* Desktop Complete Set Large Tap Button & Delete Set */}
+                  <div className="hidden items-center gap-1.5 sm:flex">
                     <Button
                       type="button"
                       variant={set.completed ? 'default' : 'secondary'}
@@ -1389,32 +1457,31 @@ export function ActiveSessionView({
               <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
                 type="search"
-                autoFocus
                 value={addExerciseSearch}
                 onChange={(e) => setAddExerciseSearch(e.target.value)}
                 placeholder={t.picker.searchPlaceholder}
                 aria-label={t.picker.searchPlaceholder}
-                className="h-9 pr-8 pl-9 text-xs"
+                className="h-10 pr-8 pl-9 text-xs sm:h-9"
               />
               {addExerciseSearch && (
                 <button
                   type="button"
                   onClick={() => setAddExerciseSearch('')}
                   aria-label={t.common.clear}
-                  className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
+                  className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2 p-1"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>
 
-            <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+            <div className="scrollbar-hide -mx-1 flex shrink-0 items-center gap-1.5 overflow-x-auto px-1 pb-0.5 sm:flex-wrap sm:overflow-visible">
               <Button
                 type="button"
                 variant={addExerciseMuscle === 'ALL' ? 'default' : 'secondary'}
                 size="xs"
                 onClick={() => setAddExerciseMuscle('ALL')}
-                className="h-7 px-2.5 text-[11px]"
+                className="h-7 shrink-0 px-2.5 text-[11px]"
               >
                 {t.picker.allMuscles}
               </Button>
@@ -1425,7 +1492,7 @@ export function ActiveSessionView({
                   variant={addExerciseMuscle === mg ? 'default' : 'secondary'}
                   size="xs"
                   onClick={() => setAddExerciseMuscle(mg)}
-                  className="h-7 px-2.5 text-[11px]"
+                  className="h-7 shrink-0 px-2.5 text-[11px]"
                 >
                   {muscleLabel(mg)}
                 </Button>

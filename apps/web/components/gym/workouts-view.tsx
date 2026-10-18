@@ -795,10 +795,13 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
 
       {/* Workout Template Builder Modal */}
       <Dialog open={showTemplateBuilder} onOpenChange={setShowTemplateBuilder}>
-        <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-3xl">
-          <form onSubmit={handleSaveTemplate} className="min-w-0 space-y-5">
-            <DialogHeader className="border-b pb-3">
-              <DialogTitle className="font-display text-xl font-bold">
+        <DialogContent className="max-h-[92dvh] overflow-hidden p-4 sm:max-w-3xl sm:p-6">
+          <form
+            onSubmit={handleSaveTemplate}
+            className="flex max-h-[calc(92dvh-2.5rem)] min-w-0 flex-col gap-3 overflow-hidden"
+          >
+            <DialogHeader className="shrink-0 border-b pb-3">
+              <DialogTitle className="font-display text-lg font-bold sm:text-xl">
                 {editingTemplate
                   ? format(t.workouts.editTemplateModalTitle, { name: editingTemplate.name })
                   : t.workouts.createTemplateModalTitle}
@@ -808,419 +811,421 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="space-y-1 sm:col-span-2">
-                <Label htmlFor="tpl-name" className="text-xs font-semibold">
-                  {t.workouts.workoutNameLabel}
-                </Label>
-                <Input
-                  id="tpl-name"
-                  required
-                  value={tplName}
-                  onChange={(e) => setTplName(e.target.value)}
-                  placeholder={t.workouts.workoutNamePlaceholder}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold">{t.workouts.folderLabel}</Label>
-                <NativeSelect
-                  value={tplFolderId ?? ''}
-                  onChange={(e) => setTplFolderId(e.target.value || null)}
-                  className="w-full"
-                >
-                  <option value="">{t.workouts.unfiledNoFolder}</option>
-                  {folders.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.name}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="space-y-1 sm:col-span-2">
-                <Label htmlFor="tpl-desc" className="text-xs font-semibold">
-                  {t.workouts.notesFocusLabel}
-                </Label>
-                <Input
-                  id="tpl-desc"
-                  value={tplDesc}
-                  onChange={(e) => setTplDesc(e.target.value)}
-                  placeholder={t.workouts.notesFocusPlaceholder}
-                  className="text-xs"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="tpl-duration" className="text-xs font-semibold">
-                  {t.workouts.estDurationLabel}
-                </Label>
-                <NumberInput
-                  id="tpl-duration"
-                  min={10}
-                  max={240}
-                  fallbackValue={60}
-                  value={tplDurationMin}
-                  onValueChange={(val) => setTplDurationMin(val)}
-                  className="text-xs"
-                />
-              </div>
-            </div>
-
-            {/* Ordered Exercises Editor */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-display text-sm font-bold">
-                  {format(t.workouts.orderedExercisesTitle, { count: tplExercises.length })}
-                </h3>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => {
-                    const ex = catalog[0];
-                    if (!ex) return;
-                    setTplExercises((prev) => [
-                      ...prev,
-                      {
-                        exerciseId: ex.id,
-                        orderIndex: prev.length,
-                        plannedSets: 3,
-                        warmupSets: 0,
-                        targetRepsMin: 8,
-                        targetRepsMax: 12,
-                        targetWeight: 40,
-                        weightUnit,
-                        restSeconds: 90,
-                        targetDurationSeconds: null,
-                        targetDistanceMeters: null,
-                        notes: '',
-                        alternativeExerciseIds: ex.alternativeExerciseIds.slice(0, 2),
-                      },
-                    ]);
-                  }}
-                >
-                  {t.workouts.addExerciseSlotBtn}
-                </Button>
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-0.5">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1 sm:col-span-2">
+                  <Label htmlFor="tpl-name" className="text-xs font-semibold">
+                    {t.workouts.workoutNameLabel}
+                  </Label>
+                  <Input
+                    id="tpl-name"
+                    required
+                    value={tplName}
+                    onChange={(e) => setTplName(e.target.value)}
+                    placeholder={t.workouts.workoutNamePlaceholder}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold">{t.workouts.folderLabel}</Label>
+                  <NativeSelect
+                    value={tplFolderId ?? ''}
+                    onChange={(e) => setTplFolderId(e.target.value || null)}
+                    className="w-full"
+                  >
+                    <option value="">{t.workouts.unfiledNoFolder}</option>
+                    {folders.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.name}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </div>
               </div>
 
-              {tplExercises.map((slot, idx) => {
-                const isSupersetWithNext = slot.restSeconds === 0 && idx < tplExercises.length - 1;
-                const isSupersetFromPrev = idx > 0 && tplExercises[idx - 1]?.restSeconds === 0;
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1 sm:col-span-2">
+                  <Label htmlFor="tpl-desc" className="text-xs font-semibold">
+                    {t.workouts.notesFocusLabel}
+                  </Label>
+                  <Input
+                    id="tpl-desc"
+                    value={tplDesc}
+                    onChange={(e) => setTplDesc(e.target.value)}
+                    placeholder={t.workouts.notesFocusPlaceholder}
+                    className="text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="tpl-duration" className="text-xs font-semibold">
+                    {t.workouts.estDurationLabel}
+                  </Label>
+                  <NumberInput
+                    id="tpl-duration"
+                    min={10}
+                    max={240}
+                    fallbackValue={60}
+                    value={tplDurationMin}
+                    onValueChange={(val) => setTplDurationMin(val)}
+                    className="text-xs"
+                  />
+                </div>
+              </div>
 
-                return (
-                  <React.Fragment key={idx}>
-                    <div
-                      className={`bg-secondary/40 min-w-0 space-y-3 rounded-2xl border p-3.5 sm:p-4 ${
-                        isSupersetWithNext || isSupersetFromPrev
-                          ? 'border-accent/60 bg-accent/5'
-                          : ''
-                      }`}
-                    >
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex w-full min-w-0 flex-1 items-center gap-2">
-                          <span className="bg-primary text-primary-foreground font-mono-tabular flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
-                            {idx + 1}
-                          </span>
-                          <ExercisePicker
-                            exercises={catalog}
-                            value={slot.exerciseId}
-                            onValueChange={(newExerciseId) => {
-                              const selectedEx = catalog.find((c) => c.id === newExerciseId);
-                              setTplExercises((prev) =>
-                                prev.map((item, i) =>
-                                  i === idx
-                                    ? {
-                                        ...item,
-                                        exerciseId: newExerciseId,
-                                        alternativeExerciseIds:
-                                          selectedEx?.alternativeExerciseIds.slice(0, 2) ?? [],
-                                      }
-                                    : item,
-                                ),
-                              );
-                            }}
-                            className="w-full flex-1"
-                          />
-                        </div>
+              {/* Ordered Exercises Editor */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-display text-sm font-bold">
+                    {format(t.workouts.orderedExercisesTitle, { count: tplExercises.length })}
+                  </h3>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => {
+                      const ex = catalog[0];
+                      if (!ex) return;
+                      setTplExercises((prev) => [
+                        ...prev,
+                        {
+                          exerciseId: ex.id,
+                          orderIndex: prev.length,
+                          plannedSets: 3,
+                          warmupSets: 0,
+                          targetRepsMin: 8,
+                          targetRepsMax: 12,
+                          targetWeight: 40,
+                          weightUnit,
+                          restSeconds: 90,
+                          targetDurationSeconds: null,
+                          targetDistanceMeters: null,
+                          notes: '',
+                          alternativeExerciseIds: ex.alternativeExerciseIds.slice(0, 2),
+                        },
+                      ]);
+                    }}
+                  >
+                    {t.workouts.addExerciseSlotBtn}
+                  </Button>
+                </div>
 
-                        <div className="flex shrink-0 flex-wrap items-center justify-between gap-1.5 sm:justify-end">
-                          {idx < tplExercises.length - 1 && (
-                            <Button
-                              type="button"
-                              variant={isSupersetWithNext ? 'accent' : 'secondary'}
-                              size="xs"
-                              onClick={() =>
+                {tplExercises.map((slot, idx) => {
+                  const isSupersetWithNext = slot.restSeconds === 0 && idx < tplExercises.length - 1;
+                  const isSupersetFromPrev = idx > 0 && tplExercises[idx - 1]?.restSeconds === 0;
+
+                  return (
+                    <React.Fragment key={idx}>
+                      <div
+                        className={`bg-secondary/40 min-w-0 space-y-3 rounded-2xl border p-3 sm:p-4 ${
+                          isSupersetWithNext || isSupersetFromPrev
+                            ? 'border-accent/60 bg-accent/5'
+                            : ''
+                        }`}
+                      >
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex w-full min-w-0 flex-1 items-center gap-2">
+                            <span className="bg-primary text-primary-foreground font-mono-tabular flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
+                              {idx + 1}
+                            </span>
+                            <ExercisePicker
+                              exercises={catalog}
+                              value={slot.exerciseId}
+                              onValueChange={(newExerciseId) => {
+                                const selectedEx = catalog.find((c) => c.id === newExerciseId);
                                 setTplExercises((prev) =>
                                   prev.map((item, i) =>
                                     i === idx
                                       ? {
                                           ...item,
-                                          restSeconds: item.restSeconds === 0 ? 90 : 0,
+                                          exerciseId: newExerciseId,
+                                          alternativeExerciseIds:
+                                            selectedEx?.alternativeExerciseIds.slice(0, 2) ?? [],
                                         }
                                       : item,
                                   ),
+                                );
+                              }}
+                              className="w-full flex-1"
+                            />
+                          </div>
+
+                          <div className="flex shrink-0 flex-wrap items-center justify-between gap-1.5 sm:justify-end">
+                            {idx < tplExercises.length - 1 && (
+                              <Button
+                                type="button"
+                                variant={isSupersetWithNext ? 'accent' : 'secondary'}
+                                size="xs"
+                                onClick={() =>
+                                  setTplExercises((prev) =>
+                                    prev.map((item, i) =>
+                                      i === idx
+                                        ? {
+                                            ...item,
+                                            restSeconds: item.restSeconds === 0 ? 90 : 0,
+                                          }
+                                        : item,
+                                    ),
+                                  )
+                                }
+                                title={t.workouts.supersetBtnTitle}
+                                className="font-bold"
+                              >
+                                <Zap className="h-3 w-3 shrink-0" />
+                                {isSupersetWithNext
+                                  ? format(t.workouts.supersetWithActive, { index: idx + 2 })
+                                  : format(t.workouts.supersetWithInactive, { index: idx + 2 })}
+                              </Button>
+                            )}
+                            <div className="ml-auto flex items-center gap-1 sm:ml-0">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                disabled={idx === 0}
+                                onClick={() =>
+                                  setTplExercises((prev) => {
+                                    const copy = [...prev];
+                                    const [m] = copy.splice(idx, 1);
+                                    if (m) copy.splice(idx - 1, 0, m);
+                                    return copy;
+                                  })
+                                }
+                                title={t.workouts.moveUpTitle}
+                                className="size-7"
+                              >
+                                <ArrowUp className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                disabled={idx === tplExercises.length - 1}
+                                onClick={() =>
+                                  setTplExercises((prev) => {
+                                    const copy = [...prev];
+                                    const [m] = copy.splice(idx, 1);
+                                    if (m) copy.splice(idx + 1, 0, m);
+                                    return copy;
+                                  })
+                                }
+                                title={t.workouts.moveDownTitle}
+                                className="size-7"
+                              >
+                                <ArrowDown className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="xs"
+                                onClick={() =>
+                                  setTplExercises((prev) => prev.filter((_, i) => i !== idx))
+                                }
+                                className="text-destructive font-semibold"
+                              >
+                                {t.common.remove}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Sets, Warmups, Rep Range, Target Weight, Rest — compact 3-col on mobile */}
+                        <div className="grid grid-cols-3 gap-2 sm:grid-cols-6 sm:gap-2.5">
+                          <div>
+                            <Label className="text-muted-foreground mb-1 truncate text-[10px] font-semibold uppercase">
+                              {t.workouts.workingSetsLabel}
+                            </Label>
+                            <NumberInput
+                              min={1}
+                              max={20}
+                              fallbackValue={3}
+                              value={slot.plannedSets}
+                              onValueChange={(val) =>
+                                setTplExercises((prev) =>
+                                  prev.map((item, i) =>
+                                    i === idx ? { ...item, plannedSets: val } : item,
+                                  ),
                                 )
                               }
-                              title={t.workouts.supersetBtnTitle}
-                              className="font-bold"
-                            >
-                              <Zap className="h-3 w-3 shrink-0" />
-                              {isSupersetWithNext
-                                ? format(t.workouts.supersetWithActive, { index: idx + 2 })
-                                : format(t.workouts.supersetWithInactive, { index: idx + 2 })}
-                            </Button>
-                          )}
-                          <div className="ml-auto flex items-center gap-1 sm:ml-0">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              disabled={idx === 0}
-                              onClick={() =>
-                                setTplExercises((prev) => {
-                                  const copy = [...prev];
-                                  const [m] = copy.splice(idx, 1);
-                                  if (m) copy.splice(idx - 1, 0, m);
-                                  return copy;
-                                })
+                              className="font-mono-tabular h-9 text-xs sm:h-8"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground mb-1 truncate text-[10px] font-semibold uppercase">
+                              {t.workouts.warmupSetsLabel}
+                            </Label>
+                            <NumberInput
+                              min={0}
+                              max={10}
+                              fallbackValue={0}
+                              value={slot.warmupSets ?? 0}
+                              onValueChange={(val) =>
+                                setTplExercises((prev) =>
+                                  prev.map((item, i) =>
+                                    i === idx ? { ...item, warmupSets: val } : item,
+                                  ),
+                                )
                               }
-                              title={t.workouts.moveUpTitle}
-                              className="size-7"
-                            >
-                              <ArrowUp className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              disabled={idx === tplExercises.length - 1}
-                              onClick={() =>
-                                setTplExercises((prev) => {
-                                  const copy = [...prev];
-                                  const [m] = copy.splice(idx, 1);
-                                  if (m) copy.splice(idx + 1, 0, m);
-                                  return copy;
-                                })
+                              className="font-mono-tabular h-9 text-xs sm:h-8"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground mb-1 truncate text-[10px] font-semibold uppercase">
+                              {t.workouts.minRepsLabel}
+                            </Label>
+                            <NumberInput
+                              min={1}
+                              max={100}
+                              fallbackValue={8}
+                              value={slot.targetRepsMin ?? 8}
+                              onValueChange={(val) =>
+                                setTplExercises((prev) =>
+                                  prev.map((item, i) =>
+                                    i === idx ? { ...item, targetRepsMin: val } : item,
+                                  ),
+                                )
                               }
-                              title={t.workouts.moveDownTitle}
-                              className="size-7"
-                            >
-                              <ArrowDown className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="xs"
-                              onClick={() =>
-                                setTplExercises((prev) => prev.filter((_, i) => i !== idx))
+                              className="font-mono-tabular h-9 text-xs sm:h-8"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground mb-1 truncate text-[10px] font-semibold uppercase">
+                              {t.workouts.maxRepsLabel}
+                            </Label>
+                            <NumberInput
+                              min={1}
+                              max={100}
+                              fallbackValue={12}
+                              value={slot.targetRepsMax ?? 12}
+                              onValueChange={(val) =>
+                                setTplExercises((prev) =>
+                                  prev.map((item, i) =>
+                                    i === idx ? { ...item, targetRepsMax: val } : item,
+                                  ),
+                                )
                               }
-                              className="text-destructive font-semibold"
-                            >
-                              {t.common.remove}
-                            </Button>
+                              className="font-mono-tabular h-9 text-xs sm:h-8"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground mb-1 truncate text-[10px] font-semibold uppercase">
+                              {format(t.workouts.targetWeightLabel, { unit: weightUnit })}
+                            </Label>
+                            <NumberInput
+                              allowNull
+                              step="0.5"
+                              min={0}
+                              value={slot.targetWeight ?? null}
+                              onValueChange={(val) =>
+                                setTplExercises((prev) =>
+                                  prev.map((item, i) =>
+                                    i === idx ? { ...item, targetWeight: val } : item,
+                                  ),
+                                )
+                              }
+                              placeholder={t.common.optional}
+                              className="font-mono-tabular h-9 text-xs sm:h-8"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground mb-1 truncate text-[10px] font-semibold uppercase">
+                              {t.workouts.restSecLabel}
+                            </Label>
+                            <NumberInput
+                              step="15"
+                              min={0}
+                              max={600}
+                              fallbackValue={90}
+                              value={slot.restSeconds}
+                              onValueChange={(val) =>
+                                setTplExercises((prev) =>
+                                  prev.map((item, i) =>
+                                    i === idx ? { ...item, restSeconds: val } : item,
+                                  ),
+                                )
+                              }
+                              className="font-mono-tabular h-9 text-xs sm:h-8"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Backup / Alternative Exercises Selector */}
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <div className="min-w-0">
+                            <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
+                              {t.workouts.backupExerciseLabel}
+                            </Label>
+                            <ExercisePicker
+                              exercises={catalog.filter((c) => c.id !== slot.exerciseId)}
+                              value={slot.alternativeExerciseIds?.[0] ?? ''}
+                              emptyOptionLabel={t.workouts.noneConfigured}
+                              emptyOptionValue=""
+                              title={t.workouts.backupExerciseLabel}
+                              onValueChange={(val) => {
+                                setTplExercises((prev) =>
+                                  prev.map((item, i) =>
+                                    i === idx
+                                      ? {
+                                          ...item,
+                                          alternativeExerciseIds: val ? [val] : [],
+                                        }
+                                      : item,
+                                  ),
+                                );
+                              }}
+                              triggerClassName="h-9 sm:h-8 text-xs font-normal"
+                            />
+                          </div>
+                          <div className="min-w-0">
+                            <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
+                              {t.workouts.exerciseNotesLabel}
+                            </Label>
+                            <Input
+                              value={slot.notes ?? ''}
+                              onChange={(e) =>
+                                setTplExercises((prev) =>
+                                  prev.map((item, i) =>
+                                    i === idx ? { ...item, notes: e.target.value } : item,
+                                  ),
+                                )
+                              }
+                              placeholder={t.workouts.exerciseNotesPlaceholder}
+                              className="h-9 text-xs sm:h-8"
+                            />
                           </div>
                         </div>
                       </div>
 
-                      {/* Sets, Warmups, Rep Range, Target Weight, Rest */}
-                      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-6">
-                        <div>
-                          <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                            {t.workouts.workingSetsLabel}
-                          </Label>
-                          <NumberInput
-                            min={1}
-                            max={20}
-                            fallbackValue={3}
-                            value={slot.plannedSets}
-                            onValueChange={(val) =>
-                              setTplExercises((prev) =>
-                                prev.map((item, i) =>
-                                  i === idx ? { ...item, plannedSets: val } : item,
-                                ),
-                              )
-                            }
-                            className="font-mono-tabular h-8 text-xs"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                            {t.workouts.warmupSetsLabel}
-                          </Label>
-                          <NumberInput
-                            min={0}
-                            max={10}
-                            fallbackValue={0}
-                            value={slot.warmupSets ?? 0}
-                            onValueChange={(val) =>
-                              setTplExercises((prev) =>
-                                prev.map((item, i) =>
-                                  i === idx ? { ...item, warmupSets: val } : item,
-                                ),
-                              )
-                            }
-                            className="font-mono-tabular h-8 text-xs"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                            {t.workouts.minRepsLabel}
-                          </Label>
-                          <NumberInput
-                            min={1}
-                            max={100}
-                            fallbackValue={8}
-                            value={slot.targetRepsMin ?? 8}
-                            onValueChange={(val) =>
-                              setTplExercises((prev) =>
-                                prev.map((item, i) =>
-                                  i === idx ? { ...item, targetRepsMin: val } : item,
-                                ),
-                              )
-                            }
-                            className="font-mono-tabular h-8 text-xs"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                            {t.workouts.maxRepsLabel}
-                          </Label>
-                          <NumberInput
-                            min={1}
-                            max={100}
-                            fallbackValue={12}
-                            value={slot.targetRepsMax ?? 12}
-                            onValueChange={(val) =>
-                              setTplExercises((prev) =>
-                                prev.map((item, i) =>
-                                  i === idx ? { ...item, targetRepsMax: val } : item,
-                                ),
-                              )
-                            }
-                            className="font-mono-tabular h-8 text-xs"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                            {format(t.workouts.targetWeightLabel, { unit: weightUnit })}
-                          </Label>
-                          <NumberInput
-                            allowNull
-                            step="0.5"
-                            min={0}
-                            value={slot.targetWeight ?? null}
-                            onValueChange={(val) =>
-                              setTplExercises((prev) =>
-                                prev.map((item, i) =>
-                                  i === idx ? { ...item, targetWeight: val } : item,
-                                ),
-                              )
-                            }
-                            placeholder={t.common.optional}
-                            className="font-mono-tabular h-8 text-xs"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                            {t.workouts.restSecLabel}
-                          </Label>
-                          <NumberInput
-                            step="15"
-                            min={0}
-                            max={600}
-                            fallbackValue={90}
-                            value={slot.restSeconds}
-                            onValueChange={(val) =>
-                              setTplExercises((prev) =>
-                                prev.map((item, i) =>
-                                  i === idx ? { ...item, restSeconds: val } : item,
-                                ),
-                              )
-                            }
-                            className="font-mono-tabular h-8 text-xs"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Backup / Alternative Exercises Selector */}
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <div className="min-w-0">
-                          <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                            {t.workouts.backupExerciseLabel}
-                          </Label>
-                          <ExercisePicker
-                            exercises={catalog.filter((c) => c.id !== slot.exerciseId)}
-                            value={slot.alternativeExerciseIds?.[0] ?? ''}
-                            emptyOptionLabel={t.workouts.noneConfigured}
-                            emptyOptionValue=""
-                            title={t.workouts.backupExerciseLabel}
-                            onValueChange={(val) => {
-                              setTplExercises((prev) =>
-                                prev.map((item, i) =>
-                                  i === idx
-                                    ? {
-                                        ...item,
-                                        alternativeExerciseIds: val ? [val] : [],
-                                      }
-                                    : item,
-                                ),
-                              );
-                            }}
-                            triggerClassName="h-8 text-xs font-normal"
-                          />
-                        </div>
-                        <div className="min-w-0">
-                          <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                            {t.workouts.exerciseNotesLabel}
-                          </Label>
-                          <Input
-                            value={slot.notes ?? ''}
-                            onChange={(e) =>
-                              setTplExercises((prev) =>
-                                prev.map((item, i) =>
-                                  i === idx ? { ...item, notes: e.target.value } : item,
-                                ),
-                              )
-                            }
-                            placeholder={t.workouts.exerciseNotesPlaceholder}
-                            className="h-8 text-xs"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {isSupersetWithNext && (
-                      <div className="border-accent/40 bg-accent/15 text-accent flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs font-bold">
-                        <span className="flex min-w-0 items-center gap-2">
-                          <Zap className="h-3.5 w-3.5 shrink-0" />
-                          <span className="leading-snug">
-                            {format(t.workouts.supersetPairBanner, {
-                              first: idx + 1,
-                              second: idx + 2,
-                            })}
+                      {isSupersetWithNext && (
+                        <div className="border-accent/40 bg-accent/15 text-accent flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs font-bold">
+                          <span className="flex min-w-0 items-center gap-2">
+                            <Zap className="h-3.5 w-3.5 shrink-0" />
+                            <span className="leading-snug">
+                              {format(t.workouts.supersetPairBanner, {
+                                first: idx + 1,
+                                second: idx + 2,
+                              })}
+                            </span>
                           </span>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setTplExercises((prev) =>
-                              prev.map((item, i) =>
-                                i === idx ? { ...item, restSeconds: 90 } : item,
-                              ),
-                            )
-                          }
-                          className="shrink-0 underline opacity-80 hover:opacity-100"
-                        >
-                          {t.workouts.unlinkBtn}
-                        </button>
-                      </div>
-                    )}
-                  </React.Fragment>
-                );
-              })}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setTplExercises((prev) =>
+                                prev.map((item, i) =>
+                                  i === idx ? { ...item, restSeconds: 90 } : item,
+                                ),
+                              )
+                            }
+                            className="shrink-0 underline opacity-80 hover:opacity-100"
+                          >
+                            {t.workouts.unlinkBtn}
+                          </button>
+                        </div>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </div>
             </div>
 
-            <DialogFooter className="border-t pt-4">
+            <DialogFooter className="shrink-0 border-t pt-3">
               <Button
                 type="button"
                 variant="secondary"

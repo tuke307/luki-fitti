@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Input } from '@luki-fitti/ui/components/ui/input';
+import { cn } from '@luki-fitti/ui/lib/utils';
 
 interface BaseNumberInputProps
   extends Omit<
@@ -93,6 +94,14 @@ export function NumberInput(props: NumberInputProps) {
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     setIsFocused(true);
     setDraft(formatExternal(value));
+    const target = e.currentTarget;
+    window.requestAnimationFrame(() => {
+      try {
+        target.select();
+      } catch {
+        // Ignore if unsupported by input type
+      }
+    });
     onFocus?.(e);
   };
 
@@ -141,7 +150,12 @@ export function NumberInput(props: NumberInputProps) {
   };
 
   if (variant === 'bare') {
-    return <input {...sharedProps} />;
+    return (
+      <input
+        {...sharedProps}
+        className={cn(sharedProps.className, 'max-sm:text-base')}
+      />
+    );
   }
 
   return <Input {...sharedProps} />;
