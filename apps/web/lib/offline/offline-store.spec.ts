@@ -36,6 +36,14 @@ import {
   computeExerciseProgression,
   formatCompactDelta,
 } from '@luki-fitti/common/utils/client';
+import {
+  getEquipmentLabel,
+  getMuscleGroupLabel,
+  interpolate,
+  matchBrowserTagToLocale,
+  resolveLocale,
+} from '../i18n';
+import { filterExercisesByQuery } from '../../components/gym/exercise-picker';
 import type { WorkoutSessionDto } from '@luki-fitti/common/schemas';
 
 describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substitution', () => {
@@ -429,5 +437,35 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
       resetWorkouts.folders.some((f) => f.id === 'custom-folder'),
       false,
     );
+  });
+
+  it('supports bilingual (EN/DE) exercise search and i18n locale resolution', async () => {
+    const catalog = await getCachedCatalog();
+    assert.equal(catalog.length > 50, true);
+
+    // Search by German alias / muscle / equipment
+    const benchMatches = filterExercisesByQuery(catalog, 'bankdrücken');
+    assert.equal(benchMatches.some((e) => e.id === 'ex-barbell-bench-press'), true);
+
+    const chestDeMatches = filterExercisesByQuery(catalog, 'Brust');
+    assert.equal(
+      chestDeMatches.some((e) => e.primaryMuscleGroup === MuscleGroup.CHEST),
+      true,
+    );
+
+    const cableDeMatches = filterExercisesByQuery(catalog, 'Kabelzug');
+    assert.equal(cableDeMatches.length > 0, true);
+
+    // Locale detection and translation helpers
+    assert.equal(matchBrowserTagToLocale('de-DE'), 'de');
+    assert.equal(matchBrowserTagToLocale('de-CH'), 'de');
+    assert.equal(matchBrowserTagToLocale('en-US'), 'en');
+    assert.equal(matchBrowserTagToLocale('fr-FR'), null);
+    assert.equal(resolveLocale('de'), 'de');
+    assert.equal(resolveLocale('en'), 'en');
+    assert.equal(getMuscleGroupLabel(MuscleGroup.CHEST, 'de'), 'Brust');
+    assert.equal(getMuscleGroupLabel(MuscleGroup.CHEST, 'en'), 'Chest');
+    assert.equal(getEquipmentLabel(catalog[0]!.equipment, 'de'), 'Langhantel');
+    assert.equal(interpolate('Duplicated "{name}"', { name: 'Push A (Copy)' }), 'Duplicated "Push A (Copy)"');
   });
 });
