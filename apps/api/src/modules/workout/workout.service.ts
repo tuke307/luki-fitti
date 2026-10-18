@@ -5,6 +5,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { resolveExerciseMedia } from '@luki-fitti/common/catalog';
 import type {
   CreateFolderDto,
   UpdateFolderDto,
@@ -398,6 +399,12 @@ export class WorkoutService {
               tags: e.exercise.tags ?? [],
               isSystem: e.exercise.isSystem,
               alternativeExerciseIds: e.alternativeExerciseIds ?? [],
+              media: resolveExerciseMedia({
+                id: e.exercise.id,
+                slug: e.exercise.slug,
+                name: e.exercise.name,
+                primaryMuscleGroup: e.exercise.primaryMuscleGroup,
+              }),
             }
           : undefined,
       })),

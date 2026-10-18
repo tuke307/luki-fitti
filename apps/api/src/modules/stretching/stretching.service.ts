@@ -4,6 +4,11 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import {
+  DEFAULT_STRETCHING_ROUTINES,
+  INITIAL_EXERCISE_CATALOG,
+  resolveExerciseMedia,
+} from '@luki-fitti/common/catalog';
 import type {
   CreateStretchingRoutineDto,
   UpdateStretchingRoutineDto,
@@ -14,7 +19,84 @@ import type {
 export class StretchingService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async ensureDefaultRoutinesForUser(userId: string): Promise<void> {
+    if (!this.prisma.stretchingRoutine?.findMany) return;
+    const existing = await this.prisma.stretchingRoutine.findMany({
+      where: { userId },
+      select: { name: true },
+    });
+    const existingNames = new Set(existing.map((r) => r.name.toLowerCase()));
+    const missingRoutines = DEFAULT_STRETCHING_ROUTINES.filter(
+      (r) => !existingNames.has(r.name.toLowerCase()),
+    );
+    if (missingRoutines.length === 0) return;
+
+    // Ensure referenced stretching exercises exist in Exercise table
+    if (this.prisma.exercise?.upsert) {
+      const stretchCatalog = INITIAL_EXERCISE_CATALOG.filter((e) =>
+        missingRoutines.some((r) => r.exercises.some((re) => re.exerciseId === e.id)),
+      );
+      for (const item of stretchCatalog) {
+        await this.prisma.exercise.upsert({
+          where: { slug: item.slug },
+          update: {},
+          create: {
+            id: item.id,
+            slug: item.slug,
+            name: item.name,
+            description: item.description,
+            instructions: item.instructions,
+            category: item.category,
+            exerciseType: item.exerciseType,
+            primaryMuscleGroup: item.primaryMuscleGroup,
+            equipment: item.equipment,
+            recommendedDurationSeconds: item.recommendedDurationSeconds,
+            tags: item.tags,
+            isSystem: true,
+          },
+        });
+      }
+    }
+
+    for (const def of missingRoutines) {
+      await this.prisma.$transaction(async (tx) => {
+        const created = await tx.stretchingRoutine.create({
+          data: {
+            userId,
+            name: def.name,
+            description: def.description,
+            targetArea: def.targetArea,
+            estimatedDurationSeconds: def.estimatedDurationSeconds,
+            isSystem: true,
+          },
+        });
+        for (const ex of def.exercises) {
+          const foundEx = await tx.exercise?.findFirst?.({
+            where: {
+              OR: [{ id: ex.exerciseId }, { slug: ex.exerciseId.replace(/^ex-/, '') }],
+            },
+            select: { id: true },
+          });
+          const resolvedExId = foundEx?.id ?? ex.exerciseId;
+          await tx.stretchingRoutineExercise.create({
+            data: {
+              routineId: created.id,
+              exerciseId: resolvedExId,
+              orderIndex: ex.orderIndex,
+              sets: ex.sets,
+              durationSeconds: ex.durationSeconds,
+              reps: ex.reps,
+              transitionSeconds: ex.transitionSeconds,
+              notes: ex.notes,
+            },
+          });
+        }
+      });
+    }
+  }
+
   async findAll(userId: string): Promise<StretchingRoutineDto[]> {
+    await this.ensureDefaultRoutinesForUser(userId).catch(() => undefined);
     const routines = await this.prisma.stretchingRoutine.findMany({
       where: { userId },
       orderBy: { createdAt: 'asc' },
@@ -203,6 +285,12 @@ export class StretchingService {
               tags: e.exercise.tags ?? [],
               isSystem: e.exercise.isSystem,
               alternativeExerciseIds: [],
+              media: resolveExerciseMedia({
+                id: e.exercise.id,
+                slug: e.exercise.slug,
+                name: e.exercise.name,
+                primaryMuscleGroup: e.exercise.primaryMuscleGroup,
+              }),
             }
           : undefined,
       })),

@@ -7,6 +7,7 @@ import {
   createOfflineSessionFromTemplate,
   enqueueSessionSync,
   getCachedCatalog,
+  getCachedStretchingRoutines,
   getLocalActiveSession,
   getLocalHistorySessions,
   getSyncQueue,
@@ -338,5 +339,27 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
       ),
       false,
     );
+  });
+
+  it('preserves 0s rest for superset exercises and populates exercise media and expanded stretching routines', async () => {
+    const catalog = await getCachedCatalog();
+    const routines = await getCachedStretchingRoutines();
+    assert.equal(routines.length >= 6, true);
+    assert.equal(
+      catalog.every((ex) => Array.isArray(ex.media) && ex.media.length >= 2),
+      true,
+    );
+
+    const { folders } = buildDefaultFoldersAndTemplates('user-1');
+    const baseTemplate = folders[0]!.templates[0]!;
+    const supersetTemplate = {
+      ...baseTemplate,
+      exercises: baseTemplate.exercises.map((ex, idx) =>
+        idx === 0 ? { ...ex, restSeconds: 0 } : ex,
+      ),
+    };
+
+    const session = createOfflineSessionFromTemplate(supersetTemplate, catalog, 'user-1');
+    assert.equal(session.exercises[0]!.restSeconds, 0);
   });
 });

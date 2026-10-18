@@ -546,7 +546,29 @@ export const INITIAL_EXERCISE_CATALOG: ExerciseDto[] = [
     recommendedDurationSeconds: null,
     tags: ['beinbeuger', 'leg curl', 'hamstrings', 'isolation'],
     isSystem: true,
-    alternativeExerciseIds: ['ex-romanian-deadlift'],
+    alternativeExerciseIds: ['ex-lying-leg-curl', 'ex-romanian-deadlift'],
+  },
+  {
+    id: 'ex-lying-leg-curl',
+    slug: 'lying-leg-curl',
+    userId: null,
+    name: 'Lying Leg Curls',
+    description:
+      'Prone machine hamstring curl isolating the biceps femoris, semitendinosus, and semimembranosus with hips extended.',
+    instructions: [
+      'Lie face down on the leg curl bench with the roller pad resting just above your heels and knees aligned with the pivot.',
+      'Brace your hips into the pad and curl your lower legs up until the pad reaches your glutes/upper hamstrings.',
+      'Hold peak contraction for 1 second, then lower under control over 2-3 seconds.',
+    ],
+    category: ExerciseCategory.MACHINE,
+    exerciseType: ExerciseType.STRENGTH,
+    primaryMuscleGroup: MuscleGroup.HAMSTRINGS,
+    secondaryMuscleGroups: [MuscleGroup.CALVES, MuscleGroup.GLUTES],
+    equipment: EquipmentType.MACHINE,
+    recommendedDurationSeconds: null,
+    tags: ['lying leg curls', 'beinbeuger liegend', 'hamstrings', 'legs', 'isolation'],
+    isSystem: true,
+    alternativeExerciseIds: ['ex-seated-leg-curl', 'ex-romanian-deadlift'],
   },
 
   // ── GLUTES ─────────────────────────────────────────────────────────────────
@@ -572,6 +594,28 @@ export const INITIAL_EXERCISE_CATALOG: ExerciseDto[] = [
     isSystem: true,
     alternativeExerciseIds: ['ex-romanian-deadlift', 'ex-bulgarian-split-squat'],
   },
+  {
+    id: 'ex-hip-adduction-abduction',
+    slug: 'hip-adduction-abduction',
+    userId: null,
+    name: 'Hüftabduktion / Hip Adduction',
+    description:
+      'Seated machine hip abduction and adduction strengthening the gluteus medius/minimus and inner thigh adductors for pelvic stability.',
+    instructions: [
+      'Sit tall in the machine with your back against the pad and position the knee pads comfortably.',
+      'Drive your knees outward (abduction) or squeeze inward (adduction) smoothly through a full range of motion.',
+      'Pause 1 second at peak contraction and control the eccentric without letting the weight stack slam.',
+    ],
+    category: ExerciseCategory.MACHINE,
+    exerciseType: ExerciseType.STRENGTH,
+    primaryMuscleGroup: MuscleGroup.GLUTES,
+    secondaryMuscleGroups: [MuscleGroup.QUADRICEPS, MuscleGroup.HIP_FLEXORS],
+    equipment: EquipmentType.MACHINE,
+    recommendedDurationSeconds: null,
+    tags: ['hüftabduktion', 'hip adduction', 'hip abduction', 'adduktoren', 'abduktoren', 'glutes', 'legs'],
+    isSystem: true,
+    alternativeExerciseIds: ['ex-barbell-hip-thrust', 'ex-bulgarian-split-squat'],
+  },
 
   // ── CALVES ─────────────────────────────────────────────────────────────────
   {
@@ -591,9 +635,30 @@ export const INITIAL_EXERCISE_CATALOG: ExerciseDto[] = [
     secondaryMuscleGroups: [],
     equipment: EquipmentType.MACHINE,
     recommendedDurationSeconds: null,
-    tags: ['wadenheben', 'calf raise', 'calves', 'legs'],
+    tags: ['wadenheben', 'standing calf', 'calf raise', 'calves', 'legs'],
     isSystem: true,
-    alternativeExerciseIds: [],
+    alternativeExerciseIds: ['ex-seated-calf-raise'],
+  },
+  {
+    id: 'ex-seated-calf-raise',
+    slug: 'seated-calf-raise',
+    userId: null,
+    name: 'Seated Calf Raise',
+    description:
+      'Bent-knee plantarflexion isolating the soleus muscle underneath the gastrocnemius for complete lower-leg development.',
+    instructions: [
+      'Sit on the machine with the balls of your feet on the step and the thigh pad snug just above your knees.',
+      'Lower your heels as far as ankle mobility allows for a 2-second stretch, then drive up to full contraction.',
+    ],
+    category: ExerciseCategory.MACHINE,
+    exerciseType: ExerciseType.STRENGTH,
+    primaryMuscleGroup: MuscleGroup.CALVES,
+    secondaryMuscleGroups: [],
+    equipment: EquipmentType.MACHINE,
+    recommendedDurationSeconds: null,
+    tags: ['wadenheben sitzend', 'seated calf raise', 'soleus', 'calves', 'legs'],
+    isSystem: true,
+    alternativeExerciseIds: ['ex-standing-calf-raise'],
   },
 
   // ── ABS & CORE / HIP FLEXORS / FULL BODY / CARDIO ──────────────────────────
@@ -814,7 +879,327 @@ export const INITIAL_EXERCISE_CATALOG: ExerciseDto[] = [
     recommendedDurationSeconds: 60,
     tags: ['hamstring stretch', 'beinrückseite dehnen', 'stretching', 'cooldown'],
     isSystem: true,
+    alternativeExerciseIds: ['ex-seated-pike-hamstring-fold'],
+  },
+  {
+    id: 'ex-pigeon-glute-stretch',
+    slug: 'pigeon-glute-stretch',
+    userId: null,
+    name: 'Pigeon / Figure-4 Piriformis & Glute Stretch',
+    description:
+      'Deep external-rotation hip stretch releasing the gluteus medius, piriformis, and deep lateral hip rotators to relieve lower-back tightness.',
+    instructions: [
+      'Cross one shin in front of your hips (or ankle over opposite knee if lying on your back).',
+      'Keep your pelvis squared and hinge forward gently from the hips while exhaling slowly.',
+      'Hold for 45-60 seconds per side without forcing knee torque.',
+    ],
+    category: ExerciseCategory.STRETCH,
+    exerciseType: ExerciseType.STRETCHING,
+    primaryMuscleGroup: MuscleGroup.GLUTES,
+    secondaryMuscleGroups: [MuscleGroup.HIP_FLEXORS, MuscleGroup.HAMSTRINGS],
+    equipment: EquipmentType.NONE,
+    recommendedDurationSeconds: 60,
+    tags: ['pigeon stretch', 'piriformis', 'figure 4', 'gesäß dehnen', 'glutes', 'stretching'],
+    isSystem: true,
+    alternativeExerciseIds: ['ex-90-90-hip-mobility'],
+  },
+  {
+    id: 'ex-worlds-greatest-stretch',
+    slug: 'worlds-greatest-stretch',
+    userId: null,
+    name: "World's Greatest Stretch (Lunge & T-Spine Reach)",
+    description:
+      'Multi-planar dynamic warm-up flow simultaneously opening hip flexors, adductors, hamstrings, and thoracic rotation.',
+    instructions: [
+      'Step into a deep forward lunge and plant your opposite hand on the floor inside your front foot.',
+      'Drop your inside elbow toward your front instep, then rotate your torso and reach that arm toward the ceiling.',
+      'Shift your hips back briefly to lengthen the front hamstring before switching sides.',
+    ],
+    category: ExerciseCategory.MOBILITY,
+    exerciseType: ExerciseType.MOBILITY,
+    primaryMuscleGroup: MuscleGroup.FULL_BODY,
+    secondaryMuscleGroups: [MuscleGroup.HIP_FLEXORS, MuscleGroup.HAMSTRINGS, MuscleGroup.BACK],
+    equipment: EquipmentType.NONE,
+    recommendedDurationSeconds: 60,
+    tags: ['worlds greatest stretch', 'ganzkörper mobilität', 'warmup', 'mobility', 'dynamic'],
+    isSystem: true,
+    alternativeExerciseIds: ['ex-90-90-hip-mobility', 'ex-thoracic-open-book'],
+  },
+  {
+    id: 'ex-butterfly-adductor-stretch',
+    slug: 'butterfly-adductor-stretch',
+    userId: null,
+    name: 'Seated Butterfly Groin & Adductor Stretch',
+    description:
+      'Opens the inner-thigh adductors and pelvic floor for wider, more comfortable squat and sumo stances.',
+    instructions: [
+      'Sit tall on the floor, bring the soles of your feet together, and hold your ankles.',
+      'Use your elbows to gently press your knees toward the floor while maintaining a neutral spine.',
+      'Breathe deeply into your pelvis for 45-60 seconds.',
+    ],
+    category: ExerciseCategory.STRETCH,
+    exerciseType: ExerciseType.STRETCHING,
+    primaryMuscleGroup: MuscleGroup.HIP_FLEXORS,
+    secondaryMuscleGroups: [MuscleGroup.GLUTES, MuscleGroup.QUADRICEPS],
+    equipment: EquipmentType.NONE,
+    recommendedDurationSeconds: 45,
+    tags: ['butterfly stretch', 'adduktoren dehnen', 'groin', 'hips', 'stretching'],
+    isSystem: true,
+    alternativeExerciseIds: ['ex-90-90-hip-mobility'],
+  },
+  {
+    id: 'ex-deep-squat-ankle-pry',
+    slug: 'deep-squat-ankle-pry',
+    userId: null,
+    name: 'Deep Squat Hold & Ankle Dorsiflexion Pry',
+    description:
+      'Loaded ankle dorsiflexion and hip-opening mobility drill essential for upright squat mechanics and knee tracking.',
+    instructions: [
+      'Sink into the bottom of a deep bodyweight squat with heels flat on the floor (hold a rack upright if needed).',
+      'Place your elbows inside your knees and gently shift weight side-to-side over each ankle to mobilize the talocrural joint.',
+      'Accumulate 60 seconds with an upright chest.',
+    ],
+    category: ExerciseCategory.MOBILITY,
+    exerciseType: ExerciseType.MOBILITY,
+    primaryMuscleGroup: MuscleGroup.QUADRICEPS,
+    secondaryMuscleGroups: [MuscleGroup.CALVES, MuscleGroup.GLUTES, MuscleGroup.HIP_FLEXORS],
+    equipment: EquipmentType.NONE,
+    recommendedDurationSeconds: 60,
+    tags: ['deep squat hold', 'sprunggelenk mobilität', 'ankle mobility', 'squat warmup', 'mobility'],
+    isSystem: true,
+    alternativeExerciseIds: ['ex-standing-wall-calf-stretch'],
+  },
+  {
+    id: 'ex-standing-wall-calf-stretch',
+    slug: 'standing-wall-calf-stretch',
+    userId: null,
+    name: 'Standing Wall Gastrocnemius & Soleus Stretch',
+    description:
+      'Dual-position ankle dorsiflexion stretch releasing both straight-knee gastrocnemius and bent-knee soleus/Achilles tension.',
+    instructions: [
+      'Place hands on a wall and step one foot back with heel pressed firmly into the floor and knee straight for 30 seconds.',
+      'Slightly bend the rear knee while keeping the heel down for another 30 seconds to target the soleus and Achilles tendon.',
+    ],
+    category: ExerciseCategory.STRETCH,
+    exerciseType: ExerciseType.STRETCHING,
+    primaryMuscleGroup: MuscleGroup.CALVES,
+    secondaryMuscleGroups: [MuscleGroup.HAMSTRINGS],
+    equipment: EquipmentType.NONE,
+    recommendedDurationSeconds: 60,
+    tags: ['waden dehnen', 'calf stretch', 'achilles', 'ankle mobility', 'stretching'],
+    isSystem: true,
+    alternativeExerciseIds: ['ex-deep-squat-ankle-pry'],
+  },
+  {
+    id: 'ex-standing-quad-stretch',
+    slug: 'standing-quad-stretch',
+    userId: null,
+    name: 'Standing / Side-Lying Quadriceps Stretch',
+    description:
+      'Lengthens the rectus femoris and vasti muscles while encouraging posterior pelvic tilt.',
+    instructions: [
+      'Stand on one leg (holding a rack for balance), grab your opposite ankle, and pull your heel toward your glute.',
+      'Keep both knees close together and lightly squeeze your glute to prevent lower-back overarching.',
+    ],
+    category: ExerciseCategory.STRETCH,
+    exerciseType: ExerciseType.STRETCHING,
+    primaryMuscleGroup: MuscleGroup.QUADRICEPS,
+    secondaryMuscleGroups: [MuscleGroup.HIP_FLEXORS],
+    equipment: EquipmentType.NONE,
+    recommendedDurationSeconds: 45,
+    tags: ['oberschenkel dehnen', 'quad stretch', 'quads', 'legs', 'stretching'],
+    isSystem: true,
+    alternativeExerciseIds: ['ex-couch-hip-flexor-stretch'],
+  },
+  {
+    id: 'ex-seated-pike-hamstring-fold',
+    slug: 'seated-pike-hamstring-fold',
+    userId: null,
+    name: 'Seated Floor Hamstring & Posterior Chain Fold',
+    description:
+      'Static floor stretch lengthening the hamstrings, calves, and thoracolumbar fascia without equipment.',
+    instructions: [
+      'Sit on the floor with legs extended straight in front of you and toes dorsiflexed.',
+      'Hinge forward from the hip crease keeping your chest long, reaching toward your shins or feet for 45-60 seconds.',
+    ],
+    category: ExerciseCategory.STRETCH,
+    exerciseType: ExerciseType.STRETCHING,
+    primaryMuscleGroup: MuscleGroup.HAMSTRINGS,
+    secondaryMuscleGroups: [MuscleGroup.CALVES, MuscleGroup.BACK],
+    equipment: EquipmentType.NONE,
+    recommendedDurationSeconds: 60,
+    tags: ['seated hamstring stretch', 'vorbeuge', 'hamstrings', 'stretching'],
+    isSystem: true,
+    alternativeExerciseIds: ['ex-supine-hamstring-band-stretch'],
+  },
+  {
+    id: 'ex-childs-pose-lat-stretch',
+    slug: 'childs-pose-lat-stretch',
+    userId: null,
+    name: "Child's Pose & Side-Reach Lat Decompression",
+    description:
+      'Opens the latissimus dorsi, teres major, and thoracic spine while gently decompressing the lumbar vertebrae.',
+    instructions: [
+      'Kneel on the floor, sit your hips back onto your heels, and reach your arms long in front of you.',
+      'Walk both hands 30 degrees to the left to bias the right lat for 30 seconds, then walk hands to the right for 30 seconds.',
+    ],
+    category: ExerciseCategory.STRETCH,
+    exerciseType: ExerciseType.STRETCHING,
+    primaryMuscleGroup: MuscleGroup.BACK,
+    secondaryMuscleGroups: [MuscleGroup.SHOULDERS, MuscleGroup.GLUTES],
+    equipment: EquipmentType.NONE,
+    recommendedDurationSeconds: 60,
+    tags: ['childs pose', 'lat dehnen', 'rücken dehnen', 'lats', 'back', 'stretching'],
+    isSystem: true,
+    alternativeExerciseIds: ['ex-dead-hang-shoulder-decompression'],
+  },
+  {
+    id: 'ex-cross-body-shoulder-stretch',
+    slug: 'cross-body-shoulder-stretch',
+    userId: null,
+    name: 'Cross-Body Posterior Deltoid & Capsule Stretch',
+    description:
+      'Releases posterior shoulder capsule and rear deltoid tightness after pressing or upper-back sessions.',
+    instructions: [
+      'Bring one arm straight across your chest at shoulder height while keeping your shoulder blade depressed.',
+      'Use your opposite forearm to gently draw the arm closer to your chest for 45 seconds per side.',
+    ],
+    category: ExerciseCategory.STRETCH,
+    exerciseType: ExerciseType.STRETCHING,
+    primaryMuscleGroup: MuscleGroup.SHOULDERS,
+    secondaryMuscleGroups: [MuscleGroup.BACK],
+    equipment: EquipmentType.NONE,
+    recommendedDurationSeconds: 45,
+    tags: ['schulter dehnen', 'shoulder stretch', 'rear delts', 'shoulders', 'stretching'],
+    isSystem: true,
+    alternativeExerciseIds: ['ex-doorway-pec-stretch'],
+  },
+  {
+    id: 'ex-overhead-tricep-lat-stretch',
+    slug: 'overhead-tricep-lat-stretch',
+    userId: null,
+    name: 'Overhead Triceps & Lateral Fascia Stretch',
+    description:
+      'Targets the long head of the triceps brachii and upper latissimus dorsi in full shoulder flexion.',
+    instructions: [
+      'Reach one arm overhead and bend the elbow so your hand touches your upper back between the shoulder blades.',
+      'Gently press the elbow back and slightly side-bend away for 45 seconds per arm.',
+    ],
+    category: ExerciseCategory.STRETCH,
+    exerciseType: ExerciseType.STRETCHING,
+    primaryMuscleGroup: MuscleGroup.TRICEPS,
+    secondaryMuscleGroups: [MuscleGroup.BACK, MuscleGroup.SHOULDERS],
+    equipment: EquipmentType.NONE,
+    recommendedDurationSeconds: 45,
+    tags: ['trizeps dehnen', 'triceps stretch', 'overhead stretch', 'triceps', 'stretching'],
+    isSystem: true,
+    alternativeExerciseIds: ['ex-childs-pose-lat-stretch'],
+  },
+  {
+    id: 'ex-dead-hang-shoulder-decompression',
+    slug: 'dead-hang-shoulder-decompression',
+    userId: null,
+    name: 'Passive Bar Hang (Shoulder & Spinal Decompression)',
+    description:
+      'Traction hang opening the subacromial shoulder space, stretching the lats and pecs, and decompressing intervertebral discs.',
+    instructions: [
+      'Grip a pull-up bar with a shoulder-width overhand grip and let your body hang with relaxed hips and legs.',
+      'Allow your shoulders to elevate gently toward your ears while taking slow 4-second nasal breaths for 45-60 seconds.',
+    ],
+    category: ExerciseCategory.MOBILITY,
+    exerciseType: ExerciseType.MOBILITY,
+    primaryMuscleGroup: MuscleGroup.BACK,
+    secondaryMuscleGroups: [MuscleGroup.SHOULDERS, MuscleGroup.FOREARMS],
+    equipment: EquipmentType.BODYWEIGHT,
+    recommendedDurationSeconds: 45,
+    tags: ['dead hang', 'aushängen', 'shoulder health', 'spinal decompression', 'mobility'],
+    isSystem: true,
+    alternativeExerciseIds: ['ex-childs-pose-lat-stretch'],
+  },
+  {
+    id: 'ex-kneeling-wrist-forearm-stretch',
+    slug: 'kneeling-wrist-forearm-stretch',
+    userId: null,
+    name: 'Kneeling Wrist Flexor & Extensor Mobility',
+    description:
+      'Restores wrist extension and forearm flexor elasticity for pain-free bench pressing, push-ups, and front squats.',
+    instructions: [
+      'Kneel on all fours and place your palms flat on the floor with fingers pointing back toward your knees.',
+      'Slowly rock your hips backward a few inches until a steady stretch is felt along the inner forearms for 45 seconds.',
+    ],
+    category: ExerciseCategory.MOBILITY,
+    exerciseType: ExerciseType.MOBILITY,
+    primaryMuscleGroup: MuscleGroup.FOREARMS,
+    secondaryMuscleGroups: [MuscleGroup.BICEPS],
+    equipment: EquipmentType.NONE,
+    recommendedDurationSeconds: 45,
+    tags: ['handgelenke dehnen', 'wrist mobility', 'forearm stretch', 'forearms', 'mobility'],
+    isSystem: true,
     alternativeExerciseIds: [],
+  },
+  {
+    id: 'ex-cat-cow-spinal-flow',
+    slug: 'cat-cow-spinal-flow',
+    userId: null,
+    name: 'Cat-Cow Segmental Spinal Articulation',
+    description:
+      'Rhythmic flexion and extension flow lubricating the cervical, thoracic, and lumbar facet joints.',
+    instructions: [
+      'Start in a quadruped position with hands stacked under shoulders and knees under hips.',
+      'Inhale as you drop your belly and lift your sternum (Cow), then exhale as you press the floor away and round your spine (Cat).',
+      'Flow smoothly for 10-12 breath cycles (~60 seconds).',
+    ],
+    category: ExerciseCategory.MOBILITY,
+    exerciseType: ExerciseType.MOBILITY,
+    primaryMuscleGroup: MuscleGroup.ABS_CORE,
+    secondaryMuscleGroups: [MuscleGroup.BACK, MuscleGroup.HIP_FLEXORS],
+    equipment: EquipmentType.NONE,
+    recommendedDurationSeconds: 60,
+    tags: ['cat cow', 'katze kuh', 'wirbelsäule', 'spine mobility', 'warmup', 'mobility'],
+    isSystem: true,
+    alternativeExerciseIds: ['ex-thoracic-open-book'],
+  },
+  {
+    id: 'ex-supine-knee-to-chest-twist',
+    slug: 'supine-knee-to-chest-twist',
+    userId: null,
+    name: 'Supine Knee-to-Chest & Lumbar Decompression',
+    description:
+      'Gentle floor decompression releasing the lumbar erectors, sacroiliac joint, and gluteus maximus after heavy squats or deadlifts.',
+    instructions: [
+      'Lie flat on your back and draw both knees (or one knee at a time) gently into your chest.',
+      'Rock slowly side-to-side across your sacrum while taking deep diaphragmatic breaths for 60 seconds.',
+    ],
+    category: ExerciseCategory.STRETCH,
+    exerciseType: ExerciseType.STRETCHING,
+    primaryMuscleGroup: MuscleGroup.BACK,
+    secondaryMuscleGroups: [MuscleGroup.GLUTES, MuscleGroup.ABS_CORE],
+    equipment: EquipmentType.NONE,
+    recommendedDurationSeconds: 60,
+    tags: ['unterer rücken dehnen', 'lower back stretch', 'lumbar decompression', 'stretching'],
+    isSystem: true,
+    alternativeExerciseIds: ['ex-pigeon-glute-stretch'],
+  },
+  {
+    id: 'ex-neck-upper-trap-release',
+    slug: 'neck-upper-trap-release',
+    userId: null,
+    name: 'Lateral Neck & Upper Trapezius Release',
+    description:
+      'Relieves cervical tension, upper trapezius hypertonicity, and levator scapulae stiffness from desk work or heavy shrugs.',
+    instructions: [
+      'Sit or stand tall, anchor one hand behind your lower back to depress the shoulder.',
+      'Gently tilt your ear toward the opposite shoulder until a mild stretch is felt along the side of the neck for 45 seconds per side.',
+    ],
+    category: ExerciseCategory.STRETCH,
+    exerciseType: ExerciseType.STRETCHING,
+    primaryMuscleGroup: MuscleGroup.SHOULDERS,
+    secondaryMuscleGroups: [MuscleGroup.BACK],
+    equipment: EquipmentType.NONE,
+    recommendedDurationSeconds: 45,
+    tags: ['nacken dehnen', 'neck stretch', 'traps', 'posture', 'stretching'],
+    isSystem: true,
+    alternativeExerciseIds: ['ex-cross-body-shoulder-stretch'],
   },
 ];
 
@@ -1194,11 +1579,11 @@ export const DEFAULT_STARTER_TEMPLATES = [
 export const DEFAULT_STRETCHING_ROUTINES = [
   {
     id: 'stretch-lower-body-flow',
-    name: 'Post-Leg Day Hip & Hamstring Flow',
+    name: 'Post-Leg Day Hip, Glute & Hamstring Flow',
     description:
-      'Decompresses the lumbar spine, opens tight hip flexors, and restores internal/external hip rotation.',
+      'Decompresses the lumbar spine, opens tight hip flexors, releases the piriformis, and restores internal/external hip rotation.',
     targetArea: 'Lower Body & Hips',
-    estimatedDurationSeconds: 540,
+    estimatedDurationSeconds: 660,
     exercises: [
       {
         id: 'sre-1',
@@ -1225,26 +1610,48 @@ export const DEFAULT_STRETCHING_ROUTINES = [
       {
         id: 'sre-3',
         routineId: 'stretch-lower-body-flow',
-        exerciseId: 'ex-supine-hamstring-band-stretch',
+        exerciseId: 'ex-pigeon-glute-stretch',
         orderIndex: 2,
+        sets: 2,
+        durationSeconds: 60,
+        reps: null,
+        transitionSeconds: 15,
+        notes: 'Keep pelvis squared, hinge from hip crease.',
+      },
+      {
+        id: 'sre-4',
+        routineId: 'stretch-lower-body-flow',
+        exerciseId: 'ex-supine-hamstring-band-stretch',
+        orderIndex: 3,
         sets: 2,
         durationSeconds: 60,
         reps: null,
         transitionSeconds: 15,
         notes: 'Deep nasal breathing.',
       },
+      {
+        id: 'sre-5',
+        routineId: 'stretch-lower-body-flow',
+        exerciseId: 'ex-standing-wall-calf-stretch',
+        orderIndex: 4,
+        sets: 2,
+        durationSeconds: 45,
+        reps: null,
+        transitionSeconds: 10,
+        notes: '30s straight knee + 15s bent knee per side.',
+      },
     ],
   },
   {
     id: 'stretch-upper-thoracic-reset',
-    name: 'Upper Body & Thoracic Posture Reset',
+    name: 'Upper Body, Chest & Thoracic Opener',
     description:
-      'Ideal before pressing sessions or after desk work to open the chest and thoracic spine.',
+      'Ideal before or after pressing sessions to open the chest, lats, shoulders, and thoracic spine.',
     targetArea: 'Upper Body & Thoracic',
-    estimatedDurationSeconds: 360,
+    estimatedDurationSeconds: 480,
     exercises: [
       {
-        id: 'sre-4',
+        id: 'sre-6',
         routineId: 'stretch-upper-thoracic-reset',
         exerciseId: 'ex-thoracic-open-book',
         orderIndex: 0,
@@ -1255,7 +1662,7 @@ export const DEFAULT_STRETCHING_ROUTINES = [
         notes: 'Exhale on rotation.',
       },
       {
-        id: 'sre-5',
+        id: 'sre-7',
         routineId: 'stretch-upper-thoracic-reset',
         exerciseId: 'ex-doorway-pec-stretch',
         orderIndex: 1,
@@ -1265,6 +1672,534 @@ export const DEFAULT_STRETCHING_ROUTINES = [
         transitionSeconds: 10,
         notes: 'Avoid arching lower back.',
       },
+      {
+        id: 'sre-8',
+        routineId: 'stretch-upper-thoracic-reset',
+        exerciseId: 'ex-childs-pose-lat-stretch',
+        orderIndex: 2,
+        sets: 2,
+        durationSeconds: 45,
+        reps: null,
+        transitionSeconds: 10,
+        notes: 'Walk hands left 30s, then right 30s.',
+      },
+      {
+        id: 'sre-9',
+        routineId: 'stretch-upper-thoracic-reset',
+        exerciseId: 'ex-cross-body-shoulder-stretch',
+        orderIndex: 3,
+        sets: 2,
+        durationSeconds: 45,
+        reps: null,
+        transitionSeconds: 10,
+        notes: 'Keep shoulder blade depressed.',
+      },
+    ],
+  },
+  {
+    id: 'stretch-dynamic-warmup-flow',
+    name: '10-Min Pre-Workout Dynamic Mobility Warm-Up',
+    description:
+      'Activates hip capsule rotation, ankle dorsiflexion, and thoracic extension before heavy compound lifts.',
+    targetArea: 'Full Body Readiness',
+    estimatedDurationSeconds: 540,
+    exercises: [
+      {
+        id: 'sre-10',
+        routineId: 'stretch-dynamic-warmup-flow',
+        exerciseId: 'ex-cat-cow-spinal-flow',
+        orderIndex: 0,
+        sets: 2,
+        durationSeconds: 45,
+        reps: 10,
+        transitionSeconds: 10,
+        notes: 'Match movement to inhale and exhale.',
+      },
+      {
+        id: 'sre-11',
+        routineId: 'stretch-dynamic-warmup-flow',
+        exerciseId: 'ex-worlds-greatest-stretch',
+        orderIndex: 1,
+        sets: 2,
+        durationSeconds: 60,
+        reps: 6,
+        transitionSeconds: 15,
+        notes: '5-6 dynamic lunges + T-spine reaches per side.',
+      },
+      {
+        id: 'sre-12',
+        routineId: 'stretch-dynamic-warmup-flow',
+        exerciseId: 'ex-deep-squat-ankle-pry',
+        orderIndex: 2,
+        sets: 2,
+        durationSeconds: 60,
+        reps: null,
+        transitionSeconds: 15,
+        notes: 'Shift weight gently over each ankle.',
+      },
+      {
+        id: 'sre-13',
+        routineId: 'stretch-dynamic-warmup-flow',
+        exerciseId: 'ex-dead-hang-shoulder-decompression',
+        orderIndex: 3,
+        sets: 2,
+        durationSeconds: 45,
+        reps: null,
+        transitionSeconds: 15,
+        notes: 'Relax lats and breathe deeply into ribcage.',
+      },
+    ],
+  },
+  {
+    id: 'stretch-desk-posture-reset',
+    name: 'Desk Posture, Neck & Wrist Recovery Flow',
+    description:
+      'Counteracts prolonged sitting and keyboard work by releasing the neck, pecs, wrists, and hip flexors.',
+    targetArea: 'Neck, Shoulders & Hips',
+    estimatedDurationSeconds: 480,
+    exercises: [
+      {
+        id: 'sre-14',
+        routineId: 'stretch-desk-posture-reset',
+        exerciseId: 'ex-neck-upper-trap-release',
+        orderIndex: 0,
+        sets: 2,
+        durationSeconds: 45,
+        reps: null,
+        transitionSeconds: 10,
+        notes: 'Gentle lateral tilt, anchor opposite hand behind back.',
+      },
+      {
+        id: 'sre-15',
+        routineId: 'stretch-desk-posture-reset',
+        exerciseId: 'ex-doorway-pec-stretch',
+        orderIndex: 1,
+        sets: 2,
+        durationSeconds: 45,
+        reps: null,
+        transitionSeconds: 10,
+        notes: 'Elbows at 90 degrees against doorway.',
+      },
+      {
+        id: 'sre-16',
+        routineId: 'stretch-desk-posture-reset',
+        exerciseId: 'ex-kneeling-wrist-forearm-stretch',
+        orderIndex: 2,
+        sets: 2,
+        durationSeconds: 45,
+        reps: null,
+        transitionSeconds: 10,
+        notes: 'Fingers pointed toward knees, rock hips back.',
+      },
+      {
+        id: 'sre-17',
+        routineId: 'stretch-desk-posture-reset',
+        exerciseId: 'ex-couch-hip-flexor-stretch',
+        orderIndex: 3,
+        sets: 2,
+        durationSeconds: 60,
+        reps: null,
+        transitionSeconds: 15,
+        notes: 'Open tight hip flexors from sitting.',
+      },
+    ],
+  },
+  {
+    id: 'stretch-lumbar-glute-decompression',
+    name: 'Lower Back Decompression & Glute Release',
+    description:
+      'Relieves lumbar spine compression after squats, deadlifts, or long travel days.',
+    targetArea: 'Lumbar & Glutes',
+    estimatedDurationSeconds: 540,
+    exercises: [
+      {
+        id: 'sre-18',
+        routineId: 'stretch-lumbar-glute-decompression',
+        exerciseId: 'ex-supine-knee-to-chest-twist',
+        orderIndex: 0,
+        sets: 2,
+        durationSeconds: 60,
+        reps: null,
+        transitionSeconds: 15,
+        notes: 'Slow diaphragmatic breaths into lower back.',
+      },
+      {
+        id: 'sre-19',
+        routineId: 'stretch-lumbar-glute-decompression',
+        exerciseId: 'ex-pigeon-glute-stretch',
+        orderIndex: 1,
+        sets: 2,
+        durationSeconds: 60,
+        reps: null,
+        transitionSeconds: 15,
+        notes: '60s per side.',
+      },
+      {
+        id: 'sre-20',
+        routineId: 'stretch-lumbar-glute-decompression',
+        exerciseId: 'ex-butterfly-adductor-stretch',
+        orderIndex: 2,
+        sets: 2,
+        durationSeconds: 45,
+        reps: null,
+        transitionSeconds: 15,
+        notes: 'Tall spine, press knees gently down.',
+      },
+      {
+        id: 'sre-21',
+        routineId: 'stretch-lumbar-glute-decompression',
+        exerciseId: 'ex-childs-pose-lat-stretch',
+        orderIndex: 3,
+        sets: 2,
+        durationSeconds: 60,
+        reps: null,
+        transitionSeconds: 10,
+        notes: 'Sink hips onto heels and lengthen spine.',
+      },
+    ],
+  },
+  {
+    id: 'stretch-full-body-evening-recovery',
+    name: 'Full-Body Evening Mobility & Downregulation',
+    description:
+      'Complete head-to-toe parasympathetic cooldown flow to improve recovery and sleep quality.',
+    targetArea: 'Full Body Recovery',
+    estimatedDurationSeconds: 720,
+    exercises: [
+      {
+        id: 'sre-22',
+        routineId: 'stretch-full-body-evening-recovery',
+        exerciseId: 'ex-cat-cow-spinal-flow',
+        orderIndex: 0,
+        sets: 2,
+        durationSeconds: 45,
+        reps: 10,
+        transitionSeconds: 10,
+        notes: 'Slow 4-second inhale, 6-second exhale.',
+      },
+      {
+        id: 'sre-23',
+        routineId: 'stretch-full-body-evening-recovery',
+        exerciseId: 'ex-thoracic-open-book',
+        orderIndex: 1,
+        sets: 2,
+        durationSeconds: 45,
+        reps: 8,
+        transitionSeconds: 10,
+        notes: 'Let top shoulder melt toward floor.',
+      },
+      {
+        id: 'sre-24',
+        routineId: 'stretch-full-body-evening-recovery',
+        exerciseId: 'ex-pigeon-glute-stretch',
+        orderIndex: 2,
+        sets: 2,
+        durationSeconds: 60,
+        reps: null,
+        transitionSeconds: 15,
+        notes: 'Release outer hip tension.',
+      },
+      {
+        id: 'sre-25',
+        routineId: 'stretch-full-body-evening-recovery',
+        exerciseId: 'ex-seated-pike-hamstring-fold',
+        orderIndex: 3,
+        sets: 2,
+        durationSeconds: 60,
+        reps: null,
+        transitionSeconds: 15,
+        notes: 'Relax neck and shoulders into the fold.',
+      },
+      {
+        id: 'sre-26',
+        routineId: 'stretch-full-body-evening-recovery',
+        exerciseId: 'ex-standing-quad-stretch',
+        orderIndex: 4,
+        sets: 2,
+        durationSeconds: 45,
+        reps: null,
+        transitionSeconds: 10,
+        notes: '45s per leg.',
+      },
+      {
+        id: 'sre-27',
+        routineId: 'stretch-full-body-evening-recovery',
+        exerciseId: 'ex-supine-knee-to-chest-twist',
+        orderIndex: 5,
+        sets: 2,
+        durationSeconds: 60,
+        reps: null,
+        transitionSeconds: 10,
+        notes: 'Finish with calm nasal breathing.',
+      },
     ],
   },
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Exercise Visual Media & Demonstration Links Mapping (free-exercise-db + Video)
+// ─────────────────────────────────────────────────────────────────────────────
+const FREE_EXERCISE_DB_BASE =
+  'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises';
+
+const EXERCISE_DB_FOLDER_BY_SLUG: Record<string, string> = {
+  // System Catalog Exercises
+  'barbell-bench-press': 'Barbell_Bench_Press_-_Medium_Grip',
+  'dumbbell-incline-press': 'Incline_Dumbbell_Press',
+  'machine-chest-press': 'Leverage_Chest_Press',
+  'cable-chest-fly': 'Cable_Crossover',
+  'weighted-pull-up': 'Pullups',
+  'lat-pulldown': 'Wide-Grip_Lat_Pulldown',
+  'barbell-bent-over-row': 'Bent_Over_Barbell_Row',
+  'seated-cable-row': 'Seated_Cable_Rows',
+  'overhead-barbell-press': 'Barbell_Shoulder_Press',
+  'seated-dumbbell-shoulder-press': 'Dumbbell_Shoulder_Press',
+  'dumbbell-lateral-raise': 'Side_Lateral_Raise',
+  'cable-face-pull': 'Face_Pull',
+  'ez-bar-bicep-curl': 'EZ-Bar_Curl',
+  'incline-dumbbell-curl': 'Incline_Dumbbell_Curl',
+  'hammer-curl': 'Hammer_Curls',
+  'cable-tricep-pushdown': 'Triceps_Pushdown_-_Rope_Attachment',
+  'overhead-cable-tricep-extension': 'Cable_Rope_Overhead_Triceps_Extension',
+  'barbell-wrist-curl': 'Palms-Up_Barbell_Wrist_Curl_Over_A_Bench',
+  'barbell-back-squat': 'Barbell_Squat',
+  'leg-press': 'Leg_Press',
+  'bulgarian-split-squat': 'Split_Squat_with_Dumbbells',
+  'leg-extension': 'Leg_Extensions',
+  'romanian-deadlift': 'Romanian_Deadlift',
+  'seated-leg-curl': 'Seated_Leg_Curl',
+  'lying-leg-curl': 'Lying_Leg_Curls',
+  'barbell-hip-thrust': 'Barbell_Hip_Thrust',
+  'hip-adduction-abduction': 'Thigh_Abductor',
+  'standing-calf-raise': 'Standing_Calf_Raises',
+  'seated-calf-raise': 'Seated_Calf_Raise',
+  'hanging-leg-raise': 'Hanging_Leg_Raise',
+  'cable-crunch': 'Cable_Crunch',
+  'kettlebell-hip-flexor-march': 'Standing_Hip_Flexors',
+  'conventional-deadlift': 'Barbell_Deadlift',
+  'rowing-ergometer': 'Rowing_Stationary',
+
+  // Stretching & Mobility Catalog
+  'couch-hip-flexor-stretch': 'Kneeling_Hip_Flexor',
+  '90-90-hip-mobility': '90_90_Hamstring',
+  'thoracic-open-book': 'Spinal_Stretch',
+  'doorway-pec-stretch': 'Chest_And_Front_Of_Shoulder_Stretch',
+  'supine-hamstring-band-stretch': 'Leg-Up_Hamstring_Stretch',
+  'pigeon-glute-stretch': 'Ankle_On_The_Knee',
+  'worlds-greatest-stretch': 'Worlds_Greatest_Stretch',
+  'butterfly-adductor-stretch': 'Groin_and_Back_Stretch',
+  'deep-squat-ankle-pry': 'Sit_Squats',
+  'standing-wall-calf-stretch': 'Standing_Gastrocnemius_Calf_Stretch',
+  'standing-quad-stretch': 'Standing_Elevated_Quad_Stretch',
+  'seated-pike-hamstring-fold': 'Seated_Floor_Hamstring_Stretch',
+  'childs-pose-lat-stretch': 'Childs_Pose',
+  'cross-body-shoulder-stretch': 'Shoulder_Stretch',
+  'overhead-tricep-lat-stretch': 'Overhead_Triceps',
+  'dead-hang-shoulder-decompression': 'One_Handed_Hang',
+  'kneeling-wrist-forearm-stretch': 'Kneeling_Forearm_Stretch',
+  'cat-cow-spinal-flow': 'Cat_Stretch',
+  'supine-knee-to-chest-twist': 'Hug_Knees_To_Chest',
+  'neck-upper-trap-release': 'Side_Neck_Stretch',
+
+  // Gymlife Imported Exercises
+  'gymlife-1-barbell-curl-standing-biceps-curl': 'Barbell_Curl',
+  'gymlife-10-standing-bicep-cable-curls': 'Standing_Biceps_Cable_Curl',
+  'gymlife-101-push-up': 'Pushups',
+  'gymlife-10381-decline-bench-crunches-sit-ups': 'Decline_Crunch',
+  'gymlife-10420-machine-bicep-preacher-concentration-curls': 'Machine_Preacher_Curls',
+  'gymlife-10440-seated-single-arm-overhead-dumbbell-tricep-extensions':
+    'Dumbbell_One-Arm_Triceps_Extension',
+  'gymlife-10482-dumbbell-bent-over-lateral-rear-delt-raises-flyes':
+    'Seated_Bent-Over_Rear_Delt_Raise',
+  'gymlife-10487-weighted-tricep-dips': 'Dips_-_Triceps_Version',
+  'gymlife-10488-wadenheben-sitzend': 'Seated_Calf_Raise',
+  'gymlife-10489-seitheben-maschine': 'Lateral_Raise_-_With_Bands',
+  'gymlife-10490-butterfly': 'Butterfly',
+  'gymlife-10491-h-ftabduktion-hip-adduction': 'Thigh_Abductor',
+  'gymlife-119-bodyweight-squat': 'Bodyweight_Squat',
+  'gymlife-12-static-bicep-curls': 'Alternate_Hammer_Curl',
+  'gymlife-125-dumbbell-lunges': 'Dumbbell_Lunges',
+  'gymlife-132-hip-raise-butt-lift-bridge': 'Butt_Lift_Bridge',
+  'gymlife-14-ab-crunch-machine': 'Ab_Crunch_Machine',
+  'gymlife-158-weighted-glute-bridge': 'Barbell_Glute_Bridge',
+  'gymlife-164-lying-leg-curls': 'Lying_Leg_Curls',
+  'gymlife-170-standing-leg-hamstring-curl': 'Standing_Leg_Curl',
+  'gymlife-175-back-extensions-hyperextensions': 'Hyperextensions_Back_Extensions',
+  'gymlife-181-close-grip-pullup-chinup': 'Chin-Up',
+  'gymlife-183-dumbbell-incline-bench-row': 'Dumbbell_Incline_Row',
+  'gymlife-188-one-arm-dumbbell-row': 'One-Arm_Dumbbell_Row',
+  'gymlife-195-straight-arm-pulldown': 'Straight-Arm_Pulldown',
+  'gymlife-199-two-armed-bent-over-row': 'Bent_Over_Two-Dumbbell_Row',
+  'gymlife-201-barbell-shoulder-shrug': 'Barbell_Shrug',
+  'gymlife-202-cable-shrug': 'Cable_Shrugs',
+  'gymlife-206-alternate-heel-touchers': 'Alternate_Heel_Touchers',
+  'gymlife-212-barbell-lunge': 'Barbell_Lunge',
+  'gymlife-22-bench-flutter-kicks': 'Flutter_Kicks',
+  'gymlife-225-goblet-squat': 'Goblet_Squat',
+  'gymlife-233-barbell-front-raise': 'Standing_Front_Barbell_Raise_Over_Head',
+  'gymlife-235-cable-upright-row': 'Upright_Cable_Row',
+  'gymlife-239-dumbbell-shrug': 'Dumbbell_Shrug',
+  'gymlife-24-elbow-to-knee-crunches': 'Air_Bike',
+  'gymlife-241-forward-front-dumbbell-raise': 'Front_Dumbbell_Raise',
+  'gymlife-244-machine-seated-shoulder-press': 'Leverage_Shoulder_Press',
+  'gymlife-246-reverse-flyes': 'Reverse_Flyes',
+  'gymlife-247-seated-arnold-dumbbell-press': 'Arnold_Dumbbell_Press',
+  'gymlife-249-seated-lateral-dumbbell-raise': 'Seated_Side_Lateral_Raise',
+  'gymlife-25-alternating-reach-kickback': 'Superman',
+  'gymlife-253-standing-overhead-dumbbell-press': 'Standing_Dumbbell_Press',
+  'gymlife-260-close-grip-overhand-barbell-bench-press': 'Close-Grip_Barbell_Bench_Press',
+  'gymlife-263-lying-dumbbell-tricep-extension': 'Lying_Dumbbell_Tricep_Extension',
+  'gymlife-267-seated-tricep-press': 'Seated_Triceps_Press',
+  'gymlife-27-cable-core-rotation': 'Cable_Russian_Twists',
+  'gymlife-270-tricep-dumbbell-kickback': 'Tricep_Dumbbell_Kickback',
+  'gymlife-272-triceps-dips': 'Dips_-_Triceps_Version',
+  'gymlife-273-weighted-bench-dip': 'Bench_Dips',
+  'gymlife-28-captain-s-chair-leg-knee-hip-raise': 'Knee_Hip_Raise_On_Parallel_Bars',
+  'gymlife-285-side-plank': 'Side_Bridge',
+  'gymlife-288-seated-one-arm-pulley': 'Seated_One-arm_Cable_Pulley_Rows',
+  'gymlife-289-narrow-grip-lat-pulldown': 'Close-Grip_Front_Lat_Pulldown',
+  'gymlife-290-seated-biceps-curl-2': 'Machine_Bicep_Curl',
+  'gymlife-292-pull-to-neck-lat-machine': 'Wide-Grip_Pulldown_Behind_The_Neck',
+  'gymlife-294-reversed-pec-dec': 'Reverse_Machine_Flyes',
+  'gymlife-3-ez-bar-preacher-curl': 'Preacher_Curl',
+  'gymlife-30-crunches': 'Crunches',
+  'gymlife-300-lat-machine-with-special-bar': 'V-Bar_Pulldown',
+  'gymlife-306-upper-back': 'Leverage_Iso_Row',
+  'gymlife-307-seated-biceps-curl': 'Machine_Bicep_Curl',
+  'gymlife-314-smith-rack-squat': 'Smith_Machine_Squat',
+  'gymlife-322-inclined-chest-press': 'Leverage_Incline_Chest_Press',
+  'gymlife-324-row': 'Seated_Cable_Rows',
+  'gymlife-325-lat-pull': 'Wide-Grip_Lat_Pulldown',
+  'gymlife-33-double-side-jackknife': 'Jackknife_Sit-Up',
+  'gymlife-355-standing-reversed-cable-cross': 'Cable_Rear_Delt_Fly',
+  'gymlife-366-supinated-one-arm-triceps-press': 'Cable_One_Arm_Tricep_Extension',
+  'gymlife-367-lying-flies-with-cable': 'Flat_Bench_Cable_Flyes',
+  'gymlife-369-standing-triceps-press': 'Triceps_Pushdown',
+  'gymlife-371-standing-one-arm-side-lift-with-cable': 'One-Arm_Side_Laterals',
+  'gymlife-38-jackknife-sit-up-crunch-toe-touches': 'Jackknife_Sit-Up',
+  'gymlife-41-leg-pull-in-knee-up': 'Flat_Bench_Leg_Pull-In',
+  'gymlife-42-lying-leg-raise-lift': 'Flat_Bench_Lying_Leg_Raise',
+  'gymlife-54-reverse-bench-crunch': 'Reverse_Crunch',
+  'gymlife-6-overhead-cable-curl-crucifix-curl': 'Overhead_Cable_Curl',
+  'gymlife-63-swiss-ball-crunch': 'Exercise_Ball_Crunch',
+  'gymlife-72-bodyweight-calf-raises': 'Standing_Calf_Raises',
+  'gymlife-77-standing-dumbbell-calf-raise': 'Standing_Dumbbell_Calf_Raise',
+  'gymlife-86-dumbbell-flat-bench-press': 'Dumbbell_Bench_Press',
+  'gymlife-89-flat-bench-dumbbell-fly': 'Dumbbell_Flyes',
+  'gymlife-9-seated-dumbbell-curl': 'Seated_Dumbbell_Curl',
+  'gymlife-92-incline-bench-dumbbell-fly': 'Incline_Dumbbell_Flyes',
+  'gymlife-94-incline-barbell-bench-press': 'Barbell_Incline_Bench_Press_-_Medium_Grip',
+};
+
+const MUSCLE_FALLBACK_FOLDER: Record<MuscleGroup, string> = {
+  [MuscleGroup.CHEST]: 'Barbell_Bench_Press_-_Medium_Grip',
+  [MuscleGroup.BACK]: 'Wide-Grip_Lat_Pulldown',
+  [MuscleGroup.SHOULDERS]: 'Dumbbell_Shoulder_Press',
+  [MuscleGroup.BICEPS]: 'Barbell_Curl',
+  [MuscleGroup.TRICEPS]: 'Triceps_Pushdown_-_Rope_Attachment',
+  [MuscleGroup.FOREARMS]: 'Palms-Up_Barbell_Wrist_Curl_Over_A_Bench',
+  [MuscleGroup.QUADRICEPS]: 'Barbell_Squat',
+  [MuscleGroup.HAMSTRINGS]: 'Lying_Leg_Curls',
+  [MuscleGroup.GLUTES]: 'Barbell_Hip_Thrust',
+  [MuscleGroup.CALVES]: 'Standing_Calf_Raises',
+  [MuscleGroup.ABS_CORE]: 'Crunches',
+  [MuscleGroup.HIP_FLEXORS]: 'Kneeling_Hip_Flexor',
+  [MuscleGroup.FULL_BODY]: 'Barbell_Deadlift',
+};
+
+export function resolveExerciseMedia(exercise: {
+  id?: string | null;
+  slug?: string | null;
+  name?: string | null;
+  primaryMuscleGroup?: MuscleGroup | null;
+  media?: ExerciseDto['media'];
+}): NonNullable<ExerciseDto['media']> {
+  if (exercise.media && exercise.media.length > 0) {
+    return exercise.media;
+  }
+
+  const rawSlug = (exercise.slug || exercise.id || '').replace(/^ex-/, '').toLowerCase();
+  let folder = EXERCISE_DB_FOLDER_BY_SLUG[rawSlug] || EXERCISE_DB_FOLDER_BY_SLUG[exercise.slug ?? ''];
+
+  if (!folder && exercise.name) {
+    const q = exercise.name.toLowerCase();
+    if (q.includes('leg extension') || q.includes('beinstrecker')) folder = 'Leg_Extensions';
+    else if (q.includes('leg press') || q.includes('beinpresse') || q.includes('squat press'))
+      folder = 'Leg_Press';
+    else if (q.includes('lying leg curl') || q.includes('beinbeuger liegend'))
+      folder = 'Lying_Leg_Curls';
+    else if (q.includes('leg curl') || q.includes('beinbeuger')) folder = 'Seated_Leg_Curl';
+    else if (q.includes('wadenheben sitzend') || q.includes('seated calf'))
+      folder = 'Seated_Calf_Raise';
+    else if (q.includes('calf') || q.includes('waden')) folder = 'Standing_Calf_Raises';
+    else if (q.includes('addukt') || q.includes('abdukt') || q.includes('adduction') || q.includes('abduction'))
+      folder = 'Thigh_Abductor';
+    else if (q.includes('incline') && q.includes('bench'))
+      folder = 'Barbell_Incline_Bench_Press_-_Medium_Grip';
+    else if (q.includes('bench press') || q.includes('bankdrücken'))
+      folder = 'Barbell_Bench_Press_-_Medium_Grip';
+    else if (q.includes('butterfly') || q.includes('pec dec')) folder = 'Butterfly';
+    else if (q.includes('seitheben') || q.includes('lateral raise')) folder = 'Side_Lateral_Raise';
+    else if (q.includes('face pull')) folder = 'Face_Pull';
+    else if (q.includes('arnold')) folder = 'Arnold_Dumbbell_Press';
+    else if (q.includes('shoulder press') || q.includes('schulterdrücken'))
+      folder = 'Dumbbell_Shoulder_Press';
+    else if (q.includes('pull-up') || q.includes('pullup') || q.includes('klimmz'))
+      folder = 'Pullups';
+    else if (q.includes('lat pull') || q.includes('latzug')) folder = 'Wide-Grip_Lat_Pulldown';
+    else if (q.includes('row') || q.includes('rudern')) folder = 'Seated_Cable_Rows';
+    else if (q.includes('preacher')) folder = 'Preacher_Curl';
+    else if (q.includes('hammer curl')) folder = 'Hammer_Curls';
+    else if (q.includes('curl')) folder = 'Barbell_Curl';
+    else if (q.includes('dip')) folder = 'Dips_-_Triceps_Version';
+    else if (q.includes('tricep') || q.includes('trizeps'))
+      folder = 'Triceps_Pushdown_-_Rope_Attachment';
+    else if (q.includes('squat') || q.includes('kniebeuge')) folder = 'Barbell_Squat';
+    else if (q.includes('deadlift') || q.includes('kreuzheben') || q.includes('rdl'))
+      folder = 'Romanian_Deadlift';
+    else if (q.includes('crunch') || q.includes('sit-up')) folder = 'Crunches';
+  }
+
+  if (!folder) {
+    folder =
+      (exercise.primaryMuscleGroup && MUSCLE_FALLBACK_FOLDER[exercise.primaryMuscleGroup]) ||
+      'Barbell_Bench_Press_-_Medium_Grip';
+  }
+
+  const label = exercise.name || 'Exercise';
+  const searchQuery = encodeURIComponent(`${label} exercise form tutorial`);
+
+  return [
+    {
+      id: `${rawSlug || 'ex'}-frame-0`,
+      mediaType: 'IMAGE',
+      url: `${FREE_EXERCISE_DB_BASE}/${folder}/0.jpg`,
+      caption: `${label} — Start Position`,
+      attribution: 'Free Exercise DB (Public Domain)',
+      license: 'Unlicense',
+    },
+    {
+      id: `${rawSlug || 'ex'}-frame-1`,
+      mediaType: 'IMAGE',
+      url: `${FREE_EXERCISE_DB_BASE}/${folder}/1.jpg`,
+      caption: `${label} — Peak Contraction / Finish`,
+      attribution: 'Free Exercise DB (Public Domain)',
+      license: 'Unlicense',
+    },
+    {
+      id: `${rawSlug || 'ex'}-video`,
+      mediaType: 'VIDEO_LINK',
+      url: `https://www.youtube.com/results?search_query=${searchQuery}`,
+      caption: `Watch ${label} Video Form Guide`,
+      attribution: 'YouTube Form Guide',
+      license: 'External Link',
+    },
+  ];
+}
+
+for (const ex of INITIAL_EXERCISE_CATALOG) {
+  if (!ex.media || ex.media.length === 0) {
+    ex.media = resolveExerciseMedia(ex);
+  }
+}
+
