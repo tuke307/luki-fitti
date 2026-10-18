@@ -12,6 +12,16 @@ import {
   Check,
   Filter,
 } from 'lucide-react';
+import {
+  Area,
+  Bar,
+  CartesianGrid,
+  ComposedChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import { Badge } from '@luki-fitti/ui/components/ui/badge';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import { Card } from '@luki-fitti/ui/components/ui/card';
@@ -225,9 +235,43 @@ export function DiaryAnalyticsView() {
       totalStretchMinutes: Math.round(totalStretchSec / 60),
       muscleDistribution,
       personalRecords: Array.from(prMap.values()).sort((a, b) => b.est1RM - a.est1RM),
-      progression: progression.slice(-10),
+      progression: progression.slice(-20),
     };
   }, [filteredSessions, filterMuscle, selectedExerciseId]);
+
+  const diaryChartData = useMemo(() => {
+    if (selectedExerciseId !== 'ALL') {
+      return stats.progression.map((p) => ({
+        label: p.date.slice(5),
+        fullDate: p.date,
+        workoutName: p.workoutName,
+        est1RM: p.est1RM,
+        maxWeightKg: p.maxWeightKg,
+        volumeTons: Math.round((p.volumeKg / 1000) * 10) / 10,
+        volumeKg: p.volumeKg,
+        sets: 0,
+      }));
+    }
+
+    const strengthChrono = [...filteredSessions]
+      .filter((s) => s.sessionType !== SessionType.STRETCHING && s.totalVolumeKg > 0)
+      .reverse()
+      .slice(-20);
+
+    return strengthChrono.map((s) => {
+      const iso = toLocalDateIso(s.startedAt);
+      return {
+        label: iso.slice(5),
+        fullDate: iso,
+        workoutName: s.workoutNameSnapshot,
+        est1RM: 0,
+        maxWeightKg: 0,
+        volumeTons: Math.round((s.totalVolumeKg / 1000) * 10) / 10,
+        volumeKg: Math.round(s.totalVolumeKg),
+        sets: s.totalSetsCompleted,
+      };
+    });
+  }, [filteredSessions, selectedExerciseId, stats.progression]);
 
   // Dynamic activity breakdown matching the selected period ('week' | 'month' | 'year' | 'all')
   const activityData = useMemo(() => {
@@ -351,14 +395,14 @@ export function DiaryAnalyticsView() {
   }, [filteredSessions, period, nowMs]);
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="min-w-0 max-w-full space-y-6 pb-12">
       {/* Header & Period Filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
             Training Diary & Progress Analytics
           </h1>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-xs sm:text-sm">
             Calendar history, working-set volume, stretching time, muscle distribution, and PRs
           </p>
         </div>
@@ -369,10 +413,11 @@ export function DiaryAnalyticsView() {
             setPeriod(val as 'week' | 'month' | 'year' | 'all');
             setVisibleCount(20);
           }}
+          className="w-full sm:w-auto"
         >
-          <TabsList>
+          <TabsList className="grid w-full grid-cols-4 sm:inline-flex sm:w-auto">
             {(['week', 'month', 'year', 'all'] as const).map((p) => (
-              <TabsTrigger key={p} value={p} className="capitalize">
+              <TabsTrigger key={p} value={p} className="px-2 text-xs capitalize sm:px-3">
                 {p === 'all' ? 'All Time' : `This ${p}`}
               </TabsTrigger>
             ))}
@@ -572,6 +617,137 @@ export function DiaryAnalyticsView() {
                 </div>
               );
             })}
+          </div>
+        )}
+      </Card>
+
+      {/* Diary Progression Chart (Session Volume & Working Sets OR Exercise e1RM Progression) */}
+      <Card className="min-w-0 space-y-4 overflow-hidden rounded-3xl p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h2 className="font-display flex items-center gap-2 text-base font-bold">
+              <TrendingUp className="text-primary h-4 w-4" />
+              {selectedExerciseId !== 'ALL'
+                ? `${catalog.find((c) => c.id === selectedExerciseId)?.name ?? 'Exercise'} — Weight & Est. 1RM Progression`
+                : 'Session Volume & Working Sets Progression'}
+            </h2>
+            <p className="text-muted-foreground text-xs">
+              {selectedExerciseId !== 'ALL'
+                ? 'Tracks top working weight (kg) and Epley estimated 1RM across recent sessions'
+                : 'Tracks total working volume (t) and completed sets across your recent strength workouts'}
+            </p>
+          </div>
+          <div className="flex items-center gap-3 text-[11px]">
+            <span className="flex items-center gap-1.5 font-semibold">
+              <span className="bg-primary inline-block h-2.5 w-2.5 rounded-sm" />
+              {selectedExerciseId !== 'ALL' ? 'Est. 1RM (kg)' : 'Volume (t)'}
+            </span>
+            <span className="flex items-center gap-1.5 font-semibold">
+              <span className="bg-accent inline-block h-2.5 w-2.5 rounded-full" />
+              {selectedExerciseId !== 'ALL' ? 'Max Weight (kg)' : 'Completed Sets'}
+            </span>
+          </div>
+        </div>
+
+        {diaryChartData.length === 0 ? (
+          <p className="text-muted-foreground py-8 text-center text-xs">
+            No completed strength sessions match the current filter selection.
+          </p>
+        ) : (
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                data={diaryChartData}
+                margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="diaryVolGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#CCFF00" stopOpacity={0.65} />
+                    <stop offset="100%" stopColor="#CCFF00" stopOpacity={0.08} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 10, fill: '#94A3B8' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  yAxisId="left"
+                  tick={{ fontSize: 10, fill: '#94A3B8' }}
+                  axisLine={false}
+                  tickLine={false}
+                  unit={selectedExerciseId !== 'ALL' ? 'kg' : 't'}
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  tick={{ fontSize: 10, fill: '#00E5FF' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#0F1318',
+                    borderColor: 'rgba(255,255,255,0.12)',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                  }}
+                  labelFormatter={(_label, payload) => {
+                    const row = payload?.[0]?.payload;
+                    return row ? `${row.fullDate} — ${row.workoutName}` : String(_label);
+                  }}
+                  formatter={(value, name) => {
+                    if (name === 'volumeTons') return [`${String(value ?? 0)} t`, 'Session Volume'];
+                    if (name === 'sets') return [`${String(value ?? 0)} sets`, 'Completed Sets'];
+                    if (name === 'est1RM') return [`${String(value ?? 0)} kg`, 'Estimated 1RM'];
+                    if (name === 'maxWeightKg')
+                      return [`${String(value ?? 0)} kg`, 'Max Working Weight'];
+                    return [String(value ?? ''), String(name ?? '')];
+                  }}
+                />
+                {selectedExerciseId !== 'ALL' ? (
+                  <>
+                    <Bar
+                      yAxisId="right"
+                      dataKey="maxWeightKg"
+                      fill="#00E5FF"
+                      fillOpacity={0.45}
+                      radius={[6, 6, 0, 0]}
+                      maxBarSize={24}
+                    />
+                    <Area
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="est1RM"
+                      stroke="#CCFF00"
+                      strokeWidth={2.5}
+                      fill="url(#diaryVolGrad)"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Area
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="volumeTons"
+                      stroke="#CCFF00"
+                      strokeWidth={2.5}
+                      fill="url(#diaryVolGrad)"
+                    />
+                    <Bar
+                      yAxisId="right"
+                      dataKey="sets"
+                      fill="#00E5FF"
+                      fillOpacity={0.5}
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={18}
+                    />
+                  </>
+                )}
+              </ComposedChart>
+            </ResponsiveContainer>
           </div>
         )}
       </Card>
