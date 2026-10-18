@@ -1,14 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import {
-  Play,
-  Dumbbell,
-  TrendingUp,
-  BarChart3,
-  FolderKanban,
-  CalendarDays,
-} from 'lucide-react';
+import { Play, Dumbbell, TrendingUp, BarChart3, FolderKanban, CalendarDays } from 'lucide-react';
 import {
   Area,
   Bar,
@@ -192,20 +185,11 @@ export function HomeView({ onNavigate }: HomeViewProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => onNavigate('diary')}
-          >
+          <Button type="button" variant="secondary" size="sm" onClick={() => onNavigate('diary')}>
             <CalendarDays className="h-4 w-4" />
             Training Diary
           </Button>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => onNavigate('workouts')}
-          >
+          <Button type="button" size="sm" onClick={() => onNavigate('workouts')}>
             <FolderKanban className="h-4 w-4" />
             Choose Workout
           </Button>
@@ -315,16 +299,16 @@ export function HomeView({ onNavigate }: HomeViewProps) {
                     <stop offset="100%" stopColor="#CCFF00" stopOpacity={0.2} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.18)" />
                 <XAxis
                   dataKey="weekLabel"
-                  tick={{ fontSize: 10, fill: '#94A3B8' }}
+                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
                   yAxisId="left"
-                  tick={{ fontSize: 10, fill: '#94A3B8' }}
+                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                   axisLine={false}
                   tickLine={false}
                   unit="t"
@@ -333,21 +317,46 @@ export function HomeView({ onNavigate }: HomeViewProps) {
                   yAxisId="right"
                   orientation="right"
                   allowDecimals={false}
-                  tick={{ fontSize: 10, fill: '#00E5FF' }}
+                  tick={{ fontSize: 10, fill: 'hsl(var(--accent))' }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0F1318',
-                    borderColor: 'rgba(255,255,255,0.12)',
-                    borderRadius: '12px',
-                    fontSize: '12px',
-                  }}
-                  formatter={(value, name) => {
-                    if (name === 'volumeTons') return [`${String(value ?? 0)} t`, 'Volume'];
-                    if (name === 'sessions') return [`${String(value ?? 0)} workouts`, 'Sessions'];
-                    return [String(value ?? ''), String(name ?? '')];
+                  cursor={{ stroke: 'hsl(var(--muted-foreground) / 0.3)', strokeWidth: 1 }}
+                  wrapperStyle={{ outline: 'none' }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null;
+                    return (
+                      <div className="bg-popover/95 text-popover-foreground border-border pointer-events-none max-w-[180px] rounded-xl border px-2.5 py-1.5 text-[11px] leading-tight shadow-md backdrop-blur-sm">
+                        <p className="text-foreground mb-1 truncate font-semibold">
+                          Week of {String(label ?? '')}
+                        </p>
+                        <div className="space-y-0.5">
+                          {payload.map((item) => {
+                            const isVolume = item.dataKey === 'volumeTons';
+                            const val = Number(item.value ?? 0);
+                            return (
+                              <div
+                                key={String(item.dataKey)}
+                                className="flex items-center justify-between gap-2.5"
+                              >
+                                <span className="text-muted-foreground flex items-center gap-1.5">
+                                  <span
+                                    className={`inline-block h-2 w-2 shrink-0 rounded-full ${
+                                      isVolume ? 'bg-primary' : 'bg-accent'
+                                    }`}
+                                  />
+                                  {isVolume ? 'Volume' : 'Sessions'}
+                                </span>
+                                <span className="text-foreground font-mono-tabular font-bold">
+                                  {isVolume ? `${val} t` : `${val} workout${val === 1 ? '' : 's'}`}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
                   }}
                 />
                 <Bar
@@ -417,11 +426,11 @@ export function HomeView({ onNavigate }: HomeViewProps) {
                   <CartesianGrid
                     strokeDasharray="3 3"
                     horizontal={false}
-                    stroke="rgba(148,163,184,0.15)"
+                    stroke="rgba(148,163,184,0.18)"
                   />
                   <XAxis
                     type="number"
-                    tick={{ fontSize: 10, fill: '#94A3B8' }}
+                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                     axisLine={false}
                     tickLine={false}
                   />
@@ -429,18 +438,33 @@ export function HomeView({ onNavigate }: HomeViewProps) {
                     type="category"
                     dataKey="name"
                     width={84}
-                    tick={{ fontSize: 11, fill: '#E2E8F0', fontWeight: 600 }}
+                    tick={{ fontSize: 11, fill: 'hsl(var(--foreground))', fontWeight: 600 }}
                     axisLine={false}
                     tickLine={false}
                   />
                   <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#0F1318',
-                      borderColor: 'rgba(255,255,255,0.12)',
-                      borderRadius: '12px',
-                      fontSize: '12px',
+                    cursor={{ fill: 'hsl(var(--muted) / 0.45)' }}
+                    wrapperStyle={{ outline: 'none' }}
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload?.length) return null;
+                      const setsCount = Number(payload[0]?.value ?? 0);
+                      return (
+                        <div className="bg-popover/95 text-popover-foreground border-border pointer-events-none max-w-[175px] rounded-xl border px-2.5 py-1.5 text-[11px] leading-tight shadow-md backdrop-blur-sm">
+                          <p className="text-foreground mb-0.5 truncate font-semibold">
+                            {String(label ?? '')}
+                          </p>
+                          <div className="flex items-center justify-between gap-2.5">
+                            <span className="text-muted-foreground flex items-center gap-1.5">
+                              <span className="bg-primary inline-block h-2 w-2 shrink-0 rounded-full" />
+                              Working Load
+                            </span>
+                            <span className="text-foreground font-mono-tabular font-bold">
+                              {setsCount} set{setsCount === 1 ? '' : 's'}
+                            </span>
+                          </div>
+                        </div>
+                      );
                     }}
-                    formatter={(value) => [`${String(value ?? 0)} sets`, 'Working Load']}
                   />
                   <Bar dataKey="sets" radius={[0, 6, 6, 0]} maxBarSize={22}>
                     {muscleChartData.map((entry, idx) => (

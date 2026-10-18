@@ -66,13 +66,8 @@ function toLocalDateIso(dateInput: Date | string | number): string {
 }
 
 export function DiaryAnalyticsView() {
-  const {
-    historySessions,
-    catalog,
-    weightUnit,
-    updateHistoricalSession,
-    deleteHistoricalSession,
-  } = useGym();
+  const { historySessions, catalog, weightUnit, updateHistoricalSession, deleteHistoricalSession } =
+    useGym();
 
   const [nowMs] = useState<number>(() => Date.now());
   const [period, setPeriod] = useState<'week' | 'month' | 'year' | 'all'>('month');
@@ -216,10 +211,7 @@ export function DiaryAnalyticsView() {
       }
     }
 
-    const totalMuscleSetCount = Array.from(muscleSets.values()).reduce(
-      (a, b) => a + b.sets,
-      0,
-    );
+    const totalMuscleSetCount = Array.from(muscleSets.values()).reduce((a, b) => a + b.sets, 0);
 
     const muscleDistribution = Array.from(muscleSets.entries())
       .map(([muscle, data]) => ({
@@ -312,11 +304,7 @@ export function DiaryAnalyticsView() {
         dayNum: number;
         sessions: WorkoutSessionDto[];
       }> = [];
-      const firstDay = new Date(
-        nowDate.getFullYear(),
-        nowDate.getMonth(),
-        nowDate.getDate() - 29,
-      );
+      const firstDay = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - 29);
       const leadingEmptyDays = (firstDay.getDay() + 6) % 7;
       for (let i = 29; i >= 0; i--) {
         const d = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - i);
@@ -429,15 +417,15 @@ export function DiaryAnalyticsView() {
       </div>
 
       {/* Filter Bar */}
-      <Card className="flex-row flex-wrap items-center gap-3 p-3.5">
+      <Card className="min-w-0 flex-col items-stretch gap-2.5 p-3.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
         <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold">
-          <Filter className="h-3.5 w-3.5" /> Filter Analytics:
+          <Filter className="h-3.5 w-3.5 shrink-0" /> Filter Analytics:
         </div>
         <NativeSelect
           aria-label="Filter analytics by muscle group"
           value={filterMuscle}
           onChange={(e) => setFilterMuscle(e.target.value as MuscleGroup | 'ALL')}
-          className="bg-secondary h-8 text-xs"
+          className="bg-secondary h-8 w-full text-xs sm:w-auto"
         >
           <option value="ALL">All Muscle Groups</option>
           {Object.values(MuscleGroup).map((mg) => (
@@ -451,7 +439,7 @@ export function DiaryAnalyticsView() {
           aria-label="Filter analytics by exercise"
           value={selectedExerciseId}
           onChange={(e) => setSelectedExerciseId(e.target.value)}
-          className="bg-secondary h-8 text-xs"
+          className="bg-secondary h-8 w-full text-xs sm:w-auto"
         >
           <option value="ALL">All Exercises</option>
           {catalog.map((c) => (
@@ -669,16 +657,16 @@ export function DiaryAnalyticsView() {
                     <stop offset="100%" stopColor="#CCFF00" stopOpacity={0.08} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.18)" />
                 <XAxis
                   dataKey="label"
-                  tick={{ fontSize: 10, fill: '#94A3B8' }}
+                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
                   yAxisId="left"
-                  tick={{ fontSize: 10, fill: '#94A3B8' }}
+                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                   axisLine={false}
                   tickLine={false}
                   unit={selectedExerciseId !== 'ALL' ? 'kg' : 't'}
@@ -686,28 +674,66 @@ export function DiaryAnalyticsView() {
                 <YAxis
                   yAxisId="right"
                   orientation="right"
-                  tick={{ fontSize: 10, fill: '#00E5FF' }}
+                  tick={{ fontSize: 10, fill: 'hsl(var(--accent))' }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#0F1318',
-                    borderColor: 'rgba(255,255,255,0.12)',
-                    borderRadius: '12px',
-                    fontSize: '12px',
-                  }}
-                  labelFormatter={(_label, payload) => {
-                    const row = payload?.[0]?.payload;
-                    return row ? `${row.fullDate} — ${row.workoutName}` : String(_label);
-                  }}
-                  formatter={(value, name) => {
-                    if (name === 'volumeTons') return [`${String(value ?? 0)} t`, 'Session Volume'];
-                    if (name === 'sets') return [`${String(value ?? 0)} sets`, 'Completed Sets'];
-                    if (name === 'est1RM') return [`${String(value ?? 0)} kg`, 'Estimated 1RM'];
-                    if (name === 'maxWeightKg')
-                      return [`${String(value ?? 0)} kg`, 'Max Working Weight'];
-                    return [String(value ?? ''), String(name ?? '')];
+                  cursor={{ stroke: 'hsl(var(--muted-foreground) / 0.3)', strokeWidth: 1 }}
+                  wrapperStyle={{ outline: 'none' }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null;
+                    const row = payload[0]?.payload as
+                      { fullDate?: string; workoutName?: string } | undefined;
+                    return (
+                      <div className="bg-popover/95 text-popover-foreground border-border pointer-events-none max-w-[200px] rounded-xl border px-2.5 py-1.5 text-[11px] leading-tight shadow-md backdrop-blur-sm">
+                        <p className="text-foreground truncate font-semibold">
+                          {row?.workoutName ?? String(label ?? '')}
+                        </p>
+                        {row?.fullDate && (
+                          <p className="text-muted-foreground font-mono-tabular mb-1 text-[10px]">
+                            {row.fullDate}
+                          </p>
+                        )}
+                        <div className="space-y-0.5">
+                          {payload.map((item) => {
+                            const key = String(item.dataKey);
+                            const val = Number(item.value ?? 0);
+                            const isPrimary = key === 'volumeTons' || key === 'est1RM';
+                            const metricLabel =
+                              key === 'volumeTons'
+                                ? 'Volume'
+                                : key === 'sets'
+                                  ? 'Sets'
+                                  : key === 'est1RM'
+                                    ? 'Est. 1RM'
+                                    : 'Max Weight';
+                            const metricValue =
+                              key === 'volumeTons'
+                                ? `${val} t`
+                                : key === 'sets'
+                                  ? `${val} sets`
+                                  : `${val} kg`;
+
+                            return (
+                              <div key={key} className="flex items-center justify-between gap-2.5">
+                                <span className="text-muted-foreground flex items-center gap-1.5">
+                                  <span
+                                    className={`inline-block h-2 w-2 shrink-0 rounded-full ${
+                                      isPrimary ? 'bg-primary' : 'bg-accent'
+                                    }`}
+                                  />
+                                  {metricLabel}
+                                </span>
+                                <span className="text-foreground font-mono-tabular font-bold">
+                                  {metricValue}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
                   }}
                 />
                 {selectedExerciseId !== 'ALL' ? (
@@ -839,9 +865,9 @@ export function DiaryAnalyticsView() {
             {filteredSessions.slice(0, visibleCount).map((session) => (
               <Card
                 key={session.clientSessionId}
-                className="hover:border-primary/40 flex-col justify-between gap-4 p-4 transition sm:flex-row sm:items-center"
+                className="hover:border-primary/40 flex-col justify-between gap-4 p-4 transition md:grid md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-6"
               >
-                <div className="space-y-1">
+                <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge
                       variant={
@@ -861,54 +887,58 @@ export function DiaryAnalyticsView() {
                     </span>
                   </div>
 
-                  <h3 className="font-display text-base font-bold">
+                  <h3 className="font-display truncate text-base font-bold">
                     {session.workoutNameSnapshot}
                   </h3>
-                  <p className="text-muted-foreground text-xs">
+                  <p className="text-muted-foreground text-xs leading-relaxed">
                     {session.exercises.map((e) => e.exerciseNameSnapshot).join(' • ')}
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="bg-secondary/60 rounded-xl px-3 py-1.5 text-right text-xs">
-                    <span className="text-muted-foreground block text-[10px]">Duration</span>
-                    <strong className="font-mono-tabular">
-                      {Math.max(1, Math.round(session.activeDurationSeconds / 60))}m
-                    </strong>
-                  </div>
-                  <div className="bg-secondary/60 rounded-xl px-3 py-1.5 text-right text-xs">
-                    <span className="text-muted-foreground block text-[10px]">Sets</span>
-                    <strong className="font-mono-tabular">{session.totalSetsCompleted}</strong>
-                  </div>
-                  <div className="bg-secondary/60 rounded-xl px-3 py-1.5 text-right text-xs">
-                    <span className="text-muted-foreground block text-[10px]">
-                      {session.sessionType === SessionType.STRETCHING ? 'Stretch' : 'Volume'}
-                    </span>
-                    <strong className="font-mono-tabular text-primary">
-                      {session.sessionType === SessionType.STRETCHING
-                        ? `${Math.round(session.totalStretchSeconds / 60)}m`
-                        : `${session.totalVolumeKg.toLocaleString()} kg`}
-                    </strong>
+                <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t pt-3 md:flex-nowrap md:justify-end md:border-t-0 md:pt-0">
+                  <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center sm:gap-2.5">
+                    <div className="bg-secondary/60 rounded-xl px-3 py-1.5 text-right text-xs sm:w-[72px]">
+                      <span className="text-muted-foreground block text-[10px]">Duration</span>
+                      <strong className="font-mono-tabular">
+                        {Math.max(1, Math.round(session.activeDurationSeconds / 60))}m
+                      </strong>
+                    </div>
+                    <div className="bg-secondary/60 rounded-xl px-3 py-1.5 text-right text-xs sm:w-[56px]">
+                      <span className="text-muted-foreground block text-[10px]">Sets</span>
+                      <strong className="font-mono-tabular">{session.totalSetsCompleted}</strong>
+                    </div>
+                    <div className="bg-secondary/60 rounded-xl px-3 py-1.5 text-right text-xs sm:w-[104px]">
+                      <span className="text-muted-foreground block text-[10px]">
+                        {session.sessionType === SessionType.STRETCHING ? 'Stretch' : 'Volume'}
+                      </span>
+                      <strong className="font-mono-tabular text-primary">
+                        {session.sessionType === SessionType.STRETCHING
+                          ? `${Math.round(session.totalStretchSeconds / 60)}m`
+                          : `${session.totalVolumeKg.toLocaleString()} kg`}
+                      </strong>
+                    </div>
                   </div>
 
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setInspectingSession(session)}
-                  >
-                    <Edit3 className="h-3.5 w-3.5" /> Inspect / Edit
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label={`Delete session ${session.workoutNameSnapshot}`}
-                    onClick={() => void deleteHistoricalSession(session.clientSessionId)}
-                    className="text-muted-foreground hover:text-destructive size-8"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setInspectingSession(session)}
+                    >
+                      <Edit3 className="h-3.5 w-3.5" /> Inspect / Edit
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`Delete session ${session.workoutNameSnapshot}`}
+                      onClick={() => void deleteHistoricalSession(session.clientSessionId)}
+                      className="text-muted-foreground hover:text-destructive size-8"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </Card>
             ))}
@@ -950,17 +980,17 @@ export function DiaryAnalyticsView() {
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-4">
+              <div className="min-w-0 space-y-4">
                 {inspectingSession.exercises.map((ex, exIdx) => (
                   <div
                     key={ex.clientExerciseId}
-                    className="bg-secondary/30 space-y-2 rounded-2xl border p-4"
+                    className="bg-secondary/30 min-w-0 space-y-2 rounded-2xl border p-3.5 sm:p-4"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="font-display text-sm font-bold">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-display min-w-0 text-sm font-bold">
                         {exIdx + 1}. {ex.exerciseNameSnapshot}
                       </span>
-                      <span className="text-muted-foreground text-[11px]">
+                      <span className="text-muted-foreground shrink-0 text-[11px]">
                         {MUSCLE_GROUP_LABELS[ex.primaryMuscleSnapshot]}
                       </span>
                     </div>
@@ -969,22 +999,21 @@ export function DiaryAnalyticsView() {
                       {ex.sets.map((set, sIdx) => (
                         <div
                           key={set.clientSetId}
-                          className="bg-background flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs"
+                          className="bg-background flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs"
                         >
-                          <span className="font-mono-tabular font-bold">
+                          <span className="font-mono-tabular shrink-0 font-bold">
                             Set {sIdx + 1} ({set.setType})
                           </span>
-                          <div className="flex items-center gap-2">
+                          <div className="ml-auto flex shrink-0 items-center gap-2">
                             <Label className="text-muted-foreground text-[10px]">
-                              Weight ({weightUnit})
+                              {weightUnit}
                             </Label>
                             <Input
                               type="number"
                               step="0.5"
                               value={set.weight ?? ''}
                               onChange={(e) => {
-                                const val =
-                                  e.target.value === '' ? null : Number(e.target.value);
+                                const val = e.target.value === '' ? null : Number(e.target.value);
                                 setInspectingSession((prev) => {
                                   if (!prev) return null;
                                   return {
@@ -1011,8 +1040,7 @@ export function DiaryAnalyticsView() {
                               type="number"
                               value={set.reps ?? ''}
                               onChange={(e) => {
-                                const val =
-                                  e.target.value === '' ? null : Number(e.target.value);
+                                const val = e.target.value === '' ? null : Number(e.target.value);
                                 setInspectingSession((prev) => {
                                   if (!prev) return null;
                                   return {
