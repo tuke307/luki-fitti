@@ -9,7 +9,6 @@ import { WorkoutModule } from './modules/workout/workout.module';
 import { SessionModule } from './modules/session/session.module';
 import { StretchingModule } from './modules/stretching/stretching.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
-import { ImportModule } from './modules/import/import.module';
 import { HealthModule } from './modules/health/health.module';
 import { BullMQModule } from './modules/bullmq/bullmq.module';
 import { EmailTemplateModule } from './modules/email-template/email-template.module';
@@ -37,7 +36,6 @@ import { NODE_ENV } from './config/env.config';
     SessionModule,
     StretchingModule,
     AnalyticsModule,
-    ImportModule,
     HealthModule,
   ],
   providers: [

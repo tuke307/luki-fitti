@@ -11,10 +11,6 @@ import type {
   ExerciseDto,
   ExerciseQueryDto,
   ForgotPasswordDto,
-  ImportCommitRequestDto,
-  ImportCommitResultDto,
-  ImportPreviewRequestDto,
-  ImportPreviewResultDto,
   LoginDto,
   RegisterDto,
   RegisterResponseDto,
@@ -242,20 +238,6 @@ export const analytics = {
   },
 };
 
-export const imports = {
-  preview: (data: ImportPreviewRequestDto) =>
-    apiFetch<ImportPreviewResultDto>('/import/preview', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-  commit: (data: ImportCommitRequestDto) =>
-    apiFetch<ImportCommitResultDto>('/import/commit', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-  listJobs: () => apiFetch<Record<string, unknown>[]>('/import/jobs'),
-};
-
 export * from './client';
 
 export const api = {
@@ -265,5 +247,4 @@ export const api = {
   stretching,
   sessions,
   analytics,
-  imports,
 };
