@@ -10,7 +10,7 @@ import bcrypt from 'bcrypt';
 import { BCRYPT_SALT_ROUNDS } from '@/config/env.config';
 import { PrismaService } from '../database/prisma.service';
 import {
-  DEFAULT_STARTER_FOLDER,
+  DEFAULT_STARTER_FOLDERS,
   DEFAULT_STARTER_TEMPLATES,
   DEFAULT_STRETCHING_ROUTINES,
   INITIAL_EXERCISE_CATALOG,
@@ -89,44 +89,49 @@ export class AuthService {
         include: { preferences: true },
       });
 
-      const folder = await tx.workoutFolder.create({
-        data: {
-          userId: user.id,
-          name: DEFAULT_STARTER_FOLDER.name,
-          color: DEFAULT_STARTER_FOLDER.color,
-          sortOrder: 0,
-        },
-      });
-
-      for (const tpl of DEFAULT_STARTER_TEMPLATES) {
-        const createdTpl = await tx.workoutTemplate.create({
+      for (const starterFolder of DEFAULT_STARTER_FOLDERS) {
+        const folder = await tx.workoutFolder.create({
           data: {
             userId: user.id,
-            folderId: folder.id,
-            name: tpl.name,
-            description: tpl.description,
-            estimatedDurationMinutes: tpl.estimatedDurationMinutes,
-            sortOrder: tpl.sortOrder,
+            name: starterFolder.name,
+            color: starterFolder.color,
+            sortOrder: starterFolder.sortOrder,
           },
         });
 
-        for (const ex of tpl.exercises) {
-          await tx.workoutTemplateExercise.create({
+        const folderTemplates = DEFAULT_STARTER_TEMPLATES.filter(
+          (t) => t.folderId === starterFolder.id,
+        );
+        for (const tpl of folderTemplates) {
+          const createdTpl = await tx.workoutTemplate.create({
             data: {
-              templateId: createdTpl.id,
-              exerciseId: ex.exerciseId,
-              orderIndex: ex.orderIndex,
-              plannedSets: ex.plannedSets,
-              warmupSets: ex.warmupSets,
-              targetRepsMin: ex.targetRepsMin,
-              targetRepsMax: ex.targetRepsMax,
-              targetWeight: ex.targetWeight,
-              weightUnit: ex.weightUnit,
-              restSeconds: ex.restSeconds,
-              notes: ex.notes,
-              alternativeExerciseIds: ex.alternativeExerciseIds,
+              userId: user.id,
+              folderId: folder.id,
+              name: tpl.name,
+              description: tpl.description,
+              estimatedDurationMinutes: tpl.estimatedDurationMinutes,
+              sortOrder: tpl.sortOrder,
             },
           });
+
+          for (const ex of tpl.exercises) {
+            await tx.workoutTemplateExercise.create({
+              data: {
+                templateId: createdTpl.id,
+                exerciseId: ex.exerciseId,
+                orderIndex: ex.orderIndex,
+                plannedSets: ex.plannedSets,
+                warmupSets: ex.warmupSets,
+                targetRepsMin: ex.targetRepsMin,
+                targetRepsMax: ex.targetRepsMax,
+                targetWeight: ex.targetWeight,
+                weightUnit: ex.weightUnit,
+                restSeconds: ex.restSeconds,
+                notes: ex.notes,
+                alternativeExerciseIds: ex.alternativeExerciseIds,
+              },
+            });
+          }
         }
       }
 
