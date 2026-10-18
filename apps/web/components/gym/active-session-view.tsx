@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Play,
   Pause,
@@ -18,6 +18,8 @@ import {
   Trophy,
   AlertTriangle,
   Zap,
+  Search,
+  X,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -44,16 +46,19 @@ import { Label } from '@luki-fitti/ui/components/ui/label';
 import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
 import { Progress } from '@luki-fitti/ui/components/ui/progress';
 import { useGym } from '@/providers/gym/gym-context';
+import { useLocale } from '@/providers/i18n/locale-context';
 import { computeRemainingRestSeconds } from '@/lib/offline/offline-store';
 import {
   computeExerciseProgression,
   formatCompactDelta,
   formatDateTime,
 } from '@luki-fitti/common/utils/client';
+import { filterExercisesByQuery } from './exercise-picker';
 import { ExerciseVisual } from './exercise-visual';
+import { NumberInput } from './number-input';
 import {
   ExerciseType,
-  MUSCLE_GROUP_LABELS,
+  MuscleGroup,
   SessionExerciseOrigin,
   SessionExerciseStatus,
   SessionStatus,
@@ -93,11 +98,15 @@ export function ActiveSessionView({
     finishSession,
     abandonSession,
   } = useGym();
+  const { t, format, muscleLabel, equipmentLabel, setTypeLabel } = useLocale();
 
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const [selectedExerciseIdx, setSelectedExerciseIdx] = useState<number>(0);
   const [showSubstituteFor, setShowSubstituteFor] = useState<string | null>(null);
+  const [substituteSearch, setSubstituteSearch] = useState('');
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
+  const [addExerciseSearch, setAddExerciseSearch] = useState('');
+  const [addExerciseMuscle, setAddExerciseMuscle] = useState<MuscleGroup | 'ALL'>('ALL');
   const [sessionNotes, setSessionNotes] = useState('');
   const [completedSummary, setCompletedSummary] = useState<WorkoutSessionDto | null>(null);
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
@@ -113,6 +122,11 @@ export function ActiveSessionView({
     }
   }, [activeSession, completedSummary, onNavigateToWorkouts]);
 
+  const filteredAddExercises = useMemo(
+    () => filterExercisesByQuery(catalog, addExerciseSearch, addExerciseMuscle),
+    [catalog, addExerciseSearch, addExerciseMuscle],
+  );
+
   if (completedSummary) {
     return (
       <div className="mx-auto max-w-lg space-y-6 py-8 text-center">
@@ -121,25 +135,23 @@ export function ActiveSessionView({
         </div>
         <div>
           <Badge variant="default" className="rounded-full px-3 py-1 text-xs uppercase">
-            Session Saved & Queued for Sync
+            {t.session.savedQueuedBadge}
           </Badge>
           <h1 className="font-display mt-3 text-3xl font-bold">
-            {completedSummary.workoutNameSnapshot} Complete!
+            {format(t.session.completeTitle, { name: completedSummary.workoutNameSnapshot })}
           </h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Logged to your Training Diary and safely persisted in local & server storage.
-          </p>
+          <p className="text-muted-foreground mt-1 text-sm">{t.session.completeSub}</p>
         </div>
 
         <Card className="grid grid-cols-3 gap-3 rounded-3xl p-5">
           <div>
-            <p className="text-muted-foreground text-xs">Duration</p>
+            <p className="text-muted-foreground text-xs">{t.session.durationLabel}</p>
             <p className="font-mono-tabular mt-1 text-xl font-bold">
               {Math.max(1, Math.round(completedSummary.activeDurationSeconds / 60))}m
             </p>
           </div>
           <div>
-            <p className="text-muted-foreground text-xs">Completed Sets</p>
+            <p className="text-muted-foreground text-xs">{t.session.completedSetsLabel}</p>
             <p className="font-mono-tabular text-primary mt-1 text-xl font-bold">
               {completedSummary.totalSetsCompleted}
             </p>
@@ -147,8 +159,8 @@ export function ActiveSessionView({
           <div>
             <p className="text-muted-foreground text-xs">
               {completedSummary.totalStretchSeconds > 0 && completedSummary.totalVolumeKg === 0
-                ? 'Stretch Time'
-                : 'Total Volume'}
+                ? t.session.stretchTimeLabel
+                : t.session.totalVolumeLabel}
             </p>
             <p className="font-mono-tabular mt-1 text-xl font-bold">
               {completedSummary.totalStretchSeconds > 0 && completedSummary.totalVolumeKg === 0
@@ -168,7 +180,7 @@ export function ActiveSessionView({
             }}
             className="text-sm shadow-sm"
           >
-            View in Training Diary
+            {t.session.viewInDiaryBtn}
           </Button>
         </div>
       </div>
@@ -259,10 +271,12 @@ export function ActiveSessionView({
           <div>
             <div className="flex items-center gap-2">
               <Badge variant="solid" className="rounded-full px-2.5 py-0.5 text-[11px] uppercase">
-                {activeSession.status === SessionStatus.PAUSED ? 'Paused' : 'Live Session'}
+                {activeSession.status === SessionStatus.PAUSED
+                  ? t.session.pausedBadge
+                  : t.session.liveSessionBadge}
               </Badge>
               <span className="text-muted-foreground font-mono-tabular text-xs">
-                Started {formatDateTime(activeSession.startedAt)}
+                {format(t.session.startedAt, { date: formatDateTime(activeSession.startedAt) })}
               </span>
             </div>
             <h1 className="font-display mt-1.5 text-xl font-bold sm:text-2xl">
@@ -272,7 +286,9 @@ export function ActiveSessionView({
 
           <div className="flex items-center gap-2">
             <div className="bg-secondary/80 rounded-2xl px-3.5 py-2 text-right">
-              <p className="text-muted-foreground text-[10px] font-bold uppercase">Elapsed</p>
+              <p className="text-muted-foreground text-[10px] font-bold uppercase">
+                {t.session.elapsedLabel}
+              </p>
               <p className="font-mono-tabular text-primary text-lg font-extrabold">
                 {formatTimer(elapsedSeconds)}
               </p>
@@ -285,7 +301,7 @@ export function ActiveSessionView({
                 onClick={() => void resumeSession()}
                 className="px-3.5"
               >
-                <Play className="h-4 w-4 fill-current" /> Resume
+                <Play className="h-4 w-4 fill-current" /> {t.session.resumeBtn}
               </Button>
             ) : (
               <Button
@@ -295,7 +311,7 @@ export function ActiveSessionView({
                 onClick={() => void pauseSession()}
                 className="px-3.5 font-semibold"
               >
-                <Pause className="h-4 w-4" /> Pause
+                <Pause className="h-4 w-4" /> {t.session.pauseBtn}
               </Button>
             )}
           </div>
@@ -305,15 +321,22 @@ export function ActiveSessionView({
         <div className="mt-4 space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
             <span className="font-semibold">
-              Progress: <strong className="text-primary">{progressPct}%</strong> (
-              {activeSession.totalSetsCompleted}/{totalSetsPlanned} sets)
+              {t.session.progressLabel} <strong className="text-primary">{progressPct}%</strong>{' '}
+              {format(t.session.setsProgress, {
+                done: activeSession.totalSetsCompleted,
+                total: totalSetsPlanned,
+              })}
             </span>
             <div className="text-muted-foreground font-mono-tabular flex items-center gap-3">
-              <span>{completedExercisesCount} done</span>
+              <span>{format(t.session.doneCount, { count: completedExercisesCount })}</span>
               <span>•</span>
-              <span>{remainingExercisesCount} left</span>
+              <span>{format(t.session.leftCount, { count: remainingExercisesCount })}</span>
               <span>•</span>
-              <span>{activeSession.totalVolumeKg.toLocaleString()} kg vol</span>
+              <span>
+                {format(t.session.volCount, {
+                  volume: activeSession.totalVolumeKg.toLocaleString(),
+                })}
+              </span>
             </div>
           </div>
           <Progress value={progressPct} className="bg-secondary h-2.5" />
@@ -322,15 +345,15 @@ export function ActiveSessionView({
         {/* Current vs Next Planned Exercise Indicator */}
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-xs">
           <div>
-            <span className="text-muted-foreground">Current: </span>
+            <span className="text-muted-foreground">{t.session.currentLabel}</span>
             <strong className="text-foreground">
-              {currentExercise?.exerciseNameSnapshot ?? 'None'}
+              {currentExercise?.exerciseNameSnapshot ?? t.session.noneLabel}
             </strong>
           </div>
           <div>
-            <span className="text-muted-foreground">Next Up: </span>
+            <span className="text-muted-foreground">{t.session.nextUpLabel}</span>
             <strong className="text-accent">
-              {nextExercise ? nextExercise.exerciseNameSnapshot : 'Final Exercise'}
+              {nextExercise ? nextExercise.exerciseNameSnapshot : t.session.finalExercise}
             </strong>
           </div>
         </div>
@@ -358,10 +381,10 @@ export function ActiveSessionView({
             <div>
               <p className="text-[11px] font-bold tracking-wider uppercase">
                 {restInfo.isRunning
-                  ? 'Rest Timer Active'
+                  ? t.session.restTimerActive
                   : restInfo.isPaused
-                    ? 'Rest Timer Paused'
-                    : 'Rest Timer Ready'}
+                    ? t.session.restTimerPaused
+                    : t.session.restTimerReady}
               </p>
               <p className="font-mono-tabular text-2xl font-extrabold">
                 {formatTimer(restInfo.remainingSeconds)}
@@ -427,7 +450,7 @@ export function ActiveSessionView({
                     size="sm"
                     onClick={() => void resumeRestTimer()}
                   >
-                    Resume
+                    {t.session.resumeBtn}
                   </Button>
                 ) : (
                   <Button
@@ -436,7 +459,7 @@ export function ActiveSessionView({
                     size="sm"
                     onClick={() => void pauseRestTimer()}
                   >
-                    Pause
+                    {t.session.pauseBtn}
                   </Button>
                 )}
                 <Button
@@ -448,7 +471,7 @@ export function ActiveSessionView({
                       activeSession.restTimerDurationSec ?? currentExercise?.restSeconds ?? 90,
                     )
                   }
-                  title="Reset Rest Timer"
+                  title={t.session.resetRestTimerTitle}
                   className="size-8"
                 >
                   <RotateCcw className="h-4 w-4" />
@@ -459,7 +482,7 @@ export function ActiveSessionView({
                   size="sm"
                   onClick={() => void skipRestTimer()}
                 >
-                  Skip Rest
+                  {t.session.skipRestBtn}
                 </Button>
               </>
             )}
@@ -510,10 +533,14 @@ export function ActiveSessionView({
         <Button
           type="button"
           variant="secondary"
-          onClick={() => setShowAddExerciseModal(true)}
+          onClick={() => {
+            setAddExerciseSearch('');
+            setAddExerciseMuscle('ALL');
+            setShowAddExerciseModal(true);
+          }}
           className="hover:border-primary h-auto shrink-0 rounded-2xl border px-3.5 py-2.5 text-xs font-bold"
         >
-          <Plus className="h-3.5 w-3.5" /> Add Exercise
+          <Plus className="h-3.5 w-3.5" /> {t.session.addExerciseBtn}
         </Button>
       </div>
 
@@ -527,7 +554,7 @@ export function ActiveSessionView({
                 {/* Upper-Left Corner Exercise Number Badge */}
                 <div className="border-primary/40 from-primary/25 to-accent/15 text-primary flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl border bg-gradient-to-br shadow-inner">
                   <span className="text-primary/70 text-[9px] font-extrabold uppercase leading-none tracking-wider">
-                    Ex
+                    {t.session.exShort}
                   </span>
                   <span className="font-mono-tabular text-lg font-black leading-tight">
                     {safeIdx + 1}
@@ -537,35 +564,37 @@ export function ActiveSessionView({
                 <div className="min-w-0 space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="default" className="text-[11px] uppercase tracking-wider">
-                      {MUSCLE_GROUP_LABELS[currentExercise.primaryMuscleSnapshot]}
+                      {muscleLabel(currentExercise.primaryMuscleSnapshot)}
                     </Badge>
                     <span className="text-muted-foreground font-mono-tabular text-xs font-semibold">
-                      of {activeSession.exercises.length} exercises
+                      {format(t.session.ofExercises, { count: activeSession.exercises.length })}
                     </span>
                     {currentExercise.restSeconds === 0 && (
                       <Badge variant="accent" className="text-[11px] font-bold">
-                        <Zap className="h-3 w-3" /> Superset (0s Rest)
+                        <Zap className="h-3 w-3" /> {t.session.supersetZeroRest}
                       </Badge>
                     )}
                     {safeIdx > 0 &&
                       activeSession.exercises[safeIdx - 1]?.restSeconds === 0 && (
                         <Badge variant="accent" className="text-[11px] font-bold">
-                          <Zap className="h-3 w-3" /> Superset Partner
+                          <Zap className="h-3 w-3" /> {t.session.supersetPartner}
                         </Badge>
                       )}
                     {currentExercise.origin === SessionExerciseOrigin.SUBSTITUTED && (
                       <Badge variant="warning" className="text-[11px]">
-                        Replaced: {currentExercise.replacedExerciseName}
+                        {format(t.session.replacedBadge, {
+                          name: currentExercise.replacedExerciseName ?? '',
+                        })}
                       </Badge>
                     )}
                     {currentExercise.origin === SessionExerciseOrigin.ADDED && (
                       <Badge variant="accent" className="text-[11px]">
-                        Added Unplanned
+                        {t.session.addedUnplannedBadge}
                       </Badge>
                     )}
                     {currentExercise.status === SessionExerciseStatus.SKIPPED && (
                       <Badge variant="destructive" className="text-[11px]">
-                        Skipped
+                        {t.session.skippedBadge}
                       </Badge>
                     )}
                   </div>
@@ -596,7 +625,7 @@ export function ActiveSessionView({
                 size="icon"
                 onClick={() => void removeExerciseFromSession(currentExercise.clientExerciseId)}
                 aria-label="Remove exercise from session"
-                title="Remove from current session (keeps template untouched)"
+                title={t.session.removeFromSessionTitle}
                 className="border-destructive/30 bg-destructive/15 text-destructive hover:bg-destructive hover:text-destructive-foreground size-9 shrink-0 rounded-xl border transition"
               >
                 <Trash2 className="h-4 w-4" />
@@ -607,7 +636,7 @@ export function ActiveSessionView({
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               <div className="bg-secondary/40 rounded-2xl border border-white/5 px-3 py-2">
                 <span className="text-muted-foreground block text-[10px] font-semibold uppercase tracking-wider">
-                  Target Sets × Reps
+                  {t.session.targetSetsRepsLabel}
                 </span>
                 <span className="font-mono-tabular text-foreground mt-0.5 block text-sm font-extrabold">
                   {currentExercise.plannedSets} ×{' '}
@@ -621,7 +650,7 @@ export function ActiveSessionView({
 
               <div className="bg-secondary/40 rounded-2xl border border-white/5 px-3 py-2">
                 <span className="text-muted-foreground block text-[10px] font-semibold uppercase tracking-wider">
-                  Rest Interval
+                  {t.session.restIntervalLabel}
                 </span>
                 <span className="font-mono-tabular text-foreground mt-0.5 block text-sm font-extrabold">
                   {currentExercise.restSeconds}s
@@ -635,8 +664,10 @@ export function ActiveSessionView({
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
                     {progressionInsight?.lastSession
-                      ? `Last (${progressionInsight.lastSession.workoutName})`
-                      : 'Previous Benchmark'}
+                      ? format(t.session.lastSessionFrom, {
+                          name: progressionInsight.lastSession.workoutName,
+                        })
+                      : t.session.previousBenchmark}
                   </span>
                   {progressionInsight && progressionInsight.ewma1RM > 0 && (
                     <span className="text-primary font-mono-tabular text-[10px] font-bold">
@@ -660,7 +691,7 @@ export function ActiveSessionView({
                   </div>
                 ) : (
                   <span className="text-muted-foreground mt-0.5 block text-xs">
-                    First logged session for this exercise
+                    {t.session.firstLoggedSession}
                   </span>
                 )}
               </div>
@@ -670,8 +701,10 @@ export function ActiveSessionView({
               <div className="border-accent/40 bg-accent/15 text-accent flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs font-bold">
                 <span className="flex items-center gap-1.5">
                   <Zap className="h-3.5 w-3.5 shrink-0" />
-                  Superset paired with #{safeIdx + 2}:{' '}
-                  {activeSession.exercises[safeIdx + 1]?.exerciseNameSnapshot} (No rest in between)
+                  {format(t.session.supersetPairedBanner, {
+                    index: safeIdx + 2,
+                    name: activeSession.exercises[safeIdx + 1]?.exerciseNameSnapshot ?? '',
+                  })}
                 </span>
                 <Button
                   type="button"
@@ -679,7 +712,7 @@ export function ActiveSessionView({
                   size="xs"
                   onClick={() => setSelectedExerciseIdx(safeIdx + 1)}
                 >
-                  Switch to Partner →
+                  {t.session.switchToPartnerBtn}
                 </Button>
               </div>
             )}
@@ -687,8 +720,10 @@ export function ActiveSessionView({
               <div className="border-accent/40 bg-accent/10 text-accent flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs font-bold">
                 <span className="flex items-center gap-1.5">
                   <Zap className="h-3.5 w-3.5 shrink-0" />
-                  Superset Partner of #{safeIdx}:{' '}
-                  {activeSession.exercises[safeIdx - 1]?.exerciseNameSnapshot}
+                  {format(t.session.supersetPartnerOfBanner, {
+                    index: safeIdx,
+                    name: activeSession.exercises[safeIdx - 1]?.exerciseNameSnapshot ?? '',
+                  })}
                 </span>
                 <Button
                   type="button"
@@ -696,14 +731,14 @@ export function ActiveSessionView({
                   size="xs"
                   onClick={() => setSelectedExerciseIdx(safeIdx - 1)}
                 >
-                  ← Back to #{safeIdx}
+                  {format(t.session.backToExerciseBtn, { index: safeIdx })}
                 </Button>
               </div>
             )}
 
             {currentExercise.notes && (
               <p className="border-accent/30 bg-accent/10 text-accent rounded-xl border px-3 py-1.5 text-xs font-medium">
-                Note: {currentExercise.notes}
+                {format(t.session.notePrefix, { note: currentExercise.notes })}
               </p>
             )}
 
@@ -714,11 +749,14 @@ export function ActiveSessionView({
                   type="button"
                   variant="secondary"
                   size="sm"
-                  onClick={() => setShowSubstituteFor(currentExercise.clientExerciseId)}
+                  onClick={() => {
+                    setSubstituteSearch('');
+                    setShowSubstituteFor(currentExercise.clientExerciseId);
+                  }}
                   className="h-8 rounded-xl text-xs font-semibold"
                 >
                   <ArrowRightLeft className="text-primary h-3.5 w-3.5" />
-                  Swap / Alternative
+                  {t.session.swapAlternativeBtn}
                 </Button>
                 <Button
                   type="button"
@@ -728,7 +766,9 @@ export function ActiveSessionView({
                   className="h-8 rounded-xl text-xs font-semibold"
                 >
                   <SkipForward className="h-3.5 w-3.5" />
-                  {currentExercise.status === SessionExerciseStatus.SKIPPED ? 'Unskip' : 'Skip'}
+                  {currentExercise.status === SessionExerciseStatus.SKIPPED
+                    ? t.session.unskipBtn
+                    : t.session.skipBtn}
                 </Button>
               </div>
 
@@ -739,7 +779,7 @@ export function ActiveSessionView({
                   size="icon"
                   onClick={() => void reorderExercise(currentExercise.clientExerciseId, 'UP')}
                   disabled={safeIdx === 0}
-                  title="Move Earlier"
+                  title={t.session.moveEarlierTitle}
                   className="size-8 rounded-xl"
                 >
                   <ArrowUp className="h-3.5 w-3.5" />
@@ -750,7 +790,7 @@ export function ActiveSessionView({
                   size="icon"
                   onClick={() => void reorderExercise(currentExercise.clientExerciseId, 'DOWN')}
                   disabled={safeIdx === activeSession.exercises.length - 1}
-                  title="Move Later"
+                  title={t.session.moveLaterTitle}
                   className="size-8 rounded-xl"
                 >
                   <ArrowDown className="h-3.5 w-3.5" />
@@ -813,31 +853,31 @@ export function ActiveSessionView({
               const intensityMeta =
                 intensityLevel === 1
                   ? {
-                      label: 'Light',
-                      hint: 'Light effort — push harder next time (cycles to Sweet Spot)',
+                      label: t.session.intensityLight,
+                      hint: t.session.intensityLightHint,
                       nextRpe: 8,
                       containerClass: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
                       activeBarClass: 'bg-emerald-400',
                     }
                   : intensityLevel === 2
                     ? {
-                        label: 'Sweet Spot',
-                        hint: 'Sweet Spot — right on target (cycles to Limit)',
+                        label: t.session.intensitySweetSpot,
+                        hint: t.session.intensitySweetSpotHint,
                         nextRpe: 9.5,
                         containerClass: 'border-amber-500/40 bg-amber-500/10 text-amber-300',
                         activeBarClass: 'bg-amber-400',
                       }
                     : intensityLevel === 3
                       ? {
-                          label: 'Limit',
-                          hint: 'Limit — high fatigue / hold weight (cycles to clear)',
+                          label: t.session.intensityLimit,
+                          hint: t.session.intensityLimitHint,
                           nextRpe: null,
                           containerClass: 'border-rose-500/40 bg-rose-500/10 text-rose-300',
                           activeBarClass: 'bg-rose-400',
                         }
                       : {
-                          label: 'Effort',
-                          hint: 'Tap to log set effort: Light → Sweet Spot → Limit',
+                          label: t.session.intensityEffort,
+                          hint: t.session.intensityEffortHint,
                           nextRpe: 7,
                           containerClass:
                             'border-border bg-background text-muted-foreground hover:text-foreground',
@@ -884,11 +924,11 @@ export function ActiveSessionView({
                             : 'bg-background text-foreground'
                       }`}
                     >
-                      <option value={SetType.WARMUP}>Warm-up</option>
-                      <option value={SetType.WORKING}>Working</option>
-                      <option value={SetType.DROPSET}>Dropset</option>
-                      <option value={SetType.FAILURE}>Failure</option>
-                      <option value={SetType.STRETCH}>Stretch</option>
+                      <option value={SetType.WARMUP}>{setTypeLabel(SetType.WARMUP)}</option>
+                      <option value={SetType.WORKING}>{setTypeLabel(SetType.WORKING)}</option>
+                      <option value={SetType.DROPSET}>{setTypeLabel(SetType.DROPSET)}</option>
+                      <option value={SetType.FAILURE}>{setTypeLabel(SetType.FAILURE)}</option>
+                      <option value={SetType.STRETCH}>{setTypeLabel(SetType.STRETCH)}</option>
                     </NativeSelect>
                   </div>
 
@@ -910,14 +950,16 @@ export function ActiveSessionView({
                           >
                             -2.5
                           </Button>
-                          <input
-                            type="number"
+                          <NumberInput
+                            variant="bare"
+                            allowNull
                             step="0.5"
+                            min={0}
                             aria-label={`Set ${sIdx + 1} weight`}
-                            value={set.weight ?? ''}
-                            onChange={(e) =>
+                            value={set.weight}
+                            onValueChange={(val) =>
                               void updateSet(currentExercise.clientExerciseId, set.clientSetId, {
-                                weight: e.target.value === '' ? null : Number(e.target.value),
+                                weight: val,
                               })
                             }
                             placeholder="0"
@@ -972,18 +1014,20 @@ export function ActiveSessionView({
                       </div>
                     ) : (
                       <div className="bg-background flex items-center rounded-xl border px-2 py-1">
-                        <input
-                          type="number"
+                        <NumberInput
+                          variant="bare"
+                          min={0}
+                          fallbackValue={45}
                           aria-label={`Set ${sIdx + 1} duration seconds`}
                           value={set.durationSeconds ?? 45}
-                          onChange={(e) =>
+                          onValueChange={(val) =>
                             void updateSet(currentExercise.clientExerciseId, set.clientSetId, {
-                              durationSeconds: Number(e.target.value),
+                              durationSeconds: val,
                             })
                           }
                           className="font-mono-tabular w-14 bg-transparent text-center text-sm font-bold outline-none"
                         />
-                        <span className="text-muted-foreground text-xs">sec</span>
+                        <span className="text-muted-foreground text-xs">{t.common.sec}</span>
                       </div>
                     )}
 
@@ -1003,20 +1047,22 @@ export function ActiveSessionView({
                         >
                           -1
                         </Button>
-                        <input
-                          type="number"
+                        <NumberInput
+                          variant="bare"
+                          allowNull
+                          min={0}
                           aria-label={`Set ${sIdx + 1} reps`}
-                          value={set.reps ?? ''}
-                          onChange={(e) =>
+                          value={set.reps}
+                          onValueChange={(val) =>
                             void updateSet(currentExercise.clientExerciseId, set.clientSetId, {
-                              reps: e.target.value === '' ? null : Number(e.target.value),
+                              reps: val,
                             })
                           }
-                          placeholder="reps"
+                          placeholder={t.common.reps}
                           className="font-mono-tabular w-12 bg-transparent text-center text-sm font-bold outline-none"
                         />
                         <span className="text-muted-foreground text-[10px] font-semibold">
-                          reps
+                          {t.common.reps}
                         </span>
                         <Button
                           type="button"
@@ -1101,7 +1147,7 @@ export function ActiveSessionView({
                       }`}
                     >
                       <Check className="h-4 w-4 stroke-[3]" />
-                      {set.completed ? 'Done' : 'Log Set'}
+                      {set.completed ? t.session.doneSetBtn : t.session.logSetBtn}
                     </Button>
                     <Button
                       type="button"
@@ -1136,7 +1182,7 @@ export function ActiveSessionView({
                 }
                 className="font-bold"
               >
-                <Plus className="h-3.5 w-3.5" /> Add Working Set
+                <Plus className="h-3.5 w-3.5" /> {t.session.addWorkingSetBtn}
               </Button>
               <Button
                 type="button"
@@ -1147,7 +1193,7 @@ export function ActiveSessionView({
                 }
                 className="bg-secondary/60 text-muted-foreground hover:text-foreground font-semibold"
               >
-                + Warm-up Set
+                {t.session.addWarmupSetBtn}
               </Button>
             </div>
 
@@ -1159,7 +1205,9 @@ export function ActiveSessionView({
                 onClick={() => setSelectedExerciseIdx(safeIdx + 1)}
                 className="h-auto p-0 text-xs font-bold"
               >
-                Next Exercise: {activeSession.exercises[safeIdx + 1]?.exerciseNameSnapshot} →
+                {format(t.session.nextExerciseLink, {
+                  name: activeSession.exercises[safeIdx + 1]?.exerciseNameSnapshot ?? '',
+                })}
               </Button>
             )}
           </div>
@@ -1167,10 +1215,10 @@ export function ActiveSessionView({
       ) : (
         <Card className="rounded-3xl p-8 text-center">
           <Dumbbell className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
-          <p className="font-display text-base font-bold">No exercises in this session yet</p>
+          <p className="font-display text-base font-bold">{t.session.noExercisesYet}</p>
           <div className="mt-3 flex justify-center">
             <Button type="button" onClick={() => setShowAddExerciseModal(true)}>
-              + Add First Exercise
+              {t.session.addFirstExerciseBtn}
             </Button>
           </div>
         </Card>
@@ -1180,13 +1228,13 @@ export function ActiveSessionView({
       <Card className="space-y-4 rounded-3xl p-5">
         <div className="space-y-1.5">
           <Label htmlFor="session-notes" className="text-xs font-semibold">
-            Session Notes
+            {t.session.sessionNotesLabel}
           </Label>
           <Input
             id="session-notes"
             value={sessionNotes}
             onChange={(e) => setSessionNotes(e.target.value)}
-            placeholder="Energy levels, machine settings, or PR notes..."
+            placeholder={t.session.sessionNotesPlaceholder}
             className="text-xs"
           />
         </div>
@@ -1199,7 +1247,7 @@ export function ActiveSessionView({
             onClick={() => setShowAbandonConfirm(true)}
             className="bg-destructive/15 text-destructive hover:bg-destructive/25"
           >
-            Abandon Session
+            {t.session.abandonSessionBtn}
           </Button>
 
           <Button
@@ -1212,7 +1260,7 @@ export function ActiveSessionView({
             className="text-sm shadow-sm"
           >
             <CheckCircle2 className="h-4 w-4" />
-            Finish & Save Workout
+            {t.session.finishSaveWorkoutBtn}
           </Button>
         </div>
       </Card>
@@ -1224,57 +1272,83 @@ export function ActiveSessionView({
           if (!open) setShowSubstituteFor(null);
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-h-[88dvh] overflow-hidden p-4 sm:max-w-md sm:p-5">
           {currentExercise && (
-            <>
-              <DialogHeader>
+            <div className="flex max-h-[calc(88dvh-2.5rem)] min-w-0 flex-col gap-3 overflow-hidden">
+              <DialogHeader className="shrink-0">
                 <DialogTitle className="font-display text-lg font-bold">
-                  Replace {currentExercise.exerciseNameSnapshot}
+                  {format(t.session.replaceModalTitle, {
+                    name: currentExercise.exerciseNameSnapshot,
+                  })}
                 </DialogTitle>
                 <DialogDescription className="text-xs">
-                  Swapping an exercise records what you actually performed in this session without
-                  modifying your saved workout template.
+                  {t.session.replaceModalDesc}
                 </DialogDescription>
               </DialogHeader>
 
-              {currentExercise.alternativeExerciseIds.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-primary text-xs font-bold uppercase">
-                    Predefined Template Alternatives
-                  </p>
-                  {currentExercise.alternativeExerciseIds.map((altId) => {
-                    const alt = catalog.find((c) => c.id === altId);
-                    if (!alt) return null;
-                    return (
-                      <Button
-                        key={alt.id}
-                        type="button"
-                        variant="outline"
-                        onClick={async () => {
-                          await substituteExercise(currentExercise.clientExerciseId, alt.id);
-                          setShowSubstituteFor(null);
-                        }}
-                        className="bg-primary/15 border-primary/40 hover:bg-primary/25 flex h-auto w-full items-center justify-between rounded-2xl p-3.5 text-left text-xs font-bold"
-                      >
-                        <span>{alt.name}</span>
-                        <span className="text-primary text-[11px]">Use Backup →</span>
-                      </Button>
-                    );
-                  })}
-                </div>
-              )}
+              <div className="relative shrink-0">
+                <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                <Input
+                  type="search"
+                  value={substituteSearch}
+                  onChange={(e) => setSubstituteSearch(e.target.value)}
+                  placeholder={t.picker.searchPlaceholder}
+                  aria-label={t.picker.searchPlaceholder}
+                  className="h-9 pr-8 pl-9 text-xs"
+                />
+                {substituteSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setSubstituteSearch('')}
+                    aria-label={t.common.clear}
+                    className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
 
-              <div className="space-y-2 pt-2">
-                <p className="text-muted-foreground text-xs font-bold uppercase">
-                  Same Muscle Group ({MUSCLE_GROUP_LABELS[currentExercise.primaryMuscleSnapshot]})
-                </p>
-                {catalog
-                  .filter(
-                    (c) =>
-                      c.primaryMuscleGroup === currentExercise.primaryMuscleSnapshot &&
-                      c.id !== currentExercise.exerciseId,
-                  )
-                  .map((alt) => (
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+                {!substituteSearch.trim() && currentExercise.alternativeExerciseIds.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-primary text-xs font-bold uppercase">
+                      {t.session.predefinedAlternatives}
+                    </p>
+                    {currentExercise.alternativeExerciseIds.map((altId) => {
+                      const alt = catalog.find((c) => c.id === altId);
+                      if (!alt) return null;
+                      return (
+                        <Button
+                          key={alt.id}
+                          type="button"
+                          variant="outline"
+                          onClick={async () => {
+                            await substituteExercise(currentExercise.clientExerciseId, alt.id);
+                            setShowSubstituteFor(null);
+                          }}
+                          className="bg-primary/15 border-primary/40 hover:bg-primary/25 flex h-auto w-full items-center justify-between rounded-2xl p-3.5 text-left text-xs font-bold"
+                        >
+                          <span>{alt.name}</span>
+                          <span className="text-primary text-[11px]">{t.session.useBackupBtn}</span>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="space-y-2 pt-1">
+                  <p className="text-muted-foreground text-xs font-bold uppercase">
+                    {substituteSearch.trim()
+                      ? t.session.allCatalogExercises
+                      : format(t.session.sameMuscleGroup, {
+                          muscle: muscleLabel(currentExercise.primaryMuscleSnapshot),
+                        })}
+                  </p>
+                  {filterExercisesByQuery(
+                    catalog.filter((c) => c.id !== currentExercise.exerciseId),
+                    substituteSearch,
+                    substituteSearch.trim() ? 'ALL' : currentExercise.primaryMuscleSnapshot,
+                  ).map((alt) => (
                     <Button
                       key={alt.id}
                       type="button"
@@ -1286,48 +1360,101 @@ export function ActiveSessionView({
                       className="flex h-auto w-full items-center justify-between rounded-xl p-3 text-left text-xs font-medium"
                     >
                       <span>{alt.name}</span>
-                      <span className="text-muted-foreground text-[11px]">{alt.equipment}</span>
+                      <span className="text-muted-foreground text-[11px]">
+                        {equipmentLabel(alt.equipment)}
+                      </span>
                     </Button>
                   ))}
+                </div>
               </div>
-            </>
+            </div>
           )}
         </DialogContent>
       </Dialog>
 
       {/* Add Unplanned Exercise Modal */}
       <Dialog open={showAddExerciseModal} onOpenChange={setShowAddExerciseModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">
-              Add Unplanned Exercise
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Select an exercise from the catalog to add to your active session.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            {catalog.map((ex) => (
+        <DialogContent className="max-h-[88dvh] overflow-hidden p-4 sm:max-w-md sm:p-5">
+          <div className="flex max-h-[calc(88dvh-2.5rem)] min-w-0 flex-col gap-3 overflow-hidden">
+            <DialogHeader className="shrink-0">
+              <DialogTitle className="font-display text-lg font-bold">
+                {t.session.addUnplannedTitle}
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                {t.session.addUnplannedDesc}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="relative shrink-0">
+              <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+              <Input
+                type="search"
+                autoFocus
+                value={addExerciseSearch}
+                onChange={(e) => setAddExerciseSearch(e.target.value)}
+                placeholder={t.picker.searchPlaceholder}
+                aria-label={t.picker.searchPlaceholder}
+                className="h-9 pr-8 pl-9 text-xs"
+              />
+              {addExerciseSearch && (
+                <button
+                  type="button"
+                  onClick={() => setAddExerciseSearch('')}
+                  aria-label={t.common.clear}
+                  className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex shrink-0 flex-wrap items-center gap-1.5">
               <Button
-                key={ex.id}
                 type="button"
-                variant="secondary"
-                onClick={async () => {
-                  await addExerciseToSession(ex.id);
-                  setSelectedExerciseIdx(activeSession.exercises.length);
-                  setShowAddExerciseModal(false);
-                }}
-                className="flex h-auto w-full items-center justify-between rounded-xl p-3 text-left text-xs"
+                variant={addExerciseMuscle === 'ALL' ? 'default' : 'secondary'}
+                size="xs"
+                onClick={() => setAddExerciseMuscle('ALL')}
+                className="h-7 px-2.5 text-[11px]"
               >
-                <div>
-                  <p className="font-bold">{ex.name}</p>
-                  <p className="text-muted-foreground text-[11px] font-normal">
-                    {MUSCLE_GROUP_LABELS[ex.primaryMuscleGroup]} • {ex.equipment}
-                  </p>
-                </div>
-                <span className="text-primary font-bold">+ Add</span>
+                {t.picker.allMuscles}
               </Button>
-            ))}
+              {Object.values(MuscleGroup).map((mg) => (
+                <Button
+                  key={mg}
+                  type="button"
+                  variant={addExerciseMuscle === mg ? 'default' : 'secondary'}
+                  size="xs"
+                  onClick={() => setAddExerciseMuscle(mg)}
+                  className="h-7 px-2.5 text-[11px]"
+                >
+                  {muscleLabel(mg)}
+                </Button>
+              ))}
+            </div>
+
+            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+              {filteredAddExercises.map((ex) => (
+                <Button
+                  key={ex.id}
+                  type="button"
+                  variant="secondary"
+                  onClick={async () => {
+                    await addExerciseToSession(ex.id);
+                    setSelectedExerciseIdx(activeSession.exercises.length);
+                    setShowAddExerciseModal(false);
+                  }}
+                  className="flex h-auto w-full items-center justify-between rounded-xl p-3 text-left text-xs"
+                >
+                  <div>
+                    <p className="font-bold">{ex.name}</p>
+                    <p className="text-muted-foreground text-[11px] font-normal">
+                      {muscleLabel(ex.primaryMuscleGroup)} • {equipmentLabel(ex.equipment)}
+                    </p>
+                  </div>
+                  <span className="text-primary font-bold">{t.session.addShortBtn}</span>
+                </Button>
+              ))}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -1338,15 +1465,14 @@ export function ActiveSessionView({
           <AlertDialogHeader>
             <AlertDialogTitle className="text-destructive font-display flex items-center gap-2 text-lg font-bold">
               <AlertTriangle className="h-5 w-5" />
-              Discard Active Session?
+              {t.session.discardModalTitle}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs">
-              This will discard your current in-progress session without saving it to your diary.
-              Your workout template will not be affected.
+              {t.session.discardModalDesc}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep Training</AlertDialogCancel>
+            <AlertDialogCancel>{t.session.keepTrainingBtn}</AlertDialogCancel>
             <AlertDialogAction
               onClick={async () => {
                 await abandonSession();
@@ -1354,7 +1480,7 @@ export function ActiveSessionView({
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Discard Session
+              {t.session.discardSessionBtn}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -33,12 +33,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@luki-fitti/ui/components/ui/dialog';
-import { Input } from '@luki-fitti/ui/components/ui/input';
 import { Label } from '@luki-fitti/ui/components/ui/label';
 import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
 import { Progress } from '@luki-fitti/ui/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useGym } from '@/providers/gym/gym-context';
+import { useLocale } from '@/providers/i18n/locale-context';
 import {
   formatDate,
   formatDateTime,
@@ -47,13 +47,14 @@ import {
 } from '@luki-fitti/common/utils/client';
 import {
   ExerciseType,
-  MUSCLE_GROUP_LABELS,
   MuscleGroup,
   SessionType,
   SetType,
   WeightUnit,
 } from '@luki-fitti/common/enums';
 import type { WorkoutSessionDto } from '@luki-fitti/common/schemas';
+import { ExercisePicker } from './exercise-picker';
+import { NumberInput } from './number-input';
 
 const LBS_TO_KG = 0.45359237;
 
@@ -68,6 +69,7 @@ function toLocalDateIso(dateInput: Date | string | number): string {
 export function DiaryAnalyticsView() {
   const { historySessions, catalog, weightUnit, updateHistoricalSession, deleteHistoricalSession } =
     useGym();
+  const { t, format, locale, bcp47, muscleLabel, sessionTypeLabel, setTypeLabel } = useLocale();
 
   const [nowMs] = useState<number>(() => Date.now());
   const [period, setPeriod] = useState<'week' | 'month' | 'year' | 'all'>('month');
@@ -216,7 +218,7 @@ export function DiaryAnalyticsView() {
     const muscleDistribution = Array.from(muscleSets.entries())
       .map(([muscle, data]) => ({
         muscle,
-        label: MUSCLE_GROUP_LABELS[muscle],
+        label: muscleLabel(muscle),
         sets: data.sets,
         volumeKg: Math.round(data.volumeKg),
         pct: totalMuscleSetCount > 0 ? Math.round((data.sets / totalMuscleSetCount) * 100) : 0,
@@ -235,7 +237,7 @@ export function DiaryAnalyticsView() {
       personalRecords: Array.from(prMap.values()).sort((a, b) => b.est1RM - a.est1RM),
       progression: progression.slice(-20),
     };
-  }, [filteredSessions, filterMuscle, selectedExerciseId]);
+  }, [filteredSessions, filterMuscle, selectedExerciseId, muscleLabel]);
 
   const diaryChartData = useMemo(() => {
     if (selectedExerciseId !== 'ALL') {
@@ -284,14 +286,14 @@ export function DiaryAnalyticsView() {
         const iso = toLocalDateIso(d);
         days.push({
           iso,
-          weekdayLabel: d.toLocaleDateString('en-US', { weekday: 'short' }),
+          weekdayLabel: d.toLocaleDateString(bcp47, { weekday: 'short' }),
           dayNum: d.getDate(),
           sessions: filteredSessions.filter((s) => toLocalDateIso(s.startedAt) === iso),
         });
       }
       return {
         mode: 'days' as const,
-        title: 'Last 7 Days Activity',
+        title: t.diary.last7DaysTitle,
         leadingEmptyDays: 0,
         items: days,
       };
@@ -311,14 +313,14 @@ export function DiaryAnalyticsView() {
         const iso = toLocalDateIso(d);
         days.push({
           iso,
-          weekdayLabel: d.toLocaleDateString('en-US', { weekday: 'short' }),
+          weekdayLabel: d.toLocaleDateString(bcp47, { weekday: 'short' }),
           dayNum: d.getDate(),
           sessions: filteredSessions.filter((s) => toLocalDateIso(s.startedAt) === iso),
         });
       }
       return {
         mode: 'days' as const,
-        title: 'Last 30 Days Activity Calendar',
+        title: t.diary.last30DaysTitle,
         leadingEmptyDays,
         items: days,
       };
@@ -335,7 +337,7 @@ export function DiaryAnalyticsView() {
       for (let i = 11; i >= 0; i--) {
         const d = new Date(nowDate.getFullYear(), nowDate.getMonth() - i, 1);
         const ym = toLocalDateIso(d).slice(0, 7);
-        const label = d.toLocaleDateString('en-US', {
+        const label = d.toLocaleDateString(bcp47, {
           month: 'short',
           year: '2-digit',
         });
@@ -350,7 +352,7 @@ export function DiaryAnalyticsView() {
           totalVolumeKg: Math.round(monthSessions.reduce((acc, s) => acc + s.totalVolumeKg, 0)),
         });
       }
-      return { mode: 'buckets' as const, title: 'Last 12 Months Activity', items: months };
+      return { mode: 'buckets' as const, title: t.diary.last12MonthsTitle, items: months };
     }
 
     // period === 'all' -> Group by Year
@@ -382,8 +384,15 @@ export function DiaryAnalyticsView() {
       .map((y) => ({ ...y, totalVolumeKg: Math.round(y.totalVolumeKg) }))
       .sort((a, b) => a.key.localeCompare(b.key));
 
-    return { mode: 'buckets' as const, title: 'All-Time Yearly Training Activity', items: years };
-  }, [filteredSessions, period, nowMs]);
+    return { mode: 'buckets' as const, title: t.diary.allTimeYearlyTitle, items: years };
+  }, [filteredSessions, period, nowMs, bcp47, t.diary]);
+
+  const periodLabels: Record<'week' | 'month' | 'year' | 'all', string> = {
+    week: t.diary.periodWeek,
+    month: t.diary.periodMonth,
+    year: t.diary.periodYear,
+    all: t.diary.periodAll,
+  };
 
   return (
     <div className="min-w-0 max-w-full space-y-6 pb-12">
@@ -391,11 +400,9 @@ export function DiaryAnalyticsView() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-            Training Diary & Progress Analytics
+            {t.diary.title}
           </h1>
-          <p className="text-muted-foreground text-xs sm:text-sm">
-            Calendar history, working-set volume, stretching time, muscle distribution, and PRs
-          </p>
+          <p className="text-muted-foreground text-xs sm:text-sm">{t.diary.subtitle}</p>
         </div>
 
         <Tabs
@@ -408,8 +415,8 @@ export function DiaryAnalyticsView() {
         >
           <TabsList className="grid w-full grid-cols-4 sm:inline-flex sm:w-auto">
             {(['week', 'month', 'year', 'all'] as const).map((p) => (
-              <TabsTrigger key={p} value={p} className="px-2 text-xs capitalize sm:px-3">
-                {p === 'all' ? 'All Time' : `This ${p}`}
+              <TabsTrigger key={p} value={p} className="px-2 text-xs sm:px-3">
+                {periodLabels[p]}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -419,7 +426,7 @@ export function DiaryAnalyticsView() {
       {/* Filter Bar */}
       <Card className="min-w-0 flex-col items-stretch gap-2.5 p-3.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
         <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold">
-          <Filter className="h-3.5 w-3.5 shrink-0" /> Filter Analytics:
+          <Filter className="h-3.5 w-3.5 shrink-0" /> {t.diary.filterAnalyticsLabel}
         </div>
         <NativeSelect
           aria-label="Filter analytics by muscle group"
@@ -427,68 +434,78 @@ export function DiaryAnalyticsView() {
           onChange={(e) => setFilterMuscle(e.target.value as MuscleGroup | 'ALL')}
           className="bg-secondary h-8 w-full text-xs sm:w-auto"
         >
-          <option value="ALL">All Muscle Groups</option>
+          <option value="ALL">{t.diary.allMuscleGroups}</option>
           {Object.values(MuscleGroup).map((mg) => (
             <option key={mg} value={mg}>
-              {MUSCLE_GROUP_LABELS[mg]}
+              {muscleLabel(mg)}
             </option>
           ))}
         </NativeSelect>
 
-        <NativeSelect
-          aria-label="Filter analytics by exercise"
+        <ExercisePicker
+          exercises={catalog}
           value={selectedExerciseId}
-          onChange={(e) => setSelectedExerciseId(e.target.value)}
-          className="bg-secondary h-8 w-full text-xs sm:w-auto"
-        >
-          <option value="ALL">All Exercises</option>
-          {catalog.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </NativeSelect>
+          emptyOptionLabel={t.diary.allExercises}
+          emptyOptionValue="ALL"
+          ariaLabel="Filter analytics by exercise"
+          onValueChange={(val) => setSelectedExerciseId(val || 'ALL')}
+          className="w-full sm:w-72"
+          triggerClassName="bg-secondary h-8 text-xs"
+        />
       </Card>
 
       {/* Top KPI Cards (Strength Volume vs Stretching Duration strictly separated) */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Card className="p-4">
-          <p className="text-muted-foreground text-xs font-medium">Completed Sessions</p>
+          <p className="text-muted-foreground text-xs font-medium">
+            {t.diary.completedSessionsTitle}
+          </p>
           <p className="font-mono-tabular text-primary mt-1 text-2xl font-extrabold">
             {stats.totalSessions}
           </p>
           <p className="text-muted-foreground mt-0.5 text-[11px]">
-            {stats.strengthSessions} strength • {stats.stretchingSessions} stretch
+            {format(t.diary.strengthVsStretchSub, {
+              strength: stats.strengthSessions,
+              stretch: stats.stretchingSessions,
+            })}
           </p>
         </Card>
 
         <Card className="p-4">
-          <p className="text-muted-foreground text-xs font-medium">Working Strength Volume</p>
+          <p className="text-muted-foreground text-xs font-medium">
+            {t.diary.workingVolumeTitle}
+          </p>
           <p className="font-mono-tabular mt-1 text-2xl font-extrabold">
             {stats.totalVolumeKg.toLocaleString()} <span className="text-sm font-normal">kg</span>
           </p>
-          <p className="text-muted-foreground mt-0.5 text-[11px]">
-            Excludes warm-ups & timed stretches
-          </p>
+          <p className="text-muted-foreground mt-0.5 text-[11px]">{t.diary.workingVolumeSub}</p>
         </Card>
 
         <Card className="p-4">
-          <p className="text-muted-foreground text-xs font-medium">Completed Sets & Reps</p>
+          <p className="text-muted-foreground text-xs font-medium">
+            {t.diary.completedSetsRepsTitle}
+          </p>
           <p className="font-mono-tabular mt-1 text-2xl font-extrabold">
             {stats.totalSets}{' '}
             <span className="text-muted-foreground text-xs font-normal">
-              ({stats.totalReps} reps)
+              ({stats.totalReps} {t.common.reps})
             </span>
           </p>
-          <p className="text-muted-foreground mt-0.5 text-[11px]">Logged across exercises</p>
+          <p className="text-muted-foreground mt-0.5 text-[11px]">
+            {t.diary.completedSetsRepsSub}
+          </p>
         </Card>
 
         <Card className="p-4">
-          <p className="text-muted-foreground text-xs font-medium">Stretching & Mobility</p>
-          <p className="font-mono-tabular text-accent mt-1 text-2xl font-extrabold">
-            {stats.totalStretchMinutes} <span className="text-sm font-normal">min</span>
+          <p className="text-muted-foreground text-xs font-medium">
+            {t.diary.stretchingMobilityTitle}
           </p>
-          <p className="text-muted-foreground mt-0.5 text-[11px]">Dedicated recovery time</p>
+          <p className="font-mono-tabular text-accent mt-1 text-2xl font-extrabold">
+            {stats.totalStretchMinutes} <span className="text-sm font-normal">{t.common.min}</span>
+          </p>
+          <p className="text-muted-foreground mt-0.5 text-[11px]">
+            {t.diary.stretchingMobilitySub}
+          </p>
         </Card>
       </div>
 
@@ -500,10 +517,12 @@ export function DiaryAnalyticsView() {
           </h2>
           <div className="flex items-center gap-3 text-[11px]">
             <span className="flex items-center gap-1">
-              <span className="bg-primary inline-block h-2.5 w-2.5 rounded-sm" /> Strength
+              <span className="bg-primary inline-block h-2.5 w-2.5 rounded-sm" />{' '}
+              {t.diary.strengthLegend}
             </span>
             <span className="flex items-center gap-1">
-              <span className="bg-accent inline-block h-2.5 w-2.5 rounded-sm" /> Stretching
+              <span className="bg-accent inline-block h-2.5 w-2.5 rounded-sm" />{' '}
+              {t.diary.stretchingLegend}
             </span>
           </div>
         </div>
@@ -512,7 +531,7 @@ export function DiaryAnalyticsView() {
           <div className="space-y-2">
             {period === 'month' && (
               <div className="grid grid-cols-7 gap-2 text-center">
-                {(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const).map((weekday) => (
+                {t.diary.weekdaysShort.map((weekday) => (
                   <span
                     key={weekday}
                     className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase"
@@ -543,7 +562,7 @@ export function DiaryAnalyticsView() {
                     onClick={() => {
                       if (day.sessions[0]) setInspectingSession(day.sessions[0]);
                     }}
-                    title={`${day.iso} (${day.weekdayLabel}): ${day.sessions.length} session(s)`}
+                    title={`${day.iso} (${day.weekdayLabel}): ${day.sessions.length} ${t.common.sessions}`}
                     className={`flex flex-col items-center justify-center rounded-xl border px-1.5 py-2 text-xs transition ${
                       period === 'week' ? 'min-h-16' : 'h-12'
                     } ${
@@ -568,7 +587,7 @@ export function DiaryAnalyticsView() {
           </div>
         ) : activityData.items.length === 0 ? (
           <p className="text-muted-foreground py-4 text-center text-xs">
-            No sessions found for this filter selection.
+            {t.diary.noSessionsFound}
           </p>
         ) : (
           <div
@@ -599,11 +618,12 @@ export function DiaryAnalyticsView() {
                         hasSessions ? 'text-primary' : 'text-muted-foreground'
                       }`}
                     >
-                      {bucket.sessions.length} sess.
+                      {bucket.sessions.length} {t.diary.sessShort}
                     </span>
                   </div>
                   <div className="text-muted-foreground font-mono-tabular mt-2 text-[10px]">
-                    {bucket.totalSets} sets • {(bucket.totalVolumeKg / 1000).toFixed(1)}t vol
+                    {bucket.totalSets} {t.common.sets} • {(bucket.totalVolumeKg / 1000).toFixed(1)}t
+                    vol
                   </div>
                 </div>
               );
@@ -619,30 +639,35 @@ export function DiaryAnalyticsView() {
             <h2 className="font-display flex items-center gap-2 text-base font-bold">
               <TrendingUp className="text-primary h-4 w-4" />
               {selectedExerciseId !== 'ALL'
-                ? `${catalog.find((c) => c.id === selectedExerciseId)?.name ?? 'Exercise'} — Weight & Est. 1RM Progression`
-                : 'Session Volume & Working Sets Progression'}
+                ? format(t.diary.exerciseProgressionTitle, {
+                    name:
+                      catalog.find((c) => c.id === selectedExerciseId)?.name ?? 'Exercise',
+                  })
+                : t.diary.sessionVolumeProgressionTitle}
             </h2>
             <p className="text-muted-foreground text-xs">
               {selectedExerciseId !== 'ALL'
-                ? 'Tracks top working weight (kg) and Epley estimated 1RM across recent sessions'
-                : 'Tracks total working volume (t) and completed sets across your recent strength workouts'}
+                ? t.diary.exerciseProgressionSub
+                : t.diary.sessionVolumeProgressionSub}
             </p>
           </div>
           <div className="flex items-center gap-3 text-[11px]">
             <span className="flex items-center gap-1.5 font-semibold">
               <span className="bg-primary inline-block h-2.5 w-2.5 rounded-sm" />
-              {selectedExerciseId !== 'ALL' ? 'Est. 1RM (kg)' : 'Volume (t)'}
+              {selectedExerciseId !== 'ALL' ? t.diary.est1RmLegend : t.diary.volumeTonsLegend}
             </span>
             <span className="flex items-center gap-1.5 font-semibold">
               <span className="bg-accent inline-block h-2.5 w-2.5 rounded-full" />
-              {selectedExerciseId !== 'ALL' ? 'Max Weight (kg)' : 'Completed Sets'}
+              {selectedExerciseId !== 'ALL'
+                ? t.diary.maxWeightLegend
+                : t.diary.completedSetsLegend}
             </span>
           </div>
         </div>
 
         {diaryChartData.length === 0 ? (
           <p className="text-muted-foreground py-8 text-center text-xs">
-            No completed strength sessions match the current filter selection.
+            {t.diary.noCompletedStrengthSessions}
           </p>
         ) : (
           <div className="h-64 w-full">
@@ -684,7 +709,8 @@ export function DiaryAnalyticsView() {
                   content={({ active, payload, label }) => {
                     if (!active || !payload?.length) return null;
                     const row = payload[0]?.payload as
-                      { fullDate?: string; workoutName?: string } | undefined;
+                      | { fullDate?: string; workoutName?: string }
+                      | undefined;
                     return (
                       <div className="bg-popover/95 text-popover-foreground border-border pointer-events-none max-w-[200px] rounded-xl border px-2.5 py-1.5 text-[11px] leading-tight shadow-md backdrop-blur-sm">
                         <p className="text-foreground truncate font-semibold">
@@ -702,17 +728,17 @@ export function DiaryAnalyticsView() {
                             const isPrimary = key === 'volumeTons' || key === 'est1RM';
                             const metricLabel =
                               key === 'volumeTons'
-                                ? 'Volume'
+                                ? t.home.volumeLabel
                                 : key === 'sets'
-                                  ? 'Sets'
+                                  ? t.diary.setsSmall
                                   : key === 'est1RM'
                                     ? 'Est. 1RM'
-                                    : 'Max Weight';
+                                    : t.diary.maxWeightLegend;
                             const metricValue =
                               key === 'volumeTons'
                                 ? `${val} t`
                                 : key === 'sets'
-                                  ? `${val} sets`
+                                  ? `${val} ${t.common.sets}`
                                   : `${val} kg`;
 
                             return (
@@ -786,11 +812,11 @@ export function DiaryAnalyticsView() {
         {/* Muscle Group Distribution */}
         <Card className="space-y-3 rounded-3xl p-5">
           <h2 className="font-display flex items-center gap-2 text-base font-bold">
-            <TrendingUp className="text-primary h-4 w-4" /> Muscle Group Distribution
+            <TrendingUp className="text-primary h-4 w-4" /> {t.diary.muscleDistTitle}
           </h2>
           {stats.muscleDistribution.length === 0 ? (
             <p className="text-muted-foreground py-6 text-center text-xs">
-              Complete a workout session to see your muscle-group training balance.
+              {t.diary.muscleDistEmpty}
             </p>
           ) : (
             <div className="space-y-2.5">
@@ -799,7 +825,7 @@ export function DiaryAnalyticsView() {
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold">{m.label}</span>
                     <span className="font-mono-tabular text-muted-foreground">
-                      {m.sets} sets ({m.pct}%) • {m.volumeKg.toLocaleString()} kg
+                      {m.sets} {t.common.sets} ({m.pct}%) • {m.volumeKg.toLocaleString()} kg
                     </span>
                   </div>
                   <Progress value={Math.max(4, m.pct)} className="bg-secondary h-2" />
@@ -812,11 +838,11 @@ export function DiaryAnalyticsView() {
         {/* Personal Records Leaderboard */}
         <Card className="space-y-3 rounded-3xl p-5">
           <h2 className="font-display flex items-center gap-2 text-base font-bold">
-            <Trophy className="text-primary h-4 w-4" /> Exercise Personal Records & Est. 1RM
+            <Trophy className="text-primary h-4 w-4" /> {t.diary.prLeaderboardTitle}
           </h2>
           {stats.personalRecords.length === 0 ? (
             <p className="text-muted-foreground py-6 text-center text-xs">
-              Personal records are automatically calculated from your completed working sets.
+              {t.diary.prLeaderboardEmpty}
             </p>
           ) : (
             <div className="space-y-2">
@@ -828,7 +854,7 @@ export function DiaryAnalyticsView() {
                   <div>
                     <p className="font-bold">{pr.exerciseName}</p>
                     <p className="text-muted-foreground text-[10px]">
-                      {MUSCLE_GROUP_LABELS[pr.muscle]} • {pr.date}
+                      {muscleLabel(pr.muscle)} • {pr.date}
                     </p>
                   </div>
                   <div className="text-right">
@@ -849,16 +875,14 @@ export function DiaryAnalyticsView() {
       {/* Diary Timeline List */}
       <div className="space-y-3">
         <h2 className="font-display text-lg font-bold">
-          Workout Diary Timeline ({filteredSessions.length})
+          {format(t.diary.timelineTitle, { count: filteredSessions.length })}
         </h2>
 
         {filteredSessions.length === 0 ? (
           <Card className="rounded-3xl p-10 text-center">
             <Dumbbell className="text-muted-foreground mx-auto mb-2 h-8 w-8 opacity-50" />
-            <p className="font-display text-base font-bold">No training sessions recorded yet</p>
-            <p className="text-muted-foreground mt-1 text-xs">
-              Start a workout session to begin tracking your training history.
-            </p>
+            <p className="font-display text-base font-bold">{t.diary.timelineEmptyTitle}</p>
+            <p className="text-muted-foreground mt-1 text-xs">{t.diary.timelineEmptySub}</p>
           </Card>
         ) : (
           <div className="space-y-3">
@@ -880,10 +904,10 @@ export function DiaryAnalyticsView() {
                       ) : (
                         <Dumbbell className="h-3 w-3" />
                       )}
-                      {session.sessionType}
+                      {sessionTypeLabel(session.sessionType)}
                     </Badge>
                     <span className="text-muted-foreground font-mono-tabular text-xs">
-                      {formatLongDateTime(session.startedAt)}
+                      {formatLongDateTime(session.startedAt, locale)}
                     </span>
                   </div>
 
@@ -898,18 +922,24 @@ export function DiaryAnalyticsView() {
                 <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t pt-3 md:flex-nowrap md:justify-end md:border-t-0 md:pt-0">
                   <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center sm:gap-2.5">
                     <div className="bg-secondary/60 rounded-xl px-3 py-1.5 text-right text-xs sm:w-[72px]">
-                      <span className="text-muted-foreground block text-[10px]">Duration</span>
+                      <span className="text-muted-foreground block text-[10px]">
+                        {t.diary.durationSmall}
+                      </span>
                       <strong className="font-mono-tabular">
                         {Math.max(1, Math.round(session.activeDurationSeconds / 60))}m
                       </strong>
                     </div>
                     <div className="bg-secondary/60 rounded-xl px-3 py-1.5 text-right text-xs sm:w-[56px]">
-                      <span className="text-muted-foreground block text-[10px]">Sets</span>
+                      <span className="text-muted-foreground block text-[10px]">
+                        {t.diary.setsSmall}
+                      </span>
                       <strong className="font-mono-tabular">{session.totalSetsCompleted}</strong>
                     </div>
                     <div className="bg-secondary/60 rounded-xl px-3 py-1.5 text-right text-xs sm:w-[104px]">
                       <span className="text-muted-foreground block text-[10px]">
-                        {session.sessionType === SessionType.STRETCHING ? 'Stretch' : 'Volume'}
+                        {session.sessionType === SessionType.STRETCHING
+                          ? t.diary.stretchSmall
+                          : t.diary.volumeSmall}
                       </span>
                       <strong className="font-mono-tabular text-primary">
                         {session.sessionType === SessionType.STRETCHING
@@ -926,7 +956,7 @@ export function DiaryAnalyticsView() {
                       size="sm"
                       onClick={() => setInspectingSession(session)}
                     >
-                      <Edit3 className="h-3.5 w-3.5" /> Inspect / Edit
+                      <Edit3 className="h-3.5 w-3.5" /> {t.diary.inspectEditBtn}
                     </Button>
                     <Button
                       type="button"
@@ -950,7 +980,9 @@ export function DiaryAnalyticsView() {
                   variant="secondary"
                   onClick={() => setVisibleCount((prev) => prev + 30)}
                 >
-                  Show More Sessions ({filteredSessions.length - visibleCount} remaining)
+                  {format(t.diary.showMoreSessions, {
+                    count: filteredSessions.length - visibleCount,
+                  })}
                 </Button>
               </div>
             )}
@@ -976,7 +1008,7 @@ export function DiaryAnalyticsView() {
                   {inspectingSession.workoutNameSnapshot}
                 </DialogTitle>
                 <DialogDescription className="text-xs">
-                  Correct any recorded weight or repetition value below and click Save Corrections.
+                  {t.diary.inspectModalDesc}
                 </DialogDescription>
               </DialogHeader>
 
@@ -991,7 +1023,7 @@ export function DiaryAnalyticsView() {
                         {exIdx + 1}. {ex.exerciseNameSnapshot}
                       </span>
                       <span className="text-muted-foreground shrink-0 text-[11px]">
-                        {MUSCLE_GROUP_LABELS[ex.primaryMuscleSnapshot]}
+                        {muscleLabel(ex.primaryMuscleSnapshot)}
                       </span>
                     </div>
 
@@ -1002,18 +1034,18 @@ export function DiaryAnalyticsView() {
                           className="bg-background flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs"
                         >
                           <span className="font-mono-tabular shrink-0 font-bold">
-                            Set {sIdx + 1} ({set.setType})
+                            {t.common.set} {sIdx + 1} ({setTypeLabel(set.setType)})
                           </span>
                           <div className="ml-auto flex shrink-0 items-center gap-2">
                             <Label className="text-muted-foreground text-[10px]">
                               {weightUnit}
                             </Label>
-                            <Input
-                              type="number"
+                            <NumberInput
+                              allowNull
                               step="0.5"
-                              value={set.weight ?? ''}
-                              onChange={(e) => {
-                                const val = e.target.value === '' ? null : Number(e.target.value);
+                              min={0}
+                              value={set.weight}
+                              onValueChange={(val) => {
                                 setInspectingSession((prev) => {
                                   if (!prev) return null;
                                   return {
@@ -1035,12 +1067,14 @@ export function DiaryAnalyticsView() {
                               }}
                               className="bg-secondary font-mono-tabular h-7 w-16 px-2 text-center text-xs"
                             />
-                            <Label className="text-muted-foreground text-[10px]">Reps</Label>
-                            <Input
-                              type="number"
-                              value={set.reps ?? ''}
-                              onChange={(e) => {
-                                const val = e.target.value === '' ? null : Number(e.target.value);
+                            <Label className="text-muted-foreground text-[10px]">
+                              {t.common.reps}
+                            </Label>
+                            <NumberInput
+                              allowNull
+                              min={0}
+                              value={set.reps}
+                              onValueChange={(val) => {
                                 setInspectingSession((prev) => {
                                   if (!prev) return null;
                                   return {
@@ -1076,7 +1110,7 @@ export function DiaryAnalyticsView() {
                   variant="secondary"
                   onClick={() => setInspectingSession(null)}
                 >
-                  Cancel
+                  {t.common.cancel}
                 </Button>
                 <Button
                   type="button"
@@ -1085,7 +1119,7 @@ export function DiaryAnalyticsView() {
                     setInspectingSession(null);
                   }}
                 >
-                  <Check className="h-4 w-4" /> Save Corrections
+                  <Check className="h-4 w-4" /> {t.diary.saveCorrectionsBtn}
                 </Button>
               </DialogFooter>
             </>

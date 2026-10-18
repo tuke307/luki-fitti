@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Dumbbell,
   Search,
@@ -30,15 +30,15 @@ import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { Textarea } from '@luki-fitti/ui/components/ui/textarea';
 import { useGym } from '@/providers/gym/gym-context';
+import { useLocale } from '@/providers/i18n/locale-context';
 import { computeExerciseProgression, formatDateTime } from '@luki-fitti/common/utils/client';
+import { ExercisePicker, filterExercisesByQuery } from './exercise-picker';
 import { ExerciseVisual } from './exercise-visual';
+import { NumberInput } from './number-input';
 import {
-  EQUIPMENT_LABELS,
   EquipmentType,
-  EXERCISE_TYPE_LABELS,
   ExerciseCategory,
   ExerciseType,
-  MUSCLE_GROUP_LABELS,
   MuscleGroup,
 } from '@luki-fitti/common/enums';
 import type { ExerciseDto } from '@luki-fitti/common/schemas';
@@ -60,6 +60,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
     weightUnit,
     addExerciseToSession,
   } = useGym();
+  const { t, format, muscleLabel, equipmentLabel, exerciseTypeLabel } = useLocale();
 
   const [subTab, setSubTab] = useState<'catalog' | 'stretching'>('catalog');
   const [search, setSearch] = useState('');
@@ -98,28 +99,33 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
     }>
   >([]);
 
-  const filteredCatalog = catalog.filter((ex) => {
-    if (selectedMuscle !== 'ALL') {
-      const matchesPrimary = ex.primaryMuscleGroup === selectedMuscle;
-      const matchesSecondary = ex.secondaryMuscleGroups?.includes(selectedMuscle);
-      if (!matchesPrimary && !matchesSecondary) return false;
-    }
-    if (selectedType !== 'ALL' && ex.exerciseType !== selectedType) return false;
-    if (selectedEquipment !== 'ALL' && ex.equipment !== selectedEquipment) return false;
+  const filteredCatalog = useMemo(() => {
+    const base = filterExercisesByQuery(catalog, search, selectedMuscle);
+    return base.filter((ex) => {
+      if (selectedType !== 'ALL' && ex.exerciseType !== selectedType) return false;
+      if (selectedEquipment !== 'ALL' && ex.equipment !== selectedEquipment) return false;
+      return true;
+    });
+  }, [catalog, search, selectedMuscle, selectedType, selectedEquipment]);
 
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      const matchName = ex.name.toLowerCase().includes(q);
-      const matchDesc = ex.description.toLowerCase().includes(q);
-      const matchTags = ex.tags.some((t) => t.toLowerCase().includes(q));
-      const matchMuscle = MUSCLE_GROUP_LABELS[ex.primaryMuscleGroup].toLowerCase().includes(q);
-      if (!matchName && !matchDesc && !matchTags && !matchMuscle) return false;
-    }
-    return true;
-  });
+  const stretchExercises = useMemo(
+    () =>
+      catalog.filter(
+        (e) =>
+          e.exerciseType === ExerciseType.STRETCHING || e.exerciseType === ExerciseType.MOBILITY,
+      ),
+    [catalog],
+  );
 
-  const stretchExercises = catalog.filter(
-    (e) => e.exerciseType === ExerciseType.STRETCHING || e.exerciseType === ExerciseType.MOBILITY,
+  const prioritizedStretchCatalog = useMemo(
+    () => [
+      ...stretchExercises,
+      ...catalog.filter(
+        (e) =>
+          e.exerciseType !== ExerciseType.STRETCHING && e.exerciseType !== ExerciseType.MOBILITY,
+      ),
+    ],
+    [catalog, stretchExercises],
   );
 
   const handleCreateExercise = async (e: React.FormEvent) => {
@@ -148,7 +154,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
           : null,
       tags: newTags
         .split(',')
-        .map((t) => t.trim())
+        .map((tItem) => tItem.trim())
         .filter(Boolean),
       alternativeExerciseIds: [],
       ...(newMediaUrl.trim() ? { mediaUrl: newMediaUrl.trim() } : {}),
@@ -195,11 +201,10 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
       <div className="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-            Exercise & Mobility Library
+            {t.exercises.title}
           </h1>
           <p className="text-muted-foreground text-xs sm:text-sm">
-            {catalog.length} exercises across 13 muscle groups with visual demonstrations,
-            alternatives & guided stretching flows
+            {format(t.exercises.subtitle, { count: catalog.length })}
           </p>
         </div>
 
@@ -211,13 +216,13 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
           >
             <TabsList className="grid w-full grid-cols-2 sm:inline-flex sm:w-auto">
               <TabsTrigger value="catalog" className="truncate px-2 text-xs sm:px-3">
-                Catalog ({catalog.length})
+                {format(t.exercises.catalogTab, { count: catalog.length })}
               </TabsTrigger>
               <TabsTrigger
                 value="stretching"
                 className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground truncate px-2 text-xs sm:px-3"
               >
-                Stretching Studio ({stretchingRoutines.length})
+                {format(t.exercises.stretchingTab, { count: stretchingRoutines.length })}
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -229,7 +234,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
               className="w-full shrink-0 sm:w-auto"
             >
               <Plus className="h-4 w-4" />
-              Custom Exercise
+              {t.exercises.customExerciseBtn}
             </Button>
           ) : (
             <Button
@@ -252,7 +257,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
               className="w-full shrink-0 sm:w-auto"
             >
               <Plus className="h-4 w-4" />
-              New Routine
+              {t.exercises.newRoutineBtn}
             </Button>
           )}
         </div>
@@ -261,15 +266,15 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
       {subTab === 'catalog' ? (
         <>
           {/* Search & Filters */}
-          <Card className="min-w-0 overflow-hidden space-y-3 p-3.5 sm:p-4">
+          <Card className="min-w-0 space-y-3 overflow-hidden p-3.5 sm:p-4">
             <div className="relative">
               <Search className="text-muted-foreground absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2" />
               <Input
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search exercise, muscle, equipment, or German alias (Bankdrücken, Kniebeuge)..."
-                aria-label="Search exercises"
+                placeholder={t.exercises.searchPlaceholder}
+                aria-label={t.exercises.searchPlaceholder}
                 className="h-10 pr-4 pl-10 text-xs sm:text-sm"
               />
             </div>
@@ -283,7 +288,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                 onClick={() => setSelectedMuscle('ALL')}
                 className="shrink-0"
               >
-                All Muscles
+                {t.exercises.allMuscles}
               </Button>
               {Object.values(MuscleGroup).map((mg) => (
                 <Button
@@ -294,7 +299,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                   onClick={() => setSelectedMuscle(mg)}
                   className="shrink-0"
                 >
-                  {MUSCLE_GROUP_LABELS[mg]}
+                  {muscleLabel(mg)}
                 </Button>
               ))}
             </div>
@@ -303,7 +308,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
             <div className="flex flex-wrap items-center gap-1.5 pt-1 sm:gap-2">
               <div className="text-muted-foreground flex items-center gap-1 text-xs">
                 <Filter className="h-3.5 w-3.5" />
-                <span>Type:</span>
+                <span>{t.exercises.typeLabel}</span>
               </div>
               {(['ALL', ...Object.values(ExerciseType)] as const).map((tp) => (
                 <Button
@@ -313,7 +318,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                   size="xs"
                   onClick={() => setSelectedType(tp)}
                 >
-                  {tp === 'ALL' ? 'All Types' : EXERCISE_TYPE_LABELS[tp]}
+                  {tp === 'ALL' ? t.exercises.allTypes : exerciseTypeLabel(tp)}
                 </Button>
               ))}
 
@@ -324,10 +329,10 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                   onChange={(e) => setSelectedEquipment(e.target.value as EquipmentType | 'ALL')}
                   className="bg-secondary h-8 w-full text-xs sm:w-auto"
                 >
-                  <option value="ALL">All Equipment</option>
+                  <option value="ALL">{t.exercises.allEquipment}</option>
                   {Object.values(EquipmentType).map((eq) => (
                     <option key={eq} value={eq}>
-                      {EQUIPMENT_LABELS[eq]}
+                      {equipmentLabel(eq)}
                     </option>
                   ))}
                 </NativeSelect>
@@ -339,10 +344,8 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
           {filteredCatalog.length === 0 ? (
             <Card className="p-10 text-center">
               <Dumbbell className="text-muted-foreground mx-auto mb-3 h-10 w-10 opacity-50" />
-              <p className="font-display text-base font-semibold">No matching exercises found</p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                Try clearing filters or create a custom exercise for your training plan.
-              </p>
+              <p className="font-display text-base font-semibold">{t.exercises.noMatchingTitle}</p>
+              <p className="text-muted-foreground mt-1 text-xs">{t.exercises.noMatchingSub}</p>
             </Card>
           ) : (
             <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
@@ -373,10 +376,10 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                           variant={isStretch ? 'accent' : 'default'}
                           className="text-[11px] tracking-wide uppercase"
                         >
-                          {MUSCLE_GROUP_LABELS[ex.primaryMuscleGroup]}
+                          {muscleLabel(ex.primaryMuscleGroup)}
                         </Badge>
                         <Badge variant="secondary" className="text-muted-foreground text-[11px]">
-                          {EQUIPMENT_LABELS[ex.equipment]}
+                          {equipmentLabel(ex.equipment)}
                         </Badge>
                       </div>
 
@@ -395,7 +398,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                               variant="secondary"
                               className="bg-secondary/70 text-muted-foreground px-1.5 py-0.5 text-[10px]"
                             >
-                              + {MUSCLE_GROUP_LABELS[sec]}
+                              + {muscleLabel(sec)}
                             </Badge>
                           ))}
                         </div>
@@ -407,15 +410,20 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                         {isStretch && ex.recommendedDurationSeconds ? (
                           <>
                             <Clock className="text-accent h-3.5 w-3.5 shrink-0" />
-                            <span>{ex.recommendedDurationSeconds}s hold</span>
+                            <span>
+                              {ex.recommendedDurationSeconds}
+                              {t.exercises.holdSuffix}
+                            </span>
                           </>
                         ) : altNames.length > 0 ? (
                           <>
                             <ArrowRightLeft className="h-3.5 w-3.5 shrink-0" />
-                            <span className="max-w-[150px] truncate">Alt: {altNames[0]}</span>
+                            <span className="max-w-[150px] truncate">
+                              {format(t.exercises.altPrefix, { name: altNames[0] ?? '' })}
+                            </span>
                           </>
                         ) : (
-                          <span>{EXERCISE_TYPE_LABELS[ex.exerciseType]}</span>
+                          <span>{exerciseTypeLabel(ex.exerciseType)}</span>
                         )}
                       </div>
 
@@ -428,11 +436,11 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                             void addExerciseToSession(ex.id);
                           }}
                         >
-                          + Add to Active
+                          {t.exercises.addToActiveBtn}
                         </Button>
                       ) : (
                         <span className="text-primary inline-flex shrink-0 items-center gap-1 font-semibold">
-                          <Info className="h-3.5 w-3.5" /> Form & Video
+                          <Info className="h-3.5 w-3.5" /> {t.exercises.formAndVideo}
                         </span>
                       )}
                     </div>
@@ -449,15 +457,16 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-1.5">
                 <Badge variant="accent" className="rounded-full px-3 py-1 text-xs">
-                  <Sparkles className="h-3.5 w-3.5" /> First-Class Mobility & Recovery Studio
+                  <Sparkles className="h-3.5 w-3.5" /> {t.exercises.studioBadge}
                 </Badge>
                 <h2 className="font-display text-xl font-bold">
-                  Guided Stretching Routines ({stretchingRoutines.length}) & Mobility Catalog (
-                  {stretchExercises.length})
+                  {format(t.exercises.studioTitle, {
+                    routines: stretchingRoutines.length,
+                    drills: stretchExercises.length,
+                  })}
                 </h2>
                 <p className="text-muted-foreground text-xs leading-relaxed">
-                  Launch timed stretching flows with transition bells or browse individual mobility
-                  drills with visual start/finish demonstrations and breathing cues.
+                  {t.exercises.studioDesc}
                 </p>
               </div>
             </div>
@@ -471,7 +480,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                 onClick={() => setStretchAreaFilter('ALL')}
                 className="shrink-0"
               >
-                All Routines ({stretchingRoutines.length})
+                {format(t.exercises.allRoutinesPill, { count: stretchingRoutines.length })}
               </Button>
               {Array.from(new Set(stretchingRoutines.map((r) => r.targetArea))).map((area) => (
                 <Button
@@ -503,7 +512,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
                         <span className="font-mono-tabular text-muted-foreground text-xs">
-                          ~{Math.round(routine.estimatedDurationSeconds / 60)} min
+                          ~{Math.round(routine.estimatedDurationSeconds / 60)} {t.common.min}
                         </span>
                         <Button
                           type="button"
@@ -557,8 +566,9 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                               {item.sets} ×{' '}
                               {item.durationSeconds
                                 ? `${item.durationSeconds}s`
-                                : `${item.reps} reps`}{' '}
-                              ({item.transitionSeconds}s rest)
+                                : `${item.reps} ${t.common.reps}`}{' '}
+                              ({item.transitionSeconds}
+                              {t.workouts.restSuffix})
                             </span>
                           </div>
                         );
@@ -578,7 +588,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                       className="w-full"
                     >
                       <Play className="h-4 w-4 fill-current" />
-                      Start Stretching Session
+                      {t.exercises.startStretchingSessionBtn}
                     </Button>
                   </div>
                 </Card>
@@ -590,12 +600,9 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="font-display text-lg font-bold">
-                  Stretching & Mobility Exercise Catalog ({stretchExercises.length})
+                  {format(t.exercises.stretchCatalogTitle, { count: stretchExercises.length })}
                 </h3>
-                <p className="text-muted-foreground text-xs">
-                  Tap any stretch or mobility drill for visual start/finish postures, target
-                  muscles, and breathing instructions
-                </p>
+                <p className="text-muted-foreground text-xs">{t.exercises.stretchCatalogSub}</p>
               </div>
               <div className="scrollbar-hide -mx-1 flex max-w-full items-center gap-1.5 overflow-x-auto px-1 pb-1">
                 <Button
@@ -605,7 +612,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                   onClick={() => setStretchMuscleFilter('ALL')}
                   className="shrink-0"
                 >
-                  All Regions
+                  {t.exercises.allRegionsPill}
                 </Button>
                 {Array.from(new Set(stretchExercises.map((e) => e.primaryMuscleGroup))).map(
                   (mg) => (
@@ -617,7 +624,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                       onClick={() => setStretchMuscleFilter(mg)}
                       className="shrink-0"
                     >
-                      {MUSCLE_GROUP_LABELS[mg]}
+                      {muscleLabel(mg)}
                     </Button>
                   ),
                 )}
@@ -647,11 +654,12 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                       <ExerciseVisual exercise={ex} variant="card" className="mb-3" />
                       <div className="flex items-center justify-between gap-2">
                         <Badge variant="accent" className="text-[11px] uppercase">
-                          {MUSCLE_GROUP_LABELS[ex.primaryMuscleGroup]}
+                          {muscleLabel(ex.primaryMuscleGroup)}
                         </Badge>
                         <Badge variant="secondary" className="font-mono-tabular text-[11px]">
                           <Clock className="text-accent mr-1 h-3 w-3" />
-                          {ex.recommendedDurationSeconds ?? 45}s hold
+                          {ex.recommendedDurationSeconds ?? 45}
+                          {t.exercises.holdSuffix}
                         </Badge>
                       </div>
                       <h4 className="font-display group-hover:text-accent mt-2 text-base font-bold transition">
@@ -664,7 +672,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
 
                     <div className="mt-4 flex items-center justify-between border-t pt-3 text-xs">
                       <span className="text-muted-foreground">
-                        {EXERCISE_TYPE_LABELS[ex.exerciseType]}
+                        {exerciseTypeLabel(ex.exerciseType)}
                       </span>
                       <Button
                         type="button"
@@ -685,7 +693,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                           setShowCreateRoutineModal(true);
                         }}
                       >
-                        + Add to Routine
+                        {t.exercises.addToRoutineBtn}
                       </Button>
                     </div>
                   </Card>
@@ -708,13 +716,13 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
               <DialogHeader>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="default" className="text-xs">
-                    {MUSCLE_GROUP_LABELS[selectedExercise.primaryMuscleGroup]}
+                    {muscleLabel(selectedExercise.primaryMuscleGroup)}
                   </Badge>
                   <Badge variant="secondary" className="text-muted-foreground text-xs">
-                    {EQUIPMENT_LABELS[selectedExercise.equipment]}
+                    {equipmentLabel(selectedExercise.equipment)}
                   </Badge>
                   <Badge variant="secondary" className="text-muted-foreground text-xs">
-                    {EXERCISE_TYPE_LABELS[selectedExercise.exerciseType]}
+                    {exerciseTypeLabel(selectedExercise.exerciseType)}
                   </Badge>
                 </div>
                 <DialogTitle className="font-display pt-1 text-xl font-bold">
@@ -730,7 +738,9 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
 
               {selectedExercise.instructions.length > 0 && (
                 <div className="space-y-2">
-                  <h3 className="font-display text-sm font-bold">Execution Cues & Instructions</h3>
+                  <h3 className="font-display text-sm font-bold">
+                    {t.exercises.executionCuesTitle}
+                  </h3>
                   <ol className="space-y-2 text-xs leading-relaxed">
                     {selectedExercise.instructions.map((step, idx) => (
                       <li key={idx} className="bg-secondary/40 flex gap-2.5 rounded-xl p-2.5">
@@ -747,7 +757,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
               {selectedExercise.alternativeExerciseIds.length > 0 && (
                 <div className="space-y-2">
                   <h3 className="font-display text-sm font-bold">
-                    Recommended Backup / Alternative Exercises
+                    {t.exercises.recommendedBackupsTitle}
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {selectedExercise.alternativeExerciseIds.map((altId) => {
@@ -784,7 +794,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                   <div className="space-y-2 border-t pt-4">
                     <div className="flex items-center justify-between">
                       <h3 className="font-display text-sm font-bold">
-                        Global Performance History ({insight.sessionsCount} sessions)
+                        {format(t.exercises.globalHistoryTitle, { count: insight.sessionsCount })}
                       </h3>
                       {insight.ewma1RM > 0 && (
                         <Badge variant="default" className="font-mono-tabular text-[11px]">
@@ -836,29 +846,29 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
           <form onSubmit={handleCreateExercise} className="space-y-4">
             <DialogHeader>
               <DialogTitle className="font-display text-lg font-bold">
-                Create Custom Exercise
+                {t.exercises.createCustomTitle}
               </DialogTitle>
               <DialogDescription className="text-xs">
-                Add a custom exercise to your catalog for use across any workout template.
+                {t.exercises.createCustomDesc}
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-1.5">
               <Label htmlFor="new-ex-name" className="text-xs font-semibold">
-                Exercise Name *
+                {t.exercises.exerciseNameLabel}
               </Label>
               <Input
                 id="new-ex-name"
                 required
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder="e.g. Pendlay Row"
+                placeholder={t.exercises.exerciseNamePlaceholder}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Primary Muscle</Label>
+                <Label className="text-xs font-semibold">{t.exercises.primaryMuscleLabel}</Label>
                 <NativeSelect
                   value={newPrimaryMuscle}
                   onChange={(e) => setNewPrimaryMuscle(e.target.value as MuscleGroup)}
@@ -866,13 +876,13 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                 >
                   {Object.values(MuscleGroup).map((mg) => (
                     <option key={mg} value={mg}>
-                      {MUSCLE_GROUP_LABELS[mg]}
+                      {muscleLabel(mg)}
                     </option>
                   ))}
                 </NativeSelect>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Exercise Type</Label>
+                <Label className="text-xs font-semibold">{t.exercises.exerciseTypeLabel}</Label>
                 <NativeSelect
                   value={newType}
                   onChange={(e) => setNewType(e.target.value as ExerciseType)}
@@ -880,7 +890,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                 >
                   {Object.values(ExerciseType).map((tp) => (
                     <option key={tp} value={tp}>
-                      {EXERCISE_TYPE_LABELS[tp]}
+                      {exerciseTypeLabel(tp)}
                     </option>
                   ))}
                 </NativeSelect>
@@ -888,7 +898,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Equipment</Label>
+              <Label className="text-xs font-semibold">{t.exercises.equipmentLabel}</Label>
               <NativeSelect
                 value={newEquipment}
                 onChange={(e) => setNewEquipment(e.target.value as EquipmentType)}
@@ -896,7 +906,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
               >
                 {Object.values(EquipmentType).map((eq) => (
                   <option key={eq} value={eq}>
-                    {EQUIPMENT_LABELS[eq]}
+                    {equipmentLabel(eq)}
                   </option>
                 ))}
               </NativeSelect>
@@ -905,21 +915,21 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
             {(newType === ExerciseType.STRETCHING || newType === ExerciseType.MOBILITY) && (
               <div className="space-y-1.5">
                 <Label htmlFor="new-ex-duration" className="text-xs font-semibold">
-                  Recommended Hold Duration (sec)
+                  {t.exercises.recommendedHoldLabel}
                 </Label>
-                <Input
+                <NumberInput
                   id="new-ex-duration"
-                  type="number"
                   min={10}
                   max={600}
+                  fallbackValue={45}
                   value={newDurationSec}
-                  onChange={(e) => setNewDurationSec(Number(e.target.value))}
+                  onValueChange={(val) => setNewDurationSec(val)}
                 />
               </div>
             )}
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Secondary Muscles</Label>
+              <Label className="text-xs font-semibold">{t.exercises.secondaryMusclesLabel}</Label>
               <div className="flex flex-wrap gap-1.5">
                 {Object.values(MuscleGroup).map((mg) => {
                   const active = newSecondaryMuscles.includes(mg);
@@ -935,7 +945,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                         )
                       }
                     >
-                      {MUSCLE_GROUP_LABELS[mg]}
+                      {muscleLabel(mg)}
                     </Button>
                   );
                 })}
@@ -944,21 +954,21 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
 
             <div className="space-y-1.5">
               <Label htmlFor="new-ex-desc" className="text-xs font-semibold">
-                Description
+                {t.exercises.descriptionLabel}
               </Label>
               <Textarea
                 id="new-ex-desc"
                 rows={2}
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
-                placeholder="Brief biomechanical summary..."
+                placeholder={t.exercises.descriptionPlaceholder}
                 className="text-xs"
               />
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="new-ex-inst" className="text-xs font-semibold">
-                Instructions (one step per line)
+                {t.exercises.instructionsLabel}
               </Label>
               <Textarea
                 id="new-ex-inst"
@@ -972,20 +982,20 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
 
             <div className="space-y-1.5">
               <Label htmlFor="new-ex-tags" className="text-xs font-semibold">
-                Search Tags (comma-separated)
+                {t.exercises.searchTagsLabel}
               </Label>
               <Input
                 id="new-ex-tags"
                 value={newTags}
                 onChange={(e) => setNewTags(e.target.value)}
-                placeholder="row, back, compound"
+                placeholder={t.exercises.searchTagsPlaceholder}
                 className="text-xs"
               />
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="new-ex-media" className="text-xs font-semibold">
-                Custom Image / GIF URL (optional)
+                {t.exercises.customMediaLabel}
               </Label>
               <Input
                 id="new-ex-media"
@@ -999,9 +1009,9 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
 
             <DialogFooter className="pt-2">
               <Button type="button" variant="secondary" onClick={() => setShowCreateModal(false)}>
-                Cancel
+                {t.common.cancel}
               </Button>
-              <Button type="submit">Save Exercise</Button>
+              <Button type="submit">{t.exercises.saveExerciseBtn}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -1013,36 +1023,36 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
           <form onSubmit={handleCreateStretchingRoutine} className="space-y-4">
             <DialogHeader>
               <DialogTitle className="font-display text-lg font-bold">
-                New Stretching / Mobility Routine
+                {t.exercises.newRoutineTitle}
               </DialogTitle>
               <DialogDescription className="text-xs">
-                Build a guided stretching flow with timed holds and transition intervals.
+                {t.exercises.newRoutineDesc}
               </DialogDescription>
             </DialogHeader>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label htmlFor="routine-name" className="text-xs font-semibold">
-                  Routine Name *
+                  {t.exercises.routineNameLabel}
                 </Label>
                 <Input
                   id="routine-name"
                   required
                   value={routineName}
                   onChange={(e) => setRoutineName(e.target.value)}
-                  placeholder="Evening Hip Mobility"
+                  placeholder={t.exercises.routineNamePlaceholder}
                   className="text-xs"
                 />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="routine-area" className="text-xs font-semibold">
-                  Target Area
+                  {t.exercises.targetAreaLabel}
                 </Label>
                 <Input
                   id="routine-area"
                   value={routineArea}
                   onChange={(e) => setRoutineArea(e.target.value)}
-                  placeholder="Hips & Lower Back"
+                  placeholder={t.exercises.targetAreaPlaceholder}
                   className="text-xs"
                 />
               </div>
@@ -1050,7 +1060,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-semibold">Stretches & Mobility Drills</Label>
+                <Label className="text-xs font-semibold">{t.exercises.stretchesDrillsLabel}</Label>
                 <Button
                   type="button"
                   variant="link"
@@ -1071,30 +1081,24 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                   }}
                   className="text-accent h-auto p-0 text-xs font-bold"
                 >
-                  + Add Stretch
+                  {t.exercises.addStretchBtn}
                 </Button>
               </div>
 
               {routineItems.map((item, idx) => (
                 <div key={idx} className="bg-secondary/50 min-w-0 space-y-2 rounded-xl p-3">
                   <div className="flex min-w-0 items-center gap-2">
-                    <NativeSelect
+                    <ExercisePicker
+                      exercises={prioritizedStretchCatalog}
                       value={item.exerciseId}
-                      onChange={(e) =>
+                      onValueChange={(newExId) =>
                         setRoutineItems((prev) =>
-                          prev.map((p, i) =>
-                            i === idx ? { ...p, exerciseId: e.target.value } : p,
-                          ),
+                          prev.map((p, i) => (i === idx ? { ...p, exerciseId: newExId } : p)),
                         )
                       }
-                      className="h-8 w-full flex-1 text-xs"
-                    >
-                      {catalog.map((ex) => (
-                        <option key={ex.id} value={ex.id}>
-                          {ex.name} ({EXERCISE_TYPE_LABELS[ex.exerciseType]})
-                        </option>
-                      ))}
-                    </NativeSelect>
+                      className="w-full flex-1"
+                      triggerClassName="h-8 text-xs"
+                    />
                     <Button
                       type="button"
                       variant="ghost"
@@ -1102,38 +1106,40 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                       onClick={() => setRoutineItems((prev) => prev.filter((_, i) => i !== idx))}
                       className="text-destructive shrink-0"
                     >
-                      Remove
+                      {t.common.remove}
                     </Button>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-xs">
                     <div>
-                      <span className="text-muted-foreground text-[10px]">Sets</span>
-                      <Input
-                        type="number"
+                      <span className="text-muted-foreground text-[10px]">
+                        {t.exercises.setsLabel}
+                      </span>
+                      <NumberInput
                         min={1}
                         max={10}
+                        fallbackValue={2}
                         value={item.sets}
-                        onChange={(e) =>
+                        onValueChange={(val) =>
                           setRoutineItems((prev) =>
-                            prev.map((p, i) =>
-                              i === idx ? { ...p, sets: Number(e.target.value) } : p,
-                            ),
+                            prev.map((p, i) => (i === idx ? { ...p, sets: val } : p)),
                           )
                         }
                         className="h-8 text-xs"
                       />
                     </div>
                     <div>
-                      <span className="text-muted-foreground text-[10px]">Hold (sec)</span>
-                      <Input
-                        type="number"
+                      <span className="text-muted-foreground text-[10px]">
+                        {t.exercises.holdSecLabel}
+                      </span>
+                      <NumberInput
                         min={10}
                         max={600}
+                        fallbackValue={45}
                         value={item.durationSeconds ?? 45}
-                        onChange={(e) =>
+                        onValueChange={(val) =>
                           setRoutineItems((prev) =>
                             prev.map((p, i) =>
-                              i === idx ? { ...p, durationSeconds: Number(e.target.value) } : p,
+                              i === idx ? { ...p, durationSeconds: val } : p,
                             ),
                           )
                         }
@@ -1141,16 +1147,18 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                       />
                     </div>
                     <div>
-                      <span className="text-muted-foreground text-[10px]">Transition (s)</span>
-                      <Input
-                        type="number"
+                      <span className="text-muted-foreground text-[10px]">
+                        {t.exercises.transitionSecLabel}
+                      </span>
+                      <NumberInput
                         min={0}
                         max={120}
+                        fallbackValue={15}
                         value={item.transitionSeconds}
-                        onChange={(e) =>
+                        onValueChange={(val) =>
                           setRoutineItems((prev) =>
                             prev.map((p, i) =>
-                              i === idx ? { ...p, transitionSeconds: Number(e.target.value) } : p,
+                              i === idx ? { ...p, transitionSeconds: val } : p,
                             ),
                           )
                         }
@@ -1168,10 +1176,10 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                 variant="secondary"
                 onClick={() => setShowCreateRoutineModal(false)}
               >
-                Cancel
+                {t.common.cancel}
               </Button>
               <Button type="submit" variant="accent">
-                Save Routine
+                {t.exercises.saveRoutineBtn}
               </Button>
             </DialogFooter>
           </form>
