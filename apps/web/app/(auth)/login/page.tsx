@@ -51,7 +51,7 @@ export default function LoginPage() {
                 LUKI<span className="text-primary">FITTI</span>
               </span>
               <span className="text-muted-foreground block text-[11px]">
-                Personal Gym & Workout PWA
+                Personal Gym & Workout Tracker
               </span>
             </div>
           </Link>

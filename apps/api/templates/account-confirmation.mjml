@@ -42,7 +42,7 @@
             LUKI<span class="brand-accent">FITTI</span>
           </mj-text>
           <mj-text align="center" css-class="muted" padding="4px 0 16px">
-            Personal Gym &amp; Workout Telemetry PWA
+            Personal Gym &amp; Workout Tracker
           </mj-text>
           <mj-divider border-color="#1E293B" border-width="1px" />
           <mj-text align="center" font-size="22px" font-weight="800" padding="16px 0 8px">
