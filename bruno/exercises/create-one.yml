@@ -1,0 +1,32 @@
+info:
+  name: create-one
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/exercises"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Pendlay Barbell Row",
+        "description": "Strict dead-stop horizontal row from the floor.",
+        "instructions": [
+          "Set up with torso parallel to the floor and grip slightly wider than shoulder-width.",
+          "Explosively row the bar to your lower sternum and return it to a dead stop on the floor."
+        ],
+        "category": "COMPOUND",
+        "exerciseType": "STRENGTH",
+        "primaryMuscleGroup": "BACK",
+        "secondaryMuscleGroups": ["BICEPS", "FOREARMS"],
+        "equipment": "BARBELL",
+        "tags": ["pendlay row", "back", "row"]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

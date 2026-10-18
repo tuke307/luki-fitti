@@ -1,0 +1,7 @@
+info:
+  name: analytics
+  type: folder
+  seq: 6
+
+request:
+  auth: inherit

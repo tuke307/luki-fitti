@@ -1,0 +1,15 @@
+info:
+  name: get-active
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{API_URL}}:{{API_PORT}}/api/sessions/active"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

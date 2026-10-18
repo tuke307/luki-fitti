@@ -1,0 +1,26 @@
+info:
+  name: update-template
+  type: http
+  seq: 7
+
+http:
+  method: PUT
+  url: "{{API_URL}}:{{API_PORT}}/api/workouts/templates/:id"
+  params:
+    - name: id
+      value: "TEMPLATE-ID"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Day 2 - Beine (Updated)",
+        "estimatedDurationMinutes": 70
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

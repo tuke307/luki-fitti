@@ -1,0 +1,19 @@
+info:
+  name: duplicate-template
+  type: http
+  seq: 8
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/workouts/templates/:id/duplicate"
+  params:
+    - name: id
+      value: "TEMPLATE-ID"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,23 @@
+info:
+  name: create-folder
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/workouts/folders"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Upper / Lower Split",
+        "color": "#CCFF00",
+        "sortOrder": 0
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

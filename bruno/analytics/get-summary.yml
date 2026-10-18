@@ -1,0 +1,27 @@
+info:
+  name: get-summary
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{API_URL}}:{{API_PORT}}/api/analytics/summary"
+  params:
+    - name: period
+      value: "month"
+      type: query
+    - name: muscleGroup
+      value: "QUADRICEPS"
+      type: query
+      disabled: true
+    - name: exerciseId
+      value: ""
+      type: query
+      disabled: true
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

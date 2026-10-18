@@ -1,0 +1,19 @@
+info:
+  name: delete-session
+  type: http
+  seq: 7
+
+http:
+  method: DELETE
+  url: "{{API_URL}}:{{API_PORT}}/api/sessions/:id"
+  params:
+    - name: id
+      value: "SESSION-ID"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

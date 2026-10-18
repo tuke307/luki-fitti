@@ -1,0 +1,35 @@
+info:
+  name: update-session
+  type: http
+  seq: 6
+
+http:
+  method: PUT
+  url: "{{API_URL}}:{{API_PORT}}/api/sessions/:id"
+  params:
+    - name: id
+      value: "SESSION-ID"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "clientSessionId": "sess-demo-sync-001",
+        "sessionType": "STRENGTH",
+        "workoutNameSnapshot": "Day 2 - Beine",
+        "status": "COMPLETED",
+        "startedAt": "2026-10-17T16:10:14+02:00",
+        "completedAt": "2026-10-17T17:29:51+02:00",
+        "activeDurationSeconds": 4777,
+        "weightUnit": "KG",
+        "version": 2,
+        "forceOverwrite": true,
+        "exercises": []
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
