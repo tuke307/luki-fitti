@@ -82,7 +82,7 @@ interface GymContextValue {
   deleteFolder: (folderId: string) => Promise<void>;
   createTemplate: (dto: CreateTemplateDto) => Promise<WorkoutTemplateDto>;
   updateTemplate: (templateId: string, dto: UpdateTemplateDto) => Promise<void>;
-  duplicateTemplate: (templateId: string) => Promise<void>;
+  duplicateTemplate: (templateId: string) => Promise<WorkoutTemplateDto | null>;
   moveTemplate: (templateId: string, folderId: string | null) => Promise<void>;
   deleteTemplate: (templateId: string) => Promise<void>;
 
@@ -147,9 +147,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
   const [stretchingRoutines, setStretchingRoutines] = useState<StretchingRoutineDto[]>([]);
   const [activeSession, setActiveSession] = useState<WorkoutSessionDto | null>(null);
   const [historySessions, setHistorySessions] = useState<WorkoutSessionDto[]>([]);
-  const [isOnline, setIsOnline] = useState<boolean>(
-    typeof navigator !== 'undefined' ? navigator.onLine : true,
-  );
+  const [isOnline, setIsOnline] = useState<boolean>(true);
   const [syncState, setSyncState] = useState<SyncState>('SYNCED');
   const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
   const [conflictServerSession, setConflictServerSession] = useState<WorkoutSessionDto | null>(
@@ -376,11 +374,14 @@ export function GymProvider({ children }: { children: ReactNode }) {
     } finally {
       isRefreshingRef.current = false;
     }
-  }, [flushSyncQueue, isAuthenticated, user?.id]);
+  }, [flushSyncQueue, isAuthenticated]);
 
   useEffect(() => {
-    refreshAllData();
-  }, [refreshAllData]);
+    const id = window.setTimeout(() => {
+      void refreshAllData();
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [refreshAllData, user?.id]);
 
   useEffect(() => {
     const handleOnline = () => {
@@ -704,17 +705,39 @@ export function GymProvider({ children }: { children: ReactNode }) {
     await setCachedWorkouts({ folders: nextFolders, unfiledTemplates: nextUnfiled });
   };
 
-  const duplicateTemplate = async (templateId: string) => {
+  const duplicateTemplate = async (templateId: string): Promise<WorkoutTemplateDto | null> => {
     const allTemplates = [...folders.flatMap((f) => f.templates), ...unfiledTemplates];
     const source = allTemplates.find((t) => t.id === templateId);
-    if (!source) return;
+    if (!source) return null;
 
-    await createTemplate({
+    if (navigator.onLine && isAuthenticated) {
+      try {
+        const res = await api.workouts.duplicateTemplate(templateId);
+        if (res.success && res.data) {
+          await refreshAllData();
+          return res.data;
+        }
+      } catch {
+        // Offline fallback below
+      }
+    }
+
+    const catalogById = new Map(catalog.map((e) => [e.id, e]));
+    const nowIso = new Date().toISOString();
+    const tplId = `tpl-${Date.now()}`;
+    const newTpl: WorkoutTemplateDto = {
+      id: tplId,
+      userId: user?.id ?? 'local-athlete',
+      folderId: source.folderId,
       name: `${source.name} (Copy)`,
       description: source.description,
-      folderId: source.folderId,
       estimatedDurationMinutes: source.estimatedDurationMinutes ?? 60,
+      sortOrder: source.sortOrder + 1,
+      createdAt: nowIso,
+      updatedAt: nowIso,
       exercises: source.exercises.map((ex, idx) => ({
+        id: `tple-${Date.now()}-${idx}`,
+        templateId: tplId,
         exerciseId: ex.exerciseId,
         orderIndex: idx,
         plannedSets: ex.plannedSets,
@@ -728,8 +751,41 @@ export function GymProvider({ children }: { children: ReactNode }) {
         targetDistanceMeters: ex.targetDistanceMeters,
         notes: ex.notes,
         alternativeExerciseIds: ex.alternativeExerciseIds,
+        exercise: ex.exercise ?? catalogById.get(ex.exerciseId),
       })),
-    });
+    };
+
+    if (source.folderId) {
+      const nextFolders = folders.map((f) => {
+        if (f.id !== source.folderId) return f;
+        const copyList = [...f.templates];
+        const sourceIdx = copyList.findIndex((t) => t.id === templateId);
+        if (sourceIdx >= 0) {
+          copyList.splice(sourceIdx + 1, 0, newTpl);
+        } else {
+          copyList.push(newTpl);
+        }
+        return {
+          ...f,
+          templates: copyList.map((t, i) => ({ ...t, sortOrder: i })),
+        };
+      });
+      setFolders(nextFolders);
+      await setCachedWorkouts({ folders: nextFolders, unfiledTemplates });
+    } else {
+      const copyList = [...unfiledTemplates];
+      const sourceIdx = copyList.findIndex((t) => t.id === templateId);
+      if (sourceIdx >= 0) {
+        copyList.splice(sourceIdx + 1, 0, newTpl);
+      } else {
+        copyList.push(newTpl);
+      }
+      const nextUnfiled = copyList.map((t, i) => ({ ...t, sortOrder: i }));
+      setUnfiledTemplates(nextUnfiled);
+      await setCachedWorkouts({ folders, unfiledTemplates: nextUnfiled });
+    }
+
+    return newTpl;
   };
 
   const moveTemplate = async (templateId: string, targetFolderId: string | null) => {
