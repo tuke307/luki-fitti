@@ -5,6 +5,7 @@ import nodemailer, { type Transporter } from 'nodemailer';
 import { EmailStatus, EmailTemplateType } from '@luki-fitti/common/enums';
 import type { CreateEmailDto, UpdateEmailDto } from '@luki-fitti/common/schemas';
 import {
+  ACCOUNT_DELETION_EXPIRY_MS,
   EMAIL_FROM,
   FRONTEND_URL,
   NODE_ENV,
@@ -25,6 +26,7 @@ export interface EmailTemplateData extends Record<string, unknown> {
   email?: string;
   confirmation_url?: string;
   reset_password_url?: string;
+  delete_account_url?: string;
   expiry_minutes?: number;
   frontend_url?: string;
 }
@@ -169,6 +171,26 @@ export class EmailService {
         email: user.email,
         reset_password_url: resetPasswordUrl,
         expiry_minutes: Math.round(PASSWORD_RESET_EXPIRY_MS / 60000),
+        frontend_url: FRONTEND_URL,
+      },
+      new Date(),
+      user.id,
+    );
+  }
+
+  public async enqueueAccountDeletionEmail(
+    user: { id: string; email: string; name?: string | null },
+    rawToken: string,
+  ): Promise<Email> {
+    const deleteAccountUrl = `${FRONTEND_URL}/delete-account?token=${encodeURIComponent(rawToken)}`;
+    return this.enqueueGenericEmail(
+      EmailTemplateType.ACCOUNT_DELETION,
+      user.email,
+      {
+        name: user.name || user.email.split('@')[0] || 'GymBuddy',
+        email: user.email,
+        delete_account_url: deleteAccountUrl,
+        expiry_minutes: Math.round(ACCOUNT_DELETION_EXPIRY_MS / 60000),
         frontend_url: FRONTEND_URL,
       },
       new Date(),

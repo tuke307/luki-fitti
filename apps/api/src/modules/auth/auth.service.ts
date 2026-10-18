@@ -10,6 +10,7 @@ import {
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import {
+  ACCOUNT_DELETION_EXPIRY_MS,
   BCRYPT_SALT_ROUNDS,
   EMAIL_VERIFICATION_EXPIRY_MS,
   PASSWORD_RESET_EXPIRY_MS,
@@ -22,7 +23,7 @@ import {
   DEFAULT_STRETCHING_ROUTINES,
   INITIAL_EXERCISE_CATALOG,
 } from '@luki-fitti/common/catalog';
-import { WeightUnit } from '@luki-fitti/common/enums';
+import { DistanceUnit, WeightUnit } from '@luki-fitti/common/enums';
 import type {
   RegisterDto,
   RegisterResponseDto,
@@ -475,6 +476,67 @@ export class AuthService {
     return { success: true };
   }
 
+  async requestAccountDeletion(
+    userId: string,
+    password: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const hashed = this.hashToken(rawToken);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        accountDeletionToken: hashed,
+        accountDeletionExpires: new Date(Date.now() + ACCOUNT_DELETION_EXPIRY_MS),
+      },
+    });
+
+    if (this.emailService) {
+      await this.emailService
+        .enqueueAccountDeletionEmail(user, rawToken)
+        .catch(() => undefined);
+    }
+
+    return {
+      success: true,
+      message:
+        'A confirmation link has been sent to your email address. Click the link in the email and confirm in your browser to permanently delete your account.',
+    };
+  }
+
+  async confirmAccountDeletion(
+    rawToken: string,
+  ): Promise<{ success: boolean; userId: string; message: string }> {
+    const trimmed = rawToken.trim();
+    const hashed = this.hashToken(trimmed);
+    const user = await this.prisma.user.findUnique({
+      where: { accountDeletionToken: hashed },
+    });
+
+    if (!user || !user.accountDeletionExpires || user.accountDeletionExpires < new Date()) {
+      throw new BadRequestException(
+        'Account deletion link is invalid or has expired. Please request a new deletion link from your profile settings.',
+      );
+    }
+
+    await this.prisma.user.delete({ where: { id: user.id } });
+
+    return {
+      success: true,
+      userId: user.id,
+      message: 'Your account and all associated workout data have been permanently deleted.',
+    };
+  }
+
   private formatUserDto(user: {
     id: string;
     email: string;
@@ -485,8 +547,8 @@ export class AuthService {
     preferences?: {
       id: string;
       userId: string;
-      weightUnit: any;
-      distanceUnit: any;
+      weightUnit: WeightUnit | `${WeightUnit}`;
+      distanceUnit: DistanceUnit | `${DistanceUnit}`;
       defaultRestSeconds: number;
       theme: string;
       restTimerSound: boolean;
@@ -504,8 +566,8 @@ export class AuthService {
         ? {
             id: user.preferences.id,
             userId: user.preferences.userId,
-            weightUnit: user.preferences.weightUnit,
-            distanceUnit: user.preferences.distanceUnit,
+            weightUnit: user.preferences.weightUnit as WeightUnit,
+            distanceUnit: user.preferences.distanceUnit as DistanceUnit,
             defaultRestSeconds: user.preferences.defaultRestSeconds,
             theme: user.preferences.theme,
             restTimerSound: user.preferences.restTimerSound,

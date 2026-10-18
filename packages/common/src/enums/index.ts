@@ -135,6 +135,7 @@ export enum SetType {
 export enum EmailTemplateType {
   ACCOUNT_CONFIRMATION = 'ACCOUNT_CONFIRMATION',
   PASSWORD_RESET = 'PASSWORD_RESET',
+  ACCOUNT_DELETION = 'ACCOUNT_DELETION',
 }
 
 export enum EmailStatus {

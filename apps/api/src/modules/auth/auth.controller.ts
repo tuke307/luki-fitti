@@ -37,6 +37,8 @@ import {
   ResendConfirmationSchema,
   ForgotPasswordSchema,
   ResetPasswordSchema,
+  RequestAccountDeletionSchema,
+  ConfirmAccountDeletionSchema,
   UpdatePreferencesSchema,
   type LoginDto,
   type RegisterDto,
@@ -46,6 +48,8 @@ import {
   type ResendConfirmationDto,
   type ForgotPasswordDto,
   type ResetPasswordDto,
+  type RequestAccountDeletionDto,
+  type ConfirmAccountDeletionDto,
   type UpdatePreferencesDto,
   type UserDto,
 } from '@luki-fitti/common/schemas';
@@ -182,6 +186,53 @@ export class AuthController {
     @Body(new ZodValidationPipe(ChangePasswordSchema)) body: ChangePasswordDto,
   ) {
     return this.authService.changePassword(currentUser.id, body.currentPassword, body.newPassword);
+  }
+
+  @Post('request-delete-account')
+  @UseGuards(AuthGuard, CsrfGuard)
+  @Throttle({ default: { limit: 5, ttl: 600_000 } })
+  @ApiOperation({
+    summary: 'Verify password and send an account deletion confirmation link via email',
+  })
+  async requestDeleteAccount(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Body(new ZodValidationPipe(RequestAccountDeletionSchema)) body: RequestAccountDeletionDto,
+  ) {
+    return this.authService.requestAccountDeletion(currentUser.id, body.password);
+  }
+
+  @Post('confirm-delete-account')
+  @Throttle({ default: { limit: 10, ttl: 600_000 } })
+  @ApiOperation({
+    summary: 'Confirm and permanently execute account deletion using the email confirmation token',
+  })
+  async confirmDeleteAccount(
+    @Body(new ZodValidationPipe(ConfirmAccountDeletionSchema)) body: ConfirmAccountDeletionDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.confirmAccountDeletion(body.token);
+
+    const accessToken = req.cookies?.accessToken;
+    if (accessToken) {
+      try {
+        const decoded = verifyAccessToken(accessToken);
+        if (decoded.jti && decoded.exp) {
+          const remainingSec = decoded.exp - Math.floor(Date.now() / 1000);
+          if (remainingSec > 0) {
+            await getRedis().set(`access_denylist:${decoded.jti}`, '1', 'EX', remainingSec);
+          }
+        }
+      } catch {
+        // Ignore already expired token
+      }
+    }
+
+    this.clearSessionCookies(res);
+    return {
+      success: result.success,
+      message: result.message,
+    };
   }
 
   @Post('logout')

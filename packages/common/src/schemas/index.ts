@@ -68,6 +68,14 @@ export const ResetPasswordSchema = z.object({
   newPassword: PasswordSchema,
 });
 
+export const RequestAccountDeletionSchema = z.object({
+  password: z.string().min(1, 'Current password is required to request account deletion'),
+});
+
+export const ConfirmAccountDeletionSchema = z.object({
+  token: z.string().trim().min(10, 'Account deletion token is required'),
+});
+
 export const CreateEmailTemplateSchema = z.object({
   name: z.string().min(1),
   subject: z.string().min(1),
@@ -138,6 +146,8 @@ export type VerifyEmailDto = z.infer<typeof VerifyEmailSchema>;
 export type ResendConfirmationDto = z.infer<typeof ResendConfirmationSchema>;
 export type ForgotPasswordDto = z.infer<typeof ForgotPasswordSchema>;
 export type ResetPasswordDto = z.infer<typeof ResetPasswordSchema>;
+export type RequestAccountDeletionDto = z.infer<typeof RequestAccountDeletionSchema>;
+export type ConfirmAccountDeletionDto = z.infer<typeof ConfirmAccountDeletionSchema>;
 export type CreateEmailTemplateDto = z.infer<typeof CreateEmailTemplateSchema>;
 export type UpdateEmailTemplateDto = z.infer<typeof UpdateEmailTemplateSchema>;
 export type CreateEmailDto = z.infer<typeof CreateEmailSchema>;
@@ -675,3 +685,5 @@ export interface ImportCommitResultDto {
   skippedDuplicates: number;
   errors: string[];
 }
+
+

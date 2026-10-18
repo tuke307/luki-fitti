@@ -115,6 +115,8 @@ model User {
   emailVerificationExpires DateTime?
   passwordResetToken       String?   @unique
   passwordResetExpires     DateTime?
+  accountDeletionToken     String?   @unique
+  accountDeletionExpires   DateTime?
   failedLoginAttempts      Int       @default(0)
   lockedUntil              DateTime?
   lastLoginAt              DateTime?
@@ -442,6 +444,7 @@ model ImportJob {
 enum EmailTemplateType {
   ACCOUNT_CONFIRMATION
   PASSWORD_RESET
+  ACCOUNT_DELETION
 }
 
 enum EmailStatus {
@@ -479,7 +482,7 @@ model Email {
   userId          String?
 
   emailTemplate EmailTemplate @relation(fields: [emailTemplateId], references: [id])
-  user          User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([emailTemplateId])
   @@index([userId])
