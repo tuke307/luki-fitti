@@ -3,6 +3,11 @@ export enum WeightUnit {
   LBS = 'LBS',
 }
 
+export const SUPPORTED_LOCALES = ['en', 'de'] as const;
+export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
+export const LANGUAGE_PREFERENCES = ['system', 'en', 'de'] as const;
+export type LanguagePreference = (typeof LANGUAGE_PREFERENCES)[number];
+
 export enum DistanceUnit {
   KM = 'KM',
   MI = 'MI',

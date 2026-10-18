@@ -5,7 +5,8 @@ import { ExternalLink, Play, Pause, Dumbbell, Sparkles, Video } from 'lucide-rea
 import { Badge } from '@luki-fitti/ui/components/ui/badge';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import { resolveExerciseMedia } from '@luki-fitti/common/catalog';
-import { MUSCLE_GROUP_LABELS, MuscleGroup } from '@luki-fitti/common/enums';
+import { MuscleGroup } from '@luki-fitti/common/enums';
+import { useLocale } from '@/providers/i18n/locale-context';
 import type { ExerciseDto } from '@luki-fitti/common/schemas';
 
 interface ExerciseVisualProps {
@@ -26,6 +27,7 @@ export function ExerciseVisual({
   variant = 'card',
   className = '',
 }: ExerciseVisualProps) {
+  const { t, format, muscleLabel } = useLocale();
   const mediaList = resolveExerciseMedia(exercise);
   const imageFrames = mediaList.filter(
     (m) => m.mediaType === 'IMAGE' || m.mediaType === 'GIF' || m.mediaType === 'SVG',
@@ -45,7 +47,8 @@ export function ExerciseVisual({
   }, [isPlayingLoop, imageFrames.length]);
 
   const validFrames = imageFrames.filter((f) => !failedUrls[f.url]);
-  const currentFrame = validFrames[activeFrameIdx % Math.max(1, validFrames.length)] ?? validFrames[0];
+  const currentFrame =
+    validFrames[activeFrameIdx % Math.max(1, validFrames.length)] ?? validFrames[0];
 
   if (variant === 'thumbnail') {
     return (
@@ -101,7 +104,7 @@ export function ExerciseVisual({
                   }`}
                 />
                 <span className="bg-background/80 text-foreground font-mono-tabular absolute bottom-1.5 left-1.5 rounded-md px-1.5 py-0.5 text-[9px] font-bold backdrop-blur-xs">
-                  {idx === 0 ? 'Start' : 'Finish'}
+                  {idx === 0 ? t.visual.startFrame : t.visual.finishFrame}
                 </span>
               </div>
             ))}
@@ -147,12 +150,15 @@ export function ExerciseVisual({
           <div className="mb-2 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Badge variant="accent" className="text-[10px] uppercase">
-                <Sparkles className="h-3 w-3" /> Motion Preview
+                <Sparkles className="h-3 w-3" /> {t.visual.motionPreviewBadge}
               </Badge>
               <span className="text-muted-foreground text-[11px] font-medium">
                 {isPlayingLoop
-                  ? `Animating Step ${(activeFrameIdx % validFrames.length) + 1}/${validFrames.length}`
-                  : 'Start & Peak Contraction'}
+                  ? format(t.visual.animatingStep, {
+                      current: (activeFrameIdx % validFrames.length) + 1,
+                      total: validFrames.length,
+                    })
+                  : t.visual.startPeakContraction}
               </span>
             </div>
             {validFrames.length > 1 && (
@@ -165,11 +171,11 @@ export function ExerciseVisual({
               >
                 {isPlayingLoop ? (
                   <>
-                    <Pause className="h-3 w-3" /> Pause Loop
+                    <Pause className="h-3 w-3" /> {t.visual.pauseLoopBtn}
                   </>
                 ) : (
                   <>
-                    <Play className="h-3 w-3 fill-current" /> Animate GIF
+                    <Play className="h-3 w-3 fill-current" /> {t.visual.animateGifBtn}
                   </>
                 )}
               </Button>
@@ -190,7 +196,9 @@ export function ExerciseVisual({
                   className="h-full w-full object-cover"
                 />
                 <span className="bg-primary text-primary-foreground font-mono-tabular absolute top-2 left-2 rounded-md px-2 py-0.5 text-[10px] font-extrabold">
-                  {activeFrameIdx % validFrames.length === 0 ? '1. START' : '2. CONTRACT'}
+                  {activeFrameIdx % validFrames.length === 0
+                    ? t.visual.step1Start
+                    : t.visual.step2Contract}
                 </span>
               </div>
             )}
@@ -221,7 +229,7 @@ export function ExerciseVisual({
                     className="h-full w-full object-cover"
                   />
                   <span className="bg-background/85 text-foreground absolute bottom-2 left-2 rounded-md px-2 py-0.5 text-[10px] font-bold backdrop-blur-xs">
-                    {idx === 0 ? 'Start Position' : 'Peak Contraction'}
+                    {idx === 0 ? t.visual.step1StartPos : t.visual.step2PeakPos}
                   </span>
                 </button>
               ))}
@@ -238,14 +246,16 @@ export function ExerciseVisual({
             secondary={exercise.secondaryMuscleGroups ?? []}
           />
           <div>
-            <p className="text-[11px] font-bold tracking-wider uppercase">Target Musculature</p>
+            <p className="text-[11px] font-bold tracking-wider uppercase">
+              {t.visual.targetMusclesBadge}
+            </p>
             <p className="text-primary mt-0.5 text-sm font-bold">
-              Primary: {MUSCLE_GROUP_LABELS[exercise.primaryMuscleGroup]}
+              {t.visual.primaryLabel} {muscleLabel(exercise.primaryMuscleGroup)}
             </p>
             {exercise.secondaryMuscleGroups && exercise.secondaryMuscleGroups.length > 0 && (
               <p className="text-muted-foreground mt-0.5 text-xs">
-                Secondary:{' '}
-                {exercise.secondaryMuscleGroups.map((m) => MUSCLE_GROUP_LABELS[m]).join(', ')}
+                {t.visual.secondaryLabel}{' '}
+                {exercise.secondaryMuscleGroups.map((m) => muscleLabel(m)).join(', ')}
               </p>
             )}
           </div>
@@ -255,13 +265,13 @@ export function ExerciseVisual({
           <Button asChild variant="secondary" size="xs" className="font-bold">
             <a href={youtubeSearchUrl} target="_blank" rel="noopener noreferrer">
               <Video className="text-primary h-3.5 w-3.5" />
-              Video Guide
+              {t.visual.youtubeGuideBtn}
               <ExternalLink className="h-3 w-3 opacity-70" />
             </a>
           </Button>
           <Button asChild variant="secondary" size="xs" className="font-bold">
             <a href={muscleWikiUrl} target="_blank" rel="noopener noreferrer">
-              MuscleWiki GIFs
+              {t.visual.muscleWikiBtn}
               <ExternalLink className="h-3 w-3 opacity-70" />
             </a>
           </Button>
@@ -298,9 +308,7 @@ function MuscleAnatomySvg({
     >
       {/* Front Silhouette (Left) */}
       <g transform="translate(8, 4)">
-        {/* Head */}
         <circle cx="20" cy="8" r="6" fill="currentColor" fillOpacity="0.25" />
-        {/* Shoulders */}
         <rect
           x="5"
           y="16"
@@ -319,7 +327,6 @@ function MuscleAnatomySvg({
           fill={getFill(MuscleGroup.SHOULDERS)}
           fillOpacity={getOpacity(MuscleGroup.SHOULDERS)}
         />
-        {/* Chest */}
         <rect
           x="12"
           y="16"
@@ -329,7 +336,6 @@ function MuscleAnatomySvg({
           fill={getFill(MuscleGroup.CHEST)}
           fillOpacity={getOpacity(MuscleGroup.CHEST)}
         />
-        {/* Abs & Core */}
         <rect
           x="13"
           y="28"
@@ -339,7 +345,6 @@ function MuscleAnatomySvg({
           fill={getFill(MuscleGroup.ABS_CORE)}
           fillOpacity={getOpacity(MuscleGroup.ABS_CORE)}
         />
-        {/* Biceps & Forearms */}
         <rect
           x="4"
           y="27"
@@ -376,7 +381,6 @@ function MuscleAnatomySvg({
           fill={getFill(MuscleGroup.FOREARMS)}
           fillOpacity={getOpacity(MuscleGroup.FOREARMS)}
         />
-        {/* Hip Flexors */}
         <rect
           x="12"
           y="45"
@@ -386,7 +390,6 @@ function MuscleAnatomySvg({
           fill={getFill(MuscleGroup.HIP_FLEXORS)}
           fillOpacity={getOpacity(MuscleGroup.HIP_FLEXORS)}
         />
-        {/* Quadriceps */}
         <rect
           x="11"
           y="52"
@@ -405,7 +408,6 @@ function MuscleAnatomySvg({
           fill={getFill(MuscleGroup.QUADRICEPS)}
           fillOpacity={getOpacity(MuscleGroup.QUADRICEPS)}
         />
-        {/* Calves Front */}
         <rect
           x="12"
           y="76"
@@ -428,9 +430,7 @@ function MuscleAnatomySvg({
 
       {/* Back Silhouette (Right) */}
       <g transform="translate(66, 4)">
-        {/* Head */}
         <circle cx="20" cy="8" r="6" fill="currentColor" fillOpacity="0.25" />
-        {/* Rear Shoulders */}
         <rect
           x="5"
           y="16"
@@ -449,7 +449,6 @@ function MuscleAnatomySvg({
           fill={getFill(MuscleGroup.SHOULDERS)}
           fillOpacity={getOpacity(MuscleGroup.SHOULDERS)}
         />
-        {/* Back / Lats */}
         <rect
           x="11"
           y="16"
@@ -459,7 +458,6 @@ function MuscleAnatomySvg({
           fill={getFill(MuscleGroup.BACK)}
           fillOpacity={getOpacity(MuscleGroup.BACK)}
         />
-        {/* Triceps */}
         <rect
           x="4"
           y="26"
@@ -478,7 +476,6 @@ function MuscleAnatomySvg({
           fill={getFill(MuscleGroup.TRICEPS)}
           fillOpacity={getOpacity(MuscleGroup.TRICEPS)}
         />
-        {/* Glutes */}
         <rect
           x="11"
           y="42"
@@ -488,7 +485,6 @@ function MuscleAnatomySvg({
           fill={getFill(MuscleGroup.GLUTES)}
           fillOpacity={getOpacity(MuscleGroup.GLUTES)}
         />
-        {/* Hamstrings */}
         <rect
           x="11"
           y="54"
@@ -507,7 +503,6 @@ function MuscleAnatomySvg({
           fill={getFill(MuscleGroup.HAMSTRINGS)}
           fillOpacity={getOpacity(MuscleGroup.HAMSTRINGS)}
         />
-        {/* Calves Back */}
         <rect
           x="12"
           y="76"

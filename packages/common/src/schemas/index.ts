@@ -6,6 +6,7 @@ import {
   EquipmentType,
   ExerciseCategory,
   ExerciseType,
+  LANGUAGE_PREFERENCES,
   MuscleGroup,
   SessionExerciseOrigin,
   SessionExerciseStatus,
@@ -109,6 +110,7 @@ export const UpdatePreferencesSchema = z.object({
   distanceUnit: z.enum(DistanceUnit).optional(),
   defaultRestSeconds: z.number().int().min(10).max(600).optional(),
   theme: z.enum(['dark', 'light', 'system']).optional(),
+  language: z.enum(LANGUAGE_PREFERENCES).optional(),
   restTimerSound: z.boolean().optional(),
   weeklyGoalSessions: z.number().int().min(1).max(14).optional(),
 });
@@ -120,6 +122,7 @@ export const UserPreferencesSchema = z.object({
   distanceUnit: z.enum(DistanceUnit),
   defaultRestSeconds: z.number(),
   theme: z.string(),
+  language: z.enum(LANGUAGE_PREFERENCES).default('system').optional(),
   restTimerSound: z.boolean(),
   weeklyGoalSessions: z.number(),
 });

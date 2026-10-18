@@ -141,6 +141,7 @@ model UserPreferences {
   distanceUnit       DistanceUnit @default(KM)
   defaultRestSeconds Int          @default(90)
   theme              String       @default("dark")
+  language           String       @default("system")
   restTimerSound     Boolean      @default(true)
   weeklyGoalSessions Int          @default(4)
   createdAt          DateTime     @default(now())

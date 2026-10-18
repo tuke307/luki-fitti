@@ -26,6 +26,7 @@ import {
 } from '@luki-fitti/ui/components/ui/dialog';
 import { useGym } from '@/providers/gym/gym-context';
 import { useAuth } from '@/providers/auth/auth-context';
+import { useLocale } from '@/providers/i18n/locale-context';
 import { computeRemainingRestSeconds } from '@/lib/offline/offline-store';
 import { HomeView } from './home-view';
 import { WorkoutsView } from './workouts-view';
@@ -40,6 +41,7 @@ export function PwaShell() {
   const [activeTab, setActiveTab] = useState<NavTab>('home');
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const { isAuthenticated } = useAuth();
+  const { t, format } = useLocale();
   const {
     activeSession,
     isOnline,
@@ -62,14 +64,14 @@ export function PwaShell() {
     label: string;
     icon: React.ComponentType<{ className?: string }>;
   }> = [
-    { id: 'home', label: 'Home', icon: Home },
-    { id: 'workouts', label: 'Workouts', icon: FolderKanban },
+    { id: 'home', label: t.nav.home, icon: Home },
+    { id: 'workouts', label: t.nav.workouts, icon: FolderKanban },
     ...(activeSession
-      ? [{ id: 'session' as const, label: 'Live Gym', icon: PlayCircle }]
+      ? [{ id: 'session' as const, label: t.nav.liveGym, icon: PlayCircle }]
       : []),
-    { id: 'diary', label: 'Diary', icon: CalendarDays },
-    { id: 'exercises', label: 'Exercises', icon: Dumbbell },
-    { id: 'profile', label: 'Profile', icon: UserCircle },
+    { id: 'diary', label: t.nav.diary, icon: CalendarDays },
+    { id: 'exercises', label: t.nav.exercises, icon: Dumbbell },
+    { id: 'profile', label: t.nav.profile, icon: UserCircle },
   ];
 
   return (
@@ -93,13 +95,13 @@ export function PwaShell() {
                 LUKI<span className="text-primary">FITTI</span>
               </span>
               <span className="text-muted-foreground hidden text-[10px] leading-none font-normal sm:block">
-                Personal Gym & Workout Tracker
+                {t.nav.tagline}
               </span>
             </div>
           </Button>
 
           {/* Desktop Horizontal Navigation */}
-          <nav aria-label="Primary Navigation" className="hidden items-center gap-1 md:flex">
+          <nav aria-label={t.nav.primaryNavAria} className="hidden items-center gap-1 md:flex">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isCurrent = activeTab === item.id;
@@ -126,7 +128,7 @@ export function PwaShell() {
             })}
           </nav>
 
-          {/* Right Status Indicators: Rest Timer Pill, Offline/Sync Badge, Theme Toggle */}
+          {/* Right Status Indicators: Rest Timer Pill, Offline/Sync Badge */}
           <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
             {(restInfo.isRunning || restInfo.isPaused) && (
               <Badge
@@ -167,21 +169,17 @@ export function PwaShell() {
                     setActiveTab('profile');
                   }
                 }}
-                title={
-                  isAuthenticated
-                    ? 'Click to synchronize queued changes with database'
-                    : 'Guest mode: data stays on this device only. Sign in to save to database.'
-                }
+                title={isAuthenticated ? t.shell.syncTitleAuth : t.shell.syncTitleGuest}
               >
                 {!isOnline || syncState === 'OFFLINE' ? (
                   <>
                     <WifiOff className="h-3.5 w-3.5" />
                     <span>
-                      Offline
+                      {t.shell.offline}
                       {isAuthenticated && pendingSyncCount > 0 ? (
                         ` (${pendingSyncCount})`
                       ) : (
-                        <span className="hidden sm:inline"> Ready</span>
+                        <span className="hidden sm:inline"> {t.shell.offlineReady}</span>
                       )}
                     </span>
                   </>
@@ -189,20 +187,21 @@ export function PwaShell() {
                   <>
                     <UserCircle className="h-3.5 w-3.5" />
                     <span>
-                      Guest<span className="hidden sm:inline"> (Local Only)</span>
+                      {t.shell.guest}
+                      <span className="hidden sm:inline"> {t.shell.guestLocalOnly}</span>
                     </span>
                   </>
                 ) : syncState === 'SYNCING' ? (
                   <>
                     <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                    <span>Syncing...</span>
+                    <span>{t.shell.syncing}</span>
                   </>
                 ) : syncState === 'SAVED_LOCALLY' ? (
                   <>
                     <Wifi className="h-3.5 w-3.5" />
                     <span>
-                      <span className="sm:hidden">Local</span>
-                      <span className="hidden sm:inline">Saved Locally</span>
+                      <span className="sm:hidden">{t.shell.localShort}</span>
+                      <span className="hidden sm:inline">{t.shell.savedLocally}</span>
                       {pendingSyncCount > 0 ? ` (${pendingSyncCount})` : ''}
                     </span>
                   </>
@@ -210,13 +209,14 @@ export function PwaShell() {
                   <>
                     <AlertTriangle className="h-3.5 w-3.5" />
                     <span>
-                      Local Safe<span className="hidden sm:inline"> (Sign In to Sync)</span>
+                      {t.shell.localSafe}
+                      <span className="hidden sm:inline"> {t.shell.signInToSync}</span>
                     </span>
                   </>
                 ) : (
                   <>
                     <Wifi className="h-3.5 w-3.5" />
-                    <span>Synced</span>
+                    <span>{t.shell.synced}</span>
                   </>
                 )}
               </button>
@@ -246,7 +246,7 @@ export function PwaShell() {
 
       {/* Mobile Bottom Tab Bar (iPhone Safari & Home Screen Standalone Optimized) */}
       <nav
-        aria-label="Mobile Bottom Navigation"
+        aria-label={t.nav.mobileNavAria}
         className="bg-card/95 pb-safe fixed right-0 bottom-0 left-0 z-40 border-t backdrop-blur-lg md:hidden"
       >
         <div
@@ -286,12 +286,14 @@ export function PwaShell() {
           <DialogHeader>
             <DialogTitle className="text-destructive font-display flex items-center gap-2 text-lg font-bold">
               <AlertTriangle className="h-5 w-5" />
-              Workout Sync Conflict Detected
+              {t.shell.conflictTitle}
             </DialogTitle>
             <DialogDescription className="text-xs leading-relaxed">
-              The server has a newer version (v{conflictServerSession?.version}) of{' '}
-              <strong>{conflictServerSession?.workoutNameSnapshot}</strong> than your queued local
-              session. Choose which version to keep so no workout data is silently overwritten:
+              {format(t.shell.conflictDescPrefix, {
+                version: conflictServerSession?.version ?? 1,
+              })}{' '}
+              <strong>{conflictServerSession?.workoutNameSnapshot}</strong>{' '}
+              {t.shell.conflictDescSuffix}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="pt-2">
@@ -300,14 +302,14 @@ export function PwaShell() {
               variant="secondary"
               onClick={() => void resolveConflict('USE_SERVER')}
             >
-              Use Server Version
+              {t.shell.useServerVersion}
             </Button>
             <Button
               type="button"
               variant="default"
               onClick={() => void resolveConflict('KEEP_LOCAL')}
             >
-              Keep Local Workout Data
+              {t.shell.keepLocalData}
             </Button>
           </DialogFooter>
         </DialogContent>

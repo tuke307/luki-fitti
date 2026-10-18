@@ -20,10 +20,10 @@ import { Card } from '@luki-fitti/ui/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useGym } from '@/providers/gym/gym-context';
 import { useAuth } from '@/providers/auth/auth-context';
+import { useLocale } from '@/providers/i18n/locale-context';
 import { formatShortDayMonth } from '@luki-fitti/common/utils/client';
 import {
   ExerciseType,
-  MUSCLE_GROUP_LABELS,
   MuscleGroup,
   SessionType,
   SetType,
@@ -48,6 +48,7 @@ function getMondayOfWeek(d: Date): Date {
 export function HomeView({ onNavigate }: HomeViewProps) {
   const { user } = useAuth();
   const { activeSession, historySessions } = useGym();
+  const { t, format, muscleLabel } = useLocale();
 
   const [nowMs] = useState<number>(() => Date.now());
   const [muscleRange, setMuscleRange] = useState<'30d' | '90d' | 'all'>('90d');
@@ -162,14 +163,14 @@ export function HomeView({ onNavigate }: HomeViewProps) {
     return Array.from(counts.entries())
       .map(([muscle, val]) => ({
         muscle,
-        name: MUSCLE_GROUP_LABELS[muscle],
+        name: muscleLabel(muscle),
         sets: val.sets,
         volumeTons: Math.round((val.volumeKg / 1000) * 10) / 10,
         volumeKg: Math.round(val.volumeKg),
       }))
       .sort((a, b) => b.sets - a.sets)
       .slice(0, 8);
-  }, [historySessions, muscleRange, nowMs]);
+  }, [historySessions, muscleRange, nowMs, muscleLabel]);
 
   return (
     <div className="min-w-0 max-w-full space-y-6 pb-10">
@@ -177,21 +178,19 @@ export function HomeView({ onNavigate }: HomeViewProps) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
-            Hey, {user?.name?.split(' ')[0] || 'GymBuddy'}
+            {format(t.home.greeting, { name: user?.name?.split(' ')[0] || 'GymBuddy' })}
           </h1>
-          <p className="text-muted-foreground text-xs sm:text-sm">
-            Your training consistency, weekly load progression, and muscle split balance
-          </p>
+          <p className="text-muted-foreground text-xs sm:text-sm">{t.home.subtitle}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" variant="secondary" size="sm" onClick={() => onNavigate('diary')}>
             <CalendarDays className="h-4 w-4" />
-            Training Diary
+            {t.home.trainingDiaryBtn}
           </Button>
           <Button type="button" size="sm" onClick={() => onNavigate('workouts')}>
             <FolderKanban className="h-4 w-4" />
-            Choose Workout
+            {t.home.chooseWorkoutBtn}
           </Button>
         </div>
       </div>
@@ -201,14 +200,16 @@ export function HomeView({ onNavigate }: HomeViewProps) {
         <Card className="border-primary bg-primary/15 flex flex-col justify-between gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center">
           <div>
             <Badge variant="solid" className="text-[10px] uppercase">
-              Session In Progress
+              {t.home.sessionInProgress}
             </Badge>
             <h2 className="font-display mt-1 text-lg font-bold">
               {activeSession.workoutNameSnapshot}
             </h2>
             <p className="text-muted-foreground text-xs">
-              {activeSession.totalSetsCompleted} sets logged •{' '}
-              {activeSession.totalVolumeKg.toLocaleString()} kg volume
+              {format(t.home.setsLoggedVolume, {
+                sets: activeSession.totalSetsCompleted,
+                volume: activeSession.totalVolumeKg.toLocaleString(),
+              })}
             </p>
           </div>
           <Button
@@ -217,7 +218,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             onClick={() => onNavigate('session')}
             className="w-full shadow-sm sm:w-auto"
           >
-            <Play className="h-4 w-4 fill-current" /> Resume Active Session
+            <Play className="h-4 w-4 fill-current" /> {t.home.resumeActiveSession}
           </Button>
         </Card>
       )}
@@ -225,41 +226,43 @@ export function HomeView({ onNavigate }: HomeViewProps) {
       {/* Key Telemetry Strip */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Card className="p-4">
-          <p className="text-muted-foreground text-xs font-medium">7-Day Frequency</p>
+          <p className="text-muted-foreground text-xs font-medium">{t.home.freq7dTitle}</p>
           <p className="font-mono-tabular text-primary mt-1 text-2xl font-extrabold">
             {summaryMetrics.sessions7d}{' '}
             <span className="text-muted-foreground text-sm font-normal">/ {weeklyGoal}</span>
           </p>
-          <p className="text-muted-foreground mt-0.5 text-[11px]">Weekly session target</p>
+          <p className="text-muted-foreground mt-0.5 text-[11px]">{t.home.freq7dSub}</p>
         </Card>
 
         <Card className="p-4">
-          <p className="text-muted-foreground text-xs font-medium">30-Day Volume</p>
+          <p className="text-muted-foreground text-xs font-medium">{t.home.vol30dTitle}</p>
           <p className="font-mono-tabular mt-1 text-2xl font-extrabold">
             {(summaryMetrics.volume30dKg / 1000).toFixed(1)}{' '}
             <span className="text-muted-foreground text-sm font-normal">t</span>
           </p>
           <p className="text-muted-foreground mt-0.5 text-[11px]">
-            {summaryMetrics.volume30dKg.toLocaleString()} kg moved
+            {format(t.home.vol30dSub, { volume: summaryMetrics.volume30dKg.toLocaleString() })}
           </p>
         </Card>
 
         <Card className="p-4">
-          <p className="text-muted-foreground text-xs font-medium">Total Workouts</p>
+          <p className="text-muted-foreground text-xs font-medium">{t.home.totalWorkoutsTitle}</p>
           <p className="font-mono-tabular mt-1 text-2xl font-extrabold">
             {summaryMetrics.totalSessions}
           </p>
-          <p className="text-muted-foreground mt-0.5 text-[11px]">Completed sessions</p>
+          <p className="text-muted-foreground mt-0.5 text-[11px]">{t.home.totalWorkoutsSub}</p>
         </Card>
 
         <Card className="p-4">
-          <p className="text-muted-foreground text-xs font-medium">Avg. Session Load</p>
+          <p className="text-muted-foreground text-xs font-medium">{t.home.avgLoadTitle}</p>
           <p className="font-mono-tabular text-accent mt-1 text-2xl font-extrabold">
             {(summaryMetrics.avgSessionVolumeKg / 1000).toFixed(1)}{' '}
             <span className="text-muted-foreground text-sm font-normal">t</span>
           </p>
           <p className="text-muted-foreground mt-0.5 text-[11px]">
-            {summaryMetrics.avgSessionVolumeKg.toLocaleString()} kg / workout
+            {format(t.home.avgLoadSub, {
+              volume: summaryMetrics.avgSessionVolumeKg.toLocaleString(),
+            })}
           </p>
         </Card>
       </div>
@@ -271,18 +274,18 @@ export function HomeView({ onNavigate }: HomeViewProps) {
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <h2 className="font-display flex items-center gap-2 text-base font-bold">
-                <TrendingUp className="text-primary h-4 w-4" /> Weekly Volume & Session Trend
+                <TrendingUp className="text-primary h-4 w-4" /> {t.home.weeklyChartTitle}
               </h2>
-              <p className="text-muted-foreground text-xs">
-                Last 10 weeks tonnage (t) and completed workouts per week
-              </p>
+              <p className="text-muted-foreground text-xs">{t.home.weeklyChartSub}</p>
             </div>
             <div className="flex items-center gap-3 text-[11px]">
               <span className="flex items-center gap-1.5 font-semibold">
-                <span className="bg-primary inline-block h-2.5 w-2.5 rounded-sm" /> Volume (t)
+                <span className="bg-primary inline-block h-2.5 w-2.5 rounded-sm" />{' '}
+                {t.home.volumeLegend}
               </span>
               <span className="flex items-center gap-1.5 font-semibold">
-                <span className="bg-accent inline-block h-2.5 w-2.5 rounded-full" /> Sessions
+                <span className="bg-accent inline-block h-2.5 w-2.5 rounded-full" />{' '}
+                {t.home.sessionsLegend}
               </span>
             </div>
           </div>
@@ -329,7 +332,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
                     return (
                       <div className="bg-popover/95 text-popover-foreground border-border pointer-events-none max-w-[180px] rounded-xl border px-2.5 py-1.5 text-[11px] leading-tight shadow-md backdrop-blur-sm">
                         <p className="text-foreground mb-1 truncate font-semibold">
-                          Week of {String(label ?? '')}
+                          {format(t.home.weekOf, { date: String(label ?? '') })}
                         </p>
                         <div className="space-y-0.5">
                           {payload.map((item) => {
@@ -346,10 +349,12 @@ export function HomeView({ onNavigate }: HomeViewProps) {
                                       isVolume ? 'bg-primary' : 'bg-accent'
                                     }`}
                                   />
-                                  {isVolume ? 'Volume' : 'Sessions'}
+                                  {isVolume ? t.home.volumeLabel : t.home.sessionsLegend}
                                 </span>
                                 <span className="text-foreground font-mono-tabular font-bold">
-                                  {isVolume ? `${val} t` : `${val} workout${val === 1 ? '' : 's'}`}
+                                  {isVolume
+                                    ? `${val} t`
+                                    : `${val} ${val === 1 ? t.common.workout : t.common.workouts}`}
                                 </span>
                               </div>
                             );
@@ -385,11 +390,9 @@ export function HomeView({ onNavigate }: HomeViewProps) {
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <h2 className="font-display flex items-center gap-2 text-base font-bold">
-                <BarChart3 className="text-accent h-4 w-4" /> Muscle Group Set Balance
+                <BarChart3 className="text-accent h-4 w-4" /> {t.home.muscleChartTitle}
               </h2>
-              <p className="text-muted-foreground text-xs">
-                Completed working sets per primary muscle group
-              </p>
+              <p className="text-muted-foreground text-xs">{t.home.muscleChartSub}</p>
             </div>
 
             <Tabs
@@ -404,7 +407,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
                   90d
                 </TabsTrigger>
                 <TabsTrigger value="all" className="px-2 py-0.5 text-[11px]">
-                  All
+                  {t.home.rangeAll}
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -412,8 +415,8 @@ export function HomeView({ onNavigate }: HomeViewProps) {
 
           {muscleChartData.length === 0 ? (
             <div className="bg-secondary/30 text-muted-foreground flex h-64 flex-col items-center justify-center rounded-2xl p-6 text-center text-xs">
-              <Dumbbell className=" mb-2 h-6 w-6 opacity-50" />
-              No logged working sets in this time window yet.
+              <Dumbbell className="mb-2 h-6 w-6 opacity-50" />
+              {t.home.noLoggedWorkingSets}
             </div>
           ) : (
             <div className="h-64 w-full">
@@ -437,7 +440,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
                   <YAxis
                     type="category"
                     dataKey="name"
-                    width={84}
+                    width={88}
                     tick={{ fontSize: 11, fill: 'hsl(var(--foreground))', fontWeight: 600 }}
                     axisLine={false}
                     tickLine={false}
@@ -456,10 +459,10 @@ export function HomeView({ onNavigate }: HomeViewProps) {
                           <div className="flex items-center justify-between gap-2.5">
                             <span className="text-muted-foreground flex items-center gap-1.5">
                               <span className="bg-primary inline-block h-2 w-2 shrink-0 rounded-full" />
-                              Working Load
+                              {t.home.workingLoad}
                             </span>
                             <span className="text-foreground font-mono-tabular font-bold">
-                              {setsCount} set{setsCount === 1 ? '' : 's'}
+                              {setsCount} {setsCount === 1 ? t.common.set : t.common.sets}
                             </span>
                           </div>
                         </div>
