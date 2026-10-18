@@ -62,6 +62,18 @@ services:
       - redis
     networks:
       - luki_fitti_network
+  email-worker:
+    build:
+      context: .
+      dockerfile: ./apps/email-worker/Dockerfile
+    restart: always
+    env_file:
+      - ./apps/email-worker/.env.production.local
+    depends_on:
+      - db-migrate
+      - redis
+    networks:
+      - luki_fitti_network
   redis:
     image: redis:alpine
     restart: always
