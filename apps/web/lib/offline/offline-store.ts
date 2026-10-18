@@ -1,5 +1,5 @@
 import {
-  DEFAULT_STARTER_FOLDER,
+  DEFAULT_STARTER_FOLDERS,
   DEFAULT_STARTER_TEMPLATES,
   DEFAULT_STRETCHING_ROUTINES,
   INITIAL_EXERCISE_CATALOG,
@@ -163,16 +163,14 @@ export function buildDefaultFoldersAndTemplates(userId = 'local-user'): {
   }));
 
   return {
-    folders: [
-      {
-        id: DEFAULT_STARTER_FOLDER.id,
-        userId,
-        name: DEFAULT_STARTER_FOLDER.name,
-        color: DEFAULT_STARTER_FOLDER.color,
-        sortOrder: DEFAULT_STARTER_FOLDER.sortOrder,
-        templates,
-      },
-    ],
+    folders: DEFAULT_STARTER_FOLDERS.map((f) => ({
+      id: f.id,
+      userId,
+      name: f.name,
+      color: f.color,
+      sortOrder: f.sortOrder,
+      templates: templates.filter((t) => t.folderId === f.id),
+    })),
     unfiledTemplates: [],
   };
 }
@@ -205,8 +203,28 @@ export async function getCachedWorkouts(): Promise<{
     folders: WorkoutFolderDto[];
     unfiledTemplates: WorkoutTemplateDto[];
   }>('workouts_overview');
-  if (cached) return cached;
   const defaults = buildDefaultFoldersAndTemplates();
+  if (cached && cached.folders.length > 0) {
+    const existingIds = new Set(cached.folders.map((f) => f.id));
+    const existingNames = new Set(cached.folders.map((f) => f.name.toLowerCase()));
+    const missingFolders = defaults.folders.filter(
+      (df) => !existingIds.has(df.id) && !existingNames.has(df.name.toLowerCase()),
+    );
+    // Only auto-merge starter folders if the cached state is the starter local state
+    const hasStarterRoot = cached.folders.some((f) => f.id === 'folder-4er-split');
+    if (hasStarterRoot && missingFolders.length > 0) {
+      const merged = {
+        folders: [...cached.folders, ...missingFolders].map((f, idx) => ({
+          ...f,
+          sortOrder: idx,
+        })),
+        unfiledTemplates: cached.unfiledTemplates,
+      };
+      await idbSet('workouts_overview', merged);
+      return merged;
+    }
+    return cached;
+  }
   await idbSet('workouts_overview', defaults);
   return defaults;
 }

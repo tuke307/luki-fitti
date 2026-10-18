@@ -2,7 +2,7 @@ import prisma from './client';
 import logger from '@luki-fitti/logger';
 import {
   INITIAL_EXERCISE_CATALOG,
-  DEFAULT_STARTER_FOLDER,
+  DEFAULT_STARTER_FOLDERS,
   DEFAULT_STARTER_TEMPLATES,
   DEFAULT_STRETCHING_ROUTINES,
 } from '@luki-fitti/common/catalog';
@@ -80,46 +80,51 @@ async function main(): Promise<void> {
       if (seedEmail) {
         const user = await tx.user.findUnique({ where: { email: seedEmail.toLowerCase() } });
         if (user) {
-          const folder = await tx.workoutFolder.upsert({
-            where: { userId_name: { userId: user.id, name: DEFAULT_STARTER_FOLDER.name } },
-            update: { color: DEFAULT_STARTER_FOLDER.color },
-            create: {
-              userId: user.id,
-              name: DEFAULT_STARTER_FOLDER.name,
-              color: DEFAULT_STARTER_FOLDER.color,
-              sortOrder: 0,
-            },
-          });
-
-          for (const tpl of DEFAULT_STARTER_TEMPLATES) {
-            const createdTpl = await tx.workoutTemplate.create({
-              data: {
+          for (const starterFolder of DEFAULT_STARTER_FOLDERS) {
+            const folder = await tx.workoutFolder.upsert({
+              where: { userId_name: { userId: user.id, name: starterFolder.name } },
+              update: { color: starterFolder.color },
+              create: {
                 userId: user.id,
-                folderId: folder.id,
-                name: tpl.name,
-                description: tpl.description,
-                estimatedDurationMinutes: tpl.estimatedDurationMinutes,
-                sortOrder: tpl.sortOrder,
+                name: starterFolder.name,
+                color: starterFolder.color,
+                sortOrder: starterFolder.sortOrder,
               },
             });
 
-            for (const ex of tpl.exercises) {
-              await tx.workoutTemplateExercise.create({
+            const folderTemplates = DEFAULT_STARTER_TEMPLATES.filter(
+              (t) => t.folderId === starterFolder.id,
+            );
+            for (const tpl of folderTemplates) {
+              const createdTpl = await tx.workoutTemplate.create({
                 data: {
-                  templateId: createdTpl.id,
-                  exerciseId: ex.exerciseId,
-                  orderIndex: ex.orderIndex,
-                  plannedSets: ex.plannedSets,
-                  warmupSets: ex.warmupSets,
-                  targetRepsMin: ex.targetRepsMin,
-                  targetRepsMax: ex.targetRepsMax,
-                  targetWeight: ex.targetWeight,
-                  weightUnit: ex.weightUnit,
-                  restSeconds: ex.restSeconds,
-                  notes: ex.notes,
-                  alternativeExerciseIds: ex.alternativeExerciseIds,
+                  userId: user.id,
+                  folderId: folder.id,
+                  name: tpl.name,
+                  description: tpl.description,
+                  estimatedDurationMinutes: tpl.estimatedDurationMinutes,
+                  sortOrder: tpl.sortOrder,
                 },
               });
+
+              for (const ex of tpl.exercises) {
+                await tx.workoutTemplateExercise.create({
+                  data: {
+                    templateId: createdTpl.id,
+                    exerciseId: ex.exerciseId,
+                    orderIndex: ex.orderIndex,
+                    plannedSets: ex.plannedSets,
+                    warmupSets: ex.warmupSets,
+                    targetRepsMin: ex.targetRepsMin,
+                    targetRepsMax: ex.targetRepsMax,
+                    targetWeight: ex.targetWeight,
+                    weightUnit: ex.weightUnit,
+                    restSeconds: ex.restSeconds,
+                    notes: ex.notes,
+                    alternativeExerciseIds: ex.alternativeExerciseIds,
+                  },
+                });
+              }
             }
           }
 
