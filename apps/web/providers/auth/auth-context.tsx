@@ -13,11 +13,14 @@ interface AuthContextProps {
   user: UserDto | null;
   login: (email: string, password: string) => Promise<boolean>;
   register: (data: RegisterDto) => Promise<boolean>;
+  verifyEmail: (token: string) => Promise<boolean>;
+  resendConfirmation: (email: string) => Promise<boolean>;
   logout: () => Promise<void>;
   updatePreferences: (data: UpdatePreferencesDto) => Promise<void>;
   continueOfflineLocal: () => void;
   refreshUser: () => Promise<void>;
   error: string | null;
+  infoMessage: string | null;
   loading: boolean;
 }
 
@@ -45,11 +48,14 @@ export const AuthContext = createContext<AuthContextProps>({
   user: null,
   login: async () => false,
   register: async () => false,
+  verifyEmail: async () => false,
+  resendConfirmation: async () => false,
   logout: async () => {},
   updatePreferences: async () => {},
   continueOfflineLocal: () => {},
   refreshUser: async () => {},
   error: null,
+  infoMessage: null,
   loading: true,
 });
 
@@ -61,6 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserDto | null>(null);
   const [authMode, setAuthMode] = useState<AuthMode>('UNAUTHENTICATED');
   const [error, setError] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -119,6 +126,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string): Promise<boolean> => {
     setLoading(true);
     setError(null);
+    setInfoMessage(null);
     try {
       const response = await api.auth.login({ email, password });
       if (response.success && response.data) {
@@ -140,9 +148,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const register = async (data: RegisterDto): Promise<boolean> => {
     setLoading(true);
     setError(null);
+    setInfoMessage(null);
     try {
       const response = await api.auth.register(data);
       if (response.success && response.data) {
+        if (response.data.requiresEmailConfirmation) {
+          setInfoMessage(
+            response.data.message ||
+              'Account created! Please check your email and click the confirmation link to activate your account.',
+          );
+          return false;
+        }
         setUser(response.data);
         setAuthMode('AUTHENTICATED');
         localStorage.setItem('luki_cached_user_profile', JSON.stringify(response.data));
@@ -152,6 +168,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to register account');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyEmail = async (token: string): Promise<boolean> => {
+    setLoading(true);
+    setError(null);
+    setInfoMessage(null);
+    try {
+      const response = await api.auth.verifyEmail({ token });
+      if (response.success && response.data) {
+        setUser(response.data);
+        setAuthMode('AUTHENTICATED');
+        localStorage.setItem('luki_cached_user_profile', JSON.stringify(response.data));
+        return true;
+      }
+      setError(response.error || 'Email verification failed');
+      return false;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Invalid or expired verification link');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resendConfirmation = async (email: string): Promise<boolean> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.auth.resendConfirmation({ email });
+      if (response.success && response.data) {
+        setInfoMessage(response.data.message);
+        return true;
+      }
+      setError(response.error || 'Failed to resend confirmation email');
+      return false;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to resend confirmation email');
       return false;
     } finally {
       setLoading(false);
@@ -236,11 +293,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user,
         login,
         register,
+        verifyEmail,
+        resendConfirmation,
         logout,
         updatePreferences,
         continueOfflineLocal,
         refreshUser,
         error,
+        infoMessage,
         loading,
       }}
     >

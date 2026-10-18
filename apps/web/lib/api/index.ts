@@ -9,12 +9,16 @@ import type {
   CreateTemplateDto,
   ExerciseDto,
   ExerciseQueryDto,
+  ForgotPasswordDto,
   ImportCommitRequestDto,
   ImportCommitResultDto,
   ImportPreviewRequestDto,
   ImportPreviewResultDto,
   LoginDto,
   RegisterDto,
+  RegisterResponseDto,
+  ResendConfirmationDto,
+  ResetPasswordDto,
   StartSessionDto,
   StretchingRoutineDto,
   SyncSessionPayloadDto,
@@ -25,6 +29,7 @@ import type {
   UpdateStretchingRoutineDto,
   UpdateTemplateDto,
   UserDto,
+  VerifyEmailDto,
   WorkoutFolderDto,
   WorkoutSessionDto,
   WorkoutTemplateDto,
@@ -32,7 +37,31 @@ import type {
 
 export const auth = {
   register: (data: RegisterDto) =>
-    apiFetch<UserDto>('/auth/register', {
+    apiFetch<RegisterResponseDto>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      retry: false,
+    }),
+  verifyEmail: (data: VerifyEmailDto) =>
+    apiFetch<UserDto>('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      retry: false,
+    }),
+  resendConfirmation: (data: ResendConfirmationDto) =>
+    apiFetch<{ success: boolean; message: string }>('/auth/resend-confirmation', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      retry: false,
+    }),
+  forgotPassword: (data: ForgotPasswordDto) =>
+    apiFetch<{ success: boolean; message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      retry: false,
+    }),
+  resetPassword: (data: ResetPasswordDto) =>
+    apiFetch<{ success: boolean; message: string }>('/auth/reset-password', {
       method: 'POST',
       body: JSON.stringify(data),
       retry: false,

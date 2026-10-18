@@ -18,6 +18,20 @@ function createMockPrisma() {
         if (where.email) {
           return Array.from(users.values()).find((u) => u.email === where.email) ?? null;
         }
+        if (where.emailVerificationToken) {
+          return (
+            Array.from(users.values()).find(
+              (u) => u.emailVerificationToken === where.emailVerificationToken,
+            ) ?? null
+          );
+        }
+        if (where.passwordResetToken) {
+          return (
+            Array.from(users.values()).find(
+              (u) => u.passwordResetToken === where.passwordResetToken,
+            ) ?? null
+          );
+        }
         if (where.id) {
           return users.get(where.id) ?? null;
         }
@@ -30,6 +44,11 @@ function createMockPrisma() {
           email: data.email,
           name: data.name,
           passwordHash: data.passwordHash,
+          emailVerified: data.emailVerified ?? true,
+          emailVerificationToken: data.emailVerificationToken ?? null,
+          emailVerificationExpires: data.emailVerificationExpires ?? null,
+          passwordResetToken: data.passwordResetToken ?? null,
+          passwordResetExpires: data.passwordResetExpires ?? null,
           failedLoginAttempts: 0,
           lockedUntil: null,
           lastLoginAt: data.lastLoginAt ?? new Date(),
@@ -142,5 +161,65 @@ describe('AuthService — Registration, Authentication & Brute-Force Protection'
       () => service.authenticateUser('athlete@example.com', 'FAKE-PASSWORD-TEST-123'),
       /Account temporarily locked/i,
     );
+  });
+
+  it('requires email confirmation before sign-in and supports password reset via token', async () => {
+    const prisma = createMockPrisma();
+    let capturedVerificationToken = '';
+    let capturedResetToken = '';
+    const mockEmailService: any = {
+      enqueueAccountConfirmationEmail: async (_user: any, rawToken: string) => {
+        capturedVerificationToken = rawToken;
+      },
+      enqueuePasswordResetEmail: async (_user: any, rawToken: string) => {
+        capturedResetToken = rawToken;
+      },
+    };
+
+    const service = new AuthService(prisma, mockEmailService);
+
+    const registered = await service.registerUser({
+      email: 'newathlete@lukifitti.de',
+      password: 'FAKE-PASSWORD-TEST-123',
+      name: 'NewAthlete',
+    });
+
+    assert.equal(registered.requiresEmailConfirmation, true);
+    assert.equal(registered.emailVerified, false);
+    assert.equal(capturedVerificationToken.length > 20, true);
+
+    // Sign in before email confirmation is rejected
+    await assert.rejects(
+      () => service.authenticateUser('newathlete@lukifitti.de', 'FAKE-PASSWORD-TEST-123'),
+      /confirm your email address/i,
+    );
+
+    // Confirm email with raw token
+    const verifiedUser = await service.verifyEmail(capturedVerificationToken);
+    assert.equal(verifiedUser.emailVerified, true);
+
+    // Sign in now succeeds
+    const loggedIn = await service.authenticateUser(
+      'newathlete@lukifitti.de',
+      'FAKE-PASSWORD-TEST-123',
+    );
+    assert.equal(loggedIn.email, 'newathlete@lukifitti.de');
+
+    // Forgot password + Reset password flow
+    await service.requestPasswordReset('newathlete@lukifitti.de');
+    assert.equal(capturedResetToken.length > 20, true);
+
+    await service.resetPassword(capturedResetToken, 'NEW-FAKE-PASS-789');
+
+    // Old password rejected, new password succeeds
+    await assert.rejects(
+      () => service.authenticateUser('newathlete@lukifitti.de', 'FAKE-PASSWORD-TEST-123'),
+      /Invalid email or password/i,
+    );
+    const loggedInWithNewPass = await service.authenticateUser(
+      'newathlete@lukifitti.de',
+      'NEW-FAKE-PASS-789',
+    );
+    assert.equal(loggedInWithNewPass.email, 'newathlete@lukifitti.de');
   });
 });

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import {
   User,
   LogOut,
@@ -10,6 +11,8 @@ import {
   FileJson,
   FileSpreadsheet,
   CheckCircle2,
+  MailCheck,
+  KeyRound,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Badge } from '@luki-fitti/ui/components/ui/badge';
@@ -37,9 +40,11 @@ export function ProfileImportView() {
     authMode,
     login,
     register,
+    resendConfirmation,
     logout,
     updatePreferences,
     error: authError,
+    infoMessage: authInfoMessage,
     loading: authLoading,
   } = useAuth();
   const {
@@ -230,14 +235,21 @@ export function ProfileImportView() {
           )}
 
           {authMode === 'AUTHENTICATED' ? (
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => void logout()}
-              className="hover:bg-destructive/20 hover:text-destructive w-fit"
-            >
-              <LogOut className="h-4 w-4" /> Sign Out of Server Session
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" variant="secondary" asChild>
+                <Link href="/change-password">
+                  <KeyRound className="h-4 w-4" /> Change Password
+                </Link>
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => void logout()}
+                className="hover:bg-destructive/20 hover:text-destructive w-fit"
+              >
+                <LogOut className="h-4 w-4" /> Sign Out of Server Session
+              </Button>
+            </div>
           ) : (
             <form
               onSubmit={async (e) => {
@@ -284,7 +296,55 @@ export function ProfileImportView() {
                 placeholder="Password (min. 8 chars, letter + number)"
                 className="text-xs"
               />
-              {authError && <p className="text-destructive text-xs">{authError}</p>}
+
+              {authTab === 'login' && (
+                <div className="flex justify-end">
+                  <Link
+                    href="/forgot-password"
+                    className="text-primary text-xs font-semibold hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+              )}
+
+              {authInfoMessage && (
+                <div className="border-primary/40 bg-primary/15 text-primary space-y-2 rounded-2xl border p-3 text-xs">
+                  <div className="flex items-start gap-2">
+                    <MailCheck className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{authInfoMessage}</span>
+                  </div>
+                  {email.trim() && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="xs"
+                      disabled={authLoading}
+                      onClick={() => void resendConfirmation(email.trim())}
+                    >
+                      Resend Confirmation Email
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {authError && (
+                <div className="space-y-2">
+                  <p className="text-destructive text-xs">{authError}</p>
+                  {authError.toLowerCase().includes('confirm your email') && email.trim() && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="xs"
+                      disabled={authLoading}
+                      onClick={() => void resendConfirmation(email.trim())}
+                    >
+                      <MailCheck className="h-3.5 w-3.5" /> Resend Confirmation Email
+                    </Button>
+                  )}
+                </div>
+              )}
+
               <Button type="submit" disabled={authLoading} className="w-full">
                 {authTab === 'login' ? (
                   <>
@@ -292,7 +352,7 @@ export function ProfileImportView() {
                   </>
                 ) : (
                   <>
-                    <UserPlus className="h-4 w-4" /> Create Account & Seed Starter Split
+                    <UserPlus className="h-4 w-4" /> Create Account & Send Confirmation Link
                   </>
                 )}
               </Button>
