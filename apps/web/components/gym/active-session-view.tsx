@@ -17,6 +17,7 @@ import {
   Dumbbell,
   Trophy,
   AlertTriangle,
+  Zap,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -48,6 +49,7 @@ import {
   computeExerciseProgression,
   formatCompactDelta,
 } from '@luki-fitti/common/utils/client';
+import { ExerciseVisual } from './exercise-visual';
 import {
   ExerciseType,
   MUSCLE_GROUP_LABELS,
@@ -535,7 +537,7 @@ export function ActiveSessionView({
                   </span>
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="min-w-0 space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="default" className="text-[11px] uppercase tracking-wider">
                       {MUSCLE_GROUP_LABELS[currentExercise.primaryMuscleSnapshot]}
@@ -543,6 +545,17 @@ export function ActiveSessionView({
                     <span className="text-muted-foreground font-mono-tabular text-xs font-semibold">
                       of {activeSession.exercises.length} exercises
                     </span>
+                    {currentExercise.restSeconds === 0 && (
+                      <Badge variant="accent" className="text-[11px] font-bold">
+                        <Zap className="h-3 w-3" /> Superset (0s Rest)
+                      </Badge>
+                    )}
+                    {safeIdx > 0 &&
+                      activeSession.exercises[safeIdx - 1]?.restSeconds === 0 && (
+                        <Badge variant="accent" className="text-[11px] font-bold">
+                          <Zap className="h-3 w-3" /> Superset Partner
+                        </Badge>
+                      )}
                     {currentExercise.origin === SessionExerciseOrigin.SUBSTITUTED && (
                       <Badge variant="warning" className="text-[11px]">
                         Replaced: {currentExercise.replacedExerciseName}
@@ -560,9 +573,22 @@ export function ActiveSessionView({
                     )}
                   </div>
 
-                  <h2 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
-                    {currentExercise.exerciseNameSnapshot}
-                  </h2>
+                  <div className="flex items-center gap-3">
+                    <ExerciseVisual
+                      exercise={{
+                        id: currentExercise.exerciseId,
+                        slug: currentCatalogExercise?.slug,
+                        name: currentExercise.exerciseNameSnapshot,
+                        primaryMuscleGroup: currentExercise.primaryMuscleSnapshot,
+                        media: currentCatalogExercise?.media,
+                      }}
+                      variant="thumbnail"
+                      className="h-12 w-16"
+                    />
+                    <h2 className="font-display text-xl font-extrabold tracking-tight sm:text-3xl">
+                      {currentExercise.exerciseNameSnapshot}
+                    </h2>
+                  </div>
                 </div>
               </div>
 
@@ -642,6 +668,41 @@ export function ActiveSessionView({
                 )}
               </div>
             </div>
+
+            {currentExercise.restSeconds === 0 && activeSession.exercises[safeIdx + 1] && (
+              <div className="border-accent/40 bg-accent/15 text-accent flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs font-bold">
+                <span className="flex items-center gap-1.5">
+                  <Zap className="h-3.5 w-3.5 shrink-0" />
+                  Superset paired with #{safeIdx + 2}:{' '}
+                  {activeSession.exercises[safeIdx + 1]?.exerciseNameSnapshot} (No rest in between)
+                </span>
+                <Button
+                  type="button"
+                  variant="accent"
+                  size="xs"
+                  onClick={() => setSelectedExerciseIdx(safeIdx + 1)}
+                >
+                  Switch to Partner →
+                </Button>
+              </div>
+            )}
+            {safeIdx > 0 && activeSession.exercises[safeIdx - 1]?.restSeconds === 0 && (
+              <div className="border-accent/40 bg-accent/10 text-accent flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs font-bold">
+                <span className="flex items-center gap-1.5">
+                  <Zap className="h-3.5 w-3.5 shrink-0" />
+                  Superset Partner of #{safeIdx}:{' '}
+                  {activeSession.exercises[safeIdx - 1]?.exerciseNameSnapshot}
+                </span>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="xs"
+                  onClick={() => setSelectedExerciseIdx(safeIdx - 1)}
+                >
+                  ← Back to #{safeIdx}
+                </Button>
+              </div>
+            )}
 
             {currentExercise.notes && (
               <p className="border-accent/30 bg-accent/10 text-accent rounded-xl border px-3 py-1.5 text-xs font-medium">

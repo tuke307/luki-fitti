@@ -42,6 +42,7 @@ import {
   WeightUnit,
 } from '@luki-fitti/common/enums';
 import { applyExerciseHistoryToSessionExercise } from '@luki-fitti/common/utils/client';
+import { resolveExerciseMedia } from '@luki-fitti/common/catalog';
 import type {
   CreateExerciseDto,
   CreateFolderDto,
@@ -77,6 +78,7 @@ interface GymContextValue {
   // Folder & Template actions
   createFolder: (dto: CreateFolderDto) => Promise<void>;
   renameFolder: (folderId: string, name: string, color?: string) => Promise<void>;
+  reorderFolder: (folderId: string, direction: 'UP' | 'DOWN') => Promise<void>;
   deleteFolder: (folderId: string) => Promise<void>;
   createTemplate: (dto: CreateTemplateDto) => Promise<WorkoutTemplateDto>;
   updateTemplate: (templateId: string, dto: UpdateTemplateDto) => Promise<void>;
@@ -476,6 +478,19 @@ export function GymProvider({ children }: { children: ReactNode }) {
       tags: dto.tags ?? [],
       isSystem: false,
       alternativeExerciseIds: dto.alternativeExerciseIds ?? [],
+      media: dto.mediaUrl?.trim()
+        ? [
+            {
+              id: `media-${Date.now()}`,
+              mediaType: dto.mediaUrl.toLowerCase().endsWith('.gif') ? 'GIF' : 'IMAGE',
+              url: dto.mediaUrl.trim(),
+              caption: `${dto.name} demonstration`,
+            },
+          ]
+        : resolveExerciseMedia({
+            name: dto.name,
+            primaryMuscleGroup: dto.primaryMuscleGroup,
+          }),
     };
     const next = [...catalog, custom];
     setCatalog(next);
@@ -523,6 +538,32 @@ export function GymProvider({ children }: { children: ReactNode }) {
     );
     setFolders(nextFolders);
     await setCachedWorkouts({ folders: nextFolders, unfiledTemplates });
+  };
+
+  const reorderFolder = async (folderId: string, direction: 'UP' | 'DOWN') => {
+    const idx = folders.findIndex((f) => f.id === folderId);
+    if (idx === -1) return;
+    const targetIdx = direction === 'UP' ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= folders.length) return;
+
+    const copy = [...folders];
+    const [moved] = copy.splice(idx, 1);
+    if (!moved) return;
+    copy.splice(targetIdx, 0, moved);
+
+    const reindexed = copy.map((f, i) => ({ ...f, sortOrder: i }));
+    setFolders(reindexed);
+    await setCachedWorkouts({ folders: reindexed, unfiledTemplates });
+
+    if (navigator.onLine && isAuthenticated) {
+      try {
+        await Promise.all(
+          reindexed.map((f) => api.workouts.updateFolder(f.id, { sortOrder: f.sortOrder })),
+        );
+      } catch {
+        // Offline fallback already saved
+      }
+    }
   };
 
   const deleteFolder = async (folderId: string) => {
@@ -888,7 +929,10 @@ export function GymProvider({ children }: { children: ReactNode }) {
         if (s.clientSetId !== clientSetId) return s;
         const nextCompleted = !s.completed;
         if (nextCompleted) {
-          restSecToStart = ex.restSeconds || user?.preferences?.defaultRestSeconds || 90;
+          restSecToStart =
+            ex.restSeconds === 0
+              ? 0
+              : (ex.restSeconds ?? user?.preferences?.defaultRestSeconds ?? 90);
         }
         return {
           ...s,
@@ -916,13 +960,19 @@ export function GymProvider({ children }: { children: ReactNode }) {
 
     const nowMs = Date.now();
     const restUpdate =
-      restSecToStart !== null
-        ? {
-            restTimerEndsAt: new Date(nowMs + restSecToStart * 1000).toISOString(),
-            restTimerDurationSec: restSecToStart,
-            restTimerPausedRemSec: null,
-          }
-        : {};
+      restSecToStart === null
+        ? {}
+        : restSecToStart === 0
+          ? {
+              restTimerEndsAt: null,
+              restTimerDurationSec: null,
+              restTimerPausedRemSec: null,
+            }
+          : {
+              restTimerEndsAt: new Date(nowMs + restSecToStart * 1000).toISOString(),
+              restTimerDurationSec: restSecToStart,
+              restTimerPausedRemSec: null,
+            };
 
     await persistSessionUpdate({
       ...activeSession,
@@ -1350,6 +1400,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
         createCustomExercise,
         createFolder,
         renameFolder,
+        reorderFolder,
         deleteFolder,
         createTemplate,
         updateTemplate,
