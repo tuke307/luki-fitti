@@ -1,7 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
-import { User, LogOut, LogIn, UserPlus } from 'lucide-react';
+import {
+  User,
+  LogOut,
+  LogIn,
+  UserPlus,
+  Download,
+  FileJson,
+  FileSpreadsheet,
+  CheckCircle2,
+} from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Badge } from '@luki-fitti/ui/components/ui/badge';
 import { Button } from '@luki-fitti/ui/components/ui/button';
@@ -10,7 +19,17 @@ import { Input } from '@luki-fitti/ui/components/ui/input';
 import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useAuth } from '@/providers/auth/auth-context';
+import { useGym } from '@/providers/gym/gym-context';
 import { WeightUnit } from '@luki-fitti/common/enums';
+
+function escapeCsvCell(value: string | number | null | undefined): string {
+  if (value === null || value === undefined) return '';
+  const str = String(value);
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
 
 export function ProfileImportView() {
   const {
@@ -23,12 +42,150 @@ export function ProfileImportView() {
     error: authError,
     loading: authLoading,
   } = useAuth();
+  const {
+    folders,
+    unfiledTemplates,
+    stretchingRoutines,
+    historySessions,
+    catalog,
+  } = useGym();
   const { theme, setTheme } = useTheme();
 
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [exportStatus, setExportStatus] = useState<string | null>(null);
+
+  const allTemplatesCount =
+    folders.reduce((acc, f) => acc + f.templates.length, 0) + unfiledTemplates.length;
+  const totalLoggedSets = historySessions.reduce((acc, s) => acc + s.totalSetsCompleted, 0);
+
+  const triggerDownload = (content: string, fileName: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportJson = () => {
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    const folderByTplId = new Map<string, string>();
+    for (const f of folders) {
+      for (const t of f.templates) {
+        folderByTplId.set(t.id, f.name);
+      }
+    }
+
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      app: 'LukiFitti',
+      version: '1.0',
+      user: {
+        email: user?.email ?? null,
+        name: user?.name ?? null,
+        preferences: user?.preferences ?? null,
+      },
+      folders,
+      unfiledTemplates,
+      stretchingRoutines,
+      customExercises: catalog.filter((e) => !e.isSystem),
+      sessions: historySessions,
+      workouts: historySessions.map((s) => ({
+        date: s.startedAt,
+        workoutName: s.workoutNameSnapshot,
+        folder: (s.templateId && folderByTplId.get(s.templateId)) || null,
+        durationSeconds: s.activeDurationSeconds,
+        totalVolumeKg: s.totalVolumeKg,
+        exercises: s.exercises.map((ex) => ({
+          name: ex.exerciseNameSnapshot,
+          primaryMuscle: ex.primaryMuscleSnapshot,
+          sets: ex.sets
+            .filter((st) => st.completed)
+            .map((st) => ({
+              setNumber: st.setNumber,
+              setType: st.setType,
+              weight: st.weight,
+              unit: st.weightUnit,
+              reps: st.reps,
+              durationSeconds: st.durationSeconds,
+              rpe: st.rpe,
+              notes: st.notes,
+            })),
+        })),
+      })),
+    };
+
+    const fileName = `luki-fitti-backup-${dateStamp}.json`;
+    triggerDownload(JSON.stringify(payload, null, 2), fileName, 'application/json;charset=utf-8');
+    setExportStatus(`Exported ${fileName}`);
+  };
+
+  const handleExportCsv = () => {
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    const folderByTplId = new Map<string, string>();
+    for (const f of folders) {
+      for (const t of f.templates) {
+        folderByTplId.set(t.id, f.name);
+      }
+    }
+
+    const headers = [
+      'Date',
+      'Workout',
+      'Folder',
+      'SessionType',
+      'DurationSeconds',
+      'Exercise',
+      'PrimaryMuscle',
+      'SetNumber',
+      'SetType',
+      'Weight',
+      'Unit',
+      'Reps',
+      'DurationSec',
+      'RPE',
+      'Notes',
+    ];
+    const rows: string[] = [headers.join(',')];
+
+    for (const s of historySessions) {
+      const folderName = (s.templateId && folderByTplId.get(s.templateId)) || '';
+      for (const ex of s.exercises) {
+        for (const st of ex.sets) {
+          if (!st.completed) continue;
+          rows.push(
+            [
+              escapeCsvCell(s.startedAt),
+              escapeCsvCell(s.workoutNameSnapshot),
+              escapeCsvCell(folderName),
+              escapeCsvCell(s.sessionType),
+              escapeCsvCell(s.activeDurationSeconds),
+              escapeCsvCell(ex.exerciseNameSnapshot),
+              escapeCsvCell(ex.primaryMuscleSnapshot),
+              escapeCsvCell(st.setNumber),
+              escapeCsvCell(st.setType),
+              escapeCsvCell(st.weight),
+              escapeCsvCell(st.weightUnit),
+              escapeCsvCell(st.reps),
+              escapeCsvCell(st.durationSeconds),
+              escapeCsvCell(st.rpe),
+              escapeCsvCell(st.notes ?? s.notes),
+            ].join(','),
+          );
+        }
+      }
+    }
+
+    const fileName = `luki-fitti-workouts-${dateStamp}.csv`;
+    triggerDownload(rows.join('\n'), fileName, 'text/csv;charset=utf-8');
+    setExportStatus(`Exported ${fileName}`);
+  };
 
   return (
     <div className="space-y-6 pb-12">
@@ -238,6 +395,63 @@ export function ProfileImportView() {
           </div>
         </Card>
       </div>
+
+      {/* Export Gym Data Card (Only when logged in) */}
+      {authMode === 'AUTHENTICATED' && (
+        <Card className="space-y-4 rounded-3xl p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5">
+              <Download className="text-primary h-5 w-5" />
+              <div>
+                <h2 className="font-display text-lg font-bold">Export Gym Data</h2>
+                <p className="text-muted-foreground text-xs">
+                  Download a complete backup of your splits, templates, custom exercises, and
+                  training history
+                </p>
+              </div>
+            </div>
+            {exportStatus && (
+              <Badge variant="success" className="rounded-full px-3 py-1 text-xs">
+                <CheckCircle2 className="h-3.5 w-3.5" /> {exportStatus}
+              </Badge>
+            )}
+          </div>
+
+          <div className="bg-secondary/40 grid grid-cols-2 gap-3 rounded-2xl border p-3.5 text-xs sm:grid-cols-4">
+            <div>
+              <span className="text-muted-foreground block text-[11px]">Split Folders</span>
+              <strong className="font-mono-tabular text-base">{folders.length}</strong>
+            </div>
+            <div>
+              <span className="text-muted-foreground block text-[11px]">Workout Templates</span>
+              <strong className="font-mono-tabular text-base">{allTemplatesCount}</strong>
+            </div>
+            <div>
+              <span className="text-muted-foreground block text-[11px]">Completed Sessions</span>
+              <strong className="font-mono-tabular text-primary text-base">
+                {historySessions.length}
+              </strong>
+            </div>
+            <div>
+              <span className="text-muted-foreground block text-[11px]">Completed Sets</span>
+              <strong className="font-mono-tabular text-base">
+                {totalLoggedSets.toLocaleString()}
+              </strong>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Button type="button" onClick={handleExportJson}>
+              <FileJson className="h-4 w-4" />
+              Export Full Backup (JSON)
+            </Button>
+            <Button type="button" variant="secondary" onClick={handleExportCsv}>
+              <FileSpreadsheet className="h-4 w-4" />
+              Export Workout Log (CSV)
+            </Button>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

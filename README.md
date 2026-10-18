@@ -62,10 +62,16 @@ yarn run db:seed
 
 ---
 
-## 4. Exercise Catalog & Gymlife Migration Notes
+## 4. Exercise Catalog, Visual Demonstrations & Gymlife Migration Notes
 
-- **Exercise Sources Evaluation:** Public fitness reference sites (MuscleWiki, Muscle & Strength, ExRx) restrict automated scraping and commercial/redistributed media reuse in their terms of service. LukiFitti ships with an original, curated internal exercise catalog (`packages/common/src/catalog/index.ts`) covering all 13 muscle groups with bilingual EN/DE search tags, execution instructions, and biomechanical backup alternatives, and supports custom user-created exercises.
-- **Gymlife & Apple Health Migration:** Gymlife syncs with Apple Health and supports CSV/spreadsheet workout logging exports. LukiFitti's Import Wizard (`POST /api/import/preview` & `POST /api/import/commit`) accepts Gymlife CSV, Gymlife JSON, and Apple Health workout JSON exports, previews sessions, detects duplicates by date + workout name fingerprint, and lets you map unmatched exercises to the catalog or create custom exercises.
+- **4-Layer Exercise Visual & Media Architecture (`packages/common/src/catalog/index.ts` & `apps/web/components/gym/exercise-visual.tsx`):**
+  1. **Public-Domain Start/Finish Frames (`free-exercise-db`):** Public commercial fitness sites restrict automated scraping. Instead, `resolveExerciseMedia()` maps all built-in exercises (including 20 stretching & mobility drills) and all 85 imported Gymlife exercises (`gymlife-*` slugs and EN/DE keyword matching) to the public-domain [`yuhonas/free-exercise-db`](https://github.com/yuhonas/free-exercise-db) dataset (`Unlicense`), loading `0.jpg` (Start Position) and `1.jpg` (Peak Contraction / Finish Position) from GitHub's CDN.
+  2. **Animated 2-Frame Motion Loop:** `<ExerciseVisual />` displays Start and Finish frames side-by-side on catalog cards and runs a `1.1s` animated loop (GIF-style motion preview) inside the Exercise Detail modal without requiring heavy video files.
+  3. **Offline Vector Anatomical Muscle Map (`MuscleAnatomySvg`):** Pure inline front-and-back SVG body diagram highlighting primary muscles in lime (`#CCFF00`) and secondary muscles in cyan (`#00E5FF`), serving as both an anatomy reference and a 100% offline fallback if images are not cached.
+  4. **Custom Image/GIF URLs & External Video Links:** Custom exercises support an optional direct Image/GIF URL (`ExerciseMedia` table), and every exercise detail modal includes one-tap external links to **YouTube** form tutorials and **MuscleWiki** GIF guides.
+- **Gymlife Migration & Full Gym Data Export:**
+  - **Import:** LukiFitti's Import Wizard (`POST /api/import/preview` & `POST /api/import/commit`) and SQL migration scripts (`gymlife-extracted/`) import Gymlife SQLite/CSV/JSON and Apple Health exports with duplicate detection and exercise mapping.
+  - **Export:** When signed in, **Profile & Preferences → Export Gym Data** exports a complete JSON backup (`luki-fitti-backup-YYYY-MM-DD.json`) or a spreadsheet-compatible workout log CSV (`luki-fitti-workouts-YYYY-MM-DD.csv`).
 
 ---
 
