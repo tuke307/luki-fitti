@@ -61,6 +61,13 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - FRONTEND_URL=${FRONTEND_URL}
       - COOKIE_DOMAIN=${COOKIE_DOMAIN}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - EMAIL_RETRY_DELAY_MS=${EMAIL_RETRY_DELAY_MS}
+      - EMAIL_MAX_ATTEMPTS=${EMAIL_MAX_ATTEMPTS}
       - REDIS_URL=${REDIS_URL}
     depends_on:
       luki-fitti-db-migrate:
@@ -86,6 +93,45 @@ services:
       - 'caddy_1.0_handle.reverse_proxy={{upstreams 3001}}'
       - 'app.project=luki-fitti'
       - 'app.service=api'
+
+  luki-fitti-email-worker:
+    image: ghcr.io/tuke307/luki-fitti-email-worker:latest
+    pull_policy: always
+    restart: always
+    environment:
+      - TZ=UTC
+      - NODE_ENV=${NODE_ENV}
+      - EMAIL_WORKER_PORT=${EMAIL_WORKER_PORT}
+      - DATABASE_URL=${DATABASE_URL}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - EMAIL_RETRY_DELAY_MS=${EMAIL_RETRY_DELAY_MS}
+      - EMAIL_MAX_ATTEMPTS=${EMAIL_MAX_ATTEMPTS}
+      - REDIS_URL=${REDIS_URL}
+    depends_on:
+      luki-fitti-db-migrate:
+        condition: service_completed_successfully
+    networks:
+      - luki_fitti_network
+    labels:
+      - 'app.project=luki-fitti'
+      - 'app.service=email-worker'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:'+(process.env.EMAIL_WORKER_PORT||3002)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
 networks:
   luki_fitti_network:
