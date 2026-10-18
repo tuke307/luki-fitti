@@ -131,3 +131,15 @@ export enum SetType {
   FAILURE = 'FAILURE',
   STRETCH = 'STRETCH',
 }
+
+export enum EmailTemplateType {
+  ACCOUNT_CONFIRMATION = 'ACCOUNT_CONFIRMATION',
+  PASSWORD_RESET = 'PASSWORD_RESET',
+}
+
+export enum EmailStatus {
+  PROCESSING = 'PROCESSING',
+  PENDING = 'PENDING',
+  SENT = 'SENT',
+  FAILED = 'FAILED',
+}

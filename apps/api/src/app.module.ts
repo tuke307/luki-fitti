@@ -11,6 +11,9 @@ import { StretchingModule } from './modules/stretching/stretching.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { ImportModule } from './modules/import/import.module';
 import { HealthModule } from './modules/health/health.module';
+import { BullMQModule } from './modules/bullmq/bullmq.module';
+import { EmailTemplateModule } from './modules/email-template/email-template.module';
+import { EmailModule } from './modules/email/email.module';
 import { NODE_ENV } from './config/env.config';
 
 @Module({
@@ -25,6 +28,9 @@ import { NODE_ENV } from './config/env.config';
       },
     ]),
     DatabaseModule,
+    BullMQModule,
+    EmailTemplateModule,
+    EmailModule,
     AuthModule,
     ExerciseModule,
     WorkoutModule,

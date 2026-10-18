@@ -44,6 +44,8 @@ export type {
   SessionExercise,
   SessionSet,
   ImportJob,
+  EmailTemplate,
+  Email,
 } from './generated/prisma/client';
 
 export {
@@ -58,4 +60,6 @@ export {
   SessionExerciseOrigin,
   SessionExerciseStatus,
   SetType,
+  EmailTemplateType,
+  EmailStatus,
 } from './generated/prisma/client';

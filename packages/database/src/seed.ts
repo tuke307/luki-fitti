@@ -76,6 +76,36 @@ async function main(): Promise<void> {
         }
       }
 
+      await tx.emailTemplate.upsert({
+        where: { type: 'ACCOUNT_CONFIRMATION' },
+        update: {
+          name: 'Account Confirmation',
+          subject: 'LukiFitti — Confirm your account ({{ name }})',
+          htmlFile: 'account-confirmation.mjml',
+        },
+        create: {
+          name: 'Account Confirmation',
+          subject: 'LukiFitti — Confirm your account ({{ name }})',
+          htmlFile: 'account-confirmation.mjml',
+          type: 'ACCOUNT_CONFIRMATION',
+        },
+      });
+
+      await tx.emailTemplate.upsert({
+        where: { type: 'PASSWORD_RESET' },
+        update: {
+          name: 'Password Reset',
+          subject: 'LukiFitti — Reset your password',
+          htmlFile: 'password-reset.mjml',
+        },
+        create: {
+          name: 'Password Reset',
+          subject: 'LukiFitti — Reset your password',
+          htmlFile: 'password-reset.mjml',
+          type: 'PASSWORD_RESET',
+        },
+      });
+
       const seedEmail = process.env.SEED_USER_EMAIL;
       if (seedEmail) {
         const user = await tx.user.findUnique({ where: { email: seedEmail.toLowerCase() } });

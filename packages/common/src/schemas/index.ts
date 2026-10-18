@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import {
   DistanceUnit,
+  EmailStatus,
+  EmailTemplateType,
   EquipmentType,
   ExerciseCategory,
   ExerciseType,
@@ -49,6 +51,50 @@ export const ChangePasswordSchema = z
     path: ['newPassword'],
   });
 
+export const VerifyEmailSchema = z.object({
+  token: z.string().trim().min(10, 'Verification token is required'),
+});
+
+export const ResendConfirmationSchema = z.object({
+  email: z.email('Please enter a valid email address'),
+});
+
+export const ForgotPasswordSchema = z.object({
+  email: z.email('Please enter a valid email address'),
+});
+
+export const ResetPasswordSchema = z.object({
+  token: z.string().trim().min(10, 'Password reset token is required'),
+  newPassword: PasswordSchema,
+});
+
+export const CreateEmailTemplateSchema = z.object({
+  name: z.string().min(1),
+  subject: z.string().min(1),
+  htmlFile: z.string().min(1),
+  type: z.enum(EmailTemplateType),
+});
+
+export const UpdateEmailTemplateSchema = CreateEmailTemplateSchema.partial();
+
+export const CreateEmailSchema = z.object({
+  recipientEmail: z.email(),
+  subject: z.string().min(1),
+  content: z.string().min(1),
+  status: z.enum(EmailStatus).default(EmailStatus.PENDING),
+  scheduledAt: z.string(),
+  emailTemplateId: z.number().int(),
+  userId: z.string().nullable().optional(),
+});
+
+export const UpdateEmailSchema = z.object({
+  status: z.enum(EmailStatus).optional(),
+  sentAt: z.string().optional(),
+  attempts: z.number().int().optional(),
+  lastAttemptAt: z.string().optional(),
+  errorMessage: z.string().nullable().optional(),
+});
+
 export const UpdatePreferencesSchema = z.object({
   name: z.string().trim().min(1).max(80).optional(),
   weightUnit: z.enum(WeightUnit).optional(),
@@ -74,6 +120,7 @@ export const UserSchema = z.object({
   id: z.string(),
   email: z.string(),
   name: z.string().nullable(),
+  emailVerified: z.boolean().optional(),
   lastLoginAt: z.string().nullable().optional(),
   createdAt: z.string().optional(),
   preferences: UserPreferencesSchema.nullable().optional(),
@@ -87,10 +134,23 @@ export const UserPayloadSchema = z.object({
 export type RegisterDto = z.infer<typeof RegisterSchema>;
 export type LoginDto = z.infer<typeof LoginSchema>;
 export type ChangePasswordDto = z.infer<typeof ChangePasswordSchema>;
+export type VerifyEmailDto = z.infer<typeof VerifyEmailSchema>;
+export type ResendConfirmationDto = z.infer<typeof ResendConfirmationSchema>;
+export type ForgotPasswordDto = z.infer<typeof ForgotPasswordSchema>;
+export type ResetPasswordDto = z.infer<typeof ResetPasswordSchema>;
+export type CreateEmailTemplateDto = z.infer<typeof CreateEmailTemplateSchema>;
+export type UpdateEmailTemplateDto = z.infer<typeof UpdateEmailTemplateSchema>;
+export type CreateEmailDto = z.infer<typeof CreateEmailSchema>;
+export type UpdateEmailDto = z.infer<typeof UpdateEmailSchema>;
 export type UpdatePreferencesDto = z.infer<typeof UpdatePreferencesSchema>;
 export type UserPreferencesDto = z.infer<typeof UserPreferencesSchema>;
 export type UserDto = z.infer<typeof UserSchema>;
 export type UserPayloadDto = z.infer<typeof UserPayloadSchema>;
+
+export interface RegisterResponseDto extends UserDto {
+  requiresEmailConfirmation?: boolean;
+  message?: string;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Exercise Library Schemas
