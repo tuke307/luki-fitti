@@ -1,6 +1,8 @@
 {
   "extends": "@luki-fitti/typescript-config/nestjs.json",
   "compilerOptions": {
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
     "rootDir": ".",
     "outDir": "dist",
     "paths": {

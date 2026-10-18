@@ -1,3 +1,4 @@
-import { nestJsConfig } from '@luki-fitti/eslint-config/server';
+import { serverConfig } from '@luki-fitti/eslint-config/server';
 
-export default nestJsConfig;
+/** @type {import("eslint").Linter.Config} */
+export default serverConfig;
