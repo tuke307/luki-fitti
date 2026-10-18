@@ -5,10 +5,17 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Optional,
 } from '@nestjs/common';
+import crypto from 'crypto';
 import bcrypt from 'bcrypt';
-import { BCRYPT_SALT_ROUNDS } from '@/config/env.config';
+import {
+  BCRYPT_SALT_ROUNDS,
+  EMAIL_VERIFICATION_EXPIRY_MS,
+  PASSWORD_RESET_EXPIRY_MS,
+} from '@/config/env.config';
 import { PrismaService } from '../database/prisma.service';
+import { EmailService } from '../email/email.service';
 import {
   DEFAULT_STARTER_FOLDERS,
   DEFAULT_STARTER_TEMPLATES,
@@ -18,6 +25,7 @@ import {
 import { WeightUnit } from '@luki-fitti/common/enums';
 import type {
   RegisterDto,
+  RegisterResponseDto,
   UpdatePreferencesDto,
   UserDto,
 } from '@luki-fitti/common/schemas';
@@ -27,7 +35,14 @@ const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly emailService?: EmailService,
+  ) {}
+
+  private hashToken(rawToken: string): string {
+    return crypto.createHash('sha256').update(rawToken).digest('hex');
+  }
 
   async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
@@ -59,7 +74,7 @@ export class AuthService {
     }
   }
 
-  async registerUser(dto: RegisterDto): Promise<UserDto> {
+  async registerUser(dto: RegisterDto): Promise<RegisterResponseDto> {
     const email = dto.email.trim().toLowerCase();
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -67,6 +82,10 @@ export class AuthService {
     }
 
     const passwordHash = await this.hashPassword(dto.password);
+    const rawVerificationToken = crypto.randomBytes(32).toString('hex');
+    const hashedVerificationToken = this.hashToken(rawVerificationToken);
+    const verificationExpires = new Date(Date.now() + EMAIL_VERIFICATION_EXPIRY_MS);
+
     await this.ensureSystemCatalogSeeded();
 
     const created = await this.prisma.$transaction(async (tx) => {
@@ -75,7 +94,10 @@ export class AuthService {
           email,
           name: dto.name?.trim() || email.split('@')[0] || 'Athlete',
           passwordHash,
-          lastLoginAt: new Date(),
+          emailVerified: false,
+          emailVerificationToken: hashedVerificationToken,
+          emailVerificationExpires: verificationExpires,
+          lastLoginAt: null,
           preferences: {
             create: {
               weightUnit: dto.weightUnit ?? WeightUnit.KG,
@@ -165,7 +187,149 @@ export class AuthService {
       return user;
     });
 
-    return this.formatUserDto(created);
+    if (this.emailService) {
+      await this.emailService
+        .enqueueAccountConfirmationEmail(created, rawVerificationToken)
+        .catch(() => undefined);
+    }
+
+    return {
+      ...this.formatUserDto(created),
+      requiresEmailConfirmation: true,
+      message:
+        'Account created! Please check your email and click the activation link to confirm your account.',
+    };
+  }
+
+  async verifyEmail(rawToken: string): Promise<UserDto> {
+    const trimmed = rawToken.trim();
+    const hashed = this.hashToken(trimmed);
+    const user = await this.prisma.user.findUnique({
+      where: { emailVerificationToken: hashed },
+      include: { preferences: true },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Invalid or expired confirmation link.');
+    }
+
+    if (user.emailVerificationExpires && user.emailVerificationExpires < new Date()) {
+      throw new BadRequestException(
+        'Confirmation link has expired. Please request a new confirmation email.',
+      );
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationExpires: null,
+        lastLoginAt: new Date(),
+      },
+      include: { preferences: true },
+    });
+
+    return this.formatUserDto(updated);
+  }
+
+  async resendConfirmationEmail(email: string): Promise<{ success: boolean; message: string }> {
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (user && user.emailVerified === false) {
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const hashed = this.hashToken(rawToken);
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          emailVerificationToken: hashed,
+          emailVerificationExpires: new Date(Date.now() + EMAIL_VERIFICATION_EXPIRY_MS),
+        },
+      });
+
+      if (this.emailService) {
+        await this.emailService
+          .enqueueAccountConfirmationEmail(user, rawToken)
+          .catch(() => undefined);
+      }
+    }
+
+    return {
+      success: true,
+      message:
+        'If an unverified account exists for that email address, a new confirmation link has been sent.',
+    };
+  }
+
+  async requestPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (user) {
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const hashed = this.hashToken(rawToken);
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          passwordResetToken: hashed,
+          passwordResetExpires: new Date(Date.now() + PASSWORD_RESET_EXPIRY_MS),
+        },
+      });
+
+      if (this.emailService) {
+        await this.emailService
+          .enqueuePasswordResetEmail(user, rawToken)
+          .catch(() => undefined);
+      }
+    }
+
+    return {
+      success: true,
+      message:
+        'If an account with that email exists, a password reset link has been sent to your inbox.',
+    };
+  }
+
+  async resetPassword(
+    rawToken: string,
+    newPassword: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const trimmed = rawToken.trim();
+    const hashed = this.hashToken(trimmed);
+    const user = await this.prisma.user.findUnique({
+      where: { passwordResetToken: hashed },
+    });
+
+    if (!user || !user.passwordResetExpires || user.passwordResetExpires < new Date()) {
+      throw new BadRequestException(
+        'Password reset link is invalid or has expired. Please request a new reset link.',
+      );
+    }
+
+    const passwordHash = await this.hashPassword(newPassword);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        passwordResetToken: null,
+        passwordResetExpires: null,
+        emailVerified: true,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+      },
+    });
+
+    await this.prisma.refreshToken.deleteMany({ where: { userId: user.id } });
+
+    return {
+      success: true,
+      message: 'Your password has been reset successfully. You can now sign in.',
+    };
   }
 
   async authenticateUser(email: string, password: string): Promise<UserDto> {
@@ -203,6 +367,12 @@ export class AuthService {
       });
 
       throw new UnauthorizedException('Invalid email or password');
+    }
+
+    if (user.emailVerified === false) {
+      throw new ForbiddenException(
+        'Please confirm your email address before signing in. Check your inbox for the activation link.',
+      );
     }
 
     const updated = await this.prisma.user.update({
@@ -309,6 +479,7 @@ export class AuthService {
     id: string;
     email: string;
     name: string | null;
+    emailVerified?: boolean;
     lastLoginAt: Date | null;
     createdAt: Date;
     preferences?: {
@@ -326,6 +497,7 @@ export class AuthService {
       id: user.id,
       email: user.email,
       name: user.name,
+      emailVerified: user.emailVerified ?? true,
       lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
       createdAt: user.createdAt.toISOString(),
       preferences: user.preferences

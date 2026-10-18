@@ -1,0 +1,112 @@
+'use client';
+
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { Dumbbell, Mail, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Button } from '@luki-fitti/ui/components/ui/button';
+import { Card } from '@luki-fitti/ui/components/ui/card';
+import { Input } from '@luki-fitti/ui/components/ui/input';
+import { Label } from '@luki-fitti/ui/components/ui/label';
+import { api } from '@/lib/api';
+
+export default function ForgotPasswordPage() {
+  const [email, setEmail] = useState('');
+  const [submittedMessage, setSubmittedMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSubmittedMessage(null);
+    setLoading(true);
+    try {
+      const res = await api.auth.forgotPassword({ email: email.trim() });
+      if (res.success && res.data) {
+        setSubmittedMessage(res.data.message);
+      } else {
+        setError(res.error || 'Unable to process request');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to send reset email');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-background flex min-h-dvh items-center justify-center p-4">
+      <Card className="w-full max-w-md space-y-6 rounded-3xl p-6 sm:p-8">
+        <div className="flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="bg-primary text-primary-foreground flex h-10 w-10 items-center justify-center rounded-xl font-extrabold">
+              <Dumbbell className="h-5 w-5" />
+            </div>
+            <div>
+              <span className="font-display text-lg font-extrabold">
+                LUKI<span className="text-primary">FITTI</span>
+              </span>
+              <span className="text-muted-foreground block text-[11px]">
+                Account Password Recovery
+              </span>
+            </div>
+          </Link>
+        </div>
+
+        <div>
+          <h1 className="font-display text-2xl font-bold">Forgot Password?</h1>
+          <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+            Enter the email address associated with your LukiFitti account and we will send you a
+            link to reset your password.
+          </p>
+        </div>
+
+        {submittedMessage ? (
+          <div className="space-y-4">
+            <div className="border-primary/40 bg-primary/15 text-primary flex items-start gap-2.5 rounded-2xl border p-4 text-xs leading-relaxed">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{submittedMessage}</span>
+            </div>
+            <Button asChild variant="secondary" className="w-full">
+              <Link href="/login">
+                <ArrowLeft className="h-4 w-4" /> Return to Sign In
+              </Link>
+            </Button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="reset-email" className="text-xs font-semibold">
+                Email Address
+              </Label>
+              <Input
+                id="reset-email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="athlete@example.com"
+                className="h-10"
+              />
+            </div>
+
+            {error && <p className="text-destructive text-xs">{error}</p>}
+
+            <Button type="submit" size="lg" disabled={loading} className="w-full">
+              <Mail className="h-4 w-4" />
+              {loading ? 'Sending Reset Link...' : 'Send Password Reset Link'}
+            </Button>
+
+            <div className="border-t pt-3 text-center">
+              <Button variant="link" asChild className="text-muted-foreground text-xs">
+                <Link href="/login">
+                  <ArrowLeft className="h-3.5 w-3.5" /> Back to Sign In
+                </Link>
+              </Button>
+            </div>
+          </form>
+        )}
+      </Card>
+    </div>
+  );
+}

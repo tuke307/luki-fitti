@@ -33,10 +33,19 @@ import {
   LoginSchema,
   RegisterSchema,
   ChangePasswordSchema,
+  VerifyEmailSchema,
+  ResendConfirmationSchema,
+  ForgotPasswordSchema,
+  ResetPasswordSchema,
   UpdatePreferencesSchema,
   type LoginDto,
   type RegisterDto,
+  type RegisterResponseDto,
   type ChangePasswordDto,
+  type VerifyEmailDto,
+  type ResendConfirmationDto,
+  type ForgotPasswordDto,
+  type ResetPasswordDto,
   type UpdatePreferencesDto,
   type UserDto,
 } from '@luki-fitti/common/schemas';
@@ -79,14 +88,57 @@ export class AuthController {
 
   @Post('register')
   @Throttle({ default: { limit: 10, ttl: 600_000 } })
-  @ApiOperation({ summary: 'Register a new user account and initialize starter templates' })
+  @ApiOperation({
+    summary: 'Register a new user account, initialize starter templates, and send confirmation email',
+  })
   async register(
     @Body(new ZodValidationPipe(RegisterSchema)) body: RegisterDto,
     @Res({ passthrough: true }) res: Response,
+  ): Promise<RegisterResponseDto> {
+    const result = await this.authService.registerUser(body);
+    if (!result.requiresEmailConfirmation) {
+      await this.issueSessionCookies(result, res);
+    }
+    return result;
+  }
+
+  @Post('verify-email')
+  @Throttle({ default: { limit: 15, ttl: 600_000 } })
+  @ApiOperation({ summary: 'Confirm user email address via token and sign in' })
+  async verifyEmail(
+    @Body(new ZodValidationPipe(VerifyEmailSchema)) body: VerifyEmailDto,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<UserDto> {
-    const user = await this.authService.registerUser(body);
+    const user = await this.authService.verifyEmail(body.token);
     await this.issueSessionCookies(user, res);
     return user;
+  }
+
+  @Post('resend-confirmation')
+  @Throttle({ default: { limit: 5, ttl: 600_000 } })
+  @ApiOperation({ summary: 'Resend account confirmation email' })
+  async resendConfirmation(
+    @Body(new ZodValidationPipe(ResendConfirmationSchema)) body: ResendConfirmationDto,
+  ) {
+    return this.authService.resendConfirmationEmail(body.email);
+  }
+
+  @Post('forgot-password')
+  @Throttle({ default: { limit: 5, ttl: 600_000 } })
+  @ApiOperation({ summary: 'Request a password reset email link' })
+  async forgotPassword(
+    @Body(new ZodValidationPipe(ForgotPasswordSchema)) body: ForgotPasswordDto,
+  ) {
+    return this.authService.requestPasswordReset(body.email);
+  }
+
+  @Post('reset-password')
+  @Throttle({ default: { limit: 10, ttl: 600_000 } })
+  @ApiOperation({ summary: 'Reset account password using a valid reset token' })
+  async resetPassword(
+    @Body(new ZodValidationPipe(ResetPasswordSchema)) body: ResetPasswordDto,
+  ) {
+    return this.authService.resetPassword(body.token, body.newPassword);
   }
 
   @Post('login')

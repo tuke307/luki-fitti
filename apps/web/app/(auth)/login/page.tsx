@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Dumbbell, LogIn, UserPlus } from 'lucide-react';
+import { Dumbbell, LogIn, UserPlus, MailCheck } from 'lucide-react';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import { Card } from '@luki-fitti/ui/components/ui/card';
 import { Input } from '@luki-fitti/ui/components/ui/input';
@@ -13,7 +13,15 @@ import { useAuth } from '@/providers/auth/auth-context';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, register, continueOfflineLocal, error, loading } = useAuth();
+  const {
+    login,
+    register,
+    resendConfirmation,
+    continueOfflineLocal,
+    error,
+    infoMessage,
+    loading,
+  } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -88,9 +96,19 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="password" className="text-xs font-semibold">
-              Password
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password" className="text-xs font-semibold">
+                Password
+              </Label>
+              {mode === 'login' && (
+                <Link
+                  href="/forgot-password"
+                  className="text-primary text-xs font-semibold hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              )}
+            </div>
             <Input
               id="password"
               type="password"
@@ -102,7 +120,42 @@ export default function LoginPage() {
             />
           </div>
 
-          {error && <p className="text-destructive text-xs">{error}</p>}
+          {infoMessage && (
+            <div className="border-primary/40 bg-primary/15 text-primary space-y-2 rounded-2xl border p-3.5 text-xs">
+              <div className="flex items-start gap-2">
+                <MailCheck className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{infoMessage}</span>
+              </div>
+              {email.trim() && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="xs"
+                  disabled={loading}
+                  onClick={() => void resendConfirmation(email.trim())}
+                >
+                  Resend Confirmation Email
+                </Button>
+              )}
+            </div>
+          )}
+
+          {error && (
+            <div className="space-y-2">
+              <p className="text-destructive text-xs">{error}</p>
+              {error.toLowerCase().includes('confirm your email') && email.trim() && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="xs"
+                  disabled={loading}
+                  onClick={() => void resendConfirmation(email.trim())}
+                >
+                  <MailCheck className="h-3.5 w-3.5" /> Resend Confirmation Email
+                </Button>
+              )}
+            </div>
+          )}
 
           <Button type="submit" size="lg" disabled={loading} className="w-full">
             {mode === 'login' ? (
@@ -111,7 +164,7 @@ export default function LoginPage() {
               </>
             ) : (
               <>
-                <UserPlus className="h-4 w-4" /> Register & Seed 4er Split
+                <UserPlus className="h-4 w-4" /> Register & Send Confirmation Link
               </>
             )}
           </Button>
