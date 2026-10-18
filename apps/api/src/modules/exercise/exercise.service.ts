@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import { INITIAL_EXERCISE_CATALOG } from '@luki-fitti/common/catalog';
+import { INITIAL_EXERCISE_CATALOG, resolveExerciseMedia } from '@luki-fitti/common/catalog';
 import type {
   CreateExerciseDto,
   ExerciseDto,
@@ -207,6 +207,18 @@ export class ExerciseService {
         });
       }
 
+      if (dto.mediaUrl?.trim()) {
+        await tx.exerciseMedia.create({
+          data: {
+            exerciseId: ex.id,
+            mediaType: dto.mediaUrl.toLowerCase().endsWith('.gif') ? 'GIF' : 'IMAGE',
+            url: dto.mediaUrl.trim(),
+            caption: `${dto.name} demonstration`,
+            sortOrder: 0,
+          },
+        });
+      }
+
       return tx.exercise.findUniqueOrThrow({
         where: { id: ex.id },
         include: {
@@ -344,7 +356,15 @@ export class ExerciseService {
       isSystem: record.isSystem,
       alternativeExerciseIds,
       alternatives: alternativesFromDb,
-      media: record.media ?? [],
+      media:
+        record.media && record.media.length > 0
+          ? record.media
+          : resolveExerciseMedia({
+              id: record.id,
+              slug: record.slug,
+              name: record.name,
+              primaryMuscleGroup: record.primaryMuscleGroup,
+            }),
     };
   }
 }

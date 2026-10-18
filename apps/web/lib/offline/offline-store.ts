@@ -3,6 +3,7 @@ import {
   DEFAULT_STARTER_TEMPLATES,
   DEFAULT_STRETCHING_ROUTINES,
   INITIAL_EXERCISE_CATALOG,
+  resolveExerciseMedia,
 } from '@luki-fitti/common/catalog';
 import {
   ExerciseType,
@@ -109,7 +110,27 @@ async function idbSet<T>(key: string, value: T): Promise<void> {
 
 export async function getCachedCatalog(): Promise<ExerciseDto[]> {
   const cached = await idbGet<ExerciseDto[]>('exercise_catalog');
-  if (cached && cached.length > 0) return cached;
+  if (cached && cached.length > 0) {
+    const bySlug = new Map(cached.map((e) => [e.slug, e]));
+    let changed = false;
+    for (const sysEx of INITIAL_EXERCISE_CATALOG) {
+      if (!bySlug.has(sysEx.slug)) {
+        bySlug.set(sysEx.slug, sysEx);
+        changed = true;
+      }
+    }
+    const merged = Array.from(bySlug.values()).map((ex) => {
+      if (!ex.media || ex.media.length === 0) {
+        changed = true;
+        return { ...ex, media: resolveExerciseMedia(ex) };
+      }
+      return ex;
+    });
+    if (changed) {
+      await idbSet('exercise_catalog', merged);
+    }
+    return merged;
+  }
   await idbSet('exercise_catalog', INITIAL_EXERCISE_CATALOG);
   return INITIAL_EXERCISE_CATALOG;
 }
@@ -199,8 +220,21 @@ export async function setCachedWorkouts(overview: {
 
 export async function getCachedStretchingRoutines(): Promise<StretchingRoutineDto[]> {
   const cached = await idbGet<StretchingRoutineDto[]>('stretching_routines');
-  if (cached) return cached;
   const defaults = buildDefaultStretchingRoutines();
+  if (cached && cached.length > 0) {
+    const existingNames = new Set(cached.map((r) => r.name.toLowerCase()));
+    const missing = defaults.filter(
+      (d) =>
+        !existingNames.has(d.name.toLowerCase()) &&
+        !cached.some((c) => c.id === d.id),
+    );
+    if (missing.length > 0) {
+      const merged = [...cached, ...missing];
+      await idbSet('stretching_routines', merged);
+      return merged;
+    }
+    return cached;
+  }
   await idbSet('stretching_routines', defaults);
   return defaults;
 }

@@ -10,7 +10,6 @@ import {
   Trash2,
   Clock,
   ArrowRightLeft,
-  CheckCircle2,
   Filter,
   Info,
 } from 'lucide-react';
@@ -32,6 +31,7 @@ import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { Textarea } from '@luki-fitti/ui/components/ui/textarea';
 import { useGym } from '@/providers/gym/gym-context';
 import { computeExerciseProgression } from '@luki-fitti/common/utils/client';
+import { ExerciseVisual } from './exercise-visual';
 import {
   EQUIPMENT_LABELS,
   EquipmentType,
@@ -80,6 +80,9 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
   const [newType, setNewType] = useState<ExerciseType>(ExerciseType.STRENGTH);
   const [newDurationSec, setNewDurationSec] = useState<number>(45);
   const [newTags, setNewTags] = useState('');
+  const [newMediaUrl, setNewMediaUrl] = useState('');
+  const [stretchAreaFilter, setStretchAreaFilter] = useState<string>('ALL');
+  const [stretchMuscleFilter, setStretchMuscleFilter] = useState<MuscleGroup | 'ALL'>('ALL');
 
   // New Stretching Routine state
   const [routineName, setRoutineName] = useState('');
@@ -148,11 +151,13 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
         .map((t) => t.trim())
         .filter(Boolean),
       alternativeExerciseIds: [],
+      ...(newMediaUrl.trim() ? { mediaUrl: newMediaUrl.trim() } : {}),
     });
     setNewName('');
     setNewDesc('');
     setNewInstructions('');
     setNewTags('');
+    setNewMediaUrl('');
     setShowCreateModal(false);
   };
 
@@ -185,29 +190,32 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
   };
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="min-w-0 max-w-full space-y-6 pb-10">
       {/* Header & Sub-navigation */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+      <div className="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
           <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
             Exercise & Mobility Library
           </h1>
-          <p className="text-muted-foreground text-sm">
-            {catalog.length} exercises across 13 muscle groups with biomechanical alternatives &
-            stretching flows
+          <p className="text-muted-foreground text-xs sm:text-sm">
+            {catalog.length} exercises across 13 muscle groups with visual demonstrations,
+            alternatives & guided stretching flows
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center lg:w-auto">
           <Tabs
             value={subTab}
             onValueChange={(val) => setSubTab(val as 'catalog' | 'stretching')}
+            className="w-full min-w-0 sm:w-auto"
           >
-            <TabsList>
-              <TabsTrigger value="catalog">Exercise Catalog ({catalog.length})</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 sm:inline-flex sm:w-auto">
+              <TabsTrigger value="catalog" className="truncate px-2 text-xs sm:px-3">
+                Catalog ({catalog.length})
+              </TabsTrigger>
               <TabsTrigger
                 value="stretching"
-                className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+                className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground truncate px-2 text-xs sm:px-3"
               >
                 Stretching Studio ({stretchingRoutines.length})
               </TabsTrigger>
@@ -215,7 +223,11 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
           </Tabs>
 
           {subTab === 'catalog' ? (
-            <Button type="button" onClick={() => setShowCreateModal(true)}>
+            <Button
+              type="button"
+              onClick={() => setShowCreateModal(true)}
+              className="w-full shrink-0 sm:w-auto"
+            >
               <Plus className="h-4 w-4" />
               Custom Exercise
             </Button>
@@ -237,6 +249,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                 }
                 setShowCreateRoutineModal(true);
               }}
+              className="w-full shrink-0 sm:w-auto"
             >
               <Plus className="h-4 w-4" />
               New Routine
@@ -248,21 +261,21 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
       {subTab === 'catalog' ? (
         <>
           {/* Search & Filters */}
-          <Card className="space-y-3 p-4">
+          <Card className="min-w-0 overflow-hidden space-y-3 p-3.5 sm:p-4">
             <div className="relative">
               <Search className="text-muted-foreground absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2" />
               <Input
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by exercise, muscle, equipment, or German alias (e.g. Bankdrücken, Kniebeuge)..."
+                placeholder="Search exercise, muscle, equipment, or German alias (Bankdrücken, Kniebeuge)..."
                 aria-label="Search exercises"
-                className="h-10 pr-4 pl-10 text-sm"
+                className="h-10 pr-4 pl-10 text-xs sm:text-sm"
               />
             </div>
 
             {/* Muscle Group Pills */}
-            <div className="scrollbar-hide flex items-center gap-1.5 overflow-x-auto pb-1">
+            <div className="scrollbar-hide -mx-1 flex max-w-full items-center gap-1.5 overflow-x-auto px-1 pb-1">
               <Button
                 type="button"
                 variant={selectedMuscle === 'ALL' ? 'default' : 'secondary'}
@@ -287,7 +300,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
             </div>
 
             {/* Type & Equipment Filter Row */}
-            <div className="flex flex-wrap items-center gap-2 pt-1">
+            <div className="flex flex-wrap items-center gap-1.5 pt-1 sm:gap-2">
               <div className="text-muted-foreground flex items-center gap-1 text-xs">
                 <Filter className="h-3.5 w-3.5" />
                 <span>Type:</span>
@@ -304,12 +317,12 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                 </Button>
               ))}
 
-              <div className="ml-auto">
+              <div className="w-full pt-1 sm:ml-auto sm:w-auto sm:pt-0">
                 <NativeSelect
                   aria-label="Filter by equipment"
                   value={selectedEquipment}
                   onChange={(e) => setSelectedEquipment(e.target.value as EquipmentType | 'ALL')}
-                  className="bg-secondary h-8 text-xs"
+                  className="bg-secondary h-8 w-full text-xs sm:w-auto"
                 >
                   <option value="ALL">All Equipment</option>
                   {Object.values(EquipmentType).map((eq) => (
@@ -332,7 +345,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
               </p>
             </Card>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
               {filteredCatalog.map((ex) => {
                 const isStretch =
                   ex.exerciseType === ExerciseType.STRETCHING ||
@@ -350,9 +363,11 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') setSelectedExercise(ex);
                     }}
-                    className="hover:border-primary/50 group cursor-pointer justify-between p-4 transition"
+                    className="hover:border-primary/50 group min-w-0 cursor-pointer justify-between overflow-hidden p-4 transition"
                   >
                     <div>
+                      <ExerciseVisual exercise={ex} variant="card" className="mb-3" />
+
                       <div className="flex items-start justify-between gap-2">
                         <Badge
                           variant={isStretch ? 'accent' : 'default'}
@@ -388,16 +403,16 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                     </div>
 
                     <div className="mt-4 flex items-center justify-between border-t pt-3 text-xs">
-                      <div className="text-muted-foreground flex items-center gap-1.5">
+                      <div className="text-muted-foreground flex min-w-0 items-center gap-1.5">
                         {isStretch && ex.recommendedDurationSeconds ? (
                           <>
-                            <Clock className="text-accent h-3.5 w-3.5" />
+                            <Clock className="text-accent h-3.5 w-3.5 shrink-0" />
                             <span>{ex.recommendedDurationSeconds}s hold</span>
                           </>
                         ) : altNames.length > 0 ? (
                           <>
-                            <ArrowRightLeft className="h-3.5 w-3.5" />
-                            <span className="max-w-[160px] truncate">Alt: {altNames[0]}</span>
+                            <ArrowRightLeft className="h-3.5 w-3.5 shrink-0" />
+                            <span className="max-w-[150px] truncate">Alt: {altNames[0]}</span>
                           </>
                         ) : (
                           <span>{EXERCISE_TYPE_LABELS[ex.exerciseType]}</span>
@@ -416,8 +431,8 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                           + Add to Active
                         </Button>
                       ) : (
-                        <span className="text-primary inline-flex items-center gap-1 font-semibold">
-                          <Info className="h-3.5 w-3.5" /> Details
+                        <span className="text-primary inline-flex shrink-0 items-center gap-1 font-semibold">
+                          <Info className="h-3.5 w-3.5" /> Form & Video
                         </span>
                       )}
                     </div>
@@ -429,100 +444,253 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
         </>
       ) : (
         /* Stretching & Mobility Studio */
-        <div className="space-y-6">
-          <Card className="border-accent/30 p-5">
+        <div className="min-w-0 space-y-6">
+          <Card className="border-accent/30 min-w-0 overflow-hidden p-4 sm:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
+              <div className="space-y-1.5">
                 <Badge variant="accent" className="rounded-full px-3 py-1 text-xs">
-                  <Sparkles className="h-3.5 w-3.5" /> First-Class Mobility & Recovery
+                  <Sparkles className="h-3.5 w-3.5" /> First-Class Mobility & Recovery Studio
                 </Badge>
-                <h2 className="font-display mt-2 text-xl font-bold">
-                  Dedicated Stretching & Mobility Routines
+                <h2 className="font-display text-xl font-bold">
+                  Guided Stretching Routines ({stretchingRoutines.length}) & Mobility Catalog (
+                  {stretchExercises.length})
                 </h2>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  Execute standalone guided stretching flows with timed holds, repetition mobility
-                  drills, and transition intervals. Tracked separately from strength volume in your
-                  diary.
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  Launch timed stretching flows with transition bells or browse individual mobility
+                  drills with visual start/finish demonstrations and breathing cues.
                 </p>
               </div>
+            </div>
+
+            {/* Routine Target Area Filter Pills */}
+            <div className="scrollbar-hide -mx-1 mt-3 flex max-w-full items-center gap-1.5 overflow-x-auto px-1 pb-1">
+              <Button
+                type="button"
+                variant={stretchAreaFilter === 'ALL' ? 'accent' : 'secondary'}
+                size="xs"
+                onClick={() => setStretchAreaFilter('ALL')}
+                className="shrink-0"
+              >
+                All Routines ({stretchingRoutines.length})
+              </Button>
+              {Array.from(new Set(stretchingRoutines.map((r) => r.targetArea))).map((area) => (
+                <Button
+                  key={area}
+                  type="button"
+                  variant={stretchAreaFilter === area ? 'accent' : 'secondary'}
+                  size="xs"
+                  onClick={() => setStretchAreaFilter(area)}
+                  className="shrink-0"
+                >
+                  {area}
+                </Button>
+              ))}
             </div>
           </Card>
 
           <div className="grid gap-4 md:grid-cols-2">
-            {stretchingRoutines.map((routine) => (
-              <Card key={routine.id} className="justify-between p-5">
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <Badge variant="accent" className="text-[11px]">
-                        {routine.targetArea}
-                      </Badge>
-                      <h3 className="font-display mt-2 text-lg font-bold">{routine.name}</h3>
+            {stretchingRoutines
+              .filter((r) => stretchAreaFilter === 'ALL' || r.targetArea === stretchAreaFilter)
+              .map((routine) => (
+                <Card key={routine.id} className="min-w-0 justify-between p-4 sm:p-5">
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <Badge variant="accent" className="text-[11px]">
+                          {routine.targetArea}
+                        </Badge>
+                        <h3 className="font-display mt-2 text-lg font-bold">{routine.name}</h3>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="font-mono-tabular text-muted-foreground text-xs">
+                          ~{Math.round(routine.estimatedDurationSeconds / 60)} min
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Delete routine ${routine.name}`}
+                          onClick={() => void deleteStretchingRoutine(routine.id)}
+                          className="text-muted-foreground hover:text-destructive size-8"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono-tabular text-muted-foreground text-xs">
-                        ~{Math.round(routine.estimatedDurationSeconds / 60)} min
+                    {routine.description && (
+                      <p className="text-muted-foreground mt-1.5 text-xs">{routine.description}</p>
+                    )}
+
+                    <div className="mt-4 space-y-2">
+                      {routine.exercises.map((item, idx) => {
+                        const exObj =
+                          item.exercise ?? catalog.find((c) => c.id === item.exerciseId);
+                        const exName = exObj?.name ?? 'Stretch';
+                        return (
+                          <div
+                            key={item.id ?? idx}
+                            onClick={() => {
+                              if (exObj) setSelectedExercise(exObj);
+                            }}
+                            className="bg-secondary/50 hover:bg-secondary/80 flex cursor-pointer items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs transition"
+                          >
+                            <div className="flex min-w-0 items-center gap-2.5">
+                              {exObj && (
+                                <ExerciseVisual
+                                  exercise={exObj}
+                                  variant="thumbnail"
+                                  className="h-9 w-12"
+                                />
+                              )}
+                              <div className="min-w-0">
+                                <p className="truncate font-semibold">
+                                  {idx + 1}. {exName}
+                                </p>
+                                {item.notes && (
+                                  <p className="text-muted-foreground truncate text-[10px]">
+                                    {item.notes}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <span className="font-mono-tabular text-accent shrink-0 font-semibold">
+                              {item.sets} ×{' '}
+                              {item.durationSeconds
+                                ? `${item.durationSeconds}s`
+                                : `${item.reps} reps`}{' '}
+                              ({item.transitionSeconds}s rest)
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="mt-5 border-t pt-3">
+                    <Button
+                      type="button"
+                      variant="accent"
+                      size="lg"
+                      onClick={async () => {
+                        await startStretchingSession(routine.id);
+                        onStartSessionNavigation();
+                      }}
+                      className="w-full"
+                    >
+                      <Play className="h-4 w-4 fill-current" />
+                      Start Stretching Session
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+          </div>
+
+          {/* Individual Stretching & Mobility Drills Catalog */}
+          <div className="space-y-3 pt-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="font-display text-lg font-bold">
+                  Stretching & Mobility Exercise Catalog ({stretchExercises.length})
+                </h3>
+                <p className="text-muted-foreground text-xs">
+                  Tap any stretch or mobility drill for visual start/finish postures, target
+                  muscles, and breathing instructions
+                </p>
+              </div>
+              <div className="scrollbar-hide -mx-1 flex max-w-full items-center gap-1.5 overflow-x-auto px-1 pb-1">
+                <Button
+                  type="button"
+                  variant={stretchMuscleFilter === 'ALL' ? 'accent' : 'secondary'}
+                  size="xs"
+                  onClick={() => setStretchMuscleFilter('ALL')}
+                  className="shrink-0"
+                >
+                  All Regions
+                </Button>
+                {Array.from(new Set(stretchExercises.map((e) => e.primaryMuscleGroup))).map(
+                  (mg) => (
+                    <Button
+                      key={mg}
+                      type="button"
+                      variant={stretchMuscleFilter === mg ? 'accent' : 'secondary'}
+                      size="xs"
+                      onClick={() => setStretchMuscleFilter(mg)}
+                      className="shrink-0"
+                    >
+                      {MUSCLE_GROUP_LABELS[mg]}
+                    </Button>
+                  ),
+                )}
+              </div>
+            </div>
+
+            <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+              {stretchExercises
+                .filter(
+                  (e) =>
+                    stretchMuscleFilter === 'ALL' ||
+                    e.primaryMuscleGroup === stretchMuscleFilter ||
+                    e.secondaryMuscleGroups.includes(stretchMuscleFilter),
+                )
+                .map((ex) => (
+                  <Card
+                    key={ex.id}
+                    onClick={() => setSelectedExercise(ex)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(ev) => {
+                      if (ev.key === 'Enter' || ev.key === ' ') setSelectedExercise(ex);
+                    }}
+                    className="hover:border-accent/50 group min-w-0 cursor-pointer justify-between overflow-hidden p-4 transition"
+                  >
+                    <div>
+                      <ExerciseVisual exercise={ex} variant="card" className="mb-3" />
+                      <div className="flex items-center justify-between gap-2">
+                        <Badge variant="accent" className="text-[11px] uppercase">
+                          {MUSCLE_GROUP_LABELS[ex.primaryMuscleGroup]}
+                        </Badge>
+                        <Badge variant="secondary" className="font-mono-tabular text-[11px]">
+                          <Clock className="text-accent mr-1 h-3 w-3" />
+                          {ex.recommendedDurationSeconds ?? 45}s hold
+                        </Badge>
+                      </div>
+                      <h4 className="font-display group-hover:text-accent mt-2 text-base font-bold transition">
+                        {ex.name}
+                      </h4>
+                      <p className="text-muted-foreground mt-1 line-clamp-2 text-xs leading-relaxed">
+                        {ex.description}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between border-t pt-3 text-xs">
+                      <span className="text-muted-foreground">
+                        {EXERCISE_TYPE_LABELS[ex.exerciseType]}
                       </span>
                       <Button
                         type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label={`Delete routine ${routine.name}`}
-                        onClick={() => void deleteStretchingRoutine(routine.id)}
-                        className="text-muted-foreground hover:text-destructive size-8"
+                        variant="secondary"
+                        size="xs"
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          setRoutineItems((prev) => [
+                            ...prev,
+                            {
+                              exerciseId: ex.id,
+                              sets: 2,
+                              durationSeconds: ex.recommendedDurationSeconds ?? 45,
+                              reps: null,
+                              transitionSeconds: 15,
+                            },
+                          ]);
+                          setShowCreateRoutineModal(true);
+                        }}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        + Add to Routine
                       </Button>
                     </div>
-                  </div>
-                  {routine.description && (
-                    <p className="text-muted-foreground mt-1.5 text-xs">{routine.description}</p>
-                  )}
-
-                  <div className="mt-4 space-y-2">
-                    {routine.exercises.map((item, idx) => {
-                      const exName =
-                        item.exercise?.name ??
-                        catalog.find((c) => c.id === item.exerciseId)?.name ??
-                        'Stretch';
-                      return (
-                        <div
-                          key={item.id}
-                          className="bg-secondary/50 flex items-center justify-between rounded-xl px-3 py-2 text-xs"
-                        >
-                          <span className="font-medium">
-                            {idx + 1}. {exName}
-                          </span>
-                          <span className="font-mono-tabular text-accent font-semibold">
-                            {item.sets} ×{' '}
-                            {item.durationSeconds
-                              ? `${item.durationSeconds}s`
-                              : `${item.reps} reps`}{' '}
-                            ({item.transitionSeconds}s rest)
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="mt-5 border-t pt-3">
-                  <Button
-                    type="button"
-                    variant="accent"
-                    size="lg"
-                    onClick={async () => {
-                      await startStretchingSession(routine.id);
-                      onStartSessionNavigation();
-                    }}
-                    className="w-full"
-                  >
-                    <Play className="h-4 w-4 fill-current" />
-                    Start Stretching Session
-                  </Button>
-                </div>
-              </Card>
-            ))}
+                  </Card>
+                ))}
+            </div>
           </div>
         </div>
       )}
@@ -534,7 +702,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
           if (!open) setSelectedExercise(null);
         }}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
           {selectedExercise && (
             <>
               <DialogHeader>
@@ -557,24 +725,8 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                 </DialogDescription>
               </DialogHeader>
 
-              {/* Biomechanical SVG Diagram */}
-              <div className="bg-secondary/40 flex items-center justify-between rounded-2xl border p-4">
-                <div>
-                  <p className="text-xs font-bold tracking-wider uppercase">Target Musculature</p>
-                  <p className="text-primary mt-1 text-sm font-semibold">
-                    Primary: {MUSCLE_GROUP_LABELS[selectedExercise.primaryMuscleGroup]}
-                  </p>
-                  {selectedExercise.secondaryMuscleGroups.length > 0 && (
-                    <p className="text-muted-foreground mt-0.5 text-xs">
-                      Secondary:{' '}
-                      {selectedExercise.secondaryMuscleGroups
-                        .map((m) => MUSCLE_GROUP_LABELS[m])
-                        .join(', ')}
-                    </p>
-                  )}
-                </div>
-                <CheckCircle2 className="text-primary h-10 w-10 shrink-0 opacity-80" />
-              </div>
+              {/* Animated Visual Demonstration + Anatomical Muscle Map + Video Links */}
+              <ExerciseVisual exercise={selectedExercise} variant="detail" />
 
               {selectedExercise.instructions.length > 0 && (
                 <div className="space-y-2">
@@ -827,6 +979,20 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                 value={newTags}
                 onChange={(e) => setNewTags(e.target.value)}
                 placeholder="row, back, compound"
+                className="text-xs"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="new-ex-media" className="text-xs font-semibold">
+                Custom Image / GIF URL (optional)
+              </Label>
+              <Input
+                id="new-ex-media"
+                type="url"
+                value={newMediaUrl}
+                onChange={(e) => setNewMediaUrl(e.target.value)}
+                placeholder="https://example.com/exercise-demo.gif"
                 className="text-xs"
               />
             </div>
