@@ -15,6 +15,7 @@ import {
   KeyRound,
   Trash2,
   AlertTriangle,
+  Globe,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Badge } from '@luki-fitti/ui/components/ui/badge';
@@ -34,7 +35,8 @@ import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useGym } from '@/providers/gym/gym-context';
-import { WeightUnit } from '@luki-fitti/common/enums';
+import { useLocale } from '@/providers/i18n/locale-context';
+import { type LanguagePreference, WeightUnit } from '@luki-fitti/common/enums';
 
 function escapeCsvCell(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return '';
@@ -67,6 +69,7 @@ export function ProfileImportView() {
     catalog,
   } = useGym();
   const { theme, setTheme } = useTheme();
+  const { t, format, languagePreference, setLanguagePreference } = useLocale();
 
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
@@ -97,8 +100,8 @@ export function ProfileImportView() {
     const dateStamp = new Date().toISOString().slice(0, 10);
     const folderByTplId = new Map<string, string>();
     for (const f of folders) {
-      for (const t of f.templates) {
-        folderByTplId.set(t.id, f.name);
+      for (const tItem of f.templates) {
+        folderByTplId.set(tItem.id, f.name);
       }
     }
 
@@ -143,15 +146,15 @@ export function ProfileImportView() {
 
     const fileName = `luki-fitti-backup-${dateStamp}.json`;
     triggerDownload(JSON.stringify(payload, null, 2), fileName, 'application/json;charset=utf-8');
-    setExportStatus(`Exported ${fileName}`);
+    setExportStatus(format(t.profile.exportedStatus, { fileName }));
   };
 
   const handleExportCsv = () => {
     const dateStamp = new Date().toISOString().slice(0, 10);
     const folderByTplId = new Map<string, string>();
     for (const f of folders) {
-      for (const t of f.templates) {
-        folderByTplId.set(t.id, f.name);
+      for (const tItem of f.templates) {
+        folderByTplId.set(tItem.id, f.name);
       }
     }
 
@@ -204,18 +207,16 @@ export function ProfileImportView() {
 
     const fileName = `luki-fitti-workouts-${dateStamp}.csv`;
     triggerDownload(rows.join('\n'), fileName, 'text/csv;charset=utf-8');
-    setExportStatus(`Exported ${fileName}`);
+    setExportStatus(format(t.profile.exportedStatus, { fileName }));
   };
 
   return (
     <div className="space-y-6 pb-12">
       <div>
         <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-          Profile & Preferences
+          {t.profile.title}
         </h1>
-        <p className="text-muted-foreground text-sm">
-          Account & session status and units & gym preferences
-        </p>
+        <p className="text-muted-foreground text-sm">{t.profile.subtitle}</p>
       </div>
 
       {/* Account & Preferences Grid */}
@@ -225,15 +226,15 @@ export function ProfileImportView() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <User className="text-primary h-5 w-5" />
-              <h2 className="font-display text-lg font-bold">Account & Session Status</h2>
+              <h2 className="font-display text-lg font-bold">{t.profile.accountSectionTitle}</h2>
             </div>
             <Badge
               variant={authMode === 'AUTHENTICATED' ? 'success' : 'warning'}
               className="rounded-full px-3 py-1 text-[11px]"
             >
               {authMode === 'AUTHENTICATED'
-                ? 'Authenticated Server Session'
-                : 'Offline Local Session'}
+                ? t.profile.authenticatedBadge
+                : t.profile.offlineLocalBadge}
             </Badge>
           </div>
 
@@ -243,8 +244,8 @@ export function ProfileImportView() {
               <p className="text-muted-foreground">{user.email}</p>
               <p className="text-muted-foreground mt-1 text-[11px]">
                 {authMode === 'AUTHENTICATED'
-                  ? 'Secured via HTTP-only JWT + CSRF protection. All workouts and history are saved in PostgreSQL.'
-                  : 'Guest Mode: Nothing is saved to the server database. Sign in or create an account below to persist your workouts in the database.'}
+                  ? t.profile.authenticatedDesc
+                  : t.profile.guestDesc}
               </p>
             </div>
           )}
@@ -260,7 +261,7 @@ export function ProfileImportView() {
               <div className="flex flex-wrap items-center gap-2">
                 <Button type="button" variant="secondary" asChild>
                   <Link href="/change-password">
-                    <KeyRound className="h-4 w-4" /> Change Password
+                    <KeyRound className="h-4 w-4" /> {t.profile.changePasswordBtn}
                   </Link>
                 </Button>
                 <Button
@@ -269,7 +270,7 @@ export function ProfileImportView() {
                   onClick={() => void logout()}
                   className="hover:bg-destructive/20 hover:text-destructive w-fit"
                 >
-                  <LogOut className="h-4 w-4" /> Sign Out of Server Session
+                  <LogOut className="h-4 w-4" /> {t.profile.signOutBtn}
                 </Button>
                 <Button
                   type="button"
@@ -281,7 +282,7 @@ export function ProfileImportView() {
                   }}
                   className="w-fit"
                 >
-                  <Trash2 className="h-4 w-4" /> Delete Account
+                  <Trash2 className="h-4 w-4" /> {t.profile.deleteAccountBtn}
                 </Button>
               </div>
             </div>
@@ -302,8 +303,8 @@ export function ProfileImportView() {
                 onValueChange={(val) => setAuthTab(val as 'login' | 'register')}
               >
                 <TabsList className="w-full">
-                  <TabsTrigger value="login">Sign In</TabsTrigger>
-                  <TabsTrigger value="register">Register Account</TabsTrigger>
+                  <TabsTrigger value="login">{t.profile.signInTab}</TabsTrigger>
+                  <TabsTrigger value="register">{t.profile.registerTab}</TabsTrigger>
                 </TabsList>
               </Tabs>
 
@@ -311,7 +312,7 @@ export function ProfileImportView() {
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Your Name (e.g. GymBuddy)"
+                  placeholder={t.profile.yourNamePlaceholder}
                   className="text-xs"
                 />
               )}
@@ -320,7 +321,7 @@ export function ProfileImportView() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email address"
+                placeholder={t.profile.emailPlaceholder}
                 className="text-xs"
               />
               <Input
@@ -328,7 +329,7 @@ export function ProfileImportView() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password (min. 8 chars, letter + number)"
+                placeholder={t.profile.passwordPlaceholder}
                 className="text-xs"
               />
 
@@ -338,7 +339,7 @@ export function ProfileImportView() {
                     href="/forgot-password"
                     className="text-primary text-xs font-semibold hover:underline"
                   >
-                    Forgot password?
+                    {t.profile.forgotPasswordLink}
                   </Link>
                 </div>
               )}
@@ -357,7 +358,7 @@ export function ProfileImportView() {
                       disabled={authLoading}
                       onClick={() => void resendConfirmation(email.trim())}
                     >
-                      Resend Confirmation Email
+                      {t.profile.resendConfirmationBtn}
                     </Button>
                   )}
                 </div>
@@ -374,7 +375,7 @@ export function ProfileImportView() {
                       disabled={authLoading}
                       onClick={() => void resendConfirmation(email.trim())}
                     >
-                      <MailCheck className="h-3.5 w-3.5" /> Resend Confirmation Email
+                      <MailCheck className="h-3.5 w-3.5" /> {t.profile.resendConfirmationBtn}
                     </Button>
                   )}
                 </div>
@@ -383,11 +384,11 @@ export function ProfileImportView() {
               <Button type="submit" disabled={authLoading} className="w-full">
                 {authTab === 'login' ? (
                   <>
-                    <LogIn className="h-4 w-4" /> Sign In & Sync
+                    <LogIn className="h-4 w-4" /> {t.profile.signInSyncBtn}
                   </>
                 ) : (
                   <>
-                    <UserPlus className="h-4 w-4" /> Create Account & Send Confirmation Link
+                    <UserPlus className="h-4 w-4" /> {t.profile.createAccountBtn}
                   </>
                 )}
               </Button>
@@ -397,15 +398,38 @@ export function ProfileImportView() {
 
         {/* Units & Training Preferences Card */}
         <Card className="space-y-4 rounded-3xl p-5">
-          <h2 className="font-display text-lg font-bold">Units & Gym Preferences</h2>
+          <h2 className="font-display text-lg font-bold">{t.profile.preferencesTitle}</h2>
 
           <div className="space-y-3 text-xs">
-            <div className="flex items-center justify-between">
+            {/* Language Switcher */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p className="font-semibold">Appearance / Theme</p>
-                <p className="text-muted-foreground text-[11px]">
-                  Choose Dark, Light, or follow iOS System setting
+                <p className="flex items-center gap-1.5 font-semibold">
+                  <Globe className="text-primary h-3.5 w-3.5" />
+                  {t.profile.languageLabel}
                 </p>
+                <p className="text-muted-foreground text-[11px]">{t.profile.languageSub}</p>
+              </div>
+              <Tabs
+                value={languagePreference}
+                onValueChange={(val) => {
+                  if (val === 'system' || val === 'en' || val === 'de') {
+                    void setLanguagePreference(val as LanguagePreference);
+                  }
+                }}
+              >
+                <TabsList>
+                  <TabsTrigger value="system">{t.profile.langSystem}</TabsTrigger>
+                  <TabsTrigger value="en">{t.profile.langEn}</TabsTrigger>
+                  <TabsTrigger value="de">{t.profile.langDe}</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="font-semibold">{t.profile.themeLabel}</p>
+                <p className="text-muted-foreground text-[11px]">{t.profile.themeSub}</p>
               </div>
               <Tabs
                 value={theme ?? 'dark'}
@@ -417,19 +441,17 @@ export function ProfileImportView() {
                 }}
               >
                 <TabsList>
-                  <TabsTrigger value="dark">Dark</TabsTrigger>
-                  <TabsTrigger value="light">Light</TabsTrigger>
-                  <TabsTrigger value="system">System</TabsTrigger>
+                  <TabsTrigger value="dark">{t.profile.themeDark}</TabsTrigger>
+                  <TabsTrigger value="light">{t.profile.themeLight}</TabsTrigger>
+                  <TabsTrigger value="system">{t.profile.themeSystem}</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-semibold">Weight Unit</p>
-                <p className="text-muted-foreground text-[11px]">
-                  Used for set entry and target loads
-                </p>
+                <p className="font-semibold">{t.profile.weightUnitLabel}</p>
+                <p className="text-muted-foreground text-[11px]">{t.profile.weightUnitSub}</p>
               </div>
               <Tabs
                 value={user?.preferences?.weightUnit ?? WeightUnit.KG}
@@ -444,10 +466,8 @@ export function ProfileImportView() {
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-semibold">Default Rest Timer Duration</p>
-                <p className="text-muted-foreground text-[11px]">
-                  Auto-starts when you log a working set
-                </p>
+                <p className="font-semibold">{t.profile.defaultRestLabel}</p>
+                <p className="text-muted-foreground text-[11px]">{t.profile.defaultRestSub}</p>
               </div>
               <NativeSelect
                 aria-label="Default rest timer seconds"
@@ -459,7 +479,7 @@ export function ProfileImportView() {
               >
                 {[60, 75, 90, 120, 150, 180].map((sec) => (
                   <option key={sec} value={sec}>
-                    {sec} sec
+                    {sec} {t.common.sec}
                   </option>
                 ))}
               </NativeSelect>
@@ -467,10 +487,8 @@ export function ProfileImportView() {
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-semibold">Weekly Training Goal</p>
-                <p className="text-muted-foreground text-[11px]">
-                  Displayed on your Home readiness ring
-                </p>
+                <p className="font-semibold">{t.profile.weeklyGoalLabel}</p>
+                <p className="text-muted-foreground text-[11px]">{t.profile.weeklyGoalSub}</p>
               </div>
               <NativeSelect
                 aria-label="Weekly goal sessions"
@@ -482,7 +500,7 @@ export function ProfileImportView() {
               >
                 {[2, 3, 4, 5, 6].map((g) => (
                   <option key={g} value={g}>
-                    {g} sessions / week
+                    {format(t.profile.sessionsPerWeek, { count: g })}
                   </option>
                 ))}
               </NativeSelect>
@@ -498,11 +516,8 @@ export function ProfileImportView() {
             <div className="flex items-center gap-2.5">
               <Download className="text-primary h-5 w-5" />
               <div>
-                <h2 className="font-display text-lg font-bold">Export Gym Data</h2>
-                <p className="text-muted-foreground text-xs">
-                  Download a complete backup of your splits, templates, custom exercises, and
-                  training history
-                </p>
+                <h2 className="font-display text-lg font-bold">{t.profile.exportTitle}</h2>
+                <p className="text-muted-foreground text-xs">{t.profile.exportSub}</p>
               </div>
             </div>
             {exportStatus && (
@@ -514,21 +529,29 @@ export function ProfileImportView() {
 
           <div className="bg-secondary/40 grid grid-cols-2 gap-3 rounded-2xl border p-3.5 text-xs sm:grid-cols-4">
             <div>
-              <span className="text-muted-foreground block text-[11px]">Split Folders</span>
+              <span className="text-muted-foreground block text-[11px]">
+                {t.profile.splitFoldersStat}
+              </span>
               <strong className="font-mono-tabular text-base">{folders.length}</strong>
             </div>
             <div>
-              <span className="text-muted-foreground block text-[11px]">Workout Templates</span>
+              <span className="text-muted-foreground block text-[11px]">
+                {t.profile.workoutTemplatesStat}
+              </span>
               <strong className="font-mono-tabular text-base">{allTemplatesCount}</strong>
             </div>
             <div>
-              <span className="text-muted-foreground block text-[11px]">Completed Sessions</span>
+              <span className="text-muted-foreground block text-[11px]">
+                {t.profile.completedSessionsStat}
+              </span>
               <strong className="font-mono-tabular text-primary text-base">
                 {historySessions.length}
               </strong>
             </div>
             <div>
-              <span className="text-muted-foreground block text-[11px]">Completed Sets</span>
+              <span className="text-muted-foreground block text-[11px]">
+                {t.profile.completedSetsStat}
+              </span>
               <strong className="font-mono-tabular text-base">
                 {totalLoggedSets.toLocaleString()}
               </strong>
@@ -538,11 +561,11 @@ export function ProfileImportView() {
           <div className="flex flex-wrap items-center gap-2.5">
             <Button type="button" onClick={handleExportJson}>
               <FileJson className="h-4 w-4" />
-              Export Full Backup (JSON)
+              {t.profile.exportJsonBtn}
             </Button>
             <Button type="button" variant="secondary" onClick={handleExportCsv}>
               <FileSpreadsheet className="h-4 w-4" />
-              Export Workout Log (CSV)
+              {t.profile.exportCsvBtn}
             </Button>
           </div>
         </Card>
@@ -553,13 +576,9 @@ export function ProfileImportView() {
           <DialogHeader>
             <DialogTitle className="text-destructive flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 shrink-0" />
-              Request Account Deletion
+              {t.profile.deleteDialogTitle}
             </DialogTitle>
-            <DialogDescription>
-              Enter your current password to receive a confirmation email at{' '}
-              <strong>{user?.email}</strong>. Your account and workout data will only be deleted
-              after you click the link in that email and confirm in your browser.
-            </DialogDescription>
+            <DialogDescription>{t.profile.deleteDialogDesc}</DialogDescription>
           </DialogHeader>
 
           <form
@@ -567,7 +586,7 @@ export function ProfileImportView() {
               e.preventDefault();
               setDeleteError(null);
               if (!deletePassword.trim()) {
-                setDeleteError('Please enter your current password to request account deletion.');
+                setDeleteError(t.profile.currentPasswordPlaceholder);
                 return;
               }
               const ok = await requestAccountDeletion(deletePassword);
@@ -580,7 +599,7 @@ export function ProfileImportView() {
           >
             <div className="space-y-1.5">
               <Label htmlFor="delete-account-password" className="text-xs font-semibold">
-                Current Password
+                {t.profile.currentPasswordLabel}
               </Label>
               <Input
                 id="delete-account-password"
@@ -588,7 +607,7 @@ export function ProfileImportView() {
                 required
                 value={deletePassword}
                 onChange={(e) => setDeletePassword(e.target.value)}
-                placeholder="Enter your current password"
+                placeholder={t.profile.currentPasswordPlaceholder}
                 className="h-10 text-xs"
               />
             </div>
@@ -604,11 +623,11 @@ export function ProfileImportView() {
                 onClick={() => setDeleteDialogOpen(false)}
                 disabled={authLoading}
               >
-                Cancel
+                {t.common.cancel}
               </Button>
               <Button type="submit" variant="destructive" disabled={authLoading}>
                 <MailCheck className="h-4 w-4" />
-                {authLoading ? 'Sending Email...' : 'Send Deletion Confirmation Email'}
+                {authLoading ? t.profile.sendingBtn : t.profile.sendDeletionLinkBtn}
               </Button>
             </DialogFooter>
           </form>

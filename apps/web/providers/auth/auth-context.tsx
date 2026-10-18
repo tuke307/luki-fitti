@@ -40,6 +40,7 @@ const DEFAULT_LOCAL_USER: UserDto = {
     distanceUnit: DistanceUnit.KM,
     defaultRestSeconds: 90,
     theme: 'dark',
+    language: 'system',
     restTimerSound: true,
     weeklyGoalSessions: 4,
   },
@@ -313,6 +314,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           defaultRestSeconds:
             data.defaultRestSeconds ?? user.preferences?.defaultRestSeconds ?? 90,
           theme: data.theme ?? user.preferences?.theme ?? 'dark',
+          language: data.language ?? user.preferences?.language ?? 'system',
           restTimerSound: data.restTimerSound ?? user.preferences?.restTimerSound ?? true,
           weeklyGoalSessions:
             data.weeklyGoalSessions ?? user.preferences?.weeklyGoalSessions ?? 4,

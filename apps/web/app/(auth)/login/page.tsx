@@ -10,6 +10,7 @@ import { Input } from '@luki-fitti/ui/components/ui/input';
 import { Label } from '@luki-fitti/ui/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useAuth } from '@/providers/auth/auth-context';
+import { useLocale } from '@/providers/i18n/locale-context';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function LoginPage() {
     infoMessage,
     loading,
   } = useAuth();
+  const { t } = useLocale();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -50,17 +52,15 @@ export default function LoginPage() {
               <span className="font-display text-lg font-extrabold">
                 LUKI<span className="text-primary">FITTI</span>
               </span>
-              <span className="text-muted-foreground block text-[11px]">
-                Personal Gym & Workout Tracker
-              </span>
+              <span className="text-muted-foreground block text-[11px]">{t.nav.tagline}</span>
             </div>
           </Link>
         </div>
 
         <Tabs value={mode} onValueChange={(val) => setMode(val as 'login' | 'register')}>
           <TabsList className="w-full">
-            <TabsTrigger value="login">Sign In</TabsTrigger>
-            <TabsTrigger value="register">Create Account</TabsTrigger>
+            <TabsTrigger value="login">{t.auth.signInTab}</TabsTrigger>
+            <TabsTrigger value="register">{t.auth.createAccountTab}</TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -68,7 +68,7 @@ export default function LoginPage() {
           {mode === 'register' && (
             <div className="space-y-1.5">
               <Label htmlFor="name" className="text-xs font-semibold">
-                Name
+                {t.auth.nameLabel}
               </Label>
               <Input
                 id="name"
@@ -82,7 +82,7 @@ export default function LoginPage() {
 
           <div className="space-y-1.5">
             <Label htmlFor="email" className="text-xs font-semibold">
-              Email
+              {t.auth.emailLabel}
             </Label>
             <Input
               id="email"
@@ -98,14 +98,14 @@ export default function LoginPage() {
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <Label htmlFor="password" className="text-xs font-semibold">
-                Password
+                {t.auth.passwordLabel}
               </Label>
               {mode === 'login' && (
                 <Link
                   href="/forgot-password"
                   className="text-primary text-xs font-semibold hover:underline"
                 >
-                  Forgot password?
+                  {t.auth.forgotPasswordLink}
                 </Link>
               )}
             </div>
@@ -115,7 +115,7 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 8 characters (letter + number)"
+              placeholder={t.auth.passwordMinHint}
               className="h-10"
             />
           </div>
@@ -134,7 +134,7 @@ export default function LoginPage() {
                   disabled={loading}
                   onClick={() => void resendConfirmation(email.trim())}
                 >
-                  Resend Confirmation Email
+                  {t.profile.resendConfirmationBtn}
                 </Button>
               )}
             </div>
@@ -151,7 +151,7 @@ export default function LoginPage() {
                   disabled={loading}
                   onClick={() => void resendConfirmation(email.trim())}
                 >
-                  <MailCheck className="h-3.5 w-3.5" /> Resend Confirmation Email
+                  <MailCheck className="h-3.5 w-3.5" /> {t.profile.resendConfirmationBtn}
                 </Button>
               )}
             </div>
@@ -160,11 +160,11 @@ export default function LoginPage() {
           <Button type="submit" size="lg" disabled={loading} className="w-full">
             {mode === 'login' ? (
               <>
-                <LogIn className="h-4 w-4" /> Sign In
+                <LogIn className="h-4 w-4" /> {t.auth.signInBtn}
               </>
             ) : (
               <>
-                <UserPlus className="h-4 w-4" /> Register & Send Confirmation Link
+                <UserPlus className="h-4 w-4" /> {t.auth.registerBtn}
               </>
             )}
           </Button>
@@ -180,7 +180,7 @@ export default function LoginPage() {
             }}
             className="text-muted-foreground hover:text-foreground text-xs font-semibold"
           >
-            Continue in Guest (Local Only) Mode →
+            {t.auth.continueGuestBtn}
           </Button>
         </div>
       </Card>

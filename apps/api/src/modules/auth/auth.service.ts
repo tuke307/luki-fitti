@@ -23,7 +23,7 @@ import {
   DEFAULT_STRETCHING_ROUTINES,
   INITIAL_EXERCISE_CATALOG,
 } from '@luki-fitti/common/catalog';
-import { DistanceUnit, WeightUnit } from '@luki-fitti/common/enums';
+import { DistanceUnit, type LanguagePreference, WeightUnit } from '@luki-fitti/common/enums';
 import type {
   RegisterDto,
   RegisterResponseDto,
@@ -104,6 +104,7 @@ export class AuthService {
               weightUnit: dto.weightUnit ?? WeightUnit.KG,
               defaultRestSeconds: 90,
               theme: 'dark',
+              language: 'system',
               restTimerSound: true,
               weeklyGoalSessions: 4,
             },
@@ -422,6 +423,7 @@ export class AuthService {
               distanceUnit: prefFields.distanceUnit,
               defaultRestSeconds: prefFields.defaultRestSeconds ?? 90,
               theme: prefFields.theme ?? 'dark',
+              language: prefFields.language ?? 'system',
               restTimerSound: prefFields.restTimerSound ?? true,
               weeklyGoalSessions: prefFields.weeklyGoalSessions ?? 4,
             },
@@ -434,6 +436,7 @@ export class AuthService {
                 ? { defaultRestSeconds: prefFields.defaultRestSeconds }
                 : {}),
               ...(prefFields.theme !== undefined ? { theme: prefFields.theme } : {}),
+              ...(prefFields.language !== undefined ? { language: prefFields.language } : {}),
               ...(prefFields.restTimerSound !== undefined
                 ? { restTimerSound: prefFields.restTimerSound }
                 : {}),
@@ -551,10 +554,15 @@ export class AuthService {
       distanceUnit: DistanceUnit | `${DistanceUnit}`;
       defaultRestSeconds: number;
       theme: string;
+      language?: string;
       restTimerSound: boolean;
       weeklyGoalSessions: number;
     } | null;
   }): UserDto {
+    const rawLang = user.preferences?.language;
+    const normalizedLang: LanguagePreference =
+      rawLang === 'en' || rawLang === 'de' || rawLang === 'system' ? rawLang : 'system';
+
     return {
       id: user.id,
       email: user.email,
@@ -570,6 +578,7 @@ export class AuthService {
             distanceUnit: user.preferences.distanceUnit as DistanceUnit,
             defaultRestSeconds: user.preferences.defaultRestSeconds,
             theme: user.preferences.theme,
+            language: normalizedLang,
             restTimerSound: user.preferences.restTimerSound,
             weeklyGoalSessions: user.preferences.weeklyGoalSessions,
           }

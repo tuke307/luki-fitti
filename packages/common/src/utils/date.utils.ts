@@ -38,13 +38,16 @@ export function formatDateTime(dateInput: Date | string | number): string {
 }
 
 /**
- * Formats a date with full month name (e.g., `17. October 2026`)
+ * Formats a date with full month name (e.g., `17. October 2026` or `17. Oktober 2026`)
  */
-export function formatLongDate(dateInput: Date | string | number): string {
+export function formatLongDate(
+  dateInput: Date | string | number,
+  locale: 'en' | 'de' = 'en',
+): string {
   const d = toDate(dateInput);
   if (isNaN(d.getTime())) return '';
   const day = d.getDate();
-  const monthName = d.toLocaleDateString('en-US', { month: 'long' });
+  const monthName = d.toLocaleDateString(locale === 'de' ? 'de-DE' : 'en-US', { month: 'long' });
   const year = d.getFullYear();
   return `${day}. ${monthName} ${year}`;
 }
@@ -52,10 +55,13 @@ export function formatLongDate(dateInput: Date | string | number): string {
 /**
  * Formats a date with full month name and 24h time (e.g., `17. October 2026, 16:10`)
  */
-export function formatLongDateTime(dateInput: Date | string | number): string {
+export function formatLongDateTime(
+  dateInput: Date | string | number,
+  locale: 'en' | 'de' = 'en',
+): string {
   const d = toDate(dateInput);
   if (isNaN(d.getTime())) return '';
-  return `${formatLongDate(d)}, ${formatTime(d)}`;
+  return `${formatLongDate(d, locale)}, ${formatTime(d)}`;
 }
 
 /**

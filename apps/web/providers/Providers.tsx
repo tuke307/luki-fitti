@@ -3,6 +3,7 @@
 import { ReactNode } from 'react';
 import { ThemeProvider } from '@/providers/theme/theme-provider';
 import { AuthProvider } from '@/providers/auth/auth-context';
+import { LocaleProvider } from '@/providers/i18n/locale-context';
 import { GymProvider } from '@/providers/gym/gym-context';
 import { Toaster } from '@luki-fitti/ui/components/ui/sonner';
 import { MotionConfig, useReducedMotion } from 'framer-motion';
@@ -18,15 +19,17 @@ export function Providers({ children }: ProvidersProps) {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <GymProvider>
-          <MotionConfig
-            reducedMotion={shouldReduce ? 'user' : 'never'}
-            transition={shouldReduce ? ANIMATION_CONFIG.reducedMotion : TRANSITIONS.smooth}
-          >
-            {children}
-          </MotionConfig>
-          <Toaster />
-        </GymProvider>
+        <LocaleProvider>
+          <GymProvider>
+            <MotionConfig
+              reducedMotion={shouldReduce ? 'user' : 'never'}
+              transition={shouldReduce ? ANIMATION_CONFIG.reducedMotion : TRANSITIONS.smooth}
+            >
+              {children}
+            </MotionConfig>
+            <Toaster />
+          </GymProvider>
+        </LocaleProvider>
       </AuthProvider>
     </ThemeProvider>
   );

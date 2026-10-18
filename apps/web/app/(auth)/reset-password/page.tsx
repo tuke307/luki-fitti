@@ -9,11 +9,13 @@ import { Card } from '@luki-fitti/ui/components/ui/card';
 import { Input } from '@luki-fitti/ui/components/ui/input';
 import { Label } from '@luki-fitti/ui/components/ui/label';
 import { api } from '@/lib/api';
+import { useLocale } from '@/providers/i18n/locale-context';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token') ?? '';
+  const { t } = useLocale();
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -63,18 +65,14 @@ export default function ResetPasswordPage() {
               <span className="font-display text-lg font-extrabold">
                 LUKI<span className="text-primary">FITTI</span>
               </span>
-              <span className="text-muted-foreground block text-[11px]">
-                Set New Account Password
-              </span>
+              <span className="text-muted-foreground block text-[11px]">{t.nav.tagline}</span>
             </div>
           </Link>
         </div>
 
         <div>
-          <h1 className="font-display text-2xl font-bold">Reset Your Password</h1>
-          <p className="text-muted-foreground mt-1 text-xs">
-            Choose a strong new password (at least 8 characters with a letter and a number).
-          </p>
+          <h1 className="font-display text-2xl font-bold">{t.auth.resetTitle}</h1>
+          <p className="text-muted-foreground mt-1 text-xs">{t.auth.resetSub}</p>
         </div>
 
         {!token ? (
@@ -87,7 +85,7 @@ export default function ResetPasswordPage() {
               </span>
             </div>
             <Button asChild variant="secondary" className="w-full">
-              <Link href="/forgot-password">Request New Reset Link</Link>
+              <Link href="/forgot-password">{t.auth.sendResetLinkBtn}</Link>
             </Button>
           </div>
         ) : successMessage ? (
@@ -97,14 +95,14 @@ export default function ResetPasswordPage() {
             </div>
             <p className="text-sm font-bold">{successMessage}</p>
             <Button asChild size="lg" className="w-full">
-              <Link href="/login">Go to Sign In →</Link>
+              <Link href="/login">{t.auth.signInBtn} →</Link>
             </Button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="new-password" className="text-xs font-semibold">
-                New Password
+                {t.auth.newPasswordLabel}
               </Label>
               <Input
                 id="new-password"
@@ -112,14 +110,14 @@ export default function ResetPasswordPage() {
                 required
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="At least 8 characters (letter + number)"
+                placeholder={t.auth.passwordMinHint}
                 className="h-10"
               />
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="confirm-password" className="text-xs font-semibold">
-                Confirm New Password
+                {t.auth.confirmPasswordLabel}
               </Label>
               <Input
                 id="confirm-password"
@@ -127,7 +125,7 @@ export default function ResetPasswordPage() {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter new password"
+                placeholder={t.auth.confirmPasswordLabel}
                 className="h-10"
               />
             </div>
@@ -136,7 +134,7 @@ export default function ResetPasswordPage() {
 
             <Button type="submit" size="lg" disabled={loading} className="w-full">
               <KeyRound className="h-4 w-4" />
-              {loading ? 'Updating Password...' : 'Save New Password'}
+              {t.auth.saveNewPasswordBtn}
             </Button>
           </form>
         )}
