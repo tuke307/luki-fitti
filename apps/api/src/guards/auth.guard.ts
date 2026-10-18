@@ -41,6 +41,10 @@ export class AuthGuard implements CanActivate {
         }
       }
 
+      if (!decoded || typeof decoded.id !== 'string' || !decoded.id.trim()) {
+        throw new UnauthorizedException('Invalid access token payload');
+      }
+
       const user = await this.prisma.user.findUnique({
         where: { id: decoded.id },
         select: { id: true, email: true },

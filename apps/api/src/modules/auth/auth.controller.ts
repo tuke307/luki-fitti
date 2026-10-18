@@ -71,6 +71,12 @@ export class AuthController {
     setCookie(res, 'csrfToken', csrfToken, csrfCookieOptions);
   }
 
+  private clearSessionCookies(res: Response) {
+    setCookie(res, 'accessToken', null, accessTokenCookieOptions);
+    setCookie(res, 'refreshToken', null, refreshTokenCookieOptions);
+    setCookie(res, 'csrfToken', null, csrfCookieOptions);
+  }
+
   @Post('register')
   @Throttle({ default: { limit: 10, ttl: 600_000 } })
   @ApiOperation({ summary: 'Register a new user account and initialize starter templates' })
@@ -150,10 +156,7 @@ export class AuthController {
     }
 
     await this.refreshTokenService.deleteByUserId(currentUser.id);
-
-    setCookie(res, 'accessToken', null, accessTokenCookieOptions);
-    setCookie(res, 'refreshToken', null, refreshTokenCookieOptions);
-    setCookie(res, 'csrfToken', null, csrfCookieOptions);
+    this.clearSessionCookies(res);
 
     return { success: true };
   }
@@ -170,17 +173,25 @@ export class AuthController {
     try {
       payload = verifyRefreshToken(refreshToken);
     } catch {
+      this.clearSessionCookies(res);
       throw new ForbiddenException('Invalid refresh token');
+    }
+
+    if (!payload || typeof payload.id !== 'string' || !payload.id.trim()) {
+      this.clearSessionCookies(res);
+      throw new ForbiddenException('Invalid refresh token payload');
     }
 
     const user = await this.authService.getUserById(payload.id);
     if (!user) {
+      this.clearSessionCookies(res);
       throw new NotFoundException('User not found');
     }
 
     const claimed = await this.refreshTokenService.claimToken(refreshToken);
     if (!claimed) {
       await this.refreshTokenService.deleteByUserId(payload.id);
+      this.clearSessionCookies(res);
       throw new ForbiddenException('Refresh token not found or already used');
     }
 
