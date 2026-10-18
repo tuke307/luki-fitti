@@ -53,3 +53,18 @@ export const DATABASE_URL =
 export const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 export const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || undefined;
 export const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+
+// Email & BullMQ Configuration
+export const SMTP_HOST = process.env.SMTP_HOST || 'localhost';
+export const SMTP_PORT = Number(process.env.SMTP_PORT) || 1025;
+export const SMTP_USER = process.env.SMTP_USER || '';
+export const SMTP_PASS = process.env.SMTP_PASS || '';
+export const SMTP_REJECT_UNAUTHORIZED = process.env.SMTP_REJECT_UNAUTHORIZED !== 'false';
+export const EMAIL_FROM = process.env.EMAIL_FROM || 'noreply@lukifitti.app';
+export const EMAIL_MAX_ATTEMPTS = Number(process.env.EMAIL_MAX_ATTEMPTS) || 3;
+export const EMAIL_RETRY_DELAY_MS = Number(process.env.EMAIL_RETRY_DELAY_MS) || 5000;
+
+export const EMAIL_VERIFICATION_EXPIRY_MS =
+  Number(process.env.EMAIL_VERIFICATION_EXPIRY_MS) || 24 * 60 * 60 * 1000;
+export const PASSWORD_RESET_EXPIRY_MS =
+  Number(process.env.PASSWORD_RESET_EXPIRY_MS) || 60 * 60 * 1000;

@@ -5,6 +5,20 @@
   "license": "UNLICENSED",
   "author": "Tony Meissner",
   "type": "module",
+  "exports": {
+    "./services/email.service": {
+      "types": "./src/modules/email/email.service.ts",
+      "default": "./dist/src/modules/email/email.service.js"
+    },
+    "./services/bullmq.service": {
+      "types": "./src/modules/bullmq/bullmq.service.ts",
+      "default": "./dist/src/modules/bullmq/bullmq.service.js"
+    },
+    "./services/prisma.service": {
+      "types": "./src/modules/database/prisma.service.ts",
+      "default": "./dist/src/modules/database/prisma.service.js"
+    }
+  },
   "scripts": {
     "build": "nestgo build",
     "clean": "rm -rf dist",
