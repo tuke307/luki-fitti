@@ -106,6 +106,21 @@ async function main(): Promise<void> {
         },
       });
 
+      await tx.emailTemplate.upsert({
+        where: { type: 'ACCOUNT_DELETION' },
+        update: {
+          name: 'Account Deletion',
+          subject: 'LukiFitti — Confirm account deletion',
+          htmlFile: 'account-deletion.mjml',
+        },
+        create: {
+          name: 'Account Deletion',
+          subject: 'LukiFitti — Confirm account deletion',
+          htmlFile: 'account-deletion.mjml',
+          type: 'ACCOUNT_DELETION',
+        },
+      });
+
       const seedEmail = process.env.SEED_USER_EMAIL;
       if (seedEmail) {
         const user = await tx.user.findUnique({ where: { email: seedEmail.toLowerCase() } });

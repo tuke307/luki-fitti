@@ -2,6 +2,7 @@
 
 import React, { createContext, useState, useEffect, ReactNode, useContext } from 'react';
 import { api, ApiClientError } from '@/lib/api';
+import { clearAllLocalData } from '@/lib/offline/offline-store';
 import type { RegisterDto, UpdatePreferencesDto, UserDto } from '@luki-fitti/common/schemas';
 import { DistanceUnit, WeightUnit } from '@luki-fitti/common/enums';
 
@@ -15,6 +16,8 @@ interface AuthContextProps {
   register: (data: RegisterDto) => Promise<boolean>;
   verifyEmail: (token: string) => Promise<boolean>;
   resendConfirmation: (email: string) => Promise<boolean>;
+  requestAccountDeletion: (password: string) => Promise<boolean>;
+  confirmAccountDeletion: (token: string) => Promise<boolean>;
   logout: () => Promise<void>;
   updatePreferences: (data: UpdatePreferencesDto) => Promise<void>;
   continueOfflineLocal: () => void;
@@ -50,6 +53,8 @@ export const AuthContext = createContext<AuthContextProps>({
   register: async () => false,
   verifyEmail: async () => false,
   resendConfirmation: async () => false,
+  requestAccountDeletion: async () => false,
+  confirmAccountDeletion: async () => false,
   logout: async () => {},
   updatePreferences: async () => {},
   continueOfflineLocal: () => {},
@@ -95,6 +100,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
           }
         } else if (err instanceof ApiClientError && err.isAuthError) {
+          await clearAllLocalData().catch(() => undefined);
           localStorage.removeItem('luki_cached_user_profile');
           setUser(DEFAULT_LOCAL_USER);
           setAuthMode('OFFLINE_LOCAL');
@@ -223,9 +229,60 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch {
       // Clear local profile regardless of network availability
     } finally {
+      await clearAllLocalData().catch(() => undefined);
       localStorage.removeItem('luki_cached_user_profile');
       setUser(DEFAULT_LOCAL_USER);
       setAuthMode('OFFLINE_LOCAL');
+      setLoading(false);
+    }
+  };
+
+  const requestAccountDeletion = async (password: string): Promise<boolean> => {
+    setLoading(true);
+    setError(null);
+    setInfoMessage(null);
+    try {
+      const response = await api.auth.requestAccountDeletion({ password });
+      if (response.success) {
+        setInfoMessage(
+          response.data?.message ||
+            'A confirmation link has been sent to your email address. Click the link in the email and confirm in your browser to permanently delete your account.',
+        );
+        return true;
+      }
+      setError(response.error || 'Failed to request account deletion');
+      return false;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to request account deletion');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const confirmAccountDeletion = async (token: string): Promise<boolean> => {
+    setLoading(true);
+    setError(null);
+    setInfoMessage(null);
+    try {
+      const response = await api.auth.confirmAccountDeletion({ token });
+      if (response.success) {
+        await clearAllLocalData().catch(() => undefined);
+        localStorage.removeItem('luki_cached_user_profile');
+        setUser(DEFAULT_LOCAL_USER);
+        setAuthMode('OFFLINE_LOCAL');
+        setInfoMessage(
+          response.data?.message ||
+            'Your account and all associated workout data have been permanently deleted.',
+        );
+        return true;
+      }
+      setError(response.error || 'Failed to confirm account deletion');
+      return false;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Invalid or expired account deletion link');
+      return false;
+    } finally {
       setLoading(false);
     }
   };
@@ -295,6 +352,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         register,
         verifyEmail,
         resendConfirmation,
+        requestAccountDeletion,
+        confirmAccountDeletion,
         logout,
         updatePreferences,
         continueOfflineLocal,

@@ -13,12 +13,23 @@ import {
   CheckCircle2,
   MailCheck,
   KeyRound,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Badge } from '@luki-fitti/ui/components/ui/badge';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import { Card } from '@luki-fitti/ui/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@luki-fitti/ui/components/ui/dialog';
 import { Input } from '@luki-fitti/ui/components/ui/input';
+import { Label } from '@luki-fitti/ui/components/ui/label';
 import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useAuth } from '@/providers/auth/auth-context';
@@ -41,6 +52,7 @@ export function ProfileImportView() {
     login,
     register,
     resendConfirmation,
+    requestAccountDeletion,
     logout,
     updatePreferences,
     error: authError,
@@ -61,6 +73,9 @@ export function ProfileImportView() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [exportStatus, setExportStatus] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const allTemplatesCount =
     folders.reduce((acc, f) => acc + f.templates.length, 0) + unfiledTemplates.length;
@@ -235,20 +250,40 @@ export function ProfileImportView() {
           )}
 
           {authMode === 'AUTHENTICATED' ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <Button type="button" variant="secondary" asChild>
-                <Link href="/change-password">
-                  <KeyRound className="h-4 w-4" /> Change Password
-                </Link>
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => void logout()}
-                className="hover:bg-destructive/20 hover:text-destructive w-fit"
-              >
-                <LogOut className="h-4 w-4" /> Sign Out of Server Session
-              </Button>
+            <div className="space-y-3">
+              {authInfoMessage && (
+                <div className="border-primary/40 bg-primary/15 text-primary flex items-start gap-2 rounded-2xl border p-3 text-xs">
+                  <MailCheck className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>{authInfoMessage}</span>
+                </div>
+              )}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="button" variant="secondary" asChild>
+                  <Link href="/change-password">
+                    <KeyRound className="h-4 w-4" /> Change Password
+                  </Link>
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void logout()}
+                  className="hover:bg-destructive/20 hover:text-destructive w-fit"
+                >
+                  <LogOut className="h-4 w-4" /> Sign Out of Server Session
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => {
+                    setDeletePassword('');
+                    setDeleteError(null);
+                    setDeleteDialogOpen(true);
+                  }}
+                  className="w-fit"
+                >
+                  <Trash2 className="h-4 w-4" /> Delete Account
+                </Button>
+              </div>
             </div>
           ) : (
             <form
@@ -512,6 +547,73 @@ export function ProfileImportView() {
           </div>
         </Card>
       )}
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 shrink-0" />
+              Request Account Deletion
+            </DialogTitle>
+            <DialogDescription>
+              Enter your current password to receive a confirmation email at{' '}
+              <strong>{user?.email}</strong>. Your account and workout data will only be deleted
+              after you click the link in that email and confirm in your browser.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setDeleteError(null);
+              if (!deletePassword.trim()) {
+                setDeleteError('Please enter your current password to request account deletion.');
+                return;
+              }
+              const ok = await requestAccountDeletion(deletePassword);
+              if (ok) {
+                setDeletePassword('');
+                setDeleteDialogOpen(false);
+              }
+            }}
+            className="space-y-4"
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="delete-account-password" className="text-xs font-semibold">
+                Current Password
+              </Label>
+              <Input
+                id="delete-account-password"
+                type="password"
+                required
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                placeholder="Enter your current password"
+                className="h-10 text-xs"
+              />
+            </div>
+
+            {(deleteError || authError) && (
+              <p className="text-destructive text-xs">{deleteError || authError}</p>
+            )}
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(false)}
+                disabled={authLoading}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" variant="destructive" disabled={authLoading}>
+                <MailCheck className="h-4 w-4" />
+                {authLoading ? 'Sending Email...' : 'Send Deletion Confirmation Email'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

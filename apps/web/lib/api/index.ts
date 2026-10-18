@@ -3,6 +3,7 @@ import type {
   AnalyticsQueryDto,
   AnalyticsSummaryDto,
   ChangePasswordDto,
+  ConfirmAccountDeletionDto,
   CreateExerciseDto,
   CreateFolderDto,
   CreateStretchingRoutineDto,
@@ -17,6 +18,7 @@ import type {
   LoginDto,
   RegisterDto,
   RegisterResponseDto,
+  RequestAccountDeletionDto,
   ResendConfirmationDto,
   ResetPasswordDto,
   StartSessionDto,
@@ -82,6 +84,18 @@ export const auth = {
     apiFetch<{ success: boolean }>('/auth/change-password', {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+  requestAccountDeletion: (data: RequestAccountDeletionDto) =>
+    apiFetch<{ success: boolean; message: string }>('/auth/request-delete-account', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      retry: false,
+    }),
+  confirmAccountDeletion: (data: ConfirmAccountDeletionDto) =>
+    apiFetch<{ success: boolean; message: string }>('/auth/confirm-delete-account', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      retry: false,
     }),
   logout: () =>
     apiFetch<{ success: boolean }>('/auth/logout', {
@@ -239,7 +253,7 @@ export const imports = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  listJobs: () => apiFetch<any[]>('/import/jobs'),
+  listJobs: () => apiFetch<Record<string, unknown>[]>('/import/jobs'),
 };
 
 export * from './client';

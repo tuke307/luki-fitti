@@ -19,6 +19,11 @@ const DEFAULT_TEMPLATES: Record<
     subject: 'LukiFitti — Reset your password',
     htmlFile: 'password-reset.mjml',
   },
+  [EmailTemplateType.ACCOUNT_DELETION]: {
+    name: 'Account Deletion',
+    subject: 'LukiFitti — Confirm account deletion',
+    htmlFile: 'account-deletion.mjml',
+  },
 };
 
 @Injectable()
@@ -32,7 +37,12 @@ export class EmailTemplateService {
     if (!this.prisma?.emailTemplate) {
       const fallback = DEFAULT_TEMPLATES[type];
       return {
-        id: type === EmailTemplateType.ACCOUNT_CONFIRMATION ? 1 : 2,
+        id:
+          type === EmailTemplateType.ACCOUNT_CONFIRMATION
+            ? 1
+            : type === EmailTemplateType.PASSWORD_RESET
+              ? 2
+              : 3,
         name: fallback.name,
         subject: fallback.subject,
         htmlFile: fallback.htmlFile,
@@ -66,6 +76,7 @@ export class EmailTemplateService {
       email: 'athlete@lukifitti.app',
       confirmation_url: 'http://localhost:3000/verify-email?token=sample-token',
       reset_password_url: 'http://localhost:3000/reset-password?token=sample-token',
+      delete_account_url: 'http://localhost:3000/delete-account?token=sample-token',
       expiry_minutes: 60,
       frontend_url: 'http://localhost:3000',
     });

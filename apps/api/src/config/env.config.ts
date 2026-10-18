@@ -68,3 +68,5 @@ export const EMAIL_VERIFICATION_EXPIRY_MS =
   Number(process.env.EMAIL_VERIFICATION_EXPIRY_MS) || 24 * 60 * 60 * 1000;
 export const PASSWORD_RESET_EXPIRY_MS =
   Number(process.env.PASSWORD_RESET_EXPIRY_MS) || 60 * 60 * 1000;
+export const ACCOUNT_DELETION_EXPIRY_MS =
+  Number(process.env.ACCOUNT_DELETION_EXPIRY_MS) || 60 * 60 * 1000;
