@@ -2,12 +2,14 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildDefaultFoldersAndTemplates,
+  clearAllLocalData,
   computeRemainingRestSeconds,
   createOfflineSessionFromStretchingRoutine,
   createOfflineSessionFromTemplate,
   enqueueSessionSync,
   getCachedCatalog,
   getCachedStretchingRoutines,
+  getCachedWorkouts,
   getLocalActiveSession,
   getLocalHistorySessions,
   getSyncQueue,
@@ -16,6 +18,8 @@ import {
   removeLocalHistorySession,
   saveLocalActiveSession,
   saveLocalHistorySession,
+  setCachedCatalog,
+  setCachedWorkouts,
   substituteExerciseInSession,
 } from './offline-store';
 import {
@@ -361,5 +365,69 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
 
     const session = createOfflineSessionFromTemplate(supersetTemplate, catalog, 'user-1');
     assert.equal(session.exercises[0]!.restSeconds, 0);
+  });
+
+  it('wipes cached workouts, custom exercises, active session, and history on logout via clearAllLocalData', async () => {
+    const catalog = await getCachedCatalog();
+    await setCachedCatalog([
+      ...catalog,
+      {
+        id: 'custom-user-ex',
+        slug: 'custom-user-ex',
+        userId: 'user-1',
+        name: 'Secret Custom Exercise',
+        description: 'Custom exercise',
+        instructions: [],
+        category: catalog[0]!.category,
+        exerciseType: ExerciseType.STRENGTH,
+        primaryMuscleGroup: MuscleGroup.CHEST,
+        secondaryMuscleGroups: [],
+        equipment: catalog[0]!.equipment,
+        recommendedDurationSeconds: null,
+        tags: [],
+        isSystem: false,
+        alternativeExerciseIds: [],
+      },
+    ]);
+
+    await setCachedWorkouts({
+      folders: [
+        {
+          id: 'custom-folder',
+          userId: 'user-1',
+          name: 'User Private Split',
+          color: '#CCFF00',
+          sortOrder: 0,
+          templates: [],
+        },
+      ],
+      unfiledTemplates: [],
+    });
+
+    const { folders } = buildDefaultFoldersAndTemplates('user-1');
+    const active = createOfflineSessionFromTemplate(folders[0]!.templates[0]!, catalog, 'user-1');
+    await saveLocalActiveSession(active);
+    await enqueueSessionSync(active);
+    await saveLocalHistorySession({
+      ...active,
+      status: SessionStatus.COMPLETED,
+      completedAt: new Date().toISOString(),
+    });
+
+    await clearAllLocalData();
+
+    assert.equal(await getLocalActiveSession(), null);
+    assert.equal((await getLocalHistorySessions()).length, 0);
+    assert.equal((await getSyncQueue()).length, 0);
+    const resetCatalog = await getCachedCatalog();
+    assert.equal(
+      resetCatalog.some((e) => e.id === 'custom-user-ex'),
+      false,
+    );
+    const resetWorkouts = await getCachedWorkouts();
+    assert.equal(
+      resetWorkouts.folders.some((f) => f.id === 'custom-folder'),
+      false,
+    );
   });
 });

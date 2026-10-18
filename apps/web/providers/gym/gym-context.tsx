@@ -266,6 +266,11 @@ export function GymProvider({ children }: { children: ReactNode }) {
       setStretchingRoutines(localStretch);
       if (localActive && !deletedSessionIdsRef.current.has(localActive.clientSessionId)) {
         setActiveSession(localActive);
+      } else {
+        setActiveSession(null);
+      }
+      if (!isAuthenticated) {
+        setConflictServerSession(null);
       }
       setHistorySessions(
         localHistory.filter(
@@ -371,7 +376,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
     } finally {
       isRefreshingRef.current = false;
     }
-  }, [flushSyncQueue, isAuthenticated]);
+  }, [flushSyncQueue, isAuthenticated, user?.id]);
 
   useEffect(() => {
     refreshAllData();

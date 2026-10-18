@@ -487,6 +487,26 @@ export async function getLocalHistorySessions(): Promise<WorkoutSessionDto[]> {
   });
 }
 
+export async function clearAllLocalData(): Promise<void> {
+  memoryKv.clear();
+  memoryQueue.clear();
+  memoryHistory.clear();
+
+  if (!hasIndexedDb()) return;
+  const db = await openDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(
+      [STORES.KV, STORES.SYNC_QUEUE, STORES.SESSION_HISTORY],
+      'readwrite',
+    );
+    tx.objectStore(STORES.KV).clear();
+    tx.objectStore(STORES.SYNC_QUEUE).clear();
+    tx.objectStore(STORES.SESSION_HISTORY).clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Pure Offline Session Builders & Mutations
 // ─────────────────────────────────────────────────────────────────────────────
