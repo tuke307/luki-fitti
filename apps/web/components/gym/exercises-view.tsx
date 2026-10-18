@@ -30,7 +30,10 @@ import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { Textarea } from '@luki-fitti/ui/components/ui/textarea';
 import { useGym } from '@/providers/gym/gym-context';
-import { computeExerciseProgression } from '@luki-fitti/common/utils/client';
+import {
+  computeExerciseProgression,
+  formatDateTime,
+} from '@luki-fitti/common/utils/client';
 import { ExerciseVisual } from './exercise-visual';
 import {
   EQUIPMENT_LABELS,
@@ -803,8 +806,8 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                           >
                             <div>
                               <p className="font-semibold">{entry.workoutName}</p>
-                              <p className="text-muted-foreground text-[10px]">
-                                {new Date(entry.startedAt).toLocaleDateString()}
+                              <p className="text-muted-foreground font-mono-tabular text-[10px]">
+                                {formatDateTime(entry.startedAt)}
                               </p>
                             </div>
                             <div className="flex flex-wrap gap-1">

@@ -40,6 +40,12 @@ import { Progress } from '@luki-fitti/ui/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useGym } from '@/providers/gym/gym-context';
 import {
+  formatDate,
+  formatDateTime,
+  formatLongDateTime,
+  formatShortDayMonth,
+} from '@luki-fitti/common/utils/client';
+import {
   ExerciseType,
   MUSCLE_GROUP_LABELS,
   MuscleGroup,
@@ -189,7 +195,7 @@ export function DiaryAnalyticsView() {
                   maxWeightKg: Math.round(wKg * 10) / 10,
                   reps,
                   est1RM: Math.round(est1RM * 10) / 10,
-                  date: toLocalDateIso(s.startedAt),
+                  date: formatDate(s.startedAt),
                 });
               }
             }
@@ -199,7 +205,7 @@ export function DiaryAnalyticsView() {
 
         if (exMaxWeight > 0) {
           progression.push({
-            date: toLocalDateIso(s.startedAt),
+            date: s.startedAt,
             workoutName: s.workoutNameSnapshot,
             exerciseName: ex.exerciseNameSnapshot,
             maxWeightKg: Math.round(exMaxWeight * 10) / 10,
@@ -242,8 +248,8 @@ export function DiaryAnalyticsView() {
   const diaryChartData = useMemo(() => {
     if (selectedExerciseId !== 'ALL') {
       return stats.progression.map((p) => ({
-        label: p.date.slice(5),
-        fullDate: p.date,
+        label: formatShortDayMonth(p.date),
+        fullDate: formatDateTime(p.date),
         workoutName: p.workoutName,
         est1RM: p.est1RM,
         maxWeightKg: p.maxWeightKg,
@@ -258,19 +264,16 @@ export function DiaryAnalyticsView() {
       .reverse()
       .slice(-20);
 
-    return strengthChrono.map((s) => {
-      const iso = toLocalDateIso(s.startedAt);
-      return {
-        label: iso.slice(5),
-        fullDate: iso,
-        workoutName: s.workoutNameSnapshot,
-        est1RM: 0,
-        maxWeightKg: 0,
-        volumeTons: Math.round((s.totalVolumeKg / 1000) * 10) / 10,
-        volumeKg: Math.round(s.totalVolumeKg),
-        sets: s.totalSetsCompleted,
-      };
-    });
+    return strengthChrono.map((s) => ({
+      label: formatShortDayMonth(s.startedAt),
+      fullDate: formatDateTime(s.startedAt),
+      workoutName: s.workoutNameSnapshot,
+      est1RM: 0,
+      maxWeightKg: 0,
+      volumeTons: Math.round((s.totalVolumeKg / 1000) * 10) / 10,
+      volumeKg: Math.round(s.totalVolumeKg),
+      sets: s.totalSetsCompleted,
+    }));
   }, [filteredSessions, selectedExerciseId, stats.progression]);
 
   // Dynamic activity breakdown matching the selected period ('week' | 'month' | 'year' | 'all')
@@ -854,12 +857,7 @@ export function DiaryAnalyticsView() {
                       {session.sessionType}
                     </Badge>
                     <span className="text-muted-foreground font-mono-tabular text-xs">
-                      {new Date(session.startedAt).toLocaleDateString(undefined, {
-                        weekday: 'short',
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
+                      {formatLongDateTime(session.startedAt)}
                     </span>
                   </div>
 
@@ -942,7 +940,7 @@ export function DiaryAnalyticsView() {
             <>
               <DialogHeader>
                 <span className="text-muted-foreground font-mono-tabular text-xs">
-                  {new Date(inspectingSession.startedAt).toLocaleString()}
+                  {formatDateTime(inspectingSession.startedAt)}
                 </span>
                 <DialogTitle className="font-display text-xl font-bold">
                   {inspectingSession.workoutNameSnapshot}

@@ -1,39 +1,72 @@
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 
-/**
- * Formats a date object to a localized date string
- * @param date The date to format
- * @returns Formatted date string in German format (dd.MM.yyyy)
- */
-export function formatDate(date: Date): string {
-  return date.toLocaleDateString('de-DE', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
+function toDate(dateInput: Date | string | number): Date {
+  return dateInput instanceof Date ? dateInput : new Date(dateInput);
 }
 
 /**
- * Formats a date object to a localized time string
- * @param date The date to format
- * @returns Formatted time string in German format (HH:mm)
+ * Formats a date to `dd.MM.yyyy` (e.g., `17.10.2026`)
  */
-export function formatTime(date: Date): string {
-  return date.toLocaleTimeString('de-DE', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+export function formatDate(dateInput: Date | string | number): string {
+  const d = toDate(dateInput);
+  if (isNaN(d.getTime())) return '';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}.${month}.${year}`;
 }
 
 /**
- * Formats a date object to a localized date and time string
- * @param date The date to format
- * @returns Formatted date and time string
+ * Formats a time to 24h `HH:mm` without seconds (e.g., `16:10`)
  */
-export function formatDateTime(date: Date): string {
-  return `${formatDate(date)} ${formatTime(date)}`;
+export function formatTime(dateInput: Date | string | number): string {
+  const d = toDate(dateInput);
+  if (isNaN(d.getTime())) return '';
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
+/**
+ * Formats a date and time to `dd.MM.yyyy HH:mm` without seconds (e.g., `17.10.2026 16:10`)
+ */
+export function formatDateTime(dateInput: Date | string | number): string {
+  const d = toDate(dateInput);
+  if (isNaN(d.getTime())) return '';
+  return `${formatDate(d)} ${formatTime(d)}`;
+}
+
+/**
+ * Formats a date with full month name (e.g., `17. October 2026`)
+ */
+export function formatLongDate(dateInput: Date | string | number): string {
+  const d = toDate(dateInput);
+  if (isNaN(d.getTime())) return '';
+  const day = d.getDate();
+  const monthName = d.toLocaleDateString('en-US', { month: 'long' });
+  const year = d.getFullYear();
+  return `${day}. ${monthName} ${year}`;
+}
+
+/**
+ * Formats a date with full month name and 24h time (e.g., `17. October 2026, 16:10`)
+ */
+export function formatLongDateTime(dateInput: Date | string | number): string {
+  const d = toDate(dateInput);
+  if (isNaN(d.getTime())) return '';
+  return `${formatLongDate(d)}, ${formatTime(d)}`;
+}
+
+/**
+ * Formats a compact day.month label for chart axes (e.g., `17.10.`)
+ */
+export function formatShortDayMonth(dateInput: Date | string | number): string {
+  const d = toDate(dateInput);
+  if (isNaN(d.getTime())) return '';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  return `${day}.${month}.`;
 }
 
 /**

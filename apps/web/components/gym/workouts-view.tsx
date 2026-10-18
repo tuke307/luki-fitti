@@ -52,6 +52,7 @@ import { Input } from '@luki-fitti/ui/components/ui/input';
 import { Label } from '@luki-fitti/ui/components/ui/label';
 import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
 import { useGym } from '@/providers/gym/gym-context';
+import { formatDate, formatDateTime } from '@luki-fitti/common/utils/client';
 import { MUSCLE_GROUP_LABELS, SessionStatus } from '@luki-fitti/common/enums';
 import { ExerciseVisual } from './exercise-visual';
 import type {
@@ -283,7 +284,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               Last:{' '}
               <strong className="font-mono-tabular text-foreground">
                 {tplStats.lastSessionDate
-                  ? new Date(tplStats.lastSessionDate).toLocaleDateString()
+                  ? formatDateTime(tplStats.lastSessionDate)
                   : 'Never trained'}
               </strong>
             </span>
@@ -553,7 +554,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                     Last:{' '}
                     <strong className="font-mono-tabular text-foreground">
                       {folderStats.lastSessionDate
-                        ? new Date(folderStats.lastSessionDate).toLocaleDateString()
+                        ? formatDate(folderStats.lastSessionDate)
                         : '—'}
                     </strong>
                   </span>
