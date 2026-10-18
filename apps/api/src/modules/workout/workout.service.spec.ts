@@ -1,96 +1,127 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { WorkoutService } from './workout.service';
+import type { PrismaService } from '../database/prisma.service';
 import { WeightUnit } from '@luki-fitti/common/enums';
 
-function createMockWorkoutPrisma() {
-  const folders = new Map<string, any>();
-  const templates = new Map<string, any>();
-  const templateExercises = new Map<string, any[]>();
-  const sessions = new Map<string, any>();
+function createMockWorkoutPrisma(): PrismaService {
+  const folders = new Map<string, Record<string, unknown>>();
+  const templates = new Map<string, Record<string, unknown>>();
+  const templateExercises = new Map<string, Array<Record<string, unknown>>>();
+  const sessions = new Map<string, Record<string, unknown>>();
 
-  const prisma: any = {
+  const prisma = {
     workoutFolder: {
-      findUnique: async ({ where }: any) => {
+      findUnique: async ({
+        where,
+      }: {
+        where: { id?: string; userId_name?: { userId: string; name: string } };
+      }) => {
         if (where.id) return folders.get(where.id) ?? null;
         if (where.userId_name) {
           return (
             Array.from(folders.values()).find(
               (f) =>
-                f.userId === where.userId_name.userId && f.name === where.userId_name.name,
+                f.userId === where.userId_name?.userId && f.name === where.userId_name?.name,
             ) ?? null
           );
         }
         return null;
       },
-      create: async ({ data }: any) => {
+      create: async ({ data }: { data: Record<string, unknown> }) => {
         const id = `folder-${folders.size + 1}`;
         const f = { id, ...data, createdAt: new Date(), updatedAt: new Date() };
         folders.set(id, f);
         return f;
       },
-      delete: async ({ where }: any) => {
+      delete: async ({ where }: { where: { id: string } }) => {
         folders.delete(where.id);
       },
     },
     workoutTemplate: {
-      findUnique: async ({ where }: any) => {
+      findMany: async ({
+        where,
+      }: {
+        where: { userId: string; folderId?: string | null };
+      }) => {
+        return Array.from(templates.values())
+          .filter(
+            (t) =>
+              t.userId === where.userId &&
+              (where.folderId !== undefined ? t.folderId === where.folderId : true),
+          )
+          .sort((a, b) => Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0));
+      },
+      findUnique: async ({ where }: { where: { id: string } }) => {
         const t = templates.get(where.id);
         if (!t) return null;
         return {
           ...t,
-          exercises: templateExercises.get(t.id) ?? [],
+          exercises: templateExercises.get(String(t.id)) ?? [],
         };
       },
-      findUniqueOrThrow: async ({ where }: any) => {
+      findUniqueOrThrow: async ({ where }: { where: { id: string } }) => {
         const t = templates.get(where.id);
         if (!t) throw new Error('Not found');
         return {
           ...t,
-          exercises: templateExercises.get(t.id) ?? [],
+          exercises: templateExercises.get(String(t.id)) ?? [],
         };
       },
-      create: async ({ data }: any) => {
+      create: async ({ data }: { data: Record<string, unknown> }) => {
         const id = `tpl-${templates.size + 1}`;
         const t = { id, ...data, createdAt: new Date(), updatedAt: new Date() };
         templates.set(id, t);
         templateExercises.set(id, []);
         return t;
       },
-      update: async ({ where, data }: any) => {
+      update: async ({
+        where,
+        data,
+      }: {
+        where: { id: string };
+        data: Record<string, unknown>;
+      }) => {
         const t = templates.get(where.id);
-        Object.assign(t, data);
+        if (t) Object.assign(t, data);
         return t;
       },
-      updateMany: async ({ where, data }: any) => {
+      updateMany: async ({
+        where,
+        data,
+      }: {
+        where: { folderId: string; userId: string };
+        data: Record<string, unknown>;
+      }) => {
         for (const t of templates.values()) {
           if (t.folderId === where.folderId && t.userId === where.userId) {
             Object.assign(t, data);
           }
         }
       },
-      delete: async ({ where }: any) => {
+      delete: async ({ where }: { where: { id: string } }) => {
         templates.delete(where.id);
       },
     },
     workoutTemplateExercise: {
-      create: async ({ data }: any) => {
-        const list = templateExercises.get(data.templateId) ?? [];
+      create: async ({ data }: { data: Record<string, unknown> }) => {
+        const tplId = String(data.templateId);
+        const list = templateExercises.get(tplId) ?? [];
         const entry = { id: `tple-${list.length + 1}`, ...data };
         list.push(entry);
-        templateExercises.set(data.templateId, list);
+        templateExercises.set(tplId, list);
         return entry;
       },
-      deleteMany: async ({ where }: any) => {
+      deleteMany: async ({ where }: { where: { templateId: string } }) => {
         templateExercises.set(where.templateId, []);
       },
     },
-    $transaction: async (fn: any) => fn(prisma),
+    $transaction: async <T>(fn: (tx: unknown) => Promise<T>) => fn(prisma),
     _sessions: sessions,
     _templates: templates,
   };
 
-  return prisma;
+  return prisma as unknown as PrismaService;
 }
 
 describe('WorkoutService — Folders, Templates, Alternatives & User Isolation', () => {
@@ -160,10 +191,21 @@ describe('WorkoutService — Folders, Templates, Alternatives & User Isolation',
       ],
     });
 
+    const tpl2 = await service.createTemplate('user-a', {
+      name: 'Pull Day',
+      folderId: folder.id,
+      sortOrder: 1,
+      exercises: [],
+    });
+
     const copy = await service.duplicateTemplate('user-a', tpl.id);
     assert.equal(copy.name, 'Push Day (Copy)');
+    assert.equal(copy.sortOrder, 1);
     assert.equal(copy.exercises.length, 1);
     assert.deepEqual(copy.exercises[0]?.alternativeExerciseIds, ['ex-dumbbell-incline-press']);
+
+    const afterDupTpl2 = await service.getTemplateById('user-a', tpl2.id);
+    assert.equal(afterDupTpl2.sortOrder, 2);
 
     // Delete folder -> templates are unfiled (folderId = null), not deleted
     await service.deleteFolder('user-a', folder.id);

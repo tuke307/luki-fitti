@@ -308,12 +308,22 @@ export class WorkoutService {
 
   async duplicateTemplate(userId: string, templateId: string): Promise<WorkoutTemplateDto> {
     const source = await this.getTemplateById(userId, templateId);
-    return this.createTemplate(userId, {
+
+    const siblings = await this.prisma.workoutTemplate.findMany({
+      where: { userId, folderId: source.folderId },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+      select: { id: true },
+    });
+
+    const sourceIdx = siblings.findIndex((s) => s.id === source.id);
+    const targetSortOrder = sourceIdx >= 0 ? sourceIdx + 1 : siblings.length;
+
+    const duplicated = await this.createTemplate(userId, {
       name: `${source.name} (Copy)`,
       description: source.description,
       folderId: source.folderId,
       estimatedDurationMinutes: source.estimatedDurationMinutes ?? 60,
-      sortOrder: source.sortOrder + 1,
+      sortOrder: targetSortOrder,
       exercises: source.exercises.map((ex, idx) => ({
         exerciseId: ex.exerciseId,
         orderIndex: idx,
@@ -330,6 +340,26 @@ export class WorkoutService {
         alternativeExerciseIds: ex.alternativeExerciseIds,
       })),
     });
+
+    if (siblings.length > 0) {
+      const orderedIds = siblings.map((s) => s.id);
+      if (sourceIdx >= 0) {
+        orderedIds.splice(sourceIdx + 1, 0, duplicated.id);
+      } else {
+        orderedIds.push(duplicated.id);
+      }
+      await this.prisma.$transaction(async (tx) => {
+        for (const [idx, id] of orderedIds.entries()) {
+          await tx.workoutTemplate.update({
+            where: { id },
+            data: { sortOrder: idx },
+          });
+        }
+      });
+      duplicated.sortOrder = targetSortOrder;
+    }
+
+    return duplicated;
   }
 
   async moveTemplate(
@@ -355,7 +385,49 @@ export class WorkoutService {
     return { success: true };
   }
 
-  private mapTemplateDto(tpl: any): WorkoutTemplateDto {
+  private mapTemplateDto(tpl: {
+    id: string;
+    userId: string;
+    folderId: string | null;
+    name: string;
+    description: string | null;
+    estimatedDurationMinutes: number | null;
+    sortOrder: number;
+    createdAt: Date | string;
+    updatedAt: Date | string;
+    exercises?: Array<{
+      id: string;
+      templateId: string;
+      exerciseId: string;
+      orderIndex: number;
+      plannedSets: number;
+      warmupSets: number;
+      targetRepsMin: number | null;
+      targetRepsMax: number | null;
+      targetWeight: number | null;
+      weightUnit: string;
+      restSeconds: number;
+      targetDurationSeconds: number | null;
+      targetDistanceMeters: number | null;
+      notes: string | null;
+      alternativeExerciseIds?: string[];
+      exercise?: {
+        id: string;
+        slug: string;
+        userId: string | null;
+        name: string;
+        description: string;
+        instructions?: string[];
+        category: string;
+        exerciseType: string;
+        primaryMuscleGroup: string;
+        equipment: string;
+        recommendedDurationSeconds: number | null;
+        tags?: string[];
+        isSystem: boolean;
+      } | null;
+    }>;
+  }): WorkoutTemplateDto {
     return {
       id: tpl.id,
       userId: tpl.userId,
@@ -366,7 +438,7 @@ export class WorkoutService {
       sortOrder: tpl.sortOrder,
       createdAt: tpl.createdAt instanceof Date ? tpl.createdAt.toISOString() : tpl.createdAt,
       updatedAt: tpl.updatedAt instanceof Date ? tpl.updatedAt.toISOString() : tpl.updatedAt,
-      exercises: (tpl.exercises ?? []).map((e: any) => ({
+      exercises: (tpl.exercises ?? []).map((e) => ({
         id: e.id,
         templateId: e.templateId,
         exerciseId: e.exerciseId,
@@ -376,7 +448,7 @@ export class WorkoutService {
         targetRepsMin: e.targetRepsMin,
         targetRepsMax: e.targetRepsMax,
         targetWeight: e.targetWeight,
-        weightUnit: e.weightUnit,
+        weightUnit: e.weightUnit as WorkoutTemplateDto['exercises'][number]['weightUnit'],
         restSeconds: e.restSeconds,
         targetDurationSeconds: e.targetDurationSeconds,
         targetDistanceMeters: e.targetDistanceMeters,
@@ -390,11 +462,19 @@ export class WorkoutService {
               name: e.exercise.name,
               description: e.exercise.description,
               instructions: e.exercise.instructions ?? [],
-              category: e.exercise.category,
-              exerciseType: e.exercise.exerciseType,
-              primaryMuscleGroup: e.exercise.primaryMuscleGroup,
+              category: e.exercise.category as NonNullable<
+                WorkoutTemplateDto['exercises'][number]['exercise']
+              >['category'],
+              exerciseType: e.exercise.exerciseType as NonNullable<
+                WorkoutTemplateDto['exercises'][number]['exercise']
+              >['exerciseType'],
+              primaryMuscleGroup: e.exercise.primaryMuscleGroup as NonNullable<
+                WorkoutTemplateDto['exercises'][number]['exercise']
+              >['primaryMuscleGroup'],
               secondaryMuscleGroups: [],
-              equipment: e.exercise.equipment,
+              equipment: e.exercise.equipment as NonNullable<
+                WorkoutTemplateDto['exercises'][number]['exercise']
+              >['equipment'],
               recommendedDurationSeconds: e.exercise.recommendedDurationSeconds,
               tags: e.exercise.tags ?? [],
               isSystem: e.exercise.isSystem,
@@ -403,7 +483,9 @@ export class WorkoutService {
                 id: e.exercise.id,
                 slug: e.exercise.slug,
                 name: e.exercise.name,
-                primaryMuscleGroup: e.exercise.primaryMuscleGroup,
+                primaryMuscleGroup: e.exercise.primaryMuscleGroup as NonNullable<
+                  WorkoutTemplateDto['exercises'][number]['exercise']
+                >['primaryMuscleGroup'],
               }),
             }
           : undefined,

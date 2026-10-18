@@ -51,10 +51,14 @@ import {
 import { Input } from '@luki-fitti/ui/components/ui/input';
 import { Label } from '@luki-fitti/ui/components/ui/label';
 import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
+import { toast } from '@luki-fitti/ui/components/ui/sonner';
 import { useGym } from '@/providers/gym/gym-context';
+import { useLocale } from '@/providers/i18n/locale-context';
 import { formatDate, formatDateTime } from '@luki-fitti/common/utils/client';
-import { MUSCLE_GROUP_LABELS, SessionStatus } from '@luki-fitti/common/enums';
+import { SessionStatus } from '@luki-fitti/common/enums';
+import { ExercisePicker } from './exercise-picker';
 import { ExerciseVisual } from './exercise-visual';
+import { NumberInput } from './number-input';
 import type {
   TemplateExerciseInputDto,
   WorkoutFolderDto,
@@ -83,6 +87,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
     deleteTemplate,
     startWorkoutFromTemplate,
   } = useGym();
+  const { t, format, muscleLabel } = useLocale();
 
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
@@ -104,6 +109,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
   } | null>(null);
 
   const [collapsedFolders, setCollapsedFolders] = useState<Record<string, boolean>>({});
+  const [highlightedTemplateId, setHighlightedTemplateId] = useState<string | null>(null);
 
   const toggleFolderCollapsed = (folderId: string) => {
     setCollapsedFolders((prev) => ({
@@ -222,6 +228,28 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
     setEditingTemplate(null);
   };
 
+  const handleDuplicateTemplate = async (tpl: WorkoutTemplateDto) => {
+    const duplicated = await duplicateTemplate(tpl.id);
+    if (!duplicated) return;
+
+    toast.success(format(t.workouts.duplicatedToast, { name: duplicated.name }));
+    setHighlightedTemplateId(duplicated.id);
+
+    window.setTimeout(() => {
+      setHighlightedTemplateId((prev) => (prev === duplicated.id ? null : prev));
+    }, 2600);
+
+    window.requestAnimationFrame(() => {
+      window.setTimeout(() => {
+        const el = document.querySelector<HTMLElement>(`[data-template-id="${duplicated.id}"]`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.focus({ preventScroll: true });
+        }
+      }, 60);
+    });
+  };
+
   const getTemplateSessionStats = (tpl: WorkoutTemplateDto) => {
     const matched = historySessions.filter(
       (s) =>
@@ -252,10 +280,15 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
 
   const renderTemplateCard = (tpl: WorkoutTemplateDto) => {
     const tplStats = getTemplateSessionStats(tpl);
+    const isHighlighted = highlightedTemplateId === tpl.id;
     return (
       <Card
         key={tpl.id}
-        className="hover:border-primary/40 min-w-0 justify-between overflow-hidden p-4 transition sm:p-5"
+        data-template-id={tpl.id}
+        tabIndex={-1}
+        className={`hover:border-primary/40 min-w-0 justify-between overflow-hidden p-4 transition duration-300 outline-none sm:p-5 ${
+          isHighlighted ? 'border-primary ring-primary/40 ring-2' : ''
+        }`}
       >
         <div>
           <div className="flex flex-wrap items-start justify-between gap-2">
@@ -274,18 +307,19 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
           <div className="bg-secondary/40 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs">
             <span className="flex items-center gap-1.5 font-semibold">
               <History className="text-primary h-3.5 w-3.5 shrink-0" />
-              Total:{' '}
+              {t.workouts.totalLabel}{' '}
               <strong className="font-mono-tabular text-primary">
-                {tplStats.totalCount} session{tplStats.totalCount === 1 ? '' : 's'}
+                {tplStats.totalCount}{' '}
+                {tplStats.totalCount === 1 ? t.common.session : t.common.sessions}
               </strong>
             </span>
             <span className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
               <Calendar className="h-3.5 w-3.5 shrink-0" />
-              Last:{' '}
+              {t.workouts.lastLabel}{' '}
               <strong className="font-mono-tabular text-foreground">
                 {tplStats.lastSessionDate
                   ? formatDateTime(tplStats.lastSessionDate)
-                  : 'Never trained'}
+                  : t.workouts.neverTrained}
               </strong>
             </span>
           </div>
@@ -321,7 +355,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                           </span>
                           {exObj && (
                             <span className="text-muted-foreground text-[10px]">
-                              ({MUSCLE_GROUP_LABELS[exObj.primaryMuscleGroup]})
+                              ({muscleLabel(exObj.primaryMuscleGroup)})
                             </span>
                           )}
                         </div>
@@ -336,26 +370,30 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                         ex.targetRepsMin !== ex.targetRepsMax
                           ? `${ex.targetRepsMin}–${ex.targetRepsMax}`
                           : (ex.targetRepsMin ?? 10)}{' '}
-                        reps
+                        {t.common.reps}
                         {ex.targetWeight ? ` @ ${ex.targetWeight}${weightUnit.toLowerCase()}` : ''}
                       </span>
                       {ex.restSeconds === 0 ? (
                         <Badge variant="accent" className="px-1.5 py-0.5 text-[10px] font-bold">
-                          <Zap className="h-2.5 w-2.5" /> Superset (0s rest)
+                          <Zap className="h-2.5 w-2.5" /> {t.workouts.supersetBadge}
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground font-mono-tabular text-[11px]">
-                          • {ex.restSeconds}s rest
+                          • {ex.restSeconds}
+                          {t.workouts.restSuffix}
                         </span>
                       )}
                       {altNames.length > 0 && (
                         <Badge
                           variant="default"
-                          title={`Backups: ${altNames.join(', ')}`}
+                          title={format(t.workouts.backupsTitle, { names: altNames.join(', ') })}
                           className="px-1.5 py-0.5 text-[10px]"
                         >
                           <ArrowRightLeft className="h-2.5 w-2.5" />
-                          {altNames.length} backup{altNames.length > 1 ? 's' : ''}
+                          {altNames.length}{' '}
+                          {altNames.length > 1
+                            ? t.workouts.backupPlural
+                            : t.workouts.backupSingular}
                         </Badge>
                       )}
                     </div>
@@ -363,7 +401,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                   {isSupersetWithNext && (
                     <div className="text-accent flex items-center gap-1.5 pl-4 text-[10px] font-bold">
                       <Zap className="h-3 w-3" />
-                      <span>Superset paired with #{idx + 2} — No rest in between</span>
+                      <span>{format(t.workouts.supersetPairedWith, { index: idx + 2 })}</span>
                     </div>
                   )}
                 </React.Fragment>
@@ -381,16 +419,16 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               size="sm"
               onClick={() => openEditTemplateBuilder(tpl)}
             >
-              <Edit3 className="h-3.5 w-3.5" /> Edit
+              <Edit3 className="h-3.5 w-3.5" /> {t.workouts.editBtn}
             </Button>
             <Button
               type="button"
               variant="secondary"
               size="sm"
-              onClick={() => void duplicateTemplate(tpl.id)}
-              title="Duplicate workout template"
+              onClick={() => void handleDuplicateTemplate(tpl)}
+              title={t.workouts.duplicateTitle}
             >
-              <Copy className="h-3.5 w-3.5" /> Duplicate
+              <Copy className="h-3.5 w-3.5" /> {t.workouts.duplicateBtn}
             </Button>
             <NativeSelect
               aria-label={`Move ${tpl.name} to folder`}
@@ -398,10 +436,10 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               onChange={(e) => void moveTemplate(tpl.id, e.target.value || null)}
               className="bg-secondary h-8 max-w-[165px] truncate text-xs"
             >
-              <option value="">Unfiled</option>
+              <option value="">{t.workouts.unfiledOption}</option>
               {folders.map((f) => (
                 <option key={f.id} value={f.id}>
-                  Folder: {f.name}
+                  {format(t.workouts.folderPrefix, { name: f.name })}
                 </option>
               ))}
             </NativeSelect>
@@ -426,7 +464,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
             className="w-full sm:w-auto"
           >
             <Play className="h-3.5 w-3.5 fill-current" />
-            Start Session
+            {t.workouts.startSessionBtn}
           </Button>
         </div>
       </Card>
@@ -439,11 +477,9 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-            Workout Templates & Splits
+            {t.workouts.title}
           </h1>
-          <p className="text-muted-foreground text-xs sm:text-sm">
-            Reorderable split folders, superset pairings, session counters, and machine-busy backups
-          </p>
+          <p className="text-muted-foreground text-xs sm:text-sm">{t.workouts.subtitle}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -458,12 +494,12 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               {areAllCollapsed ? (
                 <>
                   <ChevronsUpDown className="h-4 w-4" />
-                  Expand All
+                  {t.workouts.expandAll}
                 </>
               ) : (
                 <>
                   <ChevronsDownUp className="h-4 w-4" />
-                  Collapse All
+                  {t.workouts.collapseAll}
                 </>
               )}
             </Button>
@@ -480,7 +516,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
             }}
           >
             <FolderPlus className="h-4 w-4" />
-            New Folder
+            {t.workouts.newFolder}
           </Button>
           <Button
             type="button"
@@ -488,7 +524,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
             onClick={() => openNewTemplateBuilder(folders[0]?.id ?? null)}
           >
             <Plus className="h-4 w-4" />
-            New Workout
+            {t.workouts.newWorkout}
           </Button>
         </div>
       </div>
@@ -529,7 +565,8 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                     variant="secondary"
                     className="shrink-0 rounded-full px-2.5 py-0.5 text-xs"
                   >
-                    {folder.templates.length} workout{folder.templates.length === 1 ? '' : 's'}
+                    {folder.templates.length}{' '}
+                    {folder.templates.length === 1 ? t.common.workout : t.common.workouts}
                   </Badge>
                 </button>
               </CollapsibleTrigger>
@@ -538,12 +575,11 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2 sm:justify-end sm:border-t-0 sm:pt-0">
                 <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-[11px]">
                   <span className="font-mono-tabular font-semibold">
-                    <strong className="text-foreground">{folderStats.totalCount}</strong> total
-                    sessions
+                    {format(t.workouts.totalSessionsCount, { count: folderStats.totalCount })}
                   </span>
                   <span>•</span>
                   <span>
-                    Last:{' '}
+                    {t.workouts.lastLabel}{' '}
                     <strong className="font-mono-tabular text-foreground">
                       {folderStats.lastSessionDate ? formatDate(folderStats.lastSessionDate) : '—'}
                     </strong>
@@ -558,7 +594,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                     disabled={folderIdx === 0}
                     onClick={() => void reorderFolder(folder.id, 'UP')}
                     aria-label={`Move folder ${folder.name} up`}
-                    title="Move folder up"
+                    title={t.workouts.moveUpTitle}
                     className="size-7 rounded-lg"
                   >
                     <ArrowUp className="h-3.5 w-3.5" />
@@ -570,7 +606,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                     disabled={folderIdx === folders.length - 1}
                     onClick={() => void reorderFolder(folder.id, 'DOWN')}
                     aria-label={`Move folder ${folder.name} down`}
-                    title="Move folder down"
+                    title={t.workouts.moveDownTitle}
                     className="size-7 rounded-lg"
                   >
                     <ArrowDown className="h-3.5 w-3.5" />
@@ -582,7 +618,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                     onClick={() => openNewTemplateBuilder(folder.id)}
                     className="text-primary hover:bg-primary/10 font-semibold"
                   >
-                    + Workout
+                    {t.workouts.addWorkoutShort}
                   </Button>
                   <Button
                     type="button"
@@ -596,7 +632,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                     }}
                     className="text-muted-foreground hover:text-foreground"
                   >
-                    Rename
+                    {t.workouts.renameBtn}
                   </Button>
                   <Button
                     type="button"
@@ -617,8 +653,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
             <CollapsibleContent>
               {folder.templates.length === 0 ? (
                 <Card className="bg-card/50 text-muted-foreground border-dashed p-6 text-center text-xs">
-                  No workouts in this folder yet. Click &ldquo;+ Workout&rdquo; or move an existing
-                  template here.
+                  {t.workouts.emptyFolderText}
                 </Card>
               ) : (
                 <div className="grid gap-4 lg:grid-cols-2">
@@ -649,7 +684,9 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                   <ChevronDown className="text-muted-foreground h-4 w-4 shrink-0" />
                 )}
                 <Dumbbell className="text-muted-foreground h-5 w-5" />
-                <h2 className="font-display text-lg font-bold">Unfiled Workouts</h2>
+                <h2 className="font-display text-lg font-bold">
+                  {t.workouts.unfiledWorkoutsTitle}
+                </h2>
                 <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 text-xs">
                   {unfiledTemplates.length}
                 </Badge>
@@ -670,26 +707,26 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
           <form onSubmit={handleSaveFolder} className="space-y-4">
             <DialogHeader>
               <DialogTitle className="font-display text-lg font-bold">
-                {editingFolderId ? 'Rename Folder' : 'Create Workout Folder'}
+                {editingFolderId ? t.workouts.renameFolderTitle : t.workouts.createFolderTitle}
               </DialogTitle>
               <DialogDescription className="text-xs">
-                One-level folder to group your training split (e.g., 4er Split, Push/Pull/Legs).
+                {t.workouts.folderModalDesc}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-1.5">
               <Label htmlFor="folder-name" className="text-xs font-semibold">
-                Folder Name *
+                {t.workouts.folderNameLabel}
               </Label>
               <Input
                 id="folder-name"
                 required
                 value={folderName}
                 onChange={(e) => setFolderName(e.target.value)}
-                placeholder="e.g. 4er Split"
+                placeholder={t.workouts.folderNamePlaceholder}
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Accent Color</Label>
+              <Label className="text-xs font-semibold">{t.workouts.accentColorLabel}</Label>
               <div className="flex gap-2">
                 {['#CCFF00', '#00E5FF', '#FF6B00', '#A855F7', '#22C55E'].map((c) => (
                   <button
@@ -706,9 +743,9 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
             </div>
             <DialogFooter className="pt-2">
               <Button type="button" variant="secondary" onClick={() => setShowFolderModal(false)}>
-                Cancel
+                {t.common.cancel}
               </Button>
-              <Button type="submit">Save Folder</Button>
+              <Button type="submit">{t.workouts.saveFolderBtn}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -725,17 +762,19 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-destructive font-display flex items-center gap-2.5 text-lg font-bold">
               <AlertTriangle className="h-5 w-5" />
-              Delete {confirmDelete?.type === 'folder' ? 'Folder' : 'Workout Template'}?
+              {confirmDelete?.type === 'folder'
+                ? t.workouts.deleteFolderTitle
+                : t.workouts.deleteTemplateTitle}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs leading-relaxed">
-              Are you sure you want to delete <strong>{confirmDelete?.name}</strong>?{' '}
+              {t.workouts.deleteConfirmPrefix} <strong>{confirmDelete?.name}</strong>?{' '}
               {confirmDelete?.type === 'folder'
-                ? 'Workouts inside this folder will be moved to Unfiled Workouts.'
-                : 'Your historical training sessions and diary entries will NOT be deleted.'}
+                ? t.workouts.deleteFolderWarning
+                : t.workouts.deleteTemplateWarning}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
             <AlertDialogAction
               onClick={async () => {
                 if (!confirmDelete) return;
@@ -748,7 +787,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Confirm Delete
+              {t.workouts.confirmDeleteBtn}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -760,35 +799,36 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
           <form onSubmit={handleSaveTemplate} className="min-w-0 space-y-5">
             <DialogHeader className="border-b pb-3">
               <DialogTitle className="font-display text-xl font-bold">
-                {editingTemplate ? `Edit: ${editingTemplate.name}` : 'Create Workout Template'}
+                {editingTemplate
+                  ? format(t.workouts.editTemplateModalTitle, { name: editingTemplate.name })
+                  : t.workouts.createTemplateModalTitle}
               </DialogTitle>
               <DialogDescription className="text-xs">
-                Configure exercises, sets, rep ranges, target weight, rest timers, and backup
-                alternatives
+                {t.workouts.templateModalDesc}
               </DialogDescription>
             </DialogHeader>
 
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-1 sm:col-span-2">
                 <Label htmlFor="tpl-name" className="text-xs font-semibold">
-                  Workout Name *
+                  {t.workouts.workoutNameLabel}
                 </Label>
                 <Input
                   id="tpl-name"
                   required
                   value={tplName}
                   onChange={(e) => setTplName(e.target.value)}
-                  placeholder="e.g. Push A — Chest, Shoulders & Triceps"
+                  placeholder={t.workouts.workoutNamePlaceholder}
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs font-semibold">Folder</Label>
+                <Label className="text-xs font-semibold">{t.workouts.folderLabel}</Label>
                 <NativeSelect
                   value={tplFolderId ?? ''}
                   onChange={(e) => setTplFolderId(e.target.value || null)}
                   className="w-full"
                 >
-                  <option value="">Unfiled (No Folder)</option>
+                  <option value="">{t.workouts.unfiledNoFolder}</option>
                   {folders.map((f) => (
                     <option key={f.id} value={f.id}>
                       {f.name}
@@ -801,27 +841,27 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-1 sm:col-span-2">
                 <Label htmlFor="tpl-desc" className="text-xs font-semibold">
-                  Notes / Focus
+                  {t.workouts.notesFocusLabel}
                 </Label>
                 <Input
                   id="tpl-desc"
                   value={tplDesc}
                   onChange={(e) => setTplDesc(e.target.value)}
-                  placeholder="Optional focus notes..."
+                  placeholder={t.workouts.notesFocusPlaceholder}
                   className="text-xs"
                 />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="tpl-duration" className="text-xs font-semibold">
-                  Est. Duration (min)
+                  {t.workouts.estDurationLabel}
                 </Label>
-                <Input
+                <NumberInput
                   id="tpl-duration"
-                  type="number"
                   min={10}
                   max={240}
+                  fallbackValue={60}
                   value={tplDurationMin}
-                  onChange={(e) => setTplDurationMin(Number(e.target.value))}
+                  onValueChange={(val) => setTplDurationMin(val)}
                   className="text-xs"
                 />
               </div>
@@ -831,7 +871,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-display text-sm font-bold">
-                  Ordered Exercises ({tplExercises.length})
+                  {format(t.workouts.orderedExercisesTitle, { count: tplExercises.length })}
                 </h3>
                 <Button
                   type="button"
@@ -859,7 +899,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                     ]);
                   }}
                 >
-                  + Add Exercise Slot
+                  {t.workouts.addExerciseSlotBtn}
                 </Button>
               </div>
 
@@ -881,16 +921,17 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                           <span className="bg-primary text-primary-foreground font-mono-tabular flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
                             {idx + 1}
                           </span>
-                          <NativeSelect
+                          <ExercisePicker
+                            exercises={catalog}
                             value={slot.exerciseId}
-                            onChange={(e) => {
-                              const selectedEx = catalog.find((c) => c.id === e.target.value);
+                            onValueChange={(newExerciseId) => {
+                              const selectedEx = catalog.find((c) => c.id === newExerciseId);
                               setTplExercises((prev) =>
                                 prev.map((item, i) =>
                                   i === idx
                                     ? {
                                         ...item,
-                                        exerciseId: e.target.value,
+                                        exerciseId: newExerciseId,
                                         alternativeExerciseIds:
                                           selectedEx?.alternativeExerciseIds.slice(0, 2) ?? [],
                                       }
@@ -898,14 +939,8 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                                 ),
                               );
                             }}
-                            className="w-full flex-1 font-semibold"
-                          >
-                            {catalog.map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.name} ({MUSCLE_GROUP_LABELS[c.primaryMuscleGroup]})
-                              </option>
-                            ))}
-                          </NativeSelect>
+                            className="w-full flex-1"
+                          />
                         </div>
 
                         <div className="flex shrink-0 flex-wrap items-center justify-between gap-1.5 sm:justify-end">
@@ -926,13 +961,13 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                                   ),
                                 )
                               }
-                              title="Pair this exercise with the next one as a Superset (0 seconds rest in between)"
+                              title={t.workouts.supersetBtnTitle}
                               className="font-bold"
                             >
                               <Zap className="h-3 w-3 shrink-0" />
                               {isSupersetWithNext
-                                ? `Superset w/ #${idx + 2} (0s)`
-                                : `Superset w/ #${idx + 2}`}
+                                ? format(t.workouts.supersetWithActive, { index: idx + 2 })
+                                : format(t.workouts.supersetWithInactive, { index: idx + 2 })}
                             </Button>
                           )}
                           <div className="ml-auto flex items-center gap-1 sm:ml-0">
@@ -949,7 +984,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                                   return copy;
                                 })
                               }
-                              title="Move Up"
+                              title={t.workouts.moveUpTitle}
                               className="size-7"
                             >
                               <ArrowUp className="h-3.5 w-3.5" />
@@ -967,7 +1002,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                                   return copy;
                                 })
                               }
-                              title="Move Down"
+                              title={t.workouts.moveDownTitle}
                               className="size-7"
                             >
                               <ArrowDown className="h-3.5 w-3.5" />
@@ -981,7 +1016,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                               }
                               className="text-destructive font-semibold"
                             >
-                              Remove
+                              {t.common.remove}
                             </Button>
                           </div>
                         </div>
@@ -991,19 +1026,17 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-6">
                         <div>
                           <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                            Working Sets
+                            {t.workouts.workingSetsLabel}
                           </Label>
-                          <Input
-                            type="number"
+                          <NumberInput
                             min={1}
                             max={20}
+                            fallbackValue={3}
                             value={slot.plannedSets}
-                            onChange={(e) =>
+                            onValueChange={(val) =>
                               setTplExercises((prev) =>
                                 prev.map((item, i) =>
-                                  i === idx
-                                    ? { ...item, plannedSets: Number(e.target.value) }
-                                    : item,
+                                  i === idx ? { ...item, plannedSets: val } : item,
                                 ),
                               )
                             }
@@ -1012,19 +1045,17 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                         </div>
                         <div>
                           <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                            Warm-up Sets
+                            {t.workouts.warmupSetsLabel}
                           </Label>
-                          <Input
-                            type="number"
+                          <NumberInput
                             min={0}
                             max={10}
+                            fallbackValue={0}
                             value={slot.warmupSets ?? 0}
-                            onChange={(e) =>
+                            onValueChange={(val) =>
                               setTplExercises((prev) =>
                                 prev.map((item, i) =>
-                                  i === idx
-                                    ? { ...item, warmupSets: Number(e.target.value) }
-                                    : item,
+                                  i === idx ? { ...item, warmupSets: val } : item,
                                 ),
                               )
                             }
@@ -1033,19 +1064,17 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                         </div>
                         <div>
                           <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                            Min Reps
+                            {t.workouts.minRepsLabel}
                           </Label>
-                          <Input
-                            type="number"
+                          <NumberInput
                             min={1}
                             max={100}
+                            fallbackValue={8}
                             value={slot.targetRepsMin ?? 8}
-                            onChange={(e) =>
+                            onValueChange={(val) =>
                               setTplExercises((prev) =>
                                 prev.map((item, i) =>
-                                  i === idx
-                                    ? { ...item, targetRepsMin: Number(e.target.value) }
-                                    : item,
+                                  i === idx ? { ...item, targetRepsMin: val } : item,
                                 ),
                               )
                             }
@@ -1054,19 +1083,17 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                         </div>
                         <div>
                           <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                            Max Reps
+                            {t.workouts.maxRepsLabel}
                           </Label>
-                          <Input
-                            type="number"
+                          <NumberInput
                             min={1}
                             max={100}
+                            fallbackValue={12}
                             value={slot.targetRepsMax ?? 12}
-                            onChange={(e) =>
+                            onValueChange={(val) =>
                               setTplExercises((prev) =>
                                 prev.map((item, i) =>
-                                  i === idx
-                                    ? { ...item, targetRepsMax: Number(e.target.value) }
-                                    : item,
+                                  i === idx ? { ...item, targetRepsMax: val } : item,
                                 ),
                               )
                             }
@@ -1075,46 +1102,38 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                         </div>
                         <div>
                           <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                            Target ({weightUnit})
+                            {format(t.workouts.targetWeightLabel, { unit: weightUnit })}
                           </Label>
-                          <Input
-                            type="number"
+                          <NumberInput
+                            allowNull
                             step="0.5"
                             min={0}
-                            value={slot.targetWeight ?? ''}
-                            onChange={(e) =>
+                            value={slot.targetWeight ?? null}
+                            onValueChange={(val) =>
                               setTplExercises((prev) =>
                                 prev.map((item, i) =>
-                                  i === idx
-                                    ? {
-                                        ...item,
-                                        targetWeight:
-                                          e.target.value === '' ? null : Number(e.target.value),
-                                      }
-                                    : item,
+                                  i === idx ? { ...item, targetWeight: val } : item,
                                 ),
                               )
                             }
-                            placeholder="Optional"
+                            placeholder={t.common.optional}
                             className="font-mono-tabular h-8 text-xs"
                           />
                         </div>
                         <div>
                           <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                            Rest (sec)
+                            {t.workouts.restSecLabel}
                           </Label>
-                          <Input
-                            type="number"
+                          <NumberInput
                             step="15"
                             min={0}
                             max={600}
+                            fallbackValue={90}
                             value={slot.restSeconds}
-                            onChange={(e) =>
+                            onValueChange={(val) =>
                               setTplExercises((prev) =>
                                 prev.map((item, i) =>
-                                  i === idx
-                                    ? { ...item, restSeconds: Number(e.target.value) }
-                                    : item,
+                                  i === idx ? { ...item, restSeconds: val } : item,
                                 ),
                               )
                             }
@@ -1127,12 +1146,15 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                       <div className="grid gap-2 sm:grid-cols-2">
                         <div className="min-w-0">
                           <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                            Backup Exercise (Machine Busy)
+                            {t.workouts.backupExerciseLabel}
                           </Label>
-                          <NativeSelect
+                          <ExercisePicker
+                            exercises={catalog.filter((c) => c.id !== slot.exerciseId)}
                             value={slot.alternativeExerciseIds?.[0] ?? ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
+                            emptyOptionLabel={t.workouts.noneConfigured}
+                            emptyOptionValue=""
+                            title={t.workouts.backupExerciseLabel}
+                            onValueChange={(val) => {
                               setTplExercises((prev) =>
                                 prev.map((item, i) =>
                                   i === idx
@@ -1144,21 +1166,12 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                                 ),
                               );
                             }}
-                            className="h-8 w-full text-xs"
-                          >
-                            <option value="">None configured</option>
-                            {catalog
-                              .filter((c) => c.id !== slot.exerciseId)
-                              .map((c) => (
-                                <option key={c.id} value={c.id}>
-                                  {c.name} ({MUSCLE_GROUP_LABELS[c.primaryMuscleGroup]})
-                                </option>
-                              ))}
-                          </NativeSelect>
+                            triggerClassName="h-8 text-xs font-normal"
+                          />
                         </div>
                         <div className="min-w-0">
                           <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                            Exercise Notes / Cues
+                            {t.workouts.exerciseNotesLabel}
                           </Label>
                           <Input
                             value={slot.notes ?? ''}
@@ -1169,7 +1182,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                                 ),
                               )
                             }
-                            placeholder="e.g. Seat height 4, pause at bottom"
+                            placeholder={t.workouts.exerciseNotesPlaceholder}
                             className="h-8 text-xs"
                           />
                         </div>
@@ -1181,8 +1194,10 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                         <span className="flex min-w-0 items-center gap-2">
                           <Zap className="h-3.5 w-3.5 shrink-0" />
                           <span className="leading-snug">
-                            SUPERSET PAIR: Exercise #{idx + 1} → Exercise #{idx + 2} (0s Rest in
-                            between)
+                            {format(t.workouts.supersetPairBanner, {
+                              first: idx + 1,
+                              second: idx + 2,
+                            })}
                           </span>
                         </span>
                         <button
@@ -1196,7 +1211,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                           }
                           className="shrink-0 underline opacity-80 hover:opacity-100"
                         >
-                          Unlink
+                          {t.workouts.unlinkBtn}
                         </button>
                       </div>
                     )}
@@ -1211,10 +1226,10 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                 variant="secondary"
                 onClick={() => setShowTemplateBuilder(false)}
               >
-                Cancel
+                {t.common.cancel}
               </Button>
               <Button type="submit">
-                {editingTemplate ? 'Save Changes' : 'Create Workout Template'}
+                {editingTemplate ? t.workouts.saveChangesBtn : t.workouts.createTemplateBtn}
               </Button>
             </DialogFooter>
           </form>
