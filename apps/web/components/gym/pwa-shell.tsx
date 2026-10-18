@@ -12,12 +12,8 @@ import {
   WifiOff,
   RefreshCw,
   AlertTriangle,
-  Sun,
-  Moon,
-  Monitor,
   Timer,
 } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { Badge } from '@luki-fitti/ui/components/ui/badge';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import {
@@ -43,7 +39,6 @@ export type NavTab = 'home' | 'workouts' | 'session' | 'diary' | 'exercises' | '
 export function PwaShell() {
   const [activeTab, setActiveTab] = useState<NavTab>('home');
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
-  const { theme, setTheme } = useTheme();
   const { isAuthenticated } = useAuth();
   const {
     activeSession,
@@ -78,7 +73,7 @@ export function PwaShell() {
   ];
 
   return (
-    <div className="bg-background text-foreground flex min-h-dvh flex-col">
+    <div className="bg-background text-foreground flex min-h-dvh w-full max-w-full flex-col overflow-x-hidden">
       {/* Top Safe-Area Header */}
       <header className="bg-card/85 pt-safe sticky top-0 z-40 border-b backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 py-2.5 sm:px-4 sm:py-3">
@@ -226,33 +221,12 @@ export function PwaShell() {
                 )}
               </button>
             </Badge>
-
-            <Button
-              type="button"
-              variant="secondary"
-              size="icon"
-              aria-label={`Color theme: ${theme ?? 'system'} (click to cycle dark, light, system)`}
-              title={`Theme: ${theme ?? 'system'} (click to switch)`}
-              onClick={() => {
-                const nextTheme =
-                  theme === 'dark' ? 'light' : theme === 'light' ? 'system' : 'dark';
-                setTheme(nextTheme);
-              }}
-            >
-              {theme === 'light' ? (
-                <Sun className="h-4 w-4" />
-              ) : theme === 'dark' ? (
-                <Moon className="h-4 w-4" />
-              ) : (
-                <Monitor className="h-4 w-4" />
-              )}
-            </Button>
           </div>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-5 pb-24 md:pb-10">
+      <main className="mx-auto w-full max-w-6xl min-w-0 flex-1 overflow-x-hidden px-3 pt-4 pb-24 sm:px-4 sm:pt-5 md:pb-10">
         {activeTab === 'home' && <HomeView onNavigate={setActiveTab} />}
         {activeTab === 'workouts' && (
           <WorkoutsView onStartSessionNavigation={() => setActiveTab('session')} />

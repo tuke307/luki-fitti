@@ -1,12 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <rect width="512" height="512" rx="112" fill="#0B0D10"/>
-  <rect x="28" y="28" width="456" height="456" rx="92" fill="none" stroke="#CCFF00" stroke-width="8" stroke-opacity="0.35"/>
   <g fill="#CCFF00">
-    <rect x="76" y="176" width="36" height="160" rx="12"/>
-    <rect x="124" y="136" width="44" height="240" rx="14"/>
-    <rect x="168" y="234" width="176" height="44" rx="10"/>
-    <rect x="344" y="136" width="44" height="240" rx="14"/>
-    <rect x="400" y="176" width="36" height="160" rx="12"/>
+    <rect x="80" y="176" width="40" height="160" rx="20"/>
+    <rect x="136" y="128" width="48" height="256" rx="24"/>
+    <rect x="184" y="232" width="144" height="48" rx="16"/>
+    <rect x="328" y="128" width="48" height="256" rx="24"/>
+    <rect x="392" y="176" width="40" height="160" rx="20"/>
   </g>
-  <text x="256" y="438" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="52" letter-spacing="8" fill="#F8FAFC">LUKI·FITTI</text>
 </svg>

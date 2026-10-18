@@ -61,7 +61,7 @@ export const metadata: Metadata = {
   },
   metadataBase: new URL(SITE_URL),
   icons: {
-    icon: '/icon-192.svg',
+    icon: '/icon.svg',
     apple: '/icon-192.svg',
   },
 };
