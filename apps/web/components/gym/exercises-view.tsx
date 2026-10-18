@@ -30,10 +30,7 @@ import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { Textarea } from '@luki-fitti/ui/components/ui/textarea';
 import { useGym } from '@/providers/gym/gym-context';
-import {
-  computeExerciseProgression,
-  formatDateTime,
-} from '@luki-fitti/common/utils/client';
+import { computeExerciseProgression, formatDateTime } from '@luki-fitti/common/utils/client';
 import { ExerciseVisual } from './exercise-visual';
 import {
   EQUIPMENT_LABELS,
@@ -1001,11 +998,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
             </div>
 
             <DialogFooter className="pt-2">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setShowCreateModal(false)}
-              >
+              <Button type="button" variant="secondary" onClick={() => setShowCreateModal(false)}>
                 Cancel
               </Button>
               <Button type="submit">Save Exercise</Button>
@@ -1083,8 +1076,8 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
               </div>
 
               {routineItems.map((item, idx) => (
-                <div key={idx} className="bg-secondary/50 space-y-2 rounded-xl p-3">
-                  <div className="flex items-center gap-2">
+                <div key={idx} className="bg-secondary/50 min-w-0 space-y-2 rounded-xl p-3">
+                  <div className="flex min-w-0 items-center gap-2">
                     <NativeSelect
                       value={item.exerciseId}
                       onChange={(e) =>
@@ -1094,7 +1087,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                           ),
                         )
                       }
-                      className="h-8 w-full text-xs"
+                      className="h-8 w-full flex-1 text-xs"
                     >
                       {catalog.map((ex) => (
                         <option key={ex.id} value={ex.id}>
@@ -1106,10 +1099,8 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                       type="button"
                       variant="ghost"
                       size="xs"
-                      onClick={() =>
-                        setRoutineItems((prev) => prev.filter((_, i) => i !== idx))
-                      }
-                      className="text-destructive"
+                      onClick={() => setRoutineItems((prev) => prev.filter((_, i) => i !== idx))}
+                      className="text-destructive shrink-0"
                     >
                       Remove
                     </Button>
@@ -1142,9 +1133,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                         onChange={(e) =>
                           setRoutineItems((prev) =>
                             prev.map((p, i) =>
-                              i === idx
-                                ? { ...p, durationSeconds: Number(e.target.value) }
-                                : p,
+                              i === idx ? { ...p, durationSeconds: Number(e.target.value) } : p,
                             ),
                           )
                         }
@@ -1161,9 +1150,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                         onChange={(e) =>
                           setRoutineItems((prev) =>
                             prev.map((p, i) =>
-                              i === idx
-                                ? { ...p, transitionSeconds: Number(e.target.value) }
-                                : p,
+                              i === idx ? { ...p, transitionSeconds: Number(e.target.value) } : p,
                             ),
                           )
                         }

@@ -297,27 +297,19 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               const altNames = (ex.alternativeExerciseIds ?? [])
                 .map((id) => catalog.find((c) => c.id === id)?.name)
                 .filter(Boolean);
-              const isSupersetWithNext =
-                ex.restSeconds === 0 && idx < tpl.exercises.length - 1;
-              const isSupersetFromPrev =
-                idx > 0 && tpl.exercises[idx - 1]?.restSeconds === 0;
+              const isSupersetWithNext = ex.restSeconds === 0 && idx < tpl.exercises.length - 1;
+              const isSupersetFromPrev = idx > 0 && tpl.exercises[idx - 1]?.restSeconds === 0;
 
               return (
                 <React.Fragment key={ex.id ?? idx}>
                   <div
                     className={`bg-secondary/50 flex flex-col gap-1.5 rounded-xl px-3 py-2 text-xs sm:flex-row sm:items-center sm:justify-between ${
-                      isSupersetWithNext || isSupersetFromPrev
-                        ? 'border-accent/50 border-l-4'
-                        : ''
+                      isSupersetWithNext || isSupersetFromPrev ? 'border-accent/50 border-l-4' : ''
                     }`}
                   >
                     <div className="flex min-w-0 items-center gap-2">
                       {exObj && (
-                        <ExerciseVisual
-                          exercise={exObj}
-                          variant="thumbnail"
-                          className="h-9 w-11"
-                        />
+                        <ExerciseVisual exercise={exObj} variant="thumbnail" className="h-9 w-11" />
                       )}
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-1.5">
@@ -418,9 +410,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               variant="ghost"
               size="icon"
               aria-label={`Delete workout ${tpl.name}`}
-              onClick={() =>
-                setConfirmDelete({ type: 'template', id: tpl.id, name: tpl.name })
-              }
+              onClick={() => setConfirmDelete({ type: 'template', id: tpl.id, name: tpl.name })}
               className="text-muted-foreground hover:text-destructive size-8"
             >
               <Trash2 className="h-4 w-4" />
@@ -452,8 +442,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
             Workout Templates & Splits
           </h1>
           <p className="text-muted-foreground text-xs sm:text-sm">
-            Reorderable split folders, superset pairings, session counters, and machine-busy
-            backups
+            Reorderable split folders, superset pairings, session counters, and machine-busy backups
           </p>
         </div>
 
@@ -536,7 +525,10 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                   <h2 className="font-display min-w-0 flex-1 truncate text-base font-extrabold tracking-tight sm:text-lg">
                     {folder.name}
                   </h2>
-                  <Badge variant="secondary" className="shrink-0 rounded-full px-2.5 py-0.5 text-xs">
+                  <Badge
+                    variant="secondary"
+                    className="shrink-0 rounded-full px-2.5 py-0.5 text-xs"
+                  >
                     {folder.templates.length} workout{folder.templates.length === 1 ? '' : 's'}
                   </Badge>
                 </button>
@@ -553,9 +545,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                   <span>
                     Last:{' '}
                     <strong className="font-mono-tabular text-foreground">
-                      {folderStats.lastSessionDate
-                        ? formatDate(folderStats.lastSessionDate)
-                        : '—'}
+                      {folderStats.lastSessionDate ? formatDate(folderStats.lastSessionDate) : '—'}
                     </strong>
                   </span>
                 </div>
@@ -715,11 +705,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               </div>
             </div>
             <DialogFooter className="pt-2">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setShowFolderModal(false)}
-              >
+              <Button type="button" variant="secondary" onClick={() => setShowFolderModal(false)}>
                 Cancel
               </Button>
               <Button type="submit">Save Folder</Button>
@@ -771,7 +757,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
       {/* Workout Template Builder Modal */}
       <Dialog open={showTemplateBuilder} onOpenChange={setShowTemplateBuilder}>
         <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-3xl">
-          <form onSubmit={handleSaveTemplate} className="space-y-5">
+          <form onSubmit={handleSaveTemplate} className="min-w-0 space-y-5">
             <DialogHeader className="border-b pb-3">
               <DialogTitle className="font-display text-xl font-bold">
                 {editingTemplate ? `Edit: ${editingTemplate.name}` : 'Create Workout Template'}
@@ -878,22 +864,20 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               </div>
 
               {tplExercises.map((slot, idx) => {
-                const isSupersetWithNext =
-                  slot.restSeconds === 0 && idx < tplExercises.length - 1;
-                const isSupersetFromPrev =
-                  idx > 0 && tplExercises[idx - 1]?.restSeconds === 0;
+                const isSupersetWithNext = slot.restSeconds === 0 && idx < tplExercises.length - 1;
+                const isSupersetFromPrev = idx > 0 && tplExercises[idx - 1]?.restSeconds === 0;
 
                 return (
                   <React.Fragment key={idx}>
                     <div
-                      className={`bg-secondary/40 space-y-3 rounded-2xl border p-4 ${
+                      className={`bg-secondary/40 min-w-0 space-y-3 rounded-2xl border p-3.5 sm:p-4 ${
                         isSupersetWithNext || isSupersetFromPrev
                           ? 'border-accent/60 bg-accent/5'
                           : ''
                       }`}
                     >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex w-full min-w-0 flex-1 items-center gap-2">
                           <span className="bg-primary text-primary-foreground font-mono-tabular flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
                             {idx + 1}
                           </span>
@@ -914,7 +898,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                                 ),
                               );
                             }}
-                            className="w-full min-w-0 font-semibold"
+                            className="w-full flex-1 font-semibold"
                           >
                             {catalog.map((c) => (
                               <option key={c.id} value={c.id}>
@@ -924,7 +908,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                           </NativeSelect>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-1">
+                        <div className="flex shrink-0 flex-wrap items-center justify-between gap-1.5 sm:justify-end">
                           {idx < tplExercises.length - 1 && (
                             <Button
                               type="button"
@@ -945,251 +929,261 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                               title="Pair this exercise with the next one as a Superset (0 seconds rest in between)"
                               className="font-bold"
                             >
-                              <Zap className="h-3 w-3" />
+                              <Zap className="h-3 w-3 shrink-0" />
                               {isSupersetWithNext
                                 ? `Superset w/ #${idx + 2} (0s)`
                                 : `Superset w/ #${idx + 2}`}
                             </Button>
                           )}
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            disabled={idx === 0}
-                            onClick={() =>
-                              setTplExercises((prev) => {
-                                const copy = [...prev];
-                                const [m] = copy.splice(idx, 1);
-                                if (m) copy.splice(idx - 1, 0, m);
-                                return copy;
-                              })
-                            }
-                            title="Move Up"
-                            className="size-7"
-                          >
-                            <ArrowUp className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            disabled={idx === tplExercises.length - 1}
-                            onClick={() =>
-                              setTplExercises((prev) => {
-                                const copy = [...prev];
-                                const [m] = copy.splice(idx, 1);
-                                if (m) copy.splice(idx + 1, 0, m);
-                                return copy;
-                              })
-                            }
-                            title="Move Down"
-                            className="size-7"
-                          >
-                            <ArrowDown className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="xs"
-                            onClick={() =>
-                              setTplExercises((prev) => prev.filter((_, i) => i !== idx))
-                            }
-                            className="text-destructive font-semibold"
-                          >
-                            Remove
-                          </Button>
+                          <div className="ml-auto flex items-center gap-1 sm:ml-0">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              disabled={idx === 0}
+                              onClick={() =>
+                                setTplExercises((prev) => {
+                                  const copy = [...prev];
+                                  const [m] = copy.splice(idx, 1);
+                                  if (m) copy.splice(idx - 1, 0, m);
+                                  return copy;
+                                })
+                              }
+                              title="Move Up"
+                              className="size-7"
+                            >
+                              <ArrowUp className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              disabled={idx === tplExercises.length - 1}
+                              onClick={() =>
+                                setTplExercises((prev) => {
+                                  const copy = [...prev];
+                                  const [m] = copy.splice(idx, 1);
+                                  if (m) copy.splice(idx + 1, 0, m);
+                                  return copy;
+                                })
+                              }
+                              title="Move Down"
+                              className="size-7"
+                            >
+                              <ArrowDown className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="xs"
+                              onClick={() =>
+                                setTplExercises((prev) => prev.filter((_, i) => i !== idx))
+                              }
+                              className="text-destructive font-semibold"
+                            >
+                              Remove
+                            </Button>
+                          </div>
                         </div>
                       </div>
 
-                  {/* Sets, Warmups, Rep Range, Target Weight, Rest */}
-                  <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-6">
-                    <div>
-                      <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                        Working Sets
-                      </Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={20}
-                        value={slot.plannedSets}
-                        onChange={(e) =>
-                          setTplExercises((prev) =>
-                            prev.map((item, i) =>
-                              i === idx ? { ...item, plannedSets: Number(e.target.value) } : item,
-                            ),
-                          )
-                        }
-                        className="font-mono-tabular h-8 text-xs"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                        Warm-up Sets
-                      </Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={10}
-                        value={slot.warmupSets ?? 0}
-                        onChange={(e) =>
-                          setTplExercises((prev) =>
-                            prev.map((item, i) =>
-                              i === idx ? { ...item, warmupSets: Number(e.target.value) } : item,
-                            ),
-                          )
-                        }
-                        className="font-mono-tabular h-8 text-xs"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                        Min Reps
-                      </Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={100}
-                        value={slot.targetRepsMin ?? 8}
-                        onChange={(e) =>
-                          setTplExercises((prev) =>
-                            prev.map((item, i) =>
-                              i === idx
-                                ? { ...item, targetRepsMin: Number(e.target.value) }
-                                : item,
-                            ),
-                          )
-                        }
-                        className="font-mono-tabular h-8 text-xs"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                        Max Reps
-                      </Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={100}
-                        value={slot.targetRepsMax ?? 12}
-                        onChange={(e) =>
-                          setTplExercises((prev) =>
-                            prev.map((item, i) =>
-                              i === idx
-                                ? { ...item, targetRepsMax: Number(e.target.value) }
-                                : item,
-                            ),
-                          )
-                        }
-                        className="font-mono-tabular h-8 text-xs"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                        Target ({weightUnit})
-                      </Label>
-                      <Input
-                        type="number"
-                        step="0.5"
-                        min={0}
-                        value={slot.targetWeight ?? ''}
-                        onChange={(e) =>
-                          setTplExercises((prev) =>
-                            prev.map((item, i) =>
-                              i === idx
-                                ? {
-                                    ...item,
-                                    targetWeight:
-                                      e.target.value === '' ? null : Number(e.target.value),
-                                  }
-                                : item,
-                            ),
-                          )
-                        }
-                        placeholder="Optional"
-                        className="font-mono-tabular h-8 text-xs"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                        Rest (sec)
-                      </Label>
-                      <Input
-                        type="number"
-                        step="15"
-                        min={0}
-                        max={600}
-                        value={slot.restSeconds}
-                        onChange={(e) =>
-                          setTplExercises((prev) =>
-                            prev.map((item, i) =>
-                              i === idx ? { ...item, restSeconds: Number(e.target.value) } : item,
-                            ),
-                          )
-                        }
-                        className="font-mono-tabular h-8 text-xs"
-                      />
-                    </div>
-                  </div>
+                      {/* Sets, Warmups, Rep Range, Target Weight, Rest */}
+                      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-6">
+                        <div>
+                          <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
+                            Working Sets
+                          </Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={20}
+                            value={slot.plannedSets}
+                            onChange={(e) =>
+                              setTplExercises((prev) =>
+                                prev.map((item, i) =>
+                                  i === idx
+                                    ? { ...item, plannedSets: Number(e.target.value) }
+                                    : item,
+                                ),
+                              )
+                            }
+                            className="font-mono-tabular h-8 text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
+                            Warm-up Sets
+                          </Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={10}
+                            value={slot.warmupSets ?? 0}
+                            onChange={(e) =>
+                              setTplExercises((prev) =>
+                                prev.map((item, i) =>
+                                  i === idx
+                                    ? { ...item, warmupSets: Number(e.target.value) }
+                                    : item,
+                                ),
+                              )
+                            }
+                            className="font-mono-tabular h-8 text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
+                            Min Reps
+                          </Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={100}
+                            value={slot.targetRepsMin ?? 8}
+                            onChange={(e) =>
+                              setTplExercises((prev) =>
+                                prev.map((item, i) =>
+                                  i === idx
+                                    ? { ...item, targetRepsMin: Number(e.target.value) }
+                                    : item,
+                                ),
+                              )
+                            }
+                            className="font-mono-tabular h-8 text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
+                            Max Reps
+                          </Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={100}
+                            value={slot.targetRepsMax ?? 12}
+                            onChange={(e) =>
+                              setTplExercises((prev) =>
+                                prev.map((item, i) =>
+                                  i === idx
+                                    ? { ...item, targetRepsMax: Number(e.target.value) }
+                                    : item,
+                                ),
+                              )
+                            }
+                            className="font-mono-tabular h-8 text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
+                            Target ({weightUnit})
+                          </Label>
+                          <Input
+                            type="number"
+                            step="0.5"
+                            min={0}
+                            value={slot.targetWeight ?? ''}
+                            onChange={(e) =>
+                              setTplExercises((prev) =>
+                                prev.map((item, i) =>
+                                  i === idx
+                                    ? {
+                                        ...item,
+                                        targetWeight:
+                                          e.target.value === '' ? null : Number(e.target.value),
+                                      }
+                                    : item,
+                                ),
+                              )
+                            }
+                            placeholder="Optional"
+                            className="font-mono-tabular h-8 text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
+                            Rest (sec)
+                          </Label>
+                          <Input
+                            type="number"
+                            step="15"
+                            min={0}
+                            max={600}
+                            value={slot.restSeconds}
+                            onChange={(e) =>
+                              setTplExercises((prev) =>
+                                prev.map((item, i) =>
+                                  i === idx
+                                    ? { ...item, restSeconds: Number(e.target.value) }
+                                    : item,
+                                ),
+                              )
+                            }
+                            className="font-mono-tabular h-8 text-xs"
+                          />
+                        </div>
+                      </div>
 
-                  {/* Backup / Alternative Exercises Selector */}
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <div>
-                      <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                        Backup / Alternative Exercise (when machine is busy)
-                      </Label>
-                      <NativeSelect
-                        value={slot.alternativeExerciseIds?.[0] ?? ''}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setTplExercises((prev) =>
-                            prev.map((item, i) =>
-                              i === idx
-                                ? {
-                                    ...item,
-                                    alternativeExerciseIds: val ? [val] : [],
-                                  }
-                                : item,
-                            ),
-                          );
-                        }}
-                        className="h-8 w-full text-xs"
-                      >
-                        <option value="">None configured</option>
-                        {catalog
-                          .filter((c) => c.id !== slot.exerciseId)
-                          .map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.name} ({MUSCLE_GROUP_LABELS[c.primaryMuscleGroup]})
-                            </option>
-                          ))}
-                      </NativeSelect>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
-                        Exercise Notes / Cues
-                      </Label>
-                      <Input
-                        value={slot.notes ?? ''}
-                        onChange={(e) =>
-                          setTplExercises((prev) =>
-                            prev.map((item, i) =>
-                              i === idx ? { ...item, notes: e.target.value } : item,
-                            ),
-                          )
-                        }
-                        placeholder="e.g. Seat height 4, pause at bottom"
-                        className="h-8 text-xs"
-                      />
-                    </div>
-                  </div>
+                      {/* Backup / Alternative Exercises Selector */}
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <div className="min-w-0">
+                          <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
+                            Backup Exercise (Machine Busy)
+                          </Label>
+                          <NativeSelect
+                            value={slot.alternativeExerciseIds?.[0] ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setTplExercises((prev) =>
+                                prev.map((item, i) =>
+                                  i === idx
+                                    ? {
+                                        ...item,
+                                        alternativeExerciseIds: val ? [val] : [],
+                                      }
+                                    : item,
+                                ),
+                              );
+                            }}
+                            className="h-8 w-full text-xs"
+                          >
+                            <option value="">None configured</option>
+                            {catalog
+                              .filter((c) => c.id !== slot.exerciseId)
+                              .map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.name} ({MUSCLE_GROUP_LABELS[c.primaryMuscleGroup]})
+                                </option>
+                              ))}
+                          </NativeSelect>
+                        </div>
+                        <div className="min-w-0">
+                          <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
+                            Exercise Notes / Cues
+                          </Label>
+                          <Input
+                            value={slot.notes ?? ''}
+                            onChange={(e) =>
+                              setTplExercises((prev) =>
+                                prev.map((item, i) =>
+                                  i === idx ? { ...item, notes: e.target.value } : item,
+                                ),
+                              )
+                            }
+                            placeholder="e.g. Seat height 4, pause at bottom"
+                            className="h-8 text-xs"
+                          />
+                        </div>
+                      </div>
                     </div>
 
                     {isSupersetWithNext && (
-                      <div className="border-accent/40 bg-accent/15 text-accent flex items-center justify-between rounded-xl border px-3 py-1.5 text-xs font-bold">
-                        <span className="flex items-center gap-1.5">
-                          <Zap className="h-3.5 w-3.5" />
-                          SUPERSET PAIR: Exercise #{idx + 1} → Exercise #{idx + 2} (0s Rest in
-                          between)
+                      <div className="border-accent/40 bg-accent/15 text-accent flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs font-bold">
+                        <span className="flex min-w-0 items-center gap-2">
+                          <Zap className="h-3.5 w-3.5 shrink-0" />
+                          <span className="leading-snug">
+                            SUPERSET PAIR: Exercise #{idx + 1} → Exercise #{idx + 2} (0s Rest in
+                            between)
+                          </span>
                         </span>
                         <button
                           type="button"
@@ -1200,7 +1194,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                               ),
                             )
                           }
-                          className="underline opacity-80 hover:opacity-100"
+                          className="shrink-0 underline opacity-80 hover:opacity-100"
                         >
                           Unlink
                         </button>
