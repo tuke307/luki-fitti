@@ -22,8 +22,54 @@ public struct ExercisesAndStretchingView: View {
                 .pickerStyle(.segmented)
 
                 if activeSubTab == "catalog" {
-                    TextField("Search 130+ exercises by name, muscle, or German alias...", text: $searchQuery)
-                        .textFieldStyle(.roundedBorder)
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(.secondary)
+                        TextField("Search 130+ exercises by name, muscle, or German alias...", text: $searchQuery)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                        if !searchQuery.isEmpty {
+                            Button {
+                                searchQuery = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(10)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(LukiColors.darkCard))
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            Button {
+                                selectedMuscle = nil
+                            } label: {
+                                Text("All Muscles")
+                                    .font(.caption.bold())
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Capsule().fill(selectedMuscle == nil ? LukiColors.neonLime : LukiColors.darkCard))
+                                    .foregroundStyle(selectedMuscle == nil ? .black : .white)
+                            }
+                            .buttonStyle(.plain)
+
+                            ForEach(MuscleGroup.allCases, id: \.self) { muscle in
+                                Button {
+                                    selectedMuscle = muscle
+                                } label: {
+                                    Text(LukiI18n.muscleLabel(muscle))
+                                        .font(.caption.bold())
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Capsule().fill(selectedMuscle == muscle ? LukiColors.neonLime : LukiColors.darkCard))
+                                        .foregroundStyle(selectedMuscle == muscle ? .black : .white)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
 
                     ForEach(filteredExercises) { exercise in
                         HStack(spacing: 12) {

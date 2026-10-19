@@ -116,7 +116,7 @@ public struct WatchFolderTemplatesView: View {
             VStack(alignment: .leading, spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("📁 \(folder.name.uppercased())")
-                        .font(.system(size: 12, weight: .extrabold))
+                        .font(.system(size: 12, weight: .heavy))
                         .foregroundStyle(.white)
                     Rectangle()
                         .fill(Color.white)
@@ -135,9 +135,12 @@ public struct WatchFolderTemplatesView: View {
                                 .foregroundStyle(Color(red: 0.07, green: 0.07, blue: 0.07))
                                 .multilineTextAlignment(.leading)
 
-                            HStack(spacing: 10) {
+                            HStack(spacing: 8) {
                                 Text("⏱ \(stats.durationText)")
                                 Text("📅 \(stats.dateText)")
+                                if stats.totalCount > 0 {
+                                    Text("• \(stats.totalCount)x")
+                                }
                             }
                             .font(.system(size: 11, weight: .bold, design: .monospaced))
                             .foregroundStyle(Color.black.opacity(0.78))
@@ -157,11 +160,17 @@ public struct WatchFolderTemplatesView: View {
         .background(Color.black)
     }
 
-    private func lastPerformedStats(for template: WorkoutTemplateDto) -> (durationText: String, dateText: String) {
-        guard let last = viewModel.store.historySessions.first(where: {
-            $0.templateId == template.id || $0.workoutNameSnapshot == template.name
-        }) else {
-            return ("--:--", "New")
+    private func lastPerformedStats(for template: WorkoutTemplateDto) -> (durationText: String, dateText: String, totalCount: Int) {
+        let normalizedTemplateName = template.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let matched = viewModel.store.historySessions.filter { session in
+            guard session.status == .COMPLETED else { return false }
+            if let tid = session.templateId, tid == template.id {
+                return true
+            }
+            return session.workoutNameSnapshot.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalizedTemplateName
+        }
+        guard let last = matched.first else {
+            return ("--:--", "New", 0)
         }
         let sec = max(0, last.activeDurationSeconds)
         let h = sec / 3600
@@ -170,8 +179,20 @@ public struct WatchFolderTemplatesView: View {
         let dur = h > 0
             ? String(format: "%d:%02d:%02d", h, m, s)
             : String(format: "%d:%02d", m, s)
-        let shortDate = String(last.startedAt.prefix(10))
-        return (dur, shortDate)
+        let shortDate = formatShortDayMonth(last.startedAt)
+        return (dur, shortDate, matched.count)
+    }
+
+    private func formatShortDayMonth(_ iso: String) -> String {
+        let f1 = ISO8601DateFormatter()
+        f1.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let f2 = ISO8601DateFormatter()
+        if let date = f1.date(from: iso) ?? f2.date(from: iso) {
+            let out = DateFormatter()
+            out.dateFormat = "dd MMM"
+            return out.string(from: date)
+        }
+        return String(iso.prefix(10))
     }
 }
 

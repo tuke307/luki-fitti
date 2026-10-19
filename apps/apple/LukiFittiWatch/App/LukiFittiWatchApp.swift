@@ -28,6 +28,63 @@ public final class WatchWorkoutViewModel {
         self.store = store
         self.healthCoordinator = healthCoordinator
         self.watchSyncCoordinator = watchSyncCoordinator
+
+        self.watchSyncCoordinator.onContextReceived = { [weak self] payload in
+            self?.applyWatchContext(payload)
+        }
+        self.watchSyncCoordinator.onActiveSessionReceived = { [weak self] incoming in
+            self?.mergeIncomingActiveSession(incoming)
+        }
+        self.watchSyncCoordinator.onMutationReceived = { [weak self] packet in
+            guard let self, let active = self.store.activeSession else { return }
+            let merged = WatchSyncMerger.applyMutation(
+                packet,
+                to: active,
+                lastAppliedTimestamps: &self.watchSyncCoordinator.lastAppliedTimestamps
+            )
+            self.store.saveActiveSession(merged)
+        }
+        syncWithCompanionAndServer()
+    }
+
+    public func syncWithCompanionAndServer() {
+        if let payload = watchSyncCoordinator.pullLatestContextIfAvailable() {
+            applyWatchContext(payload)
+        }
+        if let sharedActive = watchSyncCoordinator.pullSharedActiveSessionIfAvailable() {
+            mergeIncomingActiveSession(sharedActive)
+        }
+        Task {
+            await store.refreshFromServerAfterAuth()
+        }
+    }
+
+    private func mergeIncomingActiveSession(_ incoming: WorkoutSessionDto?) {
+        guard let incoming else { return }
+        if let current = store.activeSession,
+           current.clientSessionId == incoming.clientSessionId,
+           current.version > incoming.version {
+            return
+        }
+        store.saveActiveSession(incoming)
+    }
+
+    private func applyWatchContext(_ payload: WatchContextPayload) {
+        if !payload.catalog.isEmpty {
+            store.saveCatalog(payload.catalog)
+        }
+        store.saveWorkoutsOverview(folders: payload.folders, unfiledTemplates: payload.unfiledTemplates)
+        store.saveStretchingRoutines(payload.stretchingRoutines)
+        if !payload.historySessions.isEmpty {
+            store.saveHistorySessionsList(payload.historySessions)
+        }
+        store.preferences = payload.preferences
+        if let user = payload.currentUser {
+            store.saveAuthenticatedUser(user)
+        }
+        if let tokens = payload.authTokens {
+            try? store.apiClient.tokenStore.saveTokens(tokens, userId: payload.currentUser?.id)
+        }
     }
 
     public func startWorkout(from template: WorkoutTemplateDto) {
@@ -44,6 +101,7 @@ public final class WatchWorkoutViewModel {
         activePageTab = 2
         store.saveActiveSession(session)
         store.enqueueSessionSync(session)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
         Task {
             _ = await healthCoordinator.requestAuthorization()
             await healthCoordinator.startWorkout(sessionType: .STRENGTH)
@@ -64,6 +122,7 @@ public final class WatchWorkoutViewModel {
         activePageTab = 2
         store.saveActiveSession(session)
         store.enqueueSessionSync(session)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
         Task {
             _ = await healthCoordinator.requestAuthorization()
             await healthCoordinator.startWorkout(sessionType: .STRETCHING)
@@ -135,6 +194,7 @@ public final class WatchWorkoutViewModel {
         let recalculated = SessionCalculator.recalculateSessionTotals(session)
         store.saveActiveSession(recalculated)
         store.enqueueSessionSync(recalculated)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(recalculated)
 
         let packet = SessionMutationPacket(
             clientSessionId: recalculated.clientSessionId,
@@ -170,7 +230,9 @@ public final class WatchWorkoutViewModel {
         session.version += 1
         store.saveActiveSession(session)
         store.enqueueSessionSync(session)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
         activePageTab = 2
+        Task { await store.flushSyncQueue() }
     }
 
     public func finishWorkout() async {
@@ -222,20 +284,31 @@ public struct LukiFittiWatchApp: App {
 
 public struct WatchRootContainerView: View {
     @Bindable public var viewModel: WatchWorkoutViewModel
+    @Environment(\.scenePhase) private var scenePhase
 
     public init(viewModel: WatchWorkoutViewModel) {
         self.viewModel = viewModel
     }
 
     public var body: some View {
-        if let summary = viewModel.completedSummarySession {
-            WatchWorkoutSummaryView(session: summary) {
-                viewModel.completedSummarySession = nil
+        Group {
+            if let summary = viewModel.completedSummarySession {
+                WatchWorkoutSummaryView(session: summary) {
+                    viewModel.completedSummarySession = nil
+                }
+            } else if viewModel.store.activeSession != nil {
+                WatchActiveWorkoutView(viewModel: viewModel)
+            } else {
+                WatchHomeView(viewModel: viewModel)
             }
-        } else if viewModel.store.activeSession != nil {
-            WatchActiveWorkoutView(viewModel: viewModel)
-        } else {
-            WatchHomeView(viewModel: viewModel)
+        }
+        .onAppear {
+            viewModel.syncWithCompanionAndServer()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                viewModel.syncWithCompanionAndServer()
+            }
         }
     }
 }

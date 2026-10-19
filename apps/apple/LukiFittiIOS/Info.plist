@@ -22,5 +22,7 @@
     <string>LukiFitti saves your completed strength and stretching workouts to Apple Health to close your Move and Exercise rings.</string>
     <key>NSSupportsLiveActivities</key>
     <true/>
+    <key>LUKIFITTI_API_BASE_URL</key>
+    <string>$(LUKIFITTI_API_BASE_URL)</string>
 </dict>
 </plist>

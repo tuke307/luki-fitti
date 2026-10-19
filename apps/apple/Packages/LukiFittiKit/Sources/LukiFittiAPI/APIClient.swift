@@ -21,10 +21,15 @@ public enum APIClientError: Error, LocalizedError, Sendable, Equatable {
     }
 }
 
+private struct APIErrorDetail: Decodable {
+    let message: String?
+}
+
 private struct APIEnvelope<T: Decodable>: Decodable {
     let success: Bool?
     let data: T?
     let message: String?
+    let error: APIErrorDetail?
 }
 
 private struct RefreshResponseDto: Decodable {
@@ -33,19 +38,37 @@ private struct RefreshResponseDto: Decodable {
 }
 
 public actor APIClient {
-    public let baseURL: URL
-    public let tokenStore: any TokenStoring
+    public nonisolated let baseURL: URL
+    public nonisolated let tokenStore: any TokenStoring
     private let session: URLSession
     private var inFlightRefreshTask: Task<Bool, Never>?
 
     public init(
-        baseURL: URL = URL(string: "http://localhost:3001")!,
+        baseURL: URL = APIClient.defaultBaseURL,
         tokenStore: any TokenStoring = KeychainTokenStore(),
         session: URLSession = .shared
     ) {
         self.baseURL = baseURL
         self.tokenStore = tokenStore
         self.session = session
+    }
+
+    public static var defaultBaseURL: URL {
+        if let envURL = ProcessInfo.processInfo.environment["LUKIFITTI_API_BASE_URL"],
+           let parsed = URL(string: envURL),
+           parsed.scheme != nil {
+            return parsed
+        }
+        if let plistURL = Bundle.main.object(forInfoDictionaryKey: "LUKIFITTI_API_BASE_URL") as? String,
+           let parsed = URL(string: plistURL),
+           parsed.scheme != nil {
+            return parsed
+        }
+        #if DEBUG
+        return URL(string: "http://localhost:3001")!
+        #else
+        return URL(string: "https://luki-fitti.tony-luke.de")!
+        #endif
     }
 
     public func isAuthenticated() -> Bool {
@@ -141,7 +164,7 @@ public actor APIClient {
     // MARK: - Workouts, Exercises & Sessions Endpoints
 
     public func fetchExercises() async throws -> [ExerciseDto] {
-        try await request(path: "/api/exercises?limit=200", method: "GET", requiresAuth: false)
+        try await request(path: "/api/exercises?limit=200", method: "GET", requiresAuth: true)
     }
 
     public func fetchWorkoutsOverview() async throws -> WorkoutsOverviewDto {
@@ -225,12 +248,24 @@ public actor APIClient {
         }
 
         if http.statusCode == 401 {
+            if let errEnv = try? JSONDecoder().decode(APIEnvelope<EmptyObject>.self, from: data),
+               let msg = errEnv.error?.message ?? errEnv.message {
+                throw APIClientError.serverError(401, msg)
+            }
             throw APIClientError.unauthorized
         }
         if http.statusCode == 403 {
+            if let errEnv = try? JSONDecoder().decode(APIEnvelope<EmptyObject>.self, from: data),
+               let msg = errEnv.error?.message ?? errEnv.message {
+                throw APIClientError.forbidden(msg)
+            }
             throw APIClientError.forbidden("Forbidden")
         }
         if !(200...299).contains(http.statusCode) {
+            if let errEnv = try? JSONDecoder().decode(APIEnvelope<EmptyObject>.self, from: data),
+               let msg = errEnv.error?.message ?? errEnv.message {
+                throw APIClientError.serverError(http.statusCode, msg)
+            }
             let rawMsg = String(data: data, encoding: .utf8) ?? "HTTP \(http.statusCode)"
             throw APIClientError.serverError(http.statusCode, rawMsg)
         }
@@ -291,6 +326,8 @@ public actor APIClient {
         return result
     }
 }
+
+private struct EmptyObject: Decodable {}
 
 private struct AnyEncodable: Encodable {
     private let encodeFunc: (Encoder) throws -> Void

@@ -1313,6 +1313,21 @@ Instructions for high-quality Next.js applications with Tailwind CSS styling and
 7. Add loading states
 8. Write tests
 
+## Native Apple Workspace (`apps/apple`) — Build, Simulator & Sync Reference
+
+- **Generate Xcode Project:** `cd apps/apple && xcodegen generate && open LukiFitti.xcodeproj`
+- **Run Swift Package Unit Tests:** `swift test --package-path apps/apple/Packages/LukiFittiKit`
+- **Simulator Pairing & CLI Build/Launch:**
+  - List booted simulators: `xcrun simctl list devices booted`
+  - Pair Apple Watch + iPhone simulators: `xcrun simctl pair <WATCH_SIM_UDID> <IPHONE_SIM_UDID>`
+  - Build iPhone app: `xcodebuild -project apps/apple/LukiFitti.xcodeproj -scheme LukiFittiIOS -destination 'id=<IPHONE_SIM_UDID>' CODE_SIGNING_ALLOWED=NO build`
+  - Build Watch app: `xcodebuild -project apps/apple/LukiFitti.xcodeproj -scheme LukiFittiWatch -destination 'id=<WATCH_SIM_UDID>' CODE_SIGNING_ALLOWED=NO build`
+  - Install & launch iPhone app: `xcrun simctl install <IPHONE_SIM_UDID> ~/Library/Developer/Xcode/DerivedData/LukiFitti-*/Build/Products/Debug-iphonesimulator/LukiFittiIOS.app && xcrun simctl launch <IPHONE_SIM_UDID> com.lukifitti.app`
+  - Install & launch Watch app: `xcrun simctl install <WATCH_SIM_UDID> ~/Library/Developer/Xcode/DerivedData/LukiFitti-*/Build/Products/Debug-watchsimulator/LukiFittiWatch.app && xcrun simctl launch <WATCH_SIM_UDID> com.lukifitti.app.watchkitapp`
+- **Environment Switching (`LUKIFITTI_API_BASE_URL`):**
+  - `apps/apple/Config/Debug.xcconfig` targets `http://localhost:3001`; `apps/apple/Config/Release.xcconfig` targets `https://luki-fitti.tony-luke.de`.
+  - Override anytime in Xcode via **Edit Scheme (`⌘<`) → Run → Arguments → Environment Variables → `LUKIFITTI_API_BASE_URL`**.
+
 <!-- BEGIN:turborepo-agent-rules -->
 
 # This is NOT the Turborepo you know
