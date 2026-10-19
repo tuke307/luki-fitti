@@ -65,6 +65,9 @@ apm_modules
 # API uploads
 **/uploads
 
+# Native Apple workspace (built on macOS / Xcode, not in Linux Docker containers)
+apps/apple
+
 # markdown files
 **/README.md
 

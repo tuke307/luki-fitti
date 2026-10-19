@@ -366,7 +366,8 @@ describe('AuthService — Registration, Authentication & Brute-Force Protection'
     });
 
     const token = generateAccessToken({ id: registered.id, email: registered.email });
-    const authGuard = new AuthGuard(prisma, async () => false);
+    const authGuard = new AuthGuard(prisma);
+    authGuard.checkDenylist = async () => false;
     const csrfGuard = new CsrfGuard();
 
     const bearerReq: Record<string, unknown> = {

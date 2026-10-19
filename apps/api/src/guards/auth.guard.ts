@@ -25,10 +25,9 @@ export function extractBearerToken(request: Request): string | null {
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly checkDenylist?: (jti: string) => Promise<boolean>,
-  ) {}
+  public checkDenylist?: (jti: string) => Promise<boolean>;
+
+  constructor(private readonly prisma: PrismaService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context
