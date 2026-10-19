@@ -24,11 +24,15 @@
     <string>LukiFitti Watch records your workout sessions to Apple Health and closes your Move and Exercise rings.</string>
     <key>WKApplication</key>
     <true/>
-    <key>WKWatchOnly</key>
-    <false/>
+    <key>WKCompanionAppBundleIdentifier</key>
+    <string>com.lukifitti.app</string>
+    <key>WKRunsIndependentlyOfCompanionApp</key>
+    <true/>
     <key>UIBackgroundModes</key>
     <array>
         <string>workout-processing</string>
     </array>
+    <key>LUKIFITTI_API_BASE_URL</key>
+    <string>$(LUKIFITTI_API_BASE_URL)</string>
 </dict>
 </plist>

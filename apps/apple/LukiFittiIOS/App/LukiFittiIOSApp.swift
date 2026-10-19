@@ -38,6 +38,80 @@ public final class LukiAppViewModel {
         self.store = store
         self.healthCoordinator = healthCoordinator
         self.watchSyncCoordinator = watchSyncCoordinator
+
+        self.store.onOverviewOrAuthChanged = { [weak self] in
+            self?.pushContextToWatch()
+        }
+        self.watchSyncCoordinator.onMutationReceived = { [weak self] packet in
+            guard let self, let active = self.store.activeSession else { return }
+            let merged = WatchSyncMerger.applyMutation(
+                packet,
+                to: active,
+                lastAppliedTimestamps: &self.watchSyncCoordinator.lastAppliedTimestamps
+            )
+            self.store.saveActiveSession(merged)
+            self.store.enqueueSessionSync(merged)
+            Task { await self.store.flushSyncQueue() }
+        }
+        self.watchSyncCoordinator.onActiveSessionReceived = { [weak self] incoming in
+            self?.mergeIncomingWatchActiveSession(incoming)
+        }
+        self.watchSyncCoordinator.onCompletedSessionReceived = { [weak self] completed in
+            self?.mergeIncomingWatchCompletedSession(completed)
+        }
+        pushContextToWatch()
+        pullFromWatchAndServer()
+    }
+
+    public func pullFromWatchAndServer() {
+        if let sharedActive = watchSyncCoordinator.pullSharedActiveSessionIfAvailable() {
+            mergeIncomingWatchActiveSession(sharedActive)
+        }
+        if let sharedCompleted = watchSyncCoordinator.pullSharedCompletedSessionIfAvailable() {
+            mergeIncomingWatchCompletedSession(sharedCompleted)
+        }
+        Task {
+            if store.currentUser != nil {
+                await store.refreshFromServerAfterAuth()
+            } else {
+                await store.flushSyncQueue()
+            }
+        }
+    }
+
+    private func mergeIncomingWatchActiveSession(_ incoming: WorkoutSessionDto?) {
+        guard let incoming else { return }
+        if let current = store.activeSession,
+           current.clientSessionId == incoming.clientSessionId,
+           current.version > incoming.version {
+            return
+        }
+        store.saveActiveSession(incoming)
+        store.enqueueSessionSync(incoming)
+        Task { await store.flushSyncQueue() }
+    }
+
+    private func mergeIncomingWatchCompletedSession(_ completed: WorkoutSessionDto) {
+        if store.activeSession?.clientSessionId == completed.clientSessionId {
+            store.saveActiveSession(nil)
+        }
+        store.saveHistorySession(completed)
+        store.enqueueSessionSync(completed)
+        Task { await store.flushSyncQueue() }
+    }
+
+    public func pushContextToWatch() {
+        watchSyncCoordinator.pushApplicationContextToWatch(
+            catalog: store.catalog,
+            folders: store.folders,
+            unfiledTemplates: store.unfiledTemplates,
+            stretchingRoutines: store.stretchingRoutines,
+            historySessions: store.historySessions,
+            preferences: store.preferences,
+            currentUser: store.currentUser,
+            authTokens: store.apiClient.tokenStore.loadTokens(),
+            activeSession: store.activeSession
+        )
     }
 
     public func handleUniversalLink(_ url: URL) {
@@ -78,6 +152,7 @@ public final class LukiAppViewModel {
         completedSummarySession = nil
         store.saveActiveSession(session)
         store.enqueueSessionSync(session)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
         selectedTab = .session
         Task {
             await healthCoordinator.startWorkout(sessionType: .STRENGTH)
@@ -96,6 +171,7 @@ public final class LukiAppViewModel {
         completedSummarySession = nil
         store.saveActiveSession(session)
         store.enqueueSessionSync(session)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
         selectedTab = .session
         Task {
             await healthCoordinator.startWorkout(sessionType: .STRETCHING)
@@ -141,6 +217,7 @@ public final class LukiAppViewModel {
         let recalculated = SessionCalculator.recalculateSessionTotals(session)
         store.saveActiveSession(recalculated)
         store.enqueueSessionSync(recalculated)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(recalculated)
 
         let packet = SessionMutationPacket(
             clientSessionId: recalculated.clientSessionId,
@@ -160,6 +237,225 @@ public final class LukiAppViewModel {
         watchSyncCoordinator.broadcastSetMutation(packet)
 
         Task { await store.flushSyncQueue() }
+    }
+
+    public func updateSet(
+        clientExerciseId: String,
+        clientSetId: String,
+        weight: Double? = nil,
+        reps: Int? = nil,
+        durationSeconds: Int? = nil,
+        rpe: Double?? = nil,
+        setType: SetType? = nil
+    ) {
+        guard var session = store.activeSession else { return }
+        guard let exIdx = session.exercises.firstIndex(where: { $0.clientExerciseId == clientExerciseId }),
+              let setIdx = session.exercises[exIdx].sets.firstIndex(where: { $0.clientSetId == clientSetId }) else {
+            return
+        }
+
+        var set = session.exercises[exIdx].sets[setIdx]
+        if let weight { set.weight = max(0, weight) }
+        if let reps { set.reps = max(0, reps) }
+        if let durationSeconds { set.durationSeconds = max(0, durationSeconds) }
+        if let rpe { set.rpe = rpe }
+        if let setType { set.setType = setType }
+        session.exercises[exIdx].sets[setIdx] = set
+        session.version += 1
+
+        let recalculated = SessionCalculator.recalculateSessionTotals(session)
+        store.saveActiveSession(recalculated)
+        store.enqueueSessionSync(recalculated)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(recalculated)
+
+        let packet = SessionMutationPacket(
+            clientSessionId: recalculated.clientSessionId,
+            clientExerciseId: clientExerciseId,
+            clientSetId: clientSetId,
+            weight: set.weight,
+            reps: set.reps,
+            rpe: set.rpe,
+            completed: set.completed,
+            avgHeartRateBpm: set.avgHeartRateBpm,
+            peakHeartRateBpm: set.peakHeartRateBpm,
+            restEndHeartRateBpm: set.restEndHeartRateBpm,
+            restTimerEndsAt: recalculated.restTimerEndsAt,
+            restTimerDurationSec: recalculated.restTimerDurationSec,
+            newVersion: recalculated.version
+        )
+        watchSyncCoordinator.broadcastSetMutation(packet)
+        Task { await store.flushSyncQueue() }
+    }
+
+    public func addSetToExercise(clientExerciseId: String, setType: SetType) {
+        guard var session = store.activeSession,
+              let exIdx = session.exercises.firstIndex(where: { $0.clientExerciseId == clientExerciseId }) else {
+            return
+        }
+        let existingSets = session.exercises[exIdx].sets
+        let lastSet = existingSets.last
+        let newSet = SessionSetDto(
+            sessionExerciseId: clientExerciseId,
+            setNumber: existingSets.count + 1,
+            setType: setType,
+            weight: lastSet?.weight ?? session.exercises[exIdx].targetWeight ?? 40,
+            weightUnit: session.weightUnit,
+            reps: lastSet?.reps ?? session.exercises[exIdx].targetRepsMin ?? 10,
+            durationSeconds: session.exercises[exIdx].targetDurationSeconds
+        )
+        session.exercises[exIdx].sets.append(newSet)
+        session.version += 1
+        let recalculated = SessionCalculator.recalculateSessionTotals(session)
+        store.saveActiveSession(recalculated)
+        store.enqueueSessionSync(recalculated)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(recalculated)
+        Task { await store.flushSyncQueue() }
+    }
+
+    public func removeSetFromExercise(clientExerciseId: String, clientSetId: String) {
+        guard var session = store.activeSession,
+              let exIdx = session.exercises.firstIndex(where: { $0.clientExerciseId == clientExerciseId }) else {
+            return
+        }
+        session.exercises[exIdx].sets.removeAll { $0.clientSetId == clientSetId }
+        for idx in session.exercises[exIdx].sets.indices {
+            session.exercises[exIdx].sets[idx].setNumber = idx + 1
+        }
+        session.version += 1
+        let recalculated = SessionCalculator.recalculateSessionTotals(session)
+        store.saveActiveSession(recalculated)
+        store.enqueueSessionSync(recalculated)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(recalculated)
+        Task { await store.flushSyncQueue() }
+    }
+
+    public func startRestTimer(durationSeconds: Int) {
+        guard var session = store.activeSession else { return }
+        session.restTimerDurationSec = durationSeconds
+        session.restTimerEndsAt = ISO8601DateFormatter().string(from: Date().addingTimeInterval(TimeInterval(durationSeconds)))
+        session.restTimerPausedRemSec = nil
+        session.version += 1
+        store.saveActiveSession(session)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
+    }
+
+    public func adjustRestTimer(deltaSeconds: Int) {
+        guard var session = store.activeSession else { return }
+        let current = SessionCalculator.computeRemainingRestSeconds(session: session)
+        let newRem = max(0, current.remainingSeconds + deltaSeconds)
+        if newRem == 0 {
+            skipRestTimer()
+            return
+        }
+        session.restTimerDurationSec = max(current.totalSeconds, newRem)
+        if current.isPaused {
+            session.restTimerPausedRemSec = newRem
+            session.restTimerEndsAt = nil
+        } else {
+            session.restTimerEndsAt = ISO8601DateFormatter().string(from: Date().addingTimeInterval(TimeInterval(newRem)))
+            session.restTimerPausedRemSec = nil
+        }
+        session.version += 1
+        store.saveActiveSession(session)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
+    }
+
+    public func togglePauseRestTimer() {
+        guard var session = store.activeSession else { return }
+        let current = SessionCalculator.computeRemainingRestSeconds(session: session)
+        if current.isPaused {
+            session.restTimerEndsAt = ISO8601DateFormatter().string(from: Date().addingTimeInterval(TimeInterval(current.remainingSeconds)))
+            session.restTimerPausedRemSec = nil
+        } else if current.isRunning {
+            session.restTimerPausedRemSec = current.remainingSeconds
+            session.restTimerEndsAt = nil
+        }
+        session.version += 1
+        store.saveActiveSession(session)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
+    }
+
+    public func skipRestTimer() {
+        guard var session = store.activeSession else { return }
+        session.restTimerEndsAt = nil
+        session.restTimerDurationSec = nil
+        session.restTimerPausedRemSec = nil
+        session.version += 1
+        store.saveActiveSession(session)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
+    }
+
+    public func toggleSkipExercise(clientExerciseId: String) {
+        guard var session = store.activeSession,
+              let exIdx = session.exercises.firstIndex(where: { $0.clientExerciseId == clientExerciseId }) else {
+            return
+        }
+        session.exercises[exIdx].status = session.exercises[exIdx].status == .SKIPPED ? .IN_PROGRESS : .SKIPPED
+        session.version += 1
+        store.saveActiveSession(session)
+        store.enqueueSessionSync(session)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
+    }
+
+    public func reorderExerciseInSession(clientExerciseId: String, moveUp: Bool) {
+        guard var session = store.activeSession,
+              let idx = session.exercises.firstIndex(where: { $0.clientExerciseId == clientExerciseId }) else {
+            return
+        }
+        let targetIdx = moveUp ? idx - 1 : idx + 1
+        guard session.exercises.indices.contains(targetIdx) else { return }
+        session.exercises.swapAt(idx, targetIdx)
+        for i in session.exercises.indices {
+            session.exercises[i].orderIndex = i
+        }
+        session.version += 1
+        store.saveActiveSession(session)
+        store.enqueueSessionSync(session)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
+    }
+
+    public func addUnplannedExerciseToSession(_ exercise: ExerciseDto) {
+        guard var session = store.activeSession else { return }
+        let clientExId = "sex-\(UUID().uuidString.lowercased())"
+        let sets = (1...3).map { num in
+            SessionSetDto(
+                sessionExerciseId: clientExId,
+                setNumber: num,
+                setType: .WORKING,
+                weight: 40,
+                weightUnit: session.weightUnit,
+                reps: 10
+            )
+        }
+        var newEx = SessionExerciseDto(
+            id: clientExId,
+            clientExerciseId: clientExId,
+            sessionId: session.clientSessionId,
+            exerciseId: exercise.id,
+            exerciseNameSnapshot: exercise.name,
+            primaryMuscleSnapshot: exercise.primaryMuscleGroup,
+            exerciseTypeSnapshot: exercise.exerciseType,
+            origin: .ADDED,
+            status: .IN_PROGRESS,
+            orderIndex: session.exercises.count,
+            plannedSets: 3,
+            targetRepsMin: 8,
+            targetRepsMax: 12,
+            restSeconds: store.preferences.defaultRestSeconds,
+            alternativeExerciseIds: exercise.alternativeExerciseIds,
+            sets: sets
+        )
+        newEx = ProgressionEngine.applyExerciseHistoryToSessionExercise(
+            newEx,
+            historySessions: store.historySessions,
+            catalogExercise: exercise,
+            weightUnit: session.weightUnit
+        )
+        session.exercises.append(newEx)
+        session.version += 1
+        store.saveActiveSession(session)
+        store.enqueueSessionSync(session)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
     }
 
     public func togglePauseActiveSession() {
@@ -214,6 +510,7 @@ public final class LukiAppViewModel {
         guard let session = store.activeSession else { return }
         store.saveActiveSession(nil)
         store.removeFromSyncQueue(clientSessionId: session.clientSessionId)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(nil)
         selectedTab = .workouts
     }
 }
@@ -221,6 +518,7 @@ public final class LukiAppViewModel {
 @main
 public struct LukiFittiIOSApp: App {
     @State private var viewModel = LukiAppViewModel()
+    @Environment(\.scenePhase) private var scenePhase
 
     public init() {}
 
@@ -230,6 +528,14 @@ public struct LukiFittiIOSApp: App {
                 .preferredColorScheme(.dark)
                 .onOpenURL { url in
                     viewModel.handleUniversalLink(url)
+                }
+                .onAppear {
+                    viewModel.pullFromWatchAndServer()
+                }
+                .onChange(of: scenePhase) { _, newPhase in
+                    if newPhase == .active {
+                        viewModel.pullFromWatchAndServer()
+                    }
                 }
         }
     }

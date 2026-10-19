@@ -13,6 +13,7 @@ Personal gym and workout management Progressive Web App (`luki-fitti`), optimize
 
 - `apps/api` (`@luki-fitti/api`) — NestJS 12 REST API (Express 5). Domain modules under `src/modules/` (`auth`, `exercise`, `workout`, `session`, `stretching`, `analytics`, `import`, `database`, `health`). Listens on port 3001.
 - `apps/web` (`@luki-fitti/web`) — Next.js 16 App Router PWA (`app/`): main PWA shell (`components/gym/`), IndexedDB offline store (`lib/offline/offline-store.ts`), Service Worker (`public/sw.js`), Web App Manifest (`app/manifest.ts`), and components from `@luki-fitti/ui`.
+- `apps/apple` (`@luki-fitti/apple`) — Native Swift 6 workspace (`LukiFittiIOS`, `LukiFittiWatch`, `LukiFittiWidgets`, and shared `Packages/LukiFittiKit`).
 - `packages/common` (`@luki-fitti/common`) — shared Zod schemas (single source of truth), DTOs, enums, initial exercise catalog (`src/catalog/`), and utilities.
 - `packages/database` (`@luki-fitti/database`) — Prisma 7 schema, SQL migrations, client, and seed script (PostgreSQL).
 - `packages/logger` (`@luki-fitti/logger`) — Winston wrapper; log via `@luki-fitti/logger`, never `console.log`.
@@ -38,6 +39,20 @@ Personal gym and workout management Progressive Web App (`luki-fitti`), optimize
 - Env files per app: `<app>/.env.local` (samples in `<app>/.env.sample`). Never commit `.env*.local`.
 - Inside docker, services reach each other by **service name** (`db`, `redis`, `api`), not `localhost`.
 - Next.js server-side fetch needs the **absolute** API URL — set `SERVER_API_URL=http://api:3001/api` (mirrors `API_URL`).
+
+## Native Apple Workspace (`apps/apple`)
+
+- **Generate Xcode Project:** `cd apps/apple && xcodegen generate && open LukiFitti.xcodeproj`
+- **Run Swift Package Tests:** `swift test --package-path apps/apple/Packages/LukiFittiKit`
+- **Build & Launch on Simulators:**
+  - List simulators: `xcrun simctl list devices available`
+  - Pair Watch & iPhone simulators: `xcrun simctl pair <WATCH_UDID> <IPHONE_UDID>`
+  - Build iOS: `xcodebuild -project apps/apple/LukiFitti.xcodeproj -scheme LukiFittiIOS -destination 'id=<IPHONE_UDID>' CODE_SIGNING_ALLOWED=NO build`
+  - Build watchOS: `xcodebuild -project apps/apple/LukiFitti.xcodeproj -scheme LukiFittiWatch -destination 'id=<WATCH_UDID>' CODE_SIGNING_ALLOWED=NO build`
+  - Install & launch: `xcrun simctl install <UDID> <PATH_TO_APP> && xcrun simctl launch <UDID> com.lukifitti.app` (or `com.lukifitti.app.watchkitapp` for Watch)
+- **API Environment Configuration:**
+  - `Config/Debug.xcconfig` defaults to `http://localhost:3001`; `Config/Release.xcconfig` defaults to `https://luki-fitti.tony-luke.de`.
+  - Override at runtime in Xcode via **Edit Scheme → Run → Environment Variables → `LUKIFITTI_API_BASE_URL`**.
 
 ## Agent Instructions (APM)
 

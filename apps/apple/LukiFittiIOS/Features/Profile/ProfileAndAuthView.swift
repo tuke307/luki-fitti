@@ -67,9 +67,13 @@ public struct ProfileAndAuthView: View {
             if authMode == "register" {
                 TextField("Your Name (e.g. GymBuddy)", text: $name)
                     .textFieldStyle(.roundedBorder)
+                    .autocorrectionDisabled()
             }
             TextField("Email address", text: $email)
                 .textFieldStyle(.roundedBorder)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .keyboardType(.emailAddress)
             SecureField("Password", text: $password)
                 .textFieldStyle(.roundedBorder)
 
@@ -84,8 +88,8 @@ public struct ProfileAndAuthView: View {
                     do {
                         if authMode == "login" {
                             let user = try await viewModel.store.apiClient.login(email: email, password: password)
-                            viewModel.store.currentUser = user
-                            await viewModel.store.flushSyncQueue()
+                            viewModel.store.saveAuthenticatedUser(user)
+                            await viewModel.store.refreshFromServerAfterAuth()
                         } else {
                             let user = try await viewModel.store.apiClient.register(
                                 email: email,
@@ -114,12 +118,13 @@ public struct ProfileAndAuthView: View {
     }
 
     private var preferencesSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        @Bindable var store = viewModel.store
+        return VStack(alignment: .leading, spacing: 12) {
             Text("Gym & Unit Preferences")
                 .font(.headline)
                 .foregroundStyle(.white)
 
-            Picker("Weight Unit", selection: $viewModel.store.preferences.weightUnit) {
+            Picker("Weight Unit", selection: $store.preferences.weightUnit) {
                 ForEach(WeightUnit.allCases, id: \.self) { unit in
                     Text(unit.rawValue).tag(unit)
                 }
@@ -127,8 +132,8 @@ public struct ProfileAndAuthView: View {
             .pickerStyle(.segmented)
 
             Stepper(
-                "Weekly Goal: \(viewModel.store.preferences.weeklyGoalSessions) sessions",
-                value: $viewModel.store.preferences.weeklyGoalSessions,
+                "Weekly Goal: \(store.preferences.weeklyGoalSessions) sessions",
+                value: $store.preferences.weeklyGoalSessions,
                 in: 1...14
             )
             .font(.subheadline)

@@ -91,6 +91,7 @@ mci-app
 # SwiftPM & Xcode build artifacts
 .build/
 **/.build/
+**/.swiftpm/
 **/*.xcodeproj/
 **/*.xcworkspace/
 DerivedData/

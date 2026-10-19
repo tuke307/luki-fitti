@@ -44,6 +44,7 @@ public final class OfflineStore {
     public var currentUser: UserDto?
     public var preferences: UserPreferencesDto = UserPreferencesDto()
     public var conflictItem: QueuedSessionSyncItem?
+    public var onOverviewOrAuthChanged: (() -> Void)?
 
     private let storageDirectory: URL
     public let apiClient: APIClient
@@ -55,10 +56,9 @@ public final class OfflineStore {
         if let storageDirectory {
             self.storageDirectory = storageDirectory
         } else {
-            let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.lukifitti.app")
             let fallbackURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
                 .appendingPathComponent("LukiFittiOfflineStore", isDirectory: true)
-            self.storageDirectory = groupURL ?? fallbackURL
+            self.storageDirectory = fallbackURL
         }
         self.apiClient = apiClient
         try? FileManager.default.createDirectory(at: self.storageDirectory, withIntermediateDirectories: true)
@@ -229,28 +229,93 @@ public final class OfflineStore {
         ] {
             deleteFile(file)
         }
+        deleteFile("current_user.json")
         activeSession = nil
         historySessions = []
         syncQueue = []
         currentUser = nil
         conflictItem = nil
         loadFromDiskOrSeedStarterCatalog()
+        onOverviewOrAuthChanged?()
     }
 
     public func saveWorkoutsOverview(folders: [WorkoutFolderDto], unfiledTemplates: [WorkoutTemplateDto]) {
         self.folders = folders
         self.unfiledTemplates = unfiledTemplates
         writeJSON(WorkoutsOverviewDto(folders: folders, unfiledTemplates: unfiledTemplates), to: "workouts_overview.json")
+        onOverviewOrAuthChanged?()
     }
 
     public func saveStretchingRoutines(_ routines: [StretchingRoutineDto]) {
         self.stretchingRoutines = routines
         writeJSON(routines, to: "stretching_routines.json")
+        onOverviewOrAuthChanged?()
     }
 
     public func saveCatalog(_ exercises: [ExerciseDto]) {
         self.catalog = exercises
         writeJSON(exercises, to: "exercise_catalog.json")
+    }
+
+    public func saveAuthenticatedUser(_ user: UserDto) {
+        self.currentUser = user
+        if let prefs = user.preferences {
+            self.preferences = prefs
+            writeJSON(prefs, to: "user_preferences.json")
+        }
+        writeJSON(user, to: "current_user.json")
+        updateSyncStateBadge()
+        onOverviewOrAuthChanged?()
+    }
+
+    public func saveHistorySessionsList(_ sessions: [WorkoutSessionDto]) {
+        historySessions = sessions
+            .filter { $0.status == .COMPLETED }
+            .sorted { $0.startedAt > $1.startedAt }
+        writeJSON(historySessions, to: "session_history.json")
+    }
+
+    public func refreshFromServerAfterAuth() async {
+        await flushSyncQueue()
+        if let serverExercises = try? await apiClient.fetchExercises(), !serverExercises.isEmpty {
+            var mergedById = Dictionary(uniqueKeysWithValues: catalog.map { ($0.id, $0) })
+            for ex in serverExercises {
+                mergedById[ex.id] = ex
+            }
+            let mergedList = Array(mergedById.values).sorted { $0.name < $1.name }
+            saveCatalog(mergedList)
+        }
+        if let overview = try? await apiClient.fetchWorkoutsOverview() {
+            saveWorkoutsOverview(folders: overview.folders, unfiledTemplates: overview.unfiledTemplates)
+            // Ensure any exercise embedded in user templates is also in the local catalog
+            var mergedById = Dictionary(uniqueKeysWithValues: catalog.map { ($0.id, $0) })
+            var addedAny = false
+            for folder in overview.folders {
+                for tpl in folder.templates {
+                    for te in tpl.exercises {
+                        if let ex = te.exercise, mergedById[ex.id] == nil {
+                            mergedById[ex.id] = ex
+                            addedAny = true
+                        }
+                    }
+                }
+            }
+            if addedAny {
+                saveCatalog(Array(mergedById.values).sorted { $0.name < $1.name })
+            }
+        }
+        if let routines = try? await apiClient.fetchStretchingRoutines(), !routines.isEmpty {
+            saveStretchingRoutines(routines)
+        }
+        if let sessions = try? await apiClient.fetchSessions() {
+            let completed = sessions.filter { $0.status == .COMPLETED }.sorted { $0.startedAt > $1.startedAt }
+            if !completed.isEmpty {
+                historySessions = completed
+                writeJSON(historySessions, to: "session_history.json")
+            }
+        }
+        updateSyncStateBadge()
+        onOverviewOrAuthChanged?()
     }
 
     private func updateSyncStateBadge() {

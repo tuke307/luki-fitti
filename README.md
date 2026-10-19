@@ -94,6 +94,12 @@ The native iOS 18, watchOS 11, and Dynamic Island Widget targets share business 
 # Run Swift package unit tests
 swift test --package-path apps/apple/Packages/LukiFittiKit
 
-# Generate LukiFitti.xcodeproj via XcodeGen
-cd apps/apple && xcodegen generate
+# Generate LukiFitti.xcodeproj via XcodeGen and open in Xcode
+cd apps/apple && xcodegen generate && open LukiFitti.xcodeproj
+
+# Pair Apple Watch & iPhone Simulators for WatchConnectivity sync
+xcrun simctl pair <WATCH_SIM_UDID> <IPHONE_SIM_UDID>
 ```
+
+- **Environment Switching:** `Config/Debug.xcconfig` defaults to `http://localhost:3001` and `Config/Release.xcconfig` defaults to `https://luki-fitti.tony-luke.de`. You can override the API URL in Xcode under **Edit Scheme (`⌘<`) → Run → Environment Variables → `LUKIFITTI_API_BASE_URL`**.
+

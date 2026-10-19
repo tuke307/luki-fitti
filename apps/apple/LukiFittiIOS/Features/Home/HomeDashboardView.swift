@@ -170,12 +170,45 @@ public struct HomeDashboardView: View {
         .background(RoundedRectangle(cornerRadius: 18).fill(LukiColors.darkCard))
     }
 
+    private static let isoFormatterWithFractional: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
+    private static let isoFormatterStandard = ISO8601DateFormatter()
+
+    private func parseSessionDate(_ iso: String) -> Date {
+        Self.isoFormatterWithFractional.date(from: iso)
+            ?? Self.isoFormatterStandard.date(from: iso)
+            ?? Date()
+    }
+
+    private var muscleRangeFilteredSessions: [WorkoutSessionDto] {
+        let now = Date()
+        let cutoff: Date? = switch muscleRange {
+        case "30d": now.addingTimeInterval(-30 * 86_400)
+        case "90d": now.addingTimeInterval(-90 * 86_400)
+        default: nil
+        }
+        return viewModel.store.historySessions.filter { session in
+            guard let cutoff else { return true }
+            return parseSessionDate(session.startedAt) >= cutoff
+        }
+    }
+
     private var muscleBalanceChartCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let sessionsInRange = muscleRangeFilteredSessions
+        return VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Muscle Group Set Balance")
-                    .font(.headline)
-                    .foregroundStyle(.white)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Muscle Group Set Balance")
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                    Text("Working sets (\(muscleRange.uppercased()) • \(sessionsInRange.count) sessions)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
                 Picker("Range", selection: $muscleRange) {
                     Text("30d").tag("30d")
@@ -186,7 +219,7 @@ public struct HomeDashboardView: View {
                 .frame(width: 140)
             }
             ForEach(MuscleGroup.allCases.prefix(6), id: \.self) { muscle in
-                let sets = viewModel.store.historySessions.reduce(0) { acc, sess in
+                let sets = sessionsInRange.reduce(0) { acc, sess in
                     acc + sess.exercises.filter { $0.primaryMuscleSnapshot == muscle }
                         .reduce(0) { $0 + $1.sets.filter(\.completed).count }
                 }

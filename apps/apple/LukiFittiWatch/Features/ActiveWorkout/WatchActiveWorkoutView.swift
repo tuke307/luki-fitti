@@ -2,6 +2,7 @@ import SwiftUI
 import LukiFittiModels
 import LukiFittiDesign
 import LukiFittiDomain
+import LukiFittiWatchSync
 
 public struct WatchActiveWorkoutView: View {
     @Bindable public var viewModel: WatchWorkoutViewModel
@@ -336,7 +337,31 @@ public struct WatchActiveWorkoutView: View {
         session.exercises[exIdx].sets[setIdx].weight = max(0, oldW + weightDelta)
         session.exercises[exIdx].sets[setIdx].reps = max(1, oldR + repsDelta)
         session.version += 1
-        viewModel.store.saveActiveSession(session)
+
+        let recalculated = SessionCalculator.recalculateSessionTotals(session)
+        viewModel.store.saveActiveSession(recalculated)
+        viewModel.store.enqueueSessionSync(recalculated)
+        viewModel.watchSyncCoordinator.broadcastActiveSessionSnapshot(recalculated)
+
+        let set = recalculated.exercises[exIdx].sets[setIdx]
+        let packet = SessionMutationPacket(
+            clientSessionId: recalculated.clientSessionId,
+            clientExerciseId: recalculated.exercises[exIdx].clientExerciseId,
+            clientSetId: set.clientSetId,
+            weight: set.weight,
+            reps: set.reps,
+            rpe: set.rpe,
+            completed: set.completed,
+            avgHeartRateBpm: set.avgHeartRateBpm,
+            peakHeartRateBpm: set.peakHeartRateBpm,
+            restEndHeartRateBpm: set.restEndHeartRateBpm,
+            restTimerEndsAt: recalculated.restTimerEndsAt,
+            restTimerDurationSec: recalculated.restTimerDurationSec,
+            newVersion: recalculated.version
+        )
+        viewModel.watchSyncCoordinator.broadcastSetMutation(packet)
+
+        Task { await viewModel.store.flushSyncQueue() }
     }
 
     private func formattedElapsed(_ sec: Int) -> String {
