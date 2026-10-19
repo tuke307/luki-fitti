@@ -6,6 +6,7 @@ import {
   MuscleGroup,
   SessionExerciseOrigin,
   SessionExerciseStatus,
+  SessionSourceDevice,
   SessionStatus,
   SessionType,
   SetType,
@@ -250,5 +251,75 @@ describe('SessionService — Offline Sync Idempotency, Conflict Detection & Volu
 
     // Another user cannot sync into user-1's session
     await assert.rejects(() => service.syncSession('user-2', basePayload), /another user/i);
+  });
+
+  it('persists Apple Watch HealthKit telemetry, heartRateSamples, and per-set HR metrics and computes fallback HR stats', async () => {
+    const prisma = createMockSessionPrisma();
+    const service = new SessionService(prisma);
+
+    const watchPayload = {
+      clientSessionId: 'watch-session-uuid-1',
+      sessionType: SessionType.STRENGTH,
+      workoutNameSnapshot: 'Day 1 — Chest & Triceps',
+      status: SessionStatus.COMPLETED,
+      startedAt: new Date(Date.now() - 3600_000).toISOString(),
+      completedAt: new Date().toISOString(),
+      activeDurationSeconds: 3420,
+      weightUnit: WeightUnit.KG,
+      sourceDevice: SessionSourceDevice.APPLE_WATCH,
+      healthKitWorkoutUuid: '550e8400-e29b-41d4-a716-446655440000',
+      activeCaloriesKcal: 412.5,
+      totalCaloriesKcal: 538.0,
+      heartRateSamples: [
+        { offsetSec: 0, bpm: 110 },
+        { offsetSec: 5, bpm: 140 },
+        { offsetSec: 10, bpm: 170 },
+      ],
+      version: 1,
+      exercises: [
+        {
+          clientExerciseId: 'watch-ex-1',
+          exerciseNameSnapshot: 'Barbell Bench Press',
+          primaryMuscleSnapshot: MuscleGroup.CHEST,
+          exerciseTypeSnapshot: ExerciseType.STRENGTH,
+          origin: SessionExerciseOrigin.PLANNED,
+          status: SessionExerciseStatus.COMPLETED,
+          orderIndex: 0,
+          plannedSets: 1,
+          plannedWarmupSets: 0,
+          restSeconds: 90,
+          alternativeExerciseIds: [],
+          sets: [
+            {
+              clientSetId: 'watch-set-1',
+              setNumber: 1,
+              setType: SetType.WORKING,
+              weight: 90,
+              weightUnit: WeightUnit.KG,
+              reps: 8,
+              completed: true,
+              avgHeartRateBpm: 142,
+              peakHeartRateBpm: 168,
+              restEndHeartRateBpm: 118,
+            },
+          ],
+        },
+      ],
+    };
+
+    const synced = await service.syncSession('user-1', watchPayload);
+    assert.equal(synced.session.sourceDevice, SessionSourceDevice.APPLE_WATCH);
+    assert.equal(synced.session.healthKitWorkoutUuid, '550e8400-e29b-41d4-a716-446655440000');
+    assert.equal(synced.session.activeCaloriesKcal, 412.5);
+    assert.equal(synced.session.totalCaloriesKcal, 538.0);
+    // Computed fallback from [110, 140, 170]: avg = 140, max = 170, min = 110
+    assert.equal(synced.session.avgHeartRateBpm, 140);
+    assert.equal(synced.session.maxHeartRateBpm, 170);
+    assert.equal(synced.session.minHeartRateBpm, 110);
+    assert.equal(synced.session.heartRateSamples?.length, 3);
+    const setDto = synced.session.exercises[0]?.sets[0];
+    assert.equal(setDto?.avgHeartRateBpm, 142);
+    assert.equal(setDto?.peakHeartRateBpm, 168);
+    assert.equal(setDto?.restEndHeartRateBpm, 118);
   });
 });

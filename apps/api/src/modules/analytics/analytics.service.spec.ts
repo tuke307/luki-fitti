@@ -24,6 +24,8 @@ describe('AnalyticsService — Frequency, Volume, PRs & Stretching Separation', 
             status: SessionStatus.COMPLETED,
             startedAt: now,
             activeDurationSeconds: 3600,
+            activeCaloriesKcal: 420,
+            avgHeartRateBpm: 142,
             exercises: [
               {
                 exerciseId: 'ex-barbell-bench-press',
@@ -96,5 +98,7 @@ describe('AnalyticsService — Frequency, Volume, PRs & Stretching Separation', 
     assert.equal(summary.personalRecords.length, 1);
     assert.equal(summary.personalRecords[0]?.maxWeightKg, 100);
     assert.equal(summary.personalRecords[0]?.estimatedOneRepMaxKg, 120);
+    assert.equal(summary.totalActiveCaloriesKcal, 420);
+    assert.equal(summary.avgWorkoutHeartRateBpm, 142);
   });
 });

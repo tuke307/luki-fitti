@@ -11,6 +11,10 @@ import {
   Trash2,
   Check,
   Filter,
+  Heart,
+  Flame,
+  Watch,
+  Smartphone,
 } from 'lucide-react';
 import {
   Area,
@@ -48,6 +52,7 @@ import {
 import {
   ExerciseType,
   MuscleGroup,
+  SessionSourceDevice,
   SessionType,
   SetType,
   WeightUnit,
@@ -909,6 +914,24 @@ export function DiaryAnalyticsView() {
                     <span className="text-muted-foreground font-mono-tabular text-xs">
                       {formatLongDateTime(session.startedAt, locale)}
                     </span>
+                    {session.sourceDevice === SessionSourceDevice.APPLE_WATCH && (
+                      <Badge variant="outline" className="gap-1 border-rose-500/40 text-[10px]">
+                        <Watch className="h-3 w-3 text-rose-400" />
+                        {t.diary.recordedOnAppleWatch}
+                      </Badge>
+                    )}
+                    {session.sourceDevice === SessionSourceDevice.IPHONE && (
+                      <Badge variant="outline" className="gap-1 text-[10px]">
+                        <Smartphone className="h-3 w-3" />
+                        {t.diary.recordedOnIphone}
+                      </Badge>
+                    )}
+                    {session.healthKitWorkoutUuid && (
+                      <Badge variant="outline" className="gap-1 border-rose-500/40 text-[10px] text-rose-400">
+                        <Heart className="h-3 w-3 fill-rose-500 text-rose-500" />
+                        {t.diary.syncedWithAppleHealth}
+                      </Badge>
+                    )}
                   </div>
 
                   <h3 className="font-display truncate text-base font-bold">
@@ -917,6 +940,27 @@ export function DiaryAnalyticsView() {
                   <p className="text-muted-foreground text-xs leading-relaxed">
                     {session.exercises.map((e) => e.exerciseNameSnapshot).join(' • ')}
                   </p>
+                  {(session.activeCaloriesKcal || session.avgHeartRateBpm) && (
+                    <div className="flex flex-wrap items-center gap-2 pt-0.5 text-[11px]">
+                      {typeof session.activeCaloriesKcal === 'number' &&
+                        session.activeCaloriesKcal > 0 && (
+                          <span className="font-mono-tabular inline-flex items-center gap-1 rounded-lg bg-amber-500/15 px-2 py-0.5 font-semibold text-amber-400">
+                            <Flame className="h-3 w-3" />
+                            {Math.round(session.activeCaloriesKcal)} kcal
+                          </span>
+                        )}
+                      {typeof session.avgHeartRateBpm === 'number' &&
+                        session.avgHeartRateBpm > 0 && (
+                          <span className="font-mono-tabular inline-flex items-center gap-1 rounded-lg bg-rose-500/15 px-2 py-0.5 font-semibold text-rose-400">
+                            <Heart className="h-3 w-3 fill-rose-500" />
+                            {t.diary.avgHeartRate}: {session.avgHeartRateBpm} bpm
+                            {typeof session.maxHeartRateBpm === 'number' &&
+                              session.maxHeartRateBpm > 0 &&
+                              ` • ${t.diary.maxHeartRate}: ${session.maxHeartRateBpm} bpm`}
+                          </span>
+                        )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t pt-3 md:flex-nowrap md:justify-end md:border-t-0 md:pt-0">
@@ -1013,6 +1057,82 @@ export function DiaryAnalyticsView() {
               </DialogHeader>
 
               <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-0.5">
+                {(inspectingSession.activeCaloriesKcal ||
+                  inspectingSession.avgHeartRateBpm ||
+                  (inspectingSession.heartRateSamples &&
+                    inspectingSession.heartRateSamples.length > 0)) && (
+                  <div className="space-y-3 rounded-2xl border border-rose-500/30 bg-rose-500/5 p-3.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-display flex items-center gap-1.5 text-xs font-bold text-rose-400">
+                        <Heart className="h-3.5 w-3.5 fill-rose-500 text-rose-500" />
+                        {t.diary.heartRateCurveTitle}
+                      </span>
+                      <div className="font-mono-tabular flex flex-wrap items-center gap-2 text-[11px]">
+                        {typeof inspectingSession.activeCaloriesKcal === 'number' && (
+                          <span className="rounded-md bg-amber-500/15 px-2 py-0.5 font-bold text-amber-400">
+                            {Math.round(inspectingSession.activeCaloriesKcal)} kcal
+                          </span>
+                        )}
+                        {typeof inspectingSession.avgHeartRateBpm === 'number' && (
+                          <span className="rounded-md bg-rose-500/15 px-2 py-0.5 font-bold text-rose-400">
+                            {t.diary.avgHeartRate}: {inspectingSession.avgHeartRateBpm} bpm
+                          </span>
+                        )}
+                        {typeof inspectingSession.maxHeartRateBpm === 'number' && (
+                          <span className="rounded-md bg-rose-500/15 px-2 py-0.5 font-bold text-rose-400">
+                            {t.diary.maxHeartRate}: {inspectingSession.maxHeartRateBpm} bpm
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {inspectingSession.heartRateSamples &&
+                      inspectingSession.heartRateSamples.length > 1 && (
+                        <div className="h-36 w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <ComposedChart
+                              data={inspectingSession.heartRateSamples.map((pt) => ({
+                                minLabel: `${Math.floor(pt.offsetSec / 60)}:${String(pt.offsetSec % 60).padStart(2, '0')}`,
+                                bpm: pt.bpm,
+                              }))}
+                              margin={{ top: 4, right: 8, left: -20, bottom: 0 }}
+                            >
+                              <defs>
+                                <linearGradient id="hrCurveGrad" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="#F43F5E" stopOpacity={0.55} />
+                                  <stop offset="100%" stopColor="#F43F5E" stopOpacity={0.05} />
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid
+                                strokeDasharray="3 3"
+                                stroke="rgba(148,163,184,0.15)"
+                              />
+                              <XAxis
+                                dataKey="minLabel"
+                                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                                axisLine={false}
+                                tickLine={false}
+                              />
+                              <YAxis
+                                domain={['dataMin - 10', 'dataMax + 10']}
+                                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                                axisLine={false}
+                                tickLine={false}
+                              />
+                              <Area
+                                type="monotone"
+                                dataKey="bpm"
+                                stroke="#F43F5E"
+                                strokeWidth={2}
+                                fill="url(#hrCurveGrad)"
+                              />
+                            </ComposedChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
+                  </div>
+                )}
+
                 {inspectingSession.exercises.map((ex, exIdx) => (
                   <div
                     key={ex.clientExerciseId}
@@ -1033,9 +1153,22 @@ export function DiaryAnalyticsView() {
                           key={set.clientSetId}
                           className="bg-background flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs"
                         >
-                          <span className="font-mono-tabular shrink-0 font-bold">
-                            {t.common.set} {sIdx + 1} ({setTypeLabel(set.setType)})
-                          </span>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="font-mono-tabular shrink-0 font-bold">
+                              {t.common.set} {sIdx + 1} ({setTypeLabel(set.setType)})
+                            </span>
+                            {(set.peakHeartRateBpm || set.restEndHeartRateBpm) && (
+                              <span className="font-mono-tabular inline-flex items-center gap-1 rounded-md bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-rose-400">
+                                <Heart className="h-2.5 w-2.5 fill-rose-500" />
+                                {set.peakHeartRateBpm
+                                  ? `${set.peakHeartRateBpm} bpm peak`
+                                  : `${set.avgHeartRateBpm ?? '-'} bpm`}
+                                {set.restEndHeartRateBpm
+                                  ? ` · ${set.restEndHeartRateBpm} bpm recovery`
+                                  : ''}
+                              </span>
+                            )}
+                          </div>
                           <div className="ml-auto flex shrink-0 items-center gap-2">
                             <Label className="text-muted-foreground text-[10px]">
                               {weightUnit}

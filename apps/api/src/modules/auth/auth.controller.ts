@@ -17,7 +17,7 @@ import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { RefreshTokenService } from './refresh-token.service';
 import { CsrfGuard } from '@/guards/csrf.guard';
-import { AuthGuard } from '@/guards/auth.guard';
+import { AuthGuard, extractBearerToken } from '@/guards/auth.guard';
 import { CurrentUser, type AuthenticatedUser } from '@/decorators/current-user.decorator';
 import { ZodValidationPipe } from '@/pipes/zod-validation.pipe';
 import {
@@ -28,7 +28,7 @@ import {
   verifyRefreshToken,
 } from '@/utils/jwt.util';
 import { getRedis } from '@/utils/redis.util';
-import { REFRESH_TOKEN_EXPIRY_MS } from '@/config/env.config';
+import { ACCESS_TOKEN_EXPIRY_MS, REFRESH_TOKEN_EXPIRY_MS } from '@/config/env.config';
 import {
   LoginSchema,
   RegisterSchema,
@@ -40,6 +40,7 @@ import {
   RequestAccountDeletionSchema,
   ConfirmAccountDeletionSchema,
   UpdatePreferencesSchema,
+  RefreshTokenBodySchema,
   type LoginDto,
   type RegisterDto,
   type RegisterResponseDto,
@@ -51,6 +52,8 @@ import {
   type RequestAccountDeletionDto,
   type ConfirmAccountDeletionDto,
   type UpdatePreferencesDto,
+  type RefreshTokenBodyDto,
+  type AuthTokensDto,
   type UserDto,
 } from '@luki-fitti/common/schemas';
 import {
@@ -68,7 +71,10 @@ export class AuthController {
     private readonly refreshTokenService: RefreshTokenService,
   ) {}
 
-  private async issueSessionCookies(user: { id: string; email: string }, res: Response) {
+  private async issueSessionCookies(
+    user: { id: string; email: string },
+    res: Response,
+  ): Promise<AuthTokensDto> {
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
     const csrfToken = generateCsrfToken();
@@ -82,6 +88,12 @@ export class AuthController {
     setCookie(res, 'accessToken', accessToken, accessTokenCookieOptions);
     setCookie(res, 'refreshToken', refreshToken, refreshTokenCookieOptions);
     setCookie(res, 'csrfToken', csrfToken, csrfCookieOptions);
+
+    return {
+      accessToken,
+      refreshToken,
+      expiresAt: new Date(Date.now() + ACCESS_TOKEN_EXPIRY_MS).toISOString(),
+    };
   }
 
   private clearSessionCookies(res: Response) {
@@ -101,7 +113,8 @@ export class AuthController {
   ): Promise<RegisterResponseDto> {
     const result = await this.authService.registerUser(body);
     if (!result.requiresEmailConfirmation) {
-      await this.issueSessionCookies(result, res);
+      const tokens = await this.issueSessionCookies(result, res);
+      return { ...result, tokens };
     }
     return result;
   }
@@ -114,8 +127,8 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<UserDto> {
     const user = await this.authService.verifyEmail(body.token);
-    await this.issueSessionCookies(user, res);
-    return user;
+    const tokens = await this.issueSessionCookies(user, res);
+    return { ...user, tokens };
   }
 
   @Post('resend-confirmation')
@@ -153,8 +166,8 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<UserDto> {
     const user = await this.authService.authenticateUser(body.email, body.password);
-    await this.issueSessionCookies(user, res);
-    return user;
+    const tokens = await this.issueSessionCookies(user, res);
+    return { ...user, tokens };
   }
 
   @Get('me')
@@ -213,7 +226,7 @@ export class AuthController {
   ) {
     const result = await this.authService.confirmAccountDeletion(body.token);
 
-    const accessToken = req.cookies?.accessToken;
+    const accessToken = extractBearerToken(req) ?? (req.cookies?.accessToken as string | undefined);
     if (accessToken) {
       try {
         const decoded = verifyAccessToken(accessToken);
@@ -243,7 +256,7 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const accessToken = req.cookies?.accessToken;
+    const accessToken = extractBearerToken(req) ?? (req.cookies?.accessToken as string | undefined);
     if (accessToken) {
       try {
         const decoded = verifyAccessToken(accessToken);
@@ -266,8 +279,13 @@ export class AuthController {
 
   @Post('refresh-token')
   @ApiOperation({ summary: 'Rotate refresh token and issue new access token' })
-  async refreshToken(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const refreshToken = req.cookies?.refreshToken;
+  async refreshToken(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @Body(new ZodValidationPipe(RefreshTokenBodySchema)) body?: RefreshTokenBodyDto,
+  ) {
+    const refreshToken =
+      (req.cookies?.refreshToken as string | undefined) ?? body?.refreshToken?.trim();
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token not provided');
     }
@@ -298,7 +316,7 @@ export class AuthController {
       throw new ForbiddenException('Refresh token not found or already used');
     }
 
-    await this.issueSessionCookies(user, res);
-    return { success: true };
+    const tokens = await this.issueSessionCookies(user, res);
+    return { success: true, tokens };
   }
 }

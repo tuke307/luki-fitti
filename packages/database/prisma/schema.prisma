@@ -105,6 +105,12 @@ enum SetType {
   STRETCH
 }
 
+enum SessionSourceDevice {
+  WEB
+  IPHONE
+  APPLE_WATCH
+}
+
 model User {
   id                       String    @id @default(uuid())
   email                    String    @unique
@@ -331,31 +337,39 @@ model StretchingRoutineExercise {
 }
 
 model WorkoutSession {
-  id                    String        @id @default(uuid())
-  clientSessionId       String        @unique
+  id                    String              @id @default(uuid())
+  clientSessionId       String              @unique
   userId                String
   templateId            String?
   stretchingRoutineId   String?
-  sessionType           SessionType   @default(STRENGTH)
+  sessionType           SessionType         @default(STRENGTH)
   workoutNameSnapshot   String
-  status                SessionStatus @default(IN_PROGRESS)
-  startedAt             DateTime      @default(now())
+  status                SessionStatus       @default(IN_PROGRESS)
+  startedAt             DateTime            @default(now())
   pausedAt              DateTime?
   completedAt           DateTime?
-  activeDurationSeconds Int           @default(0)
-  weightUnit            WeightUnit    @default(KG)
-  totalVolumeKg         Float         @default(0)
-  totalSetsCompleted    Int           @default(0)
-  totalRepsCompleted    Int           @default(0)
-  totalStretchSeconds   Int           @default(0)
+  activeDurationSeconds Int                 @default(0)
+  weightUnit            WeightUnit          @default(KG)
+  totalVolumeKg         Float               @default(0)
+  totalSetsCompleted    Int                 @default(0)
+  totalRepsCompleted    Int                 @default(0)
+  totalStretchSeconds   Int                 @default(0)
   notes                 String?
   restTimerEndsAt       DateTime?
   restTimerDurationSec  Int?
   restTimerPausedRemSec Int?
-  version               Int           @default(1)
-  lastSyncedAt          DateTime      @default(now())
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
+  sourceDevice          SessionSourceDevice @default(WEB)
+  healthKitWorkoutUuid  String?             @unique
+  activeCaloriesKcal    Float?
+  totalCaloriesKcal     Float?
+  avgHeartRateBpm       Int?
+  maxHeartRateBpm       Int?
+  minHeartRateBpm       Int?
+  heartRateSamplesJson  Json?
+  version               Int                 @default(1)
+  lastSyncedAt          DateTime            @default(now())
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
 
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   template          WorkoutTemplate?   @relation(fields: [templateId], references: [id], onDelete: SetNull)
@@ -401,22 +415,25 @@ model SessionExercise {
 }
 
 model SessionSet {
-  id                String     @id @default(uuid())
-  clientSetId       String     @unique
-  sessionExerciseId String
-  setNumber         Int
-  setType           SetType    @default(WORKING)
-  weight            Float?
-  weightUnit        WeightUnit @default(KG)
-  reps              Int?
-  durationSeconds   Int?
-  distanceMeters    Float?
-  rpe               Float?
-  completed         Boolean    @default(false)
-  completedAt       DateTime?
-  isPersonalRecord  Boolean    @default(false)
-  notes             String?
-  updatedAt         DateTime   @updatedAt
+  id                  String     @id @default(uuid())
+  clientSetId         String     @unique
+  sessionExerciseId   String
+  setNumber           Int
+  setType             SetType    @default(WORKING)
+  weight              Float?
+  weightUnit          WeightUnit @default(KG)
+  reps                Int?
+  durationSeconds     Int?
+  distanceMeters      Float?
+  rpe                 Float?
+  completed           Boolean    @default(false)
+  completedAt         DateTime?
+  isPersonalRecord    Boolean    @default(false)
+  notes               String?
+  avgHeartRateBpm     Int?
+  peakHeartRateBpm    Int?
+  restEndHeartRateBpm Int?
+  updatedAt           DateTime   @updatedAt
 
   sessionExercise SessionExercise @relation(fields: [sessionExerciseId], references: [id], onDelete: Cascade)
 

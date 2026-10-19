@@ -1,12 +1,22 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
-import { Request } from 'express';
+import type { Request } from 'express';
 import { constantTimeEqual } from '@luki-fitti/common/utils/crypto';
+import type { AuthTransport } from './auth.guard';
 
 @Injectable()
 export class CsrfGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest<Request>();
-    const csrfTokenFromCookie: string = request.cookies.csrfToken ?? '';
+    const request = context
+      .switchToHttp()
+      .getRequest<Request & { authTransport?: AuthTransport }>();
+
+    // Bearer-authenticated requests (e.g., native iOS / watchOS clients) do not
+    // rely on ambient browser cookies, so CSRF protection is not applicable.
+    if (request.authTransport === 'bearer') {
+      return true;
+    }
+
+    const csrfTokenFromCookie: string = request.cookies?.csrfToken ?? '';
     const headerValue = request.headers['x-csrf-token'];
     const csrfTokenFromHeader: string = Array.isArray(headerValue)
       ? (headerValue[0] ?? '')

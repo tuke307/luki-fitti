@@ -384,6 +384,16 @@ export const de = {
     inspectModalDesc:
       'Korrigiere unten beliebige Gewichts- oder Wiederholungswerte und klicke auf Korrekturen speichern.',
     saveCorrectionsBtn: 'Korrekturen speichern',
+    activeCalories: 'Aktive Kalorien',
+    heartRate: 'Herzfrequenz',
+    avgHeartRate: 'Ø Puls',
+    maxHeartRate: 'Max. Puls',
+    peakHr: 'Spitzenpuls',
+    recoveryHr: 'Erholungspuls',
+    syncedWithAppleHealth: 'Apple Health',
+    recordedOnAppleWatch: 'Apple Watch',
+    recordedOnIphone: 'iPhone',
+    heartRateCurveTitle: 'Apple Watch Herzfrequenzverlauf (BPM)',
   },
   exercises: {
     title: 'Übungs- & Mobilitätsbibliothek',

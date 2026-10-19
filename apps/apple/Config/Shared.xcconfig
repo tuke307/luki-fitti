@@ -1,0 +1,3 @@
+APP_GROUP_ID = group.com.lukifitti.app
+KEYCHAIN_ACCESS_GROUP = $(AppIdentifierPrefix)com.lukifitti.shared
+SWIFT_VERSION = 6.0

@@ -1,0 +1,2 @@
+#include "Shared.xcconfig"
+LUKIFITTI_API_BASE_URL = https:/$()/api.lukifitti.app

@@ -1,0 +1,12 @@
+{
+  "name": "@luki-fitti/apple",
+  "version": "1.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "swift build --package-path Packages/LukiFittiKit",
+    "test": "swift test --package-path Packages/LukiFittiKit",
+    "lint": "swift build --package-path Packages/LukiFittiKit",
+    "clean": "swift package --package-path Packages/LukiFittiKit clean"
+  }
+}

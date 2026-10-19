@@ -1,0 +1,95 @@
+import SwiftUI
+import LukiFittiModels
+import LukiFittiDesign
+
+public struct ExercisesAndStretchingView: View {
+    @Bindable public var viewModel: LukiAppViewModel
+    @State private var activeSubTab: String = "catalog"
+    @State private var searchQuery: String = ""
+    @State private var selectedMuscle: MuscleGroup?
+
+    public init(viewModel: LukiAppViewModel) {
+        self.viewModel = viewModel
+    }
+
+    public var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Picker("Library Mode", selection: $activeSubTab) {
+                    Text("Catalog (\(viewModel.store.catalog.count))").tag("catalog")
+                    Text("Stretching Studio (\(viewModel.store.stretchingRoutines.count))").tag("stretching")
+                }
+                .pickerStyle(.segmented)
+
+                if activeSubTab == "catalog" {
+                    TextField("Search 130+ exercises by name, muscle, or German alias...", text: $searchQuery)
+                        .textFieldStyle(.roundedBorder)
+
+                    ForEach(filteredExercises) { exercise in
+                        HStack(spacing: 12) {
+                            ExerciseVectorVisualView(
+                                exerciseName: exercise.name,
+                                primaryMuscle: exercise.primaryMuscleGroup,
+                                compact: true
+                            )
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(exercise.name)
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(.white)
+                                Text("\(LukiI18n.muscleLabel(exercise.primaryMuscleGroup)) • \(LukiI18n.equipmentLabel(exercise.equipment))")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                        }
+                        .padding(12)
+                        .background(RoundedRectangle(cornerRadius: 14).fill(LukiColors.darkCard))
+                    }
+                } else {
+                    ForEach(viewModel.store.stretchingRoutines) { routine in
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Text(routine.name)
+                                    .font(.headline.bold())
+                                    .foregroundStyle(.white)
+                                Spacer()
+                                Text(routine.targetArea)
+                                    .font(.caption2)
+                                    .foregroundStyle(LukiColors.electricCyan)
+                            }
+                            if let desc = routine.description {
+                                Text(desc).font(.caption).foregroundStyle(.secondary)
+                            }
+                            Button {
+                                viewModel.startStretchingSession(from: routine, sourceDevice: .IPHONE)
+                            } label: {
+                                Label("Start Stretching Session", systemImage: "figure.cooldown")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(.black)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 9)
+                                    .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.electricCyan))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(14)
+                        .background(RoundedRectangle(cornerRadius: 16).fill(LukiColors.darkCard))
+                    }
+                }
+            }
+            .padding(16)
+        }
+        .background(LukiColors.darkBackground)
+    }
+
+    private var filteredExercises: [ExerciseDto] {
+        let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return viewModel.store.catalog.filter { ex in
+            if let selectedMuscle, ex.primaryMuscleGroup != selectedMuscle { return false }
+            guard !q.isEmpty else { return true }
+            return ex.name.lowercased().contains(q) ||
+                ex.tags.contains(where: { $0.lowercased().contains(q) }) ||
+                LukiI18n.muscleLabel(ex.primaryMuscleGroup, locale: .de).lowercased().contains(q)
+        }
+    }
+}

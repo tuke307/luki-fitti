@@ -137,6 +137,12 @@ export enum SetType {
   STRETCH = 'STRETCH',
 }
 
+export enum SessionSourceDevice {
+  WEB = 'WEB',
+  IPHONE = 'IPHONE',
+  APPLE_WATCH = 'APPLE_WATCH',
+}
+
 export enum EmailTemplateType {
   ACCOUNT_CONFIRMATION = 'ACCOUNT_CONFIRMATION',
   PASSWORD_RESET = 'PASSWORD_RESET',

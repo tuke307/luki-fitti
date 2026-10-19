@@ -87,3 +87,11 @@ gymlife-extracted
 
 # MCI-App
 mci-app
+
+# SwiftPM & Xcode build artifacts
+.build/
+**/.build/
+**/*.xcodeproj/
+**/*.xcworkspace/
+DerivedData/
+

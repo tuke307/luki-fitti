@@ -1,7 +1,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import bcrypt from 'bcrypt';
+import type { ExecutionContext } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { AuthGuard, extractBearerToken } from '@/guards/auth.guard';
+import { CsrfGuard } from '@/guards/csrf.guard';
+import { generateAccessToken } from '@/utils/jwt.util';
 import type { PrismaService } from '../database/prisma.service';
 import type { EmailService } from '../email/email.service';
 import { EmailTemplateService } from '../email-template/email-template.service';
@@ -350,5 +354,49 @@ describe('AuthService — Registration, Authentication & Brute-Force Protection'
     const previewHtml = await templateService.getPreviewHtml(EmailTemplateType.ACCOUNT_DELETION);
     assert.equal(previewHtml.includes('Confirm Account Deletion'), true);
     assert.equal(previewHtml.includes('/delete-account?token='), true);
+  });
+
+  it('supports Authorization: Bearer tokens in AuthGuard and bypasses CsrfGuard only for Bearer transport', async () => {
+    const prisma = createMockPrisma();
+    const service = new AuthService(prisma);
+    const registered = await service.registerUser({
+      email: 'mobile-apple@lukifitti.de',
+      password: 'FAKE-PASSWORD-TEST-123',
+      name: 'AppleAthlete',
+    });
+
+    const token = generateAccessToken({ id: registered.id, email: registered.email });
+    const authGuard = new AuthGuard(prisma, async () => false);
+    const csrfGuard = new CsrfGuard();
+
+    const bearerReq: Record<string, unknown> = {
+      headers: { authorization: `Bearer ${token}` },
+      cookies: {},
+    };
+    const bearerCtx = {
+      switchToHttp: () => ({ getRequest: () => bearerReq }),
+    } as unknown as ExecutionContext;
+
+    assert.equal(extractBearerToken(bearerReq as never), token);
+    const canActivateBearer = await authGuard.canActivate(bearerCtx);
+    assert.equal(canActivateBearer, true);
+    assert.equal(bearerReq.authTransport, 'bearer');
+    assert.deepEqual(bearerReq.user, { id: registered.id, email: registered.email });
+
+    // CsrfGuard skips cookie CSRF checks when authenticated via Bearer token
+    assert.equal(csrfGuard.canActivate(bearerCtx), true);
+
+    // Cookie-authenticated requests STILL strictly enforce CsrfGuard
+    const cookieReq: Record<string, unknown> = {
+      headers: {},
+      cookies: { accessToken: token },
+    };
+    const cookieCtx = {
+      switchToHttp: () => ({ getRequest: () => cookieReq }),
+    } as unknown as ExecutionContext;
+
+    assert.equal(await authGuard.canActivate(cookieCtx), true);
+    assert.equal(cookieReq.authTransport, 'cookie');
+    assert.throws(() => csrfGuard.canActivate(cookieCtx), /CSRF token missing/i);
   });
 });
