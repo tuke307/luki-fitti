@@ -21,12 +21,14 @@ import {
   setCachedCatalog,
   setCachedWorkouts,
   substituteExerciseInSession,
+  toSyncPayload,
 } from './offline-store';
 import {
   ExerciseType,
   MuscleGroup,
   SessionExerciseOrigin,
   SessionExerciseStatus,
+  SessionSourceDevice,
   SessionStatus,
   SessionType,
   SetType,
@@ -467,5 +469,35 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
     assert.equal(getMuscleGroupLabel(MuscleGroup.CHEST, 'en'), 'Chest');
     assert.equal(getEquipmentLabel(catalog[0]!.equipment, 'de'), 'Langhantel');
     assert.equal(interpolate('Duplicated "{name}"', { name: 'Push A (Copy)' }), 'Duplicated "Push A (Copy)"');
+  });
+
+  it('preserves Apple Watch HealthKit telemetry, heartRateSamples, and per-set HR fields in toSyncPayload', async () => {
+    const catalog = await getCachedCatalog();
+    const { folders } = buildDefaultFoldersAndTemplates('user-1');
+    const session = createOfflineSessionFromTemplate(folders[0]!.templates[0]!, catalog, 'user-1');
+    session.sourceDevice = SessionSourceDevice.APPLE_WATCH;
+    session.healthKitWorkoutUuid = '550e8400-e29b-41d4-a716-446655440000';
+    session.activeCaloriesKcal = 415;
+    session.totalCaloriesKcal = 530;
+    session.avgHeartRateBpm = 142;
+    session.maxHeartRateBpm = 176;
+    session.minHeartRateBpm = 94;
+    session.heartRateSamples = [
+      { offsetSec: 0, bpm: 105 },
+      { offsetSec: 5, bpm: 142 },
+    ];
+    const firstSet = session.exercises[0]!.sets[0]!;
+    firstSet.avgHeartRateBpm = 138;
+    firstSet.peakHeartRateBpm = 165;
+    firstSet.restEndHeartRateBpm = 115;
+
+    const payload = toSyncPayload(session);
+    assert.equal(payload.sourceDevice, SessionSourceDevice.APPLE_WATCH);
+    assert.equal(payload.healthKitWorkoutUuid, '550e8400-e29b-41d4-a716-446655440000');
+    assert.equal(payload.activeCaloriesKcal, 415);
+    assert.equal(payload.avgHeartRateBpm, 142);
+    assert.equal(payload.heartRateSamples?.length, 2);
+    assert.equal(payload.exercises[0]?.sets[0]?.peakHeartRateBpm, 165);
+    assert.equal(payload.exercises[0]?.sets[0]?.restEndHeartRateBpm, 115);
   });
 });

@@ -383,6 +383,16 @@ export const en = {
     inspectModalDesc:
       'Correct any recorded weight or repetition value below and click Save Corrections.',
     saveCorrectionsBtn: 'Save Corrections',
+    activeCalories: 'Active Calories',
+    heartRate: 'Heart Rate',
+    avgHeartRate: 'Avg HR',
+    maxHeartRate: 'Max HR',
+    peakHr: 'Peak HR',
+    recoveryHr: 'Recovery HR',
+    syncedWithAppleHealth: 'Apple Health',
+    recordedOnAppleWatch: 'Apple Watch',
+    recordedOnIphone: 'iPhone',
+    heartRateCurveTitle: 'Apple Watch Heart Rate Curve (BPM)',
   },
   exercises: {
     title: 'Exercise & Mobility Library',

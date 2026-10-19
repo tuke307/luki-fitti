@@ -10,6 +10,7 @@ import {
   MuscleGroup,
   SessionExerciseOrigin,
   SessionExerciseStatus,
+  SessionSourceDevice,
   SessionStatus,
   SessionType,
   SetType,
@@ -137,6 +138,16 @@ export const UserSchema = z.object({
   preferences: UserPreferencesSchema.nullable().optional(),
 });
 
+export const AuthTokensSchema = z.object({
+  accessToken: z.string(),
+  refreshToken: z.string(),
+  expiresAt: z.string(),
+});
+
+export const RefreshTokenBodySchema = z.object({
+  refreshToken: z.string().min(1).optional(),
+});
+
 export const UserPayloadSchema = z.object({
   id: z.string(),
   email: z.string(),
@@ -157,7 +168,11 @@ export type CreateEmailDto = z.infer<typeof CreateEmailSchema>;
 export type UpdateEmailDto = z.infer<typeof UpdateEmailSchema>;
 export type UpdatePreferencesDto = z.infer<typeof UpdatePreferencesSchema>;
 export type UserPreferencesDto = z.infer<typeof UserPreferencesSchema>;
-export type UserDto = z.infer<typeof UserSchema>;
+export type AuthTokensDto = z.infer<typeof AuthTokensSchema>;
+export type RefreshTokenBodyDto = z.infer<typeof RefreshTokenBodySchema>;
+export type UserDto = z.infer<typeof UserSchema> & {
+  tokens?: AuthTokensDto;
+};
 export type UserPayloadDto = z.infer<typeof UserPayloadSchema>;
 
 export interface RegisterResponseDto extends UserDto {
@@ -380,6 +395,13 @@ export interface StretchingRoutineDto {
 // ─────────────────────────────────────────────────────────────────────────────
 // Active Workout Session & Offline Synchronization Schemas
 // ─────────────────────────────────────────────────────────────────────────────
+export const HeartRateSampleSchema = z.object({
+  offsetSec: z.number().int().min(0),
+  bpm: z.number().int().min(20).max(260),
+});
+
+export type HeartRateSampleDto = z.infer<typeof HeartRateSampleSchema>;
+
 export const SessionSetSyncSchema = z.object({
   id: z.string().optional(),
   clientSetId: z.string().min(1),
@@ -395,6 +417,9 @@ export const SessionSetSyncSchema = z.object({
   completedAt: z.string().nullable().optional(),
   isPersonalRecord: z.boolean().default(false).optional(),
   notes: z.string().max(500).nullable().optional(),
+  avgHeartRateBpm: z.number().int().min(20).max(260).nullable().optional(),
+  peakHeartRateBpm: z.number().int().min(20).max(260).nullable().optional(),
+  restEndHeartRateBpm: z.number().int().min(20).max(260).nullable().optional(),
 });
 
 export const SessionExerciseSyncSchema = z.object({
@@ -438,6 +463,14 @@ export const SyncSessionPayloadSchema = z.object({
   restTimerEndsAt: z.string().nullable().optional(),
   restTimerDurationSec: z.number().int().nullable().optional(),
   restTimerPausedRemSec: z.number().int().nullable().optional(),
+  sourceDevice: z.enum(SessionSourceDevice).default(SessionSourceDevice.WEB).optional(),
+  healthKitWorkoutUuid: z.uuid().nullable().optional(),
+  activeCaloriesKcal: z.number().min(0).max(10000).nullable().optional(),
+  totalCaloriesKcal: z.number().min(0).max(15000).nullable().optional(),
+  avgHeartRateBpm: z.number().int().min(20).max(260).nullable().optional(),
+  maxHeartRateBpm: z.number().int().min(20).max(260).nullable().optional(),
+  minHeartRateBpm: z.number().int().min(20).max(260).nullable().optional(),
+  heartRateSamples: z.array(HeartRateSampleSchema).max(3600).nullable().optional(),
   version: z.number().int().min(1).default(1),
   forceOverwrite: z.boolean().default(false).optional(),
   exercises: z.array(SessionExerciseSyncSchema).default([]),
@@ -450,6 +483,7 @@ export const StartSessionSchema = z.object({
   workoutName: z.string().min(1).max(160).optional(),
   sessionType: z.enum(SessionType).default(SessionType.STRENGTH).optional(),
   weightUnit: z.enum(WeightUnit).default(WeightUnit.KG).optional(),
+  sourceDevice: z.enum(SessionSourceDevice).default(SessionSourceDevice.WEB).optional(),
 });
 
 export type SessionSetSyncDto = z.infer<typeof SessionSetSyncSchema>;
@@ -473,6 +507,9 @@ export interface SessionSetDto {
   completedAt: string | null;
   isPersonalRecord: boolean;
   notes: string | null;
+  avgHeartRateBpm?: number | null;
+  peakHeartRateBpm?: number | null;
+  restEndHeartRateBpm?: number | null;
 }
 
 export interface SessionExerciseDto {
@@ -522,6 +559,14 @@ export interface WorkoutSessionDto {
   restTimerEndsAt: string | null;
   restTimerDurationSec: number | null;
   restTimerPausedRemSec: number | null;
+  sourceDevice?: SessionSourceDevice;
+  healthKitWorkoutUuid?: string | null;
+  activeCaloriesKcal?: number | null;
+  totalCaloriesKcal?: number | null;
+  avgHeartRateBpm?: number | null;
+  maxHeartRateBpm?: number | null;
+  minHeartRateBpm?: number | null;
+  heartRateSamples?: HeartRateSampleDto[] | null;
   version: number;
   lastSyncedAt: string;
   exercises: SessionExerciseDto[];
@@ -567,6 +612,8 @@ export interface AnalyticsSummaryDto {
   totalVolumeKg: number;
   totalDurationSeconds: number;
   totalStretchSeconds: number;
+  totalActiveCaloriesKcal: number;
+  avgWorkoutHeartRateBpm: number | null;
   currentStreakWeeks: number;
   sessionsThisWeek: number;
   weeklyGoalSessions: number;

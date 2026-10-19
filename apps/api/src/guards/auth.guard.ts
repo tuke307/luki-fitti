@@ -12,26 +12,46 @@ import { PrismaService } from '@/modules/database/prisma.service';
 import { logger } from '@luki-fitti/logger';
 import type { AuthenticatedUser } from '@/decorators/current-user.decorator';
 
+export type AuthTransport = 'bearer' | 'cookie';
+
+export function extractBearerToken(request: Request): string | null {
+  const authHeader = request.headers.authorization;
+  if (!authHeader) return null;
+  const raw = Array.isArray(authHeader) ? authHeader[0] : authHeader;
+  if (!raw) return null;
+  const match = /^Bearer\s+(.+)$/i.exec(raw.trim());
+  return match?.[1]?.trim() || null;
+}
+
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly checkDenylist?: (jti: string) => Promise<boolean>,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context
       .switchToHttp()
-      .getRequest<Request & { user?: AuthenticatedUser }>();
-    const accessToken = request.cookies?.accessToken;
+      .getRequest<Request & { user?: AuthenticatedUser; authTransport?: AuthTransport }>();
+    const bearerToken = extractBearerToken(request);
+    const cookieToken = request.cookies?.accessToken as string | undefined;
+    const accessToken = bearerToken ?? cookieToken;
 
     if (!accessToken) {
       throw new UnauthorizedException('Access token missing');
     }
+
+    const authTransport: AuthTransport = bearerToken ? 'bearer' : 'cookie';
 
     try {
       const decoded = verifyAccessToken(accessToken);
 
       if (decoded.jti) {
         try {
-          const denied = await getRedis().get(`access_denylist:${decoded.jti}`);
+          const denied = this.checkDenylist
+            ? await this.checkDenylist(decoded.jti)
+            : Boolean(await getRedis().get(`access_denylist:${decoded.jti}`));
           if (denied) {
             throw new UnauthorizedException('Session revoked');
           }
@@ -58,6 +78,7 @@ export class AuthGuard implements CanActivate {
         id: user.id,
         email: user.email,
       };
+      request.authTransport = authTransport;
 
       return true;
     } catch (err) {

@@ -1,0 +1,69 @@
+name: LukiFitti
+options:
+  bundleIdPrefix: com.lukifitti
+  deploymentTarget:
+    iOS: "18.0"
+    watchOS: "11.0"
+  xcodeVersion: "16.0"
+  generateEmptyDirectories: true
+
+configFiles:
+  Debug: Config/Debug.xcconfig
+  Release: Config/Release.xcconfig
+
+packages:
+  LukiFittiKit:
+    path: Packages/LukiFittiKit
+
+targets:
+  LukiFittiIOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: LukiFittiIOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.lukifitti.app
+        INFOPLIST_FILE: LukiFittiIOS/Info.plist
+        CODE_SIGN_ENTITLEMENTS: LukiFittiIOS/LukiFittiIOS.entitlements
+        SWIFT_VERSION: "6.0"
+    dependencies:
+      - package: LukiFittiKit
+        product: LukiFittiKit
+      - target: LukiFittiWidgets
+        embed: true
+      - target: LukiFittiWatch
+        embed: true
+
+  LukiFittiWatch:
+    type: application
+    platform: watchOS
+    deploymentTarget: "11.0"
+    sources:
+      - path: LukiFittiWatch
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.lukifitti.app.watchkitapp
+        INFOPLIST_FILE: LukiFittiWatch/Info.plist
+        CODE_SIGN_ENTITLEMENTS: LukiFittiWatch/LukiFittiWatch.entitlements
+        SWIFT_VERSION: "6.0"
+    dependencies:
+      - package: LukiFittiKit
+        product: LukiFittiKit
+
+  LukiFittiWidgets:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: LukiFittiWidgets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.lukifitti.app.widgets
+        INFOPLIST_FILE: LukiFittiWidgets/Info.plist
+        CODE_SIGN_ENTITLEMENTS: LukiFittiWidgets/LukiFittiWidgets.entitlements
+        SWIFT_VERSION: "6.0"
+    dependencies:
+      - package: LukiFittiKit
+        product: LukiFittiKit

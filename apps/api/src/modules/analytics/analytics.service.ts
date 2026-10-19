@@ -70,6 +70,9 @@ export class AnalyticsService {
     let totalVolumeKg = 0;
     let totalDurationSeconds = 0;
     let totalStretchSeconds = 0;
+    let totalActiveCaloriesKcal = 0;
+    let sumWorkoutAvgHr = 0;
+    let countWorkoutAvgHr = 0;
 
     const muscleStats = new Map<
       MuscleGroup,
@@ -125,6 +128,13 @@ export class AnalyticsService {
       }
 
       totalDurationSeconds += s.activeDurationSeconds;
+      if (typeof s.activeCaloriesKcal === 'number' && s.activeCaloriesKcal > 0) {
+        totalActiveCaloriesKcal += s.activeCaloriesKcal;
+      }
+      if (typeof s.avgHeartRateBpm === 'number' && s.avgHeartRateBpm > 0) {
+        sumWorkoutAvgHr += s.avgHeartRateBpm;
+        countWorkoutAvgHr += 1;
+      }
       const wkKey = this.getMondayIso(s.startedAt);
       if (wkKey === currentWeekMonday) {
         sessionsThisWeek += 1;
@@ -272,6 +282,9 @@ export class AnalyticsService {
       totalVolumeKg: Math.round(totalVolumeKg),
       totalDurationSeconds,
       totalStretchSeconds,
+      totalActiveCaloriesKcal: Math.round(totalActiveCaloriesKcal),
+      avgWorkoutHeartRateBpm:
+        countWorkoutAvgHr > 0 ? Math.round(sumWorkoutAvgHr / countWorkoutAvgHr) : null,
       currentStreakWeeks,
       sessionsThisWeek,
       weeklyGoalSessions: preferences?.weeklyGoalSessions ?? 4,

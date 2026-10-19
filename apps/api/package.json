@@ -25,6 +25,7 @@
     "dev": "nestgo start --watch --env-file .env.local",
     "lint": "tsc --noEmit && eslint . --max-warnings 0",
     "test": "node --import tsx --test src/**/*.spec.ts",
+    "openapi:export": "tsx src/openapi-export.ts",
     "start:debug": "nestgo start --watch --debug",
     "start": "dotenv -e .env.local -- node dist/src/main.js",
     "start:prod": "node dist/src/main.js"

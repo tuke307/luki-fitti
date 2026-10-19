@@ -9,12 +9,14 @@ import {
   ExerciseType,
   SessionExerciseOrigin,
   SessionExerciseStatus,
+  SessionSourceDevice,
   SessionStatus,
   SessionType,
   SetType,
   WeightUnit,
 } from '@luki-fitti/common/enums';
 import type {
+  HeartRateSampleDto,
   StartSessionDto,
   SyncSessionPayloadDto,
   SyncSessionResponseDto,
@@ -252,6 +254,7 @@ export class SessionService {
           workoutNameSnapshot: workoutName,
           status: SessionStatus.IN_PROGRESS,
           weightUnit: dto.weightUnit ?? WeightUnit.KG,
+          sourceDevice: dto.sourceDevice ?? SessionSourceDevice.WEB,
           version: 1,
         },
       });
@@ -322,6 +325,57 @@ export class SessionService {
     const metrics = this.computeSessionMetrics(payload.exercises);
     const nextVersion = existing ? Math.max(existing.version, payload.version) + 1 : 1;
 
+    const hrSamples = payload.heartRateSamples ?? null;
+    const allBpms: number[] = [];
+    if (hrSamples && hrSamples.length > 0) {
+      for (const sample of hrSamples) {
+        if (typeof sample.bpm === 'number' && sample.bpm >= 20 && sample.bpm <= 260) {
+          allBpms.push(sample.bpm);
+        }
+      }
+    }
+    if (allBpms.length === 0) {
+      for (const ex of payload.exercises) {
+        for (const s of ex.sets) {
+          if (typeof s.avgHeartRateBpm === 'number') allBpms.push(s.avgHeartRateBpm);
+          if (typeof s.peakHeartRateBpm === 'number') allBpms.push(s.peakHeartRateBpm);
+        }
+      }
+    }
+
+    const computedAvgHr =
+      allBpms.length > 0
+        ? Math.round(allBpms.reduce((acc, v) => acc + v, 0) / allBpms.length)
+        : null;
+    const computedMaxHr = allBpms.length > 0 ? Math.max(...allBpms) : null;
+    const computedMinHr = allBpms.length > 0 ? Math.min(...allBpms) : null;
+
+    const avgHeartRateBpm = payload.avgHeartRateBpm ?? computedAvgHr ?? existing?.avgHeartRateBpm ?? null;
+    const maxHeartRateBpm = payload.maxHeartRateBpm ?? computedMaxHr ?? existing?.maxHeartRateBpm ?? null;
+    const minHeartRateBpm = payload.minHeartRateBpm ?? computedMinHr ?? existing?.minHeartRateBpm ?? null;
+    const activeCaloriesKcal =
+      payload.activeCaloriesKcal !== undefined
+        ? payload.activeCaloriesKcal
+        : (existing?.activeCaloriesKcal ?? null);
+    const totalCaloriesKcal =
+      payload.totalCaloriesKcal !== undefined
+        ? payload.totalCaloriesKcal
+        : (existing?.totalCaloriesKcal ?? null);
+    const healthKitWorkoutUuid =
+      payload.healthKitWorkoutUuid !== undefined
+        ? payload.healthKitWorkoutUuid
+        : (existing?.healthKitWorkoutUuid ?? null);
+    const sourceDevice =
+      payload.sourceDevice ??
+      (existing?.sourceDevice as SessionSourceDevice | undefined) ??
+      SessionSourceDevice.WEB;
+    const heartRateSamplesJson: Array<{ offsetSec: number; bpm: number }> | undefined =
+      hrSamples !== null
+        ? hrSamples.map((s) => ({ offsetSec: s.offsetSec, bpm: s.bpm }))
+        : Array.isArray(existing?.heartRateSamplesJson)
+          ? (existing.heartRateSamplesJson as Array<{ offsetSec: number; bpm: number }>)
+          : undefined;
+
     let resolvedTemplateId = payload.templateId ?? null;
     if (resolvedTemplateId && this.prisma.workoutTemplate?.findUnique) {
       const tplExists = await this.prisma.workoutTemplate.findUnique({
@@ -389,6 +443,14 @@ export class SessionService {
           restTimerEndsAt: payload.restTimerEndsAt ? new Date(payload.restTimerEndsAt) : null,
           restTimerDurationSec: payload.restTimerDurationSec ?? null,
           restTimerPausedRemSec: payload.restTimerPausedRemSec ?? null,
+          sourceDevice,
+          healthKitWorkoutUuid,
+          activeCaloriesKcal,
+          totalCaloriesKcal,
+          avgHeartRateBpm,
+          maxHeartRateBpm,
+          minHeartRateBpm,
+          ...(heartRateSamplesJson !== undefined ? { heartRateSamplesJson } : {}),
           version: nextVersion,
           lastSyncedAt: new Date(),
         },
@@ -413,6 +475,14 @@ export class SessionService {
           restTimerEndsAt: payload.restTimerEndsAt ? new Date(payload.restTimerEndsAt) : null,
           restTimerDurationSec: payload.restTimerDurationSec ?? null,
           restTimerPausedRemSec: payload.restTimerPausedRemSec ?? null,
+          sourceDevice,
+          healthKitWorkoutUuid,
+          activeCaloriesKcal,
+          totalCaloriesKcal,
+          avgHeartRateBpm,
+          maxHeartRateBpm,
+          minHeartRateBpm,
+          ...(heartRateSamplesJson !== undefined ? { heartRateSamplesJson } : {}),
           version: 1,
           lastSyncedAt: new Date(),
         },
@@ -502,6 +572,9 @@ export class SessionService {
               completedAt: s.completedAt ? new Date(s.completedAt) : null,
               isPersonalRecord: s.isPersonalRecord ?? false,
               notes: s.notes ?? null,
+              avgHeartRateBpm: s.avgHeartRateBpm ?? null,
+              peakHeartRateBpm: s.peakHeartRateBpm ?? null,
+              restEndHeartRateBpm: s.restEndHeartRateBpm ?? null,
             },
             create: {
               clientSetId: s.clientSetId,
@@ -518,6 +591,9 @@ export class SessionService {
               completedAt: s.completedAt ? new Date(s.completedAt) : null,
               isPersonalRecord: s.isPersonalRecord ?? false,
               notes: s.notes ?? null,
+              avgHeartRateBpm: s.avgHeartRateBpm ?? null,
+              peakHeartRateBpm: s.peakHeartRateBpm ?? null,
+              restEndHeartRateBpm: s.restEndHeartRateBpm ?? null,
             },
           });
         }
@@ -665,6 +741,16 @@ export class SessionService {
           : session.restTimerEndsAt,
       restTimerDurationSec: session.restTimerDurationSec,
       restTimerPausedRemSec: session.restTimerPausedRemSec,
+      sourceDevice: session.sourceDevice ?? SessionSourceDevice.WEB,
+      healthKitWorkoutUuid: session.healthKitWorkoutUuid ?? null,
+      activeCaloriesKcal: session.activeCaloriesKcal ?? null,
+      totalCaloriesKcal: session.totalCaloriesKcal ?? null,
+      avgHeartRateBpm: session.avgHeartRateBpm ?? null,
+      maxHeartRateBpm: session.maxHeartRateBpm ?? null,
+      minHeartRateBpm: session.minHeartRateBpm ?? null,
+      heartRateSamples: Array.isArray(session.heartRateSamplesJson)
+        ? (session.heartRateSamplesJson as HeartRateSampleDto[])
+        : null,
       version: session.version,
       lastSyncedAt:
         session.lastSyncedAt instanceof Date
@@ -709,6 +795,9 @@ export class SessionService {
             s.completedAt instanceof Date ? s.completedAt.toISOString() : s.completedAt,
           isPersonalRecord: s.isPersonalRecord,
           notes: s.notes,
+          avgHeartRateBpm: s.avgHeartRateBpm ?? null,
+          peakHeartRateBpm: s.peakHeartRateBpm ?? null,
+          restEndHeartRateBpm: s.restEndHeartRateBpm ?? null,
         })),
       })),
     };
