@@ -1,3 +1,3 @@
-# `@turbo/eslint-config`
+# `@luki-fitti/eslint-config`
 
-Collection of internal eslint configurations.
+Shared ESLint configurations for the LukiFitti monorepo.

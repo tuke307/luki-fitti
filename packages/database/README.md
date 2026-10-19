@@ -1,26 +1,24 @@
-# Database
+# `@luki-fitti/database`
 
-for local development, execute these statements ONCE;
+Prisma 7 PostgreSQL schema, migrations, and seed data for LukiFitti.
+
+## Local Setup
 
 ```bash
-yarn run db:push
-yarn run db:seed
+cp .env.sample .env.local
+yarn db:push
+yarn db:seed
 ```
 
-# Migrations
-
-## create a new migration
-
-to create a new migration, execute this command;
+## Migrations
 
 ```bash
-yarn run db:migrate:local -- <migration-name>
-```
+# Create a new migration in development
+yarn db:migrate:local -- <migration-name>
 
-## deploy
+# Apply pending migrations
+yarn db:deploy:local
 
-to deploy the latest migration, execute this command;
-
-```bash
-yarn run db:deploy:local
+# Regenerate Prisma Client
+yarn db:generate
 ```
