@@ -1,6 +1,5 @@
 import SwiftUI
 import LukiFittiModels
-import LukiFittiDesign
 
 /// Searchable Exercise Picker sheet matching `apps/web/components/gym/exercise-picker.tsx`:
 /// supports instant filtering by English/German exercise name, muscle group chips, equipment, or German alias tags.
@@ -53,7 +52,9 @@ public struct SearchableExercisePickerSheet: View {
                         Image(systemName: "magnifyingglass")
                             .foregroundStyle(.secondary)
                         TextField("Search 130+ exercises by name, muscle, or DE alias...", text: $searchText)
+                            #if !os(macOS)
                             .textInputAutocapitalization(.never)
+                            #endif
                             .autocorrectionDisabled()
                         if !searchText.isEmpty {
                             Button {

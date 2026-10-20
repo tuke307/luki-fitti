@@ -156,8 +156,14 @@ public final class WatchSyncCoordinator: NSObject {
     private var sessionDelegateProxy: WCSessionDelegateProxy?
     #endif
 
+    private static var isIsolatedUITest: Bool {
+        let args = ProcessInfo.processInfo.arguments
+        return args.contains("--uitesting") && !args.contains("--uitesting-enable-watch-bridge")
+    }
+
     private static var simulatorBridgeURL: URL? {
         #if targetEnvironment(simulator)
+        if isIsolatedUITest { return nil }
         return URL(fileURLWithPath: "/tmp/lukifitti_watch_bridge_v1.json")
         #else
         return nil
@@ -166,6 +172,7 @@ public final class WatchSyncCoordinator: NSObject {
 
     private static var simulatorActiveSessionBridgeURL: URL? {
         #if targetEnvironment(simulator)
+        if isIsolatedUITest { return nil }
         return URL(fileURLWithPath: "/tmp/lukifitti_active_session_bridge_v1.json")
         #else
         return nil
@@ -174,6 +181,7 @@ public final class WatchSyncCoordinator: NSObject {
 
     private static var simulatorCompletedSessionBridgeURL: URL? {
         #if targetEnvironment(simulator)
+        if isIsolatedUITest { return nil }
         return URL(fileURLWithPath: "/tmp/lukifitti_completed_session_bridge_v1.json")
         #else
         return nil

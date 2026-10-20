@@ -156,6 +156,7 @@ public struct WorkoutsView: View {
                         .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("ios.workouts.collapseAllButton")
                 }
 
                 Button {
@@ -169,6 +170,7 @@ public struct WorkoutsView: View {
                         .foregroundStyle(.white)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("ios.workouts.newFolderButton")
 
                 Button {
                     openNewTemplateBuilder(defaultFolderId: viewModel.store.folders.first?.id)
@@ -181,6 +183,7 @@ public struct WorkoutsView: View {
                         .background(Capsule().fill(LukiColors.neonLime))
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("ios.workouts.newWorkoutButton")
             }
         }
     }
@@ -502,6 +505,7 @@ public struct WorkoutsView: View {
                     .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.neonLime))
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("ios.workouts.startTemplate.\(template.id)")
         }
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.05)))

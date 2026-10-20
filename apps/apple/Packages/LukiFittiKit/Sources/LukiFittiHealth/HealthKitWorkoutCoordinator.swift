@@ -50,6 +50,7 @@ public final class HealthKitWorkoutCoordinator: NSObject {
     public var workoutStartedAt: Date?
     public var isWorkoutRunning: Bool = false
     public var isWorkoutPaused: Bool = false
+    public var isUITesting: Bool = ProcessInfo.processInfo.arguments.contains("--uitesting")
 
     private var lastSampleOffsetSec: Int = -5
     private var allRecordedBpms: [Int] = []
@@ -63,6 +64,10 @@ public final class HealthKitWorkoutCoordinator: NSObject {
     }
 
     public func requestAuthorization() async -> Bool {
+        if isUITesting {
+            isAuthorized = true
+            return true
+        }
         #if canImport(HealthKit)
         guard let healthStore else { return false }
         let typesToShare: Set<HKSampleType> = [
@@ -105,7 +110,7 @@ public final class HealthKitWorkoutCoordinator: NSObject {
         lastSampleOffsetSec = -5
 
         #if canImport(HealthKit) && os(iOS)
-        if let healthStore {
+        if !isUITesting, let healthStore {
             let config = HKWorkoutConfiguration()
             config.activityType = sessionType == .STRETCHING ? .flexibility : .traditionalStrengthTraining
             config.locationType = .indoor
