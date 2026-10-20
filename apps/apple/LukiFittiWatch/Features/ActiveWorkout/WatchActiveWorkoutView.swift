@@ -94,6 +94,7 @@ public struct WatchActiveWorkoutView: View {
             }
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("watch.action.\(title.lowercased())")
     }
 
     // MARK: - Page 2 (Center Dot, Default): Exercise Execution & "Tap when done" Neon-Lime Ring
@@ -193,9 +194,11 @@ public struct WatchActiveWorkoutView: View {
                         Text(restStatus.isRunning ? "Tap to skip rest" : "Tap when done")
                             .font(.system(size: 9, weight: .semibold))
                             .foregroundStyle(.white)
+                            .accessibilityIdentifier("watch.execution.ringSubtitle")
                     }
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("watch.execution.ringButton")
 
                 Spacer()
 

@@ -6,6 +6,9 @@
   "scripts": {
     "build": "swift build --package-path Packages/LukiFittiKit",
     "test": "swift test --package-path Packages/LukiFittiKit",
+    "xcodegen": "xcodegen generate",
+    "test:e2e:ios": "xcodegen generate && xcodebuild test -project LukiFitti.xcodeproj -scheme LukiFittiIOS -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:LukiFittiIOSUITests CODE_SIGNING_ALLOWED=NO",
+    "test:e2e:watch": "xcodegen generate && xcodebuild test -project LukiFitti.xcodeproj -scheme LukiFittiWatch -destination 'platform=watchOS Simulator,name=Apple Watch Ultra 4 (49mm)' -only-testing:LukiFittiWatchUITests CODE_SIGNING_ALLOWED=NO",
     "lint": "swift build --package-path Packages/LukiFittiKit",
     "clean": "swift package --package-path Packages/LukiFittiKit clean"
   }

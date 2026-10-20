@@ -27,6 +27,7 @@ public struct WatchWorkoutSummaryView: View {
                     Text("Workout Completed!")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(.white)
+                        .accessibilityIdentifier("watch.summary.title")
                 }
 
                 Text(formattedDuration(session.activeDurationSeconds))
@@ -98,6 +99,7 @@ public struct WatchWorkoutSummaryView: View {
                         .background(RoundedRectangle(cornerRadius: 14).fill(LukiColors.neonLime))
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("watch.summary.doneButton")
                 .padding(.top, 4)
             }
             .padding(.horizontal, 8)

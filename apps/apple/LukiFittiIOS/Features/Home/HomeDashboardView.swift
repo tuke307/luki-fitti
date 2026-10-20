@@ -50,6 +50,7 @@ public struct HomeDashboardView: View {
                         .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.darkCard))
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("ios.home.trainingDiaryButton")
 
                 Button {
                     viewModel.selectedTab = .workouts
@@ -62,6 +63,7 @@ public struct HomeDashboardView: View {
                         .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.neonLime))
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("ios.home.chooseWorkoutButton")
             }
         }
     }
@@ -91,6 +93,7 @@ public struct HomeDashboardView: View {
                     .background(Capsule().fill(LukiColors.neonLime))
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("ios.home.resumeSessionButton")
         }
         .padding(14)
         .background(
@@ -98,6 +101,8 @@ public struct HomeDashboardView: View {
                 .fill(LukiColors.neonLime.opacity(0.12))
                 .overlay(RoundedRectangle(cornerRadius: 16).stroke(LukiColors.neonLime.opacity(0.45), lineWidth: 1))
         )
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("ios.home.activeSessionBanner")
     }
 
     private var kpiGridSection: some View {

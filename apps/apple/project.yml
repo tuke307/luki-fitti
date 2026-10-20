@@ -21,7 +21,8 @@ targets:
     platform: iOS
     deploymentTarget: "18.0"
     scheme:
-      testTargets: []
+      testTargets:
+        - LukiFittiIOSUITests
     sources:
       - path: LukiFittiIOS
     settings:
@@ -42,7 +43,8 @@ targets:
     platform: watchOS
     deploymentTarget: "11.0"
     scheme:
-      testTargets: []
+      testTargets:
+        - LukiFittiWatchUITests
     sources:
       - path: LukiFittiWatch
     settings:
@@ -71,3 +73,33 @@ targets:
     dependencies:
       - package: LukiFittiKit
         product: LukiFittiKit
+
+  LukiFittiIOSUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: LukiFittiIOSUITests
+    dependencies:
+      - target: LukiFittiIOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.lukifitti.app.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "6.0"
+        TEST_TARGET_NAME: LukiFittiIOS
+
+  LukiFittiWatchUITests:
+    type: bundle.ui-testing
+    platform: watchOS
+    deploymentTarget: "11.0"
+    sources:
+      - path: LukiFittiWatchUITests
+    dependencies:
+      - target: LukiFittiWatch
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.lukifitti.app.watchkitapp.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "6.0"
+        TEST_TARGET_NAME: LukiFittiWatch

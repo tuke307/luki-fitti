@@ -513,11 +513,70 @@ public final class LukiAppViewModel {
         watchSyncCoordinator.broadcastActiveSessionSnapshot(nil)
         selectedTab = .workouts
     }
+    public static func makeConfigured() -> LukiAppViewModel {
+        let args = ProcessInfo.processInfo.arguments
+        guard args.contains("--uitesting") else {
+            return LukiAppViewModel()
+        }
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LukiFittiIOSUITest-\(UUID().uuidString)", isDirectory: true)
+        let store = OfflineStore(storageDirectory: tempDir)
+        let vm = LukiAppViewModel(store: store)
+
+        if args.contains("--uitesting-seed-active-session"),
+           let firstTemplate = store.folders.first?.templates.first {
+            vm.startSession(from: firstTemplate, sourceDevice: .IPHONE)
+        }
+
+        if args.contains("--uitesting-seed-history"),
+           let firstTemplate = store.folders.first?.templates.first {
+            var completed = SessionCalculator.createOfflineSessionFromTemplate(
+                template: firstTemplate,
+                catalog: store.catalog,
+                userId: "local-user",
+                weightUnit: .KG,
+                sourceDevice: .IPHONE
+            )
+            for exIdx in completed.exercises.indices {
+                for sIdx in completed.exercises[exIdx].sets.indices {
+                    completed.exercises[exIdx].sets[sIdx].completed = true
+                }
+                completed.exercises[exIdx].status = .COMPLETED
+            }
+            completed.status = .COMPLETED
+            completed.completedAt = ISO8601DateFormatter().string(from: Date())
+            completed.activeDurationSeconds = 2700
+            completed = SessionCalculator.recalculateSessionTotals(completed)
+            store.saveHistorySession(completed)
+        }
+
+        if args.contains("--uitesting-seed-conflict"),
+           let firstTemplate = store.folders.first?.templates.first {
+            let localSession = SessionCalculator.createOfflineSessionFromTemplate(
+                template: firstTemplate,
+                catalog: store.catalog,
+                userId: "user-conflict-1",
+                weightUnit: .KG,
+                sourceDevice: .IPHONE
+            )
+            var serverConflict = localSession
+            serverConflict.version = 5
+            serverConflict.workoutNameSnapshot = firstTemplate.name
+            store.enqueueSessionSync(localSession)
+            if !store.syncQueue.isEmpty {
+                store.syncQueue[0].serverConflictSession = serverConflict
+                store.conflictItem = store.syncQueue[0]
+                store.syncState = .CONFLICT
+            }
+        }
+
+        return vm
+    }
 }
 
 @main
 public struct LukiFittiIOSApp: App {
-    @State private var viewModel = LukiAppViewModel()
+    @State private var viewModel = LukiAppViewModel.makeConfigured()
     @Environment(\.scenePhase) private var scenePhase
 
     public init() {}
@@ -618,6 +677,7 @@ public struct AppShellView: View {
                 }
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("ios.header.homeButton")
 
             Spacer()
 
@@ -638,6 +698,7 @@ public struct AppShellView: View {
                     .foregroundStyle(LukiColors.neonLime)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("ios.header.restTimerPill")
             }
 
             Button {
@@ -655,6 +716,7 @@ public struct AppShellView: View {
                     .foregroundStyle(.white)
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("ios.header.syncBadge")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)

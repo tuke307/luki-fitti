@@ -50,6 +50,7 @@ public struct WatchHomeView: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("watch.home.folder.\(folder.id)")
                     }
 
                     if !viewModel.store.unfiledTemplates.isEmpty {
@@ -91,6 +92,7 @@ public struct WatchHomeView: View {
                             .background(RoundedRectangle(cornerRadius: 16).fill(LukiColors.watchFolderSlate))
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("watch.home.stretchingLink")
                     }
                 }
                 .padding(.horizontal, 8)
@@ -153,6 +155,7 @@ public struct WatchFolderTemplatesView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("watch.folder.template.\(template.id)")
                 }
             }
             .padding(.horizontal, 8)

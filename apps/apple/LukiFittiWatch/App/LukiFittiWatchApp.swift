@@ -266,11 +266,28 @@ public final class WatchWorkoutViewModel {
         watchSyncCoordinator.transferCompletedStandaloneSession(finalized)
         await store.flushSyncQueue()
     }
+    public static func makeConfigured() -> WatchWorkoutViewModel {
+        let args = ProcessInfo.processInfo.arguments
+        guard args.contains("--uitesting") else {
+            return WatchWorkoutViewModel()
+        }
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LukiFittiWatchUITest-\(UUID().uuidString)", isDirectory: true)
+        let store = OfflineStore(storageDirectory: tempDir)
+        let vm = WatchWorkoutViewModel(store: store)
+
+        if args.contains("--uitesting-seed-active-session"),
+           let firstTemplate = store.folders.first?.templates.first {
+            vm.startWorkout(from: firstTemplate)
+        }
+
+        return vm
+    }
 }
 
 @main
 public struct LukiFittiWatchApp: App {
-    @State private var viewModel = WatchWorkoutViewModel()
+    @State private var viewModel = WatchWorkoutViewModel.makeConfigured()
 
     public init() {}
 

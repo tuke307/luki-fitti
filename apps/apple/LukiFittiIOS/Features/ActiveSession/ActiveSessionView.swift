@@ -90,9 +90,12 @@ public struct ActiveSessionView: View {
                     .background(RoundedRectangle(cornerRadius: 12).fill(LukiColors.neonLime))
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("ios.session.viewInDiaryButton")
         }
         .padding(20)
         .background(RoundedRectangle(cornerRadius: 20).fill(LukiColors.darkCard))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("ios.session.trophyCard")
     }
 
     private func statPill(label: String, value: String) -> some View {
@@ -732,6 +735,7 @@ public struct ActiveSessionView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("ios.session.completeSet.\(setIndex + 1)")
             }
 
             // Optional Progressive Overload Suggestion Pill (Tap to Apply)
@@ -797,6 +801,7 @@ public struct ActiveSessionView: View {
                     .background(RoundedRectangle(cornerRadius: 12).fill(Color.red.opacity(0.18)))
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("ios.session.abandonButton")
 
             Button {
                 Task { await viewModel.finishActiveSession() }
@@ -809,6 +814,7 @@ public struct ActiveSessionView: View {
                     .background(RoundedRectangle(cornerRadius: 12).fill(LukiColors.neonLime))
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("ios.session.finishButton")
         }
     }
 }
