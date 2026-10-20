@@ -16,7 +16,12 @@ test.describe('Workout Folders & Template Builder CRUD', () => {
     await gotoWorkoutsTab(page);
   });
 
-  test('can collapse and expand all starter folders', async ({ page }) => {
+  test('can collapse and expand all starter folders and renders Gymlife superset cards', async ({
+    page,
+  }) => {
+    await expect(page.getByTestId('superset-block-card').first()).toBeVisible();
+    await expect(page.getByTestId('superset-step-badge').first()).toBeVisible();
+
     await expect(page.getByRole('button', { name: /Collapse All/i })).toBeVisible();
     await page.getByRole('button', { name: /Collapse All/i }).click();
 

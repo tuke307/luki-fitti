@@ -36,7 +36,10 @@ import {
 } from '@luki-fitti/common/enums';
 import {
   computeExerciseProgression,
+  computeWorkoutExerciseSuggestion,
   formatCompactDelta,
+  formatRestDurationMinSec,
+  groupExercisesIntoBlocks,
 } from '@luki-fitti/common/utils/client';
 import {
   getEquipmentLabel,
@@ -499,5 +502,60 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
     assert.equal(payload.heartRateSamples?.length, 2);
     assert.equal(payload.exercises[0]?.sets[0]?.peakHeartRateBpm, 165);
     assert.equal(payload.exercises[0]?.sets[0]?.restEndHeartRateBpm, 115);
+  });
+
+  it('groups Gymlife superset blocks and proposes max 1 smart exercise suggestion per workout', async () => {
+    const catalog = await getCachedCatalog();
+    const { folders } = buildDefaultFoldersAndTemplates('user-1');
+
+    // PPL Push template has Lateral Raise (0s rest) paired with Tricep Pushdown (75s rest)
+    const pplPushTemplate = folders[1]!.templates[0]!;
+    const blocks = groupExercisesIntoBlocks(pplPushTemplate.exercises);
+    const supersetBlocks = blocks.filter((b) => b.type === 'superset');
+    assert.equal(supersetBlocks.length, 1);
+    assert.equal(supersetBlocks[0]!.rounds, 4);
+    assert.equal(supersetBlocks[0]!.roundRestSeconds, 75);
+    assert.equal(supersetBlocks[0]!.items.length, 2);
+    assert.equal(supersetBlocks[0]!.items[0]!.stepNumber, 1);
+    assert.equal(supersetBlocks[0]!.items[1]!.stepNumber, 2);
+    assert.equal(formatRestDurationMinSec(60), '1:00');
+    assert.equal(formatRestDurationMinSec(75), '1:15');
+
+    // Simulate a Push workout where Shoulder Press feels hard (RPE 9.5) and plateaus
+    const fatiguedSession = createOfflineSessionFromTemplate(pplPushTemplate, catalog, 'user-1');
+    fatiguedSession.status = SessionStatus.COMPLETED;
+    fatiguedSession.completedAt = new Date().toISOString();
+    const shoulderEx = fatiguedSession.exercises.find(
+      (e) => e.primaryMuscleSnapshot === MuscleGroup.SHOULDERS,
+    )!;
+    for (const s of shoulderEx.sets) {
+      s.completed = true;
+      s.weight = 28;
+      s.reps = 6;
+      s.rpe = 9.5;
+    }
+
+    const suggestion = computeWorkoutExerciseSuggestion({
+      workoutName: pplPushTemplate.name,
+      folderName: 'Push / Pull / Legs (PPL)',
+      exercises: pplPushTemplate.exercises.map((ex) => ({
+        exerciseId: ex.exerciseId,
+        plannedSets: ex.plannedSets,
+        targetRepsMin: ex.targetRepsMin,
+        targetRepsMax: ex.targetRepsMax,
+        targetWeight: ex.targetWeight,
+      })),
+      catalog,
+      historySessions: [fatiguedSession],
+      weightUnit: WeightUnit.KG,
+    });
+
+    assert.notEqual(suggestion, null);
+    assert.equal(suggestion!.targetMuscle, MuscleGroup.SHOULDERS);
+    assert.equal(suggestion!.reasonType, 'HIGH_FATIGUE');
+    assert.equal(
+      pplPushTemplate.exercises.some((e) => e.exerciseId === suggestion!.suggestedExercise.id),
+      false,
+    );
   });
 });
