@@ -109,6 +109,7 @@ export function PwaShell() {
                 <Button
                   key={item.id}
                   type="button"
+                  data-testid={`desktop-nav-${item.id}`}
                   variant={isCurrent ? 'default' : 'ghost'}
                   size="default"
                   onClick={() => setActiveTab(item.id)}
@@ -136,7 +137,11 @@ export function PwaShell() {
                 variant="accent"
                 className="font-mono-tabular shrink-0 cursor-pointer rounded-full px-2.5 py-1 text-xs font-extrabold sm:px-3"
               >
-                <button type="button" onClick={() => setActiveTab('session')}>
+                <button
+                  type="button"
+                  data-testid="header-rest-timer-pill"
+                  onClick={() => setActiveTab('session')}
+                >
                   <Timer className="h-3.5 w-3.5" />
                   {Math.floor(restInfo.remainingSeconds / 60)}:
                   {String(restInfo.remainingSeconds % 60).padStart(2, '0')}
@@ -162,6 +167,7 @@ export function PwaShell() {
             >
               <button
                 type="button"
+                data-testid="header-sync-badge"
                 onClick={() => {
                   if (isAuthenticated) {
                     void flushSyncQueue();
@@ -261,6 +267,7 @@ export function PwaShell() {
               <Button
                 key={item.id}
                 type="button"
+                data-testid={`mobile-nav-${item.id}`}
                 variant="ghost"
                 onClick={() => setActiveTab(item.id)}
                 className={`flex h-auto flex-col items-center justify-center gap-0.5 rounded-xl py-2 text-[10px] font-bold hover:bg-transparent ${

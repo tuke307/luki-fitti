@@ -559,11 +559,16 @@ export function ProfileImportView() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            <Button type="button" onClick={handleExportJson}>
+            <Button type="button" data-testid="export-json-btn" onClick={handleExportJson}>
               <FileJson className="h-4 w-4" />
               {t.profile.exportJsonBtn}
             </Button>
-            <Button type="button" variant="secondary" onClick={handleExportCsv}>
+            <Button
+              type="button"
+              data-testid="export-csv-btn"
+              variant="secondary"
+              onClick={handleExportCsv}
+            >
               <FileSpreadsheet className="h-4 w-4" />
               {t.profile.exportCsvBtn}
             </Button>

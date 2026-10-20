@@ -887,6 +887,7 @@ export function ActiveSessionView({
               return (
                 <div
                   key={set.clientSetId}
+                  data-testid={`session-set-row-${sIdx + 1}`}
                   className={`flex flex-col gap-2.5 rounded-2xl border p-3 transition sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-2 ${
                     set.completed
                       ? 'border-primary/50 bg-primary/10'

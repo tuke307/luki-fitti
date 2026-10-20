@@ -579,6 +579,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                   <div className="mt-5 border-t pt-3">
                     <Button
                       type="button"
+                      data-testid={`start-routine-${routine.name}`}
                       variant="accent"
                       size="lg"
                       onClick={async () => {
