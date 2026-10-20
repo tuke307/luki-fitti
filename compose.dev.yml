@@ -60,6 +60,7 @@ services:
     depends_on:
       - db-migrate
       - redis
+      - mailpit
     networks:
       - luki_fitti_network
   email-worker:
@@ -72,6 +73,15 @@ services:
     depends_on:
       - db-migrate
       - redis
+      - mailpit
+    networks:
+      - luki_fitti_network
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: always
+    ports:
+      - 1025:1025 # SMTP server
+      - 8025:8025 # Web UI & HTTP API (http://localhost:8025)
     networks:
       - luki_fitti_network
   redis:

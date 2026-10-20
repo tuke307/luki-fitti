@@ -10,6 +10,10 @@ public struct ProfileAndAuthView: View {
     @State private var name: String = ""
     @State private var statusMessage: String?
 
+    @State private var newResetPassword: String = ""
+    @State private var deleteAccountPassword: String = ""
+    @State private var showingDeleteRequestField: Bool = false
+
     public init(viewModel: LukiAppViewModel) {
         self.viewModel = viewModel
     }
@@ -20,6 +24,11 @@ public struct ProfileAndAuthView: View {
                 Text("Profile & Preferences")
                     .font(.title2.bold())
                     .foregroundStyle(.white)
+
+                if let tokenType = viewModel.deepLinkTokenType,
+                   let token = viewModel.deepLinkToken {
+                    deepLinkActionCard(tokenType: tokenType, token: token)
+                }
 
                 if let user = viewModel.store.currentUser {
                     authenticatedAccountCard(user)
@@ -35,21 +44,149 @@ public struct ProfileAndAuthView: View {
         .background(LukiColors.darkBackground)
     }
 
+    // MARK: - Deep-Link Token Completion Card (Reset Password / Confirm Delete Account)
+
+    @ViewBuilder
+    private func deepLinkActionCard(tokenType: String, token: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if tokenType == "reset-password" {
+                Text("Reset Your Password")
+                    .font(.headline.bold())
+                    .foregroundStyle(LukiColors.neonLime)
+                SecureField("New Password (min. 8 chars)", text: $newResetPassword)
+                    .textFieldStyle(.roundedBorder)
+                    .accessibilityIdentifier("ios.profile.newPasswordField")
+
+                Button {
+                    Task {
+                        do {
+                            try await viewModel.store.apiClient.resetPassword(
+                                token: token,
+                                newPassword: newResetPassword
+                            )
+                            viewModel.deepLinkTokenType = nil
+                            viewModel.deepLinkToken = nil
+                            newResetPassword = ""
+                            authMode = "login"
+                            statusMessage = "Password has been reset successfully."
+                        } catch {
+                            statusMessage = error.localizedDescription
+                        }
+                    }
+                } label: {
+                    Text("Save New Password")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.neonLime))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("ios.profile.confirmResetButton")
+            } else if tokenType == "delete-account" {
+                Text("Confirm Permanent Account Deletion")
+                    .font(.headline.bold())
+                    .foregroundStyle(.red)
+                Text("Confirm that you want to permanently delete your LukiFitti account and all workout data.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Button(role: .destructive) {
+                    Task {
+                        do {
+                            try await viewModel.store.apiClient.confirmAccountDeletion(token: token)
+                            viewModel.store.clearAllLocalData()
+                            viewModel.deepLinkTokenType = nil
+                            viewModel.deepLinkToken = nil
+                            statusMessage = "Account Permanently Deleted"
+                        } catch {
+                            statusMessage = error.localizedDescription
+                        }
+                    }
+                } label: {
+                    Text("Yes, Permanently Delete My Account")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(RoundedRectangle(cornerRadius: 10).fill(Color.red))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("ios.profile.confirmDeleteAccountButton")
+            }
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 16).fill(LukiColors.darkCard))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("ios.profile.deepLinkCard")
+    }
+
     private func authenticatedAccountCard(_ user: UserDto) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Authenticated Server Session")
                 .font(.caption.bold())
                 .foregroundStyle(LukiColors.neonLime)
+                .accessibilityIdentifier("ios.profile.authenticatedBadge")
             Text(user.email)
                 .font(.headline)
                 .foregroundStyle(.white)
-            Button("Sign Out", role: .destructive) {
-                Task {
-                    await viewModel.store.apiClient.logout()
-                    viewModel.store.clearAllLocalData()
-                }
+
+            if let statusMessage {
+                Text(statusMessage)
+                    .font(.caption)
+                    .foregroundStyle(LukiColors.neonLime)
+                    .accessibilityIdentifier("ios.profile.statusMessage")
             }
-            .font(.caption.bold())
+
+            HStack(spacing: 12) {
+                Button("Sign Out", role: .destructive) {
+                    Task {
+                        await viewModel.store.apiClient.logout()
+                        viewModel.store.clearAllLocalData()
+                    }
+                }
+                .font(.caption.bold())
+                .accessibilityIdentifier("ios.profile.signOutButton")
+
+                Button("Delete Account", role: .destructive) {
+                    showingDeleteRequestField.toggle()
+                }
+                .font(.caption.bold())
+                .accessibilityIdentifier("ios.profile.deleteAccountButton")
+            }
+
+            if showingDeleteRequestField {
+                VStack(alignment: .leading, spacing: 8) {
+                    SecureField("Current Password", text: $deleteAccountPassword)
+                        .textFieldStyle(.roundedBorder)
+                        .accessibilityIdentifier("ios.profile.deletePasswordField")
+
+                    Button {
+                        Task {
+                            do {
+                                try await viewModel.store.apiClient.requestAccountDeletion(
+                                    password: deleteAccountPassword
+                                )
+                                showingDeleteRequestField = false
+                                deleteAccountPassword = ""
+                                statusMessage = "Deletion confirmation link sent to your email."
+                            } catch {
+                                statusMessage = error.localizedDescription
+                            }
+                        }
+                    } label: {
+                        Text("Send Deletion Confirmation Email")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(RoundedRectangle(cornerRadius: 8).fill(Color.red.opacity(0.85)))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("ios.profile.sendDeleteEmailButton")
+                }
+                .padding(.top, 4)
+            }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -68,19 +205,43 @@ public struct ProfileAndAuthView: View {
                 TextField("Your Name (e.g. GymBuddy)", text: $name)
                     .textFieldStyle(.roundedBorder)
                     .autocorrectionDisabled()
+                    .accessibilityIdentifier("ios.profile.nameField")
             }
             TextField("Email address", text: $email)
                 .textFieldStyle(.roundedBorder)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .keyboardType(.emailAddress)
+                .accessibilityIdentifier("ios.profile.emailField")
             SecureField("Password", text: $password)
                 .textFieldStyle(.roundedBorder)
+                .accessibilityIdentifier("ios.profile.passwordField")
+
+            if authMode == "login" {
+                HStack {
+                    Spacer()
+                    Button("Forgot password?") {
+                        Task {
+                            do {
+                                try await viewModel.store.apiClient.forgotPassword(email: email)
+                                statusMessage = "If an account exists, a password reset link has been sent."
+                            } catch {
+                                statusMessage = error.localizedDescription
+                            }
+                        }
+                    }
+                    .font(.caption.bold())
+                    .foregroundStyle(LukiColors.neonLime)
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("ios.profile.forgotPasswordButton")
+                }
+            }
 
             if let statusMessage {
                 Text(statusMessage)
                     .font(.caption)
                     .foregroundStyle(LukiColors.neonLime)
+                    .accessibilityIdentifier("ios.profile.statusMessage")
             }
 
             Button {
@@ -97,7 +258,7 @@ public struct ProfileAndAuthView: View {
                                 name: name.isEmpty ? nil : name,
                                 weightUnit: viewModel.store.preferences.weightUnit
                             )
-                            statusMessage = user.message ?? "Registered successfully"
+                            statusMessage = user.message ?? "Account created! Please check your email."
                         }
                     } catch {
                         statusMessage = error.localizedDescription
@@ -112,6 +273,7 @@ public struct ProfileAndAuthView: View {
                     .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.neonLime))
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("ios.profile.submitAuthButton")
         }
         .padding(16)
         .background(RoundedRectangle(cornerRadius: 16).fill(LukiColors.darkCard))

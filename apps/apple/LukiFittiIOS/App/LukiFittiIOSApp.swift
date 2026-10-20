@@ -119,21 +119,24 @@ public final class LukiAppViewModel {
               let token = components.queryItems?.first(where: { $0.name == "token" })?.value else {
             return
         }
-        let path = components.path
-        if path.contains("verify-email") {
+        let routeTarget = [components.host, components.path].compactMap { $0 }.joined(separator: "/")
+        if routeTarget.contains("verify-email") {
             deepLinkTokenType = "verify-email"
             deepLinkToken = token
             selectedTab = .profile
             Task {
                 if let user = try? await store.apiClient.verifyEmail(token: token) {
-                    store.currentUser = user
+                    store.saveAuthenticatedUser(user)
+                    await store.refreshFromServerAfterAuth()
+                    deepLinkTokenType = nil
+                    deepLinkToken = nil
                 }
             }
-        } else if path.contains("reset-password") {
+        } else if routeTarget.contains("reset-password") {
             deepLinkTokenType = "reset-password"
             deepLinkToken = token
             selectedTab = .profile
-        } else if path.contains("delete-account") {
+        } else if routeTarget.contains("delete-account") {
             deepLinkTokenType = "delete-account"
             deepLinkToken = token
             selectedTab = .profile
