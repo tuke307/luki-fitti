@@ -16,6 +16,9 @@ import {
   Trash2,
   AlertTriangle,
   Globe,
+  Bell,
+  Volume2,
+  Sparkles,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Badge } from '@luki-fitti/ui/components/ui/badge';
@@ -36,6 +39,10 @@ import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
+import {
+  requestWorkoutNotificationPermission,
+  triggerWorkoutNotification,
+} from '@/lib/notifications/notification-manager';
 import { type LanguagePreference, WeightUnit } from '@luki-fitti/common/enums';
 
 function escapeCsvCell(value: string | number | null | undefined): string {
@@ -504,6 +511,113 @@ export function ProfileImportView() {
                   </option>
                 ))}
               </NativeSelect>
+            </div>
+
+            {/* Smart Rainbow Exercise Suggestions Toggle (Default: On) */}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
+              <div>
+                <p className="flex items-center gap-1.5 font-semibold">
+                  <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                  {t.profile.exerciseSuggestionsLabel}
+                </p>
+                <p className="text-muted-foreground text-[11px]">
+                  {t.profile.exerciseSuggestionsSub}
+                </p>
+              </div>
+              <Tabs
+                data-testid="profile-exercise-suggestions-tabs"
+                value={
+                  (user?.preferences?.exerciseSuggestionsEnabled ?? true) ? 'on' : 'off'
+                }
+                onValueChange={(val) =>
+                  void updatePreferences({ exerciseSuggestionsEnabled: val === 'on' })
+                }
+              >
+                <TabsList>
+                  <TabsTrigger value="on" data-testid="exercise-suggestions-on">
+                    {t.profile.enabledOption}
+                  </TabsTrigger>
+                  <TabsTrigger value="off" data-testid="exercise-suggestions-off">
+                    {t.profile.disabledOption}
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+
+            {/* Workout & Rest Timer Notifications Toggle + Test Notification */}
+            <div className="space-y-2.5 border-t pt-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="flex items-center gap-1.5 font-semibold">
+                    <Bell className="text-primary h-3.5 w-3.5" />
+                    {t.profile.notificationsLabel}
+                  </p>
+                  <p className="text-muted-foreground text-[11px]">{t.profile.notificationsSub}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="xs"
+                    data-testid="profile-test-notification-btn"
+                    onClick={async () => {
+                      await requestWorkoutNotificationPermission();
+                      await triggerWorkoutNotification({
+                        title: t.profile.testNotificationTitle,
+                        body: t.profile.testNotificationBody,
+                        tag: 'luki-fitti-test',
+                        playSound: user?.preferences?.restTimerSound ?? true,
+                        showToast: true,
+                      });
+                    }}
+                    className="font-bold"
+                  >
+                    <Bell className="h-3 w-3" />
+                    {t.profile.testNotificationBtn}
+                  </Button>
+                  <Tabs
+                    data-testid="profile-notifications-tabs"
+                    value={(user?.preferences?.notificationsEnabled ?? true) ? 'on' : 'off'}
+                    onValueChange={async (val) => {
+                      const enabled = val === 'on';
+                      if (enabled) {
+                        await requestWorkoutNotificationPermission();
+                      }
+                      await updatePreferences({ notificationsEnabled: enabled });
+                    }}
+                  >
+                    <TabsList>
+                      <TabsTrigger value="on" data-testid="notifications-on">
+                        {t.profile.enabledOption}
+                      </TabsTrigger>
+                      <TabsTrigger value="off" data-testid="notifications-off">
+                        {t.profile.disabledOption}
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="flex items-center gap-1.5 font-semibold">
+                    <Volume2 className="text-accent h-3.5 w-3.5" />
+                    {t.profile.restSoundLabel}
+                  </p>
+                  <p className="text-muted-foreground text-[11px]">{t.profile.restSoundSub}</p>
+                </div>
+                <Tabs
+                  value={(user?.preferences?.restTimerSound ?? true) ? 'on' : 'off'}
+                  onValueChange={(val) =>
+                    void updatePreferences({ restTimerSound: val === 'on' })
+                  }
+                >
+                  <TabsList>
+                    <TabsTrigger value="on">{t.profile.enabledOption}</TabsTrigger>
+                    <TabsTrigger value="off">{t.profile.disabledOption}</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
             </div>
           </div>
         </Card>

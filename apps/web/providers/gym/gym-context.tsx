@@ -1119,9 +1119,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
     if (!exInfo) return;
 
     const clientExerciseId = `sex-${Date.now()}`;
-    const isStretch =
-      exInfo.exerciseType === ExerciseType.STRETCHING ||
-      exInfo.exerciseType === ExerciseType.MOBILITY;
+    const isStretch = exInfo.exerciseType === ExerciseType.STRETCHING;
 
     const defaultSets: SessionSetDto[] = Array.from({ length: isStretch ? 2 : 3 }, (_, idx) => ({
       id: `set-${Date.now()}-${idx}`,

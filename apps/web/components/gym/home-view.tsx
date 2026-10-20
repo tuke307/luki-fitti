@@ -138,9 +138,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
     for (const s of historySessions) {
       if (cutoffMs > 0 && Date.parse(s.startedAt) < cutoffMs) continue;
       for (const ex of s.exercises) {
-        const isStretch =
-          ex.exerciseTypeSnapshot === ExerciseType.STRETCHING ||
-          ex.exerciseTypeSnapshot === ExerciseType.MOBILITY;
+        const isStretch = ex.exerciseTypeSnapshot === ExerciseType.STRETCHING;
         if (isStretch) continue;
 
         const cur = counts.get(ex.primaryMuscleSnapshot) ?? { sets: 0, volumeKg: 0 };

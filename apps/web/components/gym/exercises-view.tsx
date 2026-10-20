@@ -109,21 +109,14 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
   }, [catalog, search, selectedMuscle, selectedType, selectedEquipment]);
 
   const stretchExercises = useMemo(
-    () =>
-      catalog.filter(
-        (e) =>
-          e.exerciseType === ExerciseType.STRETCHING || e.exerciseType === ExerciseType.MOBILITY,
-      ),
+    () => catalog.filter((e) => e.exerciseType === ExerciseType.STRETCHING),
     [catalog],
   );
 
   const prioritizedStretchCatalog = useMemo(
     () => [
       ...stretchExercises,
-      ...catalog.filter(
-        (e) =>
-          e.exerciseType !== ExerciseType.STRETCHING && e.exerciseType !== ExerciseType.MOBILITY,
-      ),
+      ...catalog.filter((e) => e.exerciseType !== ExerciseType.STRETCHING),
     ],
     [catalog, stretchExercises],
   );
@@ -141,17 +134,12 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
       category:
         newType === ExerciseType.STRETCHING
           ? ExerciseCategory.STRETCH
-          : newType === ExerciseType.MOBILITY
-            ? ExerciseCategory.MOBILITY
-            : ExerciseCategory.COMPOUND,
+          : ExerciseCategory.COMPOUND,
       exerciseType: newType,
       primaryMuscleGroup: newPrimaryMuscle,
       secondaryMuscleGroups: newSecondaryMuscles,
       equipment: newEquipment,
-      recommendedDurationSeconds:
-        newType === ExerciseType.STRETCHING || newType === ExerciseType.MOBILITY
-          ? newDurationSec
-          : null,
+      recommendedDurationSeconds: newType === ExerciseType.STRETCHING ? newDurationSec : null,
       tags: newTags
         .split(',')
         .map((tItem) => tItem.trim())
@@ -350,9 +338,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
           ) : (
             <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
               {filteredCatalog.map((ex) => {
-                const isStretch =
-                  ex.exerciseType === ExerciseType.STRETCHING ||
-                  ex.exerciseType === ExerciseType.MOBILITY;
+                const isStretch = ex.exerciseType === ExerciseType.STRETCHING;
                 const altNames = ex.alternativeExerciseIds
                   .map((id) => catalog.find((c) => c.id === id)?.name)
                   .filter(Boolean);
@@ -919,7 +905,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                 </NativeSelect>
               </div>
 
-              {(newType === ExerciseType.STRETCHING || newType === ExerciseType.MOBILITY) && (
+              {newType === ExerciseType.STRETCHING && (
                 <div className="space-y-1.5">
                   <Label htmlFor="new-ex-duration" className="text-xs font-semibold">
                     {t.exercises.recommendedHoldLabel}

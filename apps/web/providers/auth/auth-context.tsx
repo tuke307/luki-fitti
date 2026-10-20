@@ -42,6 +42,8 @@ const DEFAULT_LOCAL_USER: UserDto = {
     theme: 'dark',
     language: 'system',
     restTimerSound: true,
+    notificationsEnabled: true,
+    exerciseSuggestionsEnabled: true,
     weeklyGoalSessions: 4,
   },
 };
@@ -316,6 +318,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           theme: data.theme ?? user.preferences?.theme ?? 'dark',
           language: data.language ?? user.preferences?.language ?? 'system',
           restTimerSound: data.restTimerSound ?? user.preferences?.restTimerSound ?? true,
+          notificationsEnabled:
+            data.notificationsEnabled ?? user.preferences?.notificationsEnabled ?? true,
+          exerciseSuggestionsEnabled:
+            data.exerciseSuggestionsEnabled ?? user.preferences?.exerciseSuggestionsEnabled ?? true,
           weeklyGoalSessions:
             data.weeklyGoalSessions ?? user.preferences?.weeklyGoalSessions ?? 4,
         },

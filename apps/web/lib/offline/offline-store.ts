@@ -283,9 +283,7 @@ export function recalculateSessionTotals(session: WorkoutSessionDto): WorkoutSes
   let totalStretchSeconds = 0;
 
   for (const ex of session.exercises) {
-    const isStretch =
-      ex.exerciseTypeSnapshot === ExerciseType.STRETCHING ||
-      ex.exerciseTypeSnapshot === ExerciseType.MOBILITY;
+    const isStretch = ex.exerciseTypeSnapshot === ExerciseType.STRETCHING;
 
     for (const set of ex.sets) {
       if (!set.completed) continue;
