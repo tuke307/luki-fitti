@@ -23,6 +23,8 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
     public var theme: String
     public var language: LanguagePreference?
     public var restTimerSound: Bool
+    public var notificationsEnabled: Bool
+    public var exerciseSuggestionsEnabled: Bool
     public var weeklyGoalSessions: Int
 
     public init(
@@ -34,6 +36,8 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
         theme: String = "dark",
         language: LanguagePreference? = .system,
         restTimerSound: Bool = true,
+        notificationsEnabled: Bool = true,
+        exerciseSuggestionsEnabled: Bool = true,
         weeklyGoalSessions: Int = 4
     ) {
         self.id = id
@@ -44,7 +48,29 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
         self.theme = theme
         self.language = language
         self.restTimerSound = restTimerSound
+        self.notificationsEnabled = notificationsEnabled
+        self.exerciseSuggestionsEnabled = exerciseSuggestionsEnabled
         self.weeklyGoalSessions = weeklyGoalSessions
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, userId, weightUnit, distanceUnit, defaultRestSeconds, theme, language
+        case restTimerSound, notificationsEnabled, exerciseSuggestionsEnabled, weeklyGoalSessions
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decodeIfPresent(String.self, forKey: .id) ?? "pref-local"
+        self.userId = try c.decodeIfPresent(String.self, forKey: .userId) ?? "local-user"
+        self.weightUnit = try c.decodeIfPresent(WeightUnit.self, forKey: .weightUnit) ?? .KG
+        self.distanceUnit = try c.decodeIfPresent(DistanceUnit.self, forKey: .distanceUnit) ?? .KM
+        self.defaultRestSeconds = try c.decodeIfPresent(Int.self, forKey: .defaultRestSeconds) ?? 90
+        self.theme = try c.decodeIfPresent(String.self, forKey: .theme) ?? "dark"
+        self.language = try c.decodeIfPresent(LanguagePreference.self, forKey: .language)
+        self.restTimerSound = try c.decodeIfPresent(Bool.self, forKey: .restTimerSound) ?? true
+        self.notificationsEnabled = try c.decodeIfPresent(Bool.self, forKey: .notificationsEnabled) ?? true
+        self.exerciseSuggestionsEnabled = try c.decodeIfPresent(Bool.self, forKey: .exerciseSuggestionsEnabled) ?? true
+        self.weeklyGoalSessions = try c.decodeIfPresent(Int.self, forKey: .weeklyGoalSessions) ?? 4
     }
 }
 
@@ -93,6 +119,8 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
     public var theme: String?
     public var language: LanguagePreference?
     public var restTimerSound: Bool?
+    public var notificationsEnabled: Bool?
+    public var exerciseSuggestionsEnabled: Bool?
     public var weeklyGoalSessions: Int?
 
     public init(
@@ -103,6 +131,8 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
         theme: String? = nil,
         language: LanguagePreference? = nil,
         restTimerSound: Bool? = nil,
+        notificationsEnabled: Bool? = nil,
+        exerciseSuggestionsEnabled: Bool? = nil,
         weeklyGoalSessions: Int? = nil
     ) {
         self.name = name
@@ -112,6 +142,8 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
         self.theme = theme
         self.language = language
         self.restTimerSound = restTimerSound
+        self.notificationsEnabled = notificationsEnabled
+        self.exerciseSuggestionsEnabled = exerciseSuggestionsEnabled
         self.weeklyGoalSessions = weeklyGoalSessions
     }
 }

@@ -240,7 +240,7 @@ public enum ProgressionEngine {
 
             var workingSets: [WorkingSetHistoryPoint] = []
             for ex in matchingExercises {
-                if ex.exerciseTypeSnapshot == .STRETCHING || ex.exerciseTypeSnapshot == .MOBILITY {
+                if ex.exerciseTypeSnapshot == .STRETCHING {
                     continue
                 }
                 for s in ex.sets {
@@ -556,8 +556,7 @@ public enum ProgressionEngine {
         catalogExercise: ExerciseDto? = nil,
         weightUnit: WeightUnit = .KG
     ) -> SessionExerciseDto {
-        if sessionExercise.exerciseTypeSnapshot == .STRETCHING ||
-            sessionExercise.exerciseTypeSnapshot == .MOBILITY {
+        if sessionExercise.exerciseTypeSnapshot == .STRETCHING {
             return sessionExercise
         }
 
@@ -611,5 +610,272 @@ public enum ProgressionEngine {
         updated.targetWeight = primaryLastWeight ?? sessionExercise.targetWeight
         updated.sets = hydratedSets
         return updated
+    }
+
+    // MARK: - Gymlife Superset Block Grouping & Formatting
+
+    public static func formatRestDurationMinSec(_ seconds: Int) -> String {
+        let safe = max(0, seconds)
+        return String(format: "%d:%02d", safe / 60, safe % 60)
+    }
+
+    public static func groupTemplateExercisesIntoBlocks(
+        _ exercises: [WorkoutTemplateExerciseDto]
+    ) -> [ExerciseRenderBlock<WorkoutTemplateExerciseDto>] {
+        var blocks: [ExerciseRenderBlock<WorkoutTemplateExerciseDto>] = []
+        var i = 0
+        while i < exercises.count {
+            let current = exercises[i]
+            if current.restSeconds == 0 && i < exercises.count - 1 {
+                let startIndex = i
+                var items: [ExerciseBlockItem<WorkoutTemplateExerciseDto>] = []
+                var stepNumber = 1
+                while i < exercises.count {
+                    let ex = exercises[i]
+                    items.append(ExerciseBlockItem(item: ex, globalIndex: i, stepNumber: stepNumber))
+                    stepNumber += 1
+                    if ex.restSeconds == 0 && i < exercises.count - 1 {
+                        i += 1
+                    } else {
+                        i += 1
+                        break
+                    }
+                }
+                let lastItem = items[items.count - 1].item
+                let maxRounds = items.map { $0.item.plannedSets }.max() ?? 3
+                blocks.append(
+                    ExerciseRenderBlock(
+                        isSuperset: true,
+                        startIndex: startIndex,
+                        rounds: maxRounds,
+                        roundRestSeconds: lastItem.restSeconds > 0 ? lastItem.restSeconds : 60,
+                        items: items
+                    )
+                )
+            } else {
+                blocks.append(
+                    ExerciseRenderBlock(
+                        isSuperset: false,
+                        startIndex: i,
+                        rounds: current.plannedSets,
+                        roundRestSeconds: current.restSeconds,
+                        items: [ExerciseBlockItem(item: current, globalIndex: i, stepNumber: 1)]
+                    )
+                )
+                i += 1
+            }
+        }
+        return blocks
+    }
+
+    public static func groupSessionExercisesIntoBlocks(
+        _ exercises: [SessionExerciseDto]
+    ) -> [ExerciseRenderBlock<SessionExerciseDto>] {
+        var blocks: [ExerciseRenderBlock<SessionExerciseDto>] = []
+        var i = 0
+        while i < exercises.count {
+            let current = exercises[i]
+            if current.restSeconds == 0 && i < exercises.count - 1 {
+                let startIndex = i
+                var items: [ExerciseBlockItem<SessionExerciseDto>] = []
+                var stepNumber = 1
+                while i < exercises.count {
+                    let ex = exercises[i]
+                    items.append(ExerciseBlockItem(item: ex, globalIndex: i, stepNumber: stepNumber))
+                    stepNumber += 1
+                    if ex.restSeconds == 0 && i < exercises.count - 1 {
+                        i += 1
+                    } else {
+                        i += 1
+                        break
+                    }
+                }
+                let lastItem = items[items.count - 1].item
+                let maxRounds = items.map { $0.item.plannedSets }.max() ?? 3
+                blocks.append(
+                    ExerciseRenderBlock(
+                        isSuperset: true,
+                        startIndex: startIndex,
+                        rounds: maxRounds,
+                        roundRestSeconds: lastItem.restSeconds > 0 ? lastItem.restSeconds : 60,
+                        items: items
+                    )
+                )
+            } else {
+                blocks.append(
+                    ExerciseRenderBlock(
+                        isSuperset: false,
+                        startIndex: i,
+                        rounds: current.plannedSets,
+                        roundRestSeconds: current.restSeconds,
+                        items: [ExerciseBlockItem(item: current, globalIndex: i, stepNumber: 1)]
+                    )
+                )
+                i += 1
+            }
+        }
+        return blocks
+    }
+
+    // MARK: - Smart Workout Exercise Suggestion Engine (Max 1 per Workout)
+
+    public static func computeWorkoutExerciseSuggestion(
+        workoutName: String,
+        folderName: String? = nil,
+        existingExerciseIds: [String],
+        existingExerciseNames: [String] = [],
+        existingMuscles: [MuscleGroup] = [],
+        catalog: [ExerciseDto],
+        historySessions: [WorkoutSessionDto],
+        weightUnit: WeightUnit = .KG
+    ) -> WorkoutExerciseSuggestion? {
+        let strengthCatalog = catalog.filter { $0.exerciseType == .STRENGTH }
+        guard !strengthCatalog.isEmpty else { return nil }
+
+        let idSet = Set(existingExerciseIds)
+        let nameSet = Set(existingExerciseNames.map { $0.lowercased() })
+
+        let text = "\(workoutName) \(folderName ?? "")".lowercased()
+        let splitMuscles: [MuscleGroup]
+        if text.contains("push") || (text.contains("chest") && text.contains("tricep")) {
+            splitMuscles = [.SHOULDERS, .CHEST, .TRICEPS]
+        } else if text.contains("pull") || (text.contains("back") && text.contains("bicep")) {
+            splitMuscles = [.BACK, .BICEPS, .SHOULDERS]
+        } else if text.contains("leg") || text.contains("bein") || text.contains("quad") {
+            splitMuscles = [.QUADRICEPS, .HAMSTRINGS, .GLUTES, .CALVES]
+        } else if text.contains("arm") || text.contains("bicep") || text.contains("tricep") {
+            splitMuscles = [.BICEPS, .TRICEPS, .SHOULDERS]
+        } else if text.contains("shoulder") || text.contains("schulter") {
+            splitMuscles = [.SHOULDERS, .TRICEPS, .ABS_CORE]
+        } else if !existingMuscles.isEmpty {
+            splitMuscles = Array(Set(existingMuscles))
+        } else {
+            splitMuscles = [.SHOULDERS, .CHEST, .BACK]
+        }
+
+        var stallingEx: ExerciseDto?
+        var stallingReason: String?
+
+        for exId in existingExerciseIds {
+            guard let catEx = catalog.first(where: { $0.id == exId }) else { continue }
+            let insight = computeExerciseProgression(
+                exerciseId: catEx.id,
+                exerciseName: catEx.name,
+                historySessions: historySessions,
+                catalogExercise: catEx,
+                weightUnit: weightUnit
+            )
+            guard insight.sessionsCount > 0, let last = insight.lastSession else { continue }
+            let avgRpe = last.avgRpe ?? 8.0
+            if avgRpe >= 9.0 || insight.phase == .DELOAD {
+                stallingEx = catEx
+                stallingReason = "\(catEx.name) felt heavy recently — try a fresh \(catEx.primaryMuscleGroup.rawValue.lowercased()) stimulus"
+                break
+            } else if insight.sessionsCount >= 2 && (insight.slopePerSession <= 0.15 || insight.phase == .MAINTAIN) {
+                stallingEx = catEx
+                stallingReason = "Progress on \(catEx.name) has plateaued — rotate or add a complementary \(catEx.primaryMuscleGroup.rawValue.lowercased()) movement"
+                break
+            }
+        }
+
+        let targetMuscle = stallingEx?.primaryMuscleGroup ?? splitMuscles.first ?? .SHOULDERS
+        let pool = strengthCatalog.filter {
+            !idSet.contains($0.id) &&
+            !nameSet.contains($0.name.lowercased()) &&
+            $0.primaryMuscleGroup == targetMuscle
+        }
+        let fallbackPool = pool.isEmpty
+            ? strengthCatalog.filter { !idSet.contains($0.id) && !nameSet.contains($0.name.lowercased()) }
+            : pool
+
+        guard let chosen = fallbackPool.first else { return nil }
+        let reason = stallingReason ?? "Recommended \(chosen.primaryMuscleGroup.rawValue.lowercased()) exercise to complement \(workoutName)"
+        let defaultWeight: Double = (chosen.primaryMuscleGroup == .SHOULDERS || chosen.primaryMuscleGroup == .BICEPS || chosen.primaryMuscleGroup == .TRICEPS)
+            ? (weightUnit == .LBS ? 25.0 : 12.5)
+            : (weightUnit == .LBS ? 95.0 : 40.0)
+
+        return WorkoutExerciseSuggestion(
+            suggestedExercise: chosen,
+            targetMuscle: chosen.primaryMuscleGroup,
+            reasonText: reason,
+            stallingExerciseId: stallingEx?.id,
+            stallingExerciseName: stallingEx?.name,
+            recommendedSets: 3,
+            recommendedRepsMin: chosen.category == .COMPOUND ? 8 : 10,
+            recommendedRepsMax: chosen.category == .COMPOUND ? 12 : 15,
+            recommendedWeight: defaultWeight,
+            recommendedRestSeconds: chosen.category == .COMPOUND ? 90 : 60
+        )
+    }
+}
+
+public struct ExerciseBlockItem<T: Sendable>: Sendable {
+    public var item: T
+    public var globalIndex: Int
+    public var stepNumber: Int
+
+    public init(item: T, globalIndex: Int, stepNumber: Int) {
+        self.item = item
+        self.globalIndex = globalIndex
+        self.stepNumber = stepNumber
+    }
+}
+
+public struct ExerciseRenderBlock<T: Sendable>: Sendable {
+    public var isSuperset: Bool
+    public var startIndex: Int
+    public var rounds: Int
+    public var roundRestSeconds: Int
+    public var items: [ExerciseBlockItem<T>]
+
+    public init(
+        isSuperset: Bool,
+        startIndex: Int,
+        rounds: Int,
+        roundRestSeconds: Int,
+        items: [ExerciseBlockItem<T>]
+    ) {
+        self.isSuperset = isSuperset
+        self.startIndex = startIndex
+        self.rounds = rounds
+        self.roundRestSeconds = roundRestSeconds
+        self.items = items
+    }
+}
+
+public struct WorkoutExerciseSuggestion: Sendable, Equatable {
+    public var suggestedExercise: ExerciseDto
+    public var targetMuscle: MuscleGroup
+    public var reasonText: String
+    public var stallingExerciseId: String?
+    public var stallingExerciseName: String?
+    public var recommendedSets: Int
+    public var recommendedRepsMin: Int
+    public var recommendedRepsMax: Int
+    public var recommendedWeight: Double
+    public var recommendedRestSeconds: Int
+
+    public init(
+        suggestedExercise: ExerciseDto,
+        targetMuscle: MuscleGroup,
+        reasonText: String,
+        stallingExerciseId: String? = nil,
+        stallingExerciseName: String? = nil,
+        recommendedSets: Int = 3,
+        recommendedRepsMin: Int = 10,
+        recommendedRepsMax: Int = 14,
+        recommendedWeight: Double = 20.0,
+        recommendedRestSeconds: Int = 60
+    ) {
+        self.suggestedExercise = suggestedExercise
+        self.targetMuscle = targetMuscle
+        self.reasonText = reasonText
+        self.stallingExerciseId = stallingExerciseId
+        self.stallingExerciseName = stallingExerciseName
+        self.recommendedSets = recommendedSets
+        self.recommendedRepsMin = recommendedRepsMin
+        self.recommendedRepsMax = recommendedRepsMax
+        self.recommendedWeight = recommendedWeight
+        self.recommendedRestSeconds = recommendedRestSeconds
     }
 }

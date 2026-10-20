@@ -399,39 +399,150 @@ public struct WorkoutsView: View {
             .padding(.vertical, 6)
             .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.04)))
 
-            // Full ordered exercise list
-            VStack(spacing: 6) {
-                ForEach(Array(template.exercises.enumerated()), id: \.offset) { idx, ex in
-                    let exInfo = ex.exercise ?? viewModel.store.catalog.first { $0.id == ex.exerciseId }
-                    HStack(spacing: 8) {
-                        Text("\(idx + 1).")
-                            .font(.caption.bold().monospacedDigit())
-                            .foregroundStyle(LukiColors.neonLime)
-                        Text(exInfo?.name ?? "Exercise")
-                            .font(.caption.bold())
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
-                        Spacer()
-                        if ex.restSeconds == 0 {
-                            Text("Superset (0s)")
-                                .font(.system(size: 9, weight: .bold))
+            // Full ordered exercise list (Gymlife Superset Blocks & Standalone Rows)
+            let blocks = ProgressionEngine.groupTemplateExercisesIntoBlocks(template.exercises)
+            VStack(spacing: 8) {
+                ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
+                    if block.isSuperset {
+                        VStack(alignment: .leading, spacing: 0) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    HStack(spacing: 4) {
+                                        Text("SUPERSET")
+                                            .font(.caption.weight(.heavy))
+                                            .foregroundStyle(LukiColors.electricCyan)
+                                        Text("× \(block.rounds) ROUNDS")
+                                            .font(.caption.weight(.heavy).monospacedDigit())
+                                            .foregroundStyle(.white)
+                                    }
+                                    Text("Rest 0 s between exercises · \(ProgressionEngine.formatRestDurationMinSec(block.roundRestSeconds)) between rounds")
+                                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .background(Color.black.opacity(0.65))
+
+                            ForEach(Array(block.items.enumerated()), id: \.offset) { _, blockItem in
+                                let ex = blockItem.item
+                                let exInfo = ex.exercise ?? viewModel.store.catalog.first { $0.id == ex.exerciseId }
+                                HStack(spacing: 8) {
+                                    Text("\(blockItem.stepNumber)")
+                                        .font(.system(size: 10, weight: .black, design: .monospaced))
+                                        .foregroundStyle(LukiColors.electricCyan)
+                                        .frame(width: 20, height: 20)
+                                        .background(Circle().fill(Color.black))
+                                    Text(exInfo?.name ?? "Exercise")
+                                        .font(.caption.bold())
+                                        .foregroundStyle(.white)
+                                        .lineLimit(1)
+                                    Spacer()
+                                    Text("\(ex.plannedSets)×\(ex.targetRepsMin ?? 8)-\(ex.targetRepsMax ?? 12)")
+                                        .font(.caption2.bold().monospacedDigit())
+                                        .foregroundStyle(LukiColors.electricCyan)
+                                        .padding(.horizontal, 7)
+                                        .padding(.vertical, 3)
+                                        .background(RoundedRectangle(cornerRadius: 6).fill(LukiColors.electricCyan.opacity(0.18)))
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 7)
+                            }
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(LukiColors.electricCyan.opacity(0.45), lineWidth: 1)
+                        )
+                    } else if let firstItem = block.items.first {
+                        let ex = firstItem.item
+                        let idx = firstItem.globalIndex
+                        let exInfo = ex.exercise ?? viewModel.store.catalog.first { $0.id == ex.exerciseId }
+                        HStack(spacing: 8) {
+                            Text("\(idx + 1).")
+                                .font(.caption.bold().monospacedDigit())
+                                .foregroundStyle(LukiColors.neonLime)
+                            Text(exInfo?.name ?? "Exercise")
+                                .font(.caption.bold())
+                                .foregroundStyle(.white)
+                                .lineLimit(1)
+                            Spacer()
+                            if !ex.alternativeExerciseIds.isEmpty {
+                                Text("+\(ex.alternativeExerciseIds.count) backup")
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text("\(ex.plannedSets)×\(ex.targetRepsMin ?? 8)-\(ex.targetRepsMax ?? 12)")
+                                .font(.caption2.bold().monospacedDigit())
                                 .foregroundStyle(LukiColors.electricCyan)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background(Capsule().fill(LukiColors.electricCyan.opacity(0.15)))
-                        }
-                        if !ex.alternativeExerciseIds.isEmpty {
-                            Text("+\(ex.alternativeExerciseIds.count) backup")
-                                .font(.system(size: 9, weight: .semibold))
+                                .background(RoundedRectangle(cornerRadius: 6).fill(LukiColors.electricCyan.opacity(0.16)))
+                            Text("\(ex.restSeconds)s")
+                                .font(.system(size: 10, weight: .bold, design: .monospaced))
                                 .foregroundStyle(.secondary)
                         }
-                        Text("\(ex.plannedSets) × \(ex.targetRepsMin ?? 8)-\(ex.targetRepsMax ?? 12)")
-                            .font(.caption2.monospacedDigit())
-                            .foregroundStyle(.secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.03)))
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.03)))
+                }
+
+                // Rainbow Smart Exercise Suggestion (Max 1 per workout)
+                if viewModel.store.preferences.exerciseSuggestionsEnabled,
+                   let suggestion = ProgressionEngine.computeWorkoutExerciseSuggestion(
+                       workoutName: template.name,
+                       existingExerciseIds: template.exercises.map(\.exerciseId),
+                       catalog: viewModel.store.catalog,
+                       historySessions: viewModel.store.historySessions,
+                       weightUnit: viewModel.store.preferences.weightUnit
+                   ) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "sparkles")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("SMART SUGGESTION • \(suggestion.suggestedExercise.name)")
+                                .font(.system(size: 10, weight: .heavy))
+                                .foregroundStyle(.white)
+                                .lineLimit(1)
+                            Text(suggestion.reasonText)
+                                .font(.system(size: 9))
+                                .foregroundStyle(.white.opacity(0.85))
+                                .lineLimit(2)
+                        }
+                        Spacer()
+                    }
+                    .padding(9)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color.pink.opacity(0.25),
+                                        Color.orange.opacity(0.22),
+                                        Color.green.opacity(0.22),
+                                        Color.cyan.opacity(0.25),
+                                        Color.purple.opacity(0.25)
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(
+                                        LinearGradient(
+                                            colors: [.pink, .orange, .yellow, .green, .cyan, .purple],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        ),
+                                        lineWidth: 1.5
+                                    )
+                            )
+                    )
+                    .accessibilityIdentifier("ios.workouts.rainbowSuggestion.\(template.id)")
                 }
             }
 

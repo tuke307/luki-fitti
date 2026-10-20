@@ -1655,7 +1655,7 @@
         "Hinge forward over your front shin with a flat back, then rotate smoothly to the opposite 90/90 position."
       ],
       "category": "MOBILITY",
-      "exerciseType": "MOBILITY",
+      "exerciseType": "STRETCHING",
       "primaryMuscleGroup": "GLUTES",
       "secondaryMuscleGroups": ["HIP_FLEXORS", "HAMSTRINGS"],
       "equipment": "NONE",
@@ -1701,7 +1701,7 @@
         "Sweep your top arm in an arc across your body toward the floor behind you while exhaling slowly."
       ],
       "category": "MOBILITY",
-      "exerciseType": "MOBILITY",
+      "exerciseType": "STRETCHING",
       "primaryMuscleGroup": "CHEST",
       "secondaryMuscleGroups": ["BACK", "SHOULDERS"],
       "equipment": "NONE",
@@ -1887,7 +1887,7 @@
         "Shift your hips back briefly to lengthen the front hamstring before switching sides."
       ],
       "category": "MOBILITY",
-      "exerciseType": "MOBILITY",
+      "exerciseType": "STRETCHING",
       "primaryMuscleGroup": "FULL_BODY",
       "secondaryMuscleGroups": ["HIP_FLEXORS", "HAMSTRINGS", "BACK"],
       "equipment": "NONE",
@@ -1981,7 +1981,7 @@
         "Accumulate 60 seconds with an upright chest."
       ],
       "category": "MOBILITY",
-      "exerciseType": "MOBILITY",
+      "exerciseType": "STRETCHING",
       "primaryMuscleGroup": "QUADRICEPS",
       "secondaryMuscleGroups": ["CALVES", "GLUTES", "HIP_FLEXORS"],
       "equipment": "NONE",
@@ -2309,7 +2309,7 @@
         "Allow your shoulders to elevate gently toward your ears while taking slow 4-second nasal breaths for 45-60 seconds."
       ],
       "category": "MOBILITY",
-      "exerciseType": "MOBILITY",
+      "exerciseType": "STRETCHING",
       "primaryMuscleGroup": "BACK",
       "secondaryMuscleGroups": ["SHOULDERS", "FOREARMS"],
       "equipment": "BODYWEIGHT",
@@ -2355,7 +2355,7 @@
         "Slowly rock your hips backward a few inches until a steady stretch is felt along the inner forearms for 45 seconds."
       ],
       "category": "MOBILITY",
-      "exerciseType": "MOBILITY",
+      "exerciseType": "STRETCHING",
       "primaryMuscleGroup": "FOREARMS",
       "secondaryMuscleGroups": ["BICEPS"],
       "equipment": "NONE",
@@ -2402,7 +2402,7 @@
         "Flow smoothly for 10-12 breath cycles (~60 seconds)."
       ],
       "category": "MOBILITY",
-      "exerciseType": "MOBILITY",
+      "exerciseType": "STRETCHING",
       "primaryMuscleGroup": "ABS_CORE",
       "secondaryMuscleGroups": ["BACK", "HIP_FLEXORS"],
       "equipment": "NONE",
@@ -6536,7 +6536,7 @@
               "Hinge forward over your front shin with a flat back, then rotate smoothly to the opposite 90/90 position."
             ],
             "category": "MOBILITY",
-            "exerciseType": "MOBILITY",
+            "exerciseType": "STRETCHING",
             "primaryMuscleGroup": "GLUTES",
             "secondaryMuscleGroups": ["HIP_FLEXORS", "HAMSTRINGS"],
             "equipment": "NONE",
@@ -6784,7 +6784,7 @@
               "Sweep your top arm in an arc across your body toward the floor behind you while exhaling slowly."
             ],
             "category": "MOBILITY",
-            "exerciseType": "MOBILITY",
+            "exerciseType": "STRETCHING",
             "primaryMuscleGroup": "CHEST",
             "secondaryMuscleGroups": ["BACK", "SHOULDERS"],
             "equipment": "NONE",
@@ -7031,7 +7031,7 @@
               "Flow smoothly for 10-12 breath cycles (~60 seconds)."
             ],
             "category": "MOBILITY",
-            "exerciseType": "MOBILITY",
+            "exerciseType": "STRETCHING",
             "primaryMuscleGroup": "ABS_CORE",
             "secondaryMuscleGroups": ["BACK", "HIP_FLEXORS"],
             "equipment": "NONE",
@@ -7089,7 +7089,7 @@
               "Shift your hips back briefly to lengthen the front hamstring before switching sides."
             ],
             "category": "MOBILITY",
-            "exerciseType": "MOBILITY",
+            "exerciseType": "STRETCHING",
             "primaryMuscleGroup": "FULL_BODY",
             "secondaryMuscleGroups": ["HIP_FLEXORS", "HAMSTRINGS", "BACK"],
             "equipment": "NONE",
@@ -7153,7 +7153,7 @@
               "Accumulate 60 seconds with an upright chest."
             ],
             "category": "MOBILITY",
-            "exerciseType": "MOBILITY",
+            "exerciseType": "STRETCHING",
             "primaryMuscleGroup": "QUADRICEPS",
             "secondaryMuscleGroups": ["CALVES", "GLUTES", "HIP_FLEXORS"],
             "equipment": "NONE",
@@ -7216,7 +7216,7 @@
               "Allow your shoulders to elevate gently toward your ears while taking slow 4-second nasal breaths for 45-60 seconds."
             ],
             "category": "MOBILITY",
-            "exerciseType": "MOBILITY",
+            "exerciseType": "STRETCHING",
             "primaryMuscleGroup": "BACK",
             "secondaryMuscleGroups": ["SHOULDERS", "FOREARMS"],
             "equipment": "BODYWEIGHT",
@@ -7405,7 +7405,7 @@
               "Slowly rock your hips backward a few inches until a steady stretch is felt along the inner forearms for 45 seconds."
             ],
             "category": "MOBILITY",
-            "exerciseType": "MOBILITY",
+            "exerciseType": "STRETCHING",
             "primaryMuscleGroup": "FOREARMS",
             "secondaryMuscleGroups": ["BICEPS"],
             "equipment": "NONE",
@@ -7793,7 +7793,7 @@
               "Flow smoothly for 10-12 breath cycles (~60 seconds)."
             ],
             "category": "MOBILITY",
-            "exerciseType": "MOBILITY",
+            "exerciseType": "STRETCHING",
             "primaryMuscleGroup": "ABS_CORE",
             "secondaryMuscleGroups": ["BACK", "HIP_FLEXORS"],
             "equipment": "NONE",
@@ -7850,7 +7850,7 @@
               "Sweep your top arm in an arc across your body toward the floor behind you while exhaling slowly."
             ],
             "category": "MOBILITY",
-            "exerciseType": "MOBILITY",
+            "exerciseType": "STRETCHING",
             "primaryMuscleGroup": "CHEST",
             "secondaryMuscleGroups": ["BACK", "SHOULDERS"],
             "equipment": "NONE",

@@ -166,4 +166,55 @@ final class LukiFittiDomainTests: XCTestCase {
         // Because HR recovery drop < 15 BPM indicates elevated systemic fatigue, phase holds at MAINTAIN instead of INCREASE_WEIGHT
         XCTAssertEqual(insight.phase, .MAINTAIN)
     }
+
+    func testSupersetGroupingAndWorkoutExerciseSuggestionEngine() throws {
+        let bundleData = StarterCatalogLoader.load()
+        let ex1 = WorkoutTemplateExerciseDto(
+            templateId: "tpl-1",
+            exerciseId: "ex-barbell-bench-press",
+            orderIndex: 0,
+            plannedSets: 3,
+            restSeconds: 120
+        )
+        let ex2 = WorkoutTemplateExerciseDto(
+            templateId: "tpl-1",
+            exerciseId: "ex-dumbbell-lateral-raise",
+            orderIndex: 1,
+            plannedSets: 3,
+            restSeconds: 0
+        )
+        let ex3 = WorkoutTemplateExerciseDto(
+            templateId: "tpl-1",
+            exerciseId: "ex-cable-tricep-pushdown",
+            orderIndex: 2,
+            plannedSets: 3,
+            restSeconds: 60
+        )
+
+        let blocks = ProgressionEngine.groupTemplateExercisesIntoBlocks([ex1, ex2, ex3])
+        XCTAssertEqual(blocks.count, 2)
+        XCTAssertFalse(blocks[0].isSuperset)
+        XCTAssertTrue(blocks[1].isSuperset)
+        XCTAssertEqual(blocks[1].rounds, 3)
+        XCTAssertEqual(blocks[1].roundRestSeconds, 60)
+        XCTAssertEqual(blocks[1].items.count, 2)
+        XCTAssertEqual(blocks[1].items[0].stepNumber, 1)
+        XCTAssertEqual(blocks[1].items[1].stepNumber, 2)
+        XCTAssertEqual(ProgressionEngine.formatRestDurationMinSec(60), "1:00")
+
+        let suggestion = ProgressionEngine.computeWorkoutExerciseSuggestion(
+            workoutName: "Push Day — Chest & Shoulders",
+            existingExerciseIds: ["ex-barbell-bench-press"],
+            catalog: bundleData.exercises,
+            historySessions: []
+        )
+        XCTAssertNotNil(suggestion)
+        XCTAssertNotEqual(suggestion?.suggestedExercise.id, "ex-barbell-bench-press")
+
+        // Verify legacy FAILURE and MOBILITY JSON values decode safely
+        let legacySetType = try JSONDecoder().decode(SetType.self, from: Data("\"FAILURE\"".utf8))
+        XCTAssertEqual(legacySetType, .WORKING)
+        let legacyExType = try JSONDecoder().decode(ExerciseType.self, from: Data("\"MOBILITY\"".utf8))
+        XCTAssertEqual(legacyExType, .STRETCHING)
+    }
 }
