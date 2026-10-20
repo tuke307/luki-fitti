@@ -300,6 +300,55 @@ public struct ProfileAndAuthView: View {
             )
             .font(.subheadline)
             .foregroundStyle(.white)
+
+            Divider().overlay(Color.white.opacity(0.1))
+
+            Toggle(isOn: $store.preferences.exerciseSuggestionsEnabled) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Smart Exercise Suggestions")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                    Text("Propose up to 1 rainbow exercise suggestion per workout")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .tint(LukiColors.neonLime)
+            .accessibilityIdentifier("ios.profile.exerciseSuggestionsToggle")
+
+            Toggle(isOn: $store.preferences.notificationsEnabled) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Workout & Rest Notifications")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                    Text("Alert when rest timer finishes or workout completes")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .tint(LukiColors.neonLime)
+            .accessibilityIdentifier("ios.profile.notificationsToggle")
+
+            Toggle(isOn: $store.preferences.restTimerSound) {
+                Text("Rest Timer Chime Sound")
+                    .font(.subheadline)
+                    .foregroundStyle(.white)
+            }
+            .tint(LukiColors.neonLime)
+
+            Button {
+                viewModel.sendTestNotification()
+                statusMessage = "Test notification scheduled!"
+            } label: {
+                Label("Test Notification", systemImage: "bell.badge.fill")
+                    .font(.caption.bold())
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.neonLime))
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("ios.profile.testNotificationButton")
         }
         .padding(16)
         .background(RoundedRectangle(cornerRadius: 16).fill(LukiColors.darkCard))

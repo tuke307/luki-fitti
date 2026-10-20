@@ -28,7 +28,7 @@ public enum SessionCalculator {
         }
 
         for ex in session.exercises {
-            let isStretch = ex.exerciseTypeSnapshot == .STRETCHING || ex.exerciseTypeSnapshot == .MOBILITY
+            let isStretch = ex.exerciseTypeSnapshot == .STRETCHING
             for set in ex.sets {
                 if let avgHr = set.avgHeartRateBpm { allBpms.append(avgHr) }
                 if let peakHr = set.peakHeartRateBpm { allBpms.append(peakHr) }

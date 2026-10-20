@@ -1,5 +1,6 @@
 import SwiftUI
 import Observation
+import UserNotifications
 import LukiFittiModels
 import LukiFittiDesign
 import LukiFittiDomain
@@ -202,11 +203,16 @@ public final class LukiAppViewModel {
                 session.restTimerDurationSec = restSec
                 session.restTimerEndsAt = ISO8601DateFormatter().string(from: Date().addingTimeInterval(TimeInterval(restSec)))
                 session.restTimerPausedRemSec = nil
+                scheduleRestTimerNotification(
+                    seconds: restSec,
+                    exerciseName: session.exercises[exIdx].exerciseNameSnapshot
+                )
             } else {
                 // Superset (0s rest): clear rest timer
                 session.restTimerEndsAt = nil
                 session.restTimerDurationSec = nil
                 session.restTimerPausedRemSec = nil
+                cancelRestTimerNotification()
             }
         } else {
             set.completedAt = nil
@@ -340,6 +346,10 @@ public final class LukiAppViewModel {
         session.version += 1
         store.saveActiveSession(session)
         watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
+        scheduleRestTimerNotification(
+            seconds: durationSeconds,
+            exerciseName: session.exercises.first?.exerciseNameSnapshot ?? session.workoutNameSnapshot
+        )
     }
 
     public func adjustRestTimer(deltaSeconds: Int) {
@@ -354,9 +364,14 @@ public final class LukiAppViewModel {
         if current.isPaused {
             session.restTimerPausedRemSec = newRem
             session.restTimerEndsAt = nil
+            cancelRestTimerNotification()
         } else {
             session.restTimerEndsAt = ISO8601DateFormatter().string(from: Date().addingTimeInterval(TimeInterval(newRem)))
             session.restTimerPausedRemSec = nil
+            scheduleRestTimerNotification(
+                seconds: newRem,
+                exerciseName: session.exercises.first?.exerciseNameSnapshot ?? session.workoutNameSnapshot
+            )
         }
         session.version += 1
         store.saveActiveSession(session)
@@ -369,9 +384,14 @@ public final class LukiAppViewModel {
         if current.isPaused {
             session.restTimerEndsAt = ISO8601DateFormatter().string(from: Date().addingTimeInterval(TimeInterval(current.remainingSeconds)))
             session.restTimerPausedRemSec = nil
+            scheduleRestTimerNotification(
+                seconds: current.remainingSeconds,
+                exerciseName: session.exercises.first?.exerciseNameSnapshot ?? session.workoutNameSnapshot
+            )
         } else if current.isRunning {
             session.restTimerPausedRemSec = current.remainingSeconds
             session.restTimerEndsAt = nil
+            cancelRestTimerNotification()
         }
         session.version += 1
         store.saveActiveSession(session)
@@ -386,6 +406,57 @@ public final class LukiAppViewModel {
         session.version += 1
         store.saveActiveSession(session)
         watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
+        cancelRestTimerNotification()
+    }
+
+    public func scheduleRestTimerNotification(seconds: Int, exerciseName: String) {
+        guard store.preferences.notificationsEnabled, seconds > 0 else { return }
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+            guard granted else { return }
+            let content = UNMutableNotificationContent()
+            content.title = "Rest Timer Done!"
+            content.body = "Ready for your next set of \(exerciseName)."
+            if self.store.preferences.restTimerSound {
+                content.sound = .default
+            }
+            let trigger = UNTimeIntervalNotificationTrigger(
+                timeInterval: TimeInterval(max(1, seconds)),
+                repeats: false
+            )
+            let req = UNNotificationRequest(
+                identifier: "lukifitti.rest.timer",
+                content: content,
+                trigger: trigger
+            )
+            center.add(req)
+        }
+    }
+
+    public func cancelRestTimerNotification() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: ["lukifitti.rest.timer"]
+        )
+    }
+
+    public func sendTestNotification() {
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+            guard granted else { return }
+            let content = UNMutableNotificationContent()
+            content.title = "Rest Done — LukiFitti Test"
+            content.body = "Notifications and gym timer alerts are active for your workouts!"
+            if self.store.preferences.restTimerSound {
+                content.sound = .default
+            }
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+            let req = UNNotificationRequest(
+                identifier: "lukifitti.test.notification",
+                content: content,
+                trigger: trigger
+            )
+            center.add(req)
+        }
     }
 
     public func toggleSkipExercise(clientExerciseId: String) {

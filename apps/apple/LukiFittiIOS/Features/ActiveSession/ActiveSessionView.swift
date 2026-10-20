@@ -21,18 +21,19 @@ public struct ActiveSessionView: View {
                     trophySummaryCard(completed)
                 } else if let session = viewModel.store.activeSession {
                     liveTelemetryBanner(session)
-                    restTimerCard(session)
-                    exerciseSelectorStrip(session)
-
-                    let safeIdx = min(max(0, selectedExerciseIndex), max(0, session.exercises.count - 1))
-                    if !session.exercises.isEmpty {
-                        activeExerciseCard(session: session, exercise: session.exercises[safeIdx], exerciseIndex: safeIdx)
-                    }
-
+                    verticalExerciseStack(session)
                     sessionFooterActions
                 }
             }
             .padding(16)
+        }
+        .safeAreaInset(edge: .bottom) {
+            if viewModel.completedSummarySession == nil,
+               let session = viewModel.store.activeSession {
+                restTimerCard(session)
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 6)
+            }
         }
         .background(LukiColors.darkBackground)
         .onReceive(Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()) { tick in
@@ -309,63 +310,202 @@ public struct ActiveSessionView: View {
         return String(format: "%d:%02d", s / 60, s % 60)
     }
 
-    // MARK: - Horizontal Exercise Selector Strip
+    // MARK: - Vertical Collapsible Exercise Stack (Gymlife Supersets & Rainbow Suggestion)
 
-    private func exerciseSelectorStrip(_ session: WorkoutSessionDto) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(Array(session.exercises.enumerated()), id: \.element.clientExerciseId) { idx, ex in
-                    let doneCount = ex.sets.filter(\.completed).count
-                    let isSelected = selectedExerciseIndex == idx
-                    Button {
-                        selectedExerciseIndex = idx
-                    } label: {
-                        HStack(spacing: 6) {
-                            Text("\(idx + 1)")
-                                .font(.caption2.bold().monospacedDigit())
-                                .foregroundStyle(isSelected ? .black : .white)
-                                .frame(width: 20, height: 20)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .fill(isSelected ? LukiColors.neonLime : Color.white.opacity(0.12))
-                                )
-                            Text(ex.exerciseNameSnapshot)
-                                .font(.caption.bold())
-                                .lineLimit(1)
-                            Text("\(doneCount)/\(ex.sets.count)")
-                                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(Capsule().fill(Color.black.opacity(0.25)))
+    private func verticalExerciseStack(_ session: WorkoutSessionDto) -> some View {
+        let safeIdx = min(max(0, selectedExerciseIndex), max(0, session.exercises.count - 1))
+        let blocks = ProgressionEngine.groupSessionExercisesIntoBlocks(session.exercises)
+
+        return VStack(alignment: .leading, spacing: 12) {
+            ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
+                if block.isSuperset {
+                    VStack(alignment: .leading, spacing: 0) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 4) {
+                                    Text("SUPERSET")
+                                        .font(.caption.weight(.heavy))
+                                        .foregroundStyle(LukiColors.electricCyan)
+                                    Text("× \(block.rounds) ROUNDS")
+                                        .font(.caption.weight(.heavy).monospacedDigit())
+                                        .foregroundStyle(.white)
+                                }
+                                Text("Rest 0 s between exercises · \(ProgressionEngine.formatRestDurationMinSec(block.roundRestSeconds)) between rounds")
+                                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
                         }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(isSelected ? LukiColors.neonLime.opacity(0.2) : LukiColors.darkCard)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(isSelected ? LukiColors.neonLime : Color.clear, lineWidth: 1)
-                                )
+                        .padding(12)
+                        .background(Color.black.opacity(0.75))
+
+                        VStack(spacing: 8) {
+                            ForEach(Array(block.items.enumerated()), id: \.offset) { _, item in
+                                if item.globalIndex == safeIdx {
+                                    activeExerciseCard(
+                                        session: session,
+                                        exercise: item.item,
+                                        exerciseIndex: item.globalIndex
+                                    )
+                                } else {
+                                    collapsedExerciseRow(
+                                        exercise: item.item,
+                                        index: item.globalIndex,
+                                        stepBadge: item.stepNumber
+                                    )
+                                }
+                            }
+                        }
+                        .padding(10)
+                    }
+                    .background(RoundedRectangle(cornerRadius: 18).fill(LukiColors.darkCard.opacity(0.85)))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18)
+                            .stroke(LukiColors.electricCyan.opacity(0.45), lineWidth: 1)
+                    )
+                } else if let firstItem = block.items.first {
+                    if firstItem.globalIndex == safeIdx {
+                        activeExerciseCard(
+                            session: session,
+                            exercise: firstItem.item,
+                            exerciseIndex: firstItem.globalIndex
                         )
+                    } else {
+                        collapsedExerciseRow(
+                            exercise: firstItem.item,
+                            index: firstItem.globalIndex,
+                            stepBadge: nil
+                        )
+                    }
+                }
+            }
+
+            if viewModel.store.preferences.exerciseSuggestionsEnabled,
+               let suggestion = ProgressionEngine.computeWorkoutExerciseSuggestion(
+                   workoutName: session.workoutNameSnapshot,
+                   existingExerciseIds: session.exercises.compactMap(\.exerciseId),
+                   existingExerciseNames: session.exercises.map(\.exerciseNameSnapshot),
+                   existingMuscles: session.exercises.map(\.primaryMuscleSnapshot),
+                   catalog: viewModel.store.catalog,
+                   historySessions: viewModel.store.historySessions,
+                   weightUnit: session.weightUnit
+               ) {
+                HStack(spacing: 10) {
+                    Image(systemName: "sparkles")
+                        .font(.subheadline.bold())
                         .foregroundStyle(.white)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("SMART SUGGESTION • \(suggestion.suggestedExercise.name)")
+                            .font(.caption.weight(.heavy))
+                            .foregroundStyle(.white)
+                        Text(suggestion.reasonText)
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.85))
+                    }
+                    Spacer()
+                    Button {
+                        viewModel.addUnplannedExerciseToSession(suggestion.suggestedExercise)
+                        if let count = viewModel.store.activeSession?.exercises.count, count > 0 {
+                            selectedExerciseIndex = count - 1
+                        }
+                    } label: {
+                        Text("+ Add")
+                            .font(.caption.bold())
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Capsule().fill(.white))
                     }
                     .buttonStyle(.plain)
                 }
-
-                Button {
-                    showingAddExerciseSheet = true
-                } label: {
-                    Label("Add Exercise", systemImage: "plus")
-                        .font(.caption.bold())
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(LukiColors.darkCard))
-                        .foregroundStyle(LukiColors.neonLime)
-                }
-                .buttonStyle(.plain)
+                .padding(12)
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.pink.opacity(0.28),
+                                    Color.orange.opacity(0.22),
+                                    Color.green.opacity(0.22),
+                                    Color.cyan.opacity(0.25),
+                                    Color.purple.opacity(0.28)
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [.pink, .orange, .yellow, .green, .cyan, .purple],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    ),
+                                    lineWidth: 1.5
+                                )
+                        )
+                )
+                .accessibilityIdentifier("ios.session.rainbowSuggestion")
             }
+
+            Button {
+                showingAddExerciseSheet = true
+            } label: {
+                Label("Add Exercise", systemImage: "plus")
+                    .font(.caption.bold())
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(LukiColors.darkCard))
+                    .foregroundStyle(LukiColors.neonLime)
+            }
+            .buttonStyle(.plain)
         }
+    }
+
+    private func collapsedExerciseRow(
+        exercise: SessionExerciseDto,
+        index: Int,
+        stepBadge: Int?
+    ) -> some View {
+        let doneCount = exercise.sets.filter(\.completed).count
+        let isCompleted = exercise.status == .COMPLETED
+        return Button {
+            selectedExerciseIndex = index
+        } label: {
+            HStack(spacing: 10) {
+                Text(isCompleted ? "✓" : "\(stepBadge ?? (index + 1))")
+                    .font(.caption.bold().monospacedDigit())
+                    .foregroundStyle(isCompleted ? .black : .white)
+                    .frame(width: 26, height: 26)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(isCompleted ? LukiColors.neonLime : Color.white.opacity(0.12))
+                    )
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(exercise.exerciseNameSnapshot)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                    Text("\(exercise.plannedSets)×\(exercise.targetRepsMin ?? 8)-\(exercise.targetRepsMax ?? 12) reps")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(LukiColors.electricCyan)
+                }
+                Spacer()
+                Text("\(doneCount)/\(exercise.sets.count) sets")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(Color.black.opacity(0.3)))
+                    .foregroundStyle(isCompleted ? LukiColors.neonLime : .secondary)
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(isCompleted ? LukiColors.neonLime.opacity(0.12) : LukiColors.darkCard)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Active Exercise Card & Ergonomic Set Rows (Matches Web App)
@@ -714,7 +854,7 @@ public struct ActiveSessionView: View {
                 .padding(.horizontal, 4)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.35)))
 
-                // Large Full-Height Log Set / Done Button (Matches Web App)
+                // Large Full-Height Log Set / Logged Prescription Button (Matches Web App)
                 Button {
                     viewModel.toggleCompleteSet(
                         clientExerciseId: exercise.clientExerciseId,
@@ -722,10 +862,11 @@ public struct ActiveSessionView: View {
                     )
                 } label: {
                     HStack(spacing: 5) {
-                        Image(systemName: "checkmark")
+                        Image(systemName: set.completed ? "checkmark.circle.fill" : "checkmark")
                             .font(.system(size: 12, weight: .black))
-                        Text(set.completed ? "Done" : "Log Set")
-                            .font(.system(size: 13, weight: .heavy))
+                        Text(set.completed ? "\(String(format: "%g", currentWeight))\(session.weightUnit.rawValue.lowercased())×\(currentReps) • Logged" : "Log Set")
+                            .font(.system(size: 12, weight: .heavy))
+                            .lineLimit(1)
                     }
                     .foregroundStyle(set.completed ? .black : .white)
                     .frame(maxWidth: .infinity, minHeight: 36)

@@ -51,8 +51,19 @@ public enum ExerciseCategory: String, Codable, Sendable, CaseIterable, Equatable
 public enum ExerciseType: String, Codable, Sendable, CaseIterable, Equatable, Hashable {
     case STRENGTH
     case STRETCHING
-    case MOBILITY
     case CARDIO
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        if raw == "MOBILITY" {
+            self = .STRETCHING
+        } else if let parsed = ExerciseType(rawValue: raw) {
+            self = parsed
+        } else {
+            self = .STRENGTH
+        }
+    }
 }
 
 public enum EquipmentType: String, Codable, Sendable, CaseIterable, Equatable, Hashable {
@@ -102,8 +113,19 @@ public enum SetType: String, Codable, Sendable, CaseIterable, Equatable, Hashabl
     case WARMUP
     case WORKING
     case DROPSET
-    case FAILURE
     case STRETCH
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        if raw == "FAILURE" {
+            self = .WORKING
+        } else if let parsed = SetType(rawValue: raw) {
+            self = parsed
+        } else {
+            self = .WORKING
+        }
+    }
 }
 
 public enum SessionSourceDevice: String, Codable, Sendable, CaseIterable, Equatable, Hashable {
