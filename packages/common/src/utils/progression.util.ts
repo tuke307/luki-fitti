@@ -2,6 +2,7 @@ import {
   EquipmentType,
   ExerciseCategory,
   ExerciseType,
+  MuscleGroup,
   SetType,
   WeightUnit,
 } from '../enums';
@@ -160,10 +161,7 @@ export function extractGlobalExerciseHistory(
 
     const workingSets: ExerciseHistorySessionEntry['workingSets'] = [];
     for (const ex of matchingExercises) {
-      if (
-        ex.exerciseTypeSnapshot === ExerciseType.STRETCHING ||
-        ex.exerciseTypeSnapshot === ExerciseType.MOBILITY
-      ) {
+      if (ex.exerciseTypeSnapshot === ExerciseType.STRETCHING) {
         continue;
       }
 
@@ -504,10 +502,7 @@ export function applyExerciseHistoryToSessionExercise(
   catalogExercise?: ExerciseDto | null,
   weightUnit: WeightUnit = WeightUnit.KG,
 ): SessionExerciseDto {
-  if (
-    sessionExercise.exerciseTypeSnapshot === ExerciseType.STRETCHING ||
-    sessionExercise.exerciseTypeSnapshot === ExerciseType.MOBILITY
-  ) {
+  if (sessionExercise.exerciseTypeSnapshot === ExerciseType.STRETCHING) {
     return sessionExercise;
   }
 
@@ -567,5 +562,481 @@ export function applyExerciseHistoryToSessionExercise(
     ...sessionExercise,
     targetWeight: primaryLastWeight ?? sessionExercise.targetWeight,
     sets: hydratedSets,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Gymlife-Style Superset Grouping Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ExerciseBlockItem<T> {
+  item: T;
+  globalIndex: number;
+  stepNumber: number;
+}
+
+export interface ExerciseRenderBlock<T> {
+  type: 'single' | 'superset';
+  startIndex: number;
+  rounds: number;
+  intraRestSeconds: number;
+  roundRestSeconds: number;
+  items: Array<ExerciseBlockItem<T>>;
+}
+
+/**
+ * Formats seconds into Gymlife-style M:SS round rest notation (e.g. 60 -> "1:00", 90 -> "1:30").
+ */
+export function formatRestDurationMinSec(seconds: number): string {
+  const safe = Math.max(0, Math.round(seconds));
+  const mins = Math.floor(safe / 60);
+  const rem = safe % 60;
+  return `${mins}:${String(rem).padStart(2, '0')}`;
+}
+
+/**
+ * Groups consecutive exercises linked with `restSeconds === 0` into unified Gymlife-style
+ * Superset blocks while preserving standalone exercises as `'single'` blocks.
+ */
+export function groupExercisesIntoBlocks<
+  T extends { restSeconds: number; plannedSets?: number },
+>(exercises: T[]): Array<ExerciseRenderBlock<T>> {
+  const blocks: Array<ExerciseRenderBlock<T>> = [];
+  let i = 0;
+
+  while (i < exercises.length) {
+    const current = exercises[i]!;
+    if (current.restSeconds === 0 && i < exercises.length - 1) {
+      const startIndex = i;
+      const items: Array<ExerciseBlockItem<T>> = [];
+      let stepNumber = 1;
+
+      while (i < exercises.length) {
+        const ex = exercises[i]!;
+        items.push({
+          item: ex,
+          globalIndex: i,
+          stepNumber,
+        });
+        stepNumber += 1;
+
+        if (ex.restSeconds === 0 && i < exercises.length - 1) {
+          i += 1;
+        } else {
+          i += 1;
+          break;
+        }
+      }
+
+      const lastItem = items[items.length - 1]!.item;
+      const maxPlannedSets = Math.max(...items.map((it) => it.item.plannedSets ?? 3));
+
+      blocks.push({
+        type: 'superset',
+        startIndex,
+        rounds: maxPlannedSets,
+        intraRestSeconds: 0,
+        roundRestSeconds: lastItem.restSeconds > 0 ? lastItem.restSeconds : 60,
+        items,
+      });
+    } else {
+      blocks.push({
+        type: 'single',
+        startIndex: i,
+        rounds: current.plannedSets ?? 3,
+        intraRestSeconds: current.restSeconds,
+        roundRestSeconds: current.restSeconds,
+        items: [
+          {
+            item: current,
+            globalIndex: i,
+            stepNumber: 1,
+          },
+        ],
+      });
+      i += 1;
+    }
+  }
+
+  return blocks;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Smart Workout Exercise Suggestion Engine (Heuristic + LLM-Ready Interface)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type WorkoutSplitArchetype =
+  | 'PUSH'
+  | 'PULL'
+  | 'LEGS'
+  | 'ARMS'
+  | 'SHOULDERS'
+  | 'CHEST_BACK'
+  | 'UPPER'
+  | 'FULL_BODY';
+
+export type ExerciseSuggestionReasonType = 'PLATEAU' | 'HIGH_FATIGUE' | 'SPLIT_BALANCE';
+
+export interface WorkoutExerciseSuggestion {
+  suggestedExercise: ExerciseDto;
+  targetMuscle: MuscleGroup;
+  splitArchetype: WorkoutSplitArchetype;
+  reasonType: ExerciseSuggestionReasonType;
+  stallingExerciseId: string | null;
+  stallingExerciseName: string | null;
+  recommendedSets: number;
+  recommendedRepsMin: number;
+  recommendedRepsMax: number;
+  recommendedWeight: number | null;
+  recommendedRestSeconds: number;
+}
+
+export interface WorkoutSuggestionInputExercise {
+  exerciseId?: string | null;
+  exerciseName?: string | null;
+  primaryMuscleGroup?: MuscleGroup | null;
+  plannedSets?: number;
+  targetRepsMin?: number | null;
+  targetRepsMax?: number | null;
+  targetWeight?: number | null;
+}
+
+const SPLIT_MUSCLE_PRIORITY: Record<WorkoutSplitArchetype, MuscleGroup[]> = {
+  PUSH: [MuscleGroup.SHOULDERS, MuscleGroup.CHEST, MuscleGroup.TRICEPS],
+  PULL: [MuscleGroup.BACK, MuscleGroup.BICEPS, MuscleGroup.SHOULDERS],
+  LEGS: [
+    MuscleGroup.QUADRICEPS,
+    MuscleGroup.HAMSTRINGS,
+    MuscleGroup.GLUTES,
+    MuscleGroup.CALVES,
+  ],
+  ARMS: [MuscleGroup.BICEPS, MuscleGroup.TRICEPS, MuscleGroup.SHOULDERS, MuscleGroup.FOREARMS],
+  SHOULDERS: [MuscleGroup.SHOULDERS, MuscleGroup.TRICEPS, MuscleGroup.ABS_CORE],
+  CHEST_BACK: [MuscleGroup.CHEST, MuscleGroup.BACK, MuscleGroup.SHOULDERS],
+  UPPER: [
+    MuscleGroup.SHOULDERS,
+    MuscleGroup.CHEST,
+    MuscleGroup.BACK,
+    MuscleGroup.BICEPS,
+    MuscleGroup.TRICEPS,
+  ],
+  FULL_BODY: [
+    MuscleGroup.SHOULDERS,
+    MuscleGroup.CHEST,
+    MuscleGroup.BACK,
+    MuscleGroup.QUADRICEPS,
+    MuscleGroup.HAMSTRINGS,
+  ],
+};
+
+export function inferWorkoutSplitArchetype(
+  workoutName: string,
+  folderName: string | null | undefined,
+  musclesInWorkout: MuscleGroup[],
+): WorkoutSplitArchetype {
+  const text = `${workoutName} ${folderName ?? ''}`.toLowerCase();
+
+  if (text.includes('push') || (text.includes('chest') && text.includes('tricep'))) {
+    return 'PUSH';
+  }
+  if (text.includes('pull') || (text.includes('back') && text.includes('bicep'))) {
+    return 'PULL';
+  }
+  if (
+    text.includes('leg') ||
+    text.includes('bein') ||
+    text.includes('quad') ||
+    text.includes('lower')
+  ) {
+    return 'LEGS';
+  }
+  if (text.includes('arm') || text.includes('bicep') || text.includes('tricep')) {
+    return 'ARMS';
+  }
+  if (text.includes('shoulder') || text.includes('schulter') || text.includes('delt')) {
+    return 'SHOULDERS';
+  }
+
+  const muscleSet = new Set(musclesInWorkout);
+  const hasPush =
+    muscleSet.has(MuscleGroup.CHEST) &&
+    (muscleSet.has(MuscleGroup.TRICEPS) || muscleSet.has(MuscleGroup.SHOULDERS));
+  const hasPull = muscleSet.has(MuscleGroup.BACK) && muscleSet.has(MuscleGroup.BICEPS);
+  const hasLegs =
+    muscleSet.has(MuscleGroup.QUADRICEPS) ||
+    muscleSet.has(MuscleGroup.HAMSTRINGS) ||
+    muscleSet.has(MuscleGroup.GLUTES);
+
+  if (hasPush && !hasPull && !hasLegs) return 'PUSH';
+  if (hasPull && !hasPush && !hasLegs) return 'PULL';
+  if (hasLegs && !hasPush && !hasPull) return 'LEGS';
+  if (
+    (muscleSet.has(MuscleGroup.BICEPS) || muscleSet.has(MuscleGroup.TRICEPS)) &&
+    !hasLegs &&
+    !muscleSet.has(MuscleGroup.CHEST) &&
+    !muscleSet.has(MuscleGroup.BACK)
+  ) {
+    return 'ARMS';
+  }
+  if (hasPush && hasPull && !hasLegs) return 'UPPER';
+  return 'FULL_BODY';
+}
+
+/**
+ * Proposes at most ONE smart exercise suggestion for a workout (template preview,
+ * template builder, or live active session) based on split balance, progression slope
+ * plateau, and RPE/effort fatigue.
+ *
+ * Example: In a Push workout where existing shoulder exercises have plateaued or feel
+ * consistently hard (high RPE / DELOAD / flat slope), suggests a fresh shoulder exercise.
+ */
+export function computeWorkoutExerciseSuggestion(params: {
+  workoutName: string;
+  folderName?: string | null;
+  exercises: WorkoutSuggestionInputExercise[];
+  catalog: ExerciseDto[];
+  historySessions: WorkoutSessionDto[];
+  weightUnit?: WeightUnit;
+}): WorkoutExerciseSuggestion | null {
+  const {
+    workoutName,
+    folderName = null,
+    exercises,
+    catalog,
+    historySessions,
+    weightUnit = WeightUnit.KG,
+  } = params;
+
+  const strengthCatalog = catalog.filter((c) => c.exerciseType === ExerciseType.STRENGTH);
+  if (strengthCatalog.length === 0) return null;
+
+  const existingIds = new Set<string>();
+  const existingNames = new Set<string>();
+  const resolvedExercises: Array<{
+    input: WorkoutSuggestionInputExercise;
+    catalogEx: ExerciseDto | null;
+    muscle: MuscleGroup;
+  }> = [];
+
+  for (const ex of exercises) {
+    const catEx =
+      (ex.exerciseId ? catalog.find((c) => c.id === ex.exerciseId) : null) ??
+      (ex.exerciseName
+        ? catalog.find(
+            (c) => c.name.trim().toLowerCase() === ex.exerciseName!.trim().toLowerCase(),
+          )
+        : null) ??
+      null;
+
+    if (ex.exerciseId) existingIds.add(ex.exerciseId);
+    if (catEx) {
+      existingIds.add(catEx.id);
+      existingNames.add(catEx.name.trim().toLowerCase());
+    }
+    if (ex.exerciseName) {
+      existingNames.add(ex.exerciseName.trim().toLowerCase());
+    }
+
+    const muscle = ex.primaryMuscleGroup ?? catEx?.primaryMuscleGroup ?? MuscleGroup.CHEST;
+    resolvedExercises.push({ input: ex, catalogEx: catEx, muscle });
+  }
+
+  const splitArchetype = inferWorkoutSplitArchetype(
+    workoutName,
+    folderName,
+    resolvedExercises.map((r) => r.muscle),
+  );
+  const splitMuscles = SPLIT_MUSCLE_PRIORITY[splitArchetype];
+
+  // Evaluate progression & fatigue across exercises currently in the workout
+  let worstStalling: {
+    exerciseId: string | null;
+    exerciseName: string;
+    muscle: MuscleGroup;
+    equipment: EquipmentType | null;
+    reasonType: ExerciseSuggestionReasonType;
+    severityScore: number;
+  } | null = null;
+
+  for (const item of resolvedExercises) {
+    const exId = item.input.exerciseId ?? item.catalogEx?.id ?? null;
+    const exName = item.input.exerciseName ?? item.catalogEx?.name ?? null;
+    if (!exId && !exName) continue;
+
+    const insight = computeExerciseProgression({
+      exerciseId: exId,
+      exerciseName: exName,
+      historySessions,
+      catalogExercise: item.catalogEx,
+      plannedSets: item.input.plannedSets ?? 3,
+      targetRepsMin: item.input.targetRepsMin ?? 8,
+      targetRepsMax: item.input.targetRepsMax ?? 12,
+      targetWeight: item.input.targetWeight ?? null,
+      weightUnit,
+    });
+
+    if (insight.sessionsCount === 0 || !insight.lastSession) continue;
+
+    const avgRpe = insight.lastSession.avgRpe ?? 8;
+    const isHighFatigue = avgRpe >= 9.0 || insight.phase === 'DELOAD';
+    const isPlateau =
+      insight.sessionsCount >= 2 &&
+      (insight.slopePerSession <= 0.15 || insight.phase === 'MAINTAIN');
+
+    if (!isHighFatigue && !isPlateau) continue;
+
+    // Give a bonus to accessory/key split muscles (e.g. SHOULDERS in PUSH) when tied
+    const splitBonus = item.muscle === splitMuscles[0] ? 1.5 : 0;
+    const severityScore =
+      (insight.phase === 'DELOAD' ? 4 : 0) +
+      (avgRpe >= 9.0 ? 3 : avgRpe >= 8.5 ? 1.5 : 0) +
+      (isPlateau ? 2.5 - Math.max(-1, Math.min(1, insight.slopePerSession)) : 0) +
+      splitBonus;
+
+    if (!worstStalling || severityScore > worstStalling.severityScore) {
+      worstStalling = {
+        exerciseId: exId,
+        exerciseName: exName ?? item.catalogEx?.name ?? 'Exercise',
+        muscle: item.muscle,
+        equipment: item.catalogEx?.equipment ?? null,
+        reasonType: isHighFatigue ? 'HIGH_FATIGUE' : 'PLATEAU',
+        severityScore,
+      };
+    }
+  }
+
+  // Determine target muscle group
+  let targetMuscle: MuscleGroup;
+  let reasonType: ExerciseSuggestionReasonType = 'SPLIT_BALANCE';
+  let stallingExerciseId: string | null = null;
+  let stallingExerciseName: string | null = null;
+  let avoidEquipment: EquipmentType | null = null;
+
+  if (worstStalling) {
+    targetMuscle = worstStalling.muscle;
+    reasonType = worstStalling.reasonType;
+    stallingExerciseId = worstStalling.exerciseId;
+    stallingExerciseName = worstStalling.exerciseName;
+    avoidEquipment = worstStalling.equipment;
+  } else {
+    // Find the muscle in the split archetype with the fewest planned sets in this workout
+    const setsByMuscle = new Map<MuscleGroup, number>();
+    for (const m of splitMuscles) {
+      setsByMuscle.set(m, 0);
+    }
+    for (const r of resolvedExercises) {
+      setsByMuscle.set(
+        r.muscle,
+        (setsByMuscle.get(r.muscle) ?? 0) + (r.input.plannedSets ?? 3),
+      );
+    }
+
+    let minSets = Number.POSITIVE_INFINITY;
+    let chosenMuscle = splitMuscles[0] ?? MuscleGroup.SHOULDERS;
+    for (const m of splitMuscles) {
+      const count = setsByMuscle.get(m) ?? 0;
+      if (count < minSets) {
+        minSets = count;
+        chosenMuscle = m;
+      }
+    }
+    targetMuscle = chosenMuscle;
+
+    // If there is already an exercise of this muscle in the workout, reference it for context
+    const existingForMuscle = resolvedExercises.find((r) => r.muscle === targetMuscle);
+    if (existingForMuscle) {
+      stallingExerciseId =
+        existingForMuscle.input.exerciseId ?? existingForMuscle.catalogEx?.id ?? null;
+      stallingExerciseName =
+        existingForMuscle.input.exerciseName ?? existingForMuscle.catalogEx?.name ?? null;
+      avoidEquipment = existingForMuscle.catalogEx?.equipment ?? null;
+    }
+  }
+
+  // Pick the best candidate from the catalog not already in the workout
+  const candidates = strengthCatalog.filter(
+    (c) =>
+      !existingIds.has(c.id) &&
+      !existingNames.has(c.name.trim().toLowerCase()) &&
+      c.primaryMuscleGroup === targetMuscle,
+  );
+
+  const fallbackCandidates =
+    candidates.length > 0
+      ? candidates
+      : strengthCatalog.filter(
+          (c) =>
+            !existingIds.has(c.id) &&
+            !existingNames.has(c.name.trim().toLowerCase()) &&
+            splitMuscles.includes(c.primaryMuscleGroup),
+        );
+
+  const pool =
+    fallbackCandidates.length > 0
+      ? fallbackCandidates
+      : strengthCatalog.filter((c) => !existingIds.has(c.id));
+
+  if (pool.length === 0) return null;
+
+  // Score candidates: prefer predefined alternatives of stalling exercise, or fresh equipment (Cable/Dumbbell/Machine)
+  const stallingCatalogEx = stallingExerciseId
+    ? catalog.find((c) => c.id === stallingExerciseId)
+    : null;
+  const preferredAltIds = new Set(stallingCatalogEx?.alternativeExerciseIds ?? []);
+
+  const scored = pool.map((candidate) => {
+    let score = 0;
+    if (preferredAltIds.has(candidate.id)) score += 5;
+    if (avoidEquipment && candidate.equipment !== avoidEquipment) score += 3;
+    if (
+      candidate.equipment === EquipmentType.CABLE ||
+      candidate.equipment === EquipmentType.DUMBBELL ||
+      candidate.equipment === EquipmentType.MACHINE
+    ) {
+      score += 2;
+    }
+    return { candidate, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  const chosen = scored[0]!.candidate;
+
+  // Compute recommended starting prescription from global history or sensible defaults
+  const chosenInsight = computeExerciseProgression({
+    exerciseId: chosen.id,
+    exerciseName: chosen.name,
+    historySessions,
+    catalogExercise: chosen,
+    plannedSets: 3,
+    targetRepsMin: 10,
+    targetRepsMax: 14,
+    weightUnit,
+  });
+
+  const firstSuggestion = chosenInsight.setSuggestions[0];
+  const defaultWeight =
+    firstSuggestion?.suggestedWeight ??
+    (chosen.primaryMuscleGroup === MuscleGroup.SHOULDERS ||
+    chosen.primaryMuscleGroup === MuscleGroup.BICEPS ||
+    chosen.primaryMuscleGroup === MuscleGroup.TRICEPS
+      ? weightUnit === WeightUnit.LBS
+        ? 25
+        : 12.5
+      : weightUnit === WeightUnit.LBS
+        ? 95
+        : 40);
+
+  return {
+    suggestedExercise: chosen,
+    targetMuscle: chosen.primaryMuscleGroup,
+    splitArchetype,
+    reasonType,
+    stallingExerciseId,
+    stallingExerciseName,
+    recommendedSets: 3,
+    recommendedRepsMin: chosen.category === ExerciseCategory.COMPOUND ? 8 : 10,
+    recommendedRepsMax: chosen.category === ExerciseCategory.COMPOUND ? 12 : 15,
+    recommendedWeight: defaultWeight,
+    recommendedRestSeconds: chosen.category === ExerciseCategory.COMPOUND ? 90 : 60,
   };
 }

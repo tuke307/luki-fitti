@@ -50,7 +50,6 @@ enum ExerciseCategory {
 enum ExerciseType {
   STRENGTH
   STRETCHING
-  MOBILITY
   CARDIO
 }
 
@@ -101,7 +100,6 @@ enum SetType {
   WARMUP
   WORKING
   DROPSET
-  FAILURE
   STRETCH
 }
 
@@ -141,17 +139,19 @@ model User {
 }
 
 model UserPreferences {
-  id                 String       @id @default(uuid())
-  userId             String       @unique
-  weightUnit         WeightUnit   @default(KG)
-  distanceUnit       DistanceUnit @default(KM)
-  defaultRestSeconds Int          @default(90)
-  theme              String       @default("dark")
-  language           String       @default("system")
-  restTimerSound     Boolean      @default(true)
-  weeklyGoalSessions Int          @default(4)
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  id                         String       @id @default(uuid())
+  userId                     String       @unique
+  weightUnit                 WeightUnit   @default(KG)
+  distanceUnit               DistanceUnit @default(KM)
+  defaultRestSeconds         Int          @default(90)
+  theme                      String       @default("dark")
+  language                   String       @default("system")
+  restTimerSound             Boolean      @default(true)
+  notificationsEnabled       Boolean      @default(true)
+  exerciseSuggestionsEnabled Boolean      @default(true)
+  weeklyGoalSessions         Int          @default(4)
+  createdAt                  DateTime     @default(now())
+  updatedAt                  DateTime     @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

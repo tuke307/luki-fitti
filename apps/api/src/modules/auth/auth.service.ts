@@ -425,6 +425,8 @@ export class AuthService {
               theme: prefFields.theme ?? 'dark',
               language: prefFields.language ?? 'system',
               restTimerSound: prefFields.restTimerSound ?? true,
+              notificationsEnabled: prefFields.notificationsEnabled ?? true,
+              exerciseSuggestionsEnabled: prefFields.exerciseSuggestionsEnabled ?? true,
               weeklyGoalSessions: prefFields.weeklyGoalSessions ?? 4,
             },
             update: {
@@ -439,6 +441,12 @@ export class AuthService {
               ...(prefFields.language !== undefined ? { language: prefFields.language } : {}),
               ...(prefFields.restTimerSound !== undefined
                 ? { restTimerSound: prefFields.restTimerSound }
+                : {}),
+              ...(prefFields.notificationsEnabled !== undefined
+                ? { notificationsEnabled: prefFields.notificationsEnabled }
+                : {}),
+              ...(prefFields.exerciseSuggestionsEnabled !== undefined
+                ? { exerciseSuggestionsEnabled: prefFields.exerciseSuggestionsEnabled }
                 : {}),
               ...(prefFields.weeklyGoalSessions !== undefined
                 ? { weeklyGoalSessions: prefFields.weeklyGoalSessions }
@@ -556,6 +564,8 @@ export class AuthService {
       theme: string;
       language?: string;
       restTimerSound: boolean;
+      notificationsEnabled?: boolean;
+      exerciseSuggestionsEnabled?: boolean;
       weeklyGoalSessions: number;
     } | null;
   }): UserDto {
@@ -580,6 +590,8 @@ export class AuthService {
             theme: user.preferences.theme,
             language: normalizedLang,
             restTimerSound: user.preferences.restTimerSound,
+            notificationsEnabled: user.preferences.notificationsEnabled ?? true,
+            exerciseSuggestionsEnabled: user.preferences.exerciseSuggestionsEnabled ?? true,
             weeklyGoalSessions: user.preferences.weeklyGoalSessions,
           }
         : null,

@@ -59,14 +59,12 @@ export enum ExerciseCategory {
 export enum ExerciseType {
   STRENGTH = 'STRENGTH',
   STRETCHING = 'STRETCHING',
-  MOBILITY = 'MOBILITY',
   CARDIO = 'CARDIO',
 }
 
 export const EXERCISE_TYPE_LABELS: Record<ExerciseType, string> = {
   [ExerciseType.STRENGTH]: 'Strength',
-  [ExerciseType.STRETCHING]: 'Stretching',
-  [ExerciseType.MOBILITY]: 'Mobility',
+  [ExerciseType.STRETCHING]: 'Stretching & Mobility',
   [ExerciseType.CARDIO]: 'Cardio',
 };
 
@@ -133,7 +131,6 @@ export enum SetType {
   WARMUP = 'WARMUP',
   WORKING = 'WORKING',
   DROPSET = 'DROPSET',
-  FAILURE = 'FAILURE',
   STRETCH = 'STRETCH',
 }
 
