@@ -52,13 +52,22 @@ import { Input } from '@luki-fitti/ui/components/ui/input';
 import { Label } from '@luki-fitti/ui/components/ui/label';
 import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
 import { toast } from '@luki-fitti/ui/components/ui/sonner';
+import { useAuth } from '@/providers/auth/auth-context';
 import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
-import { formatDate, formatDateTime } from '@luki-fitti/common/utils/client';
+import {
+  computeWorkoutExerciseSuggestion,
+  formatDate,
+  formatDateTime,
+  formatRestDurationMinSec,
+  groupExercisesIntoBlocks,
+  type WorkoutExerciseSuggestion,
+} from '@luki-fitti/common/utils/client';
 import { SessionStatus } from '@luki-fitti/common/enums';
 import { ExercisePicker } from './exercise-picker';
 import { ExerciseVisual } from './exercise-visual';
 import { NumberInput } from './number-input';
+import { RainbowExerciseSuggestionCard } from './rainbow-suggestion-card';
 import type {
   TemplateExerciseInputDto,
   WorkoutFolderDto,
@@ -87,7 +96,12 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
     deleteTemplate,
     startWorkoutFromTemplate,
   } = useGym();
+  const { user } = useAuth();
   const { t, format, muscleLabel } = useLocale();
+  const suggestionsEnabled = user?.preferences?.exerciseSuggestionsEnabled ?? true;
+
+  const [dismissedSuggestions, setDismissedSuggestions] = useState<Record<string, boolean>>({});
+  const [builderSuggestionDismissed, setBuilderSuggestionDismissed] = useState(false);
 
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
@@ -139,6 +153,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
 
   const openNewTemplateBuilder = (defaultFolderId: string | null = null) => {
     setEditingTemplate(null);
+    setBuilderSuggestionDismissed(false);
     setTplName('');
     setTplDesc('');
     setTplFolderId(defaultFolderId);
@@ -170,6 +185,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
 
   const openEditTemplateBuilder = (tpl: WorkoutTemplateDto) => {
     setEditingTemplate(tpl);
+    setBuilderSuggestionDismissed(false);
     setTplName(tpl.name);
     setTplDesc(tpl.description ?? '');
     setTplFolderId(tpl.folderId);
@@ -278,9 +294,92 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
     };
   };
 
+  const handleAddSuggestionToTemplate = async (
+    tpl: WorkoutTemplateDto,
+    suggestion: WorkoutExerciseSuggestion,
+  ) => {
+    const existingExercises: TemplateExerciseInputDto[] = tpl.exercises.map((ex, idx) => ({
+      id: ex.id,
+      exerciseId: ex.exerciseId,
+      orderIndex: idx,
+      plannedSets: ex.plannedSets,
+      warmupSets: ex.warmupSets,
+      targetRepsMin: ex.targetRepsMin,
+      targetRepsMax: ex.targetRepsMax,
+      targetWeight: ex.targetWeight,
+      weightUnit: ex.weightUnit,
+      restSeconds: ex.restSeconds,
+      targetDurationSeconds: ex.targetDurationSeconds,
+      targetDistanceMeters: ex.targetDistanceMeters,
+      notes: ex.notes ?? '',
+      alternativeExerciseIds: ex.alternativeExerciseIds ?? [],
+    }));
+
+    const newSlot: TemplateExerciseInputDto = {
+      exerciseId: suggestion.suggestedExercise.id,
+      orderIndex: existingExercises.length,
+      plannedSets: suggestion.recommendedSets,
+      warmupSets: 0,
+      targetRepsMin: suggestion.recommendedRepsMin,
+      targetRepsMax: suggestion.recommendedRepsMax,
+      targetWeight: suggestion.recommendedWeight,
+      weightUnit,
+      restSeconds: suggestion.recommendedRestSeconds,
+      targetDurationSeconds: null,
+      targetDistanceMeters: null,
+      notes: '',
+      alternativeExerciseIds: suggestion.suggestedExercise.alternativeExerciseIds.slice(0, 2),
+    };
+
+    await updateTemplate(tpl.id, {
+      name: tpl.name,
+      description: tpl.description,
+      folderId: tpl.folderId,
+      estimatedDurationMinutes: tpl.estimatedDurationMinutes ?? 60,
+      exercises: [...existingExercises, newSlot],
+    });
+  };
+
   const renderTemplateCard = (tpl: WorkoutTemplateDto) => {
     const tplStats = getTemplateSessionStats(tpl);
     const isHighlighted = highlightedTemplateId === tpl.id;
+    const blocks = groupExercisesIntoBlocks(tpl.exercises);
+    const folderName = folders.find((f) => f.id === tpl.folderId)?.name ?? null;
+
+    const templateSuggestion =
+      suggestionsEnabled && !dismissedSuggestions[tpl.id]
+        ? computeWorkoutExerciseSuggestion({
+            workoutName: tpl.name,
+            folderName,
+            exercises: tpl.exercises.map((ex) => {
+              const exObj = ex.exercise ?? catalog.find((c) => c.id === ex.exerciseId);
+              return {
+                exerciseId: ex.exerciseId,
+                exerciseName: exObj?.name ?? null,
+                primaryMuscleGroup: exObj?.primaryMuscleGroup ?? null,
+                plannedSets: ex.plannedSets,
+                targetRepsMin: ex.targetRepsMin,
+                targetRepsMax: ex.targetRepsMax,
+                targetWeight: ex.targetWeight,
+              };
+            }),
+            catalog,
+            historySessions,
+            weightUnit,
+          })
+        : null;
+
+    const formatTargetPillText = (ex: WorkoutTemplateDto['exercises'][number]) => {
+      const repsPart =
+        ex.targetRepsMin && ex.targetRepsMax && ex.targetRepsMin !== ex.targetRepsMax
+          ? `${ex.targetRepsMin}–${ex.targetRepsMax}`
+          : `${ex.targetRepsMin ?? 10}`;
+      const weightPart = ex.targetWeight
+        ? ` ${ex.targetWeight} ${weightUnit.toLowerCase()}`
+        : '';
+      return `${ex.plannedSets}×${repsPart}${weightPart}`;
+    };
+
     return (
       <Card
         key={tpl.id}
@@ -325,89 +424,186 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
             </span>
           </div>
 
-          {/* Ordered Exercise List Preview */}
-          <div className="mt-3.5 space-y-2">
-            {tpl.exercises.map((ex, idx) => {
+          {/* Ordered Exercise List Preview (Gymlife-style Rows & Superset Containers) */}
+          <div className="mt-3.5 space-y-2.5">
+            {blocks.map((block) => {
+              if (block.type === 'superset') {
+                return (
+                  <div
+                    key={`superset-${block.startIndex}`}
+                    data-testid="superset-block-card"
+                    className="border-accent/40 bg-card overflow-hidden rounded-2xl border shadow-sm"
+                  >
+                    {/* Gymlife Dark Superset Header Banner */}
+                    <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-zinc-950 px-3.5 py-2.5 text-white">
+                      <div>
+                        <div className="flex items-center gap-1.5 text-xs font-extrabold tracking-wide uppercase">
+                          <span className="text-accent">{t.workouts.supersetHeaderLabel}</span>
+                          <span className="font-mono-tabular text-white">
+                            {format(t.workouts.supersetRoundsFormat, { rounds: block.rounds })}
+                          </span>
+                        </div>
+                        <p className="font-mono-tabular mt-0.5 text-[11px] text-zinc-300">
+                          {format(t.workouts.supersetSubtitleFormat, {
+                            rest: formatRestDurationMinSec(block.roundRestSeconds),
+                          })}
+                        </p>
+                      </div>
+                      <Badge
+                        variant="accent"
+                        className="px-2 py-0.5 text-[10px] font-bold uppercase"
+                      >
+                        <Zap className="h-2.5 w-2.5" /> {block.items.length} ex
+                      </Badge>
+                    </div>
+
+                    {/* Grouped Superset Exercise Rows */}
+                    <div className="divide-border/60 divide-y">
+                      {block.items.map(({ item: ex, globalIndex, stepNumber }) => {
+                        const exObj = ex.exercise ?? catalog.find((c) => c.id === ex.exerciseId);
+                        const altNames = (ex.alternativeExerciseIds ?? [])
+                          .map((id) => catalog.find((c) => c.id === id)?.name)
+                          .filter(Boolean);
+
+                        return (
+                          <div
+                            key={ex.id ?? globalIndex}
+                            className="bg-secondary/25 flex items-center justify-between gap-2.5 px-3 py-2.5 text-xs"
+                          >
+                            <div className="flex min-w-0 items-center gap-2.5">
+                              <div className="relative shrink-0">
+                                <span
+                                  data-testid="superset-step-badge"
+                                  className="text-accent font-mono-tabular absolute -top-1 -left-1 z-10 flex h-5 w-5 items-center justify-center rounded-full border border-white/15 bg-zinc-950 text-[10px] font-black shadow-sm"
+                                >
+                                  {stepNumber}
+                                </span>
+                                {exObj && (
+                                  <ExerciseVisual
+                                    exercise={exObj}
+                                    variant="thumbnail"
+                                    className="h-10 w-12"
+                                  />
+                                )}
+                              </div>
+
+                              <div className="min-w-0 space-y-1">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span className="truncate font-semibold">
+                                    {exObj?.name ?? 'Exercise'}
+                                  </span>
+                                  {exObj && (
+                                    <span className="text-muted-foreground text-[10px]">
+                                      ({muscleLabel(exObj.primaryMuscleGroup)})
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span className="bg-accent/20 text-accent font-mono-tabular inline-flex items-center rounded-lg px-2 py-0.5 text-[11px] font-extrabold">
+                                    {formatTargetPillText(ex)}
+                                  </span>
+                                  {altNames.length > 0 && (
+                                    <Badge
+                                      variant="default"
+                                      title={format(t.workouts.backupsTitle, {
+                                        names: altNames.join(', '),
+                                      })}
+                                      className="px-1.5 py-0.5 text-[10px]"
+                                    >
+                                      <ArrowRightLeft className="h-2.5 w-2.5" />
+                                      {altNames.length}{' '}
+                                      {altNames.length > 1
+                                        ? t.workouts.backupPlural
+                                        : t.workouts.backupSingular}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              }
+
+              const { item: ex, globalIndex } = block.items[0]!;
               const exObj = ex.exercise ?? catalog.find((c) => c.id === ex.exerciseId);
               const altNames = (ex.alternativeExerciseIds ?? [])
                 .map((id) => catalog.find((c) => c.id === id)?.name)
                 .filter(Boolean);
-              const isSupersetWithNext = ex.restSeconds === 0 && idx < tpl.exercises.length - 1;
-              const isSupersetFromPrev = idx > 0 && tpl.exercises[idx - 1]?.restSeconds === 0;
 
               return (
-                <React.Fragment key={ex.id ?? idx}>
-                  <div
-                    className={`bg-secondary/50 flex flex-col gap-1.5 rounded-xl px-3 py-2 text-xs sm:flex-row sm:items-center sm:justify-between ${
-                      isSupersetWithNext || isSupersetFromPrev ? 'border-accent/50 border-l-4' : ''
-                    }`}
-                  >
-                    <div className="flex min-w-0 items-center gap-2">
-                      {exObj && (
-                        <ExerciseVisual exercise={exObj} variant="thumbnail" className="h-9 w-11" />
-                      )}
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="text-primary font-mono-tabular font-bold">
-                            {idx + 1}.
+                <div
+                  key={ex.id ?? globalIndex}
+                  className="bg-secondary/50 flex items-center justify-between gap-2.5 rounded-xl px-3 py-2.5 text-xs"
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    {exObj && (
+                      <ExerciseVisual
+                        exercise={exObj}
+                        variant="thumbnail"
+                        className="h-10 w-12 shrink-0"
+                      />
+                    )}
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-primary font-mono-tabular font-bold">
+                          {globalIndex + 1}.
+                        </span>
+                        <span className="truncate font-semibold">{exObj?.name ?? 'Exercise'}</span>
+                        {exObj && (
+                          <span className="text-muted-foreground text-[10px]">
+                            ({muscleLabel(exObj.primaryMuscleGroup)})
                           </span>
-                          <span className="truncate font-semibold">
-                            {exObj?.name ?? 'Exercise'}
-                          </span>
-                          {exObj && (
-                            <span className="text-muted-foreground text-[10px]">
-                              ({muscleLabel(exObj.primaryMuscleGroup)})
-                            </span>
-                          )}
-                        </div>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="bg-accent/20 text-accent font-mono-tabular inline-flex items-center rounded-lg px-2 py-0.5 text-[11px] font-extrabold">
+                          {formatTargetPillText(ex)}
+                        </span>
+                        {altNames.length > 0 && (
+                          <Badge
+                            variant="default"
+                            title={format(t.workouts.backupsTitle, { names: altNames.join(', ') })}
+                            className="px-1.5 py-0.5 text-[10px]"
+                          >
+                            <ArrowRightLeft className="h-2.5 w-2.5" />
+                            {altNames.length}{' '}
+                            {altNames.length > 1
+                              ? t.workouts.backupPlural
+                              : t.workouts.backupSingular}
+                          </Badge>
+                        )}
                       </div>
                     </div>
-
-                    <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
-                      <span className="font-mono-tabular font-semibold">
-                        {ex.plannedSets} ×{' '}
-                        {ex.targetRepsMin &&
-                        ex.targetRepsMax &&
-                        ex.targetRepsMin !== ex.targetRepsMax
-                          ? `${ex.targetRepsMin}–${ex.targetRepsMax}`
-                          : (ex.targetRepsMin ?? 10)}{' '}
-                        {t.common.reps}
-                        {ex.targetWeight ? ` @ ${ex.targetWeight}${weightUnit.toLowerCase()}` : ''}
-                      </span>
-                      {ex.restSeconds === 0 ? (
-                        <Badge variant="accent" className="px-1.5 py-0.5 text-[10px] font-bold">
-                          <Zap className="h-2.5 w-2.5" /> {t.workouts.supersetBadge}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground font-mono-tabular text-[11px]">
-                          • {ex.restSeconds}
-                          {t.workouts.restSuffix}
-                        </span>
-                      )}
-                      {altNames.length > 0 && (
-                        <Badge
-                          variant="default"
-                          title={format(t.workouts.backupsTitle, { names: altNames.join(', ') })}
-                          className="px-1.5 py-0.5 text-[10px]"
-                        >
-                          <ArrowRightLeft className="h-2.5 w-2.5" />
-                          {altNames.length}{' '}
-                          {altNames.length > 1
-                            ? t.workouts.backupPlural
-                            : t.workouts.backupSingular}
-                        </Badge>
-                      )}
-                    </div>
                   </div>
-                  {isSupersetWithNext && (
-                    <div className="text-accent flex items-center gap-1.5 pl-4 text-[10px] font-bold">
-                      <Zap className="h-3 w-3" />
-                      <span>{format(t.workouts.supersetPairedWith, { index: idx + 2 })}</span>
-                    </div>
-                  )}
-                </React.Fragment>
+
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span className="bg-secondary text-foreground font-mono-tabular rounded-lg border px-2 py-0.5 text-[10px] font-bold">
+                      {ex.restSeconds} {t.common.sec}
+                    </span>
+                  </div>
+                </div>
               );
             })}
+
+            {/* Maximum 1 Rainbow Exercise Suggestion per Workout */}
+            {templateSuggestion && (
+              <div className="pt-1">
+                <RainbowExerciseSuggestionCard
+                  suggestion={templateSuggestion}
+                  weightUnit={weightUnit}
+                  compact
+                  testId={`template-suggestion-${tpl.id}`}
+                  onAdd={(sug) => void handleAddSuggestionToTemplate(tpl, sug)}
+                  onDismiss={() =>
+                    setDismissedSuggestions((prev) => ({ ...prev, [tpl.id]: true }))
+                  }
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -1200,17 +1396,28 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                         </div>
                       </div>
 
-                      {isSupersetWithNext && (
-                        <div className="border-accent/40 bg-accent/15 text-accent flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs font-bold">
-                          <span className="flex min-w-0 items-center gap-2">
-                            <Zap className="h-3.5 w-3.5 shrink-0" />
-                            <span className="leading-snug">
-                              {format(t.workouts.supersetPairBanner, {
-                                first: idx + 1,
-                                second: idx + 2,
+                      {isSupersetWithNext && !isSupersetFromPrev && (
+                        <div
+                          data-testid="builder-superset-header"
+                          className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-zinc-950 px-3.5 py-2.5 text-xs text-white"
+                        >
+                          <div>
+                            <div className="flex items-center gap-1.5 font-extrabold tracking-wide uppercase">
+                              <span className="text-accent">{t.workouts.supersetHeaderLabel}</span>
+                              <span className="font-mono-tabular">
+                                {format(t.workouts.supersetRoundsFormat, {
+                                  rounds: slot.plannedSets,
+                                })}
+                              </span>
+                            </div>
+                            <p className="font-mono-tabular mt-0.5 text-[11px] text-zinc-300">
+                              {format(t.workouts.supersetSubtitleFormat, {
+                                rest: formatRestDurationMinSec(
+                                  tplExercises[idx + 1]?.restSeconds || 90,
+                                ),
                               })}
-                            </span>
-                          </span>
+                            </p>
+                          </div>
                           <button
                             type="button"
                             onClick={() =>
@@ -1220,7 +1427,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                                 ),
                               )
                             }
-                            className="shrink-0 underline opacity-80 hover:opacity-100"
+                            className="text-accent shrink-0 text-xs font-bold underline opacity-90 hover:opacity-100"
                           >
                             {t.workouts.unlinkBtn}
                           </button>
@@ -1229,6 +1436,86 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                     </React.Fragment>
                   );
                 })}
+
+                {/* Smart Exercise Suggestion inside Workout Builder (max 1 per workout) */}
+                {suggestionsEnabled &&
+                  !builderSuggestionDismissed &&
+                  (() => {
+                    const builderFolderName =
+                      folders.find((f) => f.id === tplFolderId)?.name ?? null;
+                    const builderSuggestion = computeWorkoutExerciseSuggestion({
+                      workoutName: tplName || 'Workout',
+                      folderName: builderFolderName,
+                      exercises: tplExercises.map((ex) => {
+                        const exObj = catalog.find((c) => c.id === ex.exerciseId);
+                        return {
+                          exerciseId: ex.exerciseId,
+                          exerciseName: exObj?.name ?? null,
+                          primaryMuscleGroup: exObj?.primaryMuscleGroup ?? null,
+                          plannedSets: ex.plannedSets,
+                          targetRepsMin: ex.targetRepsMin,
+                          targetRepsMax: ex.targetRepsMax,
+                          targetWeight: ex.targetWeight,
+                        };
+                      }),
+                      catalog,
+                      historySessions,
+                      weightUnit,
+                    });
+
+                    if (!builderSuggestion) return null;
+
+                    return (
+                      <RainbowExerciseSuggestionCard
+                        suggestion={builderSuggestion}
+                        weightUnit={weightUnit}
+                        testId="builder-rainbow-suggestion"
+                        onAdd={(sug) => {
+                          setTplExercises((prev) => [
+                            ...prev,
+                            {
+                              exerciseId: sug.suggestedExercise.id,
+                              orderIndex: prev.length,
+                              plannedSets: sug.recommendedSets,
+                              warmupSets: 0,
+                              targetRepsMin: sug.recommendedRepsMin,
+                              targetRepsMax: sug.recommendedRepsMax,
+                              targetWeight: sug.recommendedWeight,
+                              weightUnit,
+                              restSeconds: sug.recommendedRestSeconds,
+                              targetDurationSeconds: null,
+                              targetDistanceMeters: null,
+                              notes: '',
+                              alternativeExerciseIds:
+                                sug.suggestedExercise.alternativeExerciseIds.slice(0, 2),
+                            },
+                          ]);
+                        }}
+                        onSwap={
+                          builderSuggestion.stallingExerciseId
+                            ? (sug) => {
+                                setTplExercises((prev) =>
+                                  prev.map((item) =>
+                                    item.exerciseId === sug.stallingExerciseId
+                                      ? {
+                                          ...item,
+                                          exerciseId: sug.suggestedExercise.id,
+                                          alternativeExerciseIds:
+                                            sug.suggestedExercise.alternativeExerciseIds.slice(
+                                              0,
+                                              2,
+                                            ),
+                                        }
+                                      : item,
+                                  ),
+                                );
+                              }
+                            : undefined
+                        }
+                        onDismiss={() => setBuilderSuggestionDismissed(true)}
+                      />
+                    );
+                  })()}
               </div>
             </div>
 
