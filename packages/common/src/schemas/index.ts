@@ -113,6 +113,8 @@ export const UpdatePreferencesSchema = z.object({
   theme: z.enum(['dark', 'light', 'system']).optional(),
   language: z.enum(LANGUAGE_PREFERENCES).optional(),
   restTimerSound: z.boolean().optional(),
+  notificationsEnabled: z.boolean().optional(),
+  exerciseSuggestionsEnabled: z.boolean().optional(),
   weeklyGoalSessions: z.number().int().min(1).max(14).optional(),
 });
 
@@ -125,6 +127,8 @@ export const UserPreferencesSchema = z.object({
   theme: z.string(),
   language: z.enum(LANGUAGE_PREFERENCES).default('system').optional(),
   restTimerSound: z.boolean(),
+  notificationsEnabled: z.boolean().default(true).optional(),
+  exerciseSuggestionsEnabled: z.boolean().default(true).optional(),
   weeklyGoalSessions: z.number(),
 });
 
@@ -180,13 +184,23 @@ export interface RegisterResponseDto extends UserDto {
   message?: string;
 }
 
+const CoercedExerciseTypeSchema = z.preprocess(
+  (val) => (val === 'MOBILITY' ? ExerciseType.STRETCHING : val),
+  z.enum(ExerciseType),
+);
+
+const CoercedSetTypeSchema = z.preprocess(
+  (val) => (val === 'FAILURE' ? SetType.WORKING : val),
+  z.enum(SetType),
+);
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Exercise Library Schemas
 // ─────────────────────────────────────────────────────────────────────────────
 export const ExerciseQuerySchema = z.object({
   search: z.string().trim().optional(),
   muscleGroup: z.enum(MuscleGroup).optional(),
-  exerciseType: z.enum(ExerciseType).optional(),
+  exerciseType: CoercedExerciseTypeSchema.optional(),
   equipment: z.enum(EquipmentType).optional(),
   category: z.enum(ExerciseCategory).optional(),
   page: z.coerce.number().int().min(1).default(1).optional(),
@@ -198,7 +212,7 @@ export const CreateExerciseSchema = z.object({
   description: z.string().trim().min(2).max(2000),
   instructions: z.array(z.string().trim().min(1)).default([]),
   category: z.enum(ExerciseCategory).default(ExerciseCategory.COMPOUND),
-  exerciseType: z.enum(ExerciseType).default(ExerciseType.STRENGTH),
+  exerciseType: CoercedExerciseTypeSchema.default(ExerciseType.STRENGTH),
   primaryMuscleGroup: z.enum(MuscleGroup),
   secondaryMuscleGroups: z.array(z.enum(MuscleGroup)).default([]),
   equipment: z.enum(EquipmentType).default(EquipmentType.BARBELL),
@@ -406,7 +420,7 @@ export const SessionSetSyncSchema = z.object({
   id: z.string().optional(),
   clientSetId: z.string().min(1),
   setNumber: z.number().int().min(1).max(100),
-  setType: z.enum(SetType).default(SetType.WORKING),
+  setType: CoercedSetTypeSchema.default(SetType.WORKING),
   weight: z.number().min(0).max(2000).nullable().optional(),
   weightUnit: z.enum(WeightUnit).default(WeightUnit.KG),
   reps: z.number().int().min(0).max(1000).nullable().optional(),
@@ -430,7 +444,7 @@ export const SessionExerciseSyncSchema = z.object({
   replacedExerciseName: z.string().nullable().optional(),
   exerciseNameSnapshot: z.string().min(1).max(160),
   primaryMuscleSnapshot: z.enum(MuscleGroup),
-  exerciseTypeSnapshot: z.enum(ExerciseType).default(ExerciseType.STRENGTH),
+  exerciseTypeSnapshot: CoercedExerciseTypeSchema.default(ExerciseType.STRENGTH),
   origin: z.enum(SessionExerciseOrigin).default(SessionExerciseOrigin.PLANNED),
   status: z.enum(SessionExerciseStatus).default(SessionExerciseStatus.PENDING),
   orderIndex: z.number().int().min(0),

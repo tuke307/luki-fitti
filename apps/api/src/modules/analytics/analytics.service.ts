@@ -157,9 +157,7 @@ export class AnalyticsService {
       for (const ex of s.exercises) {
         if (query.muscleGroup && ex.primaryMuscleSnapshot !== query.muscleGroup) continue;
 
-        const isStretchEx =
-          ex.exerciseTypeSnapshot === ExerciseType.STRETCHING ||
-          ex.exerciseTypeSnapshot === ExerciseType.MOBILITY;
+        const isStretchEx = ex.exerciseTypeSnapshot === ExerciseType.STRETCHING;
 
         let exMaxWeightKg = 0;
         let exBestSetReps = 0;

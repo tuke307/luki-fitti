@@ -31,8 +31,8 @@ export class SessionService {
 
   /**
    * Computes volume and duration metrics consistently:
-   * - Strength volume (KG) = sum of weight(kg) * reps for completed WORKING/DROPSET/FAILURE sets on STRENGTH exercises.
-   * - Stretching duration (sec) = sum of durationSeconds for completed sets on STRETCHING/MOBILITY exercises or STRETCH setType.
+   * - Strength volume (KG) = sum of weight(kg) * reps for completed WORKING/DROPSET sets on STRENGTH exercises.
+   * - Stretching duration (sec) = sum of durationSeconds for completed sets on STRETCHING exercises or STRETCH setType.
    * Incomparable measurements are never combined.
    */
   public computeSessionMetrics(exercises: SyncSessionPayloadDto['exercises']) {
@@ -42,9 +42,7 @@ export class SessionService {
     let totalStretchSeconds = 0;
 
     for (const ex of exercises) {
-      const isStretchType =
-        ex.exerciseTypeSnapshot === ExerciseType.STRETCHING ||
-        ex.exerciseTypeSnapshot === ExerciseType.MOBILITY;
+      const isStretchType = ex.exerciseTypeSnapshot === ExerciseType.STRETCHING;
 
       for (const s of ex.sets) {
         if (!s.completed) continue;
