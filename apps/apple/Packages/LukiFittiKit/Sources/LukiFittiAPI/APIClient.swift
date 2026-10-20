@@ -146,6 +146,28 @@ public actor APIClient {
         )
     }
 
+    public func requestAccountDeletion(password: String) async throws {
+        struct Body: Encodable { let password: String }
+        struct EmptyResp: Decodable {}
+        let _: EmptyResp = try await request(
+            path: "/api/auth/request-delete-account",
+            method: "POST",
+            body: Body(password: password)
+        )
+    }
+
+    public func confirmAccountDeletion(token: String) async throws {
+        struct Body: Encodable { let token: String }
+        struct EmptyResp: Decodable {}
+        let _: EmptyResp = try await request(
+            path: "/api/auth/confirm-delete-account",
+            method: "POST",
+            body: Body(token: token),
+            requiresAuth: false
+        )
+        tokenStore.clearTokens()
+    }
+
     public func getMe() async throws -> UserDto {
         try await request(path: "/api/auth/me", method: "GET")
     }
