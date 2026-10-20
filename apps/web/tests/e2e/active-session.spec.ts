@@ -28,9 +28,15 @@ test.describe('Active Session Execution & Rest Timer', () => {
     await page.getByRole('button', { name: /Resume Active Session/i }).click();
     await expect(page.getByRole('heading', { name: WORKOUT_NAME, exact: true })).toBeVisible();
 
-    // Update Set 1 weight and reps, then mark complete
+    // Verify vertical exercise stack and sticky rest timer dock are visible
+    await expect(page.getByTestId('vertical-exercise-stack')).toBeVisible();
+    await expect(page.getByTestId('sticky-rest-timer-dock')).toBeVisible();
+    await expect(page.getByTestId('session-rainbow-suggestion')).toBeVisible();
+
+    // Update Set 1 weight and reps, then mark complete and verify logged prescription pill
     await updateSetWeightAndReps(page, 1, '82.5', '10');
     await toggleCompleteSetRow(page, 1);
+    await expect(page.getByTestId('logged-set-summary-pill').first()).toContainText('82.5kg × 10');
 
     // Completing Set 2 (Working set with >0s rest) or starting timer manually triggers header rest timer pill
     await page.getByRole('button', { name: '90s', exact: true }).click();

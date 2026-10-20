@@ -71,5 +71,20 @@ test.describe('PWA Shell, Navigation & Preferences', () => {
     // Restore KG & Dark
     await page.getByRole('tab', { name: 'KG' }).click();
     await page.getByRole('tab', { name: 'Dark' }).click();
+
+    // Verify Smart Exercise Suggestions toggle (default On) and Test Notification button
+    await expect(page.getByTestId('exercise-suggestions-on')).toHaveAttribute(
+      'data-state',
+      'active',
+    );
+    await page.getByTestId('exercise-suggestions-off').click();
+    await expect(page.getByTestId('exercise-suggestions-off')).toHaveAttribute(
+      'data-state',
+      'active',
+    );
+    await page.getByTestId('exercise-suggestions-on').click();
+
+    await page.getByTestId('profile-test-notification-btn').click();
+    await expect(page.getByText(/Rest Done — LukiFitti Test/i)).toBeVisible();
   });
 });
