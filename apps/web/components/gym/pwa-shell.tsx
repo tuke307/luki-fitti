@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Home,
   FolderKanban,
@@ -28,6 +28,8 @@ import { useGym } from '@/providers/gym/gym-context';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { computeRemainingRestSeconds } from '@/lib/offline/offline-store';
+import { triggerWorkoutNotification } from '@/lib/notifications/notification-manager';
+import { SessionExerciseStatus } from '@luki-fitti/common/enums';
 import { HomeView } from './home-view';
 import { WorkoutsView } from './workouts-view';
 import { ActiveSessionView } from './active-session-view';
@@ -40,7 +42,7 @@ export type NavTab = 'home' | 'workouts' | 'session' | 'diary' | 'exercises' | '
 export function PwaShell() {
   const [activeTab, setActiveTab] = useState<NavTab>('home');
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { t, format } = useLocale();
   const {
     activeSession,
@@ -50,12 +52,58 @@ export function PwaShell() {
     conflictServerSession,
     flushSyncQueue,
     resolveConflict,
+    skipRestTimer,
   } = useGym();
 
+  const notifiedEndsAtRef = useRef<string | null>(null);
+
   useEffect(() => {
-    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
+    const id = window.setInterval(() => setNowMs(Date.now()), 500);
     return () => window.clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    const endsAt = activeSession?.restTimerEndsAt;
+    if (!endsAt) {
+      notifiedEndsAtRef.current = null;
+      return;
+    }
+
+    const endMs = Date.parse(endsAt);
+    if (!Number.isNaN(endMs) && nowMs >= endMs && notifiedEndsAtRef.current !== endsAt) {
+      notifiedEndsAtRef.current = endsAt;
+      const notificationsOn = user?.preferences?.notificationsEnabled ?? true;
+      const soundOn = user?.preferences?.restTimerSound ?? true;
+      const nextEx =
+        activeSession?.exercises.find(
+          (e) =>
+            e.status !== SessionExerciseStatus.COMPLETED &&
+            e.status !== SessionExerciseStatus.SKIPPED,
+        ) ?? activeSession?.exercises[0];
+
+      if (notificationsOn || soundOn) {
+        void triggerWorkoutNotification({
+          title: t.session.restCompleteTitle,
+          body: format(t.session.restCompleteBody, {
+            exercise: nextEx?.exerciseNameSnapshot ?? activeSession?.workoutNameSnapshot ?? 'Workout',
+          }),
+          tag: 'luki-fitti-rest-done',
+          playSound: soundOn,
+          showToast: notificationsOn,
+        });
+      }
+      void skipRestTimer();
+    }
+  }, [
+    activeSession,
+    format,
+    nowMs,
+    skipRestTimer,
+    t.session.restCompleteBody,
+    t.session.restCompleteTitle,
+    user?.preferences?.notificationsEnabled,
+    user?.preferences?.restTimerSound,
+  ]);
 
   const restInfo = computeRemainingRestSeconds(activeSession, nowMs);
 

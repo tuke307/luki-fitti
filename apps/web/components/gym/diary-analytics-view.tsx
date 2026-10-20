@@ -152,9 +152,7 @@ export function DiaryAnalyticsView() {
         if (filterMuscle !== 'ALL' && ex.primaryMuscleSnapshot !== filterMuscle) continue;
         if (selectedExerciseId !== 'ALL' && ex.exerciseId !== selectedExerciseId) continue;
 
-        const isStretch =
-          ex.exerciseTypeSnapshot === ExerciseType.STRETCHING ||
-          ex.exerciseTypeSnapshot === ExerciseType.MOBILITY;
+        const isStretch = ex.exerciseTypeSnapshot === ExerciseType.STRETCHING;
 
         let exMaxWeight = 0;
         let exBest1RM = 0;

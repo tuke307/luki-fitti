@@ -77,3 +77,34 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
+
+self.addEventListener('message', (event) => {
+  const data = event.data;
+  if (data && data.type === 'SHOW_NOTIFICATION' && self.registration) {
+    event.waitUntil(
+      self.registration.showNotification(data.title || 'LukiFitti', {
+        body: data.body || '',
+        tag: data.tag || 'luki-fitti-notification',
+        icon: '/icon-192.svg',
+        badge: '/icon-192.svg',
+      }),
+    );
+  }
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) {
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow('/');
+      }
+      return undefined;
+    }),
+  );
+});
