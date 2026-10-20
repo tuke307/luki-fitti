@@ -285,6 +285,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
       <Card
         key={tpl.id}
         data-template-id={tpl.id}
+        data-testid={`template-card-${tpl.name}`}
         tabIndex={-1}
         className={`hover:border-primary/40 min-w-0 justify-between overflow-hidden p-4 transition duration-300 outline-none sm:p-5 ${
           isHighlighted ? 'border-primary ring-primary/40 ring-2' : ''
@@ -415,6 +416,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
           <div className="flex flex-wrap items-center gap-1.5">
             <Button
               type="button"
+              data-testid="template-action-edit"
               variant="secondary"
               size="sm"
               onClick={() => openEditTemplateBuilder(tpl)}
@@ -423,6 +425,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
             </Button>
             <Button
               type="button"
+              data-testid="template-action-duplicate"
               variant="secondary"
               size="sm"
               onClick={() => void handleDuplicateTemplate(tpl)}
@@ -431,6 +434,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               <Copy className="h-3.5 w-3.5" /> {t.workouts.duplicateBtn}
             </Button>
             <NativeSelect
+              data-testid="template-action-move"
               aria-label={`Move ${tpl.name} to folder`}
               value={tpl.folderId ?? ''}
               onChange={(e) => void moveTemplate(tpl.id, e.target.value || null)}
@@ -445,6 +449,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
             </NativeSelect>
             <Button
               type="button"
+              data-testid="template-action-delete"
               variant="ghost"
               size="icon"
               aria-label={`Delete workout ${tpl.name}`}
@@ -457,6 +462,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
 
           <Button
             type="button"
+            data-testid="template-action-start"
             onClick={async () => {
               await startWorkoutFromTemplate(tpl.id);
               onStartSessionNavigation();
@@ -622,6 +628,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                   </Button>
                   <Button
                     type="button"
+                    data-testid={`folder-rename-${folder.name}`}
                     variant="ghost"
                     size="xs"
                     onClick={() => {

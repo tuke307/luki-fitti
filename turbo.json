@@ -13,7 +13,12 @@
     "SMTP_PASS",
     "EMAIL_FROM",
     "LOG_LEVEL",
-    "SEED_USER_EMAIL"
+    "SEED_USER_EMAIL",
+    "CI",
+    "PLAYWRIGHT_BASE_URL",
+    "TEST_USER_EMAIL",
+    "TEST_USER_PASSWORD",
+    "TEST_USER_NAME"
   ],
   "tasks": {
     "build": {

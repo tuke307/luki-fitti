@@ -35,5 +35,13 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'], viewport: { width: 1920, height: 1080 } },
     },
+    {
+      name: 'mobile',
+      testIgnore: /doc-screenshots\.spec\.ts/,
+      use: {
+        ...devices['iPhone 15 Pro'],
+        defaultBrowserType: 'chromium',
+      },
+    },
   ],
 });

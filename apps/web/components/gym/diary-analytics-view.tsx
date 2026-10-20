@@ -894,6 +894,7 @@ export function DiaryAnalyticsView() {
             {filteredSessions.slice(0, visibleCount).map((session) => (
               <Card
                 key={session.clientSessionId}
+                data-testid={`diary-session-card-${session.workoutNameSnapshot}`}
                 className="hover:border-primary/40 flex-col justify-between gap-4 p-4 transition md:grid md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-6"
               >
                 <div className="min-w-0 space-y-1">
@@ -996,6 +997,7 @@ export function DiaryAnalyticsView() {
                   <div className="flex shrink-0 items-center gap-2">
                     <Button
                       type="button"
+                      data-testid="diary-session-inspect"
                       variant="secondary"
                       size="sm"
                       onClick={() => setInspectingSession(session)}
@@ -1004,6 +1006,7 @@ export function DiaryAnalyticsView() {
                     </Button>
                     <Button
                       type="button"
+                      data-testid="diary-session-delete"
                       variant="ghost"
                       size="icon"
                       aria-label={`Delete session ${session.workoutNameSnapshot}`}
