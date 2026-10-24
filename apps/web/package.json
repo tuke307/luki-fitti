@@ -26,7 +26,6 @@
     "@luki-fitti/common": "*",
     "@luki-fitti/logger": "*",
     "@luki-fitti/ui": "*",
-    "@next/third-parties": "^16.3.8",
     "@radix-ui/react-dialog": "^1.2.0",
     "@radix-ui/react-label": "^2.1.16",
     "@radix-ui/react-separator": "^1.1.16",

@@ -606,6 +606,65 @@ export const AnalyticsQuerySchema = z.object({
 
 export type AnalyticsQueryDto = z.infer<typeof AnalyticsQuerySchema>;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Web Analytics (first-party Umami pageview collector)
+// ─────────────────────────────────────────────────────────────────────────────
+export const ANALYTICS_MAX_URL_LENGTH = 500;
+
+/** Drops query string and fragment so tokens/PII in URLs can never be forwarded. */
+export const stripUrlQuery = (value: string): string => value.split(/[?#]/, 1)[0] ?? '';
+
+/**
+ * Allow-list of custom event names. Event data must stay low-cardinality and anonymous:
+ * no names, e-mail addresses, free text, weights, heart rate or other health/body data.
+ */
+export const ANALYTICS_EVENT_NAMES = [
+  'signup',
+  'login',
+  'password_reset_request',
+  'account_delete_request',
+  'workout_start',
+  'workout_complete',
+  'workout_abandon',
+  'exercise_swap',
+  'suggestion_accept',
+  'suggestion_dismiss',
+  'offline_sync',
+  'data_export',
+  'pwa_installed',
+] as const;
+
+export type AnalyticsEventName = (typeof ANALYTICS_EVENT_NAMES)[number];
+
+const analyticsUrlSchema = z
+  .string()
+  .max(ANALYTICS_MAX_URL_LENGTH)
+  .regex(/^\/(?!\/)/, 'url must be an absolute path')
+  .transform(stripUrlQuery);
+
+const analyticsEventDataSchema = z
+  .record(
+    z.string().regex(/^[a-z][a-z0-9_]{0,39}$/),
+    z.union([z.string().max(100), z.number().finite(), z.boolean()]),
+  )
+  .refine((data) => Object.keys(data).length <= 10, 'at most 10 data keys');
+
+export const AnalyticsCollectSchema = z.discriminatedUnion('type', [
+  z.strictObject({
+    type: z.literal('pageview'),
+    url: analyticsUrlSchema,
+    referrer: z.string().max(ANALYTICS_MAX_URL_LENGTH).transform(stripUrlQuery).optional(),
+  }),
+  z.strictObject({
+    type: z.literal('event'),
+    name: z.enum(ANALYTICS_EVENT_NAMES),
+    url: analyticsUrlSchema,
+    data: analyticsEventDataSchema.optional(),
+  }),
+]);
+
+export type AnalyticsCollectDto = z.infer<typeof AnalyticsCollectSchema>;
+
 export interface PersonalRecordDto {
   exerciseId: string;
   exerciseName: string;

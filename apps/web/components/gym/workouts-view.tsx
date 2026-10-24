@@ -597,6 +597,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                   weightUnit={weightUnit}
                   compact
                   testId={`template-suggestion-${tpl.id}`}
+                  analyticsContext="template"
                   onAdd={(sug) => void handleAddSuggestionToTemplate(tpl, sug)}
                   onDismiss={() =>
                     setDismissedSuggestions((prev) => ({ ...prev, [tpl.id]: true }))
@@ -1470,6 +1471,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                         suggestion={builderSuggestion}
                         weightUnit={weightUnit}
                         testId="builder-rainbow-suggestion"
+                        analyticsContext="builder"
                         onAdd={(sug) => {
                           setTplExercises((prev) => [
                             ...prev,

@@ -70,3 +70,34 @@ export const PASSWORD_RESET_EXPIRY_MS =
   Number(process.env.PASSWORD_RESET_EXPIRY_MS) || 60 * 60 * 1000;
 export const ACCOUNT_DELETION_EXPIRY_MS =
   Number(process.env.ACCOUNT_DELETION_EXPIRY_MS) || 60 * 60 * 1000;
+
+// Web analytics (self-hosted Umami, pageviews only). Forwarding is disabled unless
+// NODE_ENV=production and UMAMI_WEBSITE_ID is set.
+const DEFAULT_UMAMI_URL = 'https://umami.tony-luke.de';
+
+function resolveUmamiUrl(envValue: string | undefined): string {
+  const raw = (envValue ?? '').trim();
+  if (!raw) return DEFAULT_UMAMI_URL;
+  try {
+    const parsed = new URL(raw);
+    // Operator-configured target only; still require HTTPS so pageview data
+    // (incl. the visitor IP header) is never sent in clear text.
+    if (parsed.protocol !== 'https:' && isProduction) {
+      logger.warn('UMAMI_URL must use https — falling back to the default Umami URL.');
+      return DEFAULT_UMAMI_URL;
+    }
+    return parsed.origin + parsed.pathname.replace(/\/+$/, '');
+  } catch {
+    logger.warn('UMAMI_URL is not a valid URL — falling back to the default Umami URL.');
+    return DEFAULT_UMAMI_URL;
+  }
+}
+
+export const UMAMI_URL = resolveUmamiUrl(process.env.UMAMI_URL);
+export const UMAMI_WEBSITE_ID = (process.env.UMAMI_WEBSITE_ID ?? '').trim();
+export const UMAMI_ALLOWED_HOSTNAMES = (
+  process.env.UMAMI_ALLOWED_HOSTNAMES || 'luki-fitti.tony-luke.de'
+)
+  .split(',')
+  .map((host) => host.trim().toLowerCase())
+  .filter(Boolean);
