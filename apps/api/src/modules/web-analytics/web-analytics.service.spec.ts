@@ -35,8 +35,20 @@ describe('AnalyticsCollectSchema', () => {
       url: '/reset-password?token=FAKE-TOKEN#x',
       referrer: 'https://other.example/page?q=1',
     });
+    assert.equal(parsed.type, 'pageview');
     assert.equal(parsed.url, '/reset-password');
-    assert.equal(parsed.referrer, 'https://other.example/page');
+    assert.equal(parsed.type === 'pageview' ? parsed.referrer : undefined, 'https://other.example/page');
+  });
+
+  it('accepts allow-listed events with low-cardinality data', () => {
+    const parsed = AnalyticsCollectSchema.parse({
+      type: 'event',
+      name: 'workout_complete',
+      url: '/?tab=history',
+      data: { type: 'strength', duration_bucket: '30-60m' },
+    });
+    assert.equal(parsed.url, '/');
+    assert.equal(parsed.type === 'event' ? parsed.name : undefined, 'workout_complete');
   });
 
   it('rejects non-path urls, protocol-relative urls, unknown keys and oversized input', () => {
@@ -44,6 +56,11 @@ describe('AnalyticsCollectSchema', () => {
       { type: 'pageview', url: 'https://evil.example/' },
       { type: 'pageview', url: '//evil.example/' },
       { type: 'event', url: '/' },
+      { type: 'event', name: 'not_allowed', url: '/' },
+      { type: 'event', name: 'login', url: '/', data: { 'Bad-Key': 'x' } },
+      { type: 'event', name: 'login', url: '/', data: { status: 'x'.repeat(101) } },
+      { type: 'event', name: 'login', url: '/', referrer: 'https://x.example/' },
+      { type: 'pageview', url: '/', name: 'login' },
       { type: 'pageview', url: '/', screen: '1920x1080' },
       { type: 'pageview', url: `/${'a'.repeat(500)}` },
     ];
@@ -76,6 +93,22 @@ describe('WebAnalyticsService', () => {
     });
   });
 
+  it('forwards events with name and data but without referrer', () => {
+    const request = createService().buildUmamiRequest(
+      { type: 'event', name: 'login', url: '/login', data: { status: 'success' } },
+      context,
+    );
+    assert.ok(request);
+    assert.deepEqual(JSON.parse(String(request.init.body)).payload, {
+      website: 'FAKE-WEBSITE-ID-FOR-TESTING',
+      hostname: 'app.example.test',
+      url: '/login',
+      name: 'login',
+      data: { status: 'success' },
+      language: 'de-DE',
+    });
+  });
+
   it('drops pageviews when disabled, for foreign hosts, cross-site requests or missing UA', () => {
     const pageview = { type: 'pageview' as const, url: '/' };
     assert.equal(createService(false).buildUmamiRequest(pageview, context), null);
@@ -90,7 +123,7 @@ describe('WebAnalyticsService', () => {
     service.fetchImpl = async () => {
       throw new Error('network down');
     };
-    await assert.doesNotReject(service.forwardPageview({ type: 'pageview', url: '/' }, context));
+    await assert.doesNotReject(service.forward({ type: 'pageview', url: '/' }, context));
   });
 
   it('normalizes hostnames and language tags', () => {
