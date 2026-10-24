@@ -1,6 +1,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPageviewPayload, containsTokenLikeSegment, sanitizeReferrer } from './track';
+import {
+  buildEventPayload,
+  buildPageviewPayload,
+  containsTokenLikeSegment,
+  sanitizeReferrer,
+} from './track';
 
 const ORIGIN = 'https://app.example.test';
 
@@ -24,5 +29,19 @@ describe('analytics track helpers', () => {
     assert.equal(sanitizeReferrer(`${ORIGIN}/login`, ORIGIN), undefined);
     assert.equal(sanitizeReferrer('not a url', ORIGIN), undefined);
     assert.equal(sanitizeReferrer('javascript:alert(1)', ORIGIN), undefined);
+  });
+
+  it('builds event payloads without undefined values and with a safe path', () => {
+    assert.deepEqual(buildEventPayload('login', { status: 'success', method: undefined }, '/login'), {
+      type: 'event',
+      name: 'login',
+      url: '/login',
+      data: { status: 'success' },
+    });
+    assert.deepEqual(buildEventPayload('pwa_installed', {}, '/x/abcdefghijklmnopqrstuvwxyz0123'), {
+      type: 'event',
+      name: 'pwa_installed',
+      url: '/',
+    });
   });
 });

@@ -550,7 +550,7 @@ export const en = {
     exerciseSuggestionsSub: 'Propose up to 1 rainbow exercise suggestion per workout',
     usageStatsLabel: 'Anonymous Usage Statistics',
     usageStatsSub:
-      'Self-hosted, cookie-free page view counts (Umami). Turning this off applies to this device only.',
+      'Self-hosted, cookie-free page views and anonymous feature usage (Umami) — no training values or health data. Turning this off applies to this device only.',
     enabledOption: 'On',
     disabledOption: 'Off',
     exportTitle: 'Export Gym Data',

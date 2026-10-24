@@ -2,6 +2,7 @@
 
 import React, { createContext, useState, useEffect, ReactNode, useContext } from 'react';
 import { api, ApiClientError } from '@/lib/api';
+import { trackEvent } from '@/lib/analytics/track';
 import { clearAllLocalData } from '@/lib/offline/offline-store';
 import type { RegisterDto, UpdatePreferencesDto, UserDto } from '@luki-fitti/common/schemas';
 import { DistanceUnit, WeightUnit } from '@luki-fitti/common/enums';
@@ -139,14 +140,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const response = await api.auth.login({ email, password });
       if (response.success && response.data) {
+        trackEvent('login', { status: 'success' });
         setUser(response.data);
         setAuthMode('AUTHENTICATED');
         localStorage.setItem('luki_cached_user_profile', JSON.stringify(response.data));
         return true;
       }
+      trackEvent('login', { status: 'error' });
       setError(response.error || 'Invalid email or password');
       return false;
     } catch (err) {
+      trackEvent('login', { status: 'error' });
       setError(err instanceof Error ? err.message : 'Unable to sign in');
       return false;
     } finally {
@@ -162,20 +166,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await api.auth.register(data);
       if (response.success && response.data) {
         if (response.data.requiresEmailConfirmation) {
+          trackEvent('signup', { status: 'pending_confirmation' });
           setInfoMessage(
             response.data.message ||
               'Account created! Please check your email and click the confirmation link to activate your account.',
           );
           return false;
         }
+        trackEvent('signup', { status: 'success' });
         setUser(response.data);
         setAuthMode('AUTHENTICATED');
         localStorage.setItem('luki_cached_user_profile', JSON.stringify(response.data));
         return true;
       }
+      trackEvent('signup', { status: 'error' });
       setError(response.error || 'Registration failed');
       return false;
     } catch (err) {
+      trackEvent('signup', { status: 'error' });
       setError(err instanceof Error ? err.message : 'Unable to register account');
       return false;
     } finally {
@@ -247,6 +255,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const response = await api.auth.requestAccountDeletion({ password });
       if (response.success) {
+        trackEvent('account_delete_request');
         setInfoMessage(
           response.data?.message ||
             'A confirmation link has been sent to your email address. Click the link in the email and confirm in your browser to permanently delete your account.',
