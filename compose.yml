@@ -69,6 +69,9 @@ services:
       - EMAIL_RETRY_DELAY_MS=${EMAIL_RETRY_DELAY_MS}
       - EMAIL_MAX_ATTEMPTS=${EMAIL_MAX_ATTEMPTS}
       - REDIS_URL=${REDIS_URL}
+      - UMAMI_URL=${UMAMI_URL}
+      - UMAMI_WEBSITE_ID=${UMAMI_WEBSITE_ID}
+      - UMAMI_ALLOWED_HOSTNAMES=${UMAMI_ALLOWED_HOSTNAMES}
     depends_on:
       luki-fitti-db-migrate:
         condition: service_completed_successfully

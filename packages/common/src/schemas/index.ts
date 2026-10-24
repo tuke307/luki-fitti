@@ -606,6 +606,26 @@ export const AnalyticsQuerySchema = z.object({
 
 export type AnalyticsQueryDto = z.infer<typeof AnalyticsQuerySchema>;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Web Analytics (first-party Umami pageview collector)
+// ─────────────────────────────────────────────────────────────────────────────
+export const ANALYTICS_MAX_URL_LENGTH = 500;
+
+/** Drops query string and fragment so tokens/PII in URLs can never be forwarded. */
+export const stripUrlQuery = (value: string): string => value.split(/[?#]/, 1)[0] ?? '';
+
+export const AnalyticsCollectSchema = z.strictObject({
+  type: z.literal('pageview'),
+  url: z
+    .string()
+    .max(ANALYTICS_MAX_URL_LENGTH)
+    .regex(/^\/(?!\/)/, 'url must be an absolute path')
+    .transform(stripUrlQuery),
+  referrer: z.string().max(ANALYTICS_MAX_URL_LENGTH).transform(stripUrlQuery).optional(),
+});
+
+export type AnalyticsCollectDto = z.infer<typeof AnalyticsCollectSchema>;
+
 export interface PersonalRecordDto {
   exerciseId: string;
   exerciseName: string;

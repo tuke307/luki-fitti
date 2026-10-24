@@ -58,6 +58,9 @@ cp apps/web/.env.sample apps/web/.env.local
 | `JWT_REFRESH_SECRET` | `api` | Refresh token signing secret (`>= 32` chars in production) |
 | `FRONTEND_URL` | `api` | Allowed CORS origin (default `http://localhost:3000`) |
 | `API_PORT` | `api`, `web` | Backend port (default `3001`) |
+| `UMAMI_URL` | `api` | Self-hosted Umami base URL (default `https://umami.tony-luke.de`) |
+| `UMAMI_WEBSITE_ID` | `api` | Umami website ID; pageview forwarding is off when unset or outside production |
+| `UMAMI_ALLOWED_HOSTNAMES` | `api` | Comma-separated hostnames to forward pageviews for (default `luki-fitti.tony-luke.de`) |
 
 ### 3. Install, Migrate & Run
 
