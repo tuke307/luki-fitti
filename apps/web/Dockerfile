@@ -44,13 +44,9 @@ COPY --from=installer --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/we
 COPY --from=installer --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 
 # Re-declare ARGs so they are available at runtime (Next.js reads these server-side)
-ARG NEXT_PUBLIC_GA_MEASUREMENT_ID
-ARG NEXT_PUBLIC_GA_TAG_ID
 ARG NEXT_PUBLIC_SITE_URL
 
-ENV NEXT_PUBLIC_GA_MEASUREMENT_ID=${NEXT_PUBLIC_GA_MEASUREMENT_ID} \
-    NEXT_PUBLIC_GA_TAG_ID=${NEXT_PUBLIC_GA_TAG_ID} \
-    NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 
 EXPOSE 3000
 
