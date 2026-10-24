@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import {
   User,
@@ -19,6 +19,7 @@ import {
   Bell,
   Volume2,
   Sparkles,
+  ShieldCheck,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Badge } from '@luki-fitti/ui/components/ui/badge';
@@ -37,12 +38,18 @@ import { Label } from '@luki-fitti/ui/components/ui/label';
 import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useAuth } from '@/providers/auth/auth-context';
+import { trackEvent } from '@/lib/analytics/track';
 import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import {
   requestWorkoutNotificationPermission,
   triggerWorkoutNotification,
 } from '@/lib/notifications/notification-manager';
+import {
+  isAnalyticsOptedOut,
+  setAnalyticsOptOut,
+  subscribeAnalyticsOptOut,
+} from '@/lib/analytics/opt-out';
 import { type LanguagePreference, WeightUnit } from '@luki-fitti/common/enums';
 
 function escapeCsvCell(value: string | number | null | undefined): string {
@@ -86,6 +93,11 @@ export function ProfileImportView() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const analyticsOptedOut = useSyncExternalStore(
+    subscribeAnalyticsOptOut,
+    isAnalyticsOptedOut,
+    () => false,
+  );
 
   const allTemplatesCount =
     folders.reduce((acc, f) => acc + f.templates.length, 0) + unfiledTemplates.length;
@@ -153,6 +165,7 @@ export function ProfileImportView() {
 
     const fileName = `luki-fitti-backup-${dateStamp}.json`;
     triggerDownload(JSON.stringify(payload, null, 2), fileName, 'application/json;charset=utf-8');
+    trackEvent('data_export', { format: 'json' });
     setExportStatus(format(t.profile.exportedStatus, { fileName }));
   };
 
@@ -214,6 +227,7 @@ export function ProfileImportView() {
 
     const fileName = `luki-fitti-workouts-${dateStamp}.csv`;
     triggerDownload(rows.join('\n'), fileName, 'text/csv;charset=utf-8');
+    trackEvent('data_export', { format: 'csv' });
     setExportStatus(format(t.profile.exportedStatus, { fileName }));
   };
 
@@ -618,6 +632,31 @@ export function ProfileImportView() {
                   </TabsList>
                 </Tabs>
               </div>
+            </div>
+
+            {/* Anonymous usage statistics opt-out (device-local, stored in localStorage) */}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
+              <div>
+                <p className="flex items-center gap-1.5 font-semibold">
+                  <ShieldCheck className="text-primary h-3.5 w-3.5" />
+                  {t.profile.usageStatsLabel}
+                </p>
+                <p className="text-muted-foreground text-[11px]">{t.profile.usageStatsSub}</p>
+              </div>
+              <Tabs
+                data-testid="profile-usage-stats-tabs"
+                value={analyticsOptedOut ? 'off' : 'on'}
+                onValueChange={(val) => setAnalyticsOptOut(val === 'off')}
+              >
+                <TabsList>
+                  <TabsTrigger value="on" data-testid="usage-stats-on">
+                    {t.profile.enabledOption}
+                  </TabsTrigger>
+                  <TabsTrigger value="off" data-testid="usage-stats-off">
+                    {t.profile.disabledOption}
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
             </div>
           </div>
         </Card>

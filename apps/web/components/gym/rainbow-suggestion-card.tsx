@@ -3,6 +3,7 @@
 import React from 'react';
 import { Sparkles, Plus, ArrowRightLeft, X } from 'lucide-react';
 import { Button } from '@luki-fitti/ui/components/ui/button';
+import { trackEvent } from '@/lib/analytics/track';
 import { useLocale } from '@/providers/i18n/locale-context';
 import type { WorkoutExerciseSuggestion } from '@luki-fitti/common/utils/client';
 import type { WeightUnit } from '@luki-fitti/common/enums';
@@ -16,6 +17,8 @@ interface RainbowExerciseSuggestionCardProps {
   onDismiss?: () => void;
   compact?: boolean;
   testId?: string;
+  /** Where the card is shown — reported with suggestion analytics events. */
+  analyticsContext?: 'session' | 'template' | 'builder';
 }
 
 export function RainbowExerciseSuggestionCard({
@@ -26,6 +29,7 @@ export function RainbowExerciseSuggestionCard({
   onDismiss,
   compact = false,
   testId = 'rainbow-exercise-suggestion',
+  analyticsContext: context = 'session',
 }: RainbowExerciseSuggestionCardProps) {
   const { t, format, muscleLabel } = useLocale();
   const { suggestedExercise, targetMuscle, reasonType, stallingExerciseName, splitArchetype } =
@@ -86,7 +90,10 @@ export function RainbowExerciseSuggestionCard({
             {onDismiss && (
               <button
                 type="button"
-                onClick={onDismiss}
+                onClick={() => {
+                  trackEvent('suggestion_dismiss', { context });
+                  onDismiss();
+                }}
                 title={t.workouts.dismissSuggestionTitle}
                 aria-label={t.workouts.dismissSuggestionTitle}
                 className="text-muted-foreground hover:text-foreground rounded-lg p-1 transition"
@@ -128,7 +135,10 @@ export function RainbowExerciseSuggestionCard({
                 type="button"
                 size="xs"
                 data-testid={`${testId}-add-btn`}
-                onClick={() => onAdd(suggestion)}
+                onClick={() => {
+                  trackEvent('suggestion_accept', { action: 'add', context });
+                  onAdd(suggestion);
+                }}
                 className="bg-gradient-to-r from-rose-500 via-amber-400 via-emerald-400 to-cyan-400 font-extrabold text-black hover:opacity-95"
               >
                 <Plus className="h-3 w-3 stroke-[2.5]" />
@@ -140,7 +150,10 @@ export function RainbowExerciseSuggestionCard({
                   variant="secondary"
                   size="xs"
                   data-testid={`${testId}-swap-btn`}
-                  onClick={() => onSwap(suggestion)}
+                  onClick={() => {
+                    trackEvent('suggestion_accept', { action: 'swap', context });
+                    onSwap(suggestion);
+                  }}
                   className="font-semibold"
                 >
                   <ArrowRightLeft className="h-3 w-3" />

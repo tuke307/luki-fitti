@@ -10,6 +10,7 @@ import React, {
   type ReactNode,
 } from 'react';
 import { api, ApiClientError } from '@/lib/api';
+import { countBucket, durationBucket, trackEvent } from '@/lib/analytics/track';
 import {
   computeRemainingRestSeconds,
   createOfflineSessionFromStretchingRoutine,
@@ -205,6 +206,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
 
           if (res.success && res.data) {
             if (res.data.conflictDetected) {
+              trackEvent('offline_sync', { status: 'conflict' });
               setConflictServerSession(res.data.session);
               setSyncState('CONFLICT');
               isFlushingRef.current = false;
@@ -230,11 +232,14 @@ export function GymProvider({ children }: { children: ReactNode }) {
         const remaining = await getSyncQueue();
         setPendingSyncCount(remaining.length);
         setSyncState(remaining.length === 0 ? 'SYNCED' : 'SAVED_LOCALLY');
+        // Successful syncs are not tracked: they run on a short timer during every workout.
       } catch (err) {
         if (err instanceof ApiClientError && err.isAuthError) {
           setSyncState('AUTH_EXPIRED');
+          trackEvent('offline_sync', { status: 'auth_expired' });
         } else {
           setSyncState('SAVED_LOCALLY');
+          trackEvent('offline_sync', { status: 'error' });
         }
       } finally {
         isFlushingRef.current = false;
@@ -910,6 +915,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
       historySessions,
     );
     await persistSessionUpdate(session);
+    trackEvent('workout_start', { source: 'template' });
     return session;
   };
 
@@ -926,6 +932,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
       weightUnit,
     );
     await persistSessionUpdate(session);
+    trackEvent('workout_start', { source: 'stretching' });
     return session;
   };
 
@@ -959,6 +966,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
       exercises: [],
     };
     await persistSessionUpdate(session);
+    trackEvent('workout_start', { source: 'quick' });
     return session;
   };
 
@@ -1111,6 +1119,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
       historySessions,
     );
     await persistSessionUpdate(updated);
+    trackEvent('exercise_swap');
   };
 
   const addExerciseToSession = async (exerciseId: string) => {
@@ -1330,6 +1339,12 @@ export function GymProvider({ children }: { children: ReactNode }) {
       ...prev.filter((s) => s.clientSessionId !== finalized.clientSessionId),
     ]);
 
+    trackEvent('workout_complete', {
+      type: finalized.sessionType.toLowerCase(),
+      duration_bucket: durationBucket(finalized.activeDurationSeconds),
+      sets_bucket: countBucket(finalized.totalSetsCompleted),
+    });
+
     if (isAuthenticated) {
       await enqueueSessionSync(finalized);
       if (navigator.onLine) {
@@ -1346,6 +1361,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
       syncTimerRef.current = null;
     }
     const { clientSessionId, id } = activeSession;
+    trackEvent('workout_abandon', { type: activeSession.sessionType.toLowerCase() });
     deletedSessionIdsRef.current.add(clientSessionId);
     if (id) deletedSessionIdsRef.current.add(id);
 

@@ -12,11 +12,12 @@
         "SEAWEEDFS_USE_SSL",
         "SEAWEEDFS_ACCESS_KEY_API",
         "SEAWEEDFS_SECRET_KEY_API",
-        "GA_PROPERTY_ID",
-        "GA_CREDENTIALS_PATH",
         "EMAIL_MAX_ATTEMPTS",
         "EMAIL_RETRY_DELAY_MS",
-        "REDIS_URL"
+        "REDIS_URL",
+        "UMAMI_URL",
+        "UMAMI_WEBSITE_ID",
+        "UMAMI_ALLOWED_HOSTNAMES"
       ]
     }
   }

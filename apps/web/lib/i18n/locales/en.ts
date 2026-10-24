@@ -548,6 +548,9 @@ export const en = {
     testNotificationBody: 'Notifications and gym timer chime are active for your workouts!',
     exerciseSuggestionsLabel: 'Smart Exercise Suggestions',
     exerciseSuggestionsSub: 'Propose up to 1 rainbow exercise suggestion per workout',
+    usageStatsLabel: 'Anonymous Usage Statistics',
+    usageStatsSub:
+      'Self-hosted, cookie-free page views and anonymous feature usage (Umami) — no training values or health data. Turning this off applies to this device only.',
     enabledOption: 'On',
     disabledOption: 'Off',
     exportTitle: 'Export Gym Data',
