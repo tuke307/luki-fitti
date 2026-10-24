@@ -16,7 +16,7 @@ export interface WebAnalyticsConfig {
   timeoutMs: number;
 }
 
-/** Request metadata needed to forward a pageview. Never logged. */
+/** Request metadata needed to forward a pageview or event. Never logged. */
 export interface PageviewRequestContext {
   hostname: string | undefined;
   clientIp: string | undefined;
@@ -58,11 +58,11 @@ export class WebAnalyticsService {
   public fetchImpl: typeof fetch = (input, init) => fetch(input, init);
 
   /**
-   * Builds the Umami `/api/send` request, or returns null when the pageview must be dropped
+   * Builds the Umami `/api/send` request, or returns null when the hit must be dropped
    * (forwarding disabled, unknown hostname, cross-site request, missing user agent).
    */
   buildUmamiRequest(
-    pageview: AnalyticsCollectDto,
+    hit: AnalyticsCollectDto,
     context: PageviewRequestContext,
   ): UmamiSendRequest | null {
     const { config } = this;
@@ -99,8 +99,10 @@ export class WebAnalyticsService {
           payload: {
             website: config.websiteId,
             hostname,
-            url: pageview.url,
-            referrer: pageview.referrer ?? '',
+            url: hit.url,
+            ...(hit.type === 'pageview'
+              ? { referrer: hit.referrer ?? '' }
+              : { name: hit.name, ...(hit.data ? { data: hit.data } : {}) }),
             ...(language ? { language } : {}),
           },
         }),
@@ -109,22 +111,19 @@ export class WebAnalyticsService {
     };
   }
 
-  /** Forwards a pageview to Umami. Never throws; failures are logged without visitor data. */
-  async forwardPageview(
-    pageview: AnalyticsCollectDto,
-    context: PageviewRequestContext,
-  ): Promise<void> {
-    const request = this.buildUmamiRequest(pageview, context);
+  /** Forwards a pageview or event to Umami. Never throws; failures are logged without visitor data. */
+  async forward(hit: AnalyticsCollectDto, context: PageviewRequestContext): Promise<void> {
+    const request = this.buildUmamiRequest(hit, context);
     if (!request) return;
 
     try {
       const response = await this.fetchImpl(request.url, request.init);
       if (!response.ok) {
-        logger.warn(`Umami pageview forwarding failed with status ${response.status}`);
+        logger.warn(`Umami forwarding failed with status ${response.status}`);
       }
     } catch (error) {
       const reason = error instanceof Error ? error.name : 'unknown error';
-      logger.warn(`Umami pageview forwarding failed: ${reason}`);
+      logger.warn(`Umami forwarding failed: ${reason}`);
     }
   }
 }
