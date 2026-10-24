@@ -549,6 +549,9 @@ export const de = {
     testNotificationBody: 'Benachrichtigungen und Pausen-Signalton sind für dein Training aktiv!',
     exerciseSuggestionsLabel: 'Smarte Übungsvorschläge',
     exerciseSuggestionsSub: 'Bis zu 1 farbigen Übungsvorschlag pro Workout anzeigen',
+    usageStatsLabel: 'Anonyme Nutzungsstatistik',
+    usageStatsSub:
+      'Selbst gehostete, cookiefreie Zählung von Seitenaufrufen (Umami). Abschalten gilt nur für dieses Gerät.',
     enabledOption: 'An',
     disabledOption: 'Aus',
     exportTitle: 'Trainingsdaten exportieren',
