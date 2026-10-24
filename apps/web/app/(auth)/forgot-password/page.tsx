@@ -8,6 +8,7 @@ import { Card } from '@luki-fitti/ui/components/ui/card';
 import { Input } from '@luki-fitti/ui/components/ui/input';
 import { Label } from '@luki-fitti/ui/components/ui/label';
 import { api } from '@/lib/api';
+import { trackEvent } from '@/lib/analytics/track';
 import { useLocale } from '@/providers/i18n/locale-context';
 
 export default function ForgotPasswordPage() {
@@ -25,6 +26,7 @@ export default function ForgotPasswordPage() {
     try {
       const res = await api.auth.forgotPassword({ email: email.trim() });
       if (res.success && res.data) {
+        trackEvent('password_reset_request');
         setSubmittedMessage(res.data.message);
       } else {
         setError(res.error || 'Unable to process request');

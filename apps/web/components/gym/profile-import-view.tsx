@@ -38,6 +38,7 @@ import { Label } from '@luki-fitti/ui/components/ui/label';
 import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useAuth } from '@/providers/auth/auth-context';
+import { trackEvent } from '@/lib/analytics/track';
 import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import {
@@ -164,6 +165,7 @@ export function ProfileImportView() {
 
     const fileName = `luki-fitti-backup-${dateStamp}.json`;
     triggerDownload(JSON.stringify(payload, null, 2), fileName, 'application/json;charset=utf-8');
+    trackEvent('data_export', { format: 'json' });
     setExportStatus(format(t.profile.exportedStatus, { fileName }));
   };
 
@@ -225,6 +227,7 @@ export function ProfileImportView() {
 
     const fileName = `luki-fitti-workouts-${dateStamp}.csv`;
     triggerDownload(rows.join('\n'), fileName, 'text/csv;charset=utf-8');
+    trackEvent('data_export', { format: 'csv' });
     setExportStatus(format(t.profile.exportedStatus, { fileName }));
   };
 
