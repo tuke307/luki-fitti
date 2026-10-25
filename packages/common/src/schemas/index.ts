@@ -331,8 +331,13 @@ export interface WorkoutTemplateExerciseDto {
   exercise?: ExerciseDto;
 }
 
+/**
+ * `systemKey` links a user's copy of starter content to its catalog definition. While set, the
+ * text is resolved from the catalog in the requested locale; editing the copy clears it.
+ */
 export interface WorkoutTemplateDto {
   id: string;
+  systemKey?: string | null;
   userId: string;
   folderId: string | null;
   name: string;
@@ -346,6 +351,7 @@ export interface WorkoutTemplateDto {
 
 export interface WorkoutFolderDto {
   id: string;
+  systemKey?: string | null;
   userId: string;
   name: string;
   color: string;
@@ -397,6 +403,7 @@ export interface StretchingRoutineExerciseDto {
 
 export interface StretchingRoutineDto {
   id: string;
+  systemKey?: string | null;
   userId: string;
   name: string;
   description: string | null;
