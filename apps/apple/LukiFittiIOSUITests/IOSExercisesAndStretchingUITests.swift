@@ -4,7 +4,7 @@ import XCTest
 final class IOSExercisesAndStretchingUITests: XCTestCase {
     func testCatalogSearchAndStartStretchingSession() {
         let app = IOSUITestHelpers.launchApp()
-        IOSUITestHelpers.navigateToTab(app, label: "Exercises")
+        IOSUITestHelpers.navigateToTab(app, label: "Library")
 
         let searchField = app.textFields["Search 130+ exercises by name, muscle, or German alias..."]
         XCTAssertTrue(searchField.waitForExistence(timeout: 8))

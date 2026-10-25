@@ -21,10 +21,6 @@ public struct ProfileAndAuthView: View {
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text("Profile & Preferences")
-                    .font(.title2.bold())
-                    .foregroundStyle(.primary)
-
                 if let tokenType = viewModel.deepLinkTokenType,
                    let token = viewModel.deepLinkToken {
                     deepLinkActionCard(tokenType: tokenType, token: token)

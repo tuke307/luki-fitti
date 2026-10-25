@@ -71,10 +71,7 @@ public struct DiaryAnalyticsView: View {
 
     private var headerAndPeriodPicker: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Training Diary & Progress Analytics")
-                .font(.title2.bold())
-                .foregroundStyle(.primary)
-            Text("Calendar history, working-set volume, stretching time, muscle distribution, and PRs")
+            Text("Every workout, and how you’re progressing.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
