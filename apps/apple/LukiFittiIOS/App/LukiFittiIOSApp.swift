@@ -675,44 +675,76 @@ public struct LukiFittiIOSApp: App {
 
 public struct AppShellView: View {
     @Bindable public var viewModel: LukiAppViewModel
+    @State private var contentTab: LukiMainTab = .home
+    @State private var isSessionPresented = false
+    @State private var isProfilePresented = false
 
     public init(viewModel: LukiAppViewModel) {
         self.viewModel = viewModel
     }
 
+    private var hasSession: Bool {
+        viewModel.store.activeSession != nil || viewModel.completedSummarySession != nil
+    }
+
     public var body: some View {
-        VStack(spacing: 0) {
-            topHeaderBar
-            TabView(selection: $viewModel.selectedTab) {
-                HomeDashboardView(viewModel: viewModel)
-                    .tabItem { Label("Home", systemImage: "house.fill") }
-                    .tag(LukiMainTab.home)
-
-                WorkoutsView(viewModel: viewModel)
-                    .tabItem { Label("Workouts", systemImage: "folder.fill") }
-                    .tag(LukiMainTab.workouts)
-
-                if viewModel.store.activeSession != nil || viewModel.completedSummarySession != nil {
-                    ActiveSessionView(viewModel: viewModel)
-                        .tabItem { Label("Live Gym", systemImage: "bolt.heart.fill") }
-                        .tag(LukiMainTab.session)
-                }
-
-                DiaryAnalyticsView(viewModel: viewModel)
-                    .tabItem { Label("Diary", systemImage: "chart.xyaxis.line") }
-                    .tag(LukiMainTab.diary)
-
-                ExercisesAndStretchingView(viewModel: viewModel)
-                    .tabItem { Label("Exercises", systemImage: "dumbbell.fill") }
-                    .tag(LukiMainTab.exercises)
-
-                ProfileAndAuthView(viewModel: viewModel)
-                    .tabItem { Label("Profile", systemImage: "person.crop.circle") }
-                    .tag(LukiMainTab.profile)
+        TabView(selection: $contentTab) {
+            Tab("Today", systemImage: "sun.max", value: LukiMainTab.home) {
+                tabRoot(title: "Today") { HomeDashboardView(viewModel: viewModel) }
             }
-            .tint(LukiColors.neonLime)
+            Tab("Workouts", systemImage: "dumbbell", value: LukiMainTab.workouts) {
+                tabRoot(title: "Workouts") { WorkoutsView(viewModel: viewModel) }
+            }
+            Tab("History", systemImage: "clock.arrow.circlepath", value: LukiMainTab.diary) {
+                tabRoot(title: "History") { DiaryAnalyticsView(viewModel: viewModel) }
+            }
+            Tab("Library", systemImage: "books.vertical", value: LukiMainTab.exercises) {
+                tabRoot(title: "Library") { ExercisesAndStretchingView(viewModel: viewModel) }
+            }
         }
-        .background(LukiColors.darkBackground)
+        .tint(LukiColors.accent)
+        .tabBarMinimizeBehavior(.onScrollDown)
+        .modifier(SessionAccessoryModifier(isEnabled: hasSession) {
+            SessionAccessoryView(viewModel: viewModel) { isSessionPresented = true }
+        })
+        .fullScreenCover(isPresented: $isSessionPresented, onDismiss: syncSelectionFromContent) {
+            NavigationStack {
+                ActiveSessionView(viewModel: viewModel)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button {
+                                isSessionPresented = false
+                            } label: {
+                                Image(systemName: "chevron.down")
+                            }
+                            .accessibilityLabel("Minimize workout")
+                            .accessibilityIdentifier("ios.session.minimizeButton")
+                        }
+                    }
+            }
+            .tint(LukiColors.accent)
+        }
+        .sheet(isPresented: $isProfilePresented, onDismiss: syncSelectionFromContent) {
+            NavigationStack {
+                ProfileAndAuthView(viewModel: viewModel)
+                    .navigationTitle("Profile")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { isProfilePresented = false }
+                        }
+                    }
+            }
+            .tint(LukiColors.accent)
+        }
+        .onChange(of: viewModel.selectedTab, initial: true) { _, newTab in
+            route(to: newTab)
+        }
+        .onChange(of: contentTab) { _, newTab in
+            if viewModel.selectedTab != newTab, !isSessionPresented, !isProfilePresented {
+                viewModel.selectedTab = newTab
+            }
+        }
         .alert(
             "Workout Sync Conflict Detected",
             isPresented: Binding(
@@ -721,7 +753,7 @@ public struct AppShellView: View {
             )
         ) {
             if let conflict = viewModel.store.conflictItem {
-                Button("Use Server Version") {
+                Button("Use Other Device") {
                     Task { await viewModel.store.resolveConflict(clientSessionId: conflict.clientSessionId, keepLocal: false) }
                 }
                 Button("Keep Local Workout Data") {
@@ -729,84 +761,194 @@ public struct AppShellView: View {
                 }
             }
         } message: {
-            Text("A newer version exists on the server. Choose which version to keep so no workout data is silently overwritten.")
+            Text("A newer version of this workout exists on another device. Which one do you want to keep?")
         }
     }
 
-    private var topHeaderBar: some View {
-        HStack {
-            Button {
-                viewModel.selectedTab = .home
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "dumbbell.fill")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(LukiColors.accentForeground)
-                        .padding(6)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.neonLime))
-                    Text("LUKIFITTI")
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundStyle(.primary)
-                }
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("ios.header.homeButton")
-
-            Spacer()
-
-            let restStatus = SessionCalculator.computeRemainingRestSeconds(session: viewModel.store.activeSession)
-            if restStatus.isRunning || restStatus.isPaused {
-                Button {
-                    viewModel.selectedTab = .session
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "timer")
-                        Text(String(format: "%d:%02d", restStatus.remainingSeconds / 60, restStatus.remainingSeconds % 60))
-                            .monospacedDigit()
-                    }
-                    .font(.caption.bold())
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Capsule().fill(LukiColors.neonLime.opacity(0.2)))
-                    .foregroundStyle(LukiColors.neonLime)
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("ios.header.restTimerPill")
-            }
-
-            Button {
-                if viewModel.store.currentUser == nil {
-                    viewModel.selectedTab = .profile
-                } else {
-                    Task { await viewModel.store.flushSyncQueue() }
-                }
-            } label: {
-                Text(syncBadgeTitle)
-                    .font(.caption2.bold())
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Capsule().fill(LukiColors.fill))
-                    .foregroundStyle(.primary)
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("ios.header.syncBadge")
+    /// Bridges the view model's single `selectedTab` (still used by feature views) onto the
+    /// iOS 26 structure: four content tabs, the live workout as a full-screen cover and the
+    /// profile as a sheet.
+    private func route(to tab: LukiMainTab) {
+        switch tab {
+        case .session:
+            isProfilePresented = false
+            isSessionPresented = hasSession
+            if !hasSession { viewModel.selectedTab = contentTab }
+        case .profile:
+            isSessionPresented = false
+            isProfilePresented = true
+        case .home, .workouts, .diary, .exercises:
+            isSessionPresented = false
+            isProfilePresented = false
+            contentTab = tab
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(LukiColors.darkCard)
+    }
+
+    private func syncSelectionFromContent() {
+        if viewModel.selectedTab == .session || viewModel.selectedTab == .profile {
+            viewModel.selectedTab = contentTab
+        }
+    }
+
+    private func tabRoot<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        NavigationStack {
+            content()
+                .navigationTitle(title)
+                .toolbar {
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        restTimerPill
+                        syncIndicator
+                        Button {
+                            viewModel.selectedTab = .profile
+                        } label: {
+                            Image(systemName: viewModel.store.currentUser == nil ? "person.crop.circle" : "person.crop.circle.fill")
+                        }
+                        .accessibilityLabel("Profile and settings")
+                        .accessibilityIdentifier("ios.header.profileButton")
+                    }
+                }
+        }
+    }
+
+    @ViewBuilder
+    private var restTimerPill: some View {
+        let restStatus = SessionCalculator.computeRemainingRestSeconds(session: viewModel.store.activeSession)
+        if restStatus.isRunning || restStatus.isPaused {
+            Button {
+                viewModel.selectedTab = .session
+            } label: {
+                Label(
+                    String(format: "%d:%02d", restStatus.remainingSeconds / 60, restStatus.remainingSeconds % 60),
+                    systemImage: "timer"
+                )
+                .labelStyle(.titleAndIcon)
+                .monospacedDigit()
+            }
+            .accessibilityIdentifier("ios.header.restTimerPill")
+        }
+    }
+
+    /// Always reachable by VoiceOver/UI tests; visually it is a quiet cloud glyph that only
+    /// changes when the user needs to act (offline, unsynced changes, sign-in needed).
+    private var syncIndicator: some View {
+        Button {
+            if viewModel.store.currentUser == nil {
+                viewModel.selectedTab = .profile
+            } else {
+                Task { await viewModel.store.flushSyncQueue() }
+            }
+        } label: {
+            Image(systemName: syncSymbol)
+                .foregroundStyle(syncNeedsAttention ? LukiColors.warning : .secondary)
+        }
+        .accessibilityLabel(syncBadgeTitle)
+        .accessibilityIdentifier("ios.header.syncBadge")
+    }
+
+    private var syncNeedsAttention: Bool {
+        guard viewModel.store.currentUser != nil else { return false }
+        switch viewModel.store.syncState {
+        case .AUTH_EXPIRED, .CONFLICT, .OFFLINE: return true
+        case .SAVED_LOCALLY: return !viewModel.store.syncQueue.isEmpty
+        case .SYNCED, .SYNCING: return false
+        }
+    }
+
+    private var syncSymbol: String {
+        if viewModel.store.currentUser == nil { return "iphone" }
+        switch viewModel.store.syncState {
+        case .SYNCED: return "checkmark.icloud"
+        case .SYNCING: return "arrow.triangle.2.circlepath.icloud"
+        case .SAVED_LOCALLY: return "icloud.and.arrow.up"
+        case .CONFLICT: return "exclamationmark.icloud"
+        case .AUTH_EXPIRED: return "person.crop.circle.badge.exclamationmark"
+        case .OFFLINE: return "icloud.slash"
+        }
     }
 
     private var syncBadgeTitle: String {
         if viewModel.store.currentUser == nil {
-            return "Guest (Local Only)"
+            return "Guest – saved on this device only"
         }
         switch viewModel.store.syncState {
         case .SYNCED: return "Synced"
-        case .SYNCING: return "Syncing..."
+        case .SYNCING: return "Syncing"
         case .SAVED_LOCALLY: return "Saved Locally (\(viewModel.store.syncQueue.count))"
         case .CONFLICT: return "Sync Conflict"
-        case .AUTH_EXPIRED: return "Sign In to Sync"
+        case .AUTH_EXPIRED: return "Sign in to sync"
         case .OFFLINE: return "Offline (\(viewModel.store.syncQueue.count))"
         }
+    }
+}
+
+/// Live workout mini player shown in the tab bar's bottom accessory (iOS 26 Music-style).
+struct SessionAccessoryView: View {
+    @Bindable var viewModel: LukiAppViewModel
+    let onOpen: () -> Void
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let session = viewModel.store.activeSession
+            let rest = SessionCalculator.computeRemainingRestSeconds(session: session, now: context.date)
+            Button(action: onOpen) {
+                HStack(spacing: 12) {
+                    Circle()
+                        .fill(LukiColors.accent)
+                        .frame(width: 8, height: 8)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(session?.workoutNameSnapshot ?? viewModel.completedSummarySession?.workoutNameSnapshot ?? "Workout")
+                            .font(.subheadline.weight(.semibold))
+                            .lineLimit(1)
+                        Text(subtitle(session: session, rest: rest, now: context.date))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                    Spacer(minLength: 8)
+                    Image(systemName: "chevron.up")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 16)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Return to workout")
+            .accessibilityIdentifier("ios.shell.sessionAccessory")
+        }
+    }
+
+    private func subtitle(session: WorkoutSessionDto?, rest: RestTimerStatus, now: Date) -> String {
+        guard let session else { return "Done" }
+        let started = ISO8601DateFormatter.lukiParse(session.startedAt) ?? now
+        let elapsed = session.status == .PAUSED ? session.activeDurationSeconds : max(0, Int(now.timeIntervalSince(started)))
+        var text = String(format: "%d:%02d", elapsed / 60, elapsed % 60)
+        if rest.isRunning || rest.isPaused {
+            text += String(format: " · Rest %d:%02d", rest.remainingSeconds / 60, rest.remainingSeconds % 60)
+        }
+        return text
+    }
+}
+
+private struct SessionAccessoryModifier<Accessory: View>: ViewModifier {
+    let isEnabled: Bool
+    @ViewBuilder let accessory: () -> Accessory
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.1, *) {
+            content.tabViewBottomAccessory(isEnabled: isEnabled) { accessory() }
+        } else if isEnabled {
+            content.tabViewBottomAccessory { accessory() }
+        } else {
+            content
+        }
+    }
+}
+
+private extension ISO8601DateFormatter {
+    static func lukiParse(_ iso: String) -> Date? {
+        let withFraction = ISO8601DateFormatter()
+        withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return withFraction.date(from: iso) ?? ISO8601DateFormatter().date(from: iso)
     }
 }
