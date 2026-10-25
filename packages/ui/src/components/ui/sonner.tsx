@@ -13,19 +13,19 @@ const Toaster = ({ ...props }: ToasterProps) => {
       style={
         {
           // Sonner consumes these raw for `background:` / `color:` (no hsl()
-          // wrap), so values must be complete colors. The theme stores bare
-          // HSL triples, hence the hsl(...) wrapper — without it the browser
-          // discards the value and the toast renders transparent with inherited
-          // text, making it invisible on the page.
-          '--normal-bg': 'hsl(var(--popover))',
-          '--normal-text': 'hsl(var(--popover-foreground))',
-          '--normal-border': 'hsl(var(--border))',
-          '--error-bg': 'hsl(var(--destructive))',
-          '--error-text': 'hsl(var(--destructive-foreground))',
-          '--error-border': 'hsl(var(--destructive))',
-          '--success-bg': 'hsl(var(--success))',
-          '--success-text': 'hsl(var(--success-foreground))',
-          '--success-border': 'hsl(var(--success))',
+          // wrap), so values must be complete colors. The theme stores full
+          // OKLCH colors, so the tokens can be passed through directly — a bare
+          // channel triple would be discarded and the toast would render
+          // transparent with inherited text, making it invisible on the page.
+          '--normal-bg': 'var(--popover)',
+          '--normal-text': 'var(--popover-foreground)',
+          '--normal-border': 'var(--border)',
+          '--error-bg': 'var(--destructive)',
+          '--error-text': 'var(--destructive-foreground)',
+          '--error-border': 'var(--destructive)',
+          '--success-bg': 'var(--success)',
+          '--success-text': 'var(--success-foreground)',
+          '--success-border': 'var(--success)',
         } as React.CSSProperties
       }
       {...props}
