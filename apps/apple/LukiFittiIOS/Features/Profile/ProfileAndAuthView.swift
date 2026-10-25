@@ -23,7 +23,7 @@ public struct ProfileAndAuthView: View {
             VStack(alignment: .leading, spacing: 18) {
                 Text("Profile & Preferences")
                     .font(.title2.bold())
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
 
                 if let tokenType = viewModel.deepLinkTokenType,
                    let token = viewModel.deepLinkToken {
@@ -76,7 +76,7 @@ public struct ProfileAndAuthView: View {
                 } label: {
                     Text("Save New Password")
                         .font(.subheadline.bold())
-                        .foregroundStyle(.black)
+                        .foregroundStyle(LukiColors.accentForeground)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                         .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.neonLime))
@@ -106,7 +106,7 @@ public struct ProfileAndAuthView: View {
                 } label: {
                     Text("Yes, Permanently Delete My Account")
                         .font(.subheadline.bold())
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                         .background(RoundedRectangle(cornerRadius: 10).fill(Color.red))
@@ -129,7 +129,7 @@ public struct ProfileAndAuthView: View {
                 .accessibilityIdentifier("ios.profile.authenticatedBadge")
             Text(user.email)
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
 
             if let statusMessage {
                 Text(statusMessage)
@@ -177,7 +177,7 @@ public struct ProfileAndAuthView: View {
                     } label: {
                         Text("Send Deletion Confirmation Email")
                             .font(.caption.bold())
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
                             .background(RoundedRectangle(cornerRadius: 8).fill(Color.red.opacity(0.85)))
@@ -267,7 +267,7 @@ public struct ProfileAndAuthView: View {
             } label: {
                 Text(authMode == "login" ? "Sign In" : "Create Account")
                     .font(.subheadline.bold())
-                    .foregroundStyle(.black)
+                    .foregroundStyle(LukiColors.accentForeground)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
                     .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.neonLime))
@@ -284,7 +284,7 @@ public struct ProfileAndAuthView: View {
         return VStack(alignment: .leading, spacing: 12) {
             Text("Gym & Unit Preferences")
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
 
             Picker("Weight Unit", selection: $store.preferences.weightUnit) {
                 ForEach(WeightUnit.allCases, id: \.self) { unit in
@@ -299,15 +299,15 @@ public struct ProfileAndAuthView: View {
                 in: 1...14
             )
             .font(.subheadline)
-            .foregroundStyle(.white)
+            .foregroundStyle(.primary)
 
-            Divider().overlay(Color.white.opacity(0.1))
+            Divider()
 
             Toggle(isOn: $store.preferences.exerciseSuggestionsEnabled) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Smart Exercise Suggestions")
                         .font(.subheadline.bold())
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                     Text("Propose up to 1 rainbow exercise suggestion per workout")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
@@ -320,7 +320,7 @@ public struct ProfileAndAuthView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Workout & Rest Notifications")
                         .font(.subheadline.bold())
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                     Text("Alert when rest timer finishes or workout completes")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
@@ -332,7 +332,7 @@ public struct ProfileAndAuthView: View {
             Toggle(isOn: $store.preferences.restTimerSound) {
                 Text("Rest Timer Chime Sound")
                     .font(.subheadline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
             }
             .tint(LukiColors.neonLime)
 
@@ -342,7 +342,7 @@ public struct ProfileAndAuthView: View {
             } label: {
                 Label("Test Notification", systemImage: "bell.badge.fill")
                     .font(.caption.bold())
-                    .foregroundStyle(.black)
+                    .foregroundStyle(LukiColors.accentForeground)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.neonLime))
@@ -358,14 +358,14 @@ public struct ProfileAndAuthView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("JSON & CSV Workout Backup")
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
             let jsonBackup = (try? String(data: JSONEncoder().encode(viewModel.store.historySessions), encoding: .utf8)) ?? "[]"
             ShareLink(item: jsonBackup, preview: SharePreview("luki-fitti-backup.json")) {
                 Label("Export JSON Backup", systemImage: "square.and.arrow.up")
                     .font(.caption.bold())
                     .padding(.horizontal, 14)
                     .padding(.vertical, 9)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.08)))
+                    .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.fill))
             }
         }
         .padding(16)

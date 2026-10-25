@@ -658,7 +658,6 @@ public struct LukiFittiIOSApp: App {
     public var body: some Scene {
         WindowGroup {
             AppShellView(viewModel: viewModel)
-                .preferredColorScheme(.dark)
                 .onOpenURL { url in
                     viewModel.handleUniversalLink(url)
                 }
@@ -742,12 +741,12 @@ public struct AppShellView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "dumbbell.fill")
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(.black)
+                        .foregroundStyle(LukiColors.accentForeground)
                         .padding(6)
                         .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.neonLime))
                     Text("LUKIFITTI")
-                        .font(.system(size: 16, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
                 }
             }
             .buttonStyle(.plain)
@@ -786,8 +785,8 @@ public struct AppShellView: View {
                     .font(.caption2.bold())
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(Capsule().fill(Color.white.opacity(0.1)))
-                    .foregroundStyle(.white)
+                    .background(Capsule().fill(LukiColors.fill))
+                    .foregroundStyle(.primary)
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("ios.header.syncBadge")

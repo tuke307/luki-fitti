@@ -131,7 +131,7 @@ public struct WorkoutsView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Workout Templates & Splits")
                 .font(.title2.bold())
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
             Text("Reorderable split folders, superset pairings, session counters, and machine-busy backups")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -152,7 +152,7 @@ public struct WorkoutsView: View {
                         .font(.caption.bold())
                         .padding(.horizontal, 10)
                         .padding(.vertical, 7)
-                        .background(Capsule().fill(Color.white.opacity(0.08)))
+                        .background(Capsule().fill(LukiColors.fill))
                         .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
@@ -167,7 +167,7 @@ public struct WorkoutsView: View {
                         .padding(.horizontal, 12)
                         .padding(.vertical, 7)
                         .background(Capsule().fill(LukiColors.darkCard))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("ios.workouts.newFolderButton")
@@ -177,7 +177,7 @@ public struct WorkoutsView: View {
                 } label: {
                     Label("New Workout", systemImage: "plus")
                         .font(.caption.bold())
-                        .foregroundStyle(.black)
+                        .foregroundStyle(LukiColors.accentForeground)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 7)
                         .background(Capsule().fill(LukiColors.neonLime))
@@ -219,14 +219,14 @@ public struct WorkoutsView: View {
                             .foregroundStyle(LukiColors.neonLime)
                         Text(folder.name)
                             .font(.headline.bold())
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                             .lineLimit(1)
                         Spacer()
                         Text("\(folder.templates.count) workouts")
                             .font(.caption2.bold().monospacedDigit())
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
-                            .background(Capsule().fill(Color.white.opacity(0.08)))
+                            .background(Capsule().fill(LukiColors.fill))
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -245,7 +245,7 @@ public struct WorkoutsView: View {
                         Image(systemName: "arrow.up")
                             .font(.caption2.bold())
                             .frame(width: 24, height: 24)
-                            .background(RoundedRectangle(cornerRadius: 6).fill(Color.white.opacity(0.08)))
+                            .background(RoundedRectangle(cornerRadius: 6).fill(LukiColors.fill))
                     }
                     .buttonStyle(.plain)
                     .disabled(index == 0)
@@ -256,7 +256,7 @@ public struct WorkoutsView: View {
                         Image(systemName: "arrow.down")
                             .font(.caption2.bold())
                             .frame(width: 24, height: 24)
-                            .background(RoundedRectangle(cornerRadius: 6).fill(Color.white.opacity(0.08)))
+                            .background(RoundedRectangle(cornerRadius: 6).fill(LukiColors.fill))
                     }
                     .buttonStyle(.plain)
                     .disabled(index == viewModel.store.folders.count - 1)
@@ -303,7 +303,7 @@ public struct WorkoutsView: View {
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity)
                         .padding(16)
-                        .background(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.1), style: StrokeStyle(lineWidth: 1, dash: [4])))
+                        .background(RoundedRectangle(cornerRadius: 12).stroke(LukiColors.separator, style: StrokeStyle(lineWidth: 1, dash: [4])))
                 } else {
                     ForEach(folder.templates) { template in
                         templateCard(template)
@@ -333,13 +333,13 @@ public struct WorkoutsView: View {
                         .foregroundStyle(.secondary)
                     Text("Unfiled Workouts")
                         .font(.headline.bold())
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                     Spacer()
                     Text("\(viewModel.store.unfiledTemplates.count)")
                         .font(.caption2.bold().monospacedDigit())
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
-                        .background(Capsule().fill(Color.white.opacity(0.08)))
+                        .background(Capsule().fill(LukiColors.fill))
                 }
             }
             .buttonStyle(.plain)
@@ -367,7 +367,7 @@ public struct WorkoutsView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(template.name)
                         .font(.subheadline.bold())
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                     if let desc = template.description, !desc.isEmpty {
                         Text(desc)
                             .font(.caption2)
@@ -379,7 +379,7 @@ public struct WorkoutsView: View {
                     .font(.caption2.monospacedDigit())
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Capsule().fill(Color.white.opacity(0.08)))
+                    .background(Capsule().fill(LukiColors.fill))
             }
 
             HStack {
@@ -397,7 +397,7 @@ public struct WorkoutsView: View {
             .font(.caption2.monospacedDigit())
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.04)))
+            .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.fill))
 
             // Full ordered exercise list (Gymlife Superset Blocks & Standalone Rows)
             let blocks = ProgressionEngine.groupTemplateExercisesIntoBlocks(template.exercises)
@@ -413,10 +413,10 @@ public struct WorkoutsView: View {
                                             .foregroundStyle(LukiColors.electricCyan)
                                         Text("× \(block.rounds) ROUNDS")
                                             .font(.caption.weight(.heavy).monospacedDigit())
-                                            .foregroundStyle(.white)
+                                            .foregroundStyle(.primary)
                                     }
                                     Text("Rest 0 s between exercises · \(ProgressionEngine.formatRestDurationMinSec(block.roundRestSeconds)) between rounds")
-                                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                        .font(.system(size: 10, weight: .semibold))
                                         .foregroundStyle(.secondary)
                                 }
                                 Spacer()
@@ -430,13 +430,13 @@ public struct WorkoutsView: View {
                                 let exInfo = ex.exercise ?? viewModel.store.catalog.first { $0.id == ex.exerciseId }
                                 HStack(spacing: 8) {
                                     Text("\(blockItem.stepNumber)")
-                                        .font(.system(size: 10, weight: .black, design: .monospaced))
+                                        .font(.system(size: 10, weight: .bold))
                                         .foregroundStyle(LukiColors.electricCyan)
                                         .frame(width: 20, height: 20)
                                         .background(Circle().fill(Color.black))
                                     Text(exInfo?.name ?? "Exercise")
                                         .font(.caption.bold())
-                                        .foregroundStyle(.white)
+                                        .foregroundStyle(.primary)
                                         .lineLimit(1)
                                     Spacer()
                                     Text("\(ex.plannedSets)×\(ex.targetRepsMin ?? 8)-\(ex.targetRepsMax ?? 12)")
@@ -465,7 +465,7 @@ public struct WorkoutsView: View {
                                 .foregroundStyle(LukiColors.neonLime)
                             Text(exInfo?.name ?? "Exercise")
                                 .font(.caption.bold())
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                                 .lineLimit(1)
                             Spacer()
                             if !ex.alternativeExerciseIds.isEmpty {
@@ -480,12 +480,12 @@ public struct WorkoutsView: View {
                                 .padding(.vertical, 2)
                                 .background(RoundedRectangle(cornerRadius: 6).fill(LukiColors.electricCyan.opacity(0.16)))
                             Text("\(ex.restSeconds)s")
-                                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                .font(.system(size: 10, weight: .bold))
                                 .foregroundStyle(.secondary)
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 5)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.03)))
+                        .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
                     }
                 }
 
@@ -501,15 +501,15 @@ public struct WorkoutsView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "sparkles")
                             .font(.caption.bold())
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("SMART SUGGESTION • \(suggestion.suggestedExercise.name)")
-                                .font(.system(size: 10, weight: .heavy))
-                                .foregroundStyle(.white)
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(.primary)
                                 .lineLimit(1)
                             Text(suggestion.reasonText)
                                 .font(.system(size: 9))
-                                .foregroundStyle(.white.opacity(0.85))
+                                .foregroundStyle(.secondary)
                                 .lineLimit(2)
                         }
                         Spacer()
@@ -555,8 +555,8 @@ public struct WorkoutsView: View {
                         .font(.caption.bold())
                         .padding(.horizontal, 10)
                         .padding(.vertical, 7)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.1)))
-                        .foregroundStyle(.white)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
+                        .foregroundStyle(.primary)
                 }
                 .buttonStyle(.plain)
 
@@ -567,8 +567,8 @@ public struct WorkoutsView: View {
                         .font(.caption.bold())
                         .padding(.horizontal, 10)
                         .padding(.vertical, 7)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.1)))
-                        .foregroundStyle(.white)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
+                        .foregroundStyle(.primary)
                 }
                 .buttonStyle(.plain)
 
@@ -586,8 +586,8 @@ public struct WorkoutsView: View {
                         .font(.caption.bold())
                         .padding(.horizontal, 10)
                         .padding(.vertical, 7)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.1)))
-                        .foregroundStyle(.white)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
+                        .foregroundStyle(.primary)
                 }
 
                 Spacer()
@@ -610,7 +610,7 @@ public struct WorkoutsView: View {
             } label: {
                 Label("Start Session", systemImage: "play.fill")
                     .font(.caption.bold())
-                    .foregroundStyle(.black)
+                    .foregroundStyle(LukiColors.accentForeground)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
                     .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.neonLime))
@@ -619,7 +619,7 @@ public struct WorkoutsView: View {
             .accessibilityIdentifier("ios.workouts.startTemplate.\(template.id)")
         }
         .padding(12)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.05)))
+        .background(RoundedRectangle(cornerRadius: 14).fill(LukiColors.fill))
     }
 
     // MARK: - Folder Editor Sheet
@@ -641,7 +641,7 @@ public struct WorkoutsView: View {
                                     .frame(width: 30, height: 30)
                                     .overlay(
                                         Circle()
-                                            .stroke(Color.white, lineWidth: folderColor == hex ? 3 : 0)
+                                            .stroke(Color.primary, lineWidth: folderColor == hex ? 3 : 0)
                                     )
                             }
                             .buttonStyle(.plain)
@@ -951,7 +951,7 @@ private struct TemplateBuilderSheetView: View {
 
                         Stepper("Est. Duration: \(durationMin) min", value: $durationMin, in: 10...240, step: 5)
                             .font(.subheadline)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                     }
                     .padding(14)
                     .background(RoundedRectangle(cornerRadius: 16).fill(LukiColors.darkCard))
@@ -959,14 +959,14 @@ private struct TemplateBuilderSheetView: View {
                     HStack {
                         Text("Ordered Exercises (\(exercises.count))")
                             .font(.headline.bold())
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                         Spacer()
                         Button {
                             showingAddPickerSheet = true
                         } label: {
                             Text("+ Add Exercise Slot")
                                 .font(.caption.bold())
-                                .foregroundStyle(.black)
+                                .foregroundStyle(LukiColors.accentForeground)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 7)
                                 .background(Capsule().fill(LukiColors.neonLime))
@@ -984,7 +984,7 @@ private struct TemplateBuilderSheetView: View {
                             HStack(spacing: 8) {
                                 Text("#\(idx + 1)")
                                     .font(.caption.bold().monospacedDigit())
-                                    .foregroundStyle(.black)
+                                    .foregroundStyle(LukiColors.accentForeground)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
                                     .background(Capsule().fill(LukiColors.neonLime))
@@ -1008,7 +1008,7 @@ private struct TemplateBuilderSheetView: View {
                                     }
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 7)
-                                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.07)))
+                                    .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
                                 }
                                 .buttonStyle(.plain)
 
@@ -1019,7 +1019,7 @@ private struct TemplateBuilderSheetView: View {
                                     Image(systemName: "arrow.up")
                                         .font(.caption.bold())
                                         .frame(width: 28, height: 28)
-                                        .background(RoundedRectangle(cornerRadius: 7).fill(Color.white.opacity(0.08)))
+                                        .background(RoundedRectangle(cornerRadius: 7).fill(LukiColors.fill))
                                 }
                                 .buttonStyle(.plain)
                                 .disabled(idx == 0)
@@ -1031,7 +1031,7 @@ private struct TemplateBuilderSheetView: View {
                                     Image(systemName: "arrow.down")
                                         .font(.caption.bold())
                                         .frame(width: 28, height: 28)
-                                        .background(RoundedRectangle(cornerRadius: 7).fill(Color.white.opacity(0.08)))
+                                        .background(RoundedRectangle(cornerRadius: 7).fill(LukiColors.fill))
                                 }
                                 .buttonStyle(.plain)
                                 .disabled(idx == exercises.count - 1)
@@ -1197,7 +1197,7 @@ private struct TemplateBuilderSheetView: View {
 
                 Text(valueText)
                     .font(.subheadline.bold().monospacedDigit())
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .frame(maxWidth: .infinity)
 
                 Button(action: onIncrement) {
@@ -1209,7 +1209,7 @@ private struct TemplateBuilderSheetView: View {
             }
             .padding(.horizontal, 4)
             .padding(.vertical, 2)
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.07)))
+            .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
         }
     }
 }
