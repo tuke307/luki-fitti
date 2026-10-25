@@ -34,9 +34,9 @@ export async function enterEditMode(page: Page): Promise<void> {
 
 /** Expand every folder so template rows are visible. */
 export async function expandAllFolders(page: Page): Promise<void> {
-  const expandAll = page.getByRole('button', { name: /^(Expand All|Alle aufklappen)$/i });
-  if (await expandAll.isVisible()) {
-    await expandAll.click();
+  const collapsed = page.locator('button[aria-expanded="false"][aria-label^="Expand folder "]');
+  while ((await collapsed.count()) > 0) {
+    await collapsed.first().click();
   }
 }
 

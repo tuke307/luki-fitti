@@ -160,8 +160,6 @@ export const de = {
   workouts: {
     title: 'Workouts',
     subtitle: 'Deine Pläne, nach Split sortiert.',
-    expandAll: 'Alle aufklappen',
-    collapseAll: 'Alle einklappen',
     newFolder: 'Neuer Ordner',
     newWorkout: 'Neues Workout',
     totalLabel: 'Gesamt:',

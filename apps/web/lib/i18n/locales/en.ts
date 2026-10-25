@@ -159,8 +159,6 @@ export const en = {
   workouts: {
     title: 'Workouts',
     subtitle: 'Your plans, grouped by split.',
-    expandAll: 'Expand All',
-    collapseAll: 'Collapse All',
     newFolder: 'New Folder',
     newWorkout: 'New Workout',
     totalLabel: 'Total:',

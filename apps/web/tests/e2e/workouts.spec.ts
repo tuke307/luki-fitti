@@ -8,6 +8,7 @@ import {
   deleteFolderByName,
   deleteTemplateByName,
   enterEditMode,
+  expandAllFolders,
   gotoWorkoutsTab,
   templateCardByName,
 } from './helpers/workouts.js';
@@ -18,14 +19,14 @@ test.describe('Workout Folders & Template Builder CRUD', () => {
     await gotoWorkoutsTab(page);
   });
 
-  test('can collapse and expand all starter folders and renders Gymlife superset cards', async ({
+  test('can expand and collapse starter folders and renders Gymlife superset cards', async ({
     page,
   }) => {
     // Folders start collapsed: only folder names are shown until opened.
     await expect(page.getByTestId('template-details-toggle')).toHaveCount(0);
 
-    await page.getByRole('button', { name: /Expand All/i }).click();
-    await expect(page.getByRole('button', { name: /Collapse All/i })).toBeVisible();
+    await expandAllFolders(page);
+    await expect(page.getByTestId('template-details-toggle').first()).toBeVisible();
 
     // Exercise details (incl. superset cards) only appear once a workout is opened.
     await expect(page.getByTestId('superset-block-card')).toHaveCount(0);
@@ -37,8 +38,10 @@ test.describe('Workout Folders & Template Builder CRUD', () => {
     await expect(page.getByTestId('superset-block-card').first()).toBeVisible();
     await expect(page.getByTestId('superset-step-badge').first()).toBeVisible();
 
-    await page.getByRole('button', { name: /Collapse All/i }).click();
-    await expect(page.getByRole('button', { name: /Expand All/i })).toBeVisible();
+    const expanded = page.locator('button[aria-expanded="true"][aria-label^="Collapse folder "]');
+    while ((await expanded.count()) > 0) {
+      await expanded.first().click();
+    }
     await expect(page.getByTestId('template-details-toggle')).toHaveCount(0);
   });
 
