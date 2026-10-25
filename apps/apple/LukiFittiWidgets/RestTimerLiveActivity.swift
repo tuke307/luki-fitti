@@ -65,8 +65,8 @@ public struct RestTimerLiveActivity: Widget {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text(context.attributes.workoutName)
-                        .font(.caption.bold())
-                        .foregroundStyle(LukiColors.neonLime)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(LukiColors.accent)
                     Spacer()
                     if let bpm = context.state.liveHeartRateBpm {
                         Text("❤️ \(bpm) BPM")
@@ -87,17 +87,17 @@ public struct RestTimerLiveActivity: Widget {
                     if let endsAt = context.state.restTimerEndsAt, endsAt > Date() {
                         Text(timerInterval: Date()...endsAt, countsDown: true)
                             .font(.title3.bold().monospacedDigit())
-                            .foregroundStyle(LukiColors.neonLime)
+                            .foregroundStyle(LukiColors.accent)
                     }
                 }
                 HStack(spacing: 10) {
                     Button(intent: AddRestTimeIntent()) {
                         Text("+15s")
-                            .font(.caption2.bold())
+                            .font(.footnote.weight(.medium))
                     }
                     Button(intent: SkipRestTimerIntent()) {
                         Text("Skip Rest")
-                            .font(.caption2.bold())
+                            .font(.footnote.weight(.medium))
                     }
                 }
             }
@@ -107,8 +107,8 @@ public struct RestTimerLiveActivity: Widget {
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     Text(context.state.currentSetLabel)
-                        .font(.caption.bold())
-                        .foregroundStyle(LukiColors.neonLime)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(LukiColors.accent)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     if let bpm = context.state.liveHeartRateBpm {
@@ -119,7 +119,7 @@ public struct RestTimerLiveActivity: Widget {
                 DynamicIslandExpandedRegion(.bottom) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("\(context.state.currentExerciseName) — \(context.state.targetLoadLabel)")
-                            .font(.caption.bold())
+                            .font(.subheadline.weight(.semibold))
                         HStack {
                             Button(intent: AddRestTimeIntent()) {
                                 Text("+15s")
@@ -128,26 +128,26 @@ public struct RestTimerLiveActivity: Widget {
                                 Text("Skip Rest")
                             }
                         }
-                        .font(.caption2.bold())
+                        .font(.footnote.weight(.medium))
                     }
                 }
             } compactLeading: {
                 Text(context.state.currentSetLabel)
-                    .font(.caption2.bold())
-                    .foregroundStyle(LukiColors.neonLime)
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(LukiColors.accent)
             } compactTrailing: {
                 if let endsAt = context.state.restTimerEndsAt, endsAt > Date() {
                     Text(timerInterval: Date()...endsAt, countsDown: true)
-                        .font(.caption2.bold().monospacedDigit())
-                        .foregroundStyle(LukiColors.neonLime)
+                        .font(.footnote.monospacedDigit())
+                        .foregroundStyle(LukiColors.accent)
                 } else if let bpm = context.state.liveHeartRateBpm {
                     Text("\(bpm) ♥")
-                        .font(.caption2.bold().monospacedDigit())
+                        .font(.footnote.monospacedDigit())
                         .foregroundStyle(LukiColors.heartRose)
                 }
             } minimal: {
                 Image(systemName: "dumbbell.fill")
-                    .foregroundStyle(LukiColors.neonLime)
+                    .foregroundStyle(LukiColors.accent)
             }
         }
     }
