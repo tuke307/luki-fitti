@@ -61,7 +61,7 @@ export function RainbowExerciseSuggestionCard({
   return (
     <div
       data-testid={testId}
-      className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500 via-amber-400 via-emerald-400 via-cyan-400 to-fuchsia-500 p-[1.5px] shadow-md transition-all"
+      className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-destructive via-warning via-success via-cyan-400 to-fuchsia-500 p-[1.5px] shadow-md transition-all"
     >
       <div
         className={`bg-card/95 relative overflow-hidden rounded-[calc(1rem-1.5px)] ${
@@ -71,18 +71,18 @@ export function RainbowExerciseSuggestionCard({
         {/* Subtle iridescent rainbow backdrop glow */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-gradient-to-r from-rose-500/10 via-amber-400/10 via-emerald-400/10 via-cyan-400/10 to-fuchsia-500/10"
+          className="pointer-events-none absolute inset-0 bg-gradient-to-r from-destructive/10 via-warning/10 via-success/10 via-cyan-400/10 to-fuchsia-500/10"
         />
 
         <div className="relative space-y-2.5">
           {/* Header: Rainbow Badge + Target Muscle + Dismiss */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-rose-500 via-amber-400 via-emerald-400 via-cyan-500 to-fuchsia-500 px-2.5 py-0.5 text-[10px] font-extrabold tracking-wider text-black uppercase shadow-xs">
+              <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-destructive via-warning via-success via-cyan-500 to-fuchsia-500 px-2.5 py-0.5 text-xs font-semibold text-black shadow-xs">
                 <Sparkles className="h-3 w-3 fill-current" />
                 {t.workouts.smartSuggestionBadge}
               </span>
-              <span className="bg-secondary/80 text-foreground rounded-full px-2 py-0.5 text-[10px] font-bold uppercase">
+              <span className="bg-secondary/80 text-foreground rounded-full px-2 py-0.5 text-xs font-bold">
                 {muscleLabel(targetMuscle)}
               </span>
             </div>
@@ -113,17 +113,17 @@ export function RainbowExerciseSuggestionCard({
               />
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="font-display truncate text-xs font-extrabold sm:text-sm">
+                  <span className="font-display truncate text-xs font-semibold sm:text-sm">
                     {suggestedExercise.name}
                   </span>
-                  <span className="font-mono-tabular rounded-md bg-cyan-500/20 px-2 py-0.5 text-[11px] font-bold text-cyan-300">
+                  <span className="tabular-nums rounded-md bg-cyan-500/20 px-2 py-0.5 text-xs font-bold text-cyan-300">
                     {suggestion.recommendedSets}×{repRangeText}
                     {suggestion.recommendedWeight
                       ? ` ${suggestion.recommendedWeight} ${weightUnit.toLowerCase()}`
                       : ''}
                   </span>
                 </div>
-                <p className="text-muted-foreground mt-0.5 text-[11px] leading-snug">
+                <p className="text-muted-foreground mt-0.5 text-xs leading-snug">
                   {reasonText}
                 </p>
               </div>
@@ -139,7 +139,7 @@ export function RainbowExerciseSuggestionCard({
                   trackEvent('suggestion_accept', { action: 'add', context });
                   onAdd(suggestion);
                 }}
-                className="bg-gradient-to-r from-rose-500 via-amber-400 via-emerald-400 to-cyan-400 font-extrabold text-black hover:opacity-95"
+                className="bg-gradient-to-r from-destructive via-warning via-success to-cyan-400 font-semibold text-black hover:opacity-95"
               >
                 <Plus className="h-3 w-3 stroke-[2.5]" />
                 {t.workouts.addSuggestedBtn}

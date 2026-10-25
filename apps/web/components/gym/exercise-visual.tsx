@@ -103,7 +103,7 @@ export function ExerciseVisual({
                       : 'opacity-95'
                   }`}
                 />
-                <span className="bg-background/80 text-foreground font-mono-tabular absolute bottom-1.5 left-1.5 rounded-md px-1.5 py-0.5 text-[9px] font-bold backdrop-blur-xs">
+                <span className="bg-background/80 text-foreground tabular-nums absolute bottom-1.5 left-1.5 rounded-md px-1.5 py-0.5 text-xs font-bold backdrop-blur-xs">
                   {idx === 0 ? t.visual.startFrame : t.visual.finishFrame}
                 </span>
               </div>
@@ -149,10 +149,10 @@ export function ExerciseVisual({
         <div className="bg-secondary/35 overflow-hidden rounded-2xl border p-3">
           <div className="mb-2 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <Badge variant="accent" className="text-[10px] uppercase">
+              <Badge variant="accent" className="text-xs">
                 <Sparkles className="h-3 w-3" /> {t.visual.motionPreviewBadge}
               </Badge>
-              <span className="text-muted-foreground text-[11px] font-medium">
+              <span className="text-muted-foreground text-xs font-medium">
                 {isPlayingLoop
                   ? format(t.visual.animatingStep, {
                       current: (activeFrameIdx % validFrames.length) + 1,
@@ -167,7 +167,7 @@ export function ExerciseVisual({
                 variant="secondary"
                 size="xs"
                 onClick={() => setIsPlayingLoop((p) => !p)}
-                className="h-7 text-[11px] font-bold"
+                className="h-7 text-xs font-bold"
               >
                 {isPlayingLoop ? (
                   <>
@@ -195,7 +195,7 @@ export function ExerciseVisual({
                   }
                   className="h-full w-full object-cover"
                 />
-                <span className="bg-primary text-primary-foreground font-mono-tabular absolute top-2 left-2 rounded-md px-2 py-0.5 text-[10px] font-extrabold">
+                <span className="bg-primary text-primary-foreground tabular-nums absolute top-2 left-2 rounded-md px-2 py-0.5 text-xs font-semibold">
                   {activeFrameIdx % validFrames.length === 0
                     ? t.visual.step1Start
                     : t.visual.step2Contract}
@@ -228,7 +228,7 @@ export function ExerciseVisual({
                     }
                     className="h-full w-full object-cover"
                   />
-                  <span className="bg-background/85 text-foreground absolute bottom-2 left-2 rounded-md px-2 py-0.5 text-[10px] font-bold backdrop-blur-xs">
+                  <span className="bg-background/85 text-foreground absolute bottom-2 left-2 rounded-md px-2 py-0.5 text-xs font-bold backdrop-blur-xs">
                     {idx === 0 ? t.visual.step1StartPos : t.visual.step2PeakPos}
                   </span>
                 </button>
@@ -246,7 +246,7 @@ export function ExerciseVisual({
             secondary={exercise.secondaryMuscleGroups ?? []}
           />
           <div>
-            <p className="text-[11px] font-bold tracking-wider uppercase">
+            <p className="text-xs font-bold">
               {t.visual.targetMusclesBadge}
             </p>
             <p className="text-primary mt-0.5 text-sm font-bold">
