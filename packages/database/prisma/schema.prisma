@@ -244,6 +244,8 @@ model ExerciseMedia {
 model WorkoutFolder {
   id        String   @id @default(uuid())
   userId    String
+  /// Starter folder id from the catalog while untouched; text is then served from the catalog.
+  systemKey String?
   name      String
   color     String   @default("#E8743B")
   sortOrder Int      @default(0)
@@ -260,6 +262,8 @@ model WorkoutFolder {
 model WorkoutTemplate {
   id                       String   @id @default(uuid())
   userId                   String
+  /// Starter template id from the catalog while untouched; text is then served from the catalog.
+  systemKey                String?
   folderId                 String?
   name                     String
   description              String?
@@ -304,6 +308,8 @@ model WorkoutTemplateExercise {
 model StretchingRoutine {
   id                       String   @id @default(uuid())
   userId                   String
+  /// Starter routine id from the catalog while untouched; text is then served from the catalog.
+  systemKey                String?
   name                     String
   description              String?
   targetArea               String   @default("Full Body")
