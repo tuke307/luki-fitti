@@ -458,54 +458,43 @@ export function DiaryAnalyticsView() {
         />
       </Card>
 
-      {/* Top KPI Cards (Strength Volume vs Stretching Duration strictly separated) */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Card className="p-4">
-          <p className="text-muted-foreground text-xs font-medium">
-            {t.diary.completedSessionsTitle}
-          </p>
-          <p className="tabular-nums text-primary mt-1 text-2xl font-semibold">
-            {stats.totalSessions}
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            {format(t.diary.strengthVsStretchSub, {
+      <dl className="bg-card divide-border/70 divide-y overflow-hidden rounded-[1.25rem]">
+        {[
+          {
+            label: t.diary.completedSessionsTitle,
+            value: String(stats.totalSessions),
+            sub: format(t.diary.strengthVsStretchSub, {
               strength: stats.strengthSessions,
               stretch: stats.stretchingSessions,
-            })}
-          </p>
-        </Card>
-
-        <Card className="p-4">
-          <p className="text-muted-foreground text-xs font-medium">{t.diary.workingVolumeTitle}</p>
-          <p className="tabular-nums mt-1 text-2xl font-semibold">
-            {stats.totalVolumeKg.toLocaleString()} <span className="text-sm font-normal">kg</span>
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-xs">{t.diary.workingVolumeSub}</p>
-        </Card>
-
-        <Card className="p-4">
-          <p className="text-muted-foreground text-xs font-medium">
-            {t.diary.completedSetsRepsTitle}
-          </p>
-          <p className="tabular-nums mt-1 text-2xl font-semibold">
-            {stats.totalSets}{' '}
-            <span className="text-muted-foreground text-xs font-normal">
-              ({stats.totalReps} {t.common.reps})
-            </span>
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-xs">{t.diary.completedSetsRepsSub}</p>
-        </Card>
-
-        <Card className="p-4">
-          <p className="text-muted-foreground text-xs font-medium">
-            {t.diary.stretchingMobilityTitle}
-          </p>
-          <p className="tabular-nums text-accent mt-1 text-2xl font-semibold">
-            {stats.totalStretchMinutes} <span className="text-sm font-normal">{t.common.min}</span>
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-xs">{t.diary.stretchingMobilitySub}</p>
-        </Card>
-      </div>
+            }),
+          },
+          {
+            label: t.diary.workingVolumeTitle,
+            value: `${stats.totalVolumeKg.toLocaleString()} kg`,
+            sub: t.diary.workingVolumeSub,
+          },
+          {
+            label: t.diary.completedSetsRepsTitle,
+            value: `${stats.totalSets} · ${stats.totalReps} ${t.common.reps}`,
+            sub: null,
+          },
+          {
+            label: t.diary.stretchingMobilityTitle,
+            value: `${stats.totalStretchMinutes} ${t.common.min}`,
+            sub: null,
+          },
+        ].map((row) => (
+          <div key={row.label} className="flex items-center justify-between gap-4 px-5 py-3.5">
+            <dt className="min-w-0">
+              <span className="block text-[17px]">{row.label}</span>
+              {row.sub && (
+                <span className="text-muted-foreground block text-[13px]">{row.sub}</span>
+              )}
+            </dt>
+            <dd className="text-muted-foreground shrink-0 text-[17px] tabular-nums">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
 
       {/* Period-Aware Training Activity Strip / Breakdown */}
       <Card className="space-y-3 rounded-[1.25rem] p-5">
