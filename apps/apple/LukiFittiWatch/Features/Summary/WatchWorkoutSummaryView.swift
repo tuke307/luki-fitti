@@ -21,8 +21,8 @@ public struct WatchWorkoutSummaryView: View {
                             .fill(LukiColors.neonLime)
                             .frame(width: 26, height: 26)
                         Image(systemName: "checkmark")
-                            .font(.system(size: 13, weight: .black))
-                            .foregroundStyle(.black)
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(LukiColors.accentForeground)
                     }
                     Text("Workout Completed!")
                         .font(.system(size: 14, weight: .bold))
@@ -31,18 +31,18 @@ public struct WatchWorkoutSummaryView: View {
                 }
 
                 Text(formattedDuration(session.activeDurationSeconds))
-                    .font(.system(size: 20, weight: .black, design: .monospaced))
+                    .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(LukiColors.neonLime)
 
                 dividerLine
 
                 // STRENGTH VOLUME
                 VStack(spacing: 3) {
-                    Text("STRENGTH VOLUME")
+                    Text("Strength Volume")
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(.white)
                     Text("\(Int(session.totalVolumeKg)) kg • \(session.totalSetsCompleted) sets")
-                        .font(.system(size: 14, weight: .black, design: .monospaced))
+                        .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(LukiColors.neonLime)
                 }
 
@@ -50,14 +50,14 @@ public struct WatchWorkoutSummaryView: View {
 
                 // CARDIO / STRETCHING
                 VStack(spacing: 3) {
-                    Text("CARDIO")
+                    Text("Cardio")
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(.white)
                     HStack(spacing: 6) {
                         Image(systemName: "figure.run")
                             .foregroundStyle(LukiColors.electricCyan)
                         Text(formattedDuration(session.totalStretchSeconds))
-                            .font(.system(size: 14, weight: .bold, design: .monospaced))
+                            .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(.white)
                     }
                 }
@@ -66,14 +66,14 @@ public struct WatchWorkoutSummaryView: View {
 
                 // CALORIES BURNED
                 VStack(spacing: 3) {
-                    Text("CALORIES BURNED")
+                    Text("Calories Burned")
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(.white)
                     HStack(spacing: 6) {
                         Image(systemName: "flame.fill")
                             .foregroundStyle(LukiColors.electricCyan)
                         Text("\(Int(session.activeCaloriesKcal ?? 0)) KCal")
-                            .font(.system(size: 14, weight: .bold, design: .monospaced))
+                            .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(.white)
                     }
                 }
@@ -82,18 +82,18 @@ public struct WatchWorkoutSummaryView: View {
 
                 // HEART RATE
                 VStack(spacing: 3) {
-                    Text("HEART RATE")
+                    Text("Heart Rate")
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(.white)
                     Text("❤️ \(session.avgHeartRateBpm.map(String.init) ?? "-") avg · \(session.maxHeartRateBpm.map(String.init) ?? "-") max")
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(LukiColors.heartRose)
                 }
 
                 Button(action: onDismiss) {
                     Text("Done")
-                        .font(.system(size: 13, weight: .black))
-                        .foregroundStyle(.black)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(LukiColors.accentForeground)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                         .background(RoundedRectangle(cornerRadius: 14).fill(LukiColors.neonLime))

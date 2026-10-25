@@ -86,7 +86,7 @@ public struct WatchActiveWorkoutView: View {
                         .frame(height: 54)
                     Image(systemName: systemImage)
                         .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(.black)
+                        .foregroundStyle(LukiColors.accentForeground)
                 }
                 Text(title)
                     .font(.system(size: 11, weight: .semibold))
@@ -129,7 +129,7 @@ public struct WatchActiveWorkoutView: View {
                             ? String(format: "%d:%02d", restStatus.remainingSeconds / 60, restStatus.remainingSeconds % 60)
                             : formattedElapsed(session?.activeDurationSeconds ?? 10)
                     )
-                    .font(.system(size: 13, weight: .black, design: .monospaced))
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(LukiColors.neonLime)
 
                     Text(currentExercise?.exerciseNameSnapshot ?? "Workout")
@@ -140,19 +140,19 @@ public struct WatchActiveWorkoutView: View {
 
                     HStack(spacing: 10) {
                         VStack(alignment: .trailing, spacing: 0) {
-                            Text("SETS")
+                            Text("Sets")
                                 .font(.system(size: 8, weight: .bold))
                                 .foregroundStyle(.secondary)
                             Text("\(min(completedSetsCount + 1, totalSetsCount))/\(totalSetsCount)")
-                                .font(.system(size: 13, weight: .heavy, design: .monospaced))
+                                .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(.white)
                         }
                         VStack(alignment: .trailing, spacing: 0) {
-                            Text("REPS")
+                            Text("Reps")
                                 .font(.system(size: 8, weight: .bold))
                                 .foregroundStyle(.secondary)
                             Text("\(activeSet?.reps ?? currentExercise?.targetRepsMin ?? 12)")
-                                .font(.system(size: 13, weight: .heavy, design: .monospaced))
+                                .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(.white)
                         }
                     }
@@ -185,7 +185,7 @@ public struct WatchActiveWorkoutView: View {
                                         ? "\(activeSet?.durationSeconds ?? 45)"
                                         : String(format: "%g", activeSet?.weight ?? currentExercise?.targetWeight ?? 50)
                                 )
-                                .font(.system(size: 16, weight: .black, design: .monospaced))
+                                .font(.system(size: 16, weight: .bold))
                                 .foregroundStyle(.white)
                             }
                         }
@@ -206,7 +206,7 @@ public struct WatchActiveWorkoutView: View {
                     Text("❤️")
                         .font(.system(size: 13))
                     Text(viewModel.healthCoordinator.currentHeartRateBpm.map(String.init) ?? "-")
-                        .font(.system(size: 15, weight: .bold, design: .monospaced))
+                        .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(.white)
                 }
                 .padding(.bottom, 4)
@@ -237,8 +237,8 @@ public struct WatchActiveWorkoutView: View {
                         Spacer()
                     }
 
-                    Text(currentExercise.exerciseNameSnapshot.uppercased())
-                        .font(.system(size: 13, weight: .black))
+                    Text(currentExercise.exerciseNameSnapshot)
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(LukiColors.neonLime)
 
                     let secondaryText = (catalogInfo?.secondaryMuscleGroups ?? [])
