@@ -633,7 +633,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
 
                               <div className="min-w-0 space-y-1">
                                 <p className="truncate text-[15px] font-medium">
-                                  {exObj?.name ?? 'Exercise'}
+                                  {exObj?.name ?? t.common.exercise}
                                 </p>
                                 <div className="flex flex-wrap items-center gap-1.5">
                                   <span className="text-muted-foreground text-[13px] tabular-nums">
@@ -694,7 +694,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                         <span className="text-muted-foreground tabular-nums">
                           {globalIndex + 1}.{' '}
                         </span>
-                        {exObj?.name ?? 'Exercise'}
+                        {exObj?.name ?? t.common.exercise}
                       </p>
                       <p className="text-muted-foreground truncate text-[13px] tabular-nums">
                         {[

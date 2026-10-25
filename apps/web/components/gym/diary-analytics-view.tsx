@@ -624,7 +624,8 @@ export function DiaryAnalyticsView() {
               <TrendingUp className="text-primary h-4 w-4" />
               {selectedExerciseId !== 'ALL'
                 ? format(t.diary.exerciseProgressionTitle, {
-                    name: catalog.find((c) => c.id === selectedExerciseId)?.name ?? 'Exercise',
+                    name:
+                      catalog.find((c) => c.id === selectedExerciseId)?.name ?? t.common.exercise,
                   })
                 : t.diary.sessionVolumeProgressionTitle}
             </h2>
