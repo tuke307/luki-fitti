@@ -7,6 +7,7 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { format, resolveConfig } from 'prettier';
 import {
   buildStarterStretchingRoutines,
   buildStarterWorkouts,
@@ -33,7 +34,11 @@ const catalog = Object.fromEntries(
     },
   ]),
 );
-const content = `${JSON.stringify(catalog, null, 2)}\n`;
+// Formatted like the pre-commit hook formats JSON, so committing never changes the output.
+const content = await format(JSON.stringify(catalog), {
+  ...(await resolveConfig(OUTPUT)),
+  filepath: OUTPUT,
+});
 
 if (process.argv.includes('--check')) {
   if (readFileSync(OUTPUT, 'utf8') !== content) {
