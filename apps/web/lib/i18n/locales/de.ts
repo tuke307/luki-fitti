@@ -354,6 +354,7 @@ export const de = {
     completedSetsRepsSub: 'Alle Übungen',
     stretchingMobilityTitle: 'Dehnen',
     stretchingMobilitySub: 'Gesamtzeit',
+    thisWeekTitle: 'Diese Woche',
     last7DaysTitle: 'Letzte 7 Tage',
     last30DaysTitle: 'Letzte 30 Tage',
     last12MonthsTitle: 'Letzte 12 Monate',
