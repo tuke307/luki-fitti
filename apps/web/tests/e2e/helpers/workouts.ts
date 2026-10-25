@@ -14,7 +14,7 @@ export function templateCardByName(page: Page, name: string): Locator {
 export async function gotoWorkoutsTab(page: Page): Promise<void> {
   await navigateToTab(page, 'workouts');
   await expect(
-    page.getByRole('heading', { name: /Workout Templates & Splits|Trainingspläne & Splits/i }),
+    page.getByRole('heading', { name: 'Workouts', exact: true }),
   ).toBeVisible({ timeout: 10_000 });
 }
 
@@ -24,14 +24,14 @@ export async function createFolder(page: Page, name: string): Promise<void> {
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
   await dialog.locator('#folder-name').fill(name);
-  await clickDialogButton(page, /Save Folder|Ordner speichern/i);
+  await clickDialogButton(page, /^(Save|Speichern)$/);
   await expect(page.getByRole('heading', { name, exact: true })).toBeVisible({ timeout: 10_000 });
 }
 
 /** Delete a workout folder by name and confirm the destructive alert dialog. */
 export async function deleteFolderByName(page: Page, name: string): Promise<void> {
   await page.getByRole('button', { name: `Delete folder ${name}` }).click();
-  await confirmAlertDialog(page, /Confirm Delete|Löschen bestätigen/i);
+  await confirmAlertDialog(page, /^(Delete|Löschen)$/);
   await expect(page.getByRole('heading', { name, exact: true })).not.toBeVisible({
     timeout: 10_000,
   });
@@ -49,7 +49,7 @@ export async function createWorkoutTemplate(
   if (options.description) {
     await dialog.locator('#tpl-desc').fill(options.description);
   }
-  await clickDialogButton(page, /Create Workout Template|Vorlage erstellen/i);
+  await clickDialogButton(page, /^(Create Workout|Workout erstellen)$/);
   await expect(templateCardByName(page, options.name)).toBeVisible({ timeout: 10_000 });
 }
 
@@ -57,7 +57,7 @@ export async function createWorkoutTemplate(
 export async function deleteTemplateByName(page: Page, name: string): Promise<void> {
   const card = templateCardByName(page, name);
   await card.getByTestId('template-action-delete').click();
-  await confirmAlertDialog(page, /Confirm Delete|Löschen bestätigen/i);
+  await confirmAlertDialog(page, /^(Delete|Löschen)$/);
   await expect(card).not.toBeVisible({ timeout: 10_000 });
 }
 

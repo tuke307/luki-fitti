@@ -22,7 +22,7 @@ test.describe('Active Session Execution & Rest Timer', () => {
     await createWorkoutTemplate(page, { name: WORKOUT_NAME });
     await startWorkoutByName(page, WORKOUT_NAME);
 
-    // Navigate to Home and verify the "Session In Progress" callout banner appears
+    // Navigate to Today and verify the "Session In Progress" callout banner appears
     await navigateToTab(page, 'home');
     await expect(page.getByText('Session In Progress')).toBeVisible();
     await page.getByRole('button', { name: /Resume Active Session/i }).click();
@@ -60,16 +60,16 @@ test.describe('Active Session Execution & Rest Timer', () => {
     await page.getByRole('button', { name: 'Pause', exact: true }).first().click();
     await expect(page.getByText(/^Paused$/i)).toBeVisible();
     await page.getByRole('button', { name: /Resume/i }).first().click();
-    await expect(page.getByText(/^Live Session$/i)).toBeVisible();
+    await expect(page.getByText(/^In Progress$/i)).toBeVisible();
 
     // Finish workout and verify Trophy summary card
     await finishActiveWorkout(page, 'Great E2E pump!');
     await expect(page.getByRole('heading', { name: new RegExp(WORKOUT_NAME) })).toBeVisible();
 
     // Navigate to Training Diary from Trophy card
-    await page.getByRole('button', { name: /View in Training Diary/i }).click();
+    await page.getByRole('button', { name: /View in History/i }).click();
     await expect(
-      page.getByRole('heading', { name: 'Training Diary & Progress Analytics' }),
+      page.getByRole('heading', { name: 'History', exact: true }),
     ).toBeVisible();
     await expect(page.getByTestId(`diary-session-card-${WORKOUT_NAME}`)).toBeVisible();
   });
@@ -81,9 +81,9 @@ test.describe('Active Session Execution & Rest Timer', () => {
     await startWorkoutByName(page, WORKOUT_NAME);
 
     await page.getByRole('button', { name: /Abandon Session/i }).click();
-    await confirmAlertDialog(page, /Discard Session/i);
+    await confirmAlertDialog(page, /^(Discard|Verwerfen)$/);
 
-    await expect(page.getByRole('heading', { name: 'Workout Templates & Splits' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Workouts', exact: true })).toBeVisible();
     await navigateToTab(page, 'diary');
     await expect(page.getByTestId(`diary-session-card-${WORKOUT_NAME}`)).not.toBeVisible();
   });

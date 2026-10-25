@@ -43,7 +43,7 @@ test.describe('Workout Folders & Template Builder CRUD', () => {
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     await dialog.locator('#folder-name').fill(FOLDER_RENAMED);
-    await clickDialogButton(page, /Save Folder/i);
+    await clickDialogButton(page, /^(Save|Speichern)$/);
 
     await expect(page.getByRole('heading', { name: FOLDER_RENAMED, exact: true })).toBeVisible();
 
@@ -68,7 +68,7 @@ test.describe('Workout Folders & Template Builder CRUD', () => {
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     await dialog.locator('#tpl-name').fill(TPL_EDITED);
-    await clickDialogButton(page, /Save Changes/i);
+    await clickDialogButton(page, /^(Save|Speichern)$/);
 
     const editedCard = templateCardByName(page, TPL_EDITED);
     await expect(editedCard).toBeVisible();
