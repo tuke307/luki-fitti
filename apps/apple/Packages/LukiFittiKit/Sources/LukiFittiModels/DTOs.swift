@@ -361,7 +361,7 @@ public struct WorkoutFolderDto: Codable, Sendable, Equatable, Hashable, Identifi
         id: String = UUID().uuidString,
         userId: String = "local-user",
         name: String,
-        color: String = "#CCFF00",
+        color: String = "#E8743B",
         sortOrder: Int = 0,
         templates: [WorkoutTemplateDto] = []
     ) {

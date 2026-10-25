@@ -4,11 +4,10 @@ import React, { useState } from 'react';
 import { Input } from '@luki-fitti/ui/components/ui/input';
 import { cn } from '@luki-fitti/ui/lib/utils';
 
-interface BaseNumberInputProps
-  extends Omit<
-    React.ComponentProps<'input'>,
-    'type' | 'value' | 'onChange' | 'min' | 'max' | 'step'
-  > {
+interface BaseNumberInputProps extends Omit<
+  React.ComponentProps<'input'>,
+  'type' | 'value' | 'onChange' | 'min' | 'max' | 'step'
+> {
   min?: number;
   max?: number;
   step?: number | string;
@@ -59,9 +58,7 @@ export function NumberInput(props: NumberInputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [draft, setDraft] = useState<string>(() => formatExternal(value));
 
-  const isDecimal =
-    step !== undefined &&
-    (String(step).includes('.') || String(step) === 'any');
+  const isDecimal = step !== undefined && (String(step).includes('.') || String(step) === 'any');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(',', '.');
@@ -150,12 +147,7 @@ export function NumberInput(props: NumberInputProps) {
   };
 
   if (variant === 'bare') {
-    return (
-      <input
-        {...sharedProps}
-        className={cn(sharedProps.className, 'max-sm:text-base')}
-      />
-    );
+    return <input {...sharedProps} className={cn(sharedProps.className, 'max-sm:text-base')} />;
   }
 
   return <Input {...sharedProps} />;

@@ -1,10 +1,4 @@
-import {
-  EquipmentType,
-  ExerciseCategory,
-  ExerciseType,
-  MuscleGroup,
-  WeightUnit,
-} from '../enums';
+import { EquipmentType, ExerciseCategory, ExerciseType, MuscleGroup, WeightUnit } from '../enums';
 import type { ExerciseDto } from '../schemas';
 
 export const INITIAL_EXERCISE_CATALOG: ExerciseDto[] = [
@@ -398,8 +392,7 @@ export const INITIAL_EXERCISE_CATALOG: ExerciseDto[] = [
     slug: 'barbell-wrist-curl',
     userId: null,
     name: 'Seated Forearm Wrist Curl',
-    description:
-      'Direct wrist flexion movement for forearm flexor hypertrophy and grip endurance.',
+    description: 'Direct wrist flexion movement for forearm flexor hypertrophy and grip endurance.',
     instructions: [
       'Rest your forearms on your thighs or a flat bench with wrists hanging over the edge, palms up.',
       'Let the bar roll down toward your fingers, then curl your wrists upward as high as possible.',
@@ -612,7 +605,15 @@ export const INITIAL_EXERCISE_CATALOG: ExerciseDto[] = [
     secondaryMuscleGroups: [MuscleGroup.QUADRICEPS, MuscleGroup.HIP_FLEXORS],
     equipment: EquipmentType.MACHINE,
     recommendedDurationSeconds: null,
-    tags: ['hüftabduktion', 'hip adduction', 'hip abduction', 'adduktoren', 'abduktoren', 'glutes', 'legs'],
+    tags: [
+      'hüftabduktion',
+      'hip adduction',
+      'hip abduction',
+      'adduktoren',
+      'abduktoren',
+      'glutes',
+      'legs',
+    ],
     isSystem: true,
     alternativeExerciseIds: ['ex-barbell-hip-thrust', 'ex-bulgarian-split-squat'],
   },
@@ -689,8 +690,7 @@ export const INITIAL_EXERCISE_CATALOG: ExerciseDto[] = [
     slug: 'cable-crunch',
     userId: null,
     name: 'Kneeling Cable Crunch',
-    description:
-      'Weighted spinal flexion allowing progressive overload of the rectus abdominis.',
+    description: 'Weighted spinal flexion allowing progressive overload of the rectus abdominis.',
     instructions: [
       'Kneel below a high pulley holding a rope attachment beside your temples.',
       'Flex your spine by curling your sternum toward your pelvis while keeping your hips stationary.',
@@ -844,8 +844,7 @@ export const INITIAL_EXERCISE_CATALOG: ExerciseDto[] = [
     slug: 'doorway-pec-stretch',
     userId: null,
     name: 'Doorway Pec Major & Minor Stretch',
-    description:
-      'Static stretch releasing tight chest and anterior deltoid fascia.',
+    description: 'Static stretch releasing tight chest and anterior deltoid fascia.',
     instructions: [
       'Place your forearms against a doorway or power rack upright with elbows at 90-110 degrees.',
       'Step gently through the frame until a comfortable stretch is felt across the chest, holding for 45 seconds.',
@@ -965,7 +964,13 @@ export const INITIAL_EXERCISE_CATALOG: ExerciseDto[] = [
     secondaryMuscleGroups: [MuscleGroup.CALVES, MuscleGroup.GLUTES, MuscleGroup.HIP_FLEXORS],
     equipment: EquipmentType.NONE,
     recommendedDurationSeconds: 60,
-    tags: ['deep squat hold', 'sprunggelenk mobilität', 'ankle mobility', 'squat warmup', 'mobility'],
+    tags: [
+      'deep squat hold',
+      'sprunggelenk mobilität',
+      'ankle mobility',
+      'squat warmup',
+      'mobility',
+    ],
     isSystem: true,
     alternativeExerciseIds: ['ex-standing-wall-calf-stretch'],
   },
@@ -1206,7 +1211,7 @@ export const INITIAL_EXERCISE_CATALOG: ExerciseDto[] = [
 export const DEFAULT_STARTER_FOLDER = {
   id: 'folder-4er-split',
   name: '4er Split (Hypertrophy)',
-  color: '#CCFF00',
+  color: '#5E9C76',
   sortOrder: 0,
 };
 
@@ -1215,13 +1220,13 @@ export const DEFAULT_STARTER_FOLDERS = [
   {
     id: 'folder-ppl-split',
     name: 'Push / Pull / Legs (PPL)',
-    color: '#00E5FF',
+    color: '#3A7BD5',
     sortOrder: 1,
   },
   {
     id: 'folder-5er-brosplit',
     name: '5er Split (Bro Split)',
-    color: '#A855F7',
+    color: '#8E6CC4',
     sortOrder: 2,
   },
 ];
@@ -1231,7 +1236,8 @@ export const DEFAULT_STARTER_TEMPLATES = [
     id: 'tpl-chest-triceps',
     folderId: 'folder-4er-split',
     name: 'Day 1 — Chest & Triceps',
-    description: 'Heavy horizontal & incline pressing paired with long-head and lateral triceps work.',
+    description:
+      'Heavy horizontal & incline pressing paired with long-head and lateral triceps work.',
     estimatedDurationMinutes: 60,
     sortOrder: 0,
     exercises: [
@@ -1326,7 +1332,8 @@ export const DEFAULT_STARTER_TEMPLATES = [
     id: 'tpl-back-biceps',
     folderId: 'folder-4er-split',
     name: 'Day 2 — Back & Biceps',
-    description: 'Vertical lats width, horizontal mid-back density, and lengthened-bias biceps curls.',
+    description:
+      'Vertical lats width, horizontal mid-back density, and lengthened-bias biceps curls.',
     estimatedDurationMinutes: 65,
     sortOrder: 1,
     exercises: [
@@ -1596,7 +1603,8 @@ export const DEFAULT_STARTER_TEMPLATES = [
     id: 'tpl-ppl-push',
     folderId: 'folder-ppl-split',
     name: 'Push — Chest, Shoulders & Triceps',
-    description: 'Complete anterior pressing session hitting chest, front/lateral delts, and triceps.',
+    description:
+      'Complete anterior pressing session hitting chest, front/lateral delts, and triceps.',
     estimatedDurationMinutes: 65,
     sortOrder: 0,
     exercises: [
@@ -1786,7 +1794,8 @@ export const DEFAULT_STARTER_TEMPLATES = [
     id: 'tpl-ppl-legs',
     folderId: 'folder-ppl-split',
     name: 'Legs — Quads, Hamstrings, Glutes & Calves',
-    description: 'High-intensity lower-body session balancing quad knee flexion and posterior chain hinge.',
+    description:
+      'High-intensity lower-body session balancing quad knee flexion and posterior chain hinge.',
     estimatedDurationMinutes: 70,
     sortOrder: 2,
     exercises: [
@@ -2246,7 +2255,8 @@ export const DEFAULT_STARTER_TEMPLATES = [
     id: 'tpl-bro-arms',
     folderId: 'folder-5er-brosplit',
     name: 'Day 5 — Arm Blaster (Biceps & Triceps)',
-    description: 'Dedicated arm hypertrophy with antagonist biceps/triceps supersets and forearm work.',
+    description:
+      'Dedicated arm hypertrophy with antagonist biceps/triceps supersets and forearm work.',
     estimatedDurationMinutes: 55,
     sortOrder: 4,
     exercises: [
@@ -2570,8 +2580,7 @@ export const DEFAULT_STRETCHING_ROUTINES = [
   {
     id: 'stretch-lumbar-glute-decompression',
     name: 'Lower Back Decompression & Glute Release',
-    description:
-      'Relieves lumbar spine compression after squats, deadlifts, or long travel days.',
+    description: 'Relieves lumbar spine compression after squats, deadlifts, or long travel days.',
     targetArea: 'Lumbar & Glutes',
     estimatedDurationSeconds: 540,
     exercises: [
@@ -2882,7 +2891,8 @@ export function resolveExerciseMedia(exercise: {
   }
 
   const rawSlug = (exercise.slug || exercise.id || '').replace(/^ex-/, '').toLowerCase();
-  let folder = EXERCISE_DB_FOLDER_BY_SLUG[rawSlug] || EXERCISE_DB_FOLDER_BY_SLUG[exercise.slug ?? ''];
+  let folder =
+    EXERCISE_DB_FOLDER_BY_SLUG[rawSlug] || EXERCISE_DB_FOLDER_BY_SLUG[exercise.slug ?? ''];
 
   if (!folder && exercise.name) {
     const q = exercise.name.toLowerCase();
@@ -2895,7 +2905,12 @@ export function resolveExerciseMedia(exercise: {
     else if (q.includes('wadenheben sitzend') || q.includes('seated calf'))
       folder = 'Seated_Calf_Raise';
     else if (q.includes('calf') || q.includes('waden')) folder = 'Standing_Calf_Raises';
-    else if (q.includes('addukt') || q.includes('abdukt') || q.includes('adduction') || q.includes('abduction'))
+    else if (
+      q.includes('addukt') ||
+      q.includes('abdukt') ||
+      q.includes('adduction') ||
+      q.includes('abduction')
+    )
       folder = 'Thigh_Abductor';
     else if (q.includes('incline') && q.includes('bench'))
       folder = 'Barbell_Incline_Bench_Press_-_Medium_Grip';
@@ -2965,4 +2980,3 @@ for (const ex of INITIAL_EXERCISE_CATALOG) {
     ex.media = resolveExerciseMedia(ex);
   }
 }
-

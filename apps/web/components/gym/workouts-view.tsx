@@ -62,6 +62,9 @@ import {
   formatRestDurationMinSec,
   groupExercisesIntoBlocks,
   type WorkoutExerciseSuggestion,
+  DEFAULT_FOLDER_COLOR,
+  FOLDER_COLOR_PALETTE,
+  resolveFolderColor,
 } from '@luki-fitti/common/utils/client';
 import { SessionStatus } from '@luki-fitti/common/enums';
 import { ExercisePicker } from './exercise-picker';
@@ -106,7 +109,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [folderName, setFolderName] = useState('');
-  const [folderColor, setFolderColor] = useState('#CCFF00');
+  const [folderColor, setFolderColor] = useState<string>(DEFAULT_FOLDER_COLOR);
 
   const [editingTemplate, setEditingTemplate] = useState<WorkoutTemplateDto | null>(null);
   const [showTemplateBuilder, setShowTemplateBuilder] = useState(false);
@@ -494,7 +497,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                                   )}
                                 </div>
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className="bg-accent/20 text-accent tabular-nums inline-flex items-center rounded-lg px-2 py-0.5 text-xs font-semibold">
+                                  <span className="bg-accent/12 text-accent tabular-nums inline-flex items-center rounded-lg px-2 py-0.5 text-xs font-semibold">
                                     {formatTargetPillText(ex)}
                                   </span>
                                   {altNames.length > 0 && (
@@ -555,7 +558,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="bg-accent/20 text-accent tabular-nums inline-flex items-center rounded-lg px-2 py-0.5 text-xs font-semibold">
+                        <span className="bg-accent/12 text-accent tabular-nums inline-flex items-center rounded-lg px-2 py-0.5 text-xs font-semibold">
                           {formatTargetPillText(ex)}
                         </span>
                         {altNames.length > 0 && (
@@ -628,7 +631,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               aria-label={`Move ${tpl.name} to folder`}
               value={tpl.folderId ?? ''}
               onChange={(e) => void moveTemplate(tpl.id, e.target.value || null)}
-              className="bg-secondary h-8 max-w-[165px] truncate text-xs"
+              className="max-w-[180px]"
             >
               <option value="">{t.workouts.unfiledOption}</option>
               {folders.map((f) => (
@@ -707,7 +710,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
             onClick={() => {
               setEditingFolderId(null);
               setFolderName('');
-              setFolderColor('#CCFF00');
+              setFolderColor(DEFAULT_FOLDER_COLOR);
               setShowFolderModal(true);
             }}
           >
@@ -751,7 +754,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                   )}
                   <span
                     className="h-3.5 w-3.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: folder.color || '#CCFF00' }}
+                    style={{ backgroundColor: resolveFolderColor(folder.color) }}
                   />
                   <Folder className="text-primary h-5 w-5 shrink-0" />
                   <h2 className="font-display min-w-0 flex-1 truncate text-base font-semibold tracking-tight sm:text-lg">
@@ -824,7 +827,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                     onClick={() => {
                       setEditingFolderId(folder.id);
                       setFolderName(folder.name);
-                      setFolderColor(folder.color);
+                      setFolderColor(resolveFolderColor(folder.color));
                       setShowFolderModal(true);
                     }}
                     className="text-muted-foreground hover:text-foreground"
@@ -925,7 +928,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">{t.workouts.accentColorLabel}</Label>
               <div className="flex gap-2">
-                {['#CCFF00', '#00E5FF', '#FF6B00', '#A855F7', '#22C55E'].map((c) => (
+                {FOLDER_COLOR_PALETTE.map(({ hex: c }) => (
                   <button
                     key={c}
                     type="button"
