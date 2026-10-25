@@ -6,7 +6,9 @@ import LukiFittiDomain
 public struct WorkoutsView: View {
     @Bindable public var viewModel: LukiAppViewModel
 
-    @State private var collapsedFolderIds: Set<String> = []
+    @State private var expandedFolderIds: Set<String> = []
+    @State private var expandedTemplateIds: Set<String> = []
+    @State private var isEditing = false
 
     // Folder Create / Rename Modal State
     @State private var showingFolderModal = false
@@ -50,26 +52,104 @@ public struct WorkoutsView: View {
         return ids
     }
 
-    private var areAllCollapsed: Bool {
-        !allFolderIds.isEmpty && allFolderIds.allSatisfy { collapsedFolderIds.contains($0) }
+    private var areAllExpanded: Bool {
+        !allFolderIds.isEmpty && allFolderIds.allSatisfy { expandedFolderIds.contains($0) }
     }
 
     public var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                headerBar
-
-                ForEach(Array(viewModel.store.folders.enumerated()), id: \.element.id) { idx, folder in
-                    folderSection(folder, index: idx)
-                }
-
-                if !viewModel.store.unfiledTemplates.isEmpty {
-                    unfiledSection
+        List {
+            if allFolderIds.count > 1, !isEditing {
+                Section {
+                    EmptyView()
+                } header: {
+                    HStack {
+                        Text("Your plans, grouped by split.")
+                            .textCase(nil)
+                        Spacer()
+                        Button(areAllExpanded ? "Collapse All" : "Expand All") {
+                            expandedFolderIds = areAllExpanded ? [] : Set(allFolderIds)
+                        }
+                        .textCase(nil)
+                        .font(.subheadline.weight(.medium))
+                        .accessibilityIdentifier("ios.workouts.collapseAllButton")
+                    }
                 }
             }
-            .padding(16)
+
+            ForEach(Array(viewModel.store.folders.enumerated()), id: \.element.id) { idx, folder in
+                Section {
+                    folderHeaderRow(folder, index: idx)
+                    if expandedFolderIds.contains(folder.id) {
+                        if folder.templates.isEmpty {
+                            Text("No workouts here yet.")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ForEach(folder.templates) { templateRow($0) }
+                        }
+                        if isEditing {
+                            Button {
+                                openNewTemplateBuilder(defaultFolderId: folder.id)
+                            } label: {
+                                Label("Add Workout", systemImage: "plus.circle.fill")
+                            }
+                        }
+                    }
+                }
+            }
+
+            if !viewModel.store.unfiledTemplates.isEmpty {
+                Section {
+                    Button {
+                        toggleFolder("__unfiled__")
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "tray")
+                                .foregroundStyle(.secondary)
+                            Text("Unfiled Workouts")
+                                .font(.headline)
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Text("\(viewModel.store.unfiledTemplates.count)")
+                                .foregroundStyle(.secondary)
+                            chevron(expanded: expandedFolderIds.contains("__unfiled__"))
+                        }
+                    }
+                    if expandedFolderIds.contains("__unfiled__") {
+                        ForEach(viewModel.store.unfiledTemplates) { templateRow($0) }
+                    }
+                }
+            }
         }
-        .background(LukiColors.darkBackground)
+        .listStyle(.insetGrouped)
+        .listSectionSpacing(14)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button(isEditing ? "Done" : "Edit") {
+                    withAnimation { isEditing.toggle() }
+                }
+                .accessibilityIdentifier("ios.workouts.editToggle")
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button {
+                        openNewTemplateBuilder(defaultFolderId: viewModel.store.folders.first?.id)
+                    } label: {
+                        Label("New Workout", systemImage: "dumbbell")
+                    }
+                    .accessibilityIdentifier("ios.workouts.newWorkoutButton")
+                    Button {
+                        openCreateFolderModal()
+                    } label: {
+                        Label("New Folder", systemImage: "folder.badge.plus")
+                    }
+                    .accessibilityIdentifier("ios.workouts.newFolderButton")
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("Add")
+                .accessibilityIdentifier("ios.workouts.addMenu")
+            }
+        }
         .sheet(isPresented: $showingFolderModal) {
             folderEditorSheet
         }
@@ -95,7 +175,7 @@ public struct WorkoutsView: View {
             )
         }
         .alert(
-            deleteTarget?.isFolder == true ? "Delete Folder?" : "Delete Workout Template?",
+            deleteTarget?.isFolder == true ? "Delete folder?" : "Delete workout?",
             isPresented: Binding(
                 get: { deleteTarget != nil },
                 set: { if !$0 { deleteTarget = nil } }
@@ -105,7 +185,7 @@ public struct WorkoutsView: View {
                 Button("Cancel", role: .cancel) {
                     deleteTarget = nil
                 }
-                Button("Confirm Delete", role: .destructive) {
+                Button("Delete", role: .destructive) {
                     if target.isFolder {
                         deleteFolder(target.id)
                     } else {
@@ -118,287 +198,179 @@ public struct WorkoutsView: View {
             if let target = deleteTarget {
                 Text(
                     target.isFolder
-                        ? "Are you sure you want to delete \"\(target.name)\"? Workouts inside this folder will be moved to Unfiled Workouts."
-                        : "Are you sure you want to delete \"\(target.name)\"? Your historical training sessions and diary entries will NOT be deleted."
+                        ? "\"\(target.name)\" will be deleted. Its workouts move to Unfiled."
+                        : "\"\(target.name)\" will be deleted. Your past workouts stay in History."
                 )
             }
         }
     }
 
-    // MARK: - Top Header Bar
+    // MARK: - Rows
 
-    private var headerBar: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Workout Templates & Splits")
-                .font(.title2.bold())
-                .foregroundStyle(.primary)
-            Text("Reorderable split folders, superset pairings, session counters, and machine-busy backups")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            HStack(spacing: 8) {
-                if allFolderIds.count > 1 {
-                    Button {
-                        if areAllCollapsed {
-                            collapsedFolderIds.removeAll()
-                        } else {
-                            collapsedFolderIds = Set(allFolderIds)
-                        }
-                    } label: {
-                        Label(
-                            areAllCollapsed ? "Expand All" : "Collapse All",
-                            systemImage: areAllCollapsed ? "chevron.up.chevron.down" : "arrow.down.right.and.arrow.up.left"
-                        )
-                        .font(.caption.bold())
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 7)
-                        .background(Capsule().fill(LukiColors.fill))
-                        .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("ios.workouts.collapseAllButton")
-                }
-
-                Button {
-                    openCreateFolderModal()
-                } label: {
-                    Label("New Folder", systemImage: "folder.badge.plus")
-                        .font(.caption.bold())
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(Capsule().fill(LukiColors.darkCard))
-                        .foregroundStyle(.primary)
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("ios.workouts.newFolderButton")
-
-                Button {
-                    openNewTemplateBuilder(defaultFolderId: viewModel.store.folders.first?.id)
-                } label: {
-                    Label("New Workout", systemImage: "plus")
-                        .font(.caption.bold())
-                        .foregroundStyle(LukiColors.accentForeground)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(Capsule().fill(LukiColors.neonLime))
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("ios.workouts.newWorkoutButton")
+    private func toggleFolder(_ id: String) {
+        withAnimation(.smooth(duration: 0.25)) {
+            if expandedFolderIds.contains(id) {
+                expandedFolderIds.remove(id)
+            } else {
+                expandedFolderIds.insert(id)
             }
         }
     }
 
-    // MARK: - Folder Section
-
-    private func folderSection(_ folder: WorkoutFolderDto, index: Int) -> some View {
-        let isCollapsed = collapsedFolderIds.contains(folder.id)
-        let folderTemplateIds = Set(folder.templates.map(\.id))
-        let folderSessions = viewModel.store.historySessions.filter {
-            if let tid = $0.templateId { return folderTemplateIds.contains(tid) }
-            return false
-        }
-        let lastDate = folderSessions.first.map { String($0.startedAt.prefix(10)) } ?? "—"
-
-        return VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 8) {
-                Button {
-                    if isCollapsed {
-                        collapsedFolderIds.remove(folder.id)
-                    } else {
-                        collapsedFolderIds.insert(folder.id)
-                    }
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
-                            .font(.caption.bold())
-                            .foregroundStyle(.secondary)
-                        Circle()
-                            .fill(LukiColors.folderColor(folder.color))
-                            .frame(width: 10, height: 10)
-                        Image(systemName: "folder.fill")
-                            .foregroundStyle(LukiColors.neonLime)
-                        Text(folder.name)
-                            .font(.headline.bold())
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                        Spacer()
-                        Text("\(folder.templates.count) workouts")
-                            .font(.caption2.bold().monospacedDigit())
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Capsule().fill(LukiColors.fill))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .buttonStyle(.plain)
-
-                HStack(spacing: 8) {
-                    Text("\(folderSessions.count) total sessions • Last: \(lastDate)")
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(.secondary)
-
-                    Spacer()
-
-                    Button {
-                        reorderFolder(folder.id, moveUp: true)
-                    } label: {
-                        Image(systemName: "arrow.up")
-                            .font(.caption2.bold())
-                            .frame(width: 24, height: 24)
-                            .background(RoundedRectangle(cornerRadius: 6).fill(LukiColors.fill))
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(index == 0)
-
-                    Button {
-                        reorderFolder(folder.id, moveUp: false)
-                    } label: {
-                        Image(systemName: "arrow.down")
-                            .font(.caption2.bold())
-                            .frame(width: 24, height: 24)
-                            .background(RoundedRectangle(cornerRadius: 6).fill(LukiColors.fill))
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(index == viewModel.store.folders.count - 1)
-
-                    Button {
-                        openNewTemplateBuilder(defaultFolderId: folder.id)
-                    } label: {
-                        Text("+ Workout")
-                            .font(.caption2.bold())
-                            .foregroundStyle(LukiColors.neonLime)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Capsule().fill(LukiColors.neonLime.opacity(0.15)))
-                    }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        openRenameFolderModal(folder)
-                    } label: {
-                        Text("Rename")
-                            .font(.caption2.bold())
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 4)
-                    }
-                    .buttonStyle(.plain)
-
-                    Button(role: .destructive) {
-                        deleteTarget = DeleteTarget(id: folder.id, name: folder.name, isFolder: true)
-                    } label: {
-                        Image(systemName: "trash")
-                            .font(.caption2)
-                            .foregroundStyle(.red.opacity(0.85))
-                            .frame(width: 24, height: 24)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-
-            if !isCollapsed {
-                if folder.templates.isEmpty {
-                    Text("No workouts in this folder yet. Tap \"+ Workout\" or move an existing template here.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(16)
-                        .background(RoundedRectangle(cornerRadius: 12).stroke(LukiColors.separator, style: StrokeStyle(lineWidth: 1, dash: [4])))
-                } else {
-                    ForEach(folder.templates) { template in
-                        templateCard(template)
-                    }
-                }
-            }
-        }
-        .padding(14)
-        .background(RoundedRectangle(cornerRadius: 18).fill(LukiColors.darkCard))
+    private func chevron(expanded: Bool) -> some View {
+        Image(systemName: "chevron.right")
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(.tertiary)
+            .rotationEffect(.degrees(expanded ? 90 : 0))
     }
 
-    private var unfiledSection: some View {
-        let isCollapsed = collapsedFolderIds.contains("__unfiled__")
-        return VStack(alignment: .leading, spacing: 12) {
+    private func folderHeaderRow(_ folder: WorkoutFolderDto, index: Int) -> some View {
+        HStack(spacing: 12) {
+            if isEditing {
+                Button(role: .destructive) {
+                    deleteTarget = DeleteTarget(id: folder.id, name: folder.name, isFolder: true)
+                } label: {
+                    Image(systemName: "minus.circle.fill")
+                        .foregroundStyle(.red)
+                        .font(.title3)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Delete folder \(folder.name)")
+            }
             Button {
-                if isCollapsed {
-                    collapsedFolderIds.remove("__unfiled__")
-                } else {
-                    collapsedFolderIds.insert("__unfiled__")
-                }
+                toggleFolder(folder.id)
             } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
-                        .font(.caption.bold())
-                        .foregroundStyle(.secondary)
-                    Image(systemName: "dumbbell.fill")
-                        .foregroundStyle(.secondary)
-                    Text("Unfiled Workouts")
-                        .font(.headline.bold())
+                HStack(spacing: 12) {
+                    Circle()
+                        .fill(LukiColors.folderColor(folder.color))
+                        .frame(width: 12, height: 12)
+                    Text(folder.name)
+                        .font(.headline)
                         .foregroundStyle(.primary)
+                        .lineLimit(1)
                     Spacer()
-                    Text("\(viewModel.store.unfiledTemplates.count)")
-                        .font(.caption2.bold().monospacedDigit())
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Capsule().fill(LukiColors.fill))
+                    if !isEditing {
+                        Text("\(folder.templates.count)")
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                        chevron(expanded: expandedFolderIds.contains(folder.id))
+                    }
                 }
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-
-            if !isCollapsed {
-                ForEach(viewModel.store.unfiledTemplates) { template in
-                    templateCard(template)
-                }
+            .accessibilityIdentifier("ios.workouts.folder.\(folder.id)")
+            if isEditing {
+                Button { reorderFolder(folder.id, moveUp: true) } label: { Image(systemName: "arrow.up") }
+                    .buttonStyle(.borderless)
+                    .disabled(index == 0)
+                Button { reorderFolder(folder.id, moveUp: false) } label: { Image(systemName: "arrow.down") }
+                    .buttonStyle(.borderless)
+                    .disabled(index == viewModel.store.folders.count - 1)
+                Button { openRenameFolderModal(folder) } label: { Image(systemName: "pencil") }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Rename \(folder.name)")
             }
         }
-        .padding(14)
-        .background(RoundedRectangle(cornerRadius: 18).fill(LukiColors.darkCard))
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+            Button { openRenameFolderModal(folder) } label: { Label("Rename", systemImage: "pencil") }
+                .tint(.gray)
+            Button { openNewTemplateBuilder(defaultFolderId: folder.id) } label: { Label("Add Workout", systemImage: "plus") }
+                .tint(LukiColors.accent)
+        }
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive) {
+                deleteTarget = DeleteTarget(id: folder.id, name: folder.name, isFolder: true)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+    }
+
+    private func templateRow(_ template: WorkoutTemplateDto) -> some View {
+        let history = viewModel.store.historySessions.filter {
+            $0.templateId == template.id || $0.workoutNameSnapshot.lowercased() == template.name.lowercased()
+        }
+        let lastText = history.first.map { "Last \(String($0.startedAt.prefix(10)))" } ?? "Never trained"
+        let isExpanded = expandedTemplateIds.contains(template.id)
+
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                Button {
+                    withAnimation(.smooth(duration: 0.25)) {
+                        if isExpanded { expandedTemplateIds.remove(template.id) } else { expandedTemplateIds.insert(template.id) }
+                    }
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(template.name)
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                        Text("\(template.exercises.count) exercises · ~\(template.estimatedDurationMinutes ?? 60) min · \(lastText)")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                if isEditing {
+                    Button { openEditTemplateBuilder(template) } label: { Image(systemName: "pencil") }
+                        .buttonStyle(.borderless)
+                } else {
+                    Button {
+                        viewModel.startSession(from: template, sourceDevice: .IPHONE)
+                    } label: {
+                        Image(systemName: "play.fill")
+                    }
+                    .buttonStyle(.glassProminent)
+                    .buttonBorderShape(.circle)
+                    .accessibilityLabel("Start \(template.name)")
+                    .accessibilityIdentifier("ios.workouts.startTemplate.\(template.id)")
+                }
+            }
+            if isExpanded {
+                templateDetails(template)
+            }
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+            Button { openEditTemplateBuilder(template) } label: { Label("Edit", systemImage: "pencil") }
+                .tint(.gray)
+            Button { duplicateTemplate(template) } label: { Label("Duplicate", systemImage: "plus.square.on.square") }
+                .tint(LukiColors.accent)
+        }
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive) {
+                deleteTarget = DeleteTarget(id: template.id, name: template.name, isFolder: false)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+        .contextMenu {
+            Button { openEditTemplateBuilder(template) } label: { Label("Edit", systemImage: "pencil") }
+            Button { duplicateTemplate(template) } label: { Label("Duplicate", systemImage: "plus.square.on.square") }
+            Menu {
+                Button("Unfiled") { moveTemplate(template, toFolderId: nil) }
+                ForEach(viewModel.store.folders) { f in
+                    Button(f.name) { moveTemplate(template, toFolderId: f.id) }
+                }
+            } label: {
+                Label("Move to", systemImage: "folder")
+            }
+            Divider()
+            Button(role: .destructive) {
+                deleteTarget = DeleteTarget(id: template.id, name: template.name, isFolder: false)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
     }
 
     // MARK: - Template Card
 
-    private func templateCard(_ template: WorkoutTemplateDto) -> some View {
-        let matchingHistory = viewModel.store.historySessions.filter {
-            $0.templateId == template.id || $0.workoutNameSnapshot.lowercased() == template.name.lowercased()
-        }
-        let lastSession = matchingHistory.first
-
+    private func templateDetails(_ template: WorkoutTemplateDto) -> some View {
         return VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(template.name)
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.primary)
-                    if let desc = template.description, !desc.isEmpty {
-                        Text(desc)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                Spacer()
-                Text("\(template.exercises.count) ex • ~\(template.estimatedDurationMinutes ?? 60)m")
-                    .font(.caption2.monospacedDigit())
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Capsule().fill(LukiColors.fill))
-            }
-
-            HStack {
-                Label("Total: \(matchingHistory.count) sessions", systemImage: "clock.arrow.circlepath")
-                    .foregroundStyle(LukiColors.neonLime)
-                Spacer()
-                if let lastSession {
-                    Text("Last: \(String(lastSession.startedAt.prefix(10)))")
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text("Last: Never trained")
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .font(.caption2.monospacedDigit())
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.fill))
-
             // Full ordered exercise list (Gymlife Superset Blocks & Standalone Rows)
             let blocks = ProgressionEngine.groupTemplateExercisesIntoBlocks(template.exercises)
             VStack(spacing: 8) {
@@ -546,80 +518,8 @@ public struct WorkoutsView: View {
                 }
             }
 
-            // Action Row 1: Edit, Duplicate, Move to Folder, Delete
-            HStack(spacing: 8) {
-                Button {
-                    openEditTemplateBuilder(template)
-                } label: {
-                    Label("Edit", systemImage: "pencil")
-                        .font(.caption.bold())
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 7)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
-                        .foregroundStyle(.primary)
-                }
-                .buttonStyle(.plain)
-
-                Button {
-                    duplicateTemplate(template)
-                } label: {
-                    Label("Duplicate", systemImage: "doc.on.doc")
-                        .font(.caption.bold())
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 7)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
-                        .foregroundStyle(.primary)
-                }
-                .buttonStyle(.plain)
-
-                Menu {
-                    Button("Unfiled") {
-                        moveTemplate(template, toFolderId: nil)
-                    }
-                    ForEach(viewModel.store.folders) { f in
-                        Button("Folder: \(f.name)") {
-                            moveTemplate(template, toFolderId: f.id)
-                        }
-                    }
-                } label: {
-                    Label("Move", systemImage: "folder")
-                        .font(.caption.bold())
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 7)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
-                        .foregroundStyle(.primary)
-                }
-
-                Spacer()
-
-                Button(role: .destructive) {
-                    deleteTarget = DeleteTarget(id: template.id, name: template.name, isFolder: false)
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.caption.bold())
-                        .foregroundStyle(.red.opacity(0.9))
-                        .padding(7)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.red.opacity(0.12)))
-                }
-                .buttonStyle(.plain)
-            }
-
-            // Action Row 2: Start Session
-            Button {
-                viewModel.startSession(from: template, sourceDevice: .IPHONE)
-            } label: {
-                Label("Start Session", systemImage: "play.fill")
-                    .font(.caption.bold())
-                    .foregroundStyle(LukiColors.accentForeground)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.neonLime))
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("ios.workouts.startTemplate.\(template.id)")
         }
-        .padding(12)
-        .background(RoundedRectangle(cornerRadius: 14).fill(LukiColors.fill))
+        .padding(.top, 4)
     }
 
     // MARK: - Folder Editor Sheet
