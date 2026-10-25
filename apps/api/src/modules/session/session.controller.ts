@@ -1,19 +1,10 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Delete,
-  Param,
-  Body,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SessionService } from './session.service';
 import { AuthGuard } from '@/guards/auth.guard';
 import { CsrfGuard } from '@/guards/csrf.guard';
 import { CurrentUser, type AuthenticatedUser } from '@/decorators/current-user.decorator';
+import { RequestLocale } from '@/decorators/request-locale.decorator';
 import { ZodValidationPipe } from '@/pipes/zod-validation.pipe';
 import {
   StartSessionSchema,
@@ -21,7 +12,7 @@ import {
   type StartSessionDto,
   type SyncSessionPayloadDto,
 } from '@luki-fitti/common/schemas';
-import type { SessionStatus } from '@luki-fitti/common/enums';
+import type { SessionStatus, SupportedLocale } from '@luki-fitti/common/enums';
 
 @ApiTags('Active Gym Sessions & Diary Sync')
 @Controller('sessions')
@@ -58,8 +49,9 @@ export class SessionController {
   async start(
     @CurrentUser() user: AuthenticatedUser,
     @Body(new ZodValidationPipe(StartSessionSchema)) body: StartSessionDto,
+    @RequestLocale() locale: SupportedLocale,
   ) {
-    return this.sessionService.startSession(user.id, body);
+    return this.sessionService.startSession(user.id, body, locale);
   }
 
   @Post('sync')

@@ -5,7 +5,8 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import { resolveExerciseMedia } from '@luki-fitti/common/catalog';
+import { localizeFolder, localizeTemplate, resolveExerciseMedia } from '@luki-fitti/common/catalog';
+import type { SupportedLocale } from '@luki-fitti/common/enums';
 import { DEFAULT_FOLDER_COLOR } from '@luki-fitti/common/utils';
 import type {
   CreateFolderDto,
@@ -20,7 +21,10 @@ import type {
 export class WorkoutService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getOverview(userId: string): Promise<{
+  async getOverview(
+    userId: string,
+    locale: SupportedLocale,
+  ): Promise<{
     folders: WorkoutFolderDto[];
     unfiledTemplates: WorkoutTemplateDto[];
   }> {
@@ -53,15 +57,8 @@ export class WorkoutService {
     ]);
 
     return {
-      folders: folders.map((f) => ({
-        id: f.id,
-        userId: f.userId,
-        name: f.name,
-        color: f.color,
-        sortOrder: f.sortOrder,
-        templates: f.templates.map((t) => this.mapTemplateDto(t)),
-      })),
-      unfiledTemplates: unfiled.map((t) => this.mapTemplateDto(t)),
+      folders: folders.map((f) => this.mapFolderDto(f, locale)),
+      unfiledTemplates: unfiled.map((t) => localizeTemplate(this.mapTemplateDto(t), locale)),
     };
   }
 
@@ -84,6 +81,7 @@ export class WorkoutService {
 
     return {
       id: folder.id,
+      systemKey: folder.systemKey,
       userId: folder.userId,
       name: folder.name,
       color: folder.color,
@@ -96,6 +94,7 @@ export class WorkoutService {
     userId: string,
     folderId: string,
     dto: UpdateFolderDto,
+    locale: SupportedLocale,
   ): Promise<WorkoutFolderDto> {
     const folder = await this.prisma.workoutFolder.findUnique({ where: { id: folderId } });
     if (!folder) {
@@ -108,7 +107,7 @@ export class WorkoutService {
     const updated = await this.prisma.workoutFolder.update({
       where: { id: folderId },
       data: {
-        ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
+        ...(dto.name !== undefined ? { name: dto.name.trim(), systemKey: null } : {}),
         ...(dto.color !== undefined ? { color: dto.color } : {}),
         ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
       },
@@ -125,14 +124,7 @@ export class WorkoutService {
       },
     });
 
-    return {
-      id: updated.id,
-      userId: updated.userId,
-      name: updated.name,
-      color: updated.color,
-      sortOrder: updated.sortOrder,
-      templates: updated.templates.map((t) => this.mapTemplateDto(t)),
-    };
+    return this.mapFolderDto(updated, locale);
   }
 
   async deleteFolder(userId: string, folderId: string): Promise<{ success: boolean }> {
@@ -155,7 +147,11 @@ export class WorkoutService {
     return { success: true };
   }
 
-  async getTemplateById(userId: string, templateId: string): Promise<WorkoutTemplateDto> {
+  async getTemplateById(
+    userId: string,
+    templateId: string,
+    locale: SupportedLocale,
+  ): Promise<WorkoutTemplateDto> {
     const tpl = await this.prisma.workoutTemplate.findUnique({
       where: { id: templateId },
       include: {
@@ -171,10 +167,14 @@ export class WorkoutService {
     if (tpl.userId !== userId) {
       throw new ForbiddenException('Access denied to this workout template');
     }
-    return this.mapTemplateDto(tpl);
+    return localizeTemplate(this.mapTemplateDto(tpl), locale);
   }
 
-  async createTemplate(userId: string, dto: CreateTemplateDto): Promise<WorkoutTemplateDto> {
+  async createTemplate(
+    userId: string,
+    dto: CreateTemplateDto,
+    locale: SupportedLocale,
+  ): Promise<WorkoutTemplateDto> {
     if (dto.folderId) {
       const folder = await this.prisma.workoutFolder.findUnique({
         where: { id: dto.folderId },
@@ -228,16 +228,18 @@ export class WorkoutService {
       });
     });
 
-    return this.mapTemplateDto(created);
+    return localizeTemplate(this.mapTemplateDto(created), locale);
   }
 
   async updateTemplate(
     userId: string,
     templateId: string,
     dto: UpdateTemplateDto,
+    locale: SupportedLocale,
   ): Promise<WorkoutTemplateDto> {
     const existing = await this.prisma.workoutTemplate.findUnique({
       where: { id: templateId },
+      include: { exercises: { orderBy: { orderIndex: 'asc' }, include: { exercise: true } } },
     });
     if (!existing) {
       throw new NotFoundException('Workout template not found');
@@ -255,10 +257,21 @@ export class WorkoutService {
       }
     }
 
+    // Editing the text of a starter copy turns it into user content: persist what the user sees
+    // (the localized catalog text) for every field they did not change, and unlink it.
+    const detach =
+      existing.systemKey &&
+      (dto.name !== undefined || dto.description !== undefined || dto.exercises !== undefined)
+        ? localizeTemplate(this.mapTemplateDto(existing), locale)
+        : null;
+
     const updated = await this.prisma.$transaction(async (tx) => {
       await tx.workoutTemplate.update({
         where: { id: templateId },
         data: {
+          ...(detach
+            ? { systemKey: null, name: detach.name, description: detach.description }
+            : {}),
           ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
           ...(dto.description !== undefined ? { description: dto.description } : {}),
           ...(dto.folderId !== undefined ? { folderId: dto.folderId } : {}),
@@ -268,6 +281,15 @@ export class WorkoutService {
           ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
         },
       });
+
+      if (detach && dto.exercises === undefined) {
+        for (const te of detach.exercises) {
+          await tx.workoutTemplateExercise.update({
+            where: { id: te.id },
+            data: { notes: te.notes },
+          });
+        }
+      }
 
       if (dto.exercises !== undefined) {
         await tx.workoutTemplateExercise.deleteMany({ where: { templateId } });
@@ -304,11 +326,15 @@ export class WorkoutService {
       });
     });
 
-    return this.mapTemplateDto(updated);
+    return localizeTemplate(this.mapTemplateDto(updated), locale);
   }
 
-  async duplicateTemplate(userId: string, templateId: string): Promise<WorkoutTemplateDto> {
-    const source = await this.getTemplateById(userId, templateId);
+  async duplicateTemplate(
+    userId: string,
+    templateId: string,
+    locale: SupportedLocale,
+  ): Promise<WorkoutTemplateDto> {
+    const source = await this.getTemplateById(userId, templateId, locale);
 
     const siblings = await this.prisma.workoutTemplate.findMany({
       where: { userId, folderId: source.folderId },
@@ -319,28 +345,32 @@ export class WorkoutService {
     const sourceIdx = siblings.findIndex((s) => s.id === source.id);
     const targetSortOrder = sourceIdx >= 0 ? sourceIdx + 1 : siblings.length;
 
-    const duplicated = await this.createTemplate(userId, {
-      name: `${source.name} (Copy)`,
-      description: source.description,
-      folderId: source.folderId,
-      estimatedDurationMinutes: source.estimatedDurationMinutes ?? 60,
-      sortOrder: targetSortOrder,
-      exercises: source.exercises.map((ex, idx) => ({
-        exerciseId: ex.exerciseId,
-        orderIndex: idx,
-        plannedSets: ex.plannedSets,
-        warmupSets: ex.warmupSets,
-        targetRepsMin: ex.targetRepsMin,
-        targetRepsMax: ex.targetRepsMax,
-        targetWeight: ex.targetWeight,
-        weightUnit: ex.weightUnit,
-        restSeconds: ex.restSeconds,
-        targetDurationSeconds: ex.targetDurationSeconds,
-        targetDistanceMeters: ex.targetDistanceMeters,
-        notes: ex.notes,
-        alternativeExerciseIds: ex.alternativeExerciseIds,
-      })),
-    });
+    const duplicated = await this.createTemplate(
+      userId,
+      {
+        name: `${source.name} (Copy)`,
+        description: source.description,
+        folderId: source.folderId,
+        estimatedDurationMinutes: source.estimatedDurationMinutes ?? 60,
+        sortOrder: targetSortOrder,
+        exercises: source.exercises.map((ex, idx) => ({
+          exerciseId: ex.exerciseId,
+          orderIndex: idx,
+          plannedSets: ex.plannedSets,
+          warmupSets: ex.warmupSets,
+          targetRepsMin: ex.targetRepsMin,
+          targetRepsMax: ex.targetRepsMax,
+          targetWeight: ex.targetWeight,
+          weightUnit: ex.weightUnit,
+          restSeconds: ex.restSeconds,
+          targetDurationSeconds: ex.targetDurationSeconds,
+          targetDistanceMeters: ex.targetDistanceMeters,
+          notes: ex.notes,
+          alternativeExerciseIds: ex.alternativeExerciseIds,
+        })),
+      },
+      locale,
+    );
 
     if (siblings.length > 0) {
       const orderedIds = siblings.map((s) => s.id);
@@ -367,8 +397,9 @@ export class WorkoutService {
     userId: string,
     templateId: string,
     folderId: string | null,
+    locale: SupportedLocale,
   ): Promise<WorkoutTemplateDto> {
-    return this.updateTemplate(userId, templateId, { folderId });
+    return this.updateTemplate(userId, templateId, { folderId }, locale);
   }
 
   async deleteTemplate(userId: string, templateId: string): Promise<{ success: boolean }> {
@@ -386,8 +417,35 @@ export class WorkoutService {
     return { success: true };
   }
 
+  private mapFolderDto(
+    folder: {
+      id: string;
+      systemKey: string | null;
+      userId: string;
+      name: string;
+      color: string;
+      sortOrder: number;
+      templates: Parameters<WorkoutService['mapTemplateDto']>[0][];
+    },
+    locale: SupportedLocale,
+  ): WorkoutFolderDto {
+    return localizeFolder(
+      {
+        id: folder.id,
+        systemKey: folder.systemKey,
+        userId: folder.userId,
+        name: folder.name,
+        color: folder.color,
+        sortOrder: folder.sortOrder,
+        templates: folder.templates.map((t) => this.mapTemplateDto(t)),
+      },
+      locale,
+    );
+  }
+
   private mapTemplateDto(tpl: {
     id: string;
+    systemKey?: string | null;
     userId: string;
     folderId: string | null;
     name: string;
@@ -431,6 +489,7 @@ export class WorkoutService {
   }): WorkoutTemplateDto {
     return {
       id: tpl.id,
+      systemKey: tpl.systemKey ?? null,
       userId: tpl.userId,
       folderId: tpl.folderId,
       name: tpl.name,
