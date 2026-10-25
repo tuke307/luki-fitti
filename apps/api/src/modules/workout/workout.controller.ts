@@ -1,19 +1,10 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Patch,
-  Delete,
-  Param,
-  Body,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Param, Body, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { WorkoutService } from './workout.service';
 import { AuthGuard } from '@/guards/auth.guard';
 import { CsrfGuard } from '@/guards/csrf.guard';
 import { CurrentUser, type AuthenticatedUser } from '@/decorators/current-user.decorator';
+import { RequestLocale } from '@/decorators/request-locale.decorator';
 import { ZodValidationPipe } from '@/pipes/zod-validation.pipe';
 import {
   CreateFolderSchema,
@@ -27,6 +18,7 @@ import {
   type UpdateTemplateDto,
   type MoveTemplateDto,
 } from '@luki-fitti/common/schemas';
+import type { SupportedLocale } from '@luki-fitti/common/enums';
 
 @ApiTags('Workout Folders & Templates')
 @Controller('workouts')
@@ -36,8 +28,11 @@ export class WorkoutController {
 
   @Get()
   @ApiOperation({ summary: 'Get all user folders and workout templates' })
-  async getOverview(@CurrentUser() user: AuthenticatedUser) {
-    return this.workoutService.getOverview(user.id);
+  async getOverview(
+    @CurrentUser() user: AuthenticatedUser,
+    @RequestLocale() locale: SupportedLocale,
+  ) {
+    return this.workoutService.getOverview(user.id, locale);
   }
 
   @Post('folders')
@@ -57,8 +52,9 @@ export class WorkoutController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body(new ZodValidationPipe(UpdateFolderSchema)) body: UpdateFolderDto,
+    @RequestLocale() locale: SupportedLocale,
   ) {
-    return this.workoutService.updateFolder(user.id, id, body);
+    return this.workoutService.updateFolder(user.id, id, body, locale);
   }
 
   @Delete('folders/:id')
@@ -72,8 +68,12 @@ export class WorkoutController {
 
   @Get('templates/:id')
   @ApiOperation({ summary: 'Get a single workout template by ID' })
-  async getTemplate(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
-    return this.workoutService.getTemplateById(user.id, id);
+  async getTemplate(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @RequestLocale() locale: SupportedLocale,
+  ) {
+    return this.workoutService.getTemplateById(user.id, id, locale);
   }
 
   @Post('templates')
@@ -82,8 +82,9 @@ export class WorkoutController {
   async createTemplate(
     @CurrentUser() user: AuthenticatedUser,
     @Body(new ZodValidationPipe(CreateTemplateSchema)) body: CreateTemplateDto,
+    @RequestLocale() locale: SupportedLocale,
   ) {
-    return this.workoutService.createTemplate(user.id, body);
+    return this.workoutService.createTemplate(user.id, body, locale);
   }
 
   @Put('templates/:id')
@@ -93,15 +94,20 @@ export class WorkoutController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body(new ZodValidationPipe(UpdateTemplateSchema)) body: UpdateTemplateDto,
+    @RequestLocale() locale: SupportedLocale,
   ) {
-    return this.workoutService.updateTemplate(user.id, id, body);
+    return this.workoutService.updateTemplate(user.id, id, body, locale);
   }
 
   @Post('templates/:id/duplicate')
   @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Duplicate an existing workout template' })
-  async duplicateTemplate(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
-    return this.workoutService.duplicateTemplate(user.id, id);
+  async duplicateTemplate(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @RequestLocale() locale: SupportedLocale,
+  ) {
+    return this.workoutService.duplicateTemplate(user.id, id, locale);
   }
 
   @Patch('templates/:id/move')
@@ -111,8 +117,9 @@ export class WorkoutController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body(new ZodValidationPipe(MoveTemplateSchema)) body: MoveTemplateDto,
+    @RequestLocale() locale: SupportedLocale,
   ) {
-    return this.workoutService.moveTemplate(user.id, id, body.folderId);
+    return this.workoutService.moveTemplate(user.id, id, body.folderId, locale);
   }
 
   @Delete('templates/:id')

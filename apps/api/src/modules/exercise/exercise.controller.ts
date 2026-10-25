@@ -1,19 +1,10 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Delete,
-  Param,
-  Body,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ExerciseService } from './exercise.service';
 import { AuthGuard } from '@/guards/auth.guard';
 import { CsrfGuard } from '@/guards/csrf.guard';
 import { CurrentUser, type AuthenticatedUser } from '@/decorators/current-user.decorator';
+import { RequestLocale } from '@/decorators/request-locale.decorator';
 import { ZodValidationPipe } from '@/pipes/zod-validation.pipe';
 import {
   ExerciseQuerySchema,
@@ -24,6 +15,7 @@ import {
   type UpdateExerciseDto,
   type ExerciseDto,
 } from '@luki-fitti/common/schemas';
+import type { SupportedLocale } from '@luki-fitti/common/enums';
 
 @ApiTags('Exercise Library')
 @Controller('exercises')
@@ -36,8 +28,9 @@ export class ExerciseController {
   async getAll(
     @CurrentUser() user: AuthenticatedUser,
     @Query(new ZodValidationPipe(ExerciseQuerySchema)) query: ExerciseQueryDto,
+    @RequestLocale() locale: SupportedLocale,
   ): Promise<ExerciseDto[]> {
-    return this.exerciseService.findAll(user.id, query);
+    return this.exerciseService.findAll(user.id, query, locale);
   }
 
   @Get(':id')
@@ -45,8 +38,9 @@ export class ExerciseController {
   async getById(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
+    @RequestLocale() locale: SupportedLocale,
   ): Promise<ExerciseDto> {
-    return this.exerciseService.findById(user.id, id);
+    return this.exerciseService.findById(user.id, id, locale);
   }
 
   @Post()
@@ -55,8 +49,9 @@ export class ExerciseController {
   async create(
     @CurrentUser() user: AuthenticatedUser,
     @Body(new ZodValidationPipe(CreateExerciseSchema)) body: CreateExerciseDto,
+    @RequestLocale() locale: SupportedLocale,
   ): Promise<ExerciseDto> {
-    return this.exerciseService.createCustom(user.id, body);
+    return this.exerciseService.createCustom(user.id, body, locale);
   }
 
   @Put(':id')
@@ -66,8 +61,9 @@ export class ExerciseController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body(new ZodValidationPipe(UpdateExerciseSchema)) body: UpdateExerciseDto,
+    @RequestLocale() locale: SupportedLocale,
   ): Promise<ExerciseDto> {
-    return this.exerciseService.updateCustom(user.id, id, body);
+    return this.exerciseService.updateCustom(user.id, id, body, locale);
   }
 
   @Delete(':id')
