@@ -161,6 +161,8 @@ export function GymProvider({ children }: { children: ReactNode }) {
   );
 
   const isFlushingRef = useRef(false);
+  const flushRequestedRef = useRef(false);
+  const flushSyncQueueRef = useRef<(() => Promise<void>) | null>(null);
   const isRefreshingRef = useRef(false);
   const lastRefreshAtRef = useRef<number>(0);
   const syncTimerRef = useRef<number | null>(null);
@@ -168,7 +170,10 @@ export function GymProvider({ children }: { children: ReactNode }) {
 
   const flushSyncQueue = useCallback(
     async (forceOverwrite = false) => {
-      if (isFlushingRef.current) return;
+      if (isFlushingRef.current) {
+        flushRequestedRef.current = true;
+        return;
+      }
       if (!isAuthenticated) {
         setPendingSyncCount(0);
         setSyncState(navigator.onLine ? 'SAVED_LOCALLY' : 'OFFLINE');
@@ -192,44 +197,63 @@ export function GymProvider({ children }: { children: ReactNode }) {
       setSyncState('SYNCING');
 
       try {
-        for (const item of queue) {
-          if (deletedSessionIdsRef.current.has(item.clientSessionId)) {
-            await removeFromSyncQueue(item.clientSessionId);
-            continue;
-          }
-
-          const payload = forceOverwrite ? { ...item.payload, forceOverwrite: true } : item.payload;
-          const res = await api.sessions.sync(payload);
-
-          if (deletedSessionIdsRef.current.has(item.clientSessionId)) {
-            await removeFromSyncQueue(item.clientSessionId);
-            await api.sessions.remove(item.clientSessionId).catch(() => undefined);
-            continue;
-          }
-
-          if (res.success && res.data) {
-            if (res.data.conflictDetected) {
-              trackEvent('offline_sync', { status: 'conflict' });
-              setConflictServerSession(res.data.session);
-              setSyncState('CONFLICT');
-              isFlushingRef.current = false;
-              return;
+        let pending = queue;
+        while (pending.length > 0) {
+          let hasNewerLocalEdits = false;
+          for (const item of pending) {
+            if (deletedSessionIdsRef.current.has(item.clientSessionId)) {
+              await removeFromSyncQueue(item.clientSessionId);
+              continue;
             }
 
-            await removeFromSyncQueue(item.clientSessionId);
-            if (res.data.session.status === SessionStatus.COMPLETED) {
-              await saveLocalHistorySession(res.data.session);
-            } else {
-              const currentLocalActive = await getLocalActiveSession();
-              if (
-                currentLocalActive &&
-                currentLocalActive.clientSessionId === res.data.session.clientSessionId
-              ) {
-                await saveLocalActiveSession(res.data.session);
-                setActiveSession(res.data.session);
+            const payload = forceOverwrite
+              ? { ...item.payload, forceOverwrite: true }
+              : item.payload;
+            const res = await api.sessions.sync(payload);
+
+            if (deletedSessionIdsRef.current.has(item.clientSessionId)) {
+              await removeFromSyncQueue(item.clientSessionId);
+              await api.sessions.remove(item.clientSessionId).catch(() => undefined);
+              continue;
+            }
+
+            if (res.success && res.data) {
+              if (res.data.conflictDetected) {
+                trackEvent('offline_sync', { status: 'conflict' });
+                setConflictServerSession(res.data.session);
+                setSyncState('CONFLICT');
+                isFlushingRef.current = false;
+                return;
+              }
+
+              // The user may have edited the session while this request was in flight.
+              // Applying the (now stale) server echo would revert that edit, and dropping
+              // the queue entry would lose it — so keep it queued and sync it next.
+              const latestQueued = (await getSyncQueue()).find(
+                (q) => q.clientSessionId === item.clientSessionId,
+              );
+              if (latestQueued && latestQueued.payload.version !== item.payload.version) {
+                hasNewerLocalEdits = true;
+                continue;
+              }
+
+              await removeFromSyncQueue(item.clientSessionId);
+              if (res.data.session.status === SessionStatus.COMPLETED) {
+                await saveLocalHistorySession(res.data.session);
+              } else {
+                const currentLocalActive = await getLocalActiveSession();
+                if (
+                  currentLocalActive &&
+                  currentLocalActive.clientSessionId === res.data.session.clientSessionId &&
+                  currentLocalActive.version === item.payload.version
+                ) {
+                  await saveLocalActiveSession(res.data.session);
+                  setActiveSession(res.data.session);
+                }
               }
             }
           }
+          pending = hasNewerLocalEdits ? await getSyncQueue() : [];
         }
 
         const remaining = await getSyncQueue();
@@ -246,10 +270,18 @@ export function GymProvider({ children }: { children: ReactNode }) {
         }
       } finally {
         isFlushingRef.current = false;
+        if (flushRequestedRef.current) {
+          flushRequestedRef.current = false;
+          void flushSyncQueueRef.current?.();
+        }
       }
     },
     [isAuthenticated],
   );
+
+  useEffect(() => {
+    flushSyncQueueRef.current = flushSyncQueue;
+  }, [flushSyncQueue]);
 
   const refreshAllData = useCallback(async () => {
     if (isRefreshingRef.current) return;
