@@ -1520,11 +1520,11 @@
         "slug": "machine-lateral-raise",
         "userId": null,
         "name": "Machine Lateral Raise",
-        "description": "Machine exercise for the shoulders.",
+        "description": "Guided isolation exercise for the lateral deltoids with constant tension and no momentum.",
         "instructions": [
-          "Pick a couple of dumbbells and stand with a straight torso and the dumbbells by your side at arms length with the palms of the hand facing you. This will be your starting position.",
-          "While maintaining the torso in a stationary position (no swinging), lift the dumbbells to your side with a slight bend on the elbow and the hands slightly tilted forward as if pouring water in a glass. Continue to go up until you arms are parallel to the floor. Exhale as you execute this movement and pause for a second at the top.",
-          "Lower the dumbbells back down slowly to the starting position as you inhale.",
+          "Sit upright in the machine and adjust the seat so your shoulders line up with the pivot points, with the pads resting against the outside of your upper arms. This will be your starting position.",
+          "Keeping your torso still (no swinging), raise your arms out to the sides with a slight bend in the elbows until your upper arms are parallel to the floor. Exhale as you lift and pause for a second at the top.",
+          "Lower the pads slowly back to the starting position as you inhale, without letting the weight stack touch down.",
           "Repeat for the recommended amount of repetitions."
         ],
         "category": "MACHINE",
@@ -1537,22 +1537,6 @@
         "isSystem": true,
         "alternativeExerciseIds": ["ex-machine-shoulder-press", "ex-reverse-pec-deck"],
         "media": [
-          {
-            "id": "machine-lateral-raise-frame-0",
-            "mediaType": "IMAGE",
-            "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Lateral_Raise/0.jpg",
-            "caption": "Machine Lateral Raise — Start Position",
-            "attribution": "Free Exercise DB (Public Domain)",
-            "license": "Unlicense"
-          },
-          {
-            "id": "machine-lateral-raise-frame-1",
-            "mediaType": "IMAGE",
-            "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Lateral_Raise/1.jpg",
-            "caption": "Machine Lateral Raise — Peak Contraction / Finish",
-            "attribution": "Free Exercise DB (Public Domain)",
-            "license": "Unlicense"
-          },
           {
             "id": "machine-lateral-raise-video",
             "mediaType": "VIDEO_LINK",
@@ -13195,11 +13179,11 @@
         "slug": "machine-lateral-raise",
         "userId": null,
         "name": "Seitheben (Maschine)",
-        "description": "Maschinenübung für die Schultern.",
+        "description": "Geführte Isolationsübung für die seitliche Schulter – konstante Spannung, kein Schwung.",
         "instructions": [
-          "Setze dich aufrecht an die Maschine, die Polster liegen seitlich an den Oberarmen bzw. Ellbogen an. Das ist die Ausgangsposition.",
+          "Setze dich aufrecht an die Maschine und stelle den Sitz so ein, dass deine Schultern auf Höhe der Drehpunkte sind und die Polster außen an den Oberarmen anliegen. Das ist die Ausgangsposition.",
           "Hebe die Arme bei ruhigem Oberkörper (kein Schwung) mit leicht gebeugten Ellbogen seitlich an, bis die Oberarme parallel zum Boden sind. Atme dabei aus und halte oben eine Sekunde.",
-          "Senke die Arme beim Einatmen langsam in die Ausgangsposition ab.",
+          "Senke die Polster beim Einatmen langsam in die Ausgangsposition ab, ohne dass der Gewichtsstapel aufsetzt.",
           "Wiederhole die Übung für die empfohlene Anzahl an Wiederholungen."
         ],
         "category": "MACHINE",
@@ -13212,22 +13196,6 @@
         "isSystem": true,
         "alternativeExerciseIds": ["ex-machine-shoulder-press", "ex-reverse-pec-deck"],
         "media": [
-          {
-            "id": "machine-lateral-raise-frame-0",
-            "mediaType": "IMAGE",
-            "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Lateral_Raise/0.jpg",
-            "caption": "Machine Lateral Raise — Start Position",
-            "attribution": "Free Exercise DB (Public Domain)",
-            "license": "Unlicense"
-          },
-          {
-            "id": "machine-lateral-raise-frame-1",
-            "mediaType": "IMAGE",
-            "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Lateral_Raise/1.jpg",
-            "caption": "Machine Lateral Raise — Peak Contraction / Finish",
-            "attribution": "Free Exercise DB (Public Domain)",
-            "license": "Unlicense"
-          },
           {
             "id": "machine-lateral-raise-video",
             "mediaType": "VIDEO_LINK",
