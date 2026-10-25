@@ -48,9 +48,6 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@luki-fitti/ui/components/ui/dropdown-menu';
 import { Input } from '@luki-fitti/ui/components/ui/input';
@@ -134,6 +131,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
   const [expandedTemplates, setExpandedTemplates] = useState<Record<string, boolean>>({});
   const [isEditMode, setIsEditMode] = useState(false);
   const [openMenuTemplateId, setOpenMenuTemplateId] = useState<string | null>(null);
+  const [isMoveListOpen, setIsMoveListOpen] = useState(false);
   const lastMenuPointerType = useRef<string>('mouse');
   const [highlightedTemplateId, setHighlightedTemplateId] = useState<string | null>(null);
 
@@ -484,7 +482,10 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               <>
                 <DropdownMenu
                   open={openMenuTemplateId === tpl.id}
-                  onOpenChange={(open) => setOpenMenuTemplateId(open ? tpl.id : null)}
+                  onOpenChange={(open) => {
+                    setOpenMenuTemplateId(open ? tpl.id : null);
+                    setIsMoveListOpen(false);
+                  }}
                 >
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -522,30 +523,40 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                     >
                       <Copy /> {t.workouts.duplicateBtn}
                     </DropdownMenuItem>
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger data-testid="template-action-move">
-                        <FolderInput /> {t.workouts.moveToBtn}
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent>
-                        <DropdownMenuRadioGroup
-                          value={tpl.folderId ?? ''}
-                          onValueChange={(value) => {
-                            const target = value || null;
-                            void moveTemplate(tpl.id, target);
-                            expandFolder(folderKey(target));
-                          }}
-                        >
-                          <DropdownMenuRadioItem value="">
-                            {t.workouts.unfiledOption}
+                    <DropdownMenuItem
+                      data-testid="template-action-move"
+                      aria-expanded={isMoveListOpen}
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        setIsMoveListOpen((prev) => !prev);
+                      }}
+                    >
+                      <FolderInput /> {t.workouts.moveToBtn}
+                      <ChevronRight
+                        className={`ml-auto transition-transform duration-200 ${
+                          isMoveListOpen ? 'rotate-90' : ''
+                        }`}
+                      />
+                    </DropdownMenuItem>
+                    {isMoveListOpen && (
+                      <DropdownMenuRadioGroup
+                        value={tpl.folderId ?? ''}
+                        onValueChange={(value) => {
+                          const target = value || null;
+                          void moveTemplate(tpl.id, target);
+                          expandFolder(folderKey(target));
+                        }}
+                      >
+                        <DropdownMenuRadioItem value="" className="pl-10">
+                          {t.workouts.unfiledOption}
+                        </DropdownMenuRadioItem>
+                        {folders.map((f) => (
+                          <DropdownMenuRadioItem key={f.id} value={f.id} className="pl-10">
+                            {f.name}
                           </DropdownMenuRadioItem>
-                          {folders.map((f) => (
-                            <DropdownMenuRadioItem key={f.id} value={f.id}>
-                              {f.name}
-                            </DropdownMenuRadioItem>
-                          ))}
-                        </DropdownMenuRadioGroup>
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       variant="destructive"
