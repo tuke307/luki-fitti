@@ -11,6 +11,14 @@ final class LukiFittiDomainTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(bundleData.stretchingRoutines.count, 6)
     }
 
+    func testStarterCatalogBundleLoadsEveryLocale() {
+        let english = StarterCatalogLoader.load(locale: .en)
+        let german = StarterCatalogLoader.load(locale: .de)
+        XCTAssertEqual(german.exercises.map(\.id), english.exercises.map(\.id))
+        XCTAssertEqual(german.exercises.first { $0.id == "ex-barbell-bench-press" }?.name, "Bankdrücken (Langhantel)")
+        XCTAssertEqual(german.folders.first?.templates.first?.name, "Tag 1 — Brust & Trizeps")
+    }
+
     func testBlendedEpleyAndBrzyckiOneRepMaxParity() {
         // 100kg x 5 reps @ RPE 8 -> RIR 2 -> effectiveReps = 6
         // Epley: 100 * (1 + 6/30) = 120.0

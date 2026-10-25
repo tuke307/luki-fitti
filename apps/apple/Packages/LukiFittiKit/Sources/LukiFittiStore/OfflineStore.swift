@@ -42,7 +42,9 @@ public final class OfflineStore {
     public var syncQueue: [QueuedSessionSyncItem] = []
     public var syncState: SyncState = .SAVED_LOCALLY
     public var currentUser: UserDto?
-    public var preferences: UserPreferencesDto = UserPreferencesDto()
+    public var preferences: UserPreferencesDto = UserPreferencesDto() {
+        didSet { applyLocaleToAPIClient() }
+    }
     public var conflictItem: QueuedSessionSyncItem?
     public var onOverviewOrAuthChanged: (() -> Void)?
 
@@ -65,8 +67,19 @@ public final class OfflineStore {
         loadFromDiskOrSeedStarterCatalog()
     }
 
+    private var locale: SupportedLocale { .resolve(preferences.language) }
+
+    private func applyLocaleToAPIClient() {
+        let locale = self.locale
+        Task { await apiClient.setLocale(locale) }
+    }
+
     public func loadFromDiskOrSeedStarterCatalog() {
-        let starter = StarterCatalogLoader.load()
+        if let savedPrefs: UserPreferencesDto = readJSON("user_preferences.json") {
+            preferences = savedPrefs
+        }
+        applyLocaleToAPIClient()
+        let starter = StarterCatalogLoader.load(locale: locale)
 
         if let savedCatalog: [ExerciseDto] = readJSON("exercise_catalog.json"), !savedCatalog.isEmpty {
             catalog = savedCatalog
@@ -96,9 +109,6 @@ public final class OfflineStore {
             .filter { $0.status == .COMPLETED }
             .sorted { $0.startedAt > $1.startedAt }
         syncQueue = readJSON("sync_queue.json") ?? []
-        if let savedPrefs: UserPreferencesDto = readJSON("user_preferences.json") {
-            preferences = savedPrefs
-        }
         currentUser = readJSON("current_user.json")
         conflictItem = syncQueue.first(where: { $0.serverConflictSession != nil })
         updateSyncStateBadge()

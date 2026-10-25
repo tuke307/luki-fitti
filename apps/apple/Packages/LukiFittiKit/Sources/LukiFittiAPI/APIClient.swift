@@ -42,6 +42,8 @@ public actor APIClient {
     public nonisolated let tokenStore: any TokenStoring
     private let session: URLSession
     private var inFlightRefreshTask: Task<Bool, Never>?
+    /// Language of catalog content (exercise names, steps, starter workouts) returned by the API.
+    private var locale: SupportedLocale = .resolve(nil)
 
     public init(
         baseURL: URL = APIClient.defaultBaseURL,
@@ -51,6 +53,10 @@ public actor APIClient {
         self.baseURL = baseURL
         self.tokenStore = tokenStore
         self.session = session
+    }
+
+    public func setLocale(_ locale: SupportedLocale) {
+        self.locale = locale
     }
 
     public static var defaultBaseURL: URL {
@@ -231,6 +237,7 @@ public actor APIClient {
         req.httpMethod = method
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("apple", forHTTPHeaderField: "X-Client-Platform")
+        req.setValue(locale.rawValue, forHTTPHeaderField: "Accept-Language")
 
         if let tokens = tokenStore.loadTokens() {
             req.setValue("Bearer \(tokens.accessToken)", forHTTPHeaderField: "Authorization")
