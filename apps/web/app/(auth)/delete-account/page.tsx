@@ -33,9 +33,7 @@ export default function DeleteAccountPage() {
               <Dumbbell className="h-5 w-5" />
             </div>
             <div>
-              <span className="font-display text-lg font-semibold">
-                LUKI<span className="text-primary">FITTI</span>
-              </span>
+              <span className="text-[17px] font-semibold">LukiFitti</span>
               <span className="text-muted-foreground block text-xs">
                 Account Deletion Confirmation
               </span>
