@@ -245,7 +245,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               <Button
                 type="button"
                 size="lg"
-                className="flex-1"
+                className="sm:flex-1"
                 onClick={async () => {
                   await startWorkoutFromTemplate(suggestedTemplate.template.id);
                   onNavigate('session');
@@ -258,7 +258,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               type="button"
               size="lg"
               variant="secondary"
-              className="flex-1"
+              className="sm:flex-1"
               onClick={() => onNavigate('workouts')}
             >
               {t.home.chooseWorkoutBtn}
