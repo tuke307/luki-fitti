@@ -1,17 +1,17 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import { INITIAL_EXERCISE_CATALOG, resolveExerciseMedia } from '@luki-fitti/common/catalog';
+import {
+  INITIAL_EXERCISE_CATALOG,
+  localizeExercise,
+  resolveExerciseMedia,
+} from '@luki-fitti/common/catalog';
 import type {
   CreateExerciseDto,
   ExerciseDto,
   ExerciseQueryDto,
   UpdateExerciseDto,
 } from '@luki-fitti/common/schemas';
-import type { MuscleGroup } from '@luki-fitti/common/enums';
+import type { MuscleGroup, SupportedLocale } from '@luki-fitti/common/enums';
 
 @Injectable()
 export class ExerciseService {
@@ -83,7 +83,11 @@ export class ExerciseService {
     this.seeded = true;
   }
 
-  async findAll(userId: string | null, query: ExerciseQueryDto): Promise<ExerciseDto[]> {
+  async findAll(
+    userId: string | null,
+    query: ExerciseQueryDto,
+    locale: SupportedLocale,
+  ): Promise<ExerciseDto[]> {
     await this.ensureCatalogSeeded();
 
     const records = await this.prisma.exercise.findMany({
@@ -110,10 +114,13 @@ export class ExerciseService {
         },
         media: true,
       },
-      orderBy: [{ isSystem: 'desc' }, { name: 'asc' }],
     });
 
-    const mapped = records.map((r) => this.mapExerciseDto(r));
+    const mapped = records
+      .map((r) => this.mapExerciseDto(r, locale))
+      .sort(
+        (a, b) => Number(b.isSystem) - Number(a.isSystem) || a.name.localeCompare(b.name, locale),
+      );
 
     if (query.search?.trim()) {
       const q = query.search.trim().toLowerCase();
@@ -130,7 +137,7 @@ export class ExerciseService {
     return mapped;
   }
 
-  async findById(userId: string | null, id: string): Promise<ExerciseDto> {
+  async findById(userId: string | null, id: string, locale: SupportedLocale): Promise<ExerciseDto> {
     await this.ensureCatalogSeeded();
     const record = await this.prisma.exercise.findFirst({
       where: {
@@ -150,10 +157,14 @@ export class ExerciseService {
       throw new NotFoundException('Exercise not found');
     }
 
-    return this.mapExerciseDto(record);
+    return this.mapExerciseDto(record, locale);
   }
 
-  async createCustom(userId: string, dto: CreateExerciseDto): Promise<ExerciseDto> {
+  async createCustom(
+    userId: string,
+    dto: CreateExerciseDto,
+    locale: SupportedLocale,
+  ): Promise<ExerciseDto> {
     const baseSlug = dto.name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
@@ -229,13 +240,14 @@ export class ExerciseService {
       });
     });
 
-    return this.mapExerciseDto(created);
+    return this.mapExerciseDto(created, locale);
   }
 
   async updateCustom(
     userId: string,
     exerciseId: string,
     dto: UpdateExerciseDto,
+    locale: SupportedLocale,
   ): Promise<ExerciseDto> {
     const existing = await this.prisma.exercise.findUnique({ where: { id: exerciseId } });
     if (!existing) {
@@ -299,7 +311,7 @@ export class ExerciseService {
       });
     });
 
-    return this.mapExerciseDto(updated);
+    return this.mapExerciseDto(updated, locale);
   }
 
   async deleteCustom(userId: string, exerciseId: string): Promise<{ success: boolean }> {
@@ -315,16 +327,14 @@ export class ExerciseService {
     return { success: true };
   }
 
-  private mapExerciseDto(record: any): ExerciseDto {
+  private mapExerciseDto(record: any, locale: SupportedLocale): ExerciseDto {
     const catalogFallback = INITIAL_EXERCISE_CATALOG.find((c) => c.id === record.id);
     const secondaryFromDb = (record.muscleGroups ?? [])
       .filter((m: any) => !m.isPrimary && m.muscleGroup !== record.primaryMuscleGroup)
       .map((m: any) => m.muscleGroup as MuscleGroup);
 
     const secondaryMuscleGroups =
-      secondaryFromDb.length > 0
-        ? secondaryFromDb
-        : (catalogFallback?.secondaryMuscleGroups ?? []);
+      secondaryFromDb.length > 0 ? secondaryFromDb : (catalogFallback?.secondaryMuscleGroups ?? []);
 
     const alternativesFromDb = (record.alternatives ?? []).map((a: any) => ({
       id: a.alternativeExercise.id,
@@ -339,32 +349,35 @@ export class ExerciseService {
         ? alternativesFromDb.map((a: any) => a.id)
         : (catalogFallback?.alternativeExerciseIds ?? []);
 
-    return {
-      id: record.id,
-      slug: record.slug,
-      userId: record.userId,
-      name: record.name,
-      description: record.description,
-      instructions: record.instructions ?? [],
-      category: record.category,
-      exerciseType: record.exerciseType,
-      primaryMuscleGroup: record.primaryMuscleGroup,
-      secondaryMuscleGroups,
-      equipment: record.equipment,
-      recommendedDurationSeconds: record.recommendedDurationSeconds,
-      tags: record.tags ?? [],
-      isSystem: record.isSystem,
-      alternativeExerciseIds,
-      alternatives: alternativesFromDb,
-      media:
-        record.media && record.media.length > 0
-          ? record.media
-          : resolveExerciseMedia({
-              id: record.id,
-              slug: record.slug,
-              name: record.name,
-              primaryMuscleGroup: record.primaryMuscleGroup,
-            }),
-    };
+    return localizeExercise(
+      {
+        id: record.id,
+        slug: record.slug,
+        userId: record.userId,
+        name: record.name,
+        description: record.description,
+        instructions: record.instructions ?? [],
+        category: record.category,
+        exerciseType: record.exerciseType,
+        primaryMuscleGroup: record.primaryMuscleGroup,
+        secondaryMuscleGroups,
+        equipment: record.equipment,
+        recommendedDurationSeconds: record.recommendedDurationSeconds,
+        tags: record.tags ?? [],
+        isSystem: record.isSystem,
+        alternativeExerciseIds,
+        alternatives: alternativesFromDb,
+        media:
+          record.media && record.media.length > 0
+            ? record.media
+            : resolveExerciseMedia({
+                id: record.id,
+                slug: record.slug,
+                name: record.name,
+                primaryMuscleGroup: record.primaryMuscleGroup,
+              }),
+      },
+      locale,
+    );
   }
 }

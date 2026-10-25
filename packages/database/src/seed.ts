@@ -131,6 +131,7 @@ async function main(): Promise<void> {
               update: { color: starterFolder.color },
               create: {
                 userId: user.id,
+                systemKey: starterFolder.id,
                 name: starterFolder.name,
                 color: starterFolder.color,
                 sortOrder: starterFolder.sortOrder,
@@ -144,6 +145,7 @@ async function main(): Promise<void> {
               const createdTpl = await tx.workoutTemplate.create({
                 data: {
                   userId: user.id,
+                  systemKey: tpl.id,
                   folderId: folder.id,
                   name: tpl.name,
                   description: tpl.description,
@@ -177,6 +179,7 @@ async function main(): Promise<void> {
             const createdRoutine = await tx.stretchingRoutine.create({
               data: {
                 userId: user.id,
+                systemKey: routine.id,
                 name: routine.name,
                 description: routine.description,
                 targetArea: routine.targetArea,

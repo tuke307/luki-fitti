@@ -117,6 +117,7 @@ export class AuthService {
         const folder = await tx.workoutFolder.create({
           data: {
             userId: user.id,
+            systemKey: starterFolder.id,
             name: starterFolder.name,
             color: starterFolder.color,
             sortOrder: starterFolder.sortOrder,
@@ -130,6 +131,7 @@ export class AuthService {
           const createdTpl = await tx.workoutTemplate.create({
             data: {
               userId: user.id,
+              systemKey: tpl.id,
               folderId: folder.id,
               name: tpl.name,
               description: tpl.description,
@@ -163,6 +165,7 @@ export class AuthService {
         const createdRoutine = await tx.stretchingRoutine.create({
           data: {
             userId: user.id,
+            systemKey: routine.id,
             name: routine.name,
             description: routine.description,
             targetArea: routine.targetArea,

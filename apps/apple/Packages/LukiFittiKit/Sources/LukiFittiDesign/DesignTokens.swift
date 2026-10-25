@@ -130,15 +130,7 @@ public enum LukiColors {
 
 public enum LukiI18n {
     public static func resolveLocale(_ pref: LanguagePreference?) -> SupportedLocale {
-        if let pref {
-            switch pref {
-            case .en: return .en
-            case .de: return .de
-            case .system: break
-            }
-        }
-        let sysCode = Locale.current.language.languageCode?.identifier.lowercased() ?? "en"
-        return sysCode.hasPrefix("de") ? .de : .en
+        SupportedLocale.resolve(pref)
     }
 
     public static func muscleLabel(_ muscle: MuscleGroup, locale: SupportedLocale = .en) -> String {
