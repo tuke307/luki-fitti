@@ -12,8 +12,9 @@ final class IOSWorkoutsManagementUITests: XCTestCase {
         collapseBtn.tap()
 
         // Open Create Folder Sheet
+        app.buttons["ios.workouts.addMenu"].tap()
         let newFolderBtn = app.buttons["ios.workouts.newFolderButton"]
-        XCTAssertTrue(newFolderBtn.exists)
+        XCTAssertTrue(newFolderBtn.waitForExistence(timeout: 5))
         newFolderBtn.tap()
 
         let folderField = app.textFields["Folder Name (e.g. 4er Split)"]
@@ -29,8 +30,11 @@ final class IOSWorkoutsManagementUITests: XCTestCase {
         let app = IOSUITestHelpers.launchApp()
         IOSUITestHelpers.navigateToTab(app, label: "Workouts")
 
+        let addMenu = app.buttons["ios.workouts.addMenu"]
+        XCTAssertTrue(addMenu.waitForExistence(timeout: 8))
+        addMenu.tap()
         let newWorkoutBtn = app.buttons["ios.workouts.newWorkoutButton"]
-        XCTAssertTrue(newWorkoutBtn.waitForExistence(timeout: 8))
+        XCTAssertTrue(newWorkoutBtn.waitForExistence(timeout: 5))
         newWorkoutBtn.tap()
 
         let nameField = app.textFields["e.g. Push A — Chest, Shoulders & Triceps"]

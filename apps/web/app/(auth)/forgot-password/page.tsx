@@ -47,9 +47,7 @@ export default function ForgotPasswordPage() {
               <Dumbbell className="h-5 w-5" />
             </div>
             <div>
-              <span className="font-display text-lg font-semibold">
-                LUKI<span className="text-primary">FITTI</span>
-              </span>
+              <span className="text-[17px] font-semibold">LukiFitti</span>
               <span className="text-muted-foreground block text-xs">{t.nav.tagline}</span>
             </div>
           </Link>
@@ -62,7 +60,7 @@ export default function ForgotPasswordPage() {
 
         {submittedMessage ? (
           <div className="space-y-4">
-            <div className="border-primary/40 bg-primary/15 text-primary flex items-start gap-2.5 rounded-2xl border p-4 text-xs leading-relaxed">
+            <div className="border-primary/40 bg-primary/12 text-primary flex items-start gap-2.5 rounded-2xl border p-4 text-xs leading-relaxed">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
               <span>{submittedMessage}</span>
             </div>

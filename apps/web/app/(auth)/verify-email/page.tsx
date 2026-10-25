@@ -38,9 +38,7 @@ export default function VerifyEmailPage() {
               <Dumbbell className="h-5 w-5" />
             </div>
             <div>
-              <span className="font-display text-lg font-semibold">
-                LUKI<span className="text-primary">FITTI</span>
-              </span>
+              <span className="text-[17px] font-semibold">LukiFitti</span>
               <span className="text-muted-foreground block text-xs">
                 Account Email Confirmation
               </span>
@@ -58,7 +56,7 @@ export default function VerifyEmailPage() {
           </div>
         ) : verifiedSuccess ? (
           <div className="space-y-4 py-4 text-center">
-            <div className="bg-primary/15 text-primary mx-auto flex h-14 w-14 items-center justify-center rounded-full">
+            <div className="bg-primary/12 text-primary mx-auto flex h-14 w-14 items-center justify-center rounded-full">
               <CheckCircle2 className="h-8 w-8" />
             </div>
             <h1 className="font-display text-2xl font-bold">Email Confirmed!</h1>
@@ -83,7 +81,7 @@ export default function VerifyEmailPage() {
             </div>
 
             {infoMessage && (
-              <div className="border-primary/40 bg-primary/15 text-primary flex items-center gap-2 rounded-2xl border p-3 text-xs font-medium">
+              <div className="border-primary/40 bg-primary/12 text-primary flex items-center gap-2 rounded-2xl border p-3 text-xs font-medium">
                 <MailCheck className="h-4 w-4 shrink-0" />
                 <span>{infoMessage}</span>
               </div>

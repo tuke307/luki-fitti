@@ -37,6 +37,6 @@ final class IOSActiveSessionUITests: XCTestCase {
         XCTAssertTrue(viewInDiaryBtn.waitForExistence(timeout: 8))
         viewInDiaryBtn.tap()
 
-        XCTAssertTrue(app.staticTexts["Training Diary & Progress Analytics"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
     }
 }

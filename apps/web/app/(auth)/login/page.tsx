@@ -42,9 +42,7 @@ export default function LoginPage() {
               <Dumbbell className="h-5 w-5" />
             </div>
             <div>
-              <span className="font-display text-lg font-semibold">
-                LUKI<span className="text-primary">FITTI</span>
-              </span>
+              <span className="text-[17px] font-semibold">LukiFitti</span>
               <span className="text-muted-foreground block text-xs">{t.nav.tagline}</span>
             </div>
           </Link>
@@ -114,7 +112,7 @@ export default function LoginPage() {
           </div>
 
           {infoMessage && (
-            <div className="border-primary/40 bg-primary/15 text-primary space-y-2 rounded-2xl border p-3.5 text-xs">
+            <div className="border-primary/40 bg-primary/12 text-primary space-y-2 rounded-2xl border p-3.5 text-xs">
               <div className="flex items-start gap-2">
                 <MailCheck className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>{infoMessage}</span>

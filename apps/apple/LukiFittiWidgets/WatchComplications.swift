@@ -41,9 +41,9 @@ public struct WatchStreakComplicationView: View {
     public var body: some View {
         VStack(spacing: 2) {
             Image(systemName: "dumbbell.fill")
-                .foregroundStyle(LukiColors.neonLime)
+                .foregroundStyle(LukiColors.accent)
             Text("\(entry.sessionsThisWeek)/\(entry.weeklyGoal)")
-                .font(.caption2.bold().monospacedDigit())
+                .font(.footnote.monospacedDigit())
         }
         .containerBackground(.black, for: .widget)
     }

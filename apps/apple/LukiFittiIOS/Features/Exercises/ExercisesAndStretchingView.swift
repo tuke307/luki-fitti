@@ -39,7 +39,7 @@ public struct ExercisesAndStretchingView: View {
                         }
                     }
                     .padding(10)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(LukiColors.darkCard))
+                    .background(RoundedRectangle(cornerRadius: 12).fill(LukiColors.cardBackground))
 
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
@@ -47,11 +47,11 @@ public struct ExercisesAndStretchingView: View {
                                 selectedMuscle = nil
                             } label: {
                                 Text("All Muscles")
-                                    .font(.caption.bold())
+                                    .font(.subheadline.weight(.semibold))
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 6)
-                                    .background(Capsule().fill(selectedMuscle == nil ? LukiColors.neonLime : LukiColors.darkCard))
-                                    .foregroundStyle(selectedMuscle == nil ? .black : .white)
+                                    .background(Capsule().fill(selectedMuscle == nil ? LukiColors.accent : LukiColors.cardBackground))
+                                    .foregroundStyle(selectedMuscle == nil ? LukiColors.accentForeground : .primary)
                             }
                             .buttonStyle(.plain)
 
@@ -60,11 +60,11 @@ public struct ExercisesAndStretchingView: View {
                                     selectedMuscle = muscle
                                 } label: {
                                     Text(LukiI18n.muscleLabel(muscle))
-                                        .font(.caption.bold())
+                                        .font(.subheadline.weight(.semibold))
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 6)
-                                        .background(Capsule().fill(selectedMuscle == muscle ? LukiColors.neonLime : LukiColors.darkCard))
-                                        .foregroundStyle(selectedMuscle == muscle ? .black : .white)
+                                        .background(Capsule().fill(selectedMuscle == muscle ? LukiColors.accent : LukiColors.cardBackground))
+                                        .foregroundStyle(selectedMuscle == muscle ? LukiColors.accentForeground : .primary)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -81,27 +81,27 @@ public struct ExercisesAndStretchingView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(exercise.name)
                                     .font(.subheadline.bold())
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(.primary)
                                 Text("\(LukiI18n.muscleLabel(exercise.primaryMuscleGroup)) • \(LukiI18n.equipmentLabel(exercise.equipment))")
-                                    .font(.caption2)
+                                    .font(.footnote)
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
                         }
                         .padding(12)
-                        .background(RoundedRectangle(cornerRadius: 14).fill(LukiColors.darkCard))
+                        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
                     }
                 } else {
                     ForEach(viewModel.store.stretchingRoutines) { routine in
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
                                 Text(routine.name)
-                                    .font(.headline.bold())
-                                    .foregroundStyle(.white)
+                                    .font(.headline)
+                                    .foregroundStyle(.primary)
                                 Spacer()
                                 Text(routine.targetArea)
-                                    .font(.caption2)
-                                    .foregroundStyle(LukiColors.electricCyan)
+                                    .font(.footnote)
+                                    .foregroundStyle(LukiColors.accent)
                             }
                             if let desc = routine.description {
                                 Text(desc).font(.caption).foregroundStyle(.secondary)
@@ -110,22 +110,22 @@ public struct ExercisesAndStretchingView: View {
                                 viewModel.startStretchingSession(from: routine, sourceDevice: .IPHONE)
                             } label: {
                                 Label("Start Stretching Session", systemImage: "figure.cooldown")
-                                    .font(.caption.bold())
-                                    .foregroundStyle(.black)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(LukiColors.accentForeground)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 9)
-                                    .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.electricCyan))
+                                    .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.accent))
                             }
                             .buttonStyle(.plain)
                         }
                         .padding(14)
-                        .background(RoundedRectangle(cornerRadius: 16).fill(LukiColors.darkCard))
+                        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
                     }
                 }
             }
             .padding(16)
         }
-        .background(LukiColors.darkBackground)
+        .background(LukiColors.groupedBackground)
     }
 
     private var filteredExercises: [ExerciseDto] {

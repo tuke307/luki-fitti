@@ -21,10 +21,6 @@ public struct ProfileAndAuthView: View {
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text("Profile & Preferences")
-                    .font(.title2.bold())
-                    .foregroundStyle(.white)
-
                 if let tokenType = viewModel.deepLinkTokenType,
                    let token = viewModel.deepLinkToken {
                     deepLinkActionCard(tokenType: tokenType, token: token)
@@ -41,7 +37,7 @@ public struct ProfileAndAuthView: View {
             }
             .padding(16)
         }
-        .background(LukiColors.darkBackground)
+        .background(LukiColors.groupedBackground)
     }
 
     // MARK: - Deep-Link Token Completion Card (Reset Password / Confirm Delete Account)
@@ -51,8 +47,8 @@ public struct ProfileAndAuthView: View {
         VStack(alignment: .leading, spacing: 10) {
             if tokenType == "reset-password" {
                 Text("Reset Your Password")
-                    .font(.headline.bold())
-                    .foregroundStyle(LukiColors.neonLime)
+                    .font(.headline)
+                    .foregroundStyle(LukiColors.accent)
                 SecureField("New Password (min. 8 chars)", text: $newResetPassword)
                     .textFieldStyle(.roundedBorder)
                     .accessibilityIdentifier("ios.profile.newPasswordField")
@@ -76,16 +72,16 @@ public struct ProfileAndAuthView: View {
                 } label: {
                     Text("Save New Password")
                         .font(.subheadline.bold())
-                        .foregroundStyle(.black)
+                        .foregroundStyle(LukiColors.accentForeground)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
-                        .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.neonLime))
+                        .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.accent))
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("ios.profile.confirmResetButton")
             } else if tokenType == "delete-account" {
                 Text("Confirm Permanent Account Deletion")
-                    .font(.headline.bold())
+                    .font(.headline)
                     .foregroundStyle(.red)
                 Text("Confirm that you want to permanently delete your LukiFitti account and all workout data.")
                     .font(.caption)
@@ -106,7 +102,7 @@ public struct ProfileAndAuthView: View {
                 } label: {
                     Text("Yes, Permanently Delete My Account")
                         .font(.subheadline.bold())
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                         .background(RoundedRectangle(cornerRadius: 10).fill(Color.red))
@@ -116,7 +112,7 @@ public struct ProfileAndAuthView: View {
             }
         }
         .padding(16)
-        .background(RoundedRectangle(cornerRadius: 16).fill(LukiColors.darkCard))
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("ios.profile.deepLinkCard")
     }
@@ -124,17 +120,17 @@ public struct ProfileAndAuthView: View {
     private func authenticatedAccountCard(_ user: UserDto) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Authenticated Server Session")
-                .font(.caption.bold())
-                .foregroundStyle(LukiColors.neonLime)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(LukiColors.accent)
                 .accessibilityIdentifier("ios.profile.authenticatedBadge")
             Text(user.email)
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
 
             if let statusMessage {
                 Text(statusMessage)
                     .font(.caption)
-                    .foregroundStyle(LukiColors.neonLime)
+                    .foregroundStyle(LukiColors.accent)
                     .accessibilityIdentifier("ios.profile.statusMessage")
             }
 
@@ -145,13 +141,13 @@ public struct ProfileAndAuthView: View {
                         viewModel.store.clearAllLocalData()
                     }
                 }
-                .font(.caption.bold())
+                .font(.subheadline.weight(.semibold))
                 .accessibilityIdentifier("ios.profile.signOutButton")
 
                 Button("Delete Account", role: .destructive) {
                     showingDeleteRequestField.toggle()
                 }
-                .font(.caption.bold())
+                .font(.subheadline.weight(.semibold))
                 .accessibilityIdentifier("ios.profile.deleteAccountButton")
             }
 
@@ -176,8 +172,8 @@ public struct ProfileAndAuthView: View {
                         }
                     } label: {
                         Text("Send Deletion Confirmation Email")
-                            .font(.caption.bold())
-                            .foregroundStyle(.white)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
                             .background(RoundedRectangle(cornerRadius: 8).fill(Color.red.opacity(0.85)))
@@ -190,7 +186,7 @@ public struct ProfileAndAuthView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 16).fill(LukiColors.darkCard))
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
     }
 
     private var guestAuthCard: some View {
@@ -230,8 +226,8 @@ public struct ProfileAndAuthView: View {
                             }
                         }
                     }
-                    .font(.caption.bold())
-                    .foregroundStyle(LukiColors.neonLime)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(LukiColors.accent)
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("ios.profile.forgotPasswordButton")
                 }
@@ -240,7 +236,7 @@ public struct ProfileAndAuthView: View {
             if let statusMessage {
                 Text(statusMessage)
                     .font(.caption)
-                    .foregroundStyle(LukiColors.neonLime)
+                    .foregroundStyle(LukiColors.accent)
                     .accessibilityIdentifier("ios.profile.statusMessage")
             }
 
@@ -267,16 +263,16 @@ public struct ProfileAndAuthView: View {
             } label: {
                 Text(authMode == "login" ? "Sign In" : "Create Account")
                     .font(.subheadline.bold())
-                    .foregroundStyle(.black)
+                    .foregroundStyle(LukiColors.accentForeground)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.neonLime))
+                    .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.accent))
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("ios.profile.submitAuthButton")
         }
         .padding(16)
-        .background(RoundedRectangle(cornerRadius: 16).fill(LukiColors.darkCard))
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
     }
 
     private var preferencesSection: some View {
@@ -284,7 +280,7 @@ public struct ProfileAndAuthView: View {
         return VStack(alignment: .leading, spacing: 12) {
             Text("Gym & Unit Preferences")
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
 
             Picker("Weight Unit", selection: $store.preferences.weightUnit) {
                 ForEach(WeightUnit.allCases, id: \.self) { unit in
@@ -299,77 +295,77 @@ public struct ProfileAndAuthView: View {
                 in: 1...14
             )
             .font(.subheadline)
-            .foregroundStyle(.white)
+            .foregroundStyle(.primary)
 
-            Divider().overlay(Color.white.opacity(0.1))
+            Divider()
 
             Toggle(isOn: $store.preferences.exerciseSuggestionsEnabled) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Smart Exercise Suggestions")
                         .font(.subheadline.bold())
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                     Text("Propose up to 1 rainbow exercise suggestion per workout")
-                        .font(.caption2)
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
             }
-            .tint(LukiColors.neonLime)
+            .tint(LukiColors.accent)
             .accessibilityIdentifier("ios.profile.exerciseSuggestionsToggle")
 
             Toggle(isOn: $store.preferences.notificationsEnabled) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Workout & Rest Notifications")
                         .font(.subheadline.bold())
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                     Text("Alert when rest timer finishes or workout completes")
-                        .font(.caption2)
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
             }
-            .tint(LukiColors.neonLime)
+            .tint(LukiColors.accent)
             .accessibilityIdentifier("ios.profile.notificationsToggle")
 
             Toggle(isOn: $store.preferences.restTimerSound) {
                 Text("Rest Timer Chime Sound")
                     .font(.subheadline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
             }
-            .tint(LukiColors.neonLime)
+            .tint(LukiColors.accent)
 
             Button {
                 viewModel.sendTestNotification()
                 statusMessage = "Test notification scheduled!"
             } label: {
                 Label("Test Notification", systemImage: "bell.badge.fill")
-                    .font(.caption.bold())
-                    .foregroundStyle(.black)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(LukiColors.accentForeground)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.neonLime))
+                    .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.accent))
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("ios.profile.testNotificationButton")
         }
         .padding(16)
-        .background(RoundedRectangle(cornerRadius: 16).fill(LukiColors.darkCard))
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
     }
 
     private var backupExportSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("JSON & CSV Workout Backup")
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
             let jsonBackup = (try? String(data: JSONEncoder().encode(viewModel.store.historySessions), encoding: .utf8)) ?? "[]"
             ShareLink(item: jsonBackup, preview: SharePreview("luki-fitti-backup.json")) {
                 Label("Export JSON Backup", systemImage: "square.and.arrow.up")
-                    .font(.caption.bold())
+                    .font(.subheadline.weight(.semibold))
                     .padding(.horizontal, 14)
                     .padding(.vertical, 9)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.08)))
+                    .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.fill))
             }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 16).fill(LukiColors.darkCard))
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
     }
 }

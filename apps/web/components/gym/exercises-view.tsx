@@ -8,10 +8,9 @@ import {
   Sparkles,
   Play,
   Trash2,
-  Clock,
   ArrowRightLeft,
   Filter,
-  Info,
+  ChevronRight,
 } from 'lucide-react';
 import { Badge } from '@luki-fitti/ui/components/ui/badge';
 import { Button } from '@luki-fitti/ui/components/ui/button';
@@ -313,7 +312,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                   aria-label="Filter by equipment"
                   value={selectedEquipment}
                   onChange={(e) => setSelectedEquipment(e.target.value as EquipmentType | 'ALL')}
-                  className="bg-secondary h-8 w-full text-xs sm:w-auto"
+                  className="w-full sm:w-auto"
                 >
                   <option value="ALL">{t.exercises.allEquipment}</option>
                   {Object.values(EquipmentType).map((eq) => (
@@ -334,101 +333,44 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
               <p className="text-muted-foreground mt-1 text-xs">{t.exercises.noMatchingSub}</p>
             </Card>
           ) : (
-            <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="bg-card divide-border/70 divide-y overflow-hidden rounded-[1.25rem]">
               {filteredCatalog.map((ex) => {
                 const isStretch = ex.exerciseType === ExerciseType.STRETCHING;
-                const altNames = ex.alternativeExerciseIds
-                  .map((id) => catalog.find((c) => c.id === id)?.name)
-                  .filter(Boolean);
-
                 return (
-                  <Card
-                    key={ex.id}
-                    onClick={() => setSelectedExercise(ex)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') setSelectedExercise(ex);
-                    }}
-                    className="hover:border-primary/50 group min-w-0 cursor-pointer justify-between overflow-hidden p-4 transition"
-                  >
-                    <div>
-                      <ExerciseVisual exercise={ex} variant="card" className="mb-3" />
-
-                      <div className="flex items-start justify-between gap-2">
-                        <Badge variant={isStretch ? 'accent' : 'default'} className="text-xs">
-                          {muscleLabel(ex.primaryMuscleGroup)}
-                        </Badge>
-                        <Badge variant="secondary" className="text-muted-foreground text-xs">
-                          {equipmentLabel(ex.equipment)}
-                        </Badge>
-                      </div>
-
-                      <h3 className="font-display group-hover:text-primary mt-2.5 text-base font-bold transition">
-                        {ex.name}
-                      </h3>
-                      <p className="text-muted-foreground mt-1 line-clamp-2 text-xs leading-relaxed">
-                        {ex.description}
-                      </p>
-
-                      {ex.secondaryMuscleGroups.length > 0 && (
-                        <div className="mt-2.5 flex flex-wrap gap-1">
-                          {ex.secondaryMuscleGroups.map((sec) => (
-                            <Badge
-                              key={sec}
-                              variant="secondary"
-                              className="bg-secondary/70 text-muted-foreground px-1.5 py-0.5 text-xs"
-                            >
-                              + {muscleLabel(sec)}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-4 flex items-center justify-between border-t pt-3 text-xs">
-                      <div className="text-muted-foreground flex min-w-0 items-center gap-1.5">
-                        {isStretch && ex.recommendedDurationSeconds ? (
-                          <>
-                            <Clock className="text-accent h-3.5 w-3.5 shrink-0" />
-                            <span>
-                              {ex.recommendedDurationSeconds}
-                              {t.exercises.holdSuffix}
-                            </span>
-                          </>
-                        ) : altNames.length > 0 ? (
-                          <>
-                            <ArrowRightLeft className="h-3.5 w-3.5 shrink-0" />
-                            <span className="max-w-[150px] truncate">
-                              {format(t.exercises.altPrefix, { name: altNames[0] ?? '' })}
-                            </span>
-                          </>
-                        ) : (
-                          <span>{exerciseTypeLabel(ex.exerciseType)}</span>
-                        )}
-                      </div>
-
-                      {activeSession ? (
-                        <Button
-                          type="button"
-                          size="xs"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void addExerciseToSession(ex.id);
-                          }}
-                        >
-                          {t.exercises.addToActiveBtn}
-                        </Button>
-                      ) : (
-                        <span className="text-primary inline-flex shrink-0 items-center gap-1 font-semibold">
-                          <Info className="h-3.5 w-3.5" /> {t.exercises.formAndVideo}
+                  <li key={ex.id} className="flex items-center gap-3 px-4 py-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedExercise(ex)}
+                      className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                    >
+                      <ExerciseVisual exercise={ex} variant="thumbnail" className="h-12 w-14" />
+                      <span className="min-w-0 flex-1">
+                        <h3 className="truncate text-[17px] font-medium">{ex.name}</h3>
+                        <span className="text-muted-foreground block truncate text-[13px]">
+                          {muscleLabel(ex.primaryMuscleGroup)} · {equipmentLabel(ex.equipment)}
+                          {isStretch && ex.recommendedDurationSeconds
+                            ? ` · ${ex.recommendedDurationSeconds}${t.exercises.holdSuffix}`
+                            : ''}
                         </span>
-                      )}
-                    </div>
-                  </Card>
+                      </span>
+                    </button>
+                    {activeSession ? (
+                      <Button
+                        type="button"
+                        size="xs"
+                        variant="accent"
+                        onClick={() => void addExerciseToSession(ex.id)}
+                        className="shrink-0"
+                      >
+                        {t.exercises.addToActiveBtn}
+                      </Button>
+                    ) : (
+                      <ChevronRight aria-hidden="true" className="text-muted-foreground h-4 w-4 shrink-0" />
+                    )}
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           )}
         </>
       ) : (
@@ -613,7 +555,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
               </div>
             </div>
 
-            <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="bg-card divide-border/70 divide-y overflow-hidden rounded-[1.25rem]">
               {stretchExercises
                 .filter(
                   (e) =>
@@ -622,65 +564,45 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                     e.secondaryMuscleGroups.includes(stretchMuscleFilter),
                 )
                 .map((ex) => (
-                  <Card
-                    key={ex.id}
-                    onClick={() => setSelectedExercise(ex)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(ev) => {
-                      if (ev.key === 'Enter' || ev.key === ' ') setSelectedExercise(ex);
-                    }}
-                    className="hover:border-accent/50 group min-w-0 cursor-pointer justify-between overflow-hidden p-4 transition"
-                  >
-                    <div>
-                      <ExerciseVisual exercise={ex} variant="card" className="mb-3" />
-                      <div className="flex items-center justify-between gap-2">
-                        <Badge variant="accent" className="text-xs">
-                          {muscleLabel(ex.primaryMuscleGroup)}
-                        </Badge>
-                        <Badge variant="secondary" className="tabular-nums text-xs">
-                          <Clock className="text-accent mr-1 h-3 w-3" />
-                          {ex.recommendedDurationSeconds ?? 45}
+                  <li key={ex.id} className="flex items-center gap-3 px-4 py-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedExercise(ex)}
+                      className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                    >
+                      <ExerciseVisual exercise={ex} variant="thumbnail" className="h-12 w-14" />
+                      <span className="min-w-0 flex-1">
+                        <h4 className="truncate text-[17px] font-medium">{ex.name}</h4>
+                        <span className="text-muted-foreground block truncate text-[13px] tabular-nums">
+                          {muscleLabel(ex.primaryMuscleGroup)} · {ex.recommendedDurationSeconds ?? 45}
                           {t.exercises.holdSuffix}
-                        </Badge>
-                      </div>
-                      <h4 className="font-display group-hover:text-accent mt-2 text-base font-bold transition">
-                        {ex.name}
-                      </h4>
-                      <p className="text-muted-foreground mt-1 line-clamp-2 text-xs leading-relaxed">
-                        {ex.description}
-                      </p>
-                    </div>
-
-                    <div className="mt-4 flex items-center justify-between border-t pt-3 text-xs">
-                      <span className="text-muted-foreground">
-                        {exerciseTypeLabel(ex.exerciseType)}
+                        </span>
                       </span>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="xs"
-                        onClick={(ev) => {
-                          ev.stopPropagation();
-                          setRoutineItems((prev) => [
-                            ...prev,
-                            {
-                              exerciseId: ex.id,
-                              sets: 2,
-                              durationSeconds: ex.recommendedDurationSeconds ?? 45,
-                              reps: null,
-                              transitionSeconds: 15,
-                            },
-                          ]);
-                          setShowCreateRoutineModal(true);
-                        }}
-                      >
-                        {t.exercises.addToRoutineBtn}
-                      </Button>
-                    </div>
-                  </Card>
+                    </button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="xs"
+                      className="shrink-0"
+                      onClick={() => {
+                        setRoutineItems((prev) => [
+                          ...prev,
+                          {
+                            exerciseId: ex.id,
+                            sets: 2,
+                            durationSeconds: ex.recommendedDurationSeconds ?? 45,
+                            reps: null,
+                            transitionSeconds: 15,
+                          },
+                        ]);
+                        setShowCreateRoutineModal(true);
+                      }}
+                    >
+                      {t.exercises.addToRoutineBtn}
+                    </Button>
+                  </li>
                 ))}
-            </div>
+            </ul>
           </div>
         </div>
       )}
@@ -1119,7 +1041,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                               prev.map((p, i) => (i === idx ? { ...p, sets: val } : p)),
                             )
                           }
-                          className="h-9 text-xs sm:h-8"
+                          className="h-10"
                         />
                       </div>
                       <div>
@@ -1136,7 +1058,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                               prev.map((p, i) => (i === idx ? { ...p, durationSeconds: val } : p)),
                             )
                           }
-                          className="h-9 text-xs sm:h-8"
+                          className="h-10"
                         />
                       </div>
                       <div>
@@ -1155,7 +1077,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                               ),
                             )
                           }
-                          className="h-9 text-xs sm:h-8"
+                          className="h-10"
                         />
                       </div>
                     </div>

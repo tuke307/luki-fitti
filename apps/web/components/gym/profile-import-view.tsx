@@ -266,7 +266,7 @@ export function ProfileImportView() {
           {authMode === 'AUTHENTICATED' ? (
             <div className="space-y-3">
               {authInfoMessage && (
-                <div className="border-primary/40 bg-primary/15 text-primary flex items-start gap-2 rounded-2xl border p-3 text-xs">
+                <div className="border-primary/40 bg-primary/12 text-primary flex items-start gap-2 rounded-2xl border p-3 text-xs">
                   <MailCheck className="mt-0.5 h-4 w-4 shrink-0" />
                   <span>{authInfoMessage}</span>
                 </div>
@@ -358,7 +358,7 @@ export function ProfileImportView() {
               )}
 
               {authInfoMessage && (
-                <div className="border-primary/40 bg-primary/15 text-primary space-y-2 rounded-2xl border p-3 text-xs">
+                <div className="border-primary/40 bg-primary/12 text-primary space-y-2 rounded-2xl border p-3 text-xs">
                   <div className="flex items-start gap-2">
                     <MailCheck className="mt-0.5 h-4 w-4 shrink-0" />
                     <span>{authInfoMessage}</span>
@@ -488,7 +488,7 @@ export function ProfileImportView() {
                 onChange={(e) =>
                   void updatePreferences({ defaultRestSeconds: Number(e.target.value) })
                 }
-                className="bg-secondary tabular-nums h-8 font-bold"
+                className="tabular-nums w-auto"
               >
                 {[60, 75, 90, 120, 150, 180].map((sec) => (
                   <option key={sec} value={sec}>
@@ -509,7 +509,7 @@ export function ProfileImportView() {
                 onChange={(e) =>
                   void updatePreferences({ weeklyGoalSessions: Number(e.target.value) })
                 }
-                className="bg-secondary tabular-nums h-8 font-bold"
+                className="tabular-nums w-auto"
               >
                 {[2, 3, 4, 5, 6].map((g) => (
                   <option key={g} value={g}>

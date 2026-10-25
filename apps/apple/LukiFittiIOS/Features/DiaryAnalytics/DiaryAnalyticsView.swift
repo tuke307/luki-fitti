@@ -63,7 +63,7 @@ public struct DiaryAnalyticsView: View {
             }
             .padding(16)
         }
-        .background(LukiColors.darkBackground)
+        .background(LukiColors.groupedBackground)
         .sheet(item: $inspectingSession) { session in
             sessionInspectorSheet(session)
         }
@@ -71,10 +71,7 @@ public struct DiaryAnalyticsView: View {
 
     private var headerAndPeriodPicker: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Training Diary & Progress Analytics")
-                .font(.title2.bold())
-                .foregroundStyle(.white)
-            Text("Calendar history, working-set volume, stretching time, muscle distribution, and PRs")
+            Text("Every workout, and how you’re progressing.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -95,11 +92,11 @@ public struct DiaryAnalyticsView: View {
                     filterMuscle = nil
                 } label: {
                     Text("All Muscles")
-                        .font(.caption.bold())
+                        .font(.subheadline.weight(.semibold))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(Capsule().fill(filterMuscle == nil ? LukiColors.neonLime : LukiColors.darkCard))
-                        .foregroundStyle(filterMuscle == nil ? .black : .white)
+                        .background(Capsule().fill(filterMuscle == nil ? LukiColors.accent : LukiColors.cardBackground))
+                        .foregroundStyle(filterMuscle == nil ? LukiColors.accentForeground : .primary)
                 }
                 .buttonStyle(.plain)
 
@@ -108,11 +105,11 @@ public struct DiaryAnalyticsView: View {
                         filterMuscle = muscle
                     } label: {
                         Text(LukiI18n.muscleLabel(muscle))
-                            .font(.caption.bold())
+                            .font(.subheadline.weight(.semibold))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
-                            .background(Capsule().fill(filterMuscle == muscle ? LukiColors.neonLime : LukiColors.darkCard))
-                            .foregroundStyle(filterMuscle == muscle ? .black : .white)
+                            .background(Capsule().fill(filterMuscle == muscle ? LukiColors.accent : LukiColors.cardBackground))
+                            .foregroundStyle(filterMuscle == muscle ? LukiColors.accentForeground : .primary)
                     }
                     .buttonStyle(.plain)
                 }
@@ -134,38 +131,38 @@ public struct DiaryAnalyticsView: View {
                 title: "Completed Sessions",
                 value: "\(sessions.count)",
                 subtitle: "\(strengthCount) strength • \(stretchCount) stretch",
-                accent: LukiColors.neonLime
+                accent: LukiColors.accent
             )
             kpiCard(
                 title: "Working Strength Volume",
                 value: "\(totalVolKg) kg",
                 subtitle: "Excludes warm-ups & stretches",
-                accent: .white
+                accent: .primary
             )
             kpiCard(
                 title: "Completed Sets & Reps",
                 value: "\(totalSets) (\(totalReps) reps)",
                 subtitle: "Logged across exercises",
-                accent: .white
+                accent: .primary
             )
             kpiCard(
                 title: "Stretching & Mobility",
                 value: "\(totalStretchMin) min",
                 subtitle: "Dedicated recovery time",
-                accent: LukiColors.electricCyan
+                accent: LukiColors.accent
             )
         }
     }
 
     private func kpiCard(title: String, value: String, subtitle: String, accent: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(title).font(.caption2).foregroundStyle(.secondary)
+            Text(title).font(.footnote).foregroundStyle(.secondary)
             Text(value).font(.title3.bold().monospacedDigit()).foregroundStyle(accent)
-            Text(subtitle).font(.caption2).foregroundStyle(.secondary)
+            Text(subtitle).font(.footnote).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(RoundedRectangle(cornerRadius: 16).fill(LukiColors.darkCard))
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
     }
 
     private var periodActivityCard: some View {
@@ -179,12 +176,12 @@ public struct DiaryAnalyticsView: View {
         return VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Label(title, systemImage: "calendar")
-                    .font(.headline.bold())
-                    .foregroundStyle(.white)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
                 Spacer()
                 Text("\(filteredSessions.count) sess.")
                     .font(.caption.bold().monospacedDigit())
-                    .foregroundStyle(LukiColors.neonLime)
+                    .foregroundStyle(LukiColors.accent)
             }
 
             if selectedPeriod == "week" || selectedPeriod == "month" {
@@ -207,7 +204,7 @@ public struct DiaryAnalyticsView: View {
                         } label: {
                             VStack(spacing: 2) {
                                 Text("\(dayNumber)")
-                                    .font(.caption2.bold().monospacedDigit())
+                                    .font(.footnote.monospacedDigit())
                                 if hasWorkout {
                                     Text("\(daySessions.count)x")
                                         .font(.system(size: 8, weight: .bold))
@@ -216,9 +213,9 @@ public struct DiaryAnalyticsView: View {
                             .frame(maxWidth: .infinity, minHeight: 34)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .fill(hasWorkout ? LukiColors.neonLime.opacity(0.22) : Color.white.opacity(0.04))
+                                    .fill(hasWorkout ? LukiColors.accent.opacity(0.22) : LukiColors.fill)
                             )
-                            .foregroundStyle(hasWorkout ? LukiColors.neonLime : .secondary)
+                            .foregroundStyle(hasWorkout ? LukiColors.accent : .secondary)
                         }
                         .buttonStyle(.plain)
                     }
@@ -237,21 +234,21 @@ public struct DiaryAnalyticsView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
                                     Text(bucket.label)
-                                        .font(.caption.bold())
-                                        .foregroundStyle(.white)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(.primary)
                                     Spacer()
                                     Text("\(bucket.count) sess.")
-                                        .font(.caption2.bold().monospacedDigit())
-                                        .foregroundStyle(bucket.count > 0 ? LukiColors.neonLime : .secondary)
+                                        .font(.footnote.monospacedDigit())
+                                        .foregroundStyle(bucket.count > 0 ? LukiColors.accent : .secondary)
                                 }
                                 Text("\(bucket.sets) sets • \(String(format: "%.1f", Double(bucket.volumeKg) / 1000.0))t")
-                                    .font(.system(size: 10, design: .monospaced))
+                                    .font(.system(size: 10))
                                     .foregroundStyle(.secondary)
                             }
                             .padding(10)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(bucket.count > 0 ? LukiColors.neonLime.opacity(0.15) : Color.white.opacity(0.04))
+                                    .fill(bucket.count > 0 ? LukiColors.accent.opacity(0.15) : LukiColors.fill)
                             )
                         }
                     }
@@ -259,7 +256,7 @@ public struct DiaryAnalyticsView: View {
             }
         }
         .padding(16)
-        .background(RoundedRectangle(cornerRadius: 18).fill(LukiColors.darkCard))
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
     }
 
     private func buildBuckets() -> [(label: String, count: Int, sets: Int, volumeKg: Int)] {
@@ -301,8 +298,8 @@ public struct DiaryAnalyticsView: View {
         let strengthSessions = Array(filteredSessions.filter { $0.sessionType != .STRETCHING && $0.totalVolumeKg > 0 }.reversed().suffix(15))
         return VStack(alignment: .leading, spacing: 10) {
             Text("Session Volume & Working Sets Progression")
-                .font(.headline.bold())
-                .foregroundStyle(.white)
+                .font(.headline)
+                .foregroundStyle(.primary)
             if strengthSessions.isEmpty {
                 Text("No completed strength sessions match the current filter selection.")
                     .font(.caption)
@@ -315,27 +312,27 @@ public struct DiaryAnalyticsView: View {
                             x: .value("Workout", "#\(idx + 1)"),
                             y: .value("Volume (t)", s.totalVolumeKg / 1000.0)
                         )
-                        .foregroundStyle(LukiColors.neonLime.opacity(0.3))
+                        .foregroundStyle(LukiColors.accent.opacity(0.3))
 
                         LineMark(
                             x: .value("Workout", "#\(idx + 1)"),
                             y: .value("Volume (t)", s.totalVolumeKg / 1000.0)
                         )
-                        .foregroundStyle(LukiColors.neonLime)
+                        .foregroundStyle(LukiColors.accent)
                     }
                 }
                 .frame(height: 150)
             }
         }
         .padding(16)
-        .background(RoundedRectangle(cornerRadius: 18).fill(LukiColors.darkCard))
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
     }
 
     private var muscleAndPrGrid: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Muscle Group Distribution")
-                .font(.headline.bold())
-                .foregroundStyle(.white)
+                .font(.headline)
+                .foregroundStyle(.primary)
 
             ForEach(MuscleGroup.allCases.prefix(6), id: \.self) { muscle in
                 let sets = filteredSessions.reduce(0) { acc, sess in
@@ -344,8 +341,8 @@ public struct DiaryAnalyticsView: View {
                 }
                 HStack {
                     Text(LukiI18n.muscleLabel(muscle))
-                        .font(.caption.bold())
-                        .foregroundStyle(.white)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
                     Spacer()
                     Text("\(sets) sets")
                         .font(.caption.monospacedDigit())
@@ -354,14 +351,14 @@ public struct DiaryAnalyticsView: View {
             }
         }
         .padding(16)
-        .background(RoundedRectangle(cornerRadius: 18).fill(LukiColors.darkCard))
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
     }
 
     private var timelineSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Workout Diary Timeline (\(filteredSessions.count))")
-                .font(.headline.bold())
-                .foregroundStyle(.white)
+                .font(.headline)
+                .foregroundStyle(.primary)
 
             if filteredSessions.isEmpty {
                 Text("No training sessions recorded in this period yet.")
@@ -380,12 +377,12 @@ public struct DiaryAnalyticsView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(session.workoutNameSnapshot)
-                    .font(.headline.bold())
-                    .foregroundStyle(.white)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
                 Spacer()
                 if session.sourceDevice == .APPLE_WATCH {
                     Label("Apple Watch", systemImage: "applewatch")
-                        .font(.caption2.bold())
+                        .font(.footnote.weight(.medium))
                         .foregroundStyle(LukiColors.heartRose)
                 }
             }
@@ -413,7 +410,7 @@ public struct DiaryAnalyticsView: View {
                 Button("Inspect / Edit") {
                     inspectingSession = session
                 }
-                .font(.caption.bold())
+                .font(.subheadline.weight(.semibold))
                 Spacer()
                 Button(role: .destructive) {
                     viewModel.store.deleteHistorySession(clientSessionId: session.clientSessionId)
@@ -424,7 +421,7 @@ public struct DiaryAnalyticsView: View {
             }
         }
         .padding(14)
-        .background(RoundedRectangle(cornerRadius: 16).fill(LukiColors.darkCard))
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
     }
 
     private func sessionInspectorSheet(_ session: WorkoutSessionDto) -> some View {
@@ -446,7 +443,7 @@ public struct DiaryAnalyticsView: View {
                             .frame(height: 150)
                         }
                         .padding(14)
-                        .background(RoundedRectangle(cornerRadius: 16).fill(LukiColors.darkCard))
+                        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
                     }
 
                     ForEach(session.exercises) { ex in
@@ -456,7 +453,7 @@ public struct DiaryAnalyticsView: View {
                             ForEach(ex.sets) { set in
                                 HStack {
                                     Text("Set \(set.setNumber)")
-                                        .font(.caption.bold())
+                                        .font(.subheadline.weight(.semibold))
                                     Spacer()
                                     Text("\(String(format: "%g", set.weight ?? 0)) \(set.weightUnit.rawValue) × \(set.reps ?? 0)")
                                         .font(.caption.monospacedDigit())
@@ -469,7 +466,7 @@ public struct DiaryAnalyticsView: View {
                             }
                         }
                         .padding(12)
-                        .background(RoundedRectangle(cornerRadius: 14).fill(LukiColors.darkCard))
+                        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
                     }
                 }
                 .padding(16)
