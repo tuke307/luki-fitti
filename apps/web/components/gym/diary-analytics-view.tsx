@@ -48,6 +48,8 @@ import {
   formatDateTime,
   formatLongDateTime,
   formatShortDayMonth,
+  isoWeekDays,
+  startOfIsoWeek,
 } from '@luki-fitti/common/utils/client';
 import {
   ExerciseType,
@@ -86,7 +88,7 @@ export function DiaryAnalyticsView() {
   const filteredSessions = useMemo(() => {
     const cutoffMs =
       period === 'week'
-        ? nowMs - 7 * 86400000
+        ? startOfIsoWeek(nowMs).getTime()
         : period === 'month'
           ? nowMs - 30 * 86400000
           : period === 'year'
@@ -284,8 +286,7 @@ export function DiaryAnalyticsView() {
         dayNum: number;
         sessions: WorkoutSessionDto[];
       }> = [];
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - i);
+      for (const d of isoWeekDays(nowDate)) {
         const iso = toLocalDateIso(d);
         days.push({
           iso,
@@ -296,7 +297,7 @@ export function DiaryAnalyticsView() {
       }
       return {
         mode: 'days' as const,
-        title: t.diary.last7DaysTitle,
+        title: t.diary.thisWeekTitle,
         leadingEmptyDays: 0,
         items: days,
       };
@@ -435,7 +436,7 @@ export function DiaryAnalyticsView() {
           aria-label="Filter analytics by muscle group"
           value={filterMuscle}
           onChange={(e) => setFilterMuscle(e.target.value as MuscleGroup | 'ALL')}
-          className="bg-secondary h-8 w-full text-xs sm:w-auto"
+          className="w-full sm:w-auto"
         >
           <option value="ALL">{t.diary.allMuscleGroups}</option>
           {Object.values(MuscleGroup).map((mg) => (
@@ -561,9 +562,9 @@ export function DiaryAnalyticsView() {
                       period === 'week' ? 'min-h-16' : 'h-12'
                     } ${
                       hasStrength
-                        ? 'border-primary/60 bg-primary/20 text-primary cursor-pointer font-bold'
+                        ? 'border-primary/60 bg-primary/12 text-primary cursor-pointer font-bold'
                         : hasStretch
-                          ? 'border-accent/60 bg-accent/20 text-accent cursor-pointer font-bold'
+                          ? 'border-accent/60 bg-accent/12 text-accent cursor-pointer font-bold'
                           : 'bg-secondary/30 text-muted-foreground'
                     }`}
                   >
@@ -601,7 +602,7 @@ export function DiaryAnalyticsView() {
                   }}
                   className={`flex flex-col justify-between rounded-2xl border p-3 text-xs transition ${
                     hasSessions
-                      ? 'border-primary/50 bg-primary/15 cursor-pointer'
+                      ? 'border-primary/50 bg-primary/12 cursor-pointer'
                       : 'bg-secondary/30 text-muted-foreground'
                   }`}
                 >
