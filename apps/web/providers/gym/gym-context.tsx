@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -46,7 +47,13 @@ import {
   applyExerciseHistoryToSessionExercise,
   DEFAULT_FOLDER_COLOR,
 } from '@luki-fitti/common/utils/client';
-import { resolveExerciseMedia } from '@luki-fitti/common/catalog';
+import {
+  localizeExercise,
+  localizeFolder,
+  localizeStretchingRoutine,
+  localizeTemplate,
+  resolveExerciseMedia,
+} from '@luki-fitti/common/catalog';
 import type {
   CreateExerciseDto,
   CreateFolderDto,
@@ -62,6 +69,7 @@ import type {
   WorkoutTemplateDto,
 } from '@luki-fitti/common/schemas';
 import { useAuth } from '../auth/auth-context';
+import { useLocale } from '../i18n/locale-context';
 
 interface GymContextValue {
   catalog: ExerciseDto[];
@@ -145,6 +153,7 @@ export function useGym(): GymContextValue {
 
 export function GymProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated } = useAuth();
+  const { locale } = useLocale();
   const weightUnit = user?.preferences?.weightUnit ?? WeightUnit.KG;
 
   const [catalog, setCatalog] = useState<ExerciseDto[]>([]);
@@ -158,6 +167,25 @@ export function GymProvider({ children }: { children: ReactNode }) {
   const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
   const [conflictServerSession, setConflictServerSession] = useState<WorkoutSessionDto | null>(
     null,
+  );
+
+  // Built-in catalog content is resolved by id / systemKey in the current UI language, so cached and
+  // offline data follow language switches. User-authored content passes through unchanged.
+  const localizedCatalog = useMemo(
+    () => catalog.map((ex) => localizeExercise(ex, locale)),
+    [catalog, locale],
+  );
+  const localizedFolders = useMemo(
+    () => folders.map((f) => localizeFolder(f, locale)),
+    [folders, locale],
+  );
+  const localizedUnfiledTemplates = useMemo(
+    () => unfiledTemplates.map((t) => localizeTemplate(t, locale)),
+    [unfiledTemplates, locale],
+  );
+  const localizedStretchingRoutines = useMemo(
+    () => stretchingRoutines.map((r) => localizeStretchingRoutine(r, locale)),
+    [stretchingRoutines, locale],
   );
 
   const isFlushingRef = useRef(false);
@@ -580,7 +608,9 @@ export function GymProvider({ children }: { children: ReactNode }) {
       }
     }
     const nextFolders = folders.map((f) =>
-      f.id === folderId ? { ...f, name: name.trim(), ...(color ? { color } : {}) } : f,
+      f.id === folderId
+        ? { ...f, name: name.trim(), systemKey: null, ...(color ? { color } : {}) }
+        : f,
     );
     setFolders(nextFolders);
     await setCachedWorkouts({ folders: nextFolders, unfiledTemplates });
@@ -701,8 +731,15 @@ export function GymProvider({ children }: { children: ReactNode }) {
     }
 
     const catalogById = new Map(catalog.map((e) => [e.id, e]));
-    const applyUpdate = (t: WorkoutTemplateDto): WorkoutTemplateDto => {
-      if (t.id !== templateId) return t;
+    const applyUpdate = (current: WorkoutTemplateDto): WorkoutTemplateDto => {
+      if (current.id !== templateId) return current;
+      // Editing a starter copy turns it into user content in the language the user sees.
+      const editsText =
+        dto.name !== undefined || dto.description !== undefined || dto.exercises !== undefined;
+      const t =
+        current.systemKey && editsText
+          ? { ...localizeTemplate(current, locale), systemKey: null }
+          : current;
       return {
         ...t,
         name: dto.name ?? t.name,
@@ -745,7 +782,10 @@ export function GymProvider({ children }: { children: ReactNode }) {
   };
 
   const duplicateTemplate = async (templateId: string): Promise<WorkoutTemplateDto | null> => {
-    const allTemplates = [...folders.flatMap((f) => f.templates), ...unfiledTemplates];
+    const allTemplates = [
+      ...localizedFolders.flatMap((f) => f.templates),
+      ...localizedUnfiledTemplates,
+    ];
     const source = allTemplates.find((t) => t.id === templateId);
     if (!source) return null;
 
@@ -934,8 +974,12 @@ export function GymProvider({ children }: { children: ReactNode }) {
   // ───────────────────────────────────────────────────────────────────────────
   // Active Session Execution (Offline-First)
   // ───────────────────────────────────────────────────────────────────────────
+  // Sessions snapshot names and notes in the language the user sees when starting.
   const startWorkoutFromTemplate = async (templateId: string): Promise<WorkoutSessionDto> => {
-    const allTemplates = [...folders.flatMap((f) => f.templates), ...unfiledTemplates];
+    const allTemplates = [
+      ...localizedFolders.flatMap((f) => f.templates),
+      ...localizedUnfiledTemplates,
+    ];
     const tpl = allTemplates.find((t) => t.id === templateId);
     if (!tpl) {
       throw new Error('Workout template not found');
@@ -943,7 +987,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
 
     const session = createOfflineSessionFromTemplate(
       tpl,
-      catalog,
+      localizedCatalog,
       user?.id ?? 'local-athlete',
       weightUnit,
       historySessions,
@@ -954,14 +998,14 @@ export function GymProvider({ children }: { children: ReactNode }) {
   };
 
   const startStretchingSession = async (routineId: string): Promise<WorkoutSessionDto> => {
-    const routine = stretchingRoutines.find((r) => r.id === routineId);
+    const routine = localizedStretchingRoutines.find((r) => r.id === routineId);
     if (!routine) {
       throw new Error('Stretching routine not found');
     }
 
     const session = createOfflineSessionFromStretchingRoutine(
       routine,
-      catalog,
+      localizedCatalog,
       user?.id ?? 'local-athlete',
       weightUnit,
     );
@@ -1144,7 +1188,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
 
   const substituteExercise = async (clientExerciseId: string, replacementExerciseId: string) => {
     if (!activeSession) return;
-    const replacement = catalog.find((e) => e.id === replacementExerciseId);
+    const replacement = localizedCatalog.find((e) => e.id === replacementExerciseId);
     if (!replacement) return;
     const updated = substituteExerciseInSession(
       activeSession,
@@ -1158,7 +1202,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
 
   const addExerciseToSession = async (exerciseId: string) => {
     if (!activeSession) return;
-    const exInfo = catalog.find((e) => e.id === exerciseId);
+    const exInfo = localizedCatalog.find((e) => e.id === exerciseId);
     if (!exInfo) return;
 
     const clientExerciseId = `sex-${Date.now()}`;
@@ -1494,10 +1538,10 @@ export function GymProvider({ children }: { children: ReactNode }) {
   return (
     <GymContext.Provider
       value={{
-        catalog,
-        folders,
-        unfiledTemplates,
-        stretchingRoutines,
+        catalog: localizedCatalog,
+        folders: localizedFolders,
+        unfiledTemplates: localizedUnfiledTemplates,
+        stretchingRoutines: localizedStretchingRoutines,
         activeSession,
         historySessions,
         isOnline,

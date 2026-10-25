@@ -62,6 +62,11 @@ export async function fetchClient<T = null>(
     if (!isFormData && !headers.has('Content-Type')) {
       headers.set('Content-Type', 'application/json');
     }
+    // The app's resolved UI language (kept on <html lang> by LocaleProvider) selects the language of
+    // catalog content returned by the API.
+    if (typeof document !== 'undefined' && document.documentElement.lang) {
+      headers.set('Accept-Language', document.documentElement.lang);
+    }
 
     let response: Response;
     try {
