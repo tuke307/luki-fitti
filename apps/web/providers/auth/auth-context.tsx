@@ -40,7 +40,7 @@ const DEFAULT_LOCAL_USER: UserDto = {
     weightUnit: WeightUnit.KG,
     distanceUnit: DistanceUnit.KM,
     defaultRestSeconds: 90,
-    theme: 'dark',
+    theme: 'system',
     language: 'system',
     restTimerSound: true,
     notificationsEnabled: true,
@@ -322,17 +322,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           userId: user.id,
           weightUnit: data.weightUnit ?? user.preferences?.weightUnit ?? WeightUnit.KG,
           distanceUnit: data.distanceUnit ?? user.preferences?.distanceUnit ?? DistanceUnit.KM,
-          defaultRestSeconds:
-            data.defaultRestSeconds ?? user.preferences?.defaultRestSeconds ?? 90,
-          theme: data.theme ?? user.preferences?.theme ?? 'dark',
+          defaultRestSeconds: data.defaultRestSeconds ?? user.preferences?.defaultRestSeconds ?? 90,
+          theme: data.theme ?? user.preferences?.theme ?? 'system',
           language: data.language ?? user.preferences?.language ?? 'system',
           restTimerSound: data.restTimerSound ?? user.preferences?.restTimerSound ?? true,
           notificationsEnabled:
             data.notificationsEnabled ?? user.preferences?.notificationsEnabled ?? true,
           exerciseSuggestionsEnabled:
             data.exerciseSuggestionsEnabled ?? user.preferences?.exerciseSuggestionsEnabled ?? true,
-          weeklyGoalSessions:
-            data.weeklyGoalSessions ?? user.preferences?.weeklyGoalSessions ?? 4,
+          weeklyGoalSessions: data.weeklyGoalSessions ?? user.preferences?.weeklyGoalSessions ?? 4,
         },
       };
       setUser(next);

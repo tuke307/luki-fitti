@@ -1,27 +1,15 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { Play, Dumbbell, TrendingUp, BarChart3, FolderKanban, CalendarDays } from 'lucide-react';
-import {
-  Area,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ComposedChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import { Badge } from '@luki-fitti/ui/components/ui/badge';
+import { ChevronRight, Play } from 'lucide-react';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Button } from '@luki-fitti/ui/components/ui/button';
-import { Card } from '@luki-fitti/ui/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useGym } from '@/providers/gym/gym-context';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { formatShortDayMonth } from '@luki-fitti/common/utils/client';
+import type { WorkoutTemplateDto } from '@luki-fitti/common/schemas';
 import {
   ExerciseType,
   MuscleGroup,
@@ -47,8 +35,9 @@ function getMondayOfWeek(d: Date): Date {
 
 export function HomeView({ onNavigate }: HomeViewProps) {
   const { user } = useAuth();
-  const { activeSession, historySessions } = useGym();
-  const { t, format, muscleLabel } = useLocale();
+  const { activeSession, historySessions, folders, unfiledTemplates, startWorkoutFromTemplate } =
+    useGym();
+  const { t, format, muscleLabel, locale } = useLocale();
 
   const [nowMs] = useState<number>(() => Date.now());
   const [muscleRange, setMuscleRange] = useState<'30d' | '90d' | 'all'>('90d');
@@ -76,6 +65,25 @@ export function HomeView({ onNavigate }: HomeViewProps) {
       avgSessionVolumeKg,
     };
   }, [historySessions, nowMs]);
+
+  const suggestedTemplate = useMemo(() => {
+    const templates: WorkoutTemplateDto[] = [
+      ...folders.flatMap((f) => f.templates),
+      ...unfiledTemplates,
+    ];
+    if (templates.length === 0) return null;
+    const lastTrainedMs = (tpl: WorkoutTemplateDto) => {
+      const match = historySessions.find(
+        (s) =>
+          s.templateId === tpl.id ||
+          s.workoutNameSnapshot.trim().toLowerCase() === tpl.name.trim().toLowerCase(),
+      );
+      return match ? Date.parse(match.startedAt) : 0;
+    };
+    const sorted = [...templates].sort((a, b) => lastTrainedMs(a) - lastTrainedMs(b));
+    const pick = sorted[0];
+    return pick ? { template: pick, lastMs: lastTrainedMs(pick) } : null;
+  }, [folders, unfiledTemplates, historySessions]);
 
   // Chart 1: Weekly Volume (tons) & Completed Sessions over the last 10 weeks
   const weeklyTrendData = useMemo(() => {
@@ -170,318 +178,290 @@ export function HomeView({ onNavigate }: HomeViewProps) {
       .slice(0, 8);
   }, [historySessions, muscleRange, nowMs, muscleLabel]);
 
+  const goalProgress = Math.min(1, weeklyGoal > 0 ? summaryMetrics.sessions7d / weeklyGoal : 0);
+  const remainingToGoal = Math.max(0, weeklyGoal - summaryMetrics.sessions7d);
+  const todayLabel = new Intl.DateTimeFormat(locale === 'de' ? 'de-DE' : 'en-US', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  }).format(new Date(nowMs));
+  const maxMuscleSets = muscleChartData[0]?.sets ?? 0;
+
+  const overviewRows = [
+    {
+      label: t.home.vol30dTitle,
+      value: format(t.home.vol30dSub, { volume: summaryMetrics.volume30dKg.toLocaleString() }),
+    },
+    { label: t.home.totalWorkoutsTitle, value: String(summaryMetrics.totalSessions) },
+    {
+      label: t.home.avgLoadTitle,
+      value: format(t.home.avgLoadSub, {
+        volume: summaryMetrics.avgSessionVolumeKg.toLocaleString(),
+      }),
+    },
+  ];
+
   return (
-    <div className="min-w-0 max-w-full space-y-6 pb-10">
-      {/* Compact Header & Quick Actions */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
-            {format(t.home.greeting, { name: user?.name?.split(' ')[0] || 'GymBuddy' })}
-          </h1>
-          <p className="text-muted-foreground text-xs sm:text-sm">{t.home.subtitle}</p>
-        </div>
+    <div className="mx-auto max-w-2xl min-w-0 space-y-8 pb-10">
+      <header className="space-y-1">
+        <p className="text-muted-foreground text-[15px] font-medium first-letter:uppercase">
+          {todayLabel}
+        </p>
+        <h1 className="text-[34px] leading-tight font-bold">
+          {format(t.home.greeting, { name: user?.name?.split(' ')[0] || 'GymBuddy' })}
+        </h1>
+      </header>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" variant="secondary" size="sm" onClick={() => onNavigate('diary')}>
-            <CalendarDays className="h-4 w-4" />
-            {t.home.trainingDiaryBtn}
-          </Button>
-          <Button type="button" size="sm" onClick={() => onNavigate('workouts')}>
-            <FolderKanban className="h-4 w-4" />
-            {t.home.chooseWorkoutBtn}
-          </Button>
-        </div>
-      </div>
-
-      {/* Active Session Resume Callout */}
-      {activeSession && (
-        <Card className="border-primary bg-primary/15 flex flex-col justify-between gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center">
-          <div>
-            <Badge variant="solid" className="text-[10px] uppercase">
-              {t.home.sessionInProgress}
-            </Badge>
-            <h2 className="font-display mt-1 text-lg font-bold">
+      {activeSession ? (
+        <section className="bg-card space-y-4 rounded-[1.25rem] p-5">
+          <div className="space-y-1">
+            <p className="text-primary text-[13px] font-semibold">{t.home.sessionInProgress}</p>
+            <h2 className="text-[22px] leading-snug font-bold">
               {activeSession.workoutNameSnapshot}
             </h2>
-            <p className="text-muted-foreground text-xs">
+            <p className="text-muted-foreground text-[15px]">
               {format(t.home.setsLoggedVolume, {
                 sets: activeSession.totalSetsCompleted,
                 volume: activeSession.totalVolumeKg.toLocaleString(),
               })}
             </p>
           </div>
-          <Button
-            type="button"
-            size="lg"
-            onClick={() => onNavigate('session')}
-            className="w-full shadow-sm sm:w-auto"
-          >
+          <Button type="button" size="lg" onClick={() => onNavigate('session')} className="w-full">
             <Play className="h-4 w-4 fill-current" /> {t.home.resumeActiveSession}
           </Button>
-        </Card>
+        </section>
+      ) : (
+        <section className="bg-card space-y-4 rounded-[1.25rem] p-5">
+          <div className="space-y-1">
+            <p className="text-muted-foreground text-[13px] font-semibold">
+              {t.home.startNextTitle}
+            </p>
+            <h2 className="text-[22px] leading-snug font-bold">
+              {suggestedTemplate?.template.name ?? t.home.startNextSub}
+            </h2>
+            {suggestedTemplate && (
+              <p className="text-muted-foreground text-[15px]">
+                {suggestedTemplate.lastMs > 0
+                  ? format(t.home.lastTrained, {
+                      date: formatShortDayMonth(new Date(suggestedTemplate.lastMs)),
+                    })
+                  : t.workouts.neverTrained}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {suggestedTemplate && (
+              <Button
+                type="button"
+                size="lg"
+                className="flex-1"
+                onClick={async () => {
+                  await startWorkoutFromTemplate(suggestedTemplate.template.id);
+                  onNavigate('session');
+                }}
+              >
+                <Play className="h-4 w-4 fill-current" /> {t.home.startWorkoutBtn}
+              </Button>
+            )}
+            <Button
+              type="button"
+              size="lg"
+              variant="secondary"
+              className="flex-1"
+              onClick={() => onNavigate('workouts')}
+            >
+              {t.home.chooseWorkoutBtn}
+            </Button>
+          </div>
+        </section>
       )}
 
-      {/* Key Telemetry Strip */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Card className="p-4">
-          <p className="text-muted-foreground text-xs font-medium">{t.home.freq7dTitle}</p>
-          <p className="font-mono-tabular text-primary mt-1 text-2xl font-extrabold">
-            {summaryMetrics.sessions7d}{' '}
-            <span className="text-muted-foreground text-sm font-normal">/ {weeklyGoal}</span>
+      <section
+        aria-labelledby="home-week"
+        className="bg-card flex items-center gap-5 rounded-[1.25rem] p-5"
+      >
+        <WeeklyRing progress={goalProgress} />
+        <div className="min-w-0 space-y-0.5">
+          <h2 id="home-week" className="text-[17px] font-semibold">
+            {t.home.freq7dTitle}
+          </h2>
+          <p className="font-rounded text-[28px] leading-tight font-semibold">
+            {summaryMetrics.sessions7d}
+            <span className="text-muted-foreground text-[17px] font-medium"> / {weeklyGoal}</span>
           </p>
-          <p className="text-muted-foreground mt-0.5 text-[11px]">{t.home.freq7dSub}</p>
-        </Card>
+          <p className="text-muted-foreground text-[15px]">
+            {remainingToGoal === 0
+              ? t.home.goalReached
+              : format(t.home.goalRemaining, { count: remainingToGoal })}
+          </p>
+        </div>
+      </section>
 
-        <Card className="p-4">
-          <p className="text-muted-foreground text-xs font-medium">{t.home.vol30dTitle}</p>
-          <p className="font-mono-tabular mt-1 text-2xl font-extrabold">
-            {(summaryMetrics.volume30dKg / 1000).toFixed(1)}{' '}
-            <span className="text-muted-foreground text-sm font-normal">t</span>
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-[11px]">
-            {format(t.home.vol30dSub, { volume: summaryMetrics.volume30dKg.toLocaleString() })}
-          </p>
-        </Card>
-
-        <Card className="p-4">
-          <p className="text-muted-foreground text-xs font-medium">{t.home.totalWorkoutsTitle}</p>
-          <p className="font-mono-tabular mt-1 text-2xl font-extrabold">
-            {summaryMetrics.totalSessions}
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-[11px]">{t.home.totalWorkoutsSub}</p>
-        </Card>
-
-        <Card className="p-4">
-          <p className="text-muted-foreground text-xs font-medium">{t.home.avgLoadTitle}</p>
-          <p className="font-mono-tabular text-accent mt-1 text-2xl font-extrabold">
-            {(summaryMetrics.avgSessionVolumeKg / 1000).toFixed(1)}{' '}
-            <span className="text-muted-foreground text-sm font-normal">t</span>
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-[11px]">
-            {format(t.home.avgLoadSub, {
-              volume: summaryMetrics.avgSessionVolumeKg.toLocaleString(),
-            })}
-          </p>
-        </Card>
-      </div>
-
-      {/* 2 Useful Dashboard Charts */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Chart 1: Weekly Volume & Session Frequency Trend */}
-        <Card className="min-w-0 space-y-4 overflow-hidden rounded-3xl p-4 sm:p-5">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <h2 className="font-display flex items-center gap-2 text-base font-bold">
-                <TrendingUp className="text-primary h-4 w-4" /> {t.home.weeklyChartTitle}
-              </h2>
-              <p className="text-muted-foreground text-xs">{t.home.weeklyChartSub}</p>
+      <section aria-labelledby="home-overview" className="space-y-2">
+        <h2 id="home-overview" className="px-1 text-[20px] font-bold">
+          {t.home.statsTitle}
+        </h2>
+        <dl className="bg-card divide-border divide-y overflow-hidden rounded-[1.25rem]">
+          {overviewRows.map((row) => (
+            <div key={row.label} className="flex items-center justify-between gap-4 px-5 py-3.5">
+              <dt className="text-[17px]">{row.label}</dt>
+              <dd className="text-muted-foreground tabular-nums text-[17px]">{row.value}</dd>
             </div>
-            <div className="flex items-center gap-3 text-[11px]">
-              <span className="flex items-center gap-1.5 font-semibold">
-                <span className="bg-primary inline-block h-2.5 w-2.5 rounded-sm" />{' '}
-                {t.home.volumeLegend}
-              </span>
-              <span className="flex items-center gap-1.5 font-semibold">
-                <span className="bg-accent inline-block h-2.5 w-2.5 rounded-full" />{' '}
-                {t.home.sessionsLegend}
-              </span>
-            </div>
+          ))}
+        </dl>
+        <button
+          type="button"
+          onClick={() => onNavigate('diary')}
+          className="text-primary flex items-center gap-0.5 px-1 py-1 text-[15px] font-medium"
+        >
+          {t.home.trainingDiaryBtn}
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </section>
+
+      <section
+        aria-labelledby="home-weekly"
+        className="bg-card min-w-0 space-y-4 rounded-[1.25rem] p-5"
+      >
+        <div>
+          <h2 id="home-weekly" className="text-[17px] font-semibold">
+            {t.home.weeklyChartTitle}
+          </h2>
+          <p className="text-muted-foreground text-[13px]">{t.home.weeklyChartSub}</p>
+        </div>
+        <div className="h-52 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={weeklyTrendData} margin={{ top: 4, right: 0, left: -20, bottom: 0 }}>
+              <CartesianGrid vertical={false} stroke="var(--border)" />
+              <XAxis
+                dataKey="weekLabel"
+                tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
+                axisLine={false}
+                tickLine={false}
+                interval="preserveStartEnd"
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
+                axisLine={false}
+                tickLine={false}
+                unit="t"
+                width={44}
+              />
+              <Tooltip
+                cursor={{ fill: 'color-mix(in oklch, var(--muted) 60%, transparent)' }}
+                wrapperStyle={{ outline: 'none' }}
+                content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null;
+                  const row = payload[0]?.payload as (typeof weeklyTrendData)[number] | undefined;
+                  if (!row) return null;
+                  return (
+                    <div className="bg-popover text-popover-foreground pointer-events-none rounded-xl px-3 py-2 text-[13px]">
+                      <p className="font-semibold">
+                        {format(t.home.weekOf, { date: String(label ?? '') })}
+                      </p>
+                      <p className="text-muted-foreground tabular-nums">
+                        {row.volumeTons} t · {row.sessions}{' '}
+                        {row.sessions === 1 ? t.common.workout : t.common.workouts}
+                      </p>
+                    </div>
+                  );
+                }}
+              />
+              <Bar
+                dataKey="volumeTons"
+                fill="var(--chart-1)"
+                radius={[6, 6, 6, 6]}
+                maxBarSize={22}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </section>
+
+      <section aria-labelledby="home-muscles" className="bg-card space-y-4 rounded-[1.25rem] p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 id="home-muscles" className="text-[17px] font-semibold">
+              {t.home.muscleChartTitle}
+            </h2>
+            <p className="text-muted-foreground text-[13px]">{t.home.muscleChartSub}</p>
           </div>
+          <Tabs
+            value={muscleRange}
+            onValueChange={(v) => setMuscleRange(v as '30d' | '90d' | 'all')}
+          >
+            <TabsList>
+              <TabsTrigger value="30d">30d</TabsTrigger>
+              <TabsTrigger value="90d">90d</TabsTrigger>
+              <TabsTrigger value="all">{t.home.rangeAll}</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
 
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart
-                data={weeklyTrendData}
-                margin={{ top: 8, right: 8, left: -18, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id="homeVolGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#CCFF00" stopOpacity={0.85} />
-                    <stop offset="100%" stopColor="#CCFF00" stopOpacity={0.2} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.18)" />
-                <XAxis
-                  dataKey="weekLabel"
-                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  yAxisId="left"
-                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                  axisLine={false}
-                  tickLine={false}
-                  unit="t"
-                />
-                <YAxis
-                  yAxisId="right"
-                  orientation="right"
-                  allowDecimals={false}
-                  tick={{ fontSize: 10, fill: 'hsl(var(--accent))' }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  cursor={{ stroke: 'hsl(var(--muted-foreground) / 0.3)', strokeWidth: 1 }}
-                  wrapperStyle={{ outline: 'none' }}
-                  content={({ active, payload, label }) => {
-                    if (!active || !payload?.length) return null;
-                    return (
-                      <div className="bg-popover/95 text-popover-foreground border-border pointer-events-none max-w-[180px] rounded-xl border px-2.5 py-1.5 text-[11px] leading-tight shadow-md backdrop-blur-sm">
-                        <p className="text-foreground mb-1 truncate font-semibold">
-                          {format(t.home.weekOf, { date: String(label ?? '') })}
-                        </p>
-                        <div className="space-y-0.5">
-                          {payload.map((item) => {
-                            const isVolume = item.dataKey === 'volumeTons';
-                            const val = Number(item.value ?? 0);
-                            return (
-                              <div
-                                key={String(item.dataKey)}
-                                className="flex items-center justify-between gap-2.5"
-                              >
-                                <span className="text-muted-foreground flex items-center gap-1.5">
-                                  <span
-                                    className={`inline-block h-2 w-2 shrink-0 rounded-full ${
-                                      isVolume ? 'bg-primary' : 'bg-accent'
-                                    }`}
-                                  />
-                                  {isVolume ? t.home.volumeLabel : t.home.sessionsLegend}
-                                </span>
-                                <span className="text-foreground font-mono-tabular font-bold">
-                                  {isVolume
-                                    ? `${val} t`
-                                    : `${val} ${val === 1 ? t.common.workout : t.common.workouts}`}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  }}
-                />
-                <Bar
-                  yAxisId="left"
-                  dataKey="volumeTons"
-                  fill="url(#homeVolGrad)"
-                  radius={[6, 6, 0, 0]}
-                  maxBarSize={28}
-                />
-                <Area
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="sessions"
-                  stroke="#00E5FF"
-                  strokeWidth={2.5}
-                  fill="#00E5FF"
-                  fillOpacity={0.12}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-
-        {/* Chart 2: Muscle Group Balance (Working Sets Distribution) */}
-        <Card className="min-w-0 space-y-4 overflow-hidden rounded-3xl p-4 sm:p-5">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <h2 className="font-display flex items-center gap-2 text-base font-bold">
-                <BarChart3 className="text-accent h-4 w-4" /> {t.home.muscleChartTitle}
-              </h2>
-              <p className="text-muted-foreground text-xs">{t.home.muscleChartSub}</p>
-            </div>
-
-            <Tabs
-              value={muscleRange}
-              onValueChange={(v) => setMuscleRange(v as '30d' | '90d' | 'all')}
-            >
-              <TabsList className="h-7">
-                <TabsTrigger value="30d" className="px-2 py-0.5 text-[11px]">
-                  30d
-                </TabsTrigger>
-                <TabsTrigger value="90d" className="px-2 py-0.5 text-[11px]">
-                  90d
-                </TabsTrigger>
-                <TabsTrigger value="all" className="px-2 py-0.5 text-[11px]">
-                  {t.home.rangeAll}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-
-          {muscleChartData.length === 0 ? (
-            <div className="bg-secondary/30 text-muted-foreground flex h-64 flex-col items-center justify-center rounded-2xl p-6 text-center text-xs">
-              <Dumbbell className="mb-2 h-6 w-6 opacity-50" />
-              {t.home.noLoggedWorkingSets}
-            </div>
-          ) : (
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={muscleChartData}
-                  layout="vertical"
-                  margin={{ top: 4, right: 16, left: 8, bottom: 0 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    horizontal={false}
-                    stroke="rgba(148,163,184,0.18)"
-                  />
-                  <XAxis
-                    type="number"
-                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    width={88}
-                    tick={{ fontSize: 11, fill: 'hsl(var(--foreground))', fontWeight: 600 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    cursor={{ fill: 'hsl(var(--muted) / 0.45)' }}
-                    wrapperStyle={{ outline: 'none' }}
-                    content={({ active, payload, label }) => {
-                      if (!active || !payload?.length) return null;
-                      const setsCount = Number(payload[0]?.value ?? 0);
-                      return (
-                        <div className="bg-popover/95 text-popover-foreground border-border pointer-events-none max-w-[175px] rounded-xl border px-2.5 py-1.5 text-[11px] leading-tight shadow-md backdrop-blur-sm">
-                          <p className="text-foreground mb-0.5 truncate font-semibold">
-                            {String(label ?? '')}
-                          </p>
-                          <div className="flex items-center justify-between gap-2.5">
-                            <span className="text-muted-foreground flex items-center gap-1.5">
-                              <span className="bg-primary inline-block h-2 w-2 shrink-0 rounded-full" />
-                              {t.home.workingLoad}
-                            </span>
-                            <span className="text-foreground font-mono-tabular font-bold">
-                              {setsCount} {setsCount === 1 ? t.common.set : t.common.sets}
-                            </span>
-                          </div>
-                        </div>
-                      );
+        {muscleChartData.length === 0 ? (
+          <p className="text-muted-foreground py-8 text-center text-[15px]">
+            {t.home.noLoggedWorkingSets}
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {muscleChartData.map((entry) => (
+              <li key={entry.muscle} className="space-y-1.5">
+                <div className="flex items-baseline justify-between gap-3 text-[15px]">
+                  <span>{entry.name}</span>
+                  <span className="text-muted-foreground tabular-nums">
+                    {entry.sets} {entry.sets === 1 ? t.common.set : t.common.sets}
+                  </span>
+                </div>
+                <div className="bg-secondary h-1.5 overflow-hidden rounded-full">
+                  <div
+                    className="bg-primary h-full rounded-full transition-[width] duration-500 ease-(--ease-out-quart)"
+                    style={{
+                      width: `${maxMuscleSets > 0 ? (entry.sets / maxMuscleSets) * 100 : 0}%`,
                     }}
                   />
-                  <Bar dataKey="sets" radius={[0, 6, 6, 0]} maxBarSize={22}>
-                    {muscleChartData.map((entry, idx) => (
-                      <Cell
-                        key={entry.muscle}
-                        fill={idx % 2 === 0 ? '#CCFF00' : '#00E5FF'}
-                        fillOpacity={0.85}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </Card>
-      </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
+  );
+}
+
+function WeeklyRing({ progress }: { progress: number }) {
+  const size = 76;
+  const stroke = 9;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      className="shrink-0 -rotate-90"
+      aria-hidden="true"
+    >
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="color-mix(in oklch, var(--primary) 18%, transparent)"
+        strokeWidth={stroke}
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="var(--primary)"
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={circumference * (1 - progress)}
+        className="transition-[stroke-dashoffset] duration-700 ease-(--ease-out-quart)"
+      />
+    </svg>
   );
 }

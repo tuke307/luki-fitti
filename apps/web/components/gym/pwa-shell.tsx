@@ -2,19 +2,18 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Home,
-  FolderKanban,
-  PlayCircle,
-  CalendarDays,
+  CalendarCheck,
+  ChevronUp,
+  CloudAlert,
+  CloudOff,
+  CloudUpload,
   Dumbbell,
-  UserCircle,
-  Wifi,
-  WifiOff,
+  History as HistoryIcon,
+  LibraryBig,
   RefreshCw,
-  AlertTriangle,
   Timer,
+  UserRound,
 } from 'lucide-react';
-import { Badge } from '@luki-fitti/ui/components/ui/badge';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import {
   Dialog,
@@ -29,7 +28,7 @@ import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { computeRemainingRestSeconds } from '@/lib/offline/offline-store';
 import { triggerWorkoutNotification } from '@/lib/notifications/notification-manager';
-import { SessionExerciseStatus } from '@luki-fitti/common/enums';
+import { SessionExerciseStatus, SessionStatus } from '@luki-fitti/common/enums';
 import { HomeView } from './home-view';
 import { WorkoutsView } from './workouts-view';
 import { ActiveSessionView } from './active-session-view';
@@ -85,7 +84,8 @@ export function PwaShell() {
         void triggerWorkoutNotification({
           title: t.session.restCompleteTitle,
           body: format(t.session.restCompleteBody, {
-            exercise: nextEx?.exerciseNameSnapshot ?? activeSession?.workoutNameSnapshot ?? 'Workout',
+            exercise:
+              nextEx?.exerciseNameSnapshot ?? activeSession?.workoutNameSnapshot ?? 'Workout',
           }),
           tag: 'luki-fitti-rest-done',
           playSound: soundOn,
@@ -106,181 +106,169 @@ export function PwaShell() {
   ]);
 
   const restInfo = computeRemainingRestSeconds(activeSession, nowMs);
+  const isRestVisible = restInfo.isRunning || restInfo.isPaused;
+  const isOffline = !isOnline || syncState === 'OFFLINE';
+
+  const sessionElapsedSeconds = activeSession
+    ? activeSession.status === SessionStatus.PAUSED
+      ? activeSession.activeDurationSeconds
+      : Math.max(0, Math.floor((nowMs - Date.parse(activeSession.startedAt)) / 1000))
+    : 0;
 
   const navItems: Array<{
     id: NavTab;
     label: string;
-    icon: React.ComponentType<{ className?: string }>;
+    icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   }> = [
-    { id: 'home', label: t.nav.home, icon: Home },
-    { id: 'workouts', label: t.nav.workouts, icon: FolderKanban },
-    ...(activeSession
-      ? [{ id: 'session' as const, label: t.nav.liveGym, icon: PlayCircle }]
-      : []),
-    { id: 'diary', label: t.nav.diary, icon: CalendarDays },
-    { id: 'exercises', label: t.nav.exercises, icon: Dumbbell },
-    { id: 'profile', label: t.nav.profile, icon: UserCircle },
+    { id: 'home', label: t.nav.home, icon: CalendarCheck },
+    { id: 'workouts', label: t.nav.workouts, icon: Dumbbell },
+    { id: 'diary', label: t.nav.diary, icon: HistoryIcon },
+    { id: 'exercises', label: t.nav.exercises, icon: LibraryBig },
   ];
+
+  // Plain-language status, always available to assistive tech. Visually, the indicator only
+  // appears when the user can act on it (offline, unsynced changes, sign-in needed, syncing).
+  const syncStatusText = isOffline
+    ? `${t.shell.offline}. ${t.shell.offlineReady}`
+    : !isAuthenticated
+      ? `${t.shell.guest}. ${t.shell.guestLocalOnly}`
+      : syncState === 'SYNCING'
+        ? t.shell.syncing
+        : syncState === 'SAVED_LOCALLY'
+          ? pendingSyncCount > 0
+            ? `${t.shell.savedLocally}. ${format(t.shell.pendingChanges, { count: pendingSyncCount })}`
+            : t.shell.savedLocally
+          : syncState === 'AUTH_EXPIRED'
+            ? `${t.shell.localSafe}. ${t.shell.signInToSync}`
+            : t.shell.synced;
+
+  const showSyncIndicator =
+    isOffline ||
+    (isAuthenticated &&
+      (syncState === 'SYNCING' ||
+        syncState === 'AUTH_EXPIRED' ||
+        (syncState === 'SAVED_LOCALLY' && pendingSyncCount > 0)));
+
+  const initials = (user?.name ?? '')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('');
+
+  const showSessionAccessory = Boolean(activeSession) && activeTab !== 'session';
 
   return (
     <div className="bg-background text-foreground flex min-h-dvh w-full max-w-full flex-col overflow-x-hidden">
-      {/* Top Safe-Area Header */}
-      <header className="bg-card/85 pt-safe sticky top-0 z-40 border-b backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 py-2.5 sm:px-4 sm:py-3">
-          {/* Brand Logo */}
+      <header className="material-bar pt-safe sticky top-0 z-40 border-b border-border/60">
+        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4">
           <Button
             type="button"
             variant="ghost"
             onClick={() => setActiveTab('home')}
             aria-label="LukiFitti Home"
-            className="h-auto shrink-0 gap-2 p-0 text-left hover:bg-transparent sm:gap-2.5"
+            className="h-auto shrink-0 rounded-md px-0 text-[17px] font-semibold tracking-tight hover:bg-transparent"
           >
-            <div className="bg-primary text-primary-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-xl font-extrabold shadow-sm sm:h-9 sm:w-9">
-              <Dumbbell className="h-4 w-4 sm:h-5 sm:w-5" />
-            </div>
-            <div className={restInfo.isRunning || restInfo.isPaused ? 'hidden sm:block' : 'block'}>
-              <span className="font-display text-foreground text-sm font-extrabold tracking-tight sm:text-base">
-                LUKI<span className="text-primary">FITTI</span>
-              </span>
-              <span className="text-muted-foreground hidden text-[10px] leading-none font-normal sm:block">
-                {t.nav.tagline}
-              </span>
-            </div>
+            LukiFitti
           </Button>
 
-          {/* Desktop Horizontal Navigation */}
           <nav aria-label={t.nav.primaryNavAria} className="hidden items-center gap-1 md:flex">
             {navItems.map((item) => {
-              const Icon = item.icon;
               const isCurrent = activeTab === item.id;
               return (
-                <Button
+                <button
                   key={item.id}
                   type="button"
                   data-testid={`desktop-nav-${item.id}`}
-                  variant={isCurrent ? 'default' : 'ghost'}
-                  size="default"
+                  aria-current={isCurrent ? 'page' : undefined}
                   onClick={() => setActiveTab(item.id)}
-                  className={
+                  className={`h-9 rounded-full px-4 text-[15px] transition-colors duration-150 ${
                     isCurrent
-                      ? 'shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60 font-bold'
-                  }
+                      ? 'bg-secondary text-foreground font-semibold'
+                      : 'text-muted-foreground hover:text-foreground font-medium'
+                  }`}
                 >
-                  <Icon className="h-4 w-4" />
-                  <span>{item.label}</span>
-                  {item.id === 'session' && activeSession && (
-                    <span className="bg-accent h-2 w-2 rounded-full" />
-                  )}
-                </Button>
+                  {item.label}
+                </button>
               );
             })}
           </nav>
 
-          {/* Right Status Indicators: Rest Timer Pill, Offline/Sync Badge */}
-          <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
-            {(restInfo.isRunning || restInfo.isPaused) && (
-              <Badge
-                asChild
-                variant="accent"
-                className="font-mono-tabular shrink-0 cursor-pointer rounded-full px-2.5 py-1 text-xs font-extrabold sm:px-3"
+          <div className="flex min-w-0 items-center gap-2">
+            <span role="status" data-testid="header-sync-status" className="sr-only">
+              {syncStatusText}
+            </span>
+
+            {isRestVisible && (
+              <button
+                type="button"
+                data-testid="header-rest-timer-pill"
+                onClick={() => setActiveTab('session')}
+                aria-label={`${t.session.restTimerActive} ${formatClock(restInfo.remainingSeconds)}`}
+                className="bg-primary/12 text-primary font-rounded flex h-8 items-center gap-1.5 rounded-full px-3 text-[15px] font-semibold"
               >
-                <button
-                  type="button"
-                  data-testid="header-rest-timer-pill"
-                  onClick={() => setActiveTab('session')}
-                >
-                  <Timer className="h-3.5 w-3.5" />
-                  {Math.floor(restInfo.remainingSeconds / 60)}:
-                  {String(restInfo.remainingSeconds % 60).padStart(2, '0')}
-                </button>
-              </Badge>
+                <Timer className="h-4 w-4" />
+                {formatClock(restInfo.remainingSeconds)}
+              </button>
             )}
 
-            {/* Connection & Sync State Indicator */}
-            <Badge
-              asChild
-              variant={
-                !isOnline || syncState === 'OFFLINE'
-                  ? 'warning'
-                  : !isAuthenticated
-                    ? 'accent'
-                    : syncState === 'CONFLICT'
-                      ? 'destructive'
-                      : syncState === 'SAVED_LOCALLY'
-                        ? 'accent'
-                        : 'success'
-              }
-              className="shrink-0 cursor-pointer rounded-full px-2 py-1 text-[11px] font-semibold sm:px-2.5"
-            >
+            {showSyncIndicator && (
               <button
                 type="button"
                 data-testid="header-sync-badge"
-                onClick={() => {
-                  if (isAuthenticated) {
-                    void flushSyncQueue();
-                  } else {
-                    setActiveTab('profile');
-                  }
-                }}
-                title={isAuthenticated ? t.shell.syncTitleAuth : t.shell.syncTitleGuest}
+                onClick={() => (isAuthenticated ? void flushSyncQueue() : setActiveTab('profile'))}
+                title={syncStatusText}
+                aria-label={syncStatusText}
+                className={`flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[13px] font-medium ${
+                  syncState === 'AUTH_EXPIRED'
+                    ? 'bg-warning/15 text-warning'
+                    : 'text-muted-foreground'
+                }`}
               >
-                {!isOnline || syncState === 'OFFLINE' ? (
+                {isOffline ? (
                   <>
-                    <WifiOff className="h-3.5 w-3.5" />
-                    <span>
-                      {t.shell.offline}
-                      {isAuthenticated && pendingSyncCount > 0 ? (
-                        ` (${pendingSyncCount})`
-                      ) : (
-                        <span className="hidden sm:inline"> {t.shell.offlineReady}</span>
-                      )}
-                    </span>
-                  </>
-                ) : !isAuthenticated ? (
-                  <>
-                    <UserCircle className="h-3.5 w-3.5" />
-                    <span>
-                      {t.shell.guest}
-                      <span className="hidden sm:inline"> {t.shell.guestLocalOnly}</span>
-                    </span>
+                    <CloudOff className="h-4 w-4" />
+                    <span className="hidden sm:inline">{t.shell.offline}</span>
                   </>
                 ) : syncState === 'SYNCING' ? (
-                  <>
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                    <span>{t.shell.syncing}</span>
-                  </>
-                ) : syncState === 'SAVED_LOCALLY' ? (
-                  <>
-                    <Wifi className="h-3.5 w-3.5" />
-                    <span>
-                      <span className="sm:hidden">{t.shell.localShort}</span>
-                      <span className="hidden sm:inline">{t.shell.savedLocally}</span>
-                      {pendingSyncCount > 0 ? ` (${pendingSyncCount})` : ''}
-                    </span>
-                  </>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
                 ) : syncState === 'AUTH_EXPIRED' ? (
                   <>
-                    <AlertTriangle className="h-3.5 w-3.5" />
-                    <span>
-                      {t.shell.localSafe}
-                      <span className="hidden sm:inline"> {t.shell.signInToSync}</span>
-                    </span>
+                    <CloudAlert className="h-4 w-4" />
+                    <span>{t.shell.signInToSync}</span>
                   </>
                 ) : (
                   <>
-                    <Wifi className="h-3.5 w-3.5" />
-                    <span>{t.shell.synced}</span>
+                    <CloudUpload className="h-4 w-4" />
+                    <span className="hidden sm:inline">{t.shell.localShort}</span>
                   </>
                 )}
               </button>
-            </Badge>
+            )}
+
+            <button
+              type="button"
+              data-testid="nav-profile"
+              aria-label={t.nav.profileAria}
+              aria-current={activeTab === 'profile' ? 'page' : undefined}
+              onClick={() => setActiveTab('profile')}
+              className={`flex size-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold transition-shadow ${
+                isAuthenticated && initials
+                  ? 'bg-primary/12 text-primary'
+                  : 'bg-secondary text-muted-foreground'
+              } ${activeTab === 'profile' ? 'ring-primary ring-2 ring-offset-2 ring-offset-background' : ''}`}
+            >
+              {isAuthenticated && initials ? initials : <UserRound className="h-[18px] w-[18px]" />}
+            </button>
           </div>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="mx-auto w-full max-w-6xl min-w-0 flex-1 overflow-x-hidden px-3 pt-4 pb-24 sm:px-4 sm:pt-5 md:pb-10">
+      <main
+        className={`mx-auto w-full max-w-5xl min-w-0 flex-1 overflow-x-hidden px-4 pt-5 sm:pt-8 ${
+          showSessionAccessory ? 'pb-44 md:pb-28' : 'pb-28 md:pb-12'
+        }`}
+      >
         {activeTab === 'home' && <HomeView onNavigate={setActiveTab} />}
         {activeTab === 'workouts' && (
           <WorkoutsView onStartSessionNavigation={() => setActiveTab('session')} />
@@ -298,56 +286,78 @@ export function PwaShell() {
         {activeTab === 'profile' && <ProfileImportView />}
       </main>
 
-      {/* Mobile Bottom Tab Bar (iPhone Safari & Home Screen Standalone Optimized) */}
-      <nav
-        aria-label={t.nav.mobileNavAria}
-        className="bg-card/95 pb-safe fixed right-0 bottom-0 left-0 z-40 border-t backdrop-blur-lg md:hidden"
-      >
-        <div
-          className={`grid gap-1 px-2 py-1.5 ${
-            activeSession ? 'grid-cols-6' : 'grid-cols-5'
-          }`}
-        >
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isCurrent = activeTab === item.id;
-            return (
-              <Button
-                key={item.id}
-                type="button"
-                data-testid={`mobile-nav-${item.id}`}
-                variant="ghost"
-                onClick={() => setActiveTab(item.id)}
-                className={`flex h-auto flex-col items-center justify-center gap-0.5 rounded-xl py-2 text-[10px] font-bold hover:bg-transparent ${
-                  isCurrent ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <div className="relative">
-                  <Icon className="h-5 w-5" />
-                  {item.id === 'session' && activeSession && (
-                    <span className="bg-primary absolute -top-0.5 -right-1 h-2 w-2 rounded-full" />
-                  )}
-                </div>
-                <span>{item.label}</span>
-              </Button>
-            );
-          })}
-        </div>
-      </nav>
+      {/* Floating bottom stack: live workout accessory above the tab bar (iOS 26 pattern). */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex flex-col items-center gap-2 px-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] md:pb-6">
+        {showSessionAccessory && activeSession && (
+          <button
+            type="button"
+            data-testid="nav-session"
+            aria-label={`${t.nav.resumeWorkoutAria}: ${activeSession.workoutNameSnapshot}`}
+            onClick={() => setActiveTab('session')}
+            className="material-bar animate-in fade-in slide-in-from-bottom-2 pointer-events-auto flex h-14 w-full max-w-md items-center gap-3 rounded-full border border-border/60 pr-2 pl-4 text-left shadow-[0_8px_30px_rgb(0_0_0/0.12)] duration-300"
+          >
+            <span className="relative flex size-2.5 shrink-0">
+              {activeSession.status !== SessionStatus.PAUSED && (
+                <span className="bg-primary absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 motion-reduce:hidden" />
+              )}
+              <span className="bg-primary relative inline-flex size-2.5 rounded-full" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[15px] font-semibold">
+                {activeSession.workoutNameSnapshot}
+              </span>
+              <span className="text-muted-foreground font-rounded block text-[13px]">
+                {formatClock(sessionElapsedSeconds)}
+                {isRestVisible &&
+                  ` · ${t.session.restTimerActive} ${formatClock(restInfo.remainingSeconds)}`}
+              </span>
+            </span>
+            <span className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-full">
+              <ChevronUp className="h-5 w-5" />
+            </span>
+          </button>
+        )}
 
-      {/* Explicit Sync Conflict Resolution Modal */}
+        <nav
+          aria-label={t.nav.mobileNavAria}
+          className="material-bar pointer-events-auto w-full max-w-md rounded-full border border-border/60 p-1 shadow-[0_8px_30px_rgb(0_0_0/0.12)] md:hidden"
+        >
+          <div className="grid grid-cols-4">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isCurrent =
+                activeTab === item.id || (item.id === 'workouts' && activeTab === 'session');
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  data-testid={`mobile-nav-${item.id}`}
+                  aria-current={activeTab === item.id ? 'page' : undefined}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`flex h-14 flex-col items-center justify-center gap-0.5 rounded-full text-[11px] font-medium transition-colors duration-150 ${
+                    isCurrent ? 'bg-secondary text-primary' : 'text-muted-foreground'
+                  }`}
+                >
+                  <Icon className="h-[22px] w-[22px]" strokeWidth={isCurrent ? 2.2 : 1.8} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      </div>
+
       <Dialog open={Boolean(conflictServerSession)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-destructive font-display flex items-center gap-2 text-lg font-bold">
-              <AlertTriangle className="h-5 w-5" />
-              {t.shell.conflictTitle}
-            </DialogTitle>
-            <DialogDescription className="text-xs leading-relaxed">
+            <DialogTitle>{t.shell.conflictTitle}</DialogTitle>
+            <DialogDescription className="text-[15px]">
               {format(t.shell.conflictDescPrefix, {
                 version: conflictServerSession?.version ?? 1,
               })}{' '}
-              <strong>{conflictServerSession?.workoutNameSnapshot}</strong>{' '}
+              <strong className="text-foreground">
+                {conflictServerSession?.workoutNameSnapshot}
+              </strong>{' '}
               {t.shell.conflictDescSuffix}
             </DialogDescription>
           </DialogHeader>
@@ -371,4 +381,13 @@ export function PwaShell() {
       </Dialog>
     </div>
   );
+}
+
+function formatClock(totalSeconds: number): string {
+  const hrs = Math.floor(totalSeconds / 3600);
+  const mins = Math.floor((totalSeconds % 3600) / 60);
+  const secs = totalSeconds % 60;
+  return hrs > 0
+    ? `${hrs}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+    : `${mins}:${String(secs).padStart(2, '0')}`;
 }

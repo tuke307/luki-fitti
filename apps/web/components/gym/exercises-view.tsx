@@ -132,9 +132,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
         .map((s) => s.trim())
         .filter(Boolean),
       category:
-        newType === ExerciseType.STRETCHING
-          ? ExerciseCategory.STRETCH
-          : ExerciseCategory.COMPOUND,
+        newType === ExerciseType.STRETCHING ? ExerciseCategory.STRETCH : ExerciseCategory.COMPOUND,
       exerciseType: newType,
       primaryMuscleGroup: newPrimaryMuscle,
       secondaryMuscleGroups: newSecondaryMuscles,
@@ -358,13 +356,10 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                       <ExerciseVisual exercise={ex} variant="card" className="mb-3" />
 
                       <div className="flex items-start justify-between gap-2">
-                        <Badge
-                          variant={isStretch ? 'accent' : 'default'}
-                          className="text-[11px] tracking-wide uppercase"
-                        >
+                        <Badge variant={isStretch ? 'accent' : 'default'} className="text-xs">
                           {muscleLabel(ex.primaryMuscleGroup)}
                         </Badge>
-                        <Badge variant="secondary" className="text-muted-foreground text-[11px]">
+                        <Badge variant="secondary" className="text-muted-foreground text-xs">
                           {equipmentLabel(ex.equipment)}
                         </Badge>
                       </div>
@@ -382,7 +377,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                             <Badge
                               key={sec}
                               variant="secondary"
-                              className="bg-secondary/70 text-muted-foreground px-1.5 py-0.5 text-[10px]"
+                              className="bg-secondary/70 text-muted-foreground px-1.5 py-0.5 text-xs"
                             >
                               + {muscleLabel(sec)}
                             </Badge>
@@ -491,13 +486,13 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                   <div>
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <Badge variant="accent" className="text-[11px]">
+                        <Badge variant="accent" className="text-xs">
                           {routine.targetArea}
                         </Badge>
                         <h3 className="font-display mt-2 text-lg font-bold">{routine.name}</h3>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
-                        <span className="font-mono-tabular text-muted-foreground text-xs">
+                        <span className="tabular-nums text-muted-foreground text-xs">
                           ~{Math.round(routine.estimatedDurationSeconds / 60)} {t.common.min}
                         </span>
                         <Button
@@ -542,13 +537,13 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                                   {idx + 1}. {exName}
                                 </p>
                                 {item.notes && (
-                                  <p className="text-muted-foreground truncate text-[10px]">
+                                  <p className="text-muted-foreground truncate text-xs">
                                     {item.notes}
                                   </p>
                                 )}
                               </div>
                             </div>
-                            <span className="font-mono-tabular text-accent shrink-0 font-semibold">
+                            <span className="tabular-nums text-accent shrink-0 font-semibold">
                               {item.sets} ×{' '}
                               {item.durationSeconds
                                 ? `${item.durationSeconds}s`
@@ -640,10 +635,10 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                     <div>
                       <ExerciseVisual exercise={ex} variant="card" className="mb-3" />
                       <div className="flex items-center justify-between gap-2">
-                        <Badge variant="accent" className="text-[11px] uppercase">
+                        <Badge variant="accent" className="text-xs">
                           {muscleLabel(ex.primaryMuscleGroup)}
                         </Badge>
-                        <Badge variant="secondary" className="font-mono-tabular text-[11px]">
+                        <Badge variant="secondary" className="tabular-nums text-xs">
                           <Clock className="text-accent mr-1 h-3 w-3" />
                           {ex.recommendedDurationSeconds ?? 45}
                           {t.exercises.holdSuffix}
@@ -732,7 +727,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                     <ol className="space-y-2 text-xs leading-relaxed">
                       {selectedExercise.instructions.map((step, idx) => (
                         <li key={idx} className="bg-secondary/40 flex gap-2.5 rounded-xl p-2.5">
-                          <span className="bg-primary text-primary-foreground flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold">
+                          <span className="bg-primary text-primary-foreground flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold">
                             {idx + 1}
                           </span>
                           <span>{step}</span>
@@ -785,7 +780,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                           {format(t.exercises.globalHistoryTitle, { count: insight.sessionsCount })}
                         </h3>
                         {insight.ewma1RM > 0 && (
-                          <Badge variant="default" className="font-mono-tabular text-[11px]">
+                          <Badge variant="default" className="tabular-nums text-xs">
                             e1RM {insight.ewma1RM} {weightUnit.toLowerCase()}
                           </Badge>
                         )}
@@ -801,7 +796,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                             >
                               <div>
                                 <p className="font-semibold">{entry.workoutName}</p>
-                                <p className="text-muted-foreground font-mono-tabular text-[10px]">
+                                <p className="text-muted-foreground tabular-nums text-xs">
                                   {formatDateTime(entry.startedAt)}
                                 </p>
                               </div>
@@ -810,7 +805,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                                   <Badge
                                     key={i}
                                     variant="secondary"
-                                    className="bg-background font-mono-tabular px-1.5 py-0.5 text-[10px] font-bold"
+                                    className="bg-background tabular-nums px-1.5 py-0.5 text-xs font-bold"
                                   >
                                     {ws.weightNormalized}
                                     {weightUnit.toLowerCase()} × {ws.reps}
@@ -1058,7 +1053,9 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-semibold">{t.exercises.stretchesDrillsLabel}</Label>
+                  <Label className="text-xs font-semibold">
+                    {t.exercises.stretchesDrillsLabel}
+                  </Label>
                   <Button
                     type="button"
                     variant="link"
@@ -1109,7 +1106,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-xs">
                       <div>
-                        <span className="text-muted-foreground text-[10px]">
+                        <span className="text-muted-foreground text-xs">
                           {t.exercises.setsLabel}
                         </span>
                         <NumberInput
@@ -1126,7 +1123,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                         />
                       </div>
                       <div>
-                        <span className="text-muted-foreground text-[10px]">
+                        <span className="text-muted-foreground text-xs">
                           {t.exercises.holdSecLabel}
                         </span>
                         <NumberInput
@@ -1136,16 +1133,14 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                           value={item.durationSeconds ?? 45}
                           onValueChange={(val) =>
                             setRoutineItems((prev) =>
-                              prev.map((p, i) =>
-                                i === idx ? { ...p, durationSeconds: val } : p,
-                              ),
+                              prev.map((p, i) => (i === idx ? { ...p, durationSeconds: val } : p)),
                             )
                           }
                           className="h-9 text-xs sm:h-8"
                         />
                       </div>
                       <div>
-                        <span className="text-muted-foreground text-[10px]">
+                        <span className="text-muted-foreground text-xs">
                           {t.exercises.transitionSecLabel}
                         </span>
                         <NumberInput
