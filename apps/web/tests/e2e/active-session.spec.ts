@@ -38,8 +38,12 @@ test.describe('Active Session Execution & Rest Timer', () => {
     await toggleCompleteSetRow(page, 1);
     await expect(page.getByTestId('logged-set-summary-pill').first()).toContainText('82.5kg × 10');
 
-    // Completing Set 2 (Working set with >0s rest) or starting timer manually triggers header rest timer pill
-    await page.getByRole('button', { name: '90s', exact: true }).click();
+    // Completing a set with rest auto-starts the timer; otherwise start it from the dock presets.
+    // Either way the header rest timer pill appears.
+    const preset90 = page.getByRole('button', { name: '90s', exact: true });
+    if (await preset90.isVisible()) {
+      await preset90.click();
+    }
     const headerTimerPill = page.getByTestId('header-rest-timer-pill');
     await expect(headerTimerPill).toBeVisible();
 
@@ -59,7 +63,10 @@ test.describe('Active Session Execution & Rest Timer', () => {
     // Pause and resume session
     await page.getByRole('button', { name: 'Pause', exact: true }).first().click();
     await expect(page.getByText(/^Paused$/i)).toBeVisible();
-    await page.getByRole('button', { name: /Resume/i }).first().click();
+    await page
+      .getByRole('button', { name: /Resume/i })
+      .first()
+      .click();
     await expect(page.getByText(/^In Progress$/i)).toBeVisible();
 
     // Finish workout and verify Trophy summary card
@@ -68,9 +75,7 @@ test.describe('Active Session Execution & Rest Timer', () => {
 
     // Navigate to Training Diary from Trophy card
     await page.getByRole('button', { name: /View in History/i }).click();
-    await expect(
-      page.getByRole('heading', { name: 'History', exact: true }),
-    ).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'History', exact: true })).toBeVisible();
     await expect(page.getByTestId(`diary-session-card-${WORKOUT_NAME}`)).toBeVisible();
   });
 
