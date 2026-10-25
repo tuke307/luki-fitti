@@ -22,7 +22,7 @@ public struct ExerciseVectorVisualView: View {
         .padding(compact ? 6 : 10)
         .background(
             RoundedRectangle(cornerRadius: compact ? 10 : 14)
-                .fill(Color.white.opacity(0.06))
+                .fill(LukiColors.fill)
         )
     }
 

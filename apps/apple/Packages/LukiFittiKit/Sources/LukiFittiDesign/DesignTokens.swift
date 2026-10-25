@@ -2,29 +2,81 @@ import Foundation
 import SwiftUI
 import LukiFittiModels
 
+#if canImport(UIKit)
+import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
+
+/// Semantic palette aligned with the web tokens (packages/ui/src/globals.css): system grouped
+/// surfaces plus a single ember accent, adapting to light and dark appearance.
 public enum LukiColors {
-    public static let neonLime = Color(red: 0.80, green: 1.00, blue: 0.00) // #CCFF00
-    public static let electricCyan = Color(red: 0.00, green: 0.90, blue: 1.00) // #00E5FF
-    public static let vibrantPurple = Color(red: 0.66, green: 0.33, blue: 0.97) // #A855F7
-    public static let heartRose = Color(red: 0.96, green: 0.25, blue: 0.37) // #F43F5E
-    public static let calorieAmber = Color(red: 0.98, green: 0.62, blue: 0.09) // #F97316
+    // MARK: Semantic tokens
 
-    public static let darkBackground = Color(red: 0.04, green: 0.05, blue: 0.08) // #0A0D14
-    public static let darkCard = Color(red: 0.08, green: 0.10, blue: 0.15) // #141A26
-    public static let darkBorder = Color.white.opacity(0.10)
+    /// Brand accent for primary actions, progress and the live workout (#B73D00 light / #F2823B dark).
+    public static let accent = adaptive(light: (0.718, 0.239, 0.0), dark: (0.949, 0.510, 0.231))
+    /// Text/icon color on top of `accent` fills.
+    public static let accentForeground = adaptive(light: (1, 1, 1), dark: (0.11, 0.07, 0.04))
 
-    // Apple Watch Folder & Template Card Palette (matching Section 7.1 & 7.2)
-    public static let watchFolderSlate = Color(red: 0.29, green: 0.31, blue: 0.41) // #4A4E69
-    public static let watchCardMint = Color(red: 0.43, green: 0.91, blue: 0.72) // #6EE7B7
-    public static let watchCardLime = Color(red: 0.80, green: 1.00, blue: 0.00) // #CCFF00
-    public static let watchCardAmber = Color(red: 0.99, green: 0.88, blue: 0.28) // #FDE047
-    public static let watchCardCyan = Color(red: 0.40, green: 0.91, blue: 0.98) // #67E8F9
+    #if os(iOS)
+    public static let groupedBackground = Color(uiColor: .systemGroupedBackground)
+    public static let cardBackground = Color(uiColor: .secondarySystemGroupedBackground)
+    public static let fill = Color(uiColor: .tertiarySystemFill)
+    public static let separator = Color(uiColor: .separator)
+    #else
+    public static let groupedBackground = Color.black
+    public static let cardBackground = Color(white: 0.13)
+    public static let fill = Color(white: 0.2)
+    public static let separator = Color.white.opacity(0.15)
+    #endif
 
-    // Apple Watch Page 1 Action Grid Pastel Fills
-    public static let watchActionChangeLavender = Color(red: 0.91, green: 0.84, blue: 1.00) // #E9D5FF
-    public static let watchActionEditCream = Color(red: 1.00, green: 0.98, blue: 0.76) // #FEF9C3
-    public static let watchActionPauseSky = Color(red: 0.75, green: 0.86, blue: 0.99) // #BFDBFE
-    public static let watchActionFinishMint = Color(red: 0.65, green: 0.95, blue: 0.82) // #A7F3D0
+    public static let success = Color.green
+    public static let warning = Color.orange
+    public static let destructive = Color.red
+    public static let heartRate = Color.red
+    public static let calories = Color.orange
+
+    // MARK: Legacy names (pre-redesign) mapped onto the semantic palette
+
+    public static let neonLime = accent
+    public static let electricCyan = accent
+    public static let vibrantPurple = Color.indigo
+    public static let heartRose = heartRate
+    public static let calorieAmber = calories
+    public static let darkBackground = groupedBackground
+    public static let darkCard = cardBackground
+    public static let darkBorder = separator
+    public static let watchFolderSlate = cardBackground
+    public static let watchCardMint = cardBackground
+    public static let watchCardLime = cardBackground
+    public static let watchCardAmber = cardBackground
+    public static let watchCardCyan = cardBackground
+    public static let watchActionChangeLavender = fill
+    public static let watchActionEditCream = fill
+    public static let watchActionPauseSky = fill
+    public static let watchActionFinishMint = fill
+
+    private static func adaptive(
+        light: (Double, Double, Double),
+        dark: (Double, Double, Double)
+    ) -> Color {
+        #if os(watchOS)
+        return Color(red: dark.0, green: dark.1, blue: dark.2)
+        #elseif canImport(UIKit)
+        return Color(uiColor: UIColor { traits in
+            let c = traits.userInterfaceStyle == .dark ? dark : light
+            return UIColor(red: c.0, green: c.1, blue: c.2, alpha: 1)
+        })
+        #elseif canImport(AppKit)
+        return Color(nsColor: NSColor(name: nil) { appearance in
+            let isDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            let c = isDark ? dark : light
+            return NSColor(red: c.0, green: c.1, blue: c.2, alpha: 1)
+        })
+        #else
+        return Color(red: light.0, green: light.1, blue: light.2)
+        #endif
+    }
 
     // Folder accent palette — mirrors FOLDER_COLOR_PALETTE in @luki-fitti/common.
     public static let folderPaletteHex = ["#E8743B", "#3A7BD5", "#5E9C76", "#8E6CC4", "#D9577B", "#7C8794"]
@@ -62,7 +114,7 @@ public enum LukiColors {
         case 6:
             (r, g, b) = (int >> 16, int >> 8 & 0xFF, int & 0xFF)
         default:
-            return neonLime
+            return accent
         }
         return Color(
             red: Double(r) / 255.0,
@@ -72,8 +124,7 @@ public enum LukiColors {
     }
 
     public static func watchTemplateCardFill(at index: Int) -> Color {
-        let palette = [watchCardMint, watchCardLime, watchCardAmber, watchCardCyan]
-        return palette[abs(index) % palette.count]
+        cardBackground
     }
 }
 

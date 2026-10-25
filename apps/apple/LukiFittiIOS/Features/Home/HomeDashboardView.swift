@@ -34,7 +34,7 @@ public struct HomeDashboardView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Hey, \(viewModel.store.currentUser?.name ?? "GymBuddy")")
                 .font(.title2.bold())
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
             Text("Your training consistency, weekly load progression, and muscle split balance")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -57,7 +57,7 @@ public struct HomeDashboardView: View {
                 } label: {
                     Label("Choose Workout", systemImage: "play.fill")
                         .font(.caption.bold())
-                        .foregroundStyle(.black)
+                        .foregroundStyle(LukiColors.accentForeground)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                         .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.neonLime))
@@ -76,7 +76,7 @@ public struct HomeDashboardView: View {
                     .foregroundStyle(LukiColors.neonLime)
                 Text(active.workoutNameSnapshot)
                     .font(.headline.bold())
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Text("\(active.totalSetsCompleted) sets logged • \(Int(active.totalVolumeKg)) kg volume")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -87,7 +87,7 @@ public struct HomeDashboardView: View {
             } label: {
                 Text("Resume")
                     .font(.caption.bold())
-                    .foregroundStyle(.black)
+                    .foregroundStyle(LukiColors.accentForeground)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
                     .background(Capsule().fill(LukiColors.neonLime))
@@ -121,7 +121,7 @@ public struct HomeDashboardView: View {
                 title: "30-Day Volume",
                 value: String(format: "%.1f t", totalVol30d / 1000.0),
                 subtitle: "\(Int(totalVol30d)) kg moved",
-                accent: .white
+                accent: .primary
             )
             kpiCard(
                 title: "Total Workouts",
@@ -133,7 +133,7 @@ public struct HomeDashboardView: View {
                 title: "Avg. Session Load",
                 value: "\(avgLoad) kg",
                 subtitle: "Working load / workout",
-                accent: .white
+                accent: .primary
             )
         }
     }
@@ -159,7 +159,7 @@ public struct HomeDashboardView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Weekly Volume & Session Trend")
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
             Chart {
                 ForEach(Array(viewModel.store.historySessions.prefix(10).reversed().enumerated()), id: \.offset) { idx, sess in
                     BarMark(
@@ -209,7 +209,7 @@ public struct HomeDashboardView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Muscle Group Set Balance")
                         .font(.headline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                     Text("Working sets (\(muscleRange.uppercased()) • \(sessionsInRange.count) sessions)")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
@@ -231,7 +231,7 @@ public struct HomeDashboardView: View {
                 HStack {
                     Text(LukiI18n.muscleLabel(muscle))
                         .font(.caption)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                     Spacer()
                     Text("\(sets) sets")
                         .font(.caption.monospacedDigit())

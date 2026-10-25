@@ -67,7 +67,7 @@ public struct SearchableExercisePickerSheet: View {
                         }
                     }
                     .padding(10)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.white.opacity(0.08)))
+                    .background(RoundedRectangle(cornerRadius: 12).fill(LukiColors.fill))
 
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
@@ -79,9 +79,9 @@ public struct SearchableExercisePickerSheet: View {
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 6)
                                     .background(
-                                        Capsule().fill(selectedMuscle == nil ? LukiColors.neonLime : Color.white.opacity(0.08))
+                                        Capsule().fill(selectedMuscle == nil ? LukiColors.neonLime : LukiColors.fill)
                                     )
-                                    .foregroundStyle(selectedMuscle == nil ? .black : .white)
+                                    .foregroundStyle(selectedMuscle == nil ? LukiColors.accentForeground : .primary)
                             }
                             .buttonStyle(.plain)
 
@@ -94,9 +94,9 @@ public struct SearchableExercisePickerSheet: View {
                                         .padding(.horizontal, 10)
                                         .padding(.vertical, 6)
                                         .background(
-                                            Capsule().fill(selectedMuscle == muscle ? LukiColors.neonLime : Color.white.opacity(0.08))
+                                            Capsule().fill(selectedMuscle == muscle ? LukiColors.neonLime : LukiColors.fill)
                                         )
-                                        .foregroundStyle(selectedMuscle == muscle ? .black : .white)
+                                        .foregroundStyle(selectedMuscle == muscle ? LukiColors.accentForeground : .primary)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -116,7 +116,7 @@ public struct SearchableExercisePickerSheet: View {
                                     .foregroundStyle(.secondary)
                                 Text("No matching exercises found")
                                     .font(.subheadline.bold())
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(.primary)
                             }
                             .padding(.top, 40)
                         } else {
@@ -136,7 +136,7 @@ public struct SearchableExercisePickerSheet: View {
                                         VStack(alignment: .leading, spacing: 3) {
                                             Text(ex.name)
                                                 .font(.subheadline.bold())
-                                                .foregroundStyle(isSelected ? LukiColors.neonLime : .white)
+                                                .foregroundStyle(isSelected ? LukiColors.accent : .primary)
                                                 .multilineTextAlignment(.leading)
 
                                             Text("\(LukiI18n.muscleLabel(ex.primaryMuscleGroup)) • \(LukiI18n.equipmentLabel(ex.equipment))")

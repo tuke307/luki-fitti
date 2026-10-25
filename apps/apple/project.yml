@@ -2,9 +2,9 @@ name: LukiFitti
 options:
   bundleIdPrefix: com.lukifitti
   deploymentTarget:
-    iOS: "18.0"
-    watchOS: "11.0"
-  xcodeVersion: "16.0"
+    iOS: "26.0"
+    watchOS: "26.0"
+  xcodeVersion: "27.0"
   generateEmptyDirectories: true
 
 configFiles:
@@ -19,7 +19,7 @@ targets:
   LukiFittiIOS:
     type: application
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     scheme:
       testTargets:
         - LukiFittiIOSUITests
@@ -41,7 +41,7 @@ targets:
   LukiFittiWatch:
     type: application
     platform: watchOS
-    deploymentTarget: "11.0"
+    deploymentTarget: "26.0"
     scheme:
       testTargets:
         - LukiFittiWatchUITests
@@ -61,7 +61,7 @@ targets:
   LukiFittiWidgets:
     type: app-extension
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     sources:
       - path: LukiFittiWidgets
     settings:
@@ -77,7 +77,7 @@ targets:
   LukiFittiIOSUITests:
     type: bundle.ui-testing
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.0"
     sources:
       - path: LukiFittiIOSUITests
     dependencies:
@@ -92,7 +92,7 @@ targets:
   LukiFittiWatchUITests:
     type: bundle.ui-testing
     platform: watchOS
-    deploymentTarget: "11.0"
+    deploymentTarget: "26.0"
     sources:
       - path: LukiFittiWatchUITests
     dependencies:

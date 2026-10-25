@@ -51,7 +51,7 @@ public struct ExercisesAndStretchingView: View {
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 6)
                                     .background(Capsule().fill(selectedMuscle == nil ? LukiColors.neonLime : LukiColors.darkCard))
-                                    .foregroundStyle(selectedMuscle == nil ? .black : .white)
+                                    .foregroundStyle(selectedMuscle == nil ? LukiColors.accentForeground : .primary)
                             }
                             .buttonStyle(.plain)
 
@@ -64,7 +64,7 @@ public struct ExercisesAndStretchingView: View {
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 6)
                                         .background(Capsule().fill(selectedMuscle == muscle ? LukiColors.neonLime : LukiColors.darkCard))
-                                        .foregroundStyle(selectedMuscle == muscle ? .black : .white)
+                                        .foregroundStyle(selectedMuscle == muscle ? LukiColors.accentForeground : .primary)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -81,7 +81,7 @@ public struct ExercisesAndStretchingView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(exercise.name)
                                     .font(.subheadline.bold())
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(.primary)
                                 Text("\(LukiI18n.muscleLabel(exercise.primaryMuscleGroup)) • \(LukiI18n.equipmentLabel(exercise.equipment))")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
@@ -97,7 +97,7 @@ public struct ExercisesAndStretchingView: View {
                             HStack {
                                 Text(routine.name)
                                     .font(.headline.bold())
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(.primary)
                                 Spacer()
                                 Text(routine.targetArea)
                                     .font(.caption2)
@@ -111,7 +111,7 @@ public struct ExercisesAndStretchingView: View {
                             } label: {
                                 Label("Start Stretching Session", systemImage: "figure.cooldown")
                                     .font(.caption.bold())
-                                    .foregroundStyle(.black)
+                                    .foregroundStyle(LukiColors.accentForeground)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 9)
                                     .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.electricCyan))
