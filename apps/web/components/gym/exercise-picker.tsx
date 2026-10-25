@@ -13,11 +13,7 @@ import {
 } from '@luki-fitti/ui/components/ui/dialog';
 import { Input } from '@luki-fitti/ui/components/ui/input';
 import { cn } from '@luki-fitti/ui/lib/utils';
-import {
-  EQUIPMENT_LABELS,
-  MUSCLE_GROUP_LABELS,
-  MuscleGroup,
-} from '@luki-fitti/common/enums';
+import { EQUIPMENT_LABELS, MUSCLE_GROUP_LABELS, MuscleGroup } from '@luki-fitti/common/enums';
 import type { ExerciseDto } from '@luki-fitti/common/schemas';
 import { de } from '@/lib/i18n';
 import { useLocale } from '@/providers/i18n/locale-context';
@@ -173,7 +169,7 @@ export function ExercisePicker({
                 variant={selectedMuscle === 'ALL' ? 'default' : 'secondary'}
                 size="xs"
                 onClick={() => setSelectedMuscle('ALL')}
-                className="h-7 shrink-0 px-2.5 text-[11px]"
+                className="h-7 shrink-0 px-2.5 text-xs"
               >
                 {t.picker.allMuscles}
               </Button>
@@ -184,7 +180,7 @@ export function ExercisePicker({
                   variant={selectedMuscle === mg ? 'default' : 'secondary'}
                   size="xs"
                   onClick={() => setSelectedMuscle(mg)}
-                  className="h-7 shrink-0 px-2.5 text-[11px]"
+                  className="h-7 shrink-0 px-2.5 text-xs"
                 >
                   {muscleLabel(mg)}
                 </Button>
@@ -242,12 +238,11 @@ export function ExercisePicker({
                         <div className="min-w-0">
                           <p className="truncate font-bold">{ex.name}</p>
                           <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                            <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+                            <Badge variant="secondary" className="px-1.5 py-0 text-xs">
                               {muscleLabel(ex.primaryMuscleGroup)}
                             </Badge>
-                            <span className="text-muted-foreground text-[10px]">
-                              {equipmentLabel(ex.equipment)} •{' '}
-                              {exerciseTypeLabel(ex.exerciseType)}
+                            <span className="text-muted-foreground text-xs">
+                              {equipmentLabel(ex.equipment)} • {exerciseTypeLabel(ex.exerciseType)}
                             </span>
                           </div>
                         </div>

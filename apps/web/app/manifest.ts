@@ -2,16 +2,15 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'LukiFitti — Personal Gym & Workout Tracker',
+    name: 'LukiFitti',
     short_name: 'LukiFitti',
-    description:
-      'Offline-first personal gym workout tracker, routine builder, stretching flows, and progress analytics.',
+    description: 'Plan your workouts, log every set, and see your progress — even offline.',
     start_url: '/',
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',
-    background_color: '#0B0D10',
-    theme_color: '#0B0D10',
+    background_color: '#F2F2F7',
+    theme_color: '#F2F2F7',
     categories: ['fitness', 'health', 'sports', 'lifestyle'],
     icons: [
       {

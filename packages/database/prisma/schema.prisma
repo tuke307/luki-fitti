@@ -144,7 +144,7 @@ model UserPreferences {
   weightUnit                 WeightUnit   @default(KG)
   distanceUnit               DistanceUnit @default(KM)
   defaultRestSeconds         Int          @default(90)
-  theme                      String       @default("dark")
+  theme                      String       @default("system")
   language                   String       @default("system")
   restTimerSound             Boolean      @default(true)
   notificationsEnabled       Boolean      @default(true)

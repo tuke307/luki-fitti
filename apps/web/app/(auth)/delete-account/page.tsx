@@ -29,14 +29,14 @@ export default function DeleteAccountPage() {
       <Card className="w-full max-w-md space-y-6 rounded-3xl p-6 sm:p-8">
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="bg-primary text-primary-foreground flex h-10 w-10 items-center justify-center rounded-xl font-extrabold">
+            <div className="bg-primary text-primary-foreground flex h-10 w-10 items-center justify-center rounded-xl font-semibold">
               <Dumbbell className="h-5 w-5" />
             </div>
             <div>
-              <span className="font-display text-lg font-extrabold">
+              <span className="font-display text-lg font-semibold">
                 LUKI<span className="text-primary">FITTI</span>
               </span>
-              <span className="text-muted-foreground block text-[11px]">
+              <span className="text-muted-foreground block text-xs">
                 Account Deletion Confirmation
               </span>
             </div>
@@ -66,8 +66,8 @@ export default function DeleteAccountPage() {
             </div>
             <h1 className="font-display text-2xl font-bold">Account Permanently Deleted</h1>
             <p className="text-muted-foreground text-xs leading-relaxed">
-              Your LukiFitti account and all associated workout templates, split folders,
-              stretching routines, and training history have been permanently deleted.
+              Your LukiFitti account and all associated workout templates, split folders, stretching
+              routines, and training history have been permanently deleted.
             </p>
             <Button type="button" size="lg" onClick={() => router.push('/')} className="w-full">
               Return to LukiFitti (Guest Mode) →

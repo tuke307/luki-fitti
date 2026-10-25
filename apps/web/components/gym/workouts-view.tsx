@@ -374,9 +374,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
         ex.targetRepsMin && ex.targetRepsMax && ex.targetRepsMin !== ex.targetRepsMax
           ? `${ex.targetRepsMin}–${ex.targetRepsMax}`
           : `${ex.targetRepsMin ?? 10}`;
-      const weightPart = ex.targetWeight
-        ? ` ${ex.targetWeight} ${weightUnit.toLowerCase()}`
-        : '';
+      const weightPart = ex.targetWeight ? ` ${ex.targetWeight} ${weightUnit.toLowerCase()}` : '';
       return `${ex.plannedSets}×${repsPart}${weightPart}`;
     };
 
@@ -398,7 +396,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                 <p className="text-muted-foreground mt-0.5 text-xs">{tpl.description}</p>
               )}
             </div>
-            <Badge variant="secondary" className="font-mono-tabular shrink-0 px-2.5 py-1 text-xs">
+            <Badge variant="secondary" className="tabular-nums shrink-0 px-2.5 py-1 text-xs">
               {tpl.exercises.length} ex • ~{tpl.estimatedDurationMinutes ?? 60}m
             </Badge>
           </div>
@@ -408,15 +406,15 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
             <span className="flex items-center gap-1.5 font-semibold">
               <History className="text-primary h-3.5 w-3.5 shrink-0" />
               {t.workouts.totalLabel}{' '}
-              <strong className="font-mono-tabular text-primary">
+              <strong className="tabular-nums text-primary">
                 {tplStats.totalCount}{' '}
                 {tplStats.totalCount === 1 ? t.common.session : t.common.sessions}
               </strong>
             </span>
-            <span className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
+            <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
               <Calendar className="h-3.5 w-3.5 shrink-0" />
               {t.workouts.lastLabel}{' '}
-              <strong className="font-mono-tabular text-foreground">
+              <strong className="tabular-nums text-foreground">
                 {tplStats.lastSessionDate
                   ? formatDateTime(tplStats.lastSessionDate)
                   : t.workouts.neverTrained}
@@ -432,27 +430,24 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                   <div
                     key={`superset-${block.startIndex}`}
                     data-testid="superset-block-card"
-                    className="border-accent/40 bg-card overflow-hidden rounded-2xl border shadow-sm"
+                    className="border-accent/40 bg-card overflow-hidden rounded-2xl border"
                   >
                     {/* Gymlife Dark Superset Header Banner */}
-                    <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-zinc-950 px-3.5 py-2.5 text-white">
+                    <div className="flex items-center justify-between gap-2 border-b border-border bg-secondary px-3.5 py-2.5 text-foreground">
                       <div>
-                        <div className="flex items-center gap-1.5 text-xs font-extrabold tracking-wide uppercase">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold">
                           <span className="text-accent">{t.workouts.supersetHeaderLabel}</span>
-                          <span className="font-mono-tabular text-white">
+                          <span className="tabular-nums text-foreground">
                             {format(t.workouts.supersetRoundsFormat, { rounds: block.rounds })}
                           </span>
                         </div>
-                        <p className="font-mono-tabular mt-0.5 text-[11px] text-zinc-300">
+                        <p className="tabular-nums mt-0.5 text-xs text-muted-foreground">
                           {format(t.workouts.supersetSubtitleFormat, {
                             rest: formatRestDurationMinSec(block.roundRestSeconds),
                           })}
                         </p>
                       </div>
-                      <Badge
-                        variant="accent"
-                        className="px-2 py-0.5 text-[10px] font-bold uppercase"
-                      >
+                      <Badge variant="accent" className="px-2 py-0.5 text-xs font-bold">
                         <Zap className="h-2.5 w-2.5" /> {block.items.length} ex
                       </Badge>
                     </div>
@@ -474,7 +469,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                               <div className="relative shrink-0">
                                 <span
                                   data-testid="superset-step-badge"
-                                  className="text-accent font-mono-tabular absolute -top-1 -left-1 z-10 flex h-5 w-5 items-center justify-center rounded-full border border-white/15 bg-zinc-950 text-[10px] font-black shadow-sm"
+                                  className="text-accent tabular-nums absolute -top-1 -left-1 z-10 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-secondary text-xs font-bold"
                                 >
                                   {stepNumber}
                                 </span>
@@ -493,13 +488,13 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                                     {exObj?.name ?? 'Exercise'}
                                   </span>
                                   {exObj && (
-                                    <span className="text-muted-foreground text-[10px]">
+                                    <span className="text-muted-foreground text-xs">
                                       ({muscleLabel(exObj.primaryMuscleGroup)})
                                     </span>
                                   )}
                                 </div>
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className="bg-accent/20 text-accent font-mono-tabular inline-flex items-center rounded-lg px-2 py-0.5 text-[11px] font-extrabold">
+                                  <span className="bg-accent/20 text-accent tabular-nums inline-flex items-center rounded-lg px-2 py-0.5 text-xs font-semibold">
                                     {formatTargetPillText(ex)}
                                   </span>
                                   {altNames.length > 0 && (
@@ -508,7 +503,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                                       title={format(t.workouts.backupsTitle, {
                                         names: altNames.join(', '),
                                       })}
-                                      className="px-1.5 py-0.5 text-[10px]"
+                                      className="px-1.5 py-0.5 text-xs"
                                     >
                                       <ArrowRightLeft className="h-2.5 w-2.5" />
                                       {altNames.length}{' '}
@@ -549,25 +544,25 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                     )}
                     <div className="min-w-0 space-y-1">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-primary font-mono-tabular font-bold">
+                        <span className="text-primary tabular-nums font-bold">
                           {globalIndex + 1}.
                         </span>
                         <span className="truncate font-semibold">{exObj?.name ?? 'Exercise'}</span>
                         {exObj && (
-                          <span className="text-muted-foreground text-[10px]">
+                          <span className="text-muted-foreground text-xs">
                             ({muscleLabel(exObj.primaryMuscleGroup)})
                           </span>
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="bg-accent/20 text-accent font-mono-tabular inline-flex items-center rounded-lg px-2 py-0.5 text-[11px] font-extrabold">
+                        <span className="bg-accent/20 text-accent tabular-nums inline-flex items-center rounded-lg px-2 py-0.5 text-xs font-semibold">
                           {formatTargetPillText(ex)}
                         </span>
                         {altNames.length > 0 && (
                           <Badge
                             variant="default"
                             title={format(t.workouts.backupsTitle, { names: altNames.join(', ') })}
-                            className="px-1.5 py-0.5 text-[10px]"
+                            className="px-1.5 py-0.5 text-xs"
                           >
                             <ArrowRightLeft className="h-2.5 w-2.5" />
                             {altNames.length}{' '}
@@ -581,7 +576,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                   </div>
 
                   <div className="flex shrink-0 flex-col items-end gap-1">
-                    <span className="bg-secondary text-foreground font-mono-tabular rounded-lg border px-2 py-0.5 text-[10px] font-bold">
+                    <span className="bg-secondary text-foreground tabular-nums rounded-lg border px-2 py-0.5 text-xs font-bold">
                       {ex.restSeconds} {t.common.sec}
                     </span>
                   </div>
@@ -599,9 +594,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                   testId={`template-suggestion-${tpl.id}`}
                   analyticsContext="template"
                   onAdd={(sug) => void handleAddSuggestionToTemplate(tpl, sug)}
-                  onDismiss={() =>
-                    setDismissedSuggestions((prev) => ({ ...prev, [tpl.id]: true }))
-                  }
+                  onDismiss={() => setDismissedSuggestions((prev) => ({ ...prev, [tpl.id]: true }))}
                 />
               </div>
             )}
@@ -761,7 +754,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                     style={{ backgroundColor: folder.color || '#CCFF00' }}
                   />
                   <Folder className="text-primary h-5 w-5 shrink-0" />
-                  <h2 className="font-display min-w-0 flex-1 truncate text-base font-extrabold tracking-tight sm:text-lg">
+                  <h2 className="font-display min-w-0 flex-1 truncate text-base font-semibold tracking-tight sm:text-lg">
                     {folder.name}
                   </h2>
                   <Badge
@@ -776,14 +769,14 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
 
               {/* Folder Telemetry + Reorder & Edit Controls */}
               <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2 sm:justify-end sm:border-t-0 sm:pt-0">
-                <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-[11px]">
-                  <span className="font-mono-tabular font-semibold">
+                <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
+                  <span className="tabular-nums font-semibold">
                     {format(t.workouts.totalSessionsCount, { count: folderStats.totalCount })}
                   </span>
                   <span>•</span>
                   <span>
                     {t.workouts.lastLabel}{' '}
-                    <strong className="font-mono-tabular text-foreground">
+                    <strong className="tabular-nums text-foreground">
                       {folderStats.lastSessionDate ? formatDate(folderStats.lastSessionDate) : '—'}
                     </strong>
                   </span>
@@ -938,7 +931,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                     type="button"
                     onClick={() => setFolderColor(c)}
                     className={`h-7 w-7 rounded-full border-2 transition ${
-                      folderColor === c ? 'scale-110 border-white' : 'border-transparent'
+                      folderColor === c ? 'scale-110 border-border' : 'border-transparent'
                     }`}
                     style={{ backgroundColor: c }}
                   />
@@ -1112,7 +1105,8 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                 </div>
 
                 {tplExercises.map((slot, idx) => {
-                  const isSupersetWithNext = slot.restSeconds === 0 && idx < tplExercises.length - 1;
+                  const isSupersetWithNext =
+                    slot.restSeconds === 0 && idx < tplExercises.length - 1;
                   const isSupersetFromPrev = idx > 0 && tplExercises[idx - 1]?.restSeconds === 0;
 
                   return (
@@ -1126,7 +1120,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                       >
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                           <div className="flex w-full min-w-0 flex-1 items-center gap-2">
-                            <span className="bg-primary text-primary-foreground font-mono-tabular flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
+                            <span className="bg-primary text-primary-foreground tabular-nums flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
                               {idx + 1}
                             </span>
                             <ExercisePicker
@@ -1233,7 +1227,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                         {/* Sets, Warmups, Rep Range, Target Weight, Rest — compact 3-col on mobile */}
                         <div className="grid grid-cols-3 gap-2 sm:grid-cols-6 sm:gap-2.5">
                           <div>
-                            <Label className="text-muted-foreground mb-1 truncate text-[10px] font-semibold uppercase">
+                            <Label className="text-muted-foreground mb-1 truncate text-xs font-semibold">
                               {t.workouts.workingSetsLabel}
                             </Label>
                             <NumberInput
@@ -1248,11 +1242,11 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                                   ),
                                 )
                               }
-                              className="font-mono-tabular h-9 text-xs sm:h-8"
+                              className="tabular-nums h-9 text-xs sm:h-8"
                             />
                           </div>
                           <div>
-                            <Label className="text-muted-foreground mb-1 truncate text-[10px] font-semibold uppercase">
+                            <Label className="text-muted-foreground mb-1 truncate text-xs font-semibold">
                               {t.workouts.warmupSetsLabel}
                             </Label>
                             <NumberInput
@@ -1267,11 +1261,11 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                                   ),
                                 )
                               }
-                              className="font-mono-tabular h-9 text-xs sm:h-8"
+                              className="tabular-nums h-9 text-xs sm:h-8"
                             />
                           </div>
                           <div>
-                            <Label className="text-muted-foreground mb-1 truncate text-[10px] font-semibold uppercase">
+                            <Label className="text-muted-foreground mb-1 truncate text-xs font-semibold">
                               {t.workouts.minRepsLabel}
                             </Label>
                             <NumberInput
@@ -1286,11 +1280,11 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                                   ),
                                 )
                               }
-                              className="font-mono-tabular h-9 text-xs sm:h-8"
+                              className="tabular-nums h-9 text-xs sm:h-8"
                             />
                           </div>
                           <div>
-                            <Label className="text-muted-foreground mb-1 truncate text-[10px] font-semibold uppercase">
+                            <Label className="text-muted-foreground mb-1 truncate text-xs font-semibold">
                               {t.workouts.maxRepsLabel}
                             </Label>
                             <NumberInput
@@ -1305,11 +1299,11 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                                   ),
                                 )
                               }
-                              className="font-mono-tabular h-9 text-xs sm:h-8"
+                              className="tabular-nums h-9 text-xs sm:h-8"
                             />
                           </div>
                           <div>
-                            <Label className="text-muted-foreground mb-1 truncate text-[10px] font-semibold uppercase">
+                            <Label className="text-muted-foreground mb-1 truncate text-xs font-semibold">
                               {format(t.workouts.targetWeightLabel, { unit: weightUnit })}
                             </Label>
                             <NumberInput
@@ -1325,11 +1319,11 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                                 )
                               }
                               placeholder={t.common.optional}
-                              className="font-mono-tabular h-9 text-xs sm:h-8"
+                              className="tabular-nums h-9 text-xs sm:h-8"
                             />
                           </div>
                           <div>
-                            <Label className="text-muted-foreground mb-1 truncate text-[10px] font-semibold uppercase">
+                            <Label className="text-muted-foreground mb-1 truncate text-xs font-semibold">
                               {t.workouts.restSecLabel}
                             </Label>
                             <NumberInput
@@ -1345,7 +1339,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                                   ),
                                 )
                               }
-                              className="font-mono-tabular h-9 text-xs sm:h-8"
+                              className="tabular-nums h-9 text-xs sm:h-8"
                             />
                           </div>
                         </div>
@@ -1353,7 +1347,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                         {/* Backup / Alternative Exercises Selector */}
                         <div className="grid gap-2 sm:grid-cols-2">
                           <div className="min-w-0">
-                            <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
+                            <Label className="text-muted-foreground mb-1 text-xs font-semibold">
                               {t.workouts.backupExerciseLabel}
                             </Label>
                             <ExercisePicker
@@ -1378,7 +1372,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                             />
                           </div>
                           <div className="min-w-0">
-                            <Label className="text-muted-foreground mb-1 text-[10px] font-semibold uppercase">
+                            <Label className="text-muted-foreground mb-1 text-xs font-semibold">
                               {t.workouts.exerciseNotesLabel}
                             </Label>
                             <Input
@@ -1400,18 +1394,18 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                       {isSupersetWithNext && !isSupersetFromPrev && (
                         <div
                           data-testid="builder-superset-header"
-                          className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-zinc-950 px-3.5 py-2.5 text-xs text-white"
+                          className="flex items-center justify-between gap-2 rounded-xl border border-border bg-secondary px-3.5 py-2.5 text-xs text-foreground"
                         >
                           <div>
-                            <div className="flex items-center gap-1.5 font-extrabold tracking-wide uppercase">
+                            <div className="flex items-center gap-1.5 font-semibold">
                               <span className="text-accent">{t.workouts.supersetHeaderLabel}</span>
-                              <span className="font-mono-tabular">
+                              <span className="tabular-nums">
                                 {format(t.workouts.supersetRoundsFormat, {
                                   rounds: slot.plannedSets,
                                 })}
                               </span>
                             </div>
-                            <p className="font-mono-tabular mt-0.5 text-[11px] text-zinc-300">
+                            <p className="tabular-nums mt-0.5 text-xs text-muted-foreground">
                               {format(t.workouts.supersetSubtitleFormat, {
                                 rest: formatRestDurationMinSec(
                                   tplExercises[idx + 1]?.restSeconds || 90,

@@ -34,14 +34,14 @@ export default function VerifyEmailPage() {
       <Card className="w-full max-w-md space-y-6 rounded-3xl p-6 sm:p-8">
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="bg-primary text-primary-foreground flex h-10 w-10 items-center justify-center rounded-xl font-extrabold">
+            <div className="bg-primary text-primary-foreground flex h-10 w-10 items-center justify-center rounded-xl font-semibold">
               <Dumbbell className="h-5 w-5" />
             </div>
             <div>
-              <span className="font-display text-lg font-extrabold">
+              <span className="font-display text-lg font-semibold">
                 LUKI<span className="text-primary">FITTI</span>
               </span>
-              <span className="text-muted-foreground block text-[11px]">
+              <span className="text-muted-foreground block text-xs">
                 Account Email Confirmation
               </span>
             </div>

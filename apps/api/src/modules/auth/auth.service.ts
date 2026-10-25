@@ -103,7 +103,7 @@ export class AuthService {
             create: {
               weightUnit: dto.weightUnit ?? WeightUnit.KG,
               defaultRestSeconds: 90,
-              theme: 'dark',
+              theme: 'system',
               language: 'system',
               restTimerSound: true,
               weeklyGoalSessions: 4,
@@ -284,9 +284,7 @@ export class AuthService {
       });
 
       if (this.emailService) {
-        await this.emailService
-          .enqueuePasswordResetEmail(user, rawToken)
-          .catch(() => undefined);
+        await this.emailService.enqueuePasswordResetEmail(user, rawToken).catch(() => undefined);
       }
     }
 
@@ -356,9 +354,7 @@ export class AuthService {
     if (!isPasswordValid) {
       const nextAttempts = user.failedLoginAttempts + 1;
       const lockedUntil =
-        nextAttempts >= MAX_FAILED_ATTEMPTS
-          ? new Date(Date.now() + LOCKOUT_DURATION_MS)
-          : null;
+        nextAttempts >= MAX_FAILED_ATTEMPTS ? new Date(Date.now() + LOCKOUT_DURATION_MS) : null;
 
       await this.prisma.user.update({
         where: { id: user.id },
@@ -422,7 +418,7 @@ export class AuthService {
               weightUnit: prefFields.weightUnit ?? WeightUnit.KG,
               distanceUnit: prefFields.distanceUnit,
               defaultRestSeconds: prefFields.defaultRestSeconds ?? 90,
-              theme: prefFields.theme ?? 'dark',
+              theme: prefFields.theme ?? 'system',
               language: prefFields.language ?? 'system',
               restTimerSound: prefFields.restTimerSound ?? true,
               notificationsEnabled: prefFields.notificationsEnabled ?? true,
@@ -512,9 +508,7 @@ export class AuthService {
     });
 
     if (this.emailService) {
-      await this.emailService
-        .enqueueAccountDeletionEmail(user, rawToken)
-        .catch(() => undefined);
+      await this.emailService.enqueueAccountDeletionEmail(user, rawToken).catch(() => undefined);
     }
 
     return {

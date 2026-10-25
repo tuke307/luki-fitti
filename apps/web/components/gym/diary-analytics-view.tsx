@@ -463,10 +463,10 @@ export function DiaryAnalyticsView() {
           <p className="text-muted-foreground text-xs font-medium">
             {t.diary.completedSessionsTitle}
           </p>
-          <p className="font-mono-tabular text-primary mt-1 text-2xl font-extrabold">
+          <p className="tabular-nums text-primary mt-1 text-2xl font-semibold">
             {stats.totalSessions}
           </p>
-          <p className="text-muted-foreground mt-0.5 text-[11px]">
+          <p className="text-muted-foreground mt-0.5 text-xs">
             {format(t.diary.strengthVsStretchSub, {
               strength: stats.strengthSessions,
               stretch: stats.stretchingSessions,
@@ -475,50 +475,44 @@ export function DiaryAnalyticsView() {
         </Card>
 
         <Card className="p-4">
-          <p className="text-muted-foreground text-xs font-medium">
-            {t.diary.workingVolumeTitle}
-          </p>
-          <p className="font-mono-tabular mt-1 text-2xl font-extrabold">
+          <p className="text-muted-foreground text-xs font-medium">{t.diary.workingVolumeTitle}</p>
+          <p className="tabular-nums mt-1 text-2xl font-semibold">
             {stats.totalVolumeKg.toLocaleString()} <span className="text-sm font-normal">kg</span>
           </p>
-          <p className="text-muted-foreground mt-0.5 text-[11px]">{t.diary.workingVolumeSub}</p>
+          <p className="text-muted-foreground mt-0.5 text-xs">{t.diary.workingVolumeSub}</p>
         </Card>
 
         <Card className="p-4">
           <p className="text-muted-foreground text-xs font-medium">
             {t.diary.completedSetsRepsTitle}
           </p>
-          <p className="font-mono-tabular mt-1 text-2xl font-extrabold">
+          <p className="tabular-nums mt-1 text-2xl font-semibold">
             {stats.totalSets}{' '}
             <span className="text-muted-foreground text-xs font-normal">
               ({stats.totalReps} {t.common.reps})
             </span>
           </p>
-          <p className="text-muted-foreground mt-0.5 text-[11px]">
-            {t.diary.completedSetsRepsSub}
-          </p>
+          <p className="text-muted-foreground mt-0.5 text-xs">{t.diary.completedSetsRepsSub}</p>
         </Card>
 
         <Card className="p-4">
           <p className="text-muted-foreground text-xs font-medium">
             {t.diary.stretchingMobilityTitle}
           </p>
-          <p className="font-mono-tabular text-accent mt-1 text-2xl font-extrabold">
+          <p className="tabular-nums text-accent mt-1 text-2xl font-semibold">
             {stats.totalStretchMinutes} <span className="text-sm font-normal">{t.common.min}</span>
           </p>
-          <p className="text-muted-foreground mt-0.5 text-[11px]">
-            {t.diary.stretchingMobilitySub}
-          </p>
+          <p className="text-muted-foreground mt-0.5 text-xs">{t.diary.stretchingMobilitySub}</p>
         </Card>
       </div>
 
       {/* Period-Aware Training Activity Strip / Breakdown */}
-      <Card className="space-y-3 rounded-3xl p-5">
+      <Card className="space-y-3 rounded-[1.25rem] p-5">
         <div className="flex items-center justify-between">
           <h2 className="font-display flex items-center gap-2 text-base font-bold">
             <CalendarIcon className="text-primary h-4 w-4" /> {activityData.title}
           </h2>
-          <div className="flex items-center gap-3 text-[11px]">
+          <div className="flex items-center gap-3 text-xs">
             <span className="flex items-center gap-1">
               <span className="bg-primary inline-block h-2.5 w-2.5 rounded-sm" />{' '}
               {t.diary.strengthLegend}
@@ -535,10 +529,7 @@ export function DiaryAnalyticsView() {
             {period === 'month' && (
               <div className="grid grid-cols-7 gap-2 text-center">
                 {t.diary.weekdaysShort.map((weekday) => (
-                  <span
-                    key={weekday}
-                    className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase"
-                  >
+                  <span key={weekday} className="text-muted-foreground text-xs font-semibold">
                     {weekday}
                   </span>
                 ))}
@@ -577,11 +568,11 @@ export function DiaryAnalyticsView() {
                     }`}
                   >
                     {period === 'week' && (
-                      <span className="text-[10px] font-medium opacity-75">{day.weekdayLabel}</span>
+                      <span className="text-xs font-medium opacity-75">{day.weekdayLabel}</span>
                     )}
-                    <span className="font-mono-tabular text-[11px]">{day.dayNum}</span>
+                    <span className="tabular-nums text-xs">{day.dayNum}</span>
                     {day.sessions.length > 0 && (
-                      <span className="text-[9px]">{day.sessions.length}x</span>
+                      <span className="text-xs">{day.sessions.length}x</span>
                     )}
                   </div>
                 );
@@ -617,14 +608,14 @@ export function DiaryAnalyticsView() {
                   <div className="flex items-center justify-between">
                     <span className="font-display font-bold">{bucket.label}</span>
                     <span
-                      className={`font-mono-tabular text-[11px] font-extrabold ${
+                      className={`tabular-nums text-xs font-semibold ${
                         hasSessions ? 'text-primary' : 'text-muted-foreground'
                       }`}
                     >
                       {bucket.sessions.length} {t.diary.sessShort}
                     </span>
                   </div>
-                  <div className="text-muted-foreground font-mono-tabular mt-2 text-[10px]">
+                  <div className="text-muted-foreground tabular-nums mt-2 text-xs">
                     {bucket.totalSets} {t.common.sets} • {(bucket.totalVolumeKg / 1000).toFixed(1)}t
                     vol
                   </div>
@@ -636,15 +627,14 @@ export function DiaryAnalyticsView() {
       </Card>
 
       {/* Diary Progression Chart (Session Volume & Working Sets OR Exercise e1RM Progression) */}
-      <Card className="min-w-0 space-y-4 overflow-hidden rounded-3xl p-4 sm:p-5">
+      <Card className="min-w-0 space-y-4 overflow-hidden rounded-[1.25rem] p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h2 className="font-display flex items-center gap-2 text-base font-bold">
               <TrendingUp className="text-primary h-4 w-4" />
               {selectedExerciseId !== 'ALL'
                 ? format(t.diary.exerciseProgressionTitle, {
-                    name:
-                      catalog.find((c) => c.id === selectedExerciseId)?.name ?? 'Exercise',
+                    name: catalog.find((c) => c.id === selectedExerciseId)?.name ?? 'Exercise',
                   })
                 : t.diary.sessionVolumeProgressionTitle}
             </h2>
@@ -654,16 +644,14 @@ export function DiaryAnalyticsView() {
                 : t.diary.sessionVolumeProgressionSub}
             </p>
           </div>
-          <div className="flex items-center gap-3 text-[11px]">
+          <div className="flex items-center gap-3 text-xs">
             <span className="flex items-center gap-1.5 font-semibold">
               <span className="bg-primary inline-block h-2.5 w-2.5 rounded-sm" />
               {selectedExerciseId !== 'ALL' ? t.diary.est1RmLegend : t.diary.volumeTonsLegend}
             </span>
             <span className="flex items-center gap-1.5 font-semibold">
               <span className="bg-accent inline-block h-2.5 w-2.5 rounded-full" />
-              {selectedExerciseId !== 'ALL'
-                ? t.diary.maxWeightLegend
-                : t.diary.completedSetsLegend}
+              {selectedExerciseId !== 'ALL' ? t.diary.maxWeightLegend : t.diary.completedSetsLegend}
             </span>
           </div>
         </div>
@@ -681,20 +669,20 @@ export function DiaryAnalyticsView() {
               >
                 <defs>
                   <linearGradient id="diaryVolGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#CCFF00" stopOpacity={0.65} />
-                    <stop offset="100%" stopColor="#CCFF00" stopOpacity={0.08} />
+                    <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.65} />
+                    <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0.08} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.18)" />
                 <XAxis
                   dataKey="label"
-                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                  tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
                   yAxisId="left"
-                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                  tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
                   axisLine={false}
                   tickLine={false}
                   unit={selectedExerciseId !== 'ALL' ? 'kg' : 't'}
@@ -702,25 +690,27 @@ export function DiaryAnalyticsView() {
                 <YAxis
                   yAxisId="right"
                   orientation="right"
-                  tick={{ fontSize: 10, fill: 'hsl(var(--accent))' }}
+                  tick={{ fontSize: 10, fill: 'var(--accent)' }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <Tooltip
-                  cursor={{ stroke: 'hsl(var(--muted-foreground) / 0.3)', strokeWidth: 1 }}
+                  cursor={{
+                    stroke: 'color-mix(in oklch, var(--muted-foreground) 30%, transparent)',
+                    strokeWidth: 1,
+                  }}
                   wrapperStyle={{ outline: 'none' }}
                   content={({ active, payload, label }) => {
                     if (!active || !payload?.length) return null;
                     const row = payload[0]?.payload as
-                      | { fullDate?: string; workoutName?: string }
-                      | undefined;
+                      { fullDate?: string; workoutName?: string } | undefined;
                     return (
-                      <div className="bg-popover/95 text-popover-foreground border-border pointer-events-none max-w-[200px] rounded-xl border px-2.5 py-1.5 text-[11px] leading-tight shadow-md backdrop-blur-sm">
+                      <div className="bg-popover/95 text-popover-foreground border-border pointer-events-none max-w-[200px] rounded-xl border px-2.5 py-1.5 text-xs leading-tight shadow-md backdrop-blur-sm">
                         <p className="text-foreground truncate font-semibold">
                           {row?.workoutName ?? String(label ?? '')}
                         </p>
                         {row?.fullDate && (
-                          <p className="text-muted-foreground font-mono-tabular mb-1 text-[10px]">
+                          <p className="text-muted-foreground tabular-nums mb-1 text-xs">
                             {row.fullDate}
                           </p>
                         )}
@@ -754,7 +744,7 @@ export function DiaryAnalyticsView() {
                                   />
                                   {metricLabel}
                                 </span>
-                                <span className="text-foreground font-mono-tabular font-bold">
+                                <span className="text-foreground tabular-nums font-bold">
                                   {metricValue}
                                 </span>
                               </div>
@@ -770,7 +760,7 @@ export function DiaryAnalyticsView() {
                     <Bar
                       yAxisId="right"
                       dataKey="maxWeightKg"
-                      fill="#00E5FF"
+                      fill="var(--chart-2)"
                       fillOpacity={0.45}
                       radius={[6, 6, 0, 0]}
                       maxBarSize={24}
@@ -779,7 +769,7 @@ export function DiaryAnalyticsView() {
                       yAxisId="left"
                       type="monotone"
                       dataKey="est1RM"
-                      stroke="#CCFF00"
+                      stroke="var(--chart-1)"
                       strokeWidth={2.5}
                       fill="url(#diaryVolGrad)"
                     />
@@ -790,14 +780,14 @@ export function DiaryAnalyticsView() {
                       yAxisId="left"
                       type="monotone"
                       dataKey="volumeTons"
-                      stroke="#CCFF00"
+                      stroke="var(--chart-1)"
                       strokeWidth={2.5}
                       fill="url(#diaryVolGrad)"
                     />
                     <Bar
                       yAxisId="right"
                       dataKey="sets"
-                      fill="#00E5FF"
+                      fill="var(--chart-2)"
                       fillOpacity={0.5}
                       radius={[4, 4, 0, 0]}
                       maxBarSize={18}
@@ -813,7 +803,7 @@ export function DiaryAnalyticsView() {
       {/* Muscle Distribution & Personal Records */}
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Muscle Group Distribution */}
-        <Card className="space-y-3 rounded-3xl p-5">
+        <Card className="space-y-3 rounded-[1.25rem] p-5">
           <h2 className="font-display flex items-center gap-2 text-base font-bold">
             <TrendingUp className="text-primary h-4 w-4" /> {t.diary.muscleDistTitle}
           </h2>
@@ -827,7 +817,7 @@ export function DiaryAnalyticsView() {
                 <div key={m.muscle} className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold">{m.label}</span>
-                    <span className="font-mono-tabular text-muted-foreground">
+                    <span className="tabular-nums text-muted-foreground">
                       {m.sets} {t.common.sets} ({m.pct}%) • {m.volumeKg.toLocaleString()} kg
                     </span>
                   </div>
@@ -839,7 +829,7 @@ export function DiaryAnalyticsView() {
         </Card>
 
         {/* Personal Records Leaderboard */}
-        <Card className="space-y-3 rounded-3xl p-5">
+        <Card className="space-y-3 rounded-[1.25rem] p-5">
           <h2 className="font-display flex items-center gap-2 text-base font-bold">
             <Trophy className="text-primary h-4 w-4" /> {t.diary.prLeaderboardTitle}
           </h2>
@@ -856,15 +846,15 @@ export function DiaryAnalyticsView() {
                 >
                   <div>
                     <p className="font-bold">{pr.exerciseName}</p>
-                    <p className="text-muted-foreground text-[10px]">
+                    <p className="text-muted-foreground text-xs">
                       {muscleLabel(pr.muscle)} • {pr.date}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-mono-tabular text-primary font-extrabold">
+                    <p className="tabular-nums text-primary font-semibold">
                       {pr.maxWeightKg} kg × {pr.reps}
                     </p>
-                    <p className="text-muted-foreground font-mono-tabular text-[10px]">
+                    <p className="text-muted-foreground tabular-nums text-xs">
                       Est. 1RM: {pr.est1RM} kg
                     </p>
                   </div>
@@ -882,7 +872,7 @@ export function DiaryAnalyticsView() {
         </h2>
 
         {filteredSessions.length === 0 ? (
-          <Card className="rounded-3xl p-10 text-center">
+          <Card className="rounded-[1.25rem] p-10 text-center">
             <Dumbbell className="text-muted-foreground mx-auto mb-2 h-8 w-8 opacity-50" />
             <p className="font-display text-base font-bold">{t.diary.timelineEmptyTitle}</p>
             <p className="text-muted-foreground mt-1 text-xs">{t.diary.timelineEmptySub}</p>
@@ -901,7 +891,7 @@ export function DiaryAnalyticsView() {
                       variant={
                         session.sessionType === SessionType.STRETCHING ? 'accent' : 'default'
                       }
-                      className="text-[10px] uppercase"
+                      className="text-xs"
                     >
                       {session.sessionType === SessionType.STRETCHING ? (
                         <Sparkles className="h-3 w-3" />
@@ -910,24 +900,27 @@ export function DiaryAnalyticsView() {
                       )}
                       {sessionTypeLabel(session.sessionType)}
                     </Badge>
-                    <span className="text-muted-foreground font-mono-tabular text-xs">
+                    <span className="text-muted-foreground tabular-nums text-xs">
                       {formatLongDateTime(session.startedAt, locale)}
                     </span>
                     {session.sourceDevice === SessionSourceDevice.APPLE_WATCH && (
-                      <Badge variant="outline" className="gap-1 border-rose-500/40 text-[10px]">
-                        <Watch className="h-3 w-3 text-rose-400" />
+                      <Badge variant="outline" className="gap-1 border-destructive/40 text-xs">
+                        <Watch className="h-3 w-3 text-destructive" />
                         {t.diary.recordedOnAppleWatch}
                       </Badge>
                     )}
                     {session.sourceDevice === SessionSourceDevice.IPHONE && (
-                      <Badge variant="outline" className="gap-1 text-[10px]">
+                      <Badge variant="outline" className="gap-1 text-xs">
                         <Smartphone className="h-3 w-3" />
                         {t.diary.recordedOnIphone}
                       </Badge>
                     )}
                     {session.healthKitWorkoutUuid && (
-                      <Badge variant="outline" className="gap-1 border-rose-500/40 text-[10px] text-rose-400">
-                        <Heart className="h-3 w-3 fill-rose-500 text-rose-500" />
+                      <Badge
+                        variant="outline"
+                        className="gap-1 border-destructive/40 text-xs text-destructive"
+                      >
+                        <Heart className="h-3 w-3 fill-destructive text-destructive" />
                         {t.diary.syncedWithAppleHealth}
                       </Badge>
                     )}
@@ -940,18 +933,18 @@ export function DiaryAnalyticsView() {
                     {session.exercises.map((e) => e.exerciseNameSnapshot).join(' • ')}
                   </p>
                   {(session.activeCaloriesKcal || session.avgHeartRateBpm) && (
-                    <div className="flex flex-wrap items-center gap-2 pt-0.5 text-[11px]">
+                    <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs">
                       {typeof session.activeCaloriesKcal === 'number' &&
                         session.activeCaloriesKcal > 0 && (
-                          <span className="font-mono-tabular inline-flex items-center gap-1 rounded-lg bg-amber-500/15 px-2 py-0.5 font-semibold text-amber-400">
+                          <span className="tabular-nums inline-flex items-center gap-1 rounded-lg bg-warning/15 px-2 py-0.5 font-semibold text-warning">
                             <Flame className="h-3 w-3" />
                             {Math.round(session.activeCaloriesKcal)} kcal
                           </span>
                         )}
                       {typeof session.avgHeartRateBpm === 'number' &&
                         session.avgHeartRateBpm > 0 && (
-                          <span className="font-mono-tabular inline-flex items-center gap-1 rounded-lg bg-rose-500/15 px-2 py-0.5 font-semibold text-rose-400">
-                            <Heart className="h-3 w-3 fill-rose-500" />
+                          <span className="tabular-nums inline-flex items-center gap-1 rounded-lg bg-destructive/15 px-2 py-0.5 font-semibold text-destructive">
+                            <Heart className="h-3 w-3 fill-destructive" />
                             {t.diary.avgHeartRate}: {session.avgHeartRateBpm} bpm
                             {typeof session.maxHeartRateBpm === 'number' &&
                               session.maxHeartRateBpm > 0 &&
@@ -965,26 +958,26 @@ export function DiaryAnalyticsView() {
                 <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t pt-3 md:flex-nowrap md:justify-end md:border-t-0 md:pt-0">
                   <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center sm:gap-2.5">
                     <div className="bg-secondary/60 rounded-xl px-3 py-1.5 text-right text-xs sm:w-[72px]">
-                      <span className="text-muted-foreground block text-[10px]">
+                      <span className="text-muted-foreground block text-xs">
                         {t.diary.durationSmall}
                       </span>
-                      <strong className="font-mono-tabular">
+                      <strong className="tabular-nums">
                         {Math.max(1, Math.round(session.activeDurationSeconds / 60))}m
                       </strong>
                     </div>
                     <div className="bg-secondary/60 rounded-xl px-3 py-1.5 text-right text-xs sm:w-[56px]">
-                      <span className="text-muted-foreground block text-[10px]">
+                      <span className="text-muted-foreground block text-xs">
                         {t.diary.setsSmall}
                       </span>
-                      <strong className="font-mono-tabular">{session.totalSetsCompleted}</strong>
+                      <strong className="tabular-nums">{session.totalSetsCompleted}</strong>
                     </div>
                     <div className="bg-secondary/60 rounded-xl px-3 py-1.5 text-right text-xs sm:w-[104px]">
-                      <span className="text-muted-foreground block text-[10px]">
+                      <span className="text-muted-foreground block text-xs">
                         {session.sessionType === SessionType.STRETCHING
                           ? t.diary.stretchSmall
                           : t.diary.volumeSmall}
                       </span>
-                      <strong className="font-mono-tabular text-primary">
+                      <strong className="tabular-nums text-primary">
                         {session.sessionType === SessionType.STRETCHING
                           ? `${Math.round(session.totalStretchSeconds / 60)}m`
                           : `${session.totalVolumeKg.toLocaleString()} kg`}
@@ -1046,7 +1039,7 @@ export function DiaryAnalyticsView() {
           {inspectingSession && (
             <div className="flex max-h-[calc(90dvh-2.5rem)] min-w-0 flex-col gap-3 overflow-hidden">
               <DialogHeader className="shrink-0">
-                <span className="text-muted-foreground font-mono-tabular text-xs">
+                <span className="text-muted-foreground tabular-nums text-xs">
                   {formatDateTime(inspectingSession.startedAt)}
                 </span>
                 <DialogTitle className="font-display text-xl font-bold">
@@ -1062,25 +1055,25 @@ export function DiaryAnalyticsView() {
                   inspectingSession.avgHeartRateBpm ||
                   (inspectingSession.heartRateSamples &&
                     inspectingSession.heartRateSamples.length > 0)) && (
-                  <div className="space-y-3 rounded-2xl border border-rose-500/30 bg-rose-500/5 p-3.5">
+                  <div className="space-y-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-3.5">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-display flex items-center gap-1.5 text-xs font-bold text-rose-400">
-                        <Heart className="h-3.5 w-3.5 fill-rose-500 text-rose-500" />
+                      <span className="font-display flex items-center gap-1.5 text-xs font-bold text-destructive">
+                        <Heart className="h-3.5 w-3.5 fill-destructive text-destructive" />
                         {t.diary.heartRateCurveTitle}
                       </span>
-                      <div className="font-mono-tabular flex flex-wrap items-center gap-2 text-[11px]">
+                      <div className="tabular-nums flex flex-wrap items-center gap-2 text-xs">
                         {typeof inspectingSession.activeCaloriesKcal === 'number' && (
-                          <span className="rounded-md bg-amber-500/15 px-2 py-0.5 font-bold text-amber-400">
+                          <span className="rounded-md bg-warning/15 px-2 py-0.5 font-bold text-warning">
                             {Math.round(inspectingSession.activeCaloriesKcal)} kcal
                           </span>
                         )}
                         {typeof inspectingSession.avgHeartRateBpm === 'number' && (
-                          <span className="rounded-md bg-rose-500/15 px-2 py-0.5 font-bold text-rose-400">
+                          <span className="rounded-md bg-destructive/15 px-2 py-0.5 font-bold text-destructive">
                             {t.diary.avgHeartRate}: {inspectingSession.avgHeartRateBpm} bpm
                           </span>
                         )}
                         {typeof inspectingSession.maxHeartRateBpm === 'number' && (
-                          <span className="rounded-md bg-rose-500/15 px-2 py-0.5 font-bold text-rose-400">
+                          <span className="rounded-md bg-destructive/15 px-2 py-0.5 font-bold text-destructive">
                             {t.diary.maxHeartRate}: {inspectingSession.maxHeartRateBpm} bpm
                           </span>
                         )}
@@ -1100,8 +1093,16 @@ export function DiaryAnalyticsView() {
                             >
                               <defs>
                                 <linearGradient id="hrCurveGrad" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor="#F43F5E" stopOpacity={0.55} />
-                                  <stop offset="100%" stopColor="#F43F5E" stopOpacity={0.05} />
+                                  <stop
+                                    offset="0%"
+                                    stopColor="var(--destructive)"
+                                    stopOpacity={0.55}
+                                  />
+                                  <stop
+                                    offset="100%"
+                                    stopColor="var(--destructive)"
+                                    stopOpacity={0.05}
+                                  />
                                 </linearGradient>
                               </defs>
                               <CartesianGrid
@@ -1110,20 +1111,20 @@ export function DiaryAnalyticsView() {
                               />
                               <XAxis
                                 dataKey="minLabel"
-                                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                                tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
                                 axisLine={false}
                                 tickLine={false}
                               />
                               <YAxis
                                 domain={['dataMin - 10', 'dataMax + 10']}
-                                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                                tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
                                 axisLine={false}
                                 tickLine={false}
                               />
                               <Area
                                 type="monotone"
                                 dataKey="bpm"
-                                stroke="#F43F5E"
+                                stroke="var(--destructive)"
                                 strokeWidth={2}
                                 fill="url(#hrCurveGrad)"
                               />
@@ -1143,7 +1144,7 @@ export function DiaryAnalyticsView() {
                       <span className="font-display min-w-0 text-sm font-bold">
                         {exIdx + 1}. {ex.exerciseNameSnapshot}
                       </span>
-                      <span className="text-muted-foreground shrink-0 text-[11px]">
+                      <span className="text-muted-foreground shrink-0 text-xs">
                         {muscleLabel(ex.primaryMuscleSnapshot)}
                       </span>
                     </div>
@@ -1155,12 +1156,12 @@ export function DiaryAnalyticsView() {
                           className="bg-background flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs"
                         >
                           <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="font-mono-tabular shrink-0 font-bold">
+                            <span className="tabular-nums shrink-0 font-bold">
                               {t.common.set} {sIdx + 1} ({setTypeLabel(set.setType)})
                             </span>
                             {(set.peakHeartRateBpm || set.restEndHeartRateBpm) && (
-                              <span className="font-mono-tabular inline-flex items-center gap-1 rounded-md bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-rose-400">
-                                <Heart className="h-2.5 w-2.5 fill-rose-500" />
+                              <span className="tabular-nums inline-flex items-center gap-1 rounded-md bg-destructive/15 px-1.5 py-0.5 text-xs font-semibold text-destructive">
+                                <Heart className="h-2.5 w-2.5 fill-destructive" />
                                 {set.peakHeartRateBpm
                                   ? `${set.peakHeartRateBpm} bpm peak`
                                   : `${set.avgHeartRateBpm ?? '-'} bpm`}
@@ -1171,9 +1172,7 @@ export function DiaryAnalyticsView() {
                             )}
                           </div>
                           <div className="ml-auto flex shrink-0 items-center gap-2">
-                            <Label className="text-muted-foreground text-[10px]">
-                              {weightUnit}
-                            </Label>
+                            <Label className="text-muted-foreground text-xs">{weightUnit}</Label>
                             <NumberInput
                               allowNull
                               step="0.5"
@@ -1199,11 +1198,9 @@ export function DiaryAnalyticsView() {
                                   };
                                 });
                               }}
-                              className="bg-secondary font-mono-tabular h-8 w-16 px-2 text-center text-xs sm:h-7"
+                              className="bg-secondary tabular-nums h-8 w-16 px-2 text-center text-xs sm:h-7"
                             />
-                            <Label className="text-muted-foreground text-[10px]">
-                              {t.common.reps}
-                            </Label>
+                            <Label className="text-muted-foreground text-xs">{t.common.reps}</Label>
                             <NumberInput
                               allowNull
                               min={0}
@@ -1228,7 +1225,7 @@ export function DiaryAnalyticsView() {
                                   };
                                 });
                               }}
-                              className="bg-secondary font-mono-tabular h-8 w-14 px-2 text-center text-xs sm:h-7"
+                              className="bg-secondary tabular-nums h-8 w-14 px-2 text-center text-xs sm:h-7"
                             />
                           </div>
                         </div>

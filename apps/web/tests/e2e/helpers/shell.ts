@@ -11,6 +11,15 @@ export type ShellTab = 'home' | 'workouts' | 'session' | 'diary' | 'exercises' |
  * button or the mobile bottom tab bar button depending on viewport visibility.
  */
 export async function navigateToTab(page: Page, tab: ShellTab): Promise<void> {
+  // Profile lives in the header avatar and the live workout in the floating accessory
+  // on every viewport, so they use a single shared test id.
+  if (tab === 'profile' || tab === 'session') {
+    const sharedBtn = page.getByTestId(`nav-${tab}`);
+    await expect(sharedBtn).toBeVisible({ timeout: 10_000 });
+    await sharedBtn.click();
+    return;
+  }
+
   const desktopBtn = page.getByTestId(`desktop-nav-${tab}`);
   const mobileBtn = page.getByTestId(`mobile-nav-${tab}`);
 
@@ -23,14 +32,15 @@ export async function navigateToTab(page: Page, tab: ShellTab): Promise<void> {
 }
 
 /**
- * Assert the top header sync/connection status badge contains the expected text.
+ * Assert the header sync/connection status contains the expected text. The status is always
+ * announced to assistive tech, but only shown visually when the user can act on it.
  */
 export async function expectSyncBadge(
   page: Page,
   expectedText: string | RegExp,
   timeout = 10_000,
 ): Promise<void> {
-  const badge = page.getByTestId('header-sync-badge');
-  await expect(badge).toBeVisible({ timeout });
+  const badge = page.getByTestId('header-sync-status');
+  await expect(badge).toBeAttached({ timeout });
   await expect(badge).toContainText(expectedText, { timeout });
 }
