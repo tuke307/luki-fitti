@@ -103,7 +103,7 @@ export class AuthService {
             create: {
               weightUnit: dto.weightUnit ?? WeightUnit.KG,
               defaultRestSeconds: 90,
-              theme: 'dark',
+              theme: 'system',
               language: 'system',
               restTimerSound: true,
               weeklyGoalSessions: 4,
@@ -422,7 +422,7 @@ export class AuthService {
               weightUnit: prefFields.weightUnit ?? WeightUnit.KG,
               distanceUnit: prefFields.distanceUnit,
               defaultRestSeconds: prefFields.defaultRestSeconds ?? 90,
-              theme: prefFields.theme ?? 'dark',
+              theme: prefFields.theme ?? 'system',
               language: prefFields.language ?? 'system',
               restTimerSound: prefFields.restTimerSound ?? true,
               notificationsEnabled: prefFields.notificationsEnabled ?? true,

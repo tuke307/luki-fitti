@@ -33,7 +33,7 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
         weightUnit: WeightUnit = .KG,
         distanceUnit: DistanceUnit = .KM,
         defaultRestSeconds: Int = 90,
-        theme: String = "dark",
+        theme: String = "system",
         language: LanguagePreference? = .system,
         restTimerSound: Bool = true,
         notificationsEnabled: Bool = true,
@@ -65,7 +65,7 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
         self.weightUnit = try c.decodeIfPresent(WeightUnit.self, forKey: .weightUnit) ?? .KG
         self.distanceUnit = try c.decodeIfPresent(DistanceUnit.self, forKey: .distanceUnit) ?? .KM
         self.defaultRestSeconds = try c.decodeIfPresent(Int.self, forKey: .defaultRestSeconds) ?? 90
-        self.theme = try c.decodeIfPresent(String.self, forKey: .theme) ?? "dark"
+        self.theme = try c.decodeIfPresent(String.self, forKey: .theme) ?? "system"
         self.language = try c.decodeIfPresent(LanguagePreference.self, forKey: .language)
         self.restTimerSound = try c.decodeIfPresent(Bool.self, forKey: .restTimerSound) ?? true
         self.notificationsEnabled = try c.decodeIfPresent(Bool.self, forKey: .notificationsEnabled) ?? true
