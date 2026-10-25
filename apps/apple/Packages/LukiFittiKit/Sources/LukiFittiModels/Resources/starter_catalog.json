@@ -190,6 +190,359 @@
       ]
     },
     {
+      "id": "ex-push-up",
+      "slug": "push-up",
+      "userId": null,
+      "name": "Push-Up",
+      "description": "Bodyweight exercise for the chest, with core, shoulders assisting.",
+      "instructions": [
+        "Lie on an exercise floor mat, face down.",
+        "Press your toes against the floor and place your hands flat on the ground shoulder width apart, fingers extended forward.",
+        "Descend by flexing at the elbow, lowering your chest toward the ground.",
+        "At the bottom contract your chest as you push off the ground and return to the starting position."
+      ],
+      "category": "BODYWEIGHT",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "CHEST",
+      "secondaryMuscleGroups": ["ABS_CORE", "SHOULDERS", "TRICEPS"],
+      "equipment": "BODYWEIGHT",
+      "recommendedDurationSeconds": null,
+      "tags": ["chest", "liegestütz", "push up", "push-up"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-barbell-bench-press", "ex-cable-chest-fly"],
+      "media": [
+        {
+          "id": "push-up-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Pushups/0.jpg",
+          "caption": "Push-Up — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "push-up-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Pushups/1.jpg",
+          "caption": "Push-Up — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "push-up-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Push-Up%20exercise%20form%20tutorial",
+          "caption": "Watch Push-Up Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-dumbbell-bench-press",
+      "slug": "dumbbell-bench-press",
+      "userId": null,
+      "name": "Dumbbell Bench Press",
+      "description": "Dumbbell exercise for the chest, with core, shoulders assisting.",
+      "instructions": [
+        "Lie down on a flat bench with a dumbbell in each hand resting on top of your thighs.",
+        "Press dumbbells straight up into the air and lock arms out at a full extended position and with the dumbbells touching at the peak of the movement.",
+        "Return to the starting position."
+      ],
+      "category": "COMPOUND",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "CHEST",
+      "secondaryMuscleGroups": ["ABS_CORE", "SHOULDERS", "TRICEPS"],
+      "equipment": "DUMBBELL",
+      "recommendedDurationSeconds": null,
+      "tags": ["chest", "dumbbell flat bench press", "flachbank", "kurzhantel bankdrücken"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-barbell-bench-press", "ex-dumbbell-incline-press"],
+      "media": [
+        {
+          "id": "dumbbell-bench-press-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Bench_Press/0.jpg",
+          "caption": "Dumbbell Bench Press — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "dumbbell-bench-press-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Bench_Press/1.jpg",
+          "caption": "Dumbbell Bench Press — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "dumbbell-bench-press-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Dumbbell%20Bench%20Press%20exercise%20form%20tutorial",
+          "caption": "Watch Dumbbell Bench Press Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-dumbbell-fly",
+      "slug": "dumbbell-fly",
+      "userId": null,
+      "name": "Dumbbell Fly",
+      "description": "Dumbbell exercise for the chest, with shoulders, triceps assisting.",
+      "instructions": [
+        "Lie down on a flat bench with a dumbbell on each hand resting on top of your thighs.",
+        "The palms of your hand will be facing each other.",
+        "Lift the dumbbells one at at time.",
+        "Hold the dumbbells in front of you, shoulder width apart.",
+        "The palms of your hands should be facing each other.",
+        "Lift the dumbbells as if you were pressing them stop and hold the weight before you lock out.",
+        "Bend your elbows slightly and lower your arms at both sides using a wide arc.",
+        "Keep lowering your arms until you feel a stretch on your chest."
+      ],
+      "category": "ISOLATION",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "CHEST",
+      "secondaryMuscleGroups": ["SHOULDERS", "TRICEPS"],
+      "equipment": "DUMBBELL",
+      "recommendedDurationSeconds": null,
+      "tags": ["chest", "flat bench dumbbell fly", "fliegende", "kurzhantel fliegende"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-incline-dumbbell-fly", "ex-barbell-bench-press"],
+      "media": [
+        {
+          "id": "dumbbell-fly-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Flyes/0.jpg",
+          "caption": "Dumbbell Fly — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "dumbbell-fly-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Flyes/1.jpg",
+          "caption": "Dumbbell Fly — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "dumbbell-fly-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Dumbbell%20Fly%20exercise%20form%20tutorial",
+          "caption": "Watch Dumbbell Fly Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-incline-dumbbell-fly",
+      "slug": "incline-dumbbell-fly",
+      "userId": null,
+      "name": "Incline Dumbbell Fly",
+      "description": "Dumbbell exercise for the chest, with shoulders assisting.",
+      "instructions": [
+        "Hold a dumbbell on each hand and lie on an incline bench that is set to an incline angle of no more than 30 degrees.",
+        "Extend your arms above you with your elbows slightly bent.",
+        "Rotate your wrists so that the palms of your hands are facing you.",
+        "This is the starting position.",
+        "Start to slowly lower the arms to the side while keeping the arms extended and while rotating the wrists until the palms of the hand are facing each other.",
+        "Exhale and start to bring the dumbbells back to the starting position by reversing the motion.",
+        "Rotate your hands so that your pinky fingers are next to each other again."
+      ],
+      "category": "ISOLATION",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "CHEST",
+      "secondaryMuscleGroups": ["SHOULDERS"],
+      "equipment": "DUMBBELL",
+      "recommendedDurationSeconds": null,
+      "tags": ["chest", "incline bench dumbbell fly", "schrägbank fliegende"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-dumbbell-fly", "ex-barbell-bench-press"],
+      "media": [
+        {
+          "id": "incline-dumbbell-fly-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Incline_Dumbbell_Flyes/0.jpg",
+          "caption": "Incline Dumbbell Fly — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "incline-dumbbell-fly-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Incline_Dumbbell_Flyes/1.jpg",
+          "caption": "Incline Dumbbell Fly — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "incline-dumbbell-fly-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Incline%20Dumbbell%20Fly%20exercise%20form%20tutorial",
+          "caption": "Watch Incline Dumbbell Fly Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-incline-barbell-bench-press",
+      "slug": "incline-barbell-bench-press",
+      "userId": null,
+      "name": "Incline Barbell Bench Press",
+      "description": "Barbell exercise for the chest, with core, shoulders assisting.",
+      "instructions": [
+        "Lie down on an incline bench.",
+        "Gripping the bar with a medium-width grip, lift the bar off the rack.",
+        "Hold it straight over your head, keeping your arms locked.",
+        "This is the starting position for the exercise.",
+        "Remove the bar from the rack, holding the weight above your chest with your arms extended.",
+        "Move the bar down toward your upper chest.",
+        "Pause for a moment and push the bar back to the starting position.",
+        "Arms should be locked."
+      ],
+      "category": "COMPOUND",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "CHEST",
+      "secondaryMuscleGroups": ["ABS_CORE", "SHOULDERS", "TRICEPS"],
+      "equipment": "BARBELL",
+      "recommendedDurationSeconds": null,
+      "tags": [
+        "chest",
+        "incline barbell bench press",
+        "langhantel schrägbank",
+        "schrägbankdrücken"
+      ],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-barbell-bench-press", "ex-dumbbell-bench-press"],
+      "media": [
+        {
+          "id": "incline-barbell-bench-press-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Incline_Bench_Press_-_Medium_Grip/0.jpg",
+          "caption": "Incline Barbell Bench Press — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "incline-barbell-bench-press-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Incline_Bench_Press_-_Medium_Grip/1.jpg",
+          "caption": "Incline Barbell Bench Press — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "incline-barbell-bench-press-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Incline%20Barbell%20Bench%20Press%20exercise%20form%20tutorial",
+          "caption": "Watch Incline Barbell Bench Press Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-pec-deck-fly",
+      "slug": "pec-deck-fly",
+      "userId": null,
+      "name": "Pec Deck (Butterfly)",
+      "description": "Machine exercise for the chest.",
+      "instructions": [
+        "Sit on the machine with your back flat on the pad.",
+        "Take hold of the handles. Tip: Your upper arms should be positioned parallel to the floor; adjust the machine accordingly. This will be your starting position.",
+        "Push the handles together slowly as you squeeze your chest in the middle. Breathe out during this part of the motion and hold the contraction for a second.",
+        "Return back to the starting position slowly as you inhale until your chest muscles are fully stretched.",
+        "Repeat for the recommended amount of repetitions."
+      ],
+      "category": "MACHINE",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "CHEST",
+      "secondaryMuscleGroups": [],
+      "equipment": "MACHINE",
+      "recommendedDurationSeconds": null,
+      "tags": ["butterfly", "butterfly maschine", "chest", "pec deck"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-machine-chest-press", "ex-machine-incline-chest-press"],
+      "media": [
+        {
+          "id": "pec-deck-fly-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Butterfly/0.jpg",
+          "caption": "Pec Deck (Butterfly) — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "pec-deck-fly-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Butterfly/1.jpg",
+          "caption": "Pec Deck (Butterfly) — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "pec-deck-fly-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Pec%20Deck%20(Butterfly)%20exercise%20form%20tutorial",
+          "caption": "Watch Pec Deck (Butterfly) Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-machine-incline-chest-press",
+      "slug": "machine-incline-chest-press",
+      "userId": null,
+      "name": "Machine Incline Chest Press",
+      "description": "Machine exercise for the chest, with triceps assisting.",
+      "instructions": [
+        "Firmly grasp the handles.",
+        "Pull your shoulder blades together and lift your elbows to grip level.",
+        "Push your arms inclined forward and up till they are fully stretched.",
+        "Move the handles towards each other to let your arms meet, then lower them back to your chest at a slightly slower pace.",
+        "Repeat the exercise."
+      ],
+      "category": "MACHINE",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "CHEST",
+      "secondaryMuscleGroups": ["TRICEPS"],
+      "equipment": "MACHINE",
+      "recommendedDurationSeconds": null,
+      "tags": ["chest", "inclined chest press", "schrägbankdrücken maschine"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-machine-chest-press", "ex-pec-deck-fly"],
+      "media": [
+        {
+          "id": "machine-incline-chest-press-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leverage_Incline_Chest_Press/0.jpg",
+          "caption": "Machine Incline Chest Press — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "machine-incline-chest-press-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leverage_Incline_Chest_Press/1.jpg",
+          "caption": "Machine Incline Chest Press — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "machine-incline-chest-press-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Machine%20Incline%20Chest%20Press%20exercise%20form%20tutorial",
+          "caption": "Watch Machine Incline Chest Press Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
       "id": "ex-weighted-pull-up",
       "slug": "weighted-pull-up",
       "userId": null,
@@ -372,6 +725,445 @@
           "mediaType": "VIDEO_LINK",
           "url": "https://www.youtube.com/results?search_query=Seated%20Cable%20Row%20exercise%20form%20tutorial",
           "caption": "Watch Seated Cable Row Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-chin-up",
+      "slug": "chin-up",
+      "userId": null,
+      "name": "Chin-Up",
+      "description": "Bodyweight exercise for the back, with biceps, forearms assisting.",
+      "instructions": [
+        "Facing a pull up bar, grasp the handles with your palms facing away from you and arms at a distance smaller than your shoulder width.",
+        "Pull your torso up until the bar touches your upper chest by drawing the shoulders and the upper arms down and back.",
+        "Exhale during this movement.",
+        "Contract your back muscles and then inhale as you extend your arms completely and return back to the starting position."
+      ],
+      "category": "BODYWEIGHT",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "BACK",
+      "secondaryMuscleGroups": ["BICEPS", "FOREARMS"],
+      "equipment": "BODYWEIGHT",
+      "recommendedDurationSeconds": null,
+      "tags": [
+        "back",
+        "chinup",
+        "close grip pull-up",
+        "close grip pullup / chinup",
+        "klimmzug untergriff"
+      ],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-back-extension", "ex-barbell-bent-over-row"],
+      "media": [
+        {
+          "id": "chin-up-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Chin-Up/0.jpg",
+          "caption": "Chin-Up — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "chin-up-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Chin-Up/1.jpg",
+          "caption": "Chin-Up — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "chin-up-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Chin-Up%20exercise%20form%20tutorial",
+          "caption": "Watch Chin-Up Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-chest-supported-dumbbell-row",
+      "slug": "chest-supported-dumbbell-row",
+      "userId": null,
+      "name": "Chest-Supported Dumbbell Row",
+      "description": "Dumbbell exercise for the back, with biceps, forearms assisting.",
+      "instructions": [
+        "Using a neutral grip, lean into an incline bench.",
+        "Grab a dumbbell in each hand and rotate your hands so your palms are facing each other.",
+        "Retract the shoulder blades and flex the elbows to row the dumbbells to your side.",
+        "Hold for a moment and then lower the dumbbells back down."
+      ],
+      "category": "COMPOUND",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "BACK",
+      "secondaryMuscleGroups": ["BICEPS", "FOREARMS", "SHOULDERS"],
+      "equipment": "DUMBBELL",
+      "recommendedDurationSeconds": null,
+      "tags": ["back", "dumbbell incline bench row", "incline row", "schrägbank rudern"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-barbell-bent-over-row", "ex-dumbbell-bent-over-row"],
+      "media": [
+        {
+          "id": "chest-supported-dumbbell-row-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Incline_Row/0.jpg",
+          "caption": "Chest-Supported Dumbbell Row — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "chest-supported-dumbbell-row-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Incline_Row/1.jpg",
+          "caption": "Chest-Supported Dumbbell Row — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "chest-supported-dumbbell-row-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Chest-Supported%20Dumbbell%20Row%20exercise%20form%20tutorial",
+          "caption": "Watch Chest-Supported Dumbbell Row Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-one-arm-dumbbell-row",
+      "slug": "one-arm-dumbbell-row",
+      "userId": null,
+      "name": "One-Arm Dumbbell Row",
+      "description": "Dumbbell exercise for the back, with core, biceps assisting.",
+      "instructions": [
+        "Choose a flat bench and place a dumbbell on each side of it.",
+        "Place your right hand and your right knee on the flat bench.",
+        "With a straight back and your stomach parallel to the weight bench, grasp the left hand side dumbbell with your left hand, palm facing towards you.",
+        "Pull the dumbbell straight up to the side of your chest, keeping your upper arm close to your side and keeping the torso stationary.",
+        "Lower the dumbbell until your arm is straight down and your elbow has only a slight bend."
+      ],
+      "category": "COMPOUND",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "BACK",
+      "secondaryMuscleGroups": ["ABS_CORE", "BICEPS", "SHOULDERS"],
+      "equipment": "DUMBBELL",
+      "recommendedDurationSeconds": null,
+      "tags": ["back", "einarmiges rudern", "kurzhantel rudern", "one-arm dumbbell row"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-barbell-bent-over-row", "ex-chest-supported-dumbbell-row"],
+      "media": [
+        {
+          "id": "one-arm-dumbbell-row-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/One-Arm_Dumbbell_Row/0.jpg",
+          "caption": "One-Arm Dumbbell Row — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "one-arm-dumbbell-row-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/One-Arm_Dumbbell_Row/1.jpg",
+          "caption": "One-Arm Dumbbell Row — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "one-arm-dumbbell-row-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=One-Arm%20Dumbbell%20Row%20exercise%20form%20tutorial",
+          "caption": "Watch One-Arm Dumbbell Row Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-straight-arm-pulldown",
+      "slug": "straight-arm-pulldown",
+      "userId": null,
+      "name": "Straight-Arm Pulldown",
+      "description": "Cable exercise for the back.",
+      "instructions": [
+        "Start by grabbing the wide bar from the top pulley of a pulldown machine and using a wider than shoulder-width pronated grip.",
+        "Bend your torso slightly forward and keep your elbows slightly bent as you extend your arms straight out in front of you.",
+        "Pull the bar down by contracting the lats until your hands are next to the side of the thighs.",
+        "Reverse the motion and return to the starting position."
+      ],
+      "category": "CABLE",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "BACK",
+      "secondaryMuscleGroups": [],
+      "equipment": "CABLE",
+      "recommendedDurationSeconds": null,
+      "tags": ["back", "pullover kabel", "straight arm pulldown", "überzüge kabel"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-close-grip-lat-pulldown", "ex-lat-pulldown"],
+      "media": [
+        {
+          "id": "straight-arm-pulldown-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Straight-Arm_Pulldown/0.jpg",
+          "caption": "Straight-Arm Pulldown — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "straight-arm-pulldown-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Straight-Arm_Pulldown/1.jpg",
+          "caption": "Straight-Arm Pulldown — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "straight-arm-pulldown-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Straight-Arm%20Pulldown%20exercise%20form%20tutorial",
+          "caption": "Watch Straight-Arm Pulldown Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-dumbbell-bent-over-row",
+      "slug": "dumbbell-bent-over-row",
+      "userId": null,
+      "name": "Dumbbell Bent-Over Row",
+      "description": "Dumbbell exercise for the back, with core, biceps assisting.",
+      "instructions": [
+        "With a dumbbell in each hand, bend your knees slightly and bring your torso forward by bending at the waist; as you bend make sure to keep your back straight until it is almost parallel to the floor.",
+        "While keeping the torso stationary, lift the dumbbells to your side (as you breathe out), keeping the elbows close to the body.",
+        "On the top contracted position, squeeze the back muscles and hold for a second.",
+        "Slowly lower the weight again to the starting position as you inhale."
+      ],
+      "category": "COMPOUND",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "BACK",
+      "secondaryMuscleGroups": ["ABS_CORE", "BICEPS"],
+      "equipment": "DUMBBELL",
+      "recommendedDurationSeconds": null,
+      "tags": ["back", "two-armed bent over row", "vorgebeugtes rudern kurzhantel"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-barbell-bent-over-row", "ex-chest-supported-dumbbell-row"],
+      "media": [
+        {
+          "id": "dumbbell-bent-over-row-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bent_Over_Two-Dumbbell_Row/0.jpg",
+          "caption": "Dumbbell Bent-Over Row — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "dumbbell-bent-over-row-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bent_Over_Two-Dumbbell_Row/1.jpg",
+          "caption": "Dumbbell Bent-Over Row — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "dumbbell-bent-over-row-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Dumbbell%20Bent-Over%20Row%20exercise%20form%20tutorial",
+          "caption": "Watch Dumbbell Bent-Over Row Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-back-extension",
+      "slug": "back-extension",
+      "userId": null,
+      "name": "Back Extension",
+      "description": "Machine exercise for the back, with glutes, hamstrings assisting.",
+      "instructions": [
+        "Begin by positioning yourself in the back-extension station with legs under leg hooks.",
+        "With your body straight, cross your arms in front of you.",
+        "Lower body at waist as far down to the ground as comfortably possible.",
+        "Make sure to keep back naturally arched, do not bend over too far and curve back.",
+        "Slowly raise your torso back to the initial position as you inhale."
+      ],
+      "category": "ISOLATION",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "BACK",
+      "secondaryMuscleGroups": ["GLUTES", "HAMSTRINGS"],
+      "equipment": "MACHINE",
+      "recommendedDurationSeconds": null,
+      "tags": ["back", "back extensions / hyperextensions", "hyperextension", "rückenstrecker"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-barbell-bent-over-row", "ex-chest-supported-dumbbell-row"],
+      "media": [
+        {
+          "id": "back-extension-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Hyperextensions_Back_Extensions/0.jpg",
+          "caption": "Back Extension — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "back-extension-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Hyperextensions_Back_Extensions/1.jpg",
+          "caption": "Back Extension — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "back-extension-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Back%20Extension%20exercise%20form%20tutorial",
+          "caption": "Watch Back Extension Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-close-grip-lat-pulldown",
+      "slug": "close-grip-lat-pulldown",
+      "userId": null,
+      "name": "Close-Grip Lat Pulldown",
+      "description": "Cable exercise for the back, with biceps assisting.",
+      "instructions": [
+        "Choose over or under hand grip.",
+        "Push chest forward while pulling the bar to your chin.",
+        "At the end of the movement, hold your arms tight to your body and accentuate the final position.",
+        "Slowly return to initial position and repeat."
+      ],
+      "category": "CABLE",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "BACK",
+      "secondaryMuscleGroups": ["BICEPS"],
+      "equipment": "CABLE",
+      "recommendedDurationSeconds": null,
+      "tags": ["back", "enger latzug", "latzug eng", "narrow-grip lat pulldown"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-lat-pulldown", "ex-seated-cable-row"],
+      "media": [
+        {
+          "id": "close-grip-lat-pulldown-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Close-Grip_Front_Lat_Pulldown/0.jpg",
+          "caption": "Close-Grip Lat Pulldown — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "close-grip-lat-pulldown-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Close-Grip_Front_Lat_Pulldown/1.jpg",
+          "caption": "Close-Grip Lat Pulldown — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "close-grip-lat-pulldown-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Close-Grip%20Lat%20Pulldown%20exercise%20form%20tutorial",
+          "caption": "Watch Close-Grip Lat Pulldown Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-single-arm-cable-row",
+      "slug": "single-arm-cable-row",
+      "userId": null,
+      "name": "Single-Arm Seated Cable Row",
+      "description": "Cable exercise for the back, with biceps assisting.",
+      "instructions": [
+        "Sit with your knees slightly bent.",
+        "In initial position, your active arm and shoulder are well stretched forward, your body is turned a little to the same side.",
+        "Now pull your shoulder and arm all the way back while letting your body turn with the movement."
+      ],
+      "category": "CABLE",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "BACK",
+      "secondaryMuscleGroups": ["BICEPS"],
+      "equipment": "CABLE",
+      "recommendedDurationSeconds": null,
+      "tags": ["back", "einarmiges kabelrudern", "seated one-arm pulley"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-close-grip-lat-pulldown", "ex-lat-pulldown"],
+      "media": [
+        {
+          "id": "single-arm-cable-row-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_One-arm_Cable_Pulley_Rows/0.jpg",
+          "caption": "Single-Arm Seated Cable Row — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "single-arm-cable-row-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_One-arm_Cable_Pulley_Rows/1.jpg",
+          "caption": "Single-Arm Seated Cable Row — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "single-arm-cable-row-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Single-Arm%20Seated%20Cable%20Row%20exercise%20form%20tutorial",
+          "caption": "Watch Single-Arm Seated Cable Row Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-machine-high-row",
+      "slug": "machine-high-row",
+      "userId": null,
+      "name": "Chest-Supported Machine Row (Wide)",
+      "description": "Machine exercise for the back, with shoulders assisting.",
+      "instructions": [
+        "Sit upright slightly swaying your lower back and keeping good contact to the chest cushion.",
+        "Grasp handles at a wide grip, arms stretched and shoulders pushed forward.",
+        "Pull handles towards your chest.",
+        "Avoid losing contact to the chest cushion."
+      ],
+      "category": "MACHINE",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "BACK",
+      "secondaryMuscleGroups": ["SHOULDERS"],
+      "equipment": "MACHINE",
+      "recommendedDurationSeconds": null,
+      "tags": ["back", "oberer rücken", "rudermaschine breit", "upper back"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-back-extension", "ex-barbell-bent-over-row"],
+      "media": [
+        {
+          "id": "machine-high-row-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leverage_High_Row/0.jpg",
+          "caption": "Chest-Supported Machine Row (Wide) — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "machine-high-row-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leverage_High_Row/1.jpg",
+          "caption": "Chest-Supported Machine Row (Wide) — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "machine-high-row-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Chest-Supported%20Machine%20Row%20(Wide)%20exercise%20form%20tutorial",
+          "caption": "Watch Chest-Supported Machine Row (Wide) Video Form Guide",
           "attribution": "YouTube Form Guide",
           "license": "External Link"
         }
@@ -565,6 +1357,699 @@
       ]
     },
     {
+      "id": "ex-machine-shoulder-press",
+      "slug": "machine-shoulder-press",
+      "userId": null,
+      "name": "Machine Shoulder Press",
+      "description": "Machine exercise for the shoulders, with biceps, forearms assisting.",
+      "instructions": [
+        "Keep a tight core and flat back as you remain seated in the shoulder press machine.",
+        "Look straight ahead as you hold on to the handles.",
+        "Slowly, press the handles up above your head.",
+        "Do not lock out your elbow.",
+        "Slowly, bring the handles back down but do not let the weight stack touch.",
+        "Repeat the movement."
+      ],
+      "category": "MACHINE",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "SHOULDERS",
+      "secondaryMuscleGroups": ["BICEPS", "FOREARMS", "TRICEPS"],
+      "equipment": "MACHINE",
+      "recommendedDurationSeconds": null,
+      "tags": ["machine seated shoulder press", "schulterdrücken maschine", "shoulders"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-machine-lateral-raise", "ex-reverse-pec-deck"],
+      "media": [
+        {
+          "id": "machine-shoulder-press-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Machine_Shoulder_Military_Press/0.jpg",
+          "caption": "Machine Shoulder Press — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "machine-shoulder-press-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Machine_Shoulder_Military_Press/1.jpg",
+          "caption": "Machine Shoulder Press — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "machine-shoulder-press-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Machine%20Shoulder%20Press%20exercise%20form%20tutorial",
+          "caption": "Watch Machine Shoulder Press Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-arnold-press",
+      "slug": "arnold-press",
+      "userId": null,
+      "name": "Arnold Press",
+      "description": "Dumbbell exercise for the shoulders, with biceps, triceps assisting.",
+      "instructions": [
+        "Set up an adjustable angle bench to 90 degrees and grab two dumbbells from the rack.",
+        "Pick up the dumbbells from the floor using a neutral grip (palms facing in).",
+        "Position the end of the dumbbells on your knees and sit down on the bench.",
+        "Using a safe and controlled motion, kick your knees up one at a time in order to get each dumbbell into place.",
+        "Once the dumbbells are in place, rotate your palms so they are facing you.",
+        "Take a deep breath then press the dumbbells overhead by extending the elbows and contracting the deltoids.",
+        "As you press, rotate the dumbbells until your palms are facing forward.",
+        "Slowly lower the dumbbells back to the starting position (the arms should be roughly 90 degrees or slightly lower depending upon limb lengths)."
+      ],
+      "category": "COMPOUND",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "SHOULDERS",
+      "secondaryMuscleGroups": ["BICEPS", "TRICEPS"],
+      "equipment": "DUMBBELL",
+      "recommendedDurationSeconds": null,
+      "tags": ["arnold drücken", "seated arnold dumbbell press", "shoulders"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-overhead-barbell-press", "ex-seated-dumbbell-shoulder-press"],
+      "media": [
+        {
+          "id": "arnold-press-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Arnold_Dumbbell_Press/0.jpg",
+          "caption": "Arnold Press — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "arnold-press-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Arnold_Dumbbell_Press/1.jpg",
+          "caption": "Arnold Press — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "arnold-press-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Arnold%20Press%20exercise%20form%20tutorial",
+          "caption": "Watch Arnold Press Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-standing-dumbbell-shoulder-press",
+      "slug": "standing-dumbbell-shoulder-press",
+      "userId": null,
+      "name": "Standing Dumbbell Shoulder Press",
+      "description": "Dumbbell exercise for the shoulders, with triceps assisting.",
+      "instructions": [
+        "Stand upright and keep the back straight.",
+        "Hold a dumbbell in each hand at the shoulders with an overhand grip.",
+        "Thumbs should be on the inside and knuckles facing up.",
+        "Raise the weights above the head in a controlled motion while exhaling.",
+        "Pause at the top of the motion.",
+        "Return the dumbbells to the shoulders while inhaling."
+      ],
+      "category": "COMPOUND",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "SHOULDERS",
+      "secondaryMuscleGroups": ["TRICEPS"],
+      "equipment": "DUMBBELL",
+      "recommendedDurationSeconds": null,
+      "tags": ["schulterdrücken stehend", "shoulders", "standing overhead dumbbell press"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-arnold-press", "ex-overhead-barbell-press"],
+      "media": [
+        {
+          "id": "standing-dumbbell-shoulder-press-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Dumbbell_Press/0.jpg",
+          "caption": "Standing Dumbbell Shoulder Press — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "standing-dumbbell-shoulder-press-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Dumbbell_Press/1.jpg",
+          "caption": "Standing Dumbbell Shoulder Press — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "standing-dumbbell-shoulder-press-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Standing%20Dumbbell%20Shoulder%20Press%20exercise%20form%20tutorial",
+          "caption": "Watch Standing Dumbbell Shoulder Press Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-machine-lateral-raise",
+      "slug": "machine-lateral-raise",
+      "userId": null,
+      "name": "Machine Lateral Raise",
+      "description": "Machine exercise for the shoulders.",
+      "instructions": [
+        "Pick a couple of dumbbells and stand with a straight torso and the dumbbells by your side at arms length with the palms of the hand facing you. This will be your starting position.",
+        "While maintaining the torso in a stationary position (no swinging), lift the dumbbells to your side with a slight bend on the elbow and the hands slightly tilted forward as if pouring water in a glass. Continue to go up until you arms are parallel to the floor. Exhale as you execute this movement and pause for a second at the top.",
+        "Lower the dumbbells back down slowly to the starting position as you inhale.",
+        "Repeat for the recommended amount of repetitions."
+      ],
+      "category": "MACHINE",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "SHOULDERS",
+      "secondaryMuscleGroups": [],
+      "equipment": "MACHINE",
+      "recommendedDurationSeconds": null,
+      "tags": ["seitheben maschine", "shoulders"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-machine-shoulder-press", "ex-reverse-pec-deck"],
+      "media": [
+        {
+          "id": "machine-lateral-raise-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Lateral_Raise/0.jpg",
+          "caption": "Machine Lateral Raise — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "machine-lateral-raise-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Lateral_Raise/1.jpg",
+          "caption": "Machine Lateral Raise — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "machine-lateral-raise-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Machine%20Lateral%20Raise%20exercise%20form%20tutorial",
+          "caption": "Watch Machine Lateral Raise Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-cable-lateral-raise",
+      "slug": "cable-lateral-raise",
+      "userId": null,
+      "name": "Single-Arm Cable Lateral Raise",
+      "description": "Cable exercise for the shoulders.",
+      "instructions": [
+        "Stand with your side to the machine, arm before your body, grasping the handle by a firm grip.",
+        "Lift your arm sideways and up.",
+        "Keep your elbow slightly bent during the entire movement.",
+        "Change arms."
+      ],
+      "category": "CABLE",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "SHOULDERS",
+      "secondaryMuscleGroups": [],
+      "equipment": "CABLE",
+      "recommendedDurationSeconds": null,
+      "tags": ["seitheben kabel", "shoulders", "standing one-arm side lift with cable"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-cable-face-pull", "ex-cable-reverse-fly"],
+      "media": [
+        {
+          "id": "cable-lateral-raise-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Seated_Lateral_Raise/0.jpg",
+          "caption": "Single-Arm Cable Lateral Raise — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "cable-lateral-raise-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Seated_Lateral_Raise/1.jpg",
+          "caption": "Single-Arm Cable Lateral Raise — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "cable-lateral-raise-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Single-Arm%20Cable%20Lateral%20Raise%20exercise%20form%20tutorial",
+          "caption": "Watch Single-Arm Cable Lateral Raise Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-barbell-front-raise",
+      "slug": "barbell-front-raise",
+      "userId": null,
+      "name": "Barbell Front Raise",
+      "description": "Barbell exercise for the shoulders.",
+      "instructions": [
+        "Grab a barbell and stand up straight.",
+        "Adopt a pronated, shoulder-width grip on the barbell.",
+        "Try to keep the torso stationary and lift the barbell to the front until your arms are slightly above the level where they would be parallel to the floor.",
+        "Then slowly return to the starting position.",
+        "Repeat as necessary."
+      ],
+      "category": "ISOLATION",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "SHOULDERS",
+      "secondaryMuscleGroups": [],
+      "equipment": "BARBELL",
+      "recommendedDurationSeconds": null,
+      "tags": ["barbell front raise", "frontheben langhantel", "shoulders"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-barbell-shrug", "ex-dumbbell-front-raise"],
+      "media": [
+        {
+          "id": "barbell-front-raise-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Front_Plate_Raise/0.jpg",
+          "caption": "Barbell Front Raise — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "barbell-front-raise-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Front_Plate_Raise/1.jpg",
+          "caption": "Barbell Front Raise — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "barbell-front-raise-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Barbell%20Front%20Raise%20exercise%20form%20tutorial",
+          "caption": "Watch Barbell Front Raise Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-dumbbell-front-raise",
+      "slug": "dumbbell-front-raise",
+      "userId": null,
+      "name": "Dumbbell Front Raise",
+      "description": "Dumbbell exercise for the shoulders.",
+      "instructions": [
+        "Pick up two dumbbells and stand up straight.",
+        "The dumbbells should be positioned in front of your thighs with your hand facing down.",
+        "While maintaining the torso stationary (no swinging), lift the left dumbbell to the front with a slight bend on the elbow and the palms of the hands always facing down.",
+        "Continue until you arm is slightly above parallel to the floor.",
+        "Lower the left dumbbell down slowly until you reach the starting position.",
+        "Lift the right dumbbell up at the same time."
+      ],
+      "category": "ISOLATION",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "SHOULDERS",
+      "secondaryMuscleGroups": [],
+      "equipment": "DUMBBELL",
+      "recommendedDurationSeconds": null,
+      "tags": ["forward / front dumbbell raise", "frontheben", "shoulders"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-barbell-front-raise", "ex-barbell-shrug"],
+      "media": [
+        {
+          "id": "dumbbell-front-raise-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Front_Dumbbell_Raise/0.jpg",
+          "caption": "Dumbbell Front Raise — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "dumbbell-front-raise-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Front_Dumbbell_Raise/1.jpg",
+          "caption": "Dumbbell Front Raise — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "dumbbell-front-raise-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Dumbbell%20Front%20Raise%20exercise%20form%20tutorial",
+          "caption": "Watch Dumbbell Front Raise Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-cable-upright-row",
+      "slug": "cable-upright-row",
+      "userId": null,
+      "name": "Cable Upright Row",
+      "description": "Cable exercise for the shoulders, with back assisting.",
+      "instructions": [
+        "Set the handle of the cable machine to the lowest notch.",
+        "Grasp the bar with both hands and palms facing down.",
+        "Bending at the elbows pull the bar up to the top of your chest.",
+        "Lower the bar back to you waist."
+      ],
+      "category": "CABLE",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "SHOULDERS",
+      "secondaryMuscleGroups": ["BACK"],
+      "equipment": "CABLE",
+      "recommendedDurationSeconds": null,
+      "tags": ["aufrechtes rudern", "cable upright row", "shoulders"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-cable-face-pull", "ex-cable-lateral-raise"],
+      "media": [
+        {
+          "id": "cable-upright-row-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Upright_Cable_Row/0.jpg",
+          "caption": "Cable Upright Row — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "cable-upright-row-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Upright_Cable_Row/1.jpg",
+          "caption": "Cable Upright Row — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "cable-upright-row-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Cable%20Upright%20Row%20exercise%20form%20tutorial",
+          "caption": "Watch Cable Upright Row Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-dumbbell-reverse-fly",
+      "slug": "dumbbell-reverse-fly",
+      "userId": null,
+      "name": "Dumbbell Reverse Fly",
+      "description": "Dumbbell exercise for the shoulders.",
+      "instructions": [
+        "Lie down on an incline bench with the chest and stomach pressing against the incline.",
+        "Have the dumbbells in each hand with the palms facing each other.",
+        "Place your arms extended straight out and slightly downward, palms facing each other and elbows slightly bent.",
+        "Place your feet slightly wider than shoulder width apart and ground your toes for your starting position.",
+        "Raise the dumbbells out to the sides, squeezing your shoulder blades, until your arms are parallel to the floor and the dummbells are shoulder high.",
+        "Feel the contraction and slowly lower the dumbbells back down to the starting position."
+      ],
+      "category": "ISOLATION",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "SHOULDERS",
+      "secondaryMuscleGroups": [],
+      "equipment": "DUMBBELL",
+      "recommendedDurationSeconds": null,
+      "tags": [
+        "hintere schulter",
+        "reverse flyes",
+        "reverse flys",
+        "shoulders",
+        "vorgebeugtes seitheben"
+      ],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-barbell-front-raise", "ex-barbell-shrug"],
+      "media": [
+        {
+          "id": "dumbbell-reverse-fly-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Bent-Over_Rear_Delt_Raise/0.jpg",
+          "caption": "Dumbbell Reverse Fly — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "dumbbell-reverse-fly-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Bent-Over_Rear_Delt_Raise/1.jpg",
+          "caption": "Dumbbell Reverse Fly — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "dumbbell-reverse-fly-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Dumbbell%20Reverse%20Fly%20exercise%20form%20tutorial",
+          "caption": "Watch Dumbbell Reverse Fly Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-reverse-pec-deck",
+      "slug": "reverse-pec-deck",
+      "userId": null,
+      "name": "Reverse Pec Deck",
+      "description": "Machine exercise for the shoulders.",
+      "instructions": [
+        "Sit with your chest against the cushion, arms between the cushions.",
+        "Push your arms sidewards so that your shoulder blades are pulled together."
+      ],
+      "category": "MACHINE",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "SHOULDERS",
+      "secondaryMuscleGroups": [],
+      "equipment": "MACHINE",
+      "recommendedDurationSeconds": null,
+      "tags": ["hintere schulter maschine", "reverse butterfly", "reversed pec dec", "shoulders"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-machine-lateral-raise", "ex-machine-shoulder-press"],
+      "media": [
+        {
+          "id": "reverse-pec-deck-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Reverse_Machine_Flyes/0.jpg",
+          "caption": "Reverse Pec Deck — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "reverse-pec-deck-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Reverse_Machine_Flyes/1.jpg",
+          "caption": "Reverse Pec Deck — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "reverse-pec-deck-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Reverse%20Pec%20Deck%20exercise%20form%20tutorial",
+          "caption": "Watch Reverse Pec Deck Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-cable-reverse-fly",
+      "slug": "cable-reverse-fly",
+      "userId": null,
+      "name": "Cable Reverse Fly",
+      "description": "Cable exercise for the shoulders, with back assisting.",
+      "instructions": [
+        "Stand with your arms crossed before your hips, firmly grasping the handles.",
+        "Lift your arms sideways and up, elbows slightly bent during the entire movement.",
+        "Slowly lower again and repeat."
+      ],
+      "category": "CABLE",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "SHOULDERS",
+      "secondaryMuscleGroups": ["BACK"],
+      "equipment": "CABLE",
+      "recommendedDurationSeconds": null,
+      "tags": [
+        "kabel reverse flys",
+        "reverse cable cross",
+        "shoulders",
+        "standing reversed cable cross"
+      ],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-cable-face-pull", "ex-cable-lateral-raise"],
+      "media": [
+        {
+          "id": "cable-reverse-fly-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Rear_Delt_Fly/0.jpg",
+          "caption": "Cable Reverse Fly — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "cable-reverse-fly-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Rear_Delt_Fly/1.jpg",
+          "caption": "Cable Reverse Fly — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "cable-reverse-fly-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Cable%20Reverse%20Fly%20exercise%20form%20tutorial",
+          "caption": "Watch Cable Reverse Fly Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-barbell-shrug",
+      "slug": "barbell-shrug",
+      "userId": null,
+      "name": "Barbell Shrug",
+      "description": "Barbell exercise for the shoulders, with back assisting.",
+      "instructions": [
+        "Stand behind a barbell with your feet shoulder width apart.",
+        "Raise your shoulders up as far as you can go as you breathe out and hold the contraction for a second.",
+        "Pause momentarily and then breathe in as you relax your shoulders back down."
+      ],
+      "category": "ISOLATION",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "SHOULDERS",
+      "secondaryMuscleGroups": ["BACK"],
+      "equipment": "BARBELL",
+      "recommendedDurationSeconds": null,
+      "tags": ["barbell shoulder shrug", "schulterheben langhantel", "shoulders", "shrugs"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-barbell-front-raise", "ex-dumbbell-front-raise"],
+      "media": [
+        {
+          "id": "barbell-shrug-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Shrug/0.jpg",
+          "caption": "Barbell Shrug — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "barbell-shrug-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Shrug/1.jpg",
+          "caption": "Barbell Shrug — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "barbell-shrug-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Barbell%20Shrug%20exercise%20form%20tutorial",
+          "caption": "Watch Barbell Shrug Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-dumbbell-shrug",
+      "slug": "dumbbell-shrug",
+      "userId": null,
+      "name": "Dumbbell Shrug",
+      "description": "Dumbbell exercise for the shoulders, with back assisting.",
+      "instructions": [
+        "Stand up straight with a dumbbell in each hand.",
+        "Your palms should be facing your torso, with your arms extended to your sides.",
+        "Lift the dumbbells by elevating the shoulders as high as possible while you exhale.",
+        "Bring the dumbbells back to the starting position."
+      ],
+      "category": "ISOLATION",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "SHOULDERS",
+      "secondaryMuscleGroups": ["BACK"],
+      "equipment": "DUMBBELL",
+      "recommendedDurationSeconds": null,
+      "tags": ["dumbbell shrug", "schulterheben kurzhantel", "shoulders"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-barbell-front-raise", "ex-barbell-shrug"],
+      "media": [
+        {
+          "id": "dumbbell-shrug-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Shrug/0.jpg",
+          "caption": "Dumbbell Shrug — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "dumbbell-shrug-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Shrug/1.jpg",
+          "caption": "Dumbbell Shrug — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "dumbbell-shrug-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Dumbbell%20Shrug%20exercise%20form%20tutorial",
+          "caption": "Watch Dumbbell Shrug Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-cable-shrug",
+      "slug": "cable-shrug",
+      "userId": null,
+      "name": "Cable Shrug",
+      "description": "Cable exercise for the shoulders, with back assisting.",
+      "instructions": [
+        "Grasp a cable bar attachment that is fastened to a low pulley.",
+        "Your hands should be shoulder width apart, or slightly wider if you wish.",
+        "Stand close to the pulley with your arms extended in front of you holding the bar.",
+        "Lift the bar by elevating the shoulders as high as you can.",
+        "Lower the bar to its original position."
+      ],
+      "category": "CABLE",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "SHOULDERS",
+      "secondaryMuscleGroups": ["BACK"],
+      "equipment": "CABLE",
+      "recommendedDurationSeconds": null,
+      "tags": ["cable shrug", "schulterheben kabel", "shoulders"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-cable-face-pull", "ex-cable-lateral-raise"],
+      "media": [
+        {
+          "id": "cable-shrug-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Shrugs/0.jpg",
+          "caption": "Cable Shrug — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "cable-shrug-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cable_Shrugs/1.jpg",
+          "caption": "Cable Shrug — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "cable-shrug-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Cable%20Shrug%20exercise%20form%20tutorial",
+          "caption": "Watch Cable Shrug Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
       "id": "ex-ez-bar-bicep-curl",
       "slug": "ez-bar-bicep-curl",
       "userId": null,
@@ -706,6 +2191,313 @@
       ]
     },
     {
+      "id": "ex-barbell-curl",
+      "slug": "barbell-curl",
+      "userId": null,
+      "name": "Barbell Curl",
+      "description": "Barbell exercise for the biceps, with forearms assisting.",
+      "instructions": [
+        "Stand up straight while holding a barbell in a shoulder-width grip.",
+        "The palm of your hands should be facing forward and the elbows should be close to the torso.",
+        "Contract your biceps to curl the weight forward.",
+        "Your upper arms should remain stationary during this process.",
+        "Continue the movement until your biceps are fully contracted and the bar is at shoulder level.",
+        "Hold the contracted position for a second and squeeze the biceps hard.",
+        "Slowly bring the barbell back to the starting position.",
+        "Repeat for the desired number of reps."
+      ],
+      "category": "ISOLATION",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "BICEPS",
+      "secondaryMuscleGroups": ["FOREARMS"],
+      "equipment": "BARBELL",
+      "recommendedDurationSeconds": null,
+      "tags": ["barbell curl / standing biceps curl", "biceps", "bizepscurls", "langhantel curls"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-ez-bar-bicep-curl", "ex-ez-bar-preacher-curl"],
+      "media": [
+        {
+          "id": "barbell-curl-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Curl/0.jpg",
+          "caption": "Barbell Curl — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "barbell-curl-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Curl/1.jpg",
+          "caption": "Barbell Curl — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "barbell-curl-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Barbell%20Curl%20exercise%20form%20tutorial",
+          "caption": "Watch Barbell Curl Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-seated-dumbbell-curl",
+      "slug": "seated-dumbbell-curl",
+      "userId": null,
+      "name": "Seated Dumbbell Curl",
+      "description": "Dumbbell exercise for the biceps, with forearms assisting.",
+      "instructions": [
+        "Holding a dumbbell in each hand, sit on a flat bench and extend your arms down by your sides, palms facing each other.",
+        "While holding the upper arm stationary, curl the weights and start twisting the wrists once the dumbbells pass your thighs so that the palms of your hands face forward at the end of the movement.",
+        "Slowly begin to bring the dumbbells back to the starting position as your breathe in and as you rotate the wrists back to a neutral grip."
+      ],
+      "category": "ISOLATION",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "BICEPS",
+      "secondaryMuscleGroups": ["FOREARMS"],
+      "equipment": "DUMBBELL",
+      "recommendedDurationSeconds": null,
+      "tags": ["biceps", "kurzhantel curls sitzend", "seated dumbbell curl"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-barbell-curl", "ex-ez-bar-bicep-curl"],
+      "media": [
+        {
+          "id": "seated-dumbbell-curl-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Dumbbell_Curl/0.jpg",
+          "caption": "Seated Dumbbell Curl — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "seated-dumbbell-curl-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Dumbbell_Curl/1.jpg",
+          "caption": "Seated Dumbbell Curl — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "seated-dumbbell-curl-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Seated%20Dumbbell%20Curl%20exercise%20form%20tutorial",
+          "caption": "Watch Seated Dumbbell Curl Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-cable-curl",
+      "slug": "cable-curl",
+      "userId": null,
+      "name": "Standing Cable Curl",
+      "description": "Cable exercise for the biceps, with forearms assisting.",
+      "instructions": [
+        "Stand up with your torso upright while holding a cable curl bar that is attached to a low pulley.",
+        "Grasp the bar with hands shoulder width apart and palms facing up, keeping your elbows close to your sides.",
+        "While holding the upper arms stationary, curl the weights while contracting the biceps as you breathe out.",
+        "Continue until your biceps are fully contracted.",
+        "Hold for a moment and then inhale as you slowly lower the bar back to the starting position."
+      ],
+      "category": "CABLE",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "BICEPS",
+      "secondaryMuscleGroups": ["FOREARMS"],
+      "equipment": "CABLE",
+      "recommendedDurationSeconds": null,
+      "tags": ["biceps", "bizeps kabel", "kabel curls", "standing bicep cable curls"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-overhead-cable-curl", "ex-barbell-curl"],
+      "media": [
+        {
+          "id": "cable-curl-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Biceps_Cable_Curl/0.jpg",
+          "caption": "Standing Cable Curl — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "cable-curl-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Biceps_Cable_Curl/1.jpg",
+          "caption": "Standing Cable Curl — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "cable-curl-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Standing%20Cable%20Curl%20exercise%20form%20tutorial",
+          "caption": "Watch Standing Cable Curl Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-ez-bar-preacher-curl",
+      "slug": "ez-bar-preacher-curl",
+      "userId": null,
+      "name": "EZ-Bar Preacher Curl",
+      "description": "EZ-bar exercise for the biceps, with forearms assisting.",
+      "instructions": [
+        "Grab an EZ-bar with an underhand grip.",
+        "Position hands at the first grip portion from the center.",
+        "With the upper arms positioned against the preacher bench pad and the chest against it, hold the E-Z Curl Bar at shoulder length.",
+        "Begin exercise by lowering the bar down without moving your upper arms, only allowing your forearms to move.",
+        "Let forearms go all the way down until it is straight with upper arm.",
+        "Curl weight back up to starting position."
+      ],
+      "category": "ISOLATION",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "BICEPS",
+      "secondaryMuscleGroups": ["FOREARMS"],
+      "equipment": "EZ_BAR",
+      "recommendedDurationSeconds": null,
+      "tags": ["biceps", "ez-bar preacher curl", "scottcurls", "sz preacher curl"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-barbell-curl", "ex-ez-bar-bicep-curl"],
+      "media": [
+        {
+          "id": "ez-bar-preacher-curl-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Preacher_Curl/0.jpg",
+          "caption": "EZ-Bar Preacher Curl — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "ez-bar-preacher-curl-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Preacher_Curl/1.jpg",
+          "caption": "EZ-Bar Preacher Curl — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "ez-bar-preacher-curl-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=EZ-Bar%20Preacher%20Curl%20exercise%20form%20tutorial",
+          "caption": "Watch EZ-Bar Preacher Curl Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-machine-preacher-curl",
+      "slug": "machine-preacher-curl",
+      "userId": null,
+      "name": "Machine Preacher Curl",
+      "description": "Machine exercise for the biceps.",
+      "instructions": [
+        "Sit down on the Preacher Curl Machine and select the weight.",
+        "Position your triceps on the preacher pad and grasp the handles with an underhand grip.",
+        "This is the starting position.",
+        "Now lift the handles as you exhale and you contract the biceps.",
+        "At the top of the position make sure that you hold the contraction for a second.",
+        "Lower the handles back to the starting position."
+      ],
+      "category": "MACHINE",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "BICEPS",
+      "secondaryMuscleGroups": [],
+      "equipment": "MACHINE",
+      "recommendedDurationSeconds": null,
+      "tags": [
+        "biceps",
+        "bizepsmaschine",
+        "machine bicep preacher / concentration curls",
+        "scott maschine"
+      ],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-barbell-curl", "ex-cable-curl"],
+      "media": [
+        {
+          "id": "machine-preacher-curl-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Machine_Preacher_Curls/0.jpg",
+          "caption": "Machine Preacher Curl — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "machine-preacher-curl-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Machine_Preacher_Curls/1.jpg",
+          "caption": "Machine Preacher Curl — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "machine-preacher-curl-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Machine%20Preacher%20Curl%20exercise%20form%20tutorial",
+          "caption": "Watch Machine Preacher Curl Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-overhead-cable-curl",
+      "slug": "overhead-cable-curl",
+      "userId": null,
+      "name": "Overhead Cable Curl",
+      "description": "Cable exercise for the biceps.",
+      "instructions": [
+        "Stand in the middle of two high pulleys and grasp a handle with each hand.",
+        "Your upper arms should be positioned so that they are parallel to the floor with the palms of your hands facing you.",
+        "This is the starting position for the exercise.",
+        "Slowly squeeze the biceps on each side until your forearms and biceps touch exhaling while you do so.",
+        "Slowly bring your arms back to the starting position."
+      ],
+      "category": "CABLE",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "BICEPS",
+      "secondaryMuscleGroups": [],
+      "equipment": "CABLE",
+      "recommendedDurationSeconds": null,
+      "tags": [
+        "biceps",
+        "crucifix curl",
+        "kabel curls über kopf",
+        "overhead cable curl / crucifix curl"
+      ],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-cable-curl", "ex-barbell-curl"],
+      "media": [
+        {
+          "id": "overhead-cable-curl-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/High_Cable_Curls/0.jpg",
+          "caption": "Overhead Cable Curl — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "overhead-cable-curl-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/High_Cable_Curls/1.jpg",
+          "caption": "Overhead Cable Curl — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "overhead-cable-curl-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Overhead%20Cable%20Curl%20exercise%20form%20tutorial",
+          "caption": "Watch Overhead Cable Curl Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
       "id": "ex-cable-tricep-pushdown",
       "slug": "cable-tricep-pushdown",
       "userId": null,
@@ -794,6 +2586,415 @@
           "mediaType": "VIDEO_LINK",
           "url": "https://www.youtube.com/results?search_query=Overhead%20Cable%20Tricep%20Extension%20exercise%20form%20tutorial",
           "caption": "Watch Overhead Cable Tricep Extension Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-close-grip-bench-press",
+      "slug": "close-grip-bench-press",
+      "userId": null,
+      "name": "Close-Grip Bench Press",
+      "description": "Barbell exercise for the triceps, with chest, shoulders assisting.",
+      "instructions": [
+        "Lie back on a flat bench.",
+        "Using a close grip (around shoulder width) lift the bar off the rack and hold it straight over you, keeping your arms locked.",
+        "Lower the bar to the sternum by flexing the elbows.",
+        "Maintain control and do not bounce the bar off of your chest.",
+        "After touching your torso with the bar, extend the elbows to return the bar to the starting position."
+      ],
+      "category": "COMPOUND",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "TRICEPS",
+      "secondaryMuscleGroups": ["CHEST", "SHOULDERS"],
+      "equipment": "BARBELL",
+      "recommendedDurationSeconds": null,
+      "tags": ["close-grip overhand barbell bench press", "enges bankdrücken", "triceps"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-bench-dip", "ex-cable-tricep-pushdown"],
+      "media": [
+        {
+          "id": "close-grip-bench-press-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Close-Grip_Barbell_Bench_Press/0.jpg",
+          "caption": "Close-Grip Bench Press — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "close-grip-bench-press-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Close-Grip_Barbell_Bench_Press/1.jpg",
+          "caption": "Close-Grip Bench Press — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "close-grip-bench-press-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Close-Grip%20Bench%20Press%20exercise%20form%20tutorial",
+          "caption": "Watch Close-Grip Bench Press Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-dumbbell-skull-crusher",
+      "slug": "dumbbell-skull-crusher",
+      "userId": null,
+      "name": "Lying Dumbbell Triceps Extension",
+      "description": "Dumbbell exercise for the triceps, with shoulders assisting.",
+      "instructions": [
+        "Lie down on a flat bench holding two dumbbells directly above your shoulders.",
+        "Your arms should be fully extended and form a 90 degree angle from your torso and the floor.",
+        "Your palms should be facing in and your elbows should be tucked in close to your body.",
+        "This is your starting position.",
+        "Lower the dumbbells slowly until they are positioned near your ears.",
+        "Inhale as you do so, keeping your upper arms stationary.",
+        "Use your triceps to bring the weight up to the starting position.",
+        "Exhale as you perform this part of the exercise."
+      ],
+      "category": "ISOLATION",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "TRICEPS",
+      "secondaryMuscleGroups": ["SHOULDERS"],
+      "equipment": "DUMBBELL",
+      "recommendedDurationSeconds": null,
+      "tags": [
+        "french press kurzhantel",
+        "lying dumbbell tricep extension",
+        "stirndrücken",
+        "triceps"
+      ],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-dumbbell-kickback", "ex-seated-overhead-dumbbell-extension"],
+      "media": [
+        {
+          "id": "dumbbell-skull-crusher-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Lying_Dumbbell_Tricep_Extension/0.jpg",
+          "caption": "Lying Dumbbell Triceps Extension — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "dumbbell-skull-crusher-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Lying_Dumbbell_Tricep_Extension/1.jpg",
+          "caption": "Lying Dumbbell Triceps Extension — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "dumbbell-skull-crusher-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Lying%20Dumbbell%20Triceps%20Extension%20exercise%20form%20tutorial",
+          "caption": "Watch Lying Dumbbell Triceps Extension Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-seated-overhead-dumbbell-extension",
+      "slug": "seated-overhead-dumbbell-extension",
+      "userId": null,
+      "name": "Seated Overhead Dumbbell Extension",
+      "description": "Dumbbell exercise for the triceps.",
+      "instructions": [
+        "Sit on a bench with back support.",
+        "Grip a dumbbell at one end using both hands.",
+        "Your palms should be facing inward.",
+        "Hold the dumbbell overhead with your arms fully extended.",
+        "This is the start position.",
+        "Keep your upper arms close to your head (biceps roughly level with your temples) and near to 90degrees to the floor.",
+        "Moving only your forearms, lower the dumbbell in a smooth arc behind your head until your forearms and biceps touch.",
+        "Hold for a count of one."
+      ],
+      "category": "ISOLATION",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "TRICEPS",
+      "secondaryMuscleGroups": [],
+      "equipment": "DUMBBELL",
+      "recommendedDurationSeconds": null,
+      "tags": ["seated tricep press", "triceps", "trizepsdrücken über kopf"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-dumbbell-kickback", "ex-dumbbell-skull-crusher"],
+      "media": [
+        {
+          "id": "seated-overhead-dumbbell-extension-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Triceps_Press/0.jpg",
+          "caption": "Seated Overhead Dumbbell Extension — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "seated-overhead-dumbbell-extension-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Seated_Triceps_Press/1.jpg",
+          "caption": "Seated Overhead Dumbbell Extension — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "seated-overhead-dumbbell-extension-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Seated%20Overhead%20Dumbbell%20Extension%20exercise%20form%20tutorial",
+          "caption": "Watch Seated Overhead Dumbbell Extension Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-single-arm-overhead-dumbbell-extension",
+      "slug": "single-arm-overhead-dumbbell-extension",
+      "userId": null,
+      "name": "Single-Arm Overhead Dumbbell Extension",
+      "description": "Dumbbell exercise for the triceps.",
+      "instructions": [
+        "Sit down on a bench with your back upright, feet planted on the ground and a dumbbell in one hand.",
+        "Raise the dumbbell up until you armi is fully extended.",
+        "Lower the dumbbell to the back of your head."
+      ],
+      "category": "ISOLATION",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "TRICEPS",
+      "secondaryMuscleGroups": [],
+      "equipment": "DUMBBELL",
+      "recommendedDurationSeconds": null,
+      "tags": [
+        "einarmiges trizepsdrücken",
+        "seated single arm overhead dumbbell tricep extensions",
+        "triceps"
+      ],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-dumbbell-kickback", "ex-dumbbell-skull-crusher"],
+      "media": [
+        {
+          "id": "single-arm-overhead-dumbbell-extension-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_One-Arm_Triceps_Extension/0.jpg",
+          "caption": "Single-Arm Overhead Dumbbell Extension — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "single-arm-overhead-dumbbell-extension-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_One-Arm_Triceps_Extension/1.jpg",
+          "caption": "Single-Arm Overhead Dumbbell Extension — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "single-arm-overhead-dumbbell-extension-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Single-Arm%20Overhead%20Dumbbell%20Extension%20exercise%20form%20tutorial",
+          "caption": "Watch Single-Arm Overhead Dumbbell Extension Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-dumbbell-kickback",
+      "slug": "dumbbell-kickback",
+      "userId": null,
+      "name": "Dumbbell Triceps Kickback",
+      "description": "Dumbbell exercise for the triceps, with forearms assisting.",
+      "instructions": [
+        "Brace one knee and one hand on a flat bench while keeping the other leg flat on the floor.",
+        "Your back should be flat and your torso should be parallel with the bench.",
+        "Hold a dumbbell in the free hand with your palm facing inward.",
+        "Your arm should be bent at a 90 degree angle so that the dumbbell is next to your waist and your upper arm is parallel with the floor.",
+        "This is your starting position.",
+        "Without moving your upper arm, exhale and extend your arm completely back so that your entire arm is parallel with the floor and the dumbbell is perpendicular to the floor.",
+        "Hold for a moment and then slowly reverse the motion back to the starting position."
+      ],
+      "category": "ISOLATION",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "TRICEPS",
+      "secondaryMuscleGroups": ["FOREARMS"],
+      "equipment": "DUMBBELL",
+      "recommendedDurationSeconds": null,
+      "tags": ["kickbacks", "tricep dumbbell kickback", "triceps"],
+      "isSystem": true,
+      "alternativeExerciseIds": [
+        "ex-dumbbell-skull-crusher",
+        "ex-seated-overhead-dumbbell-extension"
+      ],
+      "media": [
+        {
+          "id": "dumbbell-kickback-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Tricep_Dumbbell_Kickback/0.jpg",
+          "caption": "Dumbbell Triceps Kickback — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "dumbbell-kickback-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Tricep_Dumbbell_Kickback/1.jpg",
+          "caption": "Dumbbell Triceps Kickback — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "dumbbell-kickback-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Dumbbell%20Triceps%20Kickback%20exercise%20form%20tutorial",
+          "caption": "Watch Dumbbell Triceps Kickback Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-triceps-dip",
+      "slug": "triceps-dip",
+      "userId": null,
+      "name": "Triceps Dip",
+      "description": "Bodyweight exercise for the triceps, with chest, forearms assisting.",
+      "instructions": [
+        "Place your hands on the dip bars and face your body out.",
+        "Bend at the elbows and lower your body down till your arms make a 90 degree angle.",
+        "Push yourself back up and then bring your knees up to your waist.",
+        "Lower them back down.",
+        "This completes one repetition."
+      ],
+      "category": "BODYWEIGHT",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "TRICEPS",
+      "secondaryMuscleGroups": ["CHEST", "FOREARMS", "SHOULDERS"],
+      "equipment": "BODYWEIGHT",
+      "recommendedDurationSeconds": null,
+      "tags": ["barrenstütz", "dips", "triceps", "triceps dips"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-bench-dip", "ex-cable-tricep-pushdown"],
+      "media": [
+        {
+          "id": "triceps-dip-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dips_-_Triceps_Version/0.jpg",
+          "caption": "Triceps Dip — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "triceps-dip-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dips_-_Triceps_Version/1.jpg",
+          "caption": "Triceps Dip — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "triceps-dip-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Triceps%20Dip%20exercise%20form%20tutorial",
+          "caption": "Watch Triceps Dip Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-bench-dip",
+      "slug": "bench-dip",
+      "userId": null,
+      "name": "Bench Dip",
+      "description": "Bodyweight exercise for the triceps, with chest, shoulders assisting.",
+      "instructions": [
+        "Balance yourself between two flat benches so that your arms are behind your back on one bench and your ankles are crossed in front of you on the other one.",
+        "For the starting position, your arms should be fully extended so that your legs are parallel with the floor.",
+        "The top half of your body should form a 90 degree angle with your legs.",
+        "Have a partner place a weight plate on your lap.",
+        "Slowly lower your body as you inhale by bending at the elbows until you lower yourself far enough to where there is an angle slightly smaller than 90 degrees between the upper arm and the forearm.",
+        "Exhale as you raise your body back up to the starting position."
+      ],
+      "category": "BODYWEIGHT",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "TRICEPS",
+      "secondaryMuscleGroups": ["CHEST", "SHOULDERS"],
+      "equipment": "BODYWEIGHT",
+      "recommendedDurationSeconds": null,
+      "tags": ["bankdips", "triceps", "weighted bench dip"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-triceps-dip", "ex-cable-tricep-pushdown"],
+      "media": [
+        {
+          "id": "bench-dip-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bench_Dips/0.jpg",
+          "caption": "Bench Dip — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "bench-dip-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bench_Dips/1.jpg",
+          "caption": "Bench Dip — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "bench-dip-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Bench%20Dip%20exercise%20form%20tutorial",
+          "caption": "Watch Bench Dip Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-reverse-grip-cable-pushdown",
+      "slug": "reverse-grip-cable-pushdown",
+      "userId": null,
+      "name": "Single-Arm Reverse-Grip Pushdown",
+      "description": "Cable exercise for the triceps.",
+      "instructions": [
+        "Firmly grasp the handle, palm of your hand turning upward.",
+        "Keep your elbow tight to your body and push down till your elbow is fully stretched.",
+        "Slowly return to initial position and repeat."
+      ],
+      "category": "CABLE",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "TRICEPS",
+      "secondaryMuscleGroups": [],
+      "equipment": "CABLE",
+      "recommendedDurationSeconds": null,
+      "tags": ["supinated one-arm triceps press", "triceps", "trizepsdrücken untergriff"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-cable-tricep-pushdown", "ex-overhead-cable-tricep-extension"],
+      "media": [
+        {
+          "id": "reverse-grip-cable-pushdown-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Reverse_Grip_Triceps_Pushdown/0.jpg",
+          "caption": "Single-Arm Reverse-Grip Pushdown — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "reverse-grip-cable-pushdown-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Reverse_Grip_Triceps_Pushdown/1.jpg",
+          "caption": "Single-Arm Reverse-Grip Pushdown — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "reverse-grip-cable-pushdown-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Single-Arm%20Reverse-Grip%20Pushdown%20exercise%20form%20tutorial",
+          "caption": "Watch Single-Arm Reverse-Grip Pushdown Video Form Guide",
           "attribution": "YouTube Form Guide",
           "license": "External Link"
         }
@@ -1033,6 +3234,248 @@
       ]
     },
     {
+      "id": "ex-bodyweight-squat",
+      "slug": "bodyweight-squat",
+      "userId": null,
+      "name": "Bodyweight Squat",
+      "description": "Bodyweight exercise for the quads, with core, calves assisting.",
+      "instructions": [
+        "Stand with your feet hip width apart.",
+        "Your toes should be pointing straight ahead or only slightly outward.",
+        "Cross your arms in front of your body, place your hands behind your head (prisoner squat) or at the sides of your head.",
+        "Keep your weight on your heels and bend your knees while lowering your hips towards the ground as if you are sitting down on a chair.",
+        "Keep your back straight at all times.",
+        "Continue until you feel a slight stretch in your quadriceps.",
+        "Pause for a count of one.",
+        "Do not let your knees extend out beyond the level of your toes."
+      ],
+      "category": "BODYWEIGHT",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "QUADRICEPS",
+      "secondaryMuscleGroups": ["ABS_CORE", "CALVES", "HAMSTRINGS"],
+      "equipment": "BODYWEIGHT",
+      "recommendedDurationSeconds": null,
+      "tags": ["air squat", "bodyweight squat", "kniebeuge ohne gewicht", "quads"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-barbell-back-squat", "ex-barbell-lunge"],
+      "media": [
+        {
+          "id": "bodyweight-squat-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bodyweight_Squat/0.jpg",
+          "caption": "Bodyweight Squat — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "bodyweight-squat-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Bodyweight_Squat/1.jpg",
+          "caption": "Bodyweight Squat — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "bodyweight-squat-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Bodyweight%20Squat%20exercise%20form%20tutorial",
+          "caption": "Watch Bodyweight Squat Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-dumbbell-lunge",
+      "slug": "dumbbell-lunge",
+      "userId": null,
+      "name": "Dumbbell Lunge",
+      "description": "Dumbbell exercise for the quads, with core, calves assisting.",
+      "instructions": [
+        "Grab a dumbbell in each hand and hold them at side of body with arms straight.",
+        "Step forward with your right leg around 2 feet or so from the foot being left stationary behind and lower your upper body down.",
+        "Step back to return to starting position."
+      ],
+      "category": "COMPOUND",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "QUADRICEPS",
+      "secondaryMuscleGroups": ["ABS_CORE", "CALVES", "HAMSTRINGS"],
+      "equipment": "DUMBBELL",
+      "recommendedDurationSeconds": null,
+      "tags": ["ausfallschritte kurzhantel", "dumbbell lunges", "quads"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-barbell-back-squat", "ex-barbell-lunge"],
+      "media": [
+        {
+          "id": "dumbbell-lunge-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Lunges/0.jpg",
+          "caption": "Dumbbell Lunge — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "dumbbell-lunge-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Dumbbell_Lunges/1.jpg",
+          "caption": "Dumbbell Lunge — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "dumbbell-lunge-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Dumbbell%20Lunge%20exercise%20form%20tutorial",
+          "caption": "Watch Dumbbell Lunge Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-barbell-lunge",
+      "slug": "barbell-lunge",
+      "userId": null,
+      "name": "Barbell Lunge",
+      "description": "Barbell exercise for the quads, with core, calves assisting.",
+      "instructions": [
+        "Stand in an upright position with feet shoulder width apart and a barbell across the top of your shoulders and your hands on each side of the bar with palms facing forward.",
+        "Step forward with your right leg and squat down through your hips, while keeping the torso upright and maintaining balance.",
+        "Take a step backwards to return to starting position and then repeat the movement with the opposite leg."
+      ],
+      "category": "COMPOUND",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "QUADRICEPS",
+      "secondaryMuscleGroups": ["ABS_CORE", "CALVES", "GLUTES", "HAMSTRINGS"],
+      "equipment": "BARBELL",
+      "recommendedDurationSeconds": null,
+      "tags": ["ausfallschritte langhantel", "barbell lunge", "quads"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-barbell-back-squat", "ex-bulgarian-split-squat"],
+      "media": [
+        {
+          "id": "barbell-lunge-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Lunge/0.jpg",
+          "caption": "Barbell Lunge — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "barbell-lunge-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Lunge/1.jpg",
+          "caption": "Barbell Lunge — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "barbell-lunge-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Barbell%20Lunge%20exercise%20form%20tutorial",
+          "caption": "Watch Barbell Lunge Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-goblet-squat",
+      "slug": "goblet-squat",
+      "userId": null,
+      "name": "Goblet Squat",
+      "description": "Dumbbell exercise for the quads, with core, calves assisting.",
+      "instructions": [
+        "Stand up straight and hold a light dumbbell close to your chest.",
+        "This is the starting position.",
+        "Squat down until your hamstrings are on your calves.",
+        "Once you get to the bottom of the squat, pause and use your elbows to push your knees out.",
+        "Return to the starting position."
+      ],
+      "category": "COMPOUND",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "QUADRICEPS",
+      "secondaryMuscleGroups": ["ABS_CORE", "CALVES", "GLUTES", "HAMSTRINGS", "SHOULDERS"],
+      "equipment": "DUMBBELL",
+      "recommendedDurationSeconds": null,
+      "tags": ["goblet kniebeuge", "goblet squat", "quads"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-barbell-back-squat", "ex-barbell-lunge"],
+      "media": [
+        {
+          "id": "goblet-squat-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Goblet_Squat/0.jpg",
+          "caption": "Goblet Squat — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "goblet-squat-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Goblet_Squat/1.jpg",
+          "caption": "Goblet Squat — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "goblet-squat-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Goblet%20Squat%20exercise%20form%20tutorial",
+          "caption": "Watch Goblet Squat Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-smith-machine-squat",
+      "slug": "smith-machine-squat",
+      "userId": null,
+      "name": "Smith Machine Squat",
+      "description": "Smith machine exercise for the quads, with calves assisting.",
+      "instructions": [
+        "Stand with your feet turned slightly outwards, bar resting on your shoulders.",
+        "Bend your knees to about 90 degrees and push back upwards.",
+        "Keep your back straight and look straight ahead during the entire exercise."
+      ],
+      "category": "MACHINE",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "QUADRICEPS",
+      "secondaryMuscleGroups": ["CALVES"],
+      "equipment": "SMITH_MACHINE",
+      "recommendedDurationSeconds": null,
+      "tags": ["kniebeuge multipresse", "quads", "smith rack squat"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-leg-extension", "ex-leg-press"],
+      "media": [
+        {
+          "id": "smith-machine-squat-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Smith_Machine_Squat/0.jpg",
+          "caption": "Smith Machine Squat — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "smith-machine-squat-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Smith_Machine_Squat/1.jpg",
+          "caption": "Smith Machine Squat — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "smith-machine-squat-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Smith%20Machine%20Squat%20exercise%20form%20tutorial",
+          "caption": "Watch Smith Machine Squat Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
       "id": "ex-romanian-deadlift",
       "slug": "romanian-deadlift",
       "userId": null,
@@ -1173,6 +3616,53 @@
       ]
     },
     {
+      "id": "ex-standing-leg-curl",
+      "slug": "standing-leg-curl",
+      "userId": null,
+      "name": "Standing Leg Curl",
+      "description": "Machine exercise for the hamstrings, with glutes assisting.",
+      "instructions": [
+        "Place yourself on a leg curl machine so that your knees are against the knee pads and your chest is against the chest pad.Place the back of your right leg underneath the curl pad so your calf is pressing against it and your toes are extended straight.",
+        "Curl your right leg up as far as possible without lifting the upper leg from the pad.",
+        "Hold for a moment and then bring the legs back to the initial position."
+      ],
+      "category": "MACHINE",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "HAMSTRINGS",
+      "secondaryMuscleGroups": ["GLUTES"],
+      "equipment": "MACHINE",
+      "recommendedDurationSeconds": null,
+      "tags": ["beinbeuger stehend", "hamstrings", "standing leg / hamstring curl"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-lying-leg-curl", "ex-seated-leg-curl"],
+      "media": [
+        {
+          "id": "standing-leg-curl-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Leg_Curl/0.jpg",
+          "caption": "Standing Leg Curl — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "standing-leg-curl-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Leg_Curl/1.jpg",
+          "caption": "Standing Leg Curl — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "standing-leg-curl-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Standing%20Leg%20Curl%20exercise%20form%20tutorial",
+          "caption": "Watch Standing Leg Curl Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
       "id": "ex-barbell-hip-thrust",
       "slug": "barbell-hip-thrust",
       "userId": null,
@@ -1269,6 +3759,102 @@
           "mediaType": "VIDEO_LINK",
           "url": "https://www.youtube.com/results?search_query=H%C3%BCftabduktion%20%2F%20Hip%20Adduction%20exercise%20form%20tutorial",
           "caption": "Watch Hüftabduktion / Hip Adduction Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-glute-bridge",
+      "slug": "glute-bridge",
+      "userId": null,
+      "name": "Glute Bridge",
+      "description": "Bodyweight exercise for the glutes, with core, back assisting.",
+      "instructions": [
+        "Lie flat on the floor on your back with the hands by your side and your knees bent.",
+        "Your feet should be placed around shoulder width.",
+        "Begin exercise by squeezing your glutes and raising hips up until your body forms a straight line from your knees to your shoulders.",
+        "Hold for at least 5 seconds, then lower back down."
+      ],
+      "category": "BODYWEIGHT",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "GLUTES",
+      "secondaryMuscleGroups": ["ABS_CORE", "BACK"],
+      "equipment": "BODYWEIGHT",
+      "recommendedDurationSeconds": null,
+      "tags": ["beckenheben", "glutes", "hip raise", "hip raise / butt lift / bridge"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-barbell-hip-thrust", "ex-hip-adduction-abduction"],
+      "media": [
+        {
+          "id": "glute-bridge-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Butt_Lift_Bridge/0.jpg",
+          "caption": "Glute Bridge — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "glute-bridge-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Butt_Lift_Bridge/1.jpg",
+          "caption": "Glute Bridge — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "glute-bridge-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Glute%20Bridge%20exercise%20form%20tutorial",
+          "caption": "Watch Glute Bridge Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-weighted-glute-bridge",
+      "slug": "weighted-glute-bridge",
+      "userId": null,
+      "name": "Weighted Glute Bridge",
+      "description": "Barbell exercise for the glutes, with core, hamstrings assisting.",
+      "instructions": [
+        "Lie down with back on an exercise mat and arms straight at your sides.",
+        "Place a weight plate on your hips and hold in place with your hands.",
+        "Begin the movement by driving through with your heels, extending your hips vertically through the bar.",
+        "Extend as far as possible, then reverse the motion to return to the starting position."
+      ],
+      "category": "COMPOUND",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "GLUTES",
+      "secondaryMuscleGroups": ["ABS_CORE", "HAMSTRINGS"],
+      "equipment": "BARBELL",
+      "recommendedDurationSeconds": null,
+      "tags": ["beckenheben mit gewicht", "glutes", "weighted glute bridge"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-barbell-hip-thrust", "ex-glute-bridge"],
+      "media": [
+        {
+          "id": "weighted-glute-bridge-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Glute_Bridge/0.jpg",
+          "caption": "Weighted Glute Bridge — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "weighted-glute-bridge-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Glute_Bridge/1.jpg",
+          "caption": "Weighted Glute Bridge — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "weighted-glute-bridge-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Weighted%20Glute%20Bridge%20exercise%20form%20tutorial",
+          "caption": "Watch Weighted Glute Bridge Video Form Guide",
           "attribution": "YouTube Form Guide",
           "license": "External Link"
         }
@@ -1592,6 +4178,776 @@
           "mediaType": "VIDEO_LINK",
           "url": "https://www.youtube.com/results?search_query=Rowing%20Ergometer%20(Concept2)%20exercise%20form%20tutorial",
           "caption": "Watch Rowing Ergometer (Concept2) Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-crunch",
+      "slug": "crunch",
+      "userId": null,
+      "name": "Crunch",
+      "description": "Bodyweight exercise for the core.",
+      "instructions": [
+        "Lie down on the floor on your back and bend your knees, placing your hands behind your head or across your chest.",
+        "Brace your core.",
+        "Crunch your ribs toward your pelvis using your abdominal muscles to initiate and complete the movement.",
+        "Exhale as you come up and keep your neck straight, chin up.",
+        "Hold at the top of the movement for a few seconds, breathing continuously.",
+        "Lower slowly back down."
+      ],
+      "category": "BODYWEIGHT",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "ABS_CORE",
+      "secondaryMuscleGroups": [],
+      "equipment": "BODYWEIGHT",
+      "recommendedDurationSeconds": null,
+      "tags": ["bauchpresse", "core", "crunches"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-alternate-heel-touchers", "ex-bird-dog"],
+      "media": [
+        {
+          "id": "crunch-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Crunches/0.jpg",
+          "caption": "Crunch — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "crunch-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Crunches/1.jpg",
+          "caption": "Crunch — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "crunch-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Crunch%20exercise%20form%20tutorial",
+          "caption": "Watch Crunch Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-decline-crunch",
+      "slug": "decline-crunch",
+      "userId": null,
+      "name": "Decline Bench Crunch",
+      "description": "Bodyweight exercise for the core.",
+      "instructions": [
+        "Secure your legs at the end of the decline bench and lie down.",
+        "Place hands behind head or cross arms over chest.",
+        "Begin exercise by raising torso to a sitting position, pause, then lower back down."
+      ],
+      "category": "BODYWEIGHT",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "ABS_CORE",
+      "secondaryMuscleGroups": [],
+      "equipment": "BODYWEIGHT",
+      "recommendedDurationSeconds": null,
+      "tags": ["core", "decline bench crunches / sit-ups", "negativbank crunch", "sit-up"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-alternate-heel-touchers", "ex-bird-dog"],
+      "media": [
+        {
+          "id": "decline-crunch-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Decline_Crunch/0.jpg",
+          "caption": "Decline Bench Crunch — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "decline-crunch-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Decline_Crunch/1.jpg",
+          "caption": "Decline Bench Crunch — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "decline-crunch-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Decline%20Bench%20Crunch%20exercise%20form%20tutorial",
+          "caption": "Watch Decline Bench Crunch Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-machine-crunch",
+      "slug": "machine-crunch",
+      "userId": null,
+      "name": "Ab Crunch Machine",
+      "description": "Machine exercise for the core.",
+      "instructions": [
+        "Select an appropriate resistance and sit down on the ab machine placing your feet under the pads provided and grabbing the top handles.",
+        "Your arms should be bent at a 90 degree angle as you rest the triceps on the pads provided.",
+        "This will be your starting position.",
+        "Next, tighten the abdominals and while breathing out, crunch your abs.",
+        "To do this, bend at the waist, lowering the hand bars and lifting the legs.",
+        "Breathing in, straighten your torso without letting the weight plates hit.",
+        "Pause briefly and then repeat."
+      ],
+      "category": "MACHINE",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "ABS_CORE",
+      "secondaryMuscleGroups": [],
+      "equipment": "MACHINE",
+      "recommendedDurationSeconds": null,
+      "tags": ["ab crunch machine", "bauchmaschine", "core"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-alternate-heel-touchers", "ex-bird-dog"],
+      "media": [
+        {
+          "id": "machine-crunch-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Ab_Crunch_Machine/0.jpg",
+          "caption": "Ab Crunch Machine — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "machine-crunch-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Ab_Crunch_Machine/1.jpg",
+          "caption": "Ab Crunch Machine — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "machine-crunch-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Ab%20Crunch%20Machine%20exercise%20form%20tutorial",
+          "caption": "Watch Ab Crunch Machine Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-alternate-heel-touchers",
+      "slug": "alternate-heel-touchers",
+      "userId": null,
+      "name": "Alternate Heel Touchers",
+      "description": "Bodyweight exercise for the core.",
+      "instructions": [
+        "Lie on the floor or an exercise mat with the knees bent and the feet on the floor around 18-24 inches apart.",
+        "Breathing out, crunch your ab slightly upward and sideways to the right a couple of inches until your right hand touches your right heel.",
+        "Now go back slowly to the starting position as you inhale.",
+        "Repeat on the other side."
+      ],
+      "category": "BODYWEIGHT",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "ABS_CORE",
+      "secondaryMuscleGroups": [],
+      "equipment": "BODYWEIGHT",
+      "recommendedDurationSeconds": null,
+      "tags": ["alternate heel touchers", "core", "fersen tippen", "seitliche bauchmuskeln"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-bird-dog", "ex-captains-chair-knee-raise"],
+      "media": [
+        {
+          "id": "alternate-heel-touchers-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Alternate_Heel_Touchers/0.jpg",
+          "caption": "Alternate Heel Touchers — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "alternate-heel-touchers-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Alternate_Heel_Touchers/1.jpg",
+          "caption": "Alternate Heel Touchers — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "alternate-heel-touchers-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Alternate%20Heel%20Touchers%20exercise%20form%20tutorial",
+          "caption": "Watch Alternate Heel Touchers Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-flutter-kicks",
+      "slug": "flutter-kicks",
+      "userId": null,
+      "name": "Flutter Kicks",
+      "description": "Bodyweight exercise for the core, with glutes assisting.",
+      "instructions": [
+        "Lie facedown on a flat bench with the hips on the edge of the bench and the legs straight.",
+        "Start the movement by lifting the left leg higher than the right leg.",
+        "Then lower the left leg as you lift the right leg.",
+        "Continue alternating."
+      ],
+      "category": "BODYWEIGHT",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "ABS_CORE",
+      "secondaryMuscleGroups": ["GLUTES"],
+      "equipment": "BODYWEIGHT",
+      "recommendedDurationSeconds": null,
+      "tags": ["beinschlag", "bench flutter kicks", "core"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-alternate-heel-touchers", "ex-bird-dog"],
+      "media": [
+        {
+          "id": "flutter-kicks-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Flutter_Kicks/0.jpg",
+          "caption": "Flutter Kicks — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "flutter-kicks-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Flutter_Kicks/1.jpg",
+          "caption": "Flutter Kicks — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "flutter-kicks-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Flutter%20Kicks%20exercise%20form%20tutorial",
+          "caption": "Watch Flutter Kicks Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-elbow-to-knee-crunch",
+      "slug": "elbow-to-knee-crunch",
+      "userId": null,
+      "name": "Elbow-to-Knee Crunch",
+      "description": "Bodyweight exercise for the core, with glutes, quads assisting.",
+      "instructions": [
+        "Crunch your left knee, while bending it, and right elbow so that they meet at the center of your body.",
+        "Return to starting position and crunch your right knee to your left elbow."
+      ],
+      "category": "BODYWEIGHT",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "ABS_CORE",
+      "secondaryMuscleGroups": ["GLUTES", "QUADRICEPS"],
+      "equipment": "BODYWEIGHT",
+      "recommendedDurationSeconds": null,
+      "tags": ["core", "elbow-to-knee crunches", "ellbogen zum knie"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-alternate-heel-touchers", "ex-bird-dog"],
+      "media": [
+        {
+          "id": "elbow-to-knee-crunch-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cross-Body_Crunch/0.jpg",
+          "caption": "Elbow-to-Knee Crunch — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "elbow-to-knee-crunch-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Cross-Body_Crunch/1.jpg",
+          "caption": "Elbow-to-Knee Crunch — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "elbow-to-knee-crunch-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Elbow-to-Knee%20Crunch%20exercise%20form%20tutorial",
+          "caption": "Watch Elbow-to-Knee Crunch Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-bird-dog",
+      "slug": "bird-dog",
+      "userId": null,
+      "name": "Bird Dog",
+      "description": "Bodyweight exercise for the core, with glutes assisting.",
+      "instructions": [
+        "Get down on your hands and knees with your arms shoulder-width apart and hands directly underneath your shoulders.",
+        "Begin the exercise by simultaneously raising your right arm up and your left leg up at the same time until they are both in line with the rest of your body.",
+        "Hold this position for a brief moment and then return to starting position.",
+        "Repeat with opposite leg and arm."
+      ],
+      "category": "BODYWEIGHT",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "ABS_CORE",
+      "secondaryMuscleGroups": ["GLUTES"],
+      "equipment": "BODYWEIGHT",
+      "recommendedDurationSeconds": null,
+      "tags": [
+        "alternating reach & kickback",
+        "alternating reach kickback",
+        "core",
+        "vierfüßlerstand"
+      ],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-alternate-heel-touchers", "ex-captains-chair-knee-raise"],
+      "media": [
+        {
+          "id": "bird-dog-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Bird%20Dog%20exercise%20form%20tutorial",
+          "caption": "Watch Bird Dog Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-cable-core-rotation",
+      "slug": "cable-core-rotation",
+      "userId": null,
+      "name": "Cable Core Rotation",
+      "description": "Cable exercise for the core.",
+      "instructions": [
+        "Hold a cable with both hands to your right side, so your left arm is straight and stretched across your body.",
+        "Pull the cable to the opposite side rotating your torso until your right arm is straight.",
+        "Return the cable back to starting position and repeat."
+      ],
+      "category": "CABLE",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "ABS_CORE",
+      "secondaryMuscleGroups": [],
+      "equipment": "CABLE",
+      "recommendedDurationSeconds": null,
+      "tags": ["cable core rotation", "core", "rumpfrotation kabel", "woodchopper"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-cable-crunch", "ex-alternate-heel-touchers"],
+      "media": [
+        {
+          "id": "cable-core-rotation-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Cable_Wood_Chop/0.jpg",
+          "caption": "Cable Core Rotation — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "cable-core-rotation-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Standing_Cable_Wood_Chop/1.jpg",
+          "caption": "Cable Core Rotation — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "cable-core-rotation-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Cable%20Core%20Rotation%20exercise%20form%20tutorial",
+          "caption": "Watch Cable Core Rotation Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-captains-chair-knee-raise",
+      "slug": "captains-chair-knee-raise",
+      "userId": null,
+      "name": "Captain's Chair Knee Raise",
+      "description": "Machine exercise for the core, with back assisting.",
+      "instructions": [
+        "Place your forearms are on the pads or bars of the apparatus you are using and grip the handles or bars.",
+        "Your arms should be bent at 90 degrees and your upper arms in a straight line with your sides.",
+        "Your torso should be straight and your lower back pressed against the pad of the bench if using one.",
+        "Keep your legs extended and pointing down to the floor.",
+        "This is the start position.",
+        "Exhale and as you do so, lift your legs up in a smooth arc bending at the knees until your thighs are about parallel to the floor.",
+        "Hold for a count of one.",
+        "Return to the start position in a smooth, controlled movement while inhaling."
+      ],
+      "category": "BODYWEIGHT",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "ABS_CORE",
+      "secondaryMuscleGroups": ["BACK"],
+      "equipment": "MACHINE",
+      "recommendedDurationSeconds": null,
+      "tags": ["beinheben stütz", "captain's chair leg / knee / hip raise", "core", "knieheben"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-alternate-heel-touchers", "ex-bird-dog"],
+      "media": [
+        {
+          "id": "captains-chair-knee-raise-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Knee_Hip_Raise_On_Parallel_Bars/0.jpg",
+          "caption": "Captain's Chair Knee Raise — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "captains-chair-knee-raise-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Knee_Hip_Raise_On_Parallel_Bars/1.jpg",
+          "caption": "Captain's Chair Knee Raise — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "captains-chair-knee-raise-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Captain's%20Chair%20Knee%20Raise%20exercise%20form%20tutorial",
+          "caption": "Watch Captain's Chair Knee Raise Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-side-plank",
+      "slug": "side-plank",
+      "userId": null,
+      "name": "Side Plank",
+      "description": "Bodyweight exercise for the core.",
+      "instructions": [
+        "Lie on your right side, legs extended and stacked from hip to feet.",
+        "The elbow of your right arm is directly under your shoulder.",
+        "Ensure your head is directly in line with your spine.",
+        "Your left arm can be aligned along the left side of your body.",
+        "Engage your abdominal muscles, drawing your navel toward your spine.",
+        "Lift your hips and knees from the mat while exhaling.",
+        "Your torso is straight in line with no sagging or bending.",
+        "Hold the position."
+      ],
+      "category": "BODYWEIGHT",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "ABS_CORE",
+      "secondaryMuscleGroups": [],
+      "equipment": "BODYWEIGHT",
+      "recommendedDurationSeconds": null,
+      "tags": ["core", "seitstütz", "side plank"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-alternate-heel-touchers", "ex-bird-dog"],
+      "media": [
+        {
+          "id": "side-plank-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Bridge/0.jpg",
+          "caption": "Side Plank — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "side-plank-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Bridge/1.jpg",
+          "caption": "Side Plank — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "side-plank-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Side%20Plank%20exercise%20form%20tutorial",
+          "caption": "Watch Side Plank Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-side-jackknife",
+      "slug": "side-jackknife",
+      "userId": null,
+      "name": "Side Jackknife",
+      "description": "Bodyweight exercise for the core, with glutes assisting.",
+      "instructions": [
+        "Lie on your left side, your legs stacked and straight.",
+        "Wrap your left arm in front of your torso, placing it on your right hip, and put your right hand behind your head.",
+        "Simultaneously raise your torso and legs, bringing your head toward your hips.",
+        "Return to start in a controlled motion."
+      ],
+      "category": "BODYWEIGHT",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "ABS_CORE",
+      "secondaryMuscleGroups": ["GLUTES"],
+      "equipment": "BODYWEIGHT",
+      "recommendedDurationSeconds": null,
+      "tags": ["core", "double side jackknife", "seitliches klappmesser"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-alternate-heel-touchers", "ex-bird-dog"],
+      "media": [
+        {
+          "id": "side-jackknife-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Jackknife/0.jpg",
+          "caption": "Side Jackknife — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "side-jackknife-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Side_Jackknife/1.jpg",
+          "caption": "Side Jackknife — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "side-jackknife-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Side%20Jackknife%20exercise%20form%20tutorial",
+          "caption": "Watch Side Jackknife Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-jackknife-sit-up",
+      "slug": "jackknife-sit-up",
+      "userId": null,
+      "name": "Jackknife Sit-Up",
+      "description": "Bodyweight exercise for the core, with glutes assisting.",
+      "instructions": [
+        "Lie on your back on an exercise mat on the floor with your legs touching and fully extended and your arms extended outward with palms down.",
+        "As you exhale, bend at the waist while simultaneously raising your legs and arms to meet in a jackknife position.",
+        "While inhaling, lower your arms and legs back to the starting position."
+      ],
+      "category": "BODYWEIGHT",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "ABS_CORE",
+      "secondaryMuscleGroups": ["GLUTES"],
+      "equipment": "BODYWEIGHT",
+      "recommendedDurationSeconds": null,
+      "tags": ["core", "jackknife sit-up / crunch / toe touches", "klappmesser", "v-up"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-alternate-heel-touchers", "ex-bird-dog"],
+      "media": [
+        {
+          "id": "jackknife-sit-up-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Jackknife_Sit-Up/0.jpg",
+          "caption": "Jackknife Sit-Up — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "jackknife-sit-up-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Jackknife_Sit-Up/1.jpg",
+          "caption": "Jackknife Sit-Up — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "jackknife-sit-up-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Jackknife%20Sit-Up%20exercise%20form%20tutorial",
+          "caption": "Watch Jackknife Sit-Up Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-leg-pull-in",
+      "slug": "leg-pull-in",
+      "userId": null,
+      "name": "Leg Pull-In",
+      "description": "Bodyweight exercise for the core, with back assisting.",
+      "instructions": [
+        "Lie on an exercise mat with your legs extended and your hands either palms facing down next to you or under your glutes.",
+        "Bend your knees and raise your legs so that they form a 90 degree angle.",
+        "Begin exercise by extending your legs out and touching the floor with your toes so that you feel a tight stretch in your lower abs.",
+        "Return to the starting position."
+      ],
+      "category": "BODYWEIGHT",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "ABS_CORE",
+      "secondaryMuscleGroups": ["BACK"],
+      "equipment": "BODYWEIGHT",
+      "recommendedDurationSeconds": null,
+      "tags": ["core", "knieheben liegend", "leg pull-in knee-up"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-alternate-heel-touchers", "ex-bird-dog"],
+      "media": [
+        {
+          "id": "leg-pull-in-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leg_Pull-In/0.jpg",
+          "caption": "Leg Pull-In — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "leg-pull-in-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Leg_Pull-In/1.jpg",
+          "caption": "Leg Pull-In — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "leg-pull-in-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Leg%20Pull-In%20exercise%20form%20tutorial",
+          "caption": "Watch Leg Pull-In Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-lying-leg-raise",
+      "slug": "lying-leg-raise",
+      "userId": null,
+      "name": "Lying Leg Raise",
+      "description": "Bodyweight exercise for the core, with back assisting.",
+      "instructions": [
+        "Lay down with your back flat on the floor, feet straight out and together and your hands on your side.",
+        "While keep your legs as straight as you can lift your feet up in the air between 6-12 inches.",
+        "You can either hold for designated period of time or you can raise them up and then lower them right back down."
+      ],
+      "category": "BODYWEIGHT",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "ABS_CORE",
+      "secondaryMuscleGroups": ["BACK"],
+      "equipment": "BODYWEIGHT",
+      "recommendedDurationSeconds": null,
+      "tags": ["beinheben liegend", "core", "lying leg raise / lift"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-alternate-heel-touchers", "ex-bird-dog"],
+      "media": [
+        {
+          "id": "lying-leg-raise-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Flat_Bench_Lying_Leg_Raise/0.jpg",
+          "caption": "Lying Leg Raise — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "lying-leg-raise-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Flat_Bench_Lying_Leg_Raise/1.jpg",
+          "caption": "Lying Leg Raise — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "lying-leg-raise-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Lying%20Leg%20Raise%20exercise%20form%20tutorial",
+          "caption": "Watch Lying Leg Raise Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-reverse-crunch",
+      "slug": "reverse-crunch",
+      "userId": null,
+      "name": "Reverse Crunch",
+      "description": "Bodyweight exercise for the core, with glutes assisting.",
+      "instructions": [
+        "Lie face up on a falt bench.",
+        "Place hands behind head and raise head off the ground.",
+        "Next, lift your legs and bend knees so that they form a 90-degree angle.",
+        "Hips are still on the ground at this time.",
+        "Begin exercise by raising your hips off the ground and toward your head.",
+        "Pause for a moment, then lower back down and repeat."
+      ],
+      "category": "BODYWEIGHT",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "ABS_CORE",
+      "secondaryMuscleGroups": ["GLUTES"],
+      "equipment": "BODYWEIGHT",
+      "recommendedDurationSeconds": null,
+      "tags": ["core", "reverse bench crunch", "umgekehrter crunch"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-alternate-heel-touchers", "ex-bird-dog"],
+      "media": [
+        {
+          "id": "reverse-crunch-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Reverse_Crunch/0.jpg",
+          "caption": "Reverse Crunch — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "reverse-crunch-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Reverse_Crunch/1.jpg",
+          "caption": "Reverse Crunch — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "reverse-crunch-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Reverse%20Crunch%20exercise%20form%20tutorial",
+          "caption": "Watch Reverse Crunch Video Form Guide",
+          "attribution": "YouTube Form Guide",
+          "license": "External Link"
+        }
+      ]
+    },
+    {
+      "id": "ex-exercise-ball-crunch",
+      "slug": "exercise-ball-crunch",
+      "userId": null,
+      "name": "Exercise Ball Crunch",
+      "description": "Equipment-based exercise for the core.",
+      "instructions": [
+        "Lie on an exercise ball with your lower back pressed against the surface of the ball.",
+        "Your legs should be bent at the knee, your feet should be flat on the floor.",
+        "When you are in the proper position, your upper torso should be hanging off the top of the ball.",
+        "Keep your arms at your sides or crossed on top of your chest.",
+        "Lower your torso into a stretch position keeping the neck stationary at all times.",
+        "This will be your starting position.",
+        "With your hips stationary, contract your abs to flex your waist.",
+        "Curl your shoulders and trunk up until you feel a contraction in your abs."
+      ],
+      "category": "BODYWEIGHT",
+      "exerciseType": "STRENGTH",
+      "primaryMuscleGroup": "ABS_CORE",
+      "secondaryMuscleGroups": [],
+      "equipment": "OTHER",
+      "recommendedDurationSeconds": null,
+      "tags": ["core", "gymnastikball crunch", "swiss ball", "swiss ball crunch"],
+      "isSystem": true,
+      "alternativeExerciseIds": ["ex-alternate-heel-touchers", "ex-bird-dog"],
+      "media": [
+        {
+          "id": "exercise-ball-crunch-frame-0",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Exercise_Ball_Crunch/0.jpg",
+          "caption": "Exercise Ball Crunch — Start Position",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "exercise-ball-crunch-frame-1",
+          "mediaType": "IMAGE",
+          "url": "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Exercise_Ball_Crunch/1.jpg",
+          "caption": "Exercise Ball Crunch — Peak Contraction / Finish",
+          "attribution": "Free Exercise DB (Public Domain)",
+          "license": "Unlicense"
+        },
+        {
+          "id": "exercise-ball-crunch-video",
+          "mediaType": "VIDEO_LINK",
+          "url": "https://www.youtube.com/results?search_query=Exercise%20Ball%20Crunch%20exercise%20form%20tutorial",
+          "caption": "Watch Exercise Ball Crunch Video Form Guide",
           "attribution": "YouTube Form Guide",
           "license": "External Link"
         }

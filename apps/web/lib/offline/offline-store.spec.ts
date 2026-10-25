@@ -362,10 +362,16 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
     const catalog = await getCachedCatalog();
     const routines = await getCachedStretchingRoutines();
     assert.equal(routines.length >= 6, true);
+    // Every exercise links a video guide; exercises without a faithful photo fall back to the
+    // anatomy visual, so at least 95% must also carry start/finish images.
     assert.equal(
-      catalog.every((ex) => Array.isArray(ex.media) && ex.media.length >= 2),
+      catalog.every((ex) => ex.media?.some((m) => m.mediaType === 'VIDEO_LINK')),
       true,
     );
+    const withImages = catalog.filter(
+      (ex) => (ex.media ?? []).filter((m) => m.mediaType === 'IMAGE').length >= 2,
+    );
+    assert.equal(withImages.length / catalog.length >= 0.95, true);
 
     const { folders } = buildDefaultFoldersAndTemplates('user-1');
     const baseTemplate = folders[0]!.templates[0]!;
@@ -450,7 +456,10 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
 
     // Search by German alias / muscle / equipment
     const benchMatches = filterExercisesByQuery(catalog, 'bankdrücken');
-    assert.equal(benchMatches.some((e) => e.id === 'ex-barbell-bench-press'), true);
+    assert.equal(
+      benchMatches.some((e) => e.id === 'ex-barbell-bench-press'),
+      true,
+    );
 
     const chestDeMatches = filterExercisesByQuery(catalog, 'Brust');
     assert.equal(
@@ -471,7 +480,10 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
     assert.equal(getMuscleGroupLabel(MuscleGroup.CHEST, 'de'), 'Brust');
     assert.equal(getMuscleGroupLabel(MuscleGroup.CHEST, 'en'), 'Chest');
     assert.equal(getEquipmentLabel(catalog[0]!.equipment, 'de'), 'Langhantel');
-    assert.equal(interpolate('Duplicated "{name}"', { name: 'Push A (Copy)' }), 'Duplicated "Push A (Copy)"');
+    assert.equal(
+      interpolate('Duplicated "{name}"', { name: 'Push A (Copy)' }),
+      'Duplicated "Push A (Copy)"',
+    );
   });
 
   it('preserves Apple Watch HealthKit telemetry, heartRateSamples, and per-set HR fields in toSyncPayload', async () => {
