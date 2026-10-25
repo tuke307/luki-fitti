@@ -11,95 +11,75 @@ public struct WatchHomeView: View {
 
     public var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 10) {
-                    if let active = viewModel.store.activeSession {
-                        Button {
-                            viewModel.activePageTab = 2
-                        } label: {
-                            HStack {
-                                Image(systemName: "bolt.heart.fill")
-                                Text("RESUME: \(active.workoutNameSnapshot.uppercased())")
-                                    .font(.caption.bold())
+            List {
+                if let active = viewModel.store.activeSession {
+                    Button {
+                        viewModel.activePageTab = 2
+                    } label: {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Resume")
+                                    .font(.headline)
+                                Text(active.workoutNameSnapshot)
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
                             }
-                            .foregroundStyle(.black)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(12)
-                            .background(RoundedRectangle(cornerRadius: 16).fill(LukiColors.neonLime))
+                        } icon: {
+                            Image(systemName: "figure.strengthtraining.traditional")
+                                .foregroundStyle(LukiColors.accent)
                         }
-                        .buttonStyle(.plain)
                     }
+                    .listItemTint(LukiColors.accent.opacity(0.35))
+                }
 
+                Section("Workouts") {
                     ForEach(viewModel.store.folders) { folder in
                         NavigationLink {
                             WatchFolderTemplatesView(viewModel: viewModel, folder: folder)
                         } label: {
-                            HStack(spacing: 8) {
-                                Text("📁")
-                                Text(folder.name.uppercased())
-                                    .font(.system(size: 13, weight: .bold))
-                                    .foregroundStyle(.white)
-                                    .multilineTextAlignment(.leading)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 14)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .fill(LukiColors.watchFolderSlate)
-                            )
+                            folderLabel(name: folder.name, count: folder.templates.count, color: LukiColors.folderColor(folder.color))
                         }
-                        .buttonStyle(.plain)
                         .accessibilityIdentifier("watch.home.folder.\(folder.id)")
                     }
 
                     if !viewModel.store.unfiledTemplates.isEmpty {
-                        let unfiledFolder = WorkoutFolderDto(
-                            id: "folder-unfiled",
-                            name: "UNFILED WORKOUTS",
-                            templates: viewModel.store.unfiledTemplates
-                        )
                         NavigationLink {
-                            WatchFolderTemplatesView(viewModel: viewModel, folder: unfiledFolder)
+                            WatchFolderTemplatesView(
+                                viewModel: viewModel,
+                                folder: WorkoutFolderDto(
+                                    id: "folder-unfiled",
+                                    name: "Unfiled",
+                                    templates: viewModel.store.unfiledTemplates
+                                )
+                            )
                         } label: {
-                            HStack(spacing: 8) {
-                                Text("📁")
-                                Text("UNFILED WORKOUTS")
-                                    .font(.system(size: 13, weight: .bold))
-                                    .foregroundStyle(.white)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 14)
-                            .background(RoundedRectangle(cornerRadius: 16).fill(LukiColors.watchFolderSlate))
+                            folderLabel(name: "Unfiled", count: viewModel.store.unfiledTemplates.count, color: .secondary)
                         }
-                        .buttonStyle(.plain)
-                    }
-
-                    if !viewModel.store.stretchingRoutines.isEmpty {
-                        NavigationLink {
-                            WatchStretchingListView(viewModel: viewModel)
-                        } label: {
-                            HStack(spacing: 8) {
-                                Text("🧘")
-                                Text("STRETCHING & MOBILITY")
-                                    .font(.system(size: 13, weight: .bold))
-                                    .foregroundStyle(.white)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 14)
-                            .background(RoundedRectangle(cornerRadius: 16).fill(LukiColors.watchFolderSlate))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("watch.home.stretchingLink")
                     }
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
+
+                if !viewModel.store.stretchingRoutines.isEmpty {
+                    NavigationLink {
+                        WatchStretchingListView(viewModel: viewModel)
+                    } label: {
+                        Label("Stretching", systemImage: "figure.flexibility")
+                    }
+                    .accessibilityIdentifier("watch.home.stretchingLink")
+                }
             }
-            .background(Color.black)
             .navigationTitle("LukiFitti")
+        }
+    }
+
+    private func folderLabel(name: String, count: Int, color: Color) -> some View {
+        HStack(spacing: 8) {
+            Circle().fill(color).frame(width: 8, height: 8)
+            Text(name).lineLimit(2)
+            Spacer(minLength: 4)
+            Text("\(count)")
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
         }
     }
 }
@@ -114,53 +94,26 @@ public struct WatchFolderTemplatesView: View {
     }
 
     public var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 10) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("📁 \(folder.name.uppercased())")
-                        .font(.system(size: 12, weight: .heavy))
-                        .foregroundStyle(.white)
-                    Rectangle()
-                        .fill(Color.white)
-                        .frame(height: 1.5)
-                }
-                .padding(.bottom, 4)
-
-                ForEach(Array(folder.templates.enumerated()), id: \.element.id) { idx, template in
-                    let stats = lastPerformedStats(for: template)
-                    Button {
-                        viewModel.startWorkout(from: template)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(template.name.uppercased())
-                                .font(.system(size: 13, weight: .black))
-                                .foregroundStyle(Color(red: 0.07, green: 0.07, blue: 0.07))
-                                .multilineTextAlignment(.leading)
-
-                            HStack(spacing: 8) {
-                                Text("⏱ \(stats.durationText)")
-                                Text("📅 \(stats.dateText)")
-                                if stats.totalCount > 0 {
-                                    Text("• \(stats.totalCount)x")
-                                }
-                            }
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color.black.opacity(0.78))
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(LukiColors.watchTemplateCardFill(at: idx))
-                        )
+        List {
+            ForEach(folder.templates) { template in
+                let stats = lastPerformedStats(for: template)
+                Button {
+                    viewModel.startWorkout(from: template)
+                } label: {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(template.name)
+                            .font(.headline)
+                            .lineLimit(2)
+                        Text(stats.totalCount > 0 ? "\(stats.dateText) · \(stats.durationText)" : "Never trained")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("watch.folder.template.\(template.id)")
                 }
+                .accessibilityIdentifier("watch.folder.template.\(template.id)")
             }
-            .padding(.horizontal, 8)
         }
-        .background(Color.black)
+        .navigationTitle(folder.name)
     }
 
     private func lastPerformedStats(for template: WorkoutTemplateDto) -> (durationText: String, dateText: String, totalCount: Int) {
@@ -173,7 +126,7 @@ public struct WatchFolderTemplatesView: View {
             return session.workoutNameSnapshot.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalizedTemplateName
         }
         guard let last = matched.first else {
-            return ("--:--", "New", 0)
+            return ("--:--", "Never trained", 0)
         }
         let sec = max(0, last.activeDurationSeconds)
         let h = sec / 3600
@@ -207,32 +160,22 @@ public struct WatchStretchingListView: View {
     }
 
     public var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 10) {
-                ForEach(Array(viewModel.store.stretchingRoutines.enumerated()), id: \.element.id) { idx, routine in
-                    Button {
-                        viewModel.startStretchingWorkout(from: routine)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(routine.name.uppercased())
-                                .font(.system(size: 13, weight: .black))
-                                .foregroundStyle(.black)
-                            Text("⏱ \(routine.estimatedDurationSeconds / 60) min • \(routine.targetArea)")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundStyle(.black.opacity(0.75))
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(LukiColors.watchTemplateCardFill(at: idx))
-                        )
+        List {
+            ForEach(viewModel.store.stretchingRoutines) { routine in
+                Button {
+                    viewModel.startStretchingWorkout(from: routine)
+                } label: {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(routine.name)
+                            .font(.headline)
+                            .lineLimit(2)
+                        Text("\(routine.estimatedDurationSeconds / 60) min · \(routine.targetArea)")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
-                    .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 8)
         }
-        .background(Color.black)
+        .navigationTitle("Stretching")
     }
 }
