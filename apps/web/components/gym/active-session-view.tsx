@@ -141,7 +141,7 @@ export function ActiveSessionView({
   if (completedSummary) {
     return (
       <div className="mx-auto max-w-lg space-y-6 py-8 text-center">
-        <div className="bg-primary/15 text-primary mx-auto flex h-16 w-16 items-center justify-center rounded-full">
+        <div className="bg-primary/12 text-primary mx-auto flex h-16 w-16 items-center justify-center rounded-full">
           <Trophy className="h-8 w-8" />
         </div>
         <div>
@@ -354,7 +354,7 @@ export function ActiveSessionView({
               {ex.exerciseNameSnapshot}
             </p>
             <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs">
-              <span className="bg-accent/20 text-accent tabular-nums rounded-md px-1.5 py-0.5 font-semibold">
+              <span className="bg-accent/12 text-accent tabular-nums rounded-md px-1.5 py-0.5 font-semibold">
                 {formatExercisePillText(ex)}
               </span>
               <span className="text-muted-foreground">{muscleLabel(ex.primaryMuscleSnapshot)}</span>
@@ -548,7 +548,7 @@ export function ActiveSessionView({
           </div>
 
           {ex.restSeconds === 0 && activeSession.exercises[idx + 1] && (
-            <div className="border-accent/40 bg-accent/15 text-accent flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs font-bold">
+            <div className="border-accent/40 bg-accent/12 text-accent flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs font-bold">
               <span className="flex items-center gap-1.5">
                 <Zap className="h-3.5 w-3.5 shrink-0" />
                 {format(t.session.supersetPairedBanner, {
@@ -754,8 +754,8 @@ export function ActiveSessionView({
                           : set.setType === SetType.WARMUP
                             ? 'border-warning/40 bg-warning/15 text-warning'
                             : set.setType === SetType.STRETCH
-                              ? 'border-accent/40 bg-accent/15 text-accent'
-                              : 'border-primary/35 bg-primary/15 text-primary'
+                              ? 'border-accent/40 bg-accent/12 text-accent'
+                              : 'border-primary/35 bg-primary/12 text-primary'
                       }`}
                     >
                       {set.completed ? <Check className="h-4 w-4 stroke-[3]" /> : sIdx + 1}
@@ -773,7 +773,7 @@ export function ActiveSessionView({
                         set.setType === SetType.WARMUP
                           ? 'bg-warning/20 text-warning'
                           : set.setType === SetType.STRETCH
-                            ? 'bg-accent/20 text-accent'
+                            ? 'bg-accent/12 text-accent'
                             : 'bg-background text-foreground'
                       }`}
                     >
@@ -1041,7 +1041,7 @@ export function ActiveSessionView({
                     className={`h-10 min-w-[104px] flex-1 font-semibold transition active:scale-95 sm:hidden ${
                       set.completed
                         ? 'bg-success text-success-foreground hover:bg-success'
-                        : 'hover:bg-primary/20'
+                        : 'hover:bg-primary/12'
                     }`}
                   >
                     {set.completed ? (
@@ -1070,7 +1070,7 @@ export function ActiveSessionView({
                     className={`h-10 min-w-[116px] font-semibold transition active:scale-95 ${
                       set.completed
                         ? 'bg-success text-success-foreground hover:bg-success'
-                        : 'hover:bg-primary/20'
+                        : 'hover:bg-primary/12'
                     }`}
                   >
                     {set.completed ? (
@@ -1613,7 +1613,7 @@ export function ActiveSessionView({
                             await substituteExercise(currentExercise.clientExerciseId, alt.id);
                             setShowSubstituteFor(null);
                           }}
-                          className="bg-primary/15 border-primary/40 hover:bg-primary/25 flex h-auto w-full items-center justify-between rounded-2xl p-3.5 text-left text-xs font-bold"
+                          className="bg-primary/12 border-primary/40 hover:bg-primary/12 flex h-auto w-full items-center justify-between rounded-2xl p-3.5 text-left text-xs font-bold"
                         >
                           <span>{alt.name}</span>
                           <span className="text-primary text-xs">{t.session.useBackupBtn}</span>

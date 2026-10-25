@@ -61,7 +61,7 @@ export default function DeleteAccountPage() {
           </div>
         ) : deletedSuccess ? (
           <div className="space-y-4 py-4 text-center">
-            <div className="bg-primary/15 text-primary mx-auto flex h-14 w-14 items-center justify-center rounded-full">
+            <div className="bg-primary/12 text-primary mx-auto flex h-14 w-14 items-center justify-center rounded-full">
               <CheckCircle2 className="h-8 w-8" />
             </div>
             <h1 className="font-display text-2xl font-bold">Account Permanently Deleted</h1>

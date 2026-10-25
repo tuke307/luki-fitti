@@ -90,7 +90,7 @@ export default function ResetPasswordPage() {
           </div>
         ) : successMessage ? (
           <div className="space-y-4 py-2 text-center">
-            <div className="bg-primary/15 text-primary mx-auto flex h-12 w-12 items-center justify-center rounded-full">
+            <div className="bg-primary/12 text-primary mx-auto flex h-12 w-12 items-center justify-center rounded-full">
               <CheckCircle2 className="h-7 w-7" />
             </div>
             <p className="text-sm font-bold">{successMessage}</p>

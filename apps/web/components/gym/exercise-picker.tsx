@@ -199,7 +199,7 @@ export function ExercisePicker({
                   className={cn(
                     'flex w-full items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left text-xs font-semibold transition',
                     value === emptyOptionValue
-                      ? 'border-primary bg-primary/15 text-foreground'
+                      ? 'border-primary bg-primary/12 text-foreground'
                       : 'bg-secondary/40 hover:bg-secondary/80 border-transparent',
                   )}
                 >
@@ -229,7 +229,7 @@ export function ExercisePicker({
                       className={cn(
                         'flex w-full items-center justify-between gap-2.5 rounded-xl border p-2.5 text-left text-xs transition',
                         isSelected
-                          ? 'border-primary bg-primary/15'
+                          ? 'border-primary bg-primary/12'
                           : 'bg-secondary/35 hover:bg-secondary/75 border-transparent',
                       )}
                     >
