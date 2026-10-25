@@ -1,4 +1,6 @@
 import {
+  buildStarterStretchingRoutines,
+  buildStarterWorkouts,
   DEFAULT_STARTER_FOLDERS,
   DEFAULT_STARTER_TEMPLATES,
   DEFAULT_STRETCHING_ROUTINES,
@@ -28,12 +30,7 @@ import type {
 } from '@luki-fitti/common/schemas';
 
 export type SyncState =
-  | 'SYNCED'
-  | 'SAVED_LOCALLY'
-  | 'SYNCING'
-  | 'CONFLICT'
-  | 'AUTH_EXPIRED'
-  | 'OFFLINE';
+  'SYNCED' | 'SAVED_LOCALLY' | 'SYNCING' | 'CONFLICT' | 'AUTH_EXPIRED' | 'OFFLINE';
 
 export interface QueuedSessionSyncItem {
   clientSessionId: string;
@@ -139,60 +136,15 @@ export async function setCachedCatalog(exercises: ExerciseDto[]): Promise<void> 
   await idbSet('exercise_catalog', exercises);
 }
 
-export function buildDefaultFoldersAndTemplates(userId = 'local-user'): {
-  folders: WorkoutFolderDto[];
-  unfiledTemplates: WorkoutTemplateDto[];
-} {
-  const catalogById = new Map(INITIAL_EXERCISE_CATALOG.map((e) => [e.id, e]));
-  const nowIso = new Date().toISOString();
-
-  const templates: WorkoutTemplateDto[] = DEFAULT_STARTER_TEMPLATES.map((tpl) => ({
-    id: tpl.id,
-    userId,
-    folderId: tpl.folderId,
-    name: tpl.name,
-    description: tpl.description,
-    estimatedDurationMinutes: tpl.estimatedDurationMinutes,
-    sortOrder: tpl.sortOrder,
-    createdAt: nowIso,
-    updatedAt: nowIso,
-    exercises: tpl.exercises.map((te) => ({
-      ...te,
-      exercise: catalogById.get(te.exerciseId),
-    })),
-  }));
-
-  return {
-    folders: DEFAULT_STARTER_FOLDERS.map((f) => ({
-      id: f.id,
-      userId,
-      name: f.name,
-      color: f.color,
-      sortOrder: f.sortOrder,
-      templates: templates.filter((t) => t.folderId === f.id),
-    })),
-    unfiledTemplates: [],
-  };
-}
-
-export function buildDefaultStretchingRoutines(userId = 'local-user'): StretchingRoutineDto[] {
-  const catalogById = new Map(INITIAL_EXERCISE_CATALOG.map((e) => [e.id, e]));
-  const nowIso = new Date().toISOString();
-
-  return DEFAULT_STRETCHING_ROUTINES.map((r) => ({
-    id: r.id,
-    userId,
-    name: r.name,
-    description: r.description,
-    targetArea: r.targetArea,
-    estimatedDurationSeconds: r.estimatedDurationSeconds,
-    createdAt: nowIso,
-    updatedAt: nowIso,
-    exercises: r.exercises.map((re) => ({
-      ...re,
-      exercise: catalogById.get(re.exerciseId),
-    })),
-  }));
+// Guest caches written before starter content carried a `systemKey`: link copies that still use the
+// starter id and name, so they follow the UI language like freshly built starter content.
+function linkLegacyStarterCopy<T extends { id: string; name: string; systemKey?: string | null }>(
+  item: T,
+  starters: ReadonlyArray<{ id: string; name: string }>,
+): T {
+  if (item.systemKey !== undefined) return item;
+  const starter = starters.find((s) => s.id === item.id);
+  return { ...item, systemKey: starter && starter.name === item.name ? starter.id : null };
 }
 
 export async function getCachedWorkouts(): Promise<{
@@ -203,8 +155,12 @@ export async function getCachedWorkouts(): Promise<{
     folders: WorkoutFolderDto[];
     unfiledTemplates: WorkoutTemplateDto[];
   }>('workouts_overview');
-  const defaults = buildDefaultFoldersAndTemplates();
+  const defaults = buildStarterWorkouts();
   if (cached && cached.folders.length > 0) {
+    cached.folders = cached.folders.map((f) => ({
+      ...linkLegacyStarterCopy(f, DEFAULT_STARTER_FOLDERS),
+      templates: f.templates.map((t) => linkLegacyStarterCopy(t, DEFAULT_STARTER_TEMPLATES)),
+    }));
     const existingIds = new Set(cached.folders.map((f) => f.id));
     const existingNames = new Set(cached.folders.map((f) => f.name.toLowerCase()));
     const missingFolders = defaults.folders.filter(
@@ -237,14 +193,13 @@ export async function setCachedWorkouts(overview: {
 }
 
 export async function getCachedStretchingRoutines(): Promise<StretchingRoutineDto[]> {
-  const cached = await idbGet<StretchingRoutineDto[]>('stretching_routines');
-  const defaults = buildDefaultStretchingRoutines();
-  if (cached && cached.length > 0) {
+  const stored = await idbGet<StretchingRoutineDto[]>('stretching_routines');
+  const defaults = buildStarterStretchingRoutines();
+  if (stored && stored.length > 0) {
+    const cached = stored.map((r) => linkLegacyStarterCopy(r, DEFAULT_STRETCHING_ROUTINES));
     const existingNames = new Set(cached.map((r) => r.name.toLowerCase()));
     const missing = defaults.filter(
-      (d) =>
-        !existingNames.has(d.name.toLowerCase()) &&
-        !cached.some((c) => c.id === d.id),
+      (d) => !existingNames.has(d.name.toLowerCase()) && !cached.some((c) => c.id === d.id),
     );
     if (missing.length > 0) {
       const merged = [...cached, ...missing];
@@ -257,9 +212,7 @@ export async function getCachedStretchingRoutines(): Promise<StretchingRoutineDt
   return defaults;
 }
 
-export async function setCachedStretchingRoutines(
-  routines: StretchingRoutineDto[],
-): Promise<void> {
+export async function setCachedStretchingRoutines(routines: StretchingRoutineDto[]): Promise<void> {
   await idbSet('stretching_routines', routines);
 }
 
@@ -270,9 +223,7 @@ export async function getLocalActiveSession(): Promise<WorkoutSessionDto | null>
   return idbGet<WorkoutSessionDto>('active_workout_session');
 }
 
-export async function saveLocalActiveSession(
-  session: WorkoutSessionDto | null,
-): Promise<void> {
+export async function saveLocalActiveSession(session: WorkoutSessionDto | null): Promise<void> {
   await idbSet('active_workout_session', session);
 }
 
@@ -504,10 +455,7 @@ export async function clearAllLocalData(): Promise<void> {
   if (!hasIndexedDb()) return;
   const db = await openDatabase();
   await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction(
-      [STORES.KV, STORES.SYNC_QUEUE, STORES.SESSION_HISTORY],
-      'readwrite',
-    );
+    const tx = db.transaction([STORES.KV, STORES.SYNC_QUEUE, STORES.SESSION_HISTORY], 'readwrite');
     tx.objectStore(STORES.KV).clear();
     tx.objectStore(STORES.SYNC_QUEUE).clear();
     tx.objectStore(STORES.SESSION_HISTORY).clear();

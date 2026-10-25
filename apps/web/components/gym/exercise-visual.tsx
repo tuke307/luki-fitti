@@ -90,7 +90,7 @@ export function ExerciseVisual({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={frame.url}
-                  alt={`${exercise.name} step ${idx + 1}`}
+                  alt={format(t.visual.frameAlt, { name: exercise.name, step: idx + 1 })}
                   loading="lazy"
                   onError={() => setFailedUrls((prev) => ({ ...prev, [frame.url]: true }))}
                   className={`h-full w-full object-cover transition duration-300 ${
@@ -214,7 +214,7 @@ export function ExerciseVisual({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={frame.url}
-                    alt={`${exercise.name} frame ${idx + 1}`}
+                    alt={format(t.visual.frameAlt, { name: exercise.name, step: idx + 1 })}
                     onError={() => setFailedUrls((prev) => ({ ...prev, [frame.url]: true }))}
                     className="h-full w-full object-cover"
                   />

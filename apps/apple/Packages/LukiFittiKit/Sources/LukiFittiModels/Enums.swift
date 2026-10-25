@@ -21,6 +21,19 @@ public enum LanguagePreference: String, Codable, Sendable, CaseIterable, Equatab
     case de
 }
 
+extension SupportedLocale {
+    /// The app language: the explicit preference, otherwise the device language.
+    public static func resolve(_ preference: LanguagePreference?) -> SupportedLocale {
+        switch preference {
+        case .en: return .en
+        case .de: return .de
+        case .system, nil:
+            let code = Locale.current.language.languageCode?.identifier.lowercased() ?? "en"
+            return code.hasPrefix("de") ? .de : .en
+        }
+    }
+}
+
 public enum MuscleGroup: String, Codable, Sendable, CaseIterable, Equatable, Hashable {
     case CHEST
     case BACK

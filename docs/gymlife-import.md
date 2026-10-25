@@ -103,7 +103,7 @@ done
 | `Exercise`                     | `Exercise` — see below                                                                                                                                  |
 
 Exercises: first match each Gymlife exercise to the **global system catalog**
-(`INITIAL_EXERCISE_CATALOG` in `packages/common/src/catalog/index.ts`) by name, muscle group and
+(`INITIAL_EXERCISE_CATALOG` in `packages/common/src/catalog/data.ts`) by name, muscle group and
 equipment. Only exercises that are genuinely missing should be added — to that same catalog,
 never as a separate list — together with:
 
@@ -115,8 +115,17 @@ never as a separate list — together with:
 - a Prisma migration that upserts the new system exercises (see
   `20261025140000_expand_exercise_catalog` for the pattern, including re-pointing references from
   per-user copies),
-- a regenerated iOS catalog: `apps/apple/Packages/LukiFittiKit/Sources/LukiFittiModels/Resources/starter_catalog.json`
-  (its `exercises` array is `INITIAL_EXERCISE_CATALOG` serialized after `yarn --cwd packages/common build`).
+- a German translation (name, description, same number of instruction steps) in
+  `packages/common/src/catalog/locales/de.ts`, keyed by exercise id —
+  `yarn workspace @luki-fitti/common test` fails while one is missing,
+- a regenerated iOS catalog: run `yarn workspace @luki-fitti/common build` and then
+  `yarn workspace @luki-fitti/apple catalog:export`, which writes
+  `apps/apple/Packages/LukiFittiKit/Sources/LukiFittiModels/Resources/starter_catalog.json` for every
+  supported language (`catalog:check` verifies it is up to date).
+
+The catalog is the only source of system exercise text: the API and the apps resolve name,
+description and steps from it by id in the requested language (`Accept-Language`); the text columns
+of system rows in the `Exercise` table are not used for display.
 
 Verify image URLs return HTTP 200 before committing.
 

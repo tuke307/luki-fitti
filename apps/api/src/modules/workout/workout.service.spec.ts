@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { WorkoutService } from './workout.service';
 import type { PrismaService } from '../database/prisma.service';
 import { WeightUnit } from '@luki-fitti/common/enums';
+import { DEFAULT_STARTER_TEMPLATES } from '@luki-fitti/common/catalog';
 
 function createMockWorkoutPrisma(): PrismaService {
   const folders = new Map<string, Record<string, unknown>>();
@@ -21,8 +22,7 @@ function createMockWorkoutPrisma(): PrismaService {
         if (where.userId_name) {
           return (
             Array.from(folders.values()).find(
-              (f) =>
-                f.userId === where.userId_name?.userId && f.name === where.userId_name?.name,
+              (f) => f.userId === where.userId_name?.userId && f.name === where.userId_name?.name,
             ) ?? null
           );
         }
@@ -39,11 +39,7 @@ function createMockWorkoutPrisma(): PrismaService {
       },
     },
     workoutTemplate: {
-      findMany: async ({
-        where,
-      }: {
-        where: { userId: string; folderId?: string | null };
-      }) => {
+      findMany: async ({ where }: { where: { userId: string; folderId?: string | null } }) => {
         return Array.from(templates.values())
           .filter(
             (t) =>
@@ -75,13 +71,7 @@ function createMockWorkoutPrisma(): PrismaService {
         templateExercises.set(id, []);
         return t;
       },
-      update: async ({
-        where,
-        data,
-      }: {
-        where: { id: string };
-        data: Record<string, unknown>;
-      }) => {
+      update: async ({ where, data }: { where: { id: string }; data: Record<string, unknown> }) => {
         const t = templates.get(where.id);
         if (t) Object.assign(t, data);
         return t;
@@ -107,9 +97,16 @@ function createMockWorkoutPrisma(): PrismaService {
       create: async ({ data }: { data: Record<string, unknown> }) => {
         const tplId = String(data.templateId);
         const list = templateExercises.get(tplId) ?? [];
-        const entry = { id: `tple-${list.length + 1}`, ...data };
+        const entry = { ...data, id: `tple-${list.length + 1}` };
         list.push(entry);
         templateExercises.set(tplId, list);
+        return entry;
+      },
+      update: async ({ where, data }: { where: { id: string }; data: Record<string, unknown> }) => {
+        const entry = Array.from(templateExercises.values())
+          .flat()
+          .find((e) => e.id === where.id);
+        if (entry) Object.assign(entry, data);
         return entry;
       },
       deleteMany: async ({ where }: { where: { templateId: string } }) => {
@@ -134,29 +131,33 @@ describe('WorkoutService — Folders, Templates, Alternatives & User Isolation',
       color: '#CCFF00',
     });
 
-    const tplA = await service.createTemplate('user-a', {
-      name: 'Chest & Triceps',
-      folderId: folderA.id,
-      exercises: [
-        {
-          exerciseId: 'ex-barbell-bench-press',
-          orderIndex: 0,
-          plannedSets: 3,
-          warmupSets: 2,
-          targetRepsMin: 8,
-          targetRepsMax: 12,
-          targetWeight: 85,
-          weightUnit: WeightUnit.KG,
-          restSeconds: 120,
-          alternativeExerciseIds: ['ex-machine-chest-press'],
-        },
-      ],
-    });
+    const tplA = await service.createTemplate(
+      'user-a',
+      {
+        name: 'Chest & Triceps',
+        folderId: folderA.id,
+        exercises: [
+          {
+            exerciseId: 'ex-barbell-bench-press',
+            orderIndex: 0,
+            plannedSets: 3,
+            warmupSets: 2,
+            targetRepsMin: 8,
+            targetRepsMax: 12,
+            targetWeight: 85,
+            weightUnit: WeightUnit.KG,
+            restSeconds: 120,
+            alternativeExerciseIds: ['ex-machine-chest-press'],
+          },
+        ],
+      },
+      'en',
+    );
 
     // User B cannot view, update, move, or delete User A's template or folder
-    await assert.rejects(() => service.getTemplateById('user-b', tplA.id), /Access denied/i);
+    await assert.rejects(() => service.getTemplateById('user-b', tplA.id, 'en'), /Access denied/i);
     await assert.rejects(
-      () => service.updateTemplate('user-b', tplA.id, { name: 'Hacked' }),
+      () => service.updateTemplate('user-b', tplA.id, { name: 'Hacked' }, 'en'),
       /Access denied/i,
     );
     await assert.rejects(() => service.deleteTemplate('user-b', tplA.id), /Access denied/i);
@@ -172,44 +173,87 @@ describe('WorkoutService — Folders, Templates, Alternatives & User Isolation',
       color: '#CCFF00',
     });
 
-    const tpl = await service.createTemplate('user-a', {
-      name: 'Push Day',
-      folderId: folder.id,
-      exercises: [
-        {
-          exerciseId: 'ex-barbell-bench-press',
-          orderIndex: 0,
-          plannedSets: 4,
-          warmupSets: 1,
-          targetRepsMin: 6,
-          targetRepsMax: 8,
-          targetWeight: 90,
-          weightUnit: WeightUnit.KG,
-          restSeconds: 150,
-          alternativeExerciseIds: ['ex-dumbbell-incline-press'],
-        },
-      ],
-    });
+    const tpl = await service.createTemplate(
+      'user-a',
+      {
+        name: 'Push Day',
+        folderId: folder.id,
+        exercises: [
+          {
+            exerciseId: 'ex-barbell-bench-press',
+            orderIndex: 0,
+            plannedSets: 4,
+            warmupSets: 1,
+            targetRepsMin: 6,
+            targetRepsMax: 8,
+            targetWeight: 90,
+            weightUnit: WeightUnit.KG,
+            restSeconds: 150,
+            alternativeExerciseIds: ['ex-dumbbell-incline-press'],
+          },
+        ],
+      },
+      'en',
+    );
 
-    const tpl2 = await service.createTemplate('user-a', {
-      name: 'Pull Day',
-      folderId: folder.id,
-      sortOrder: 1,
-      exercises: [],
-    });
+    const tpl2 = await service.createTemplate(
+      'user-a',
+      {
+        name: 'Pull Day',
+        folderId: folder.id,
+        sortOrder: 1,
+        exercises: [],
+      },
+      'en',
+    );
 
-    const copy = await service.duplicateTemplate('user-a', tpl.id);
+    const copy = await service.duplicateTemplate('user-a', tpl.id, 'en');
     assert.equal(copy.name, 'Push Day (Copy)');
     assert.equal(copy.sortOrder, 1);
     assert.equal(copy.exercises.length, 1);
     assert.deepEqual(copy.exercises[0]?.alternativeExerciseIds, ['ex-dumbbell-incline-press']);
 
-    const afterDupTpl2 = await service.getTemplateById('user-a', tpl2.id);
+    const afterDupTpl2 = await service.getTemplateById('user-a', tpl2.id, 'en');
     assert.equal(afterDupTpl2.sortOrder, 2);
 
     // Delete folder -> templates are unfiled (folderId = null), not deleted
     await service.deleteFolder('user-a', folder.id);
-    const afterFolderDelete = await service.getTemplateById('user-a', tpl.id);
+    const afterFolderDelete = await service.getTemplateById('user-a', tpl.id, 'en');
     assert.equal(afterFolderDelete.folderId, null);
+  });
+
+  it('serves untouched starter copies in the request language and detaches them on edit', async () => {
+    const prisma = createMockWorkoutPrisma();
+    const service = new WorkoutService(prisma);
+    const starter = DEFAULT_STARTER_TEMPLATES[0]!;
+
+    const created = await prisma.workoutTemplate.create({
+      data: {
+        userId: 'user-a',
+        systemKey: starter.id,
+        folderId: null,
+        name: starter.name,
+        description: starter.description,
+        sortOrder: 0,
+      },
+    });
+    for (const te of starter.exercises) {
+      await prisma.workoutTemplateExercise.create({ data: { ...te, templateId: created.id } });
+    }
+
+    const de = await service.getTemplateById('user-a', created.id, 'de');
+    assert.equal(de.name, 'Tag 1 — Brust & Trizeps');
+    assert.equal(de.exercises[0]!.notes, 'Arbeitssätze mit 1 RIR. 1 s Pause auf der Brust.');
+    assert.equal((await service.getTemplateById('user-a', created.id, 'en')).name, starter.name);
+
+    const moved = await service.moveTemplate('user-a', created.id, null, 'de');
+    assert.equal(moved.systemKey, starter.id);
+
+    const renamed = await service.updateTemplate('user-a', created.id, { name: 'Mein Tag' }, 'de');
+    assert.equal(renamed.systemKey, null);
+    const inEnglish = await service.getTemplateById('user-a', created.id, 'en');
+    assert.equal(inEnglish.name, 'Mein Tag');
+    assert.equal(inEnglish.description, de.description);
+    assert.equal(inEnglish.exercises[0]!.notes, de.exercises[0]!.notes);
   });
 });

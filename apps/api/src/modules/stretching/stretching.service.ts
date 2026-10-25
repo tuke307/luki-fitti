@@ -1,14 +1,13 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import {
   DEFAULT_STRETCHING_ROUTINES,
+  getStarterRoutineText,
   INITIAL_EXERCISE_CATALOG,
+  localizeStretchingRoutine,
   resolveExerciseMedia,
 } from '@luki-fitti/common/catalog';
+import { SUPPORTED_LOCALES, type SupportedLocale } from '@luki-fitti/common/enums';
 import type {
   CreateStretchingRoutineDto,
   UpdateStretchingRoutineDto,
@@ -23,11 +22,17 @@ export class StretchingService {
     if (!this.prisma.stretchingRoutine?.findMany) return;
     const existing = await this.prisma.stretchingRoutine.findMany({
       where: { userId },
-      select: { name: true },
+      select: { name: true, systemKey: true },
     });
+    const existingKeys = new Set(existing.map((r) => r.systemKey));
     const existingNames = new Set(existing.map((r) => r.name.toLowerCase()));
+    // A default counts as present while linked, or when an edited copy still carries its name.
     const missingRoutines = DEFAULT_STRETCHING_ROUTINES.filter(
-      (r) => !existingNames.has(r.name.toLowerCase()),
+      (r) =>
+        !existingKeys.has(r.id) &&
+        !SUPPORTED_LOCALES.some((l) =>
+          existingNames.has(getStarterRoutineText(r.id, l)!.name.toLowerCase()),
+        ),
     );
     if (missingRoutines.length === 0) return;
 
@@ -63,6 +68,7 @@ export class StretchingService {
         const created = await tx.stretchingRoutine.create({
           data: {
             userId,
+            systemKey: def.id,
             name: def.name,
             description: def.description,
             targetArea: def.targetArea,
@@ -95,7 +101,7 @@ export class StretchingService {
     }
   }
 
-  async findAll(userId: string): Promise<StretchingRoutineDto[]> {
+  async findAll(userId: string, locale: SupportedLocale): Promise<StretchingRoutineDto[]> {
     await this.ensureDefaultRoutinesForUser(userId).catch(() => undefined);
     const routines = await this.prisma.stretchingRoutine.findMany({
       where: { userId },
@@ -108,10 +114,14 @@ export class StretchingService {
       },
     });
 
-    return routines.map((r) => this.mapRoutineDto(r));
+    return routines.map((r) => this.mapRoutineDto(r, locale));
   }
 
-  async findById(userId: string, routineId: string): Promise<StretchingRoutineDto> {
+  async findById(
+    userId: string,
+    routineId: string,
+    locale: SupportedLocale,
+  ): Promise<StretchingRoutineDto> {
     const routine = await this.prisma.stretchingRoutine.findUnique({
       where: { id: routineId },
       include: {
@@ -127,10 +137,14 @@ export class StretchingService {
     if (routine.userId !== userId) {
       throw new ForbiddenException('Access denied to this stretching routine');
     }
-    return this.mapRoutineDto(routine);
+    return this.mapRoutineDto(routine, locale);
   }
 
-  async create(userId: string, dto: CreateStretchingRoutineDto): Promise<StretchingRoutineDto> {
+  async create(
+    userId: string,
+    dto: CreateStretchingRoutineDto,
+    locale: SupportedLocale,
+  ): Promise<StretchingRoutineDto> {
     const created = await this.prisma.$transaction(async (tx) => {
       const routine = await tx.stretchingRoutine.create({
         data: {
@@ -168,16 +182,18 @@ export class StretchingService {
       });
     });
 
-    return this.mapRoutineDto(created);
+    return this.mapRoutineDto(created, locale);
   }
 
   async update(
     userId: string,
     routineId: string,
     dto: UpdateStretchingRoutineDto,
+    locale: SupportedLocale,
   ): Promise<StretchingRoutineDto> {
     const existing = await this.prisma.stretchingRoutine.findUnique({
       where: { id: routineId },
+      include: { exercises: { orderBy: { orderIndex: 'asc' }, include: { exercise: true } } },
     });
     if (!existing) {
       throw new NotFoundException('Stretching routine not found');
@@ -186,10 +202,26 @@ export class StretchingService {
       throw new ForbiddenException('Access denied to this stretching routine');
     }
 
+    // Editing a starter copy turns it into user content: persist what the user sees and unlink it.
+    const touchesText =
+      dto.name !== undefined ||
+      dto.description !== undefined ||
+      dto.targetArea !== undefined ||
+      dto.exercises !== undefined;
+    const detach = existing.systemKey && touchesText ? this.mapRoutineDto(existing, locale) : null;
+
     const updated = await this.prisma.$transaction(async (tx) => {
       await tx.stretchingRoutine.update({
         where: { id: routineId },
         data: {
+          ...(detach
+            ? {
+                systemKey: null,
+                name: detach.name,
+                description: detach.description,
+                targetArea: detach.targetArea,
+              }
+            : {}),
           ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
           ...(dto.description !== undefined ? { description: dto.description } : {}),
           ...(dto.targetArea !== undefined ? { targetArea: dto.targetArea } : {}),
@@ -198,6 +230,15 @@ export class StretchingService {
             : {}),
         },
       });
+
+      if (detach && dto.exercises === undefined) {
+        for (const re of detach.exercises) {
+          await tx.stretchingRoutineExercise.update({
+            where: { id: re.id },
+            data: { notes: re.notes },
+          });
+        }
+      }
 
       if (dto.exercises !== undefined) {
         await tx.stretchingRoutineExercise.deleteMany({ where: { routineId } });
@@ -228,7 +269,7 @@ export class StretchingService {
       });
     });
 
-    return this.mapRoutineDto(updated);
+    return this.mapRoutineDto(updated, locale);
   }
 
   async delete(userId: string, routineId: string): Promise<{ success: boolean }> {
@@ -246,9 +287,14 @@ export class StretchingService {
     return { success: true };
   }
 
-  private mapRoutineDto(routine: any): StretchingRoutineDto {
+  private mapRoutineDto(routine: any, locale: SupportedLocale): StretchingRoutineDto {
+    return localizeStretchingRoutine(this.toRoutineDto(routine), locale);
+  }
+
+  private toRoutineDto(routine: any): StretchingRoutineDto {
     return {
       id: routine.id,
+      systemKey: routine.systemKey ?? null,
       userId: routine.userId,
       name: routine.name,
       description: routine.description,

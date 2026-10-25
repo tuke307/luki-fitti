@@ -365,7 +365,10 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                         {t.exercises.addToActiveBtn}
                       </Button>
                     ) : (
-                      <ChevronRight aria-hidden="true" className="text-muted-foreground h-4 w-4 shrink-0" />
+                      <ChevronRight
+                        aria-hidden="true"
+                        className="text-muted-foreground h-4 w-4 shrink-0"
+                      />
                     )}
                   </li>
                 );
@@ -441,7 +444,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                           type="button"
                           variant="ghost"
                           size="icon"
-                          aria-label={`Delete routine ${routine.name}`}
+                          aria-label={format(t.exercises.deleteRoutineAria, { name: routine.name })}
                           onClick={() => void deleteStretchingRoutine(routine.id)}
                           className="text-muted-foreground hover:text-destructive size-8"
                         >
@@ -457,7 +460,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                       {routine.exercises.map((item, idx) => {
                         const exObj =
                           item.exercise ?? catalog.find((c) => c.id === item.exerciseId);
-                        const exName = exObj?.name ?? 'Stretch';
+                        const exName = exObj?.name ?? t.common.stretch;
                         return (
                           <div
                             key={item.id ?? idx}
@@ -574,7 +577,8 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                       <span className="min-w-0 flex-1">
                         <h4 className="truncate text-[17px] font-medium">{ex.name}</h4>
                         <span className="text-muted-foreground block truncate text-[13px] tabular-nums">
-                          {muscleLabel(ex.primaryMuscleGroup)} · {ex.recommendedDurationSeconds ?? 45}
+                          {muscleLabel(ex.primaryMuscleGroup)} ·{' '}
+                          {ex.recommendedDurationSeconds ?? 45}
                           {t.exercises.holdSuffix}
                         </span>
                       </span>
@@ -885,7 +889,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                   rows={3}
                   value={newInstructions}
                   onChange={(e) => setNewInstructions(e.target.value)}
-                  placeholder="Step 1&#10;Step 2"
+                  placeholder={t.exercises.instructionsPlaceholder}
                   className="text-xs"
                 />
               </div>

@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import crypto from 'crypto';
 import { PrismaService } from '../database/prisma.service';
 import {
@@ -14,7 +10,14 @@ import {
   SessionType,
   SetType,
   WeightUnit,
+  type SupportedLocale,
 } from '@luki-fitti/common/enums';
+import {
+  getExerciseText,
+  getStarterNote,
+  getStarterRoutineText,
+  getStarterTemplateText,
+} from '@luki-fitti/common/catalog';
 import type {
   HeartRateSampleDto,
   StartSessionDto,
@@ -70,7 +73,12 @@ export class SessionService {
     };
   }
 
-  async startSession(userId: string, dto: StartSessionDto): Promise<WorkoutSessionDto> {
+  /** Snapshots (workout/exercise names, notes) are taken in the user's language at start. */
+  async startSession(
+    userId: string,
+    dto: StartSessionDto,
+    locale: SupportedLocale,
+  ): Promise<WorkoutSessionDto> {
     const existing = await this.prisma.workoutSession.findUnique({
       where: { clientSessionId: dto.clientSessionId },
       include: {
@@ -105,7 +113,8 @@ export class SessionService {
       if (!tpl || tpl.userId !== userId) {
         throw new ForbiddenException('Workout template not found or access denied');
       }
-      workoutName = tpl.name;
+      workoutName =
+        (tpl.systemKey && getStarterTemplateText(tpl.systemKey, locale)?.name) || tpl.name;
       sessionType = SessionType.STRENGTH;
 
       const templateExerciseIds = tpl.exercises.map((te) => te.exerciseId);
@@ -172,7 +181,9 @@ export class SessionService {
         exercisesToCreate.push({
           clientExerciseId: crypto.randomUUID(),
           exerciseId: te.exerciseId,
-          exerciseNameSnapshot: te.exercise.name,
+          exerciseNameSnapshot:
+            (te.exercise.isSystem && getExerciseText(te.exerciseId, locale)?.name) ||
+            te.exercise.name,
           primaryMuscleSnapshot: te.exercise.primaryMuscleGroup,
           exerciseTypeSnapshot: te.exercise.exerciseType,
           origin: SessionExerciseOrigin.PLANNED,
@@ -186,7 +197,10 @@ export class SessionService {
           targetDurationSeconds: te.targetDurationSeconds,
           restSeconds: te.restSeconds,
           alternativeExerciseIds: te.alternativeExerciseIds ?? [],
-          notes: te.notes,
+          notes:
+            (tpl.systemKey &&
+              getStarterNote(tpl.systemKey, te.orderIndex, te.exerciseId, locale)) ||
+            te.notes,
           sets,
         });
       }
@@ -203,7 +217,9 @@ export class SessionService {
       if (!routine || routine.userId !== userId) {
         throw new ForbiddenException('Stretching routine not found or access denied');
       }
-      workoutName = routine.name;
+      workoutName =
+        (routine.systemKey && getStarterRoutineText(routine.systemKey, locale)?.name) ||
+        routine.name;
       sessionType = SessionType.STRETCHING;
 
       for (const [idx, re] of routine.exercises.entries()) {
@@ -221,7 +237,9 @@ export class SessionService {
         exercisesToCreate.push({
           clientExerciseId: crypto.randomUUID(),
           exerciseId: re.exerciseId,
-          exerciseNameSnapshot: re.exercise.name,
+          exerciseNameSnapshot:
+            (re.exercise.isSystem && getExerciseText(re.exerciseId, locale)?.name) ||
+            re.exercise.name,
           primaryMuscleSnapshot: re.exercise.primaryMuscleGroup,
           exerciseTypeSnapshot: re.exercise.exerciseType,
           origin: SessionExerciseOrigin.PLANNED,
@@ -235,7 +253,10 @@ export class SessionService {
           targetDurationSeconds: re.durationSeconds,
           restSeconds: re.transitionSeconds,
           alternativeExerciseIds: [],
-          notes: re.notes,
+          notes:
+            (routine.systemKey &&
+              getStarterNote(routine.systemKey, re.orderIndex, re.exerciseId, locale)) ||
+            re.notes,
           sets,
         });
       }
@@ -348,9 +369,12 @@ export class SessionService {
     const computedMaxHr = allBpms.length > 0 ? Math.max(...allBpms) : null;
     const computedMinHr = allBpms.length > 0 ? Math.min(...allBpms) : null;
 
-    const avgHeartRateBpm = payload.avgHeartRateBpm ?? computedAvgHr ?? existing?.avgHeartRateBpm ?? null;
-    const maxHeartRateBpm = payload.maxHeartRateBpm ?? computedMaxHr ?? existing?.maxHeartRateBpm ?? null;
-    const minHeartRateBpm = payload.minHeartRateBpm ?? computedMinHr ?? existing?.minHeartRateBpm ?? null;
+    const avgHeartRateBpm =
+      payload.avgHeartRateBpm ?? computedAvgHr ?? existing?.avgHeartRateBpm ?? null;
+    const maxHeartRateBpm =
+      payload.maxHeartRateBpm ?? computedMaxHr ?? existing?.maxHeartRateBpm ?? null;
+    const minHeartRateBpm =
+      payload.minHeartRateBpm ?? computedMinHr ?? existing?.minHeartRateBpm ?? null;
     const activeCaloriesKcal =
       payload.activeCaloriesKcal !== undefined
         ? payload.activeCaloriesKcal
@@ -393,11 +417,7 @@ export class SessionService {
     }
 
     const candidateExerciseIds = Array.from(
-      new Set(
-        payload.exercises
-          .map((e) => e.exerciseId)
-          .filter((id): id is string => Boolean(id)),
-      ),
+      new Set(payload.exercises.map((e) => e.exerciseId).filter((id): id is string => Boolean(id))),
     );
     let validExerciseIds: Set<string> | null = null;
     if (candidateExerciseIds.length > 0 && this.prisma.exercise?.findMany) {
@@ -721,7 +741,8 @@ export class SessionService {
       status: session.status,
       startedAt:
         session.startedAt instanceof Date ? session.startedAt.toISOString() : session.startedAt,
-      pausedAt: session.pausedAt instanceof Date ? session.pausedAt.toISOString() : session.pausedAt,
+      pausedAt:
+        session.pausedAt instanceof Date ? session.pausedAt.toISOString() : session.pausedAt,
       completedAt:
         session.completedAt instanceof Date
           ? session.completedAt.toISOString()
@@ -789,8 +810,7 @@ export class SessionService {
           distanceMeters: s.distanceMeters,
           rpe: s.rpe,
           completed: s.completed,
-          completedAt:
-            s.completedAt instanceof Date ? s.completedAt.toISOString() : s.completedAt,
+          completedAt: s.completedAt instanceof Date ? s.completedAt.toISOString() : s.completedAt,
           isPersonalRecord: s.isPersonalRecord,
           notes: s.notes,
           avgHeartRateBpm: s.avgHeartRateBpm ?? null,
