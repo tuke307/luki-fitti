@@ -145,7 +145,7 @@ export function ActiveSessionView({
           <Trophy className="h-8 w-8" />
         </div>
         <div>
-          <Badge variant="default" className="rounded-full px-3 py-1 text-xs uppercase">
+          <Badge variant="default" className="rounded-full px-3 py-1 text-xs">
             {t.session.savedQueuedBadge}
           </Badge>
           <h1 className="font-display mt-3 text-3xl font-bold">
@@ -154,16 +154,16 @@ export function ActiveSessionView({
           <p className="text-muted-foreground mt-1 text-sm">{t.session.completeSub}</p>
         </div>
 
-        <Card className="grid grid-cols-3 gap-3 rounded-3xl p-5">
+        <Card className="grid grid-cols-3 gap-3 rounded-[1.25rem] p-5">
           <div>
             <p className="text-muted-foreground text-xs">{t.session.durationLabel}</p>
-            <p className="font-mono-tabular mt-1 text-xl font-bold">
+            <p className="tabular-nums mt-1 text-xl font-bold">
               {Math.max(1, Math.round(completedSummary.activeDurationSeconds / 60))}m
             </p>
           </div>
           <div>
             <p className="text-muted-foreground text-xs">{t.session.completedSetsLabel}</p>
-            <p className="font-mono-tabular text-primary mt-1 text-xl font-bold">
+            <p className="tabular-nums text-primary mt-1 text-xl font-bold">
               {completedSummary.totalSetsCompleted}
             </p>
           </div>
@@ -173,7 +173,7 @@ export function ActiveSessionView({
                 ? t.session.stretchTimeLabel
                 : t.session.totalVolumeLabel}
             </p>
-            <p className="font-mono-tabular mt-1 text-xl font-bold">
+            <p className="tabular-nums mt-1 text-xl font-bold">
               {completedSummary.totalStretchSeconds > 0 && completedSummary.totalVolumeKg === 0
                 ? `${Math.round(completedSummary.totalStretchSeconds / 60)}m`
                 : `${completedSummary.totalVolumeKg.toLocaleString()} kg`}
@@ -189,7 +189,7 @@ export function ActiveSessionView({
               setCompletedSummary(null);
               onNavigateToDiary();
             }}
-            className="text-sm shadow-sm"
+            className="text-sm"
           >
             {t.session.viewInDiaryBtn}
           </Button>
@@ -307,7 +307,7 @@ export function ActiveSessionView({
         onClick={() => setSelectedExerciseIdx(idx)}
         className={`flex w-full items-center justify-between gap-3 rounded-2xl border p-3 text-left transition ${
           isCompleted
-            ? 'border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/15'
+            ? 'border-success/40 bg-success/10 hover:bg-success/15'
             : isSkipped
               ? 'bg-secondary/30 border-border opacity-60'
               : 'bg-card hover:border-primary/40 border-border'
@@ -315,11 +315,11 @@ export function ActiveSessionView({
       >
         <div className="flex min-w-0 items-center gap-3">
           <span
-            className={`font-mono-tabular flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-xs font-black ${
+            className={`tabular-nums flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-xs font-bold ${
               isCompleted
-                ? 'bg-emerald-500 text-black'
+                ? 'bg-success text-success-foreground'
                 : supersetStepNumber
-                  ? 'text-accent border border-white/15 bg-zinc-950'
+                  ? 'text-accent border border-border bg-secondary'
                   : 'bg-secondary text-foreground'
             }`}
           >
@@ -350,8 +350,8 @@ export function ActiveSessionView({
             >
               {ex.exerciseNameSnapshot}
             </p>
-            <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px]">
-              <span className="bg-accent/20 text-accent font-mono-tabular rounded-md px-1.5 py-0.5 font-extrabold">
+            <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="bg-accent/20 text-accent tabular-nums rounded-md px-1.5 py-0.5 font-semibold">
                 {formatExercisePillText(ex)}
               </span>
               <span className="text-muted-foreground">
@@ -364,7 +364,7 @@ export function ActiveSessionView({
         <div className="flex shrink-0 items-center gap-2">
           <Badge
             variant={isCompleted ? 'success' : 'secondary'}
-            className="font-mono-tabular px-2 py-0.5 text-[11px] font-bold"
+            className="tabular-nums px-2 py-0.5 text-xs font-bold"
           >
             {doneSets}/{ex.sets.length} {t.common.sets}
           </Badge>
@@ -399,54 +399,54 @@ export function ActiveSessionView({
       <Card
         key={ex.clientExerciseId}
         data-testid={`active-exercise-card-${idx + 1}`}
-        className="border-primary/35 from-card via-card to-secondary/20 relative space-y-5 overflow-hidden rounded-3xl border bg-gradient-to-b p-4 shadow-lg sm:p-6"
+        className="border-primary/35 relative space-y-5 overflow-hidden rounded-[1.25rem] border p-4 sm:p-6"
       >
         {/* Card Header: Upper-Left Number Badge + Title + Upper-Right Red Trash Button */}
-        <div className="flex flex-col gap-4 border-b border-white/5 pb-4">
+        <div className="flex flex-col gap-4 border-b border-border pb-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3.5">
               {/* Upper-Left Corner Exercise Number Badge */}
-              <div className="border-primary/40 from-primary/25 to-accent/15 text-primary flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl border bg-gradient-to-br shadow-inner">
-                <span className="text-primary/70 text-[9px] font-extrabold tracking-wider uppercase leading-none">
+              <div className="border-primary/40 text-primary flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl border">
+                <span className="text-primary/70 text-xs font-semibold leading-none">
                   {supersetStepNumber ? `#${supersetStepNumber}` : t.session.exShort}
                 </span>
-                <span className="font-mono-tabular text-lg font-black leading-tight">
+                <span className="tabular-nums text-lg font-bold leading-tight">
                   {idx + 1}
                 </span>
               </div>
 
               <div className="min-w-0 space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="default" className="text-[11px] tracking-wider uppercase">
+                  <Badge variant="default" className="text-xs">
                     {muscleLabel(ex.primaryMuscleSnapshot)}
                   </Badge>
-                  <span className="text-muted-foreground font-mono-tabular text-xs font-semibold">
+                  <span className="text-muted-foreground tabular-nums text-xs font-semibold">
                     {format(t.session.ofExercises, { count: activeSession.exercises.length })}
                   </span>
                   {ex.restSeconds === 0 && (
-                    <Badge variant="accent" className="text-[11px] font-bold">
+                    <Badge variant="accent" className="text-xs font-bold">
                       <Zap className="h-3 w-3" /> {t.session.supersetZeroRest}
                     </Badge>
                   )}
                   {idx > 0 && activeSession.exercises[idx - 1]?.restSeconds === 0 && (
-                    <Badge variant="accent" className="text-[11px] font-bold">
+                    <Badge variant="accent" className="text-xs font-bold">
                       <Zap className="h-3 w-3" /> {t.session.supersetPartner}
                     </Badge>
                   )}
                   {ex.origin === SessionExerciseOrigin.SUBSTITUTED && (
-                    <Badge variant="warning" className="text-[11px]">
+                    <Badge variant="warning" className="text-xs">
                       {format(t.session.replacedBadge, {
                         name: ex.replacedExerciseName ?? '',
                       })}
                     </Badge>
                   )}
                   {ex.origin === SessionExerciseOrigin.ADDED && (
-                    <Badge variant="accent" className="text-[11px]">
+                    <Badge variant="accent" className="text-xs">
                       {t.session.addedUnplannedBadge}
                     </Badge>
                   )}
                   {ex.status === SessionExerciseStatus.SKIPPED && (
-                    <Badge variant="destructive" className="text-[11px]">
+                    <Badge variant="destructive" className="text-xs">
                       {t.session.skippedBadge}
                     </Badge>
                   )}
@@ -464,7 +464,7 @@ export function ActiveSessionView({
                     variant="thumbnail"
                     className="h-12 w-16"
                   />
-                  <h2 className="font-display text-xl font-extrabold tracking-tight sm:text-3xl">
+                  <h2 className="font-display text-xl font-semibold tracking-tight sm:text-3xl">
                     {ex.exerciseNameSnapshot}
                   </h2>
                 </div>
@@ -487,11 +487,11 @@ export function ActiveSessionView({
 
           {/* Structured Target & Benchmark Strip */}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <div className="bg-secondary/40 rounded-2xl border border-white/5 px-3 py-2">
-              <span className="text-muted-foreground block text-[10px] font-semibold tracking-wider uppercase">
+            <div className="bg-secondary/40 rounded-2xl border border-border px-3 py-2">
+              <span className="text-muted-foreground block text-xs font-semibold">
                 {t.session.targetSetsRepsLabel}
               </span>
-              <span className="font-mono-tabular text-foreground mt-0.5 block text-sm font-extrabold">
+              <span className="tabular-nums text-foreground mt-0.5 block text-sm font-semibold">
                 {ex.plannedSets} ×{' '}
                 {ex.targetRepsMin && ex.targetRepsMax && ex.targetRepsMin !== ex.targetRepsMax
                   ? `${ex.targetRepsMin}–${ex.targetRepsMax}`
@@ -499,19 +499,19 @@ export function ActiveSessionView({
               </span>
             </div>
 
-            <div className="bg-secondary/40 rounded-2xl border border-white/5 px-3 py-2">
-              <span className="text-muted-foreground block text-[10px] font-semibold tracking-wider uppercase">
+            <div className="bg-secondary/40 rounded-2xl border border-border px-3 py-2">
+              <span className="text-muted-foreground block text-xs font-semibold">
                 {t.session.restIntervalLabel}
               </span>
-              <span className="font-mono-tabular text-foreground mt-0.5 block text-sm font-extrabold">
+              <span className="tabular-nums text-foreground mt-0.5 block text-sm font-semibold">
                 {ex.restSeconds}s
                 {ex.targetWeight ? ` • ${ex.targetWeight}${activeSession.weightUnit.toLowerCase()}` : ''}
               </span>
             </div>
 
-            <div className="bg-secondary/40 col-span-2 rounded-2xl border border-white/5 px-3 py-2">
+            <div className="bg-secondary/40 col-span-2 rounded-2xl border border-border px-3 py-2">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                <span className="text-muted-foreground text-xs font-semibold">
                   {insight.lastSession
                     ? format(t.session.lastSessionFrom, {
                         name: insight.lastSession.workoutName,
@@ -519,7 +519,7 @@ export function ActiveSessionView({
                     : t.session.previousBenchmark}
                 </span>
                 {insight.ewma1RM > 0 && (
-                  <span className="text-primary font-mono-tabular text-[10px] font-bold">
+                  <span className="text-primary tabular-nums text-xs font-bold">
                     e1RM {insight.ewma1RM}
                     {activeSession.weightUnit.toLowerCase()}
                   </span>
@@ -531,7 +531,7 @@ export function ActiveSessionView({
                     <Badge
                       key={i}
                       variant="secondary"
-                      className="font-mono-tabular px-1.5 py-0.5 text-[10px] font-semibold"
+                      className="tabular-nums px-1.5 py-0.5 text-xs font-semibold"
                     >
                       {ws.weightNormalized}
                       {activeSession.weightUnit.toLowerCase()} × {ws.reps}
@@ -700,24 +700,24 @@ export function ActiveSessionView({
                     label: t.session.intensityLight,
                     hint: t.session.intensityLightHint,
                     nextRpe: 8,
-                    containerClass: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
-                    activeBarClass: 'bg-emerald-400',
+                    containerClass: 'border-success/40 bg-success/10 text-success',
+                    activeBarClass: 'bg-success',
                   }
                 : intensityLevel === 2
                   ? {
                       label: t.session.intensitySweetSpot,
                       hint: t.session.intensitySweetSpotHint,
                       nextRpe: 9.5,
-                      containerClass: 'border-amber-500/40 bg-amber-500/10 text-amber-300',
-                      activeBarClass: 'bg-amber-400',
+                      containerClass: 'border-warning/40 bg-warning/10 text-warning',
+                      activeBarClass: 'bg-warning',
                     }
                   : intensityLevel === 3
                     ? {
                         label: t.session.intensityLimit,
                         hint: t.session.intensityLimitHint,
                         nextRpe: null,
-                        containerClass: 'border-rose-500/40 bg-rose-500/10 text-rose-300',
-                        activeBarClass: 'bg-rose-400',
+                        containerClass: 'border-destructive/40 bg-destructive/10 text-destructive',
+                        activeBarClass: 'bg-destructive',
                       }
                     : {
                         label: t.session.intensityEffort,
@@ -739,7 +739,7 @@ export function ActiveSessionView({
                 data-set-logged={set.completed ? 'true' : 'false'}
                 className={`flex flex-col gap-2.5 rounded-2xl border p-3 transition-all sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-2 ${
                   set.completed
-                    ? 'border-emerald-500/50 bg-emerald-500/10 shadow-xs'
+                    ? 'border-success/50 bg-success/10'
                     : 'bg-secondary/30 border-border'
                 }`}
               >
@@ -747,11 +747,11 @@ export function ActiveSessionView({
                 <div className="flex items-center justify-between gap-2 sm:justify-start">
                   <div className="flex flex-wrap items-center gap-2">
                     <span
-                      className={`font-mono-tabular flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border text-sm font-black transition-transform ${
+                      className={`tabular-nums flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border text-sm font-bold transition-transform ${
                         set.completed
-                          ? 'scale-105 border-emerald-400 bg-emerald-500 text-black shadow-xs'
+                          ? 'scale-105 border-success bg-success text-success-foreground'
                           : set.setType === SetType.WARMUP
-                            ? 'border-amber-500/40 bg-amber-500/15 text-amber-300'
+                            ? 'border-warning/40 bg-warning/15 text-warning'
                             : set.setType === SetType.STRETCH
                               ? 'border-accent/40 bg-accent/15 text-accent'
                               : 'border-primary/35 bg-primary/15 text-primary'
@@ -772,9 +772,9 @@ export function ActiveSessionView({
                           setType: e.target.value as SetType,
                         })
                       }
-                      className={`h-8 rounded-lg px-2 py-1 pr-6 text-[11px] font-bold uppercase ${
+                      className={`h-8 rounded-lg px-2 py-1 pr-6 text-xs font-bold ${
                         set.setType === SetType.WARMUP
-                          ? 'bg-amber-500/20 text-amber-300'
+                          ? 'bg-warning/20 text-warning'
                           : set.setType === SetType.STRETCH
                             ? 'bg-accent/20 text-accent'
                             : 'bg-background text-foreground'
@@ -789,7 +789,7 @@ export function ActiveSessionView({
                     {set.completed && (
                       <span
                         data-testid="logged-set-summary-pill"
-                        className="font-mono-tabular inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/20 px-2.5 py-0.5 text-[11px] font-extrabold text-emerald-300"
+                        className="tabular-nums inline-flex items-center gap-1 rounded-full border border-success/40 bg-success/20 px-2.5 py-0.5 text-xs font-semibold text-success"
                       >
                         <CheckCircle2 className="h-3 w-3 shrink-0" />
                         {loggedPrescriptionSummary}
@@ -808,7 +808,7 @@ export function ActiveSessionView({
                           rpe: intensityMeta.nextRpe,
                         })
                       }
-                      className={`flex h-8 items-center gap-1.5 rounded-xl border px-2.5 text-[11px] font-bold transition active:scale-95 ${intensityMeta.containerClass}`}
+                      className={`flex h-8 items-center gap-1.5 rounded-xl border px-2.5 text-xs font-bold transition active:scale-95 ${intensityMeta.containerClass}`}
                     >
                       <span className="flex items-end gap-0.5" aria-hidden="true">
                         {[1, 2, 3].map((barIdx) => {
@@ -876,9 +876,9 @@ export function ActiveSessionView({
                             })
                           }
                           placeholder="0"
-                          className="font-mono-tabular w-13 bg-transparent text-center text-sm font-bold outline-none sm:w-14"
+                          className="tabular-nums w-13 bg-transparent text-center text-sm font-bold outline-none sm:w-14"
                         />
-                        <span className="text-muted-foreground text-[10px] font-semibold">
+                        <span className="text-muted-foreground text-xs font-semibold">
                           {set.weightUnit.toLowerCase()}
                         </span>
                         <Button
@@ -901,7 +901,7 @@ export function ActiveSessionView({
                           <Badge
                             asChild
                             variant={dynamicWeightDelta > 0 ? 'success' : 'warning'}
-                            className="font-mono-tabular cursor-pointer rounded-lg px-1.5 py-1 text-[11px] font-extrabold transition hover:scale-105"
+                            className="tabular-nums cursor-pointer rounded-lg px-1.5 py-1 text-xs font-semibold transition hover:scale-105"
                           >
                             <button
                               type="button"
@@ -934,7 +934,7 @@ export function ActiveSessionView({
                             durationSeconds: val,
                           })
                         }
-                        className="font-mono-tabular w-14 bg-transparent text-center text-sm font-bold outline-none"
+                        className="tabular-nums w-14 bg-transparent text-center text-sm font-bold outline-none"
                       />
                       <span className="text-muted-foreground text-xs">{t.common.sec}</span>
                     </div>
@@ -968,9 +968,9 @@ export function ActiveSessionView({
                           })
                         }
                         placeholder={t.common.reps}
-                        className="font-mono-tabular w-11 bg-transparent text-center text-sm font-bold outline-none sm:w-12"
+                        className="tabular-nums w-11 bg-transparent text-center text-sm font-bold outline-none sm:w-12"
                       />
-                      <span className="text-muted-foreground text-[10px] font-semibold">
+                      <span className="text-muted-foreground text-xs font-semibold">
                         {t.common.reps}
                       </span>
                       <Button
@@ -991,7 +991,7 @@ export function ActiveSessionView({
                       <Badge
                         asChild
                         variant={dynamicRepsDelta > 0 ? 'accent' : 'warning'}
-                        className="font-mono-tabular cursor-pointer rounded-lg px-1.5 py-1 text-[11px] font-extrabold transition hover:scale-105"
+                        className="tabular-nums cursor-pointer rounded-lg px-1.5 py-1 text-xs font-semibold transition hover:scale-105"
                       >
                         <button
                           type="button"
@@ -1047,16 +1047,16 @@ export function ActiveSessionView({
                     variant={set.completed ? 'default' : 'secondary'}
                     onClick={() => void toggleCompleteSet(ex.clientExerciseId, set.clientSetId)}
                     aria-label={set.completed ? 'Mark set incomplete' : 'Complete set'}
-                    className={`h-10 min-w-[104px] flex-1 font-extrabold transition active:scale-95 sm:hidden ${
+                    className={`h-10 min-w-[104px] flex-1 font-semibold transition active:scale-95 sm:hidden ${
                       set.completed
-                        ? 'bg-emerald-500 text-black hover:bg-emerald-400'
+                        ? 'bg-success text-success-foreground hover:bg-success'
                         : 'hover:bg-primary/20'
                     }`}
                   >
                     {set.completed ? (
                       <>
                         <CheckCircle2 className="h-4 w-4 stroke-[2.5]" />
-                        <span className="font-mono-tabular">
+                        <span className="tabular-nums">
                           {loggedPrescriptionSummary} • {t.session.doneSetBtn}
                         </span>
                       </>
@@ -1076,16 +1076,16 @@ export function ActiveSessionView({
                     variant={set.completed ? 'default' : 'secondary'}
                     onClick={() => void toggleCompleteSet(ex.clientExerciseId, set.clientSetId)}
                     aria-label={set.completed ? 'Mark set incomplete' : 'Complete set'}
-                    className={`h-10 min-w-[116px] font-extrabold transition active:scale-95 ${
+                    className={`h-10 min-w-[116px] font-semibold transition active:scale-95 ${
                       set.completed
-                        ? 'bg-emerald-500 text-black hover:bg-emerald-400'
+                        ? 'bg-success text-success-foreground hover:bg-success'
                         : 'hover:bg-primary/20'
                     }`}
                   >
                     {set.completed ? (
                       <>
                         <CheckCircle2 className="h-4 w-4 stroke-[2.5]" />
-                        <span className="font-mono-tabular">
+                        <span className="tabular-nums">
                           {loggedPrescriptionSummary} • {t.session.doneSetBtn}
                         </span>
                       </>
@@ -1156,16 +1156,16 @@ export function ActiveSessionView({
   return (
     <div className="space-y-5 pb-36 md:pb-16">
       {/* Top Telemetry Banner */}
-      <Card className="border-primary/30 relative overflow-hidden rounded-3xl p-4 sm:p-5">
+      <Card className="border-primary/30 relative overflow-hidden rounded-[1.25rem] p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <Badge variant="solid" className="rounded-full px-2.5 py-0.5 text-[11px] uppercase">
+              <Badge variant="solid" className="rounded-full px-2.5 py-0.5 text-xs">
                 {activeSession.status === SessionStatus.PAUSED
                   ? t.session.pausedBadge
                   : t.session.liveSessionBadge}
               </Badge>
-              <span className="text-muted-foreground font-mono-tabular text-xs">
+              <span className="text-muted-foreground tabular-nums text-xs">
                 {format(t.session.startedAt, { date: formatDateTime(activeSession.startedAt) })}
               </span>
             </div>
@@ -1176,10 +1176,10 @@ export function ActiveSessionView({
 
           <div className="flex items-center gap-2">
             <div className="bg-secondary/80 rounded-2xl px-3.5 py-2 text-right">
-              <p className="text-muted-foreground text-[10px] font-bold uppercase">
+              <p className="text-muted-foreground text-xs font-bold">
                 {t.session.elapsedLabel}
               </p>
-              <p className="font-mono-tabular text-primary text-lg font-extrabold">
+              <p className="tabular-nums text-primary text-lg font-semibold">
                 {formatTimer(elapsedSeconds)}
               </p>
             </div>
@@ -1217,7 +1217,7 @@ export function ActiveSessionView({
                 total: totalSetsPlanned,
               })}
             </span>
-            <div className="text-muted-foreground font-mono-tabular flex items-center gap-3">
+            <div className="text-muted-foreground tabular-nums flex items-center gap-3">
               <span>{format(t.session.doneCount, { count: completedExercisesCount })}</span>
               <span>•</span>
               <span>{format(t.session.leftCount, { count: remainingExercisesCount })}</span>
@@ -1258,24 +1258,24 @@ export function ActiveSessionView({
                 <div
                   key={`active-superset-${block.startIndex}`}
                   data-testid="active-superset-block"
-                  className="border-accent/45 bg-card/60 overflow-hidden rounded-3xl border shadow-md"
+                  className="border-accent/45 bg-card/60 overflow-hidden rounded-[1.25rem] border shadow-md"
                 >
                   {/* Gymlife Dark Superset Header Banner */}
-                  <div className="flex items-center justify-between gap-2 border-b border-white/10 bg-zinc-950 px-4 py-3 text-white">
+                  <div className="flex items-center justify-between gap-2 border-b border-border bg-secondary px-4 py-3 text-foreground">
                     <div>
-                      <div className="flex items-center gap-2 text-xs font-extrabold tracking-wide uppercase sm:text-sm">
+                      <div className="flex items-center gap-2 text-xs font-semibold sm:text-sm">
                         <span className="text-accent">{t.workouts.supersetHeaderLabel}</span>
-                        <span className="font-mono-tabular text-white">
+                        <span className="tabular-nums text-foreground">
                           {format(t.workouts.supersetRoundsFormat, { rounds: block.rounds })}
                         </span>
                       </div>
-                      <p className="font-mono-tabular mt-0.5 text-[11px] text-zinc-300">
+                      <p className="tabular-nums mt-0.5 text-xs text-muted-foreground">
                         {format(t.workouts.supersetSubtitleFormat, {
                           rest: formatRestDurationMinSec(block.roundRestSeconds),
                         })}
                       </p>
                     </div>
-                    <Badge variant="accent" className="px-2.5 py-0.5 text-[11px] font-bold">
+                    <Badge variant="accent" className="px-2.5 py-0.5 text-xs font-bold">
                       <Zap className="h-3 w-3" /> {block.items.length} ex
                     </Badge>
                   </div>
@@ -1345,7 +1345,7 @@ export function ActiveSessionView({
           </div>
         </div>
       ) : (
-        <Card className="rounded-3xl p-8 text-center">
+        <Card className="rounded-[1.25rem] p-8 text-center">
           <Dumbbell className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
           <p className="font-display text-base font-bold">{t.session.noExercisesYet}</p>
           <div className="mt-3 flex justify-center">
@@ -1357,7 +1357,7 @@ export function ActiveSessionView({
       )}
 
       {/* Session Notes & Finish / Abandon Footer */}
-      <Card className="space-y-4 rounded-3xl p-5">
+      <Card className="space-y-4 rounded-[1.25rem] p-5">
         <div className="space-y-1.5">
           <Label htmlFor="session-notes" className="text-xs font-semibold">
             {t.session.sessionNotesLabel}
@@ -1404,7 +1404,7 @@ export function ActiveSessionView({
                 }
               }
             }}
-            className="text-sm shadow-sm"
+            className="text-sm"
           >
             <CheckCircle2 className="h-4 w-4" />
             {t.session.finishSaveWorkoutBtn}
@@ -1445,14 +1445,14 @@ export function ActiveSessionView({
                 <Timer className="h-4 w-4" />
               </div>
               <div>
-                <p className="text-[10px] font-bold tracking-wider uppercase">
+                <p className="text-xs font-bold">
                   {restInfo.isRunning
                     ? t.session.restTimerActive
                     : restInfo.isPaused
                       ? t.session.restTimerPaused
                       : t.session.restTimerReady}
                 </p>
-                <p className="font-mono-tabular text-lg leading-tight font-extrabold sm:text-xl">
+                <p className="tabular-nums text-lg leading-tight font-semibold sm:text-xl">
                   {formatTimer(restInfo.remainingSeconds)}
                   {restInfo.totalSeconds > 0 && (
                     <span className="text-muted-foreground ml-1 text-xs font-normal">
@@ -1609,7 +1609,7 @@ export function ActiveSessionView({
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
                 {!substituteSearch.trim() && currentExercise.alternativeExerciseIds.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-primary text-xs font-bold uppercase">
+                    <p className="text-primary text-xs font-bold">
                       {t.session.predefinedAlternatives}
                     </p>
                     {currentExercise.alternativeExerciseIds.map((altId) => {
@@ -1627,7 +1627,7 @@ export function ActiveSessionView({
                           className="bg-primary/15 border-primary/40 hover:bg-primary/25 flex h-auto w-full items-center justify-between rounded-2xl p-3.5 text-left text-xs font-bold"
                         >
                           <span>{alt.name}</span>
-                          <span className="text-primary text-[11px]">{t.session.useBackupBtn}</span>
+                          <span className="text-primary text-xs">{t.session.useBackupBtn}</span>
                         </Button>
                       );
                     })}
@@ -1635,7 +1635,7 @@ export function ActiveSessionView({
                 )}
 
                 <div className="space-y-2 pt-1">
-                  <p className="text-muted-foreground text-xs font-bold uppercase">
+                  <p className="text-muted-foreground text-xs font-bold">
                     {substituteSearch.trim()
                       ? t.session.allCatalogExercises
                       : format(t.session.sameMuscleGroup, {
@@ -1658,7 +1658,7 @@ export function ActiveSessionView({
                       className="flex h-auto w-full items-center justify-between rounded-xl p-3 text-left text-xs font-medium"
                     >
                       <span>{alt.name}</span>
-                      <span className="text-muted-foreground text-[11px]">
+                      <span className="text-muted-foreground text-xs">
                         {equipmentLabel(alt.equipment)}
                       </span>
                     </Button>
@@ -1711,7 +1711,7 @@ export function ActiveSessionView({
                 variant={addExerciseMuscle === 'ALL' ? 'default' : 'secondary'}
                 size="xs"
                 onClick={() => setAddExerciseMuscle('ALL')}
-                className="h-7 shrink-0 px-2.5 text-[11px]"
+                className="h-7 shrink-0 px-2.5 text-xs"
               >
                 {t.picker.allMuscles}
               </Button>
@@ -1722,7 +1722,7 @@ export function ActiveSessionView({
                   variant={addExerciseMuscle === mg ? 'default' : 'secondary'}
                   size="xs"
                   onClick={() => setAddExerciseMuscle(mg)}
-                  className="h-7 shrink-0 px-2.5 text-[11px]"
+                  className="h-7 shrink-0 px-2.5 text-xs"
                 >
                   {muscleLabel(mg)}
                 </Button>
@@ -1744,7 +1744,7 @@ export function ActiveSessionView({
                 >
                   <div>
                     <p className="font-bold">{ex.name}</p>
-                    <p className="text-muted-foreground text-[11px] font-normal">
+                    <p className="text-muted-foreground text-xs font-normal">
                       {muscleLabel(ex.primaryMuscleGroup)} • {equipmentLabel(ex.equipment)}
                     </p>
                   </div>

@@ -243,7 +243,7 @@ export function ProfileImportView() {
       {/* Account & Preferences Grid */}
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Account & Session Security Card */}
-        <Card className="space-y-4 rounded-3xl p-5">
+        <Card className="space-y-4 rounded-[1.25rem] p-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <User className="text-primary h-5 w-5" />
@@ -251,7 +251,7 @@ export function ProfileImportView() {
             </div>
             <Badge
               variant={authMode === 'AUTHENTICATED' ? 'success' : 'warning'}
-              className="rounded-full px-3 py-1 text-[11px]"
+              className="rounded-full px-3 py-1 text-xs"
             >
               {authMode === 'AUTHENTICATED'
                 ? t.profile.authenticatedBadge
@@ -263,7 +263,7 @@ export function ProfileImportView() {
             <div className="bg-secondary/40 rounded-2xl p-3.5 text-xs">
               <p className="text-sm font-bold">{user.name || 'GymBuddy'}</p>
               <p className="text-muted-foreground">{user.email}</p>
-              <p className="text-muted-foreground mt-1 text-[11px]">
+              <p className="text-muted-foreground mt-1 text-xs">
                 {authMode === 'AUTHENTICATED'
                   ? t.profile.authenticatedDesc
                   : t.profile.guestDesc}
@@ -418,7 +418,7 @@ export function ProfileImportView() {
         </Card>
 
         {/* Units & Training Preferences Card */}
-        <Card className="space-y-4 rounded-3xl p-5">
+        <Card className="space-y-4 rounded-[1.25rem] p-5">
           <h2 className="font-display text-lg font-bold">{t.profile.preferencesTitle}</h2>
 
           <div className="space-y-3 text-xs">
@@ -429,7 +429,7 @@ export function ProfileImportView() {
                   <Globe className="text-primary h-3.5 w-3.5" />
                   {t.profile.languageLabel}
                 </p>
-                <p className="text-muted-foreground text-[11px]">{t.profile.languageSub}</p>
+                <p className="text-muted-foreground text-xs">{t.profile.languageSub}</p>
               </div>
               <Tabs
                 value={languagePreference}
@@ -450,10 +450,10 @@ export function ProfileImportView() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="font-semibold">{t.profile.themeLabel}</p>
-                <p className="text-muted-foreground text-[11px]">{t.profile.themeSub}</p>
+                <p className="text-muted-foreground text-xs">{t.profile.themeSub}</p>
               </div>
               <Tabs
-                value={theme ?? 'dark'}
+                value={theme ?? 'system'}
                 onValueChange={(val) => {
                   setTheme(val);
                   if (val === 'dark' || val === 'light' || val === 'system') {
@@ -472,7 +472,7 @@ export function ProfileImportView() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-semibold">{t.profile.weightUnitLabel}</p>
-                <p className="text-muted-foreground text-[11px]">{t.profile.weightUnitSub}</p>
+                <p className="text-muted-foreground text-xs">{t.profile.weightUnitSub}</p>
               </div>
               <Tabs
                 value={user?.preferences?.weightUnit ?? WeightUnit.KG}
@@ -488,7 +488,7 @@ export function ProfileImportView() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-semibold">{t.profile.defaultRestLabel}</p>
-                <p className="text-muted-foreground text-[11px]">{t.profile.defaultRestSub}</p>
+                <p className="text-muted-foreground text-xs">{t.profile.defaultRestSub}</p>
               </div>
               <NativeSelect
                 aria-label="Default rest timer seconds"
@@ -496,7 +496,7 @@ export function ProfileImportView() {
                 onChange={(e) =>
                   void updatePreferences({ defaultRestSeconds: Number(e.target.value) })
                 }
-                className="bg-secondary font-mono-tabular h-8 font-bold"
+                className="bg-secondary tabular-nums h-8 font-bold"
               >
                 {[60, 75, 90, 120, 150, 180].map((sec) => (
                   <option key={sec} value={sec}>
@@ -509,7 +509,7 @@ export function ProfileImportView() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-semibold">{t.profile.weeklyGoalLabel}</p>
-                <p className="text-muted-foreground text-[11px]">{t.profile.weeklyGoalSub}</p>
+                <p className="text-muted-foreground text-xs">{t.profile.weeklyGoalSub}</p>
               </div>
               <NativeSelect
                 aria-label="Weekly goal sessions"
@@ -517,7 +517,7 @@ export function ProfileImportView() {
                 onChange={(e) =>
                   void updatePreferences({ weeklyGoalSessions: Number(e.target.value) })
                 }
-                className="bg-secondary font-mono-tabular h-8 font-bold"
+                className="bg-secondary tabular-nums h-8 font-bold"
               >
                 {[2, 3, 4, 5, 6].map((g) => (
                   <option key={g} value={g}>
@@ -531,10 +531,10 @@ export function ProfileImportView() {
             <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
               <div>
                 <p className="flex items-center gap-1.5 font-semibold">
-                  <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                  <Sparkles className="h-3.5 w-3.5 text-warning" />
                   {t.profile.exerciseSuggestionsLabel}
                 </p>
-                <p className="text-muted-foreground text-[11px]">
+                <p className="text-muted-foreground text-xs">
                   {t.profile.exerciseSuggestionsSub}
                 </p>
               </div>
@@ -566,7 +566,7 @@ export function ProfileImportView() {
                     <Bell className="text-primary h-3.5 w-3.5" />
                     {t.profile.notificationsLabel}
                   </p>
-                  <p className="text-muted-foreground text-[11px]">{t.profile.notificationsSub}</p>
+                  <p className="text-muted-foreground text-xs">{t.profile.notificationsSub}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -618,7 +618,7 @@ export function ProfileImportView() {
                     <Volume2 className="text-accent h-3.5 w-3.5" />
                     {t.profile.restSoundLabel}
                   </p>
-                  <p className="text-muted-foreground text-[11px]">{t.profile.restSoundSub}</p>
+                  <p className="text-muted-foreground text-xs">{t.profile.restSoundSub}</p>
                 </div>
                 <Tabs
                   value={(user?.preferences?.restTimerSound ?? true) ? 'on' : 'off'}
@@ -641,7 +641,7 @@ export function ProfileImportView() {
                   <ShieldCheck className="text-primary h-3.5 w-3.5" />
                   {t.profile.usageStatsLabel}
                 </p>
-                <p className="text-muted-foreground text-[11px]">{t.profile.usageStatsSub}</p>
+                <p className="text-muted-foreground text-xs">{t.profile.usageStatsSub}</p>
               </div>
               <Tabs
                 data-testid="profile-usage-stats-tabs"
@@ -664,7 +664,7 @@ export function ProfileImportView() {
 
       {/* Export Gym Data Card (Only when logged in) */}
       {authMode === 'AUTHENTICATED' && (
-        <Card className="space-y-4 rounded-3xl p-5">
+        <Card className="space-y-4 rounded-[1.25rem] p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
               <Download className="text-primary h-5 w-5" />
@@ -682,30 +682,30 @@ export function ProfileImportView() {
 
           <div className="bg-secondary/40 grid grid-cols-2 gap-3 rounded-2xl border p-3.5 text-xs sm:grid-cols-4">
             <div>
-              <span className="text-muted-foreground block text-[11px]">
+              <span className="text-muted-foreground block text-xs">
                 {t.profile.splitFoldersStat}
               </span>
-              <strong className="font-mono-tabular text-base">{folders.length}</strong>
+              <strong className="tabular-nums text-base">{folders.length}</strong>
             </div>
             <div>
-              <span className="text-muted-foreground block text-[11px]">
+              <span className="text-muted-foreground block text-xs">
                 {t.profile.workoutTemplatesStat}
               </span>
-              <strong className="font-mono-tabular text-base">{allTemplatesCount}</strong>
+              <strong className="tabular-nums text-base">{allTemplatesCount}</strong>
             </div>
             <div>
-              <span className="text-muted-foreground block text-[11px]">
+              <span className="text-muted-foreground block text-xs">
                 {t.profile.completedSessionsStat}
               </span>
-              <strong className="font-mono-tabular text-primary text-base">
+              <strong className="tabular-nums text-primary text-base">
                 {historySessions.length}
               </strong>
             </div>
             <div>
-              <span className="text-muted-foreground block text-[11px]">
+              <span className="text-muted-foreground block text-xs">
                 {t.profile.completedSetsStat}
               </span>
-              <strong className="font-mono-tabular text-base">
+              <strong className="tabular-nums text-base">
                 {totalLoggedSets.toLocaleString()}
               </strong>
             </div>
