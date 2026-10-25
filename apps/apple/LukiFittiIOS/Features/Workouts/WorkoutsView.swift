@@ -710,6 +710,9 @@ public struct WorkoutsView: View {
         }
 
         viewModel.store.saveWorkoutsOverview(folders: folders, unfiledTemplates: unfiled)
+        // Reveal the saved workout: folders start collapsed.
+        let savedInFolder = targetFolderId.map { id in folders.contains { $0.id == id } } ?? false
+        expandedFolderIds.insert(savedInFolder ? targetFolderId! : "__unfiled__")
         activeBuilderContext = nil
     }
 
@@ -753,6 +756,7 @@ public struct WorkoutsView: View {
         }
 
         viewModel.store.saveWorkoutsOverview(folders: folders, unfiledTemplates: unfiled)
+        expandedFolderIds.insert(toFolderId ?? "__unfiled__")
     }
 
     private func deleteTemplate(_ templateId: String) {
