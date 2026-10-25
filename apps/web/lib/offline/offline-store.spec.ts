@@ -1,7 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  buildDefaultFoldersAndTemplates,
   clearAllLocalData,
   computeRemainingRestSeconds,
   createOfflineSessionFromStretchingRoutine,
@@ -49,12 +48,13 @@ import {
   resolveLocale,
 } from '../i18n';
 import { filterExercisesByQuery } from '../../components/gym/exercise-picker';
+import { buildStarterWorkouts } from '@luki-fitti/common/catalog';
 import type { WorkoutSessionDto } from '@luki-fitti/common/schemas';
 
 describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substitution', () => {
   it('persists and recovers an active session across reloads and queues sync items', async () => {
     const catalog = await getCachedCatalog();
-    const { folders } = buildDefaultFoldersAndTemplates('user-1');
+    const { folders } = buildStarterWorkouts({ userId: 'user-1' });
     const template = folders[0]!.templates[0]!;
 
     const session = createOfflineSessionFromTemplate(template, catalog, 'user-1', WeightUnit.KG);
@@ -86,7 +86,7 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
 
   it('substitutes an exercise with an alternative during a session without modifying the original template', async () => {
     const catalog = await getCachedCatalog();
-    const { folders } = buildDefaultFoldersAndTemplates('user-1');
+    const { folders } = buildStarterWorkouts({ userId: 'user-1' });
     const template = folders[0]!.templates[0]!;
     const originalFirstExerciseId = template.exercises[0]!.exerciseId;
 
@@ -164,7 +164,7 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
 
   it('tracks single-source-of-truth exercise history across different workouts and suggests progressive overload deltas', async () => {
     const catalog = await getCachedCatalog();
-    const { folders } = buildDefaultFoldersAndTemplates('user-1');
+    const { folders } = buildStarterWorkouts({ userId: 'user-1' });
     const templateA = folders[0]!.templates[0]!; // Contains Barbell Bench Press (ex-barbell-bench-press)
 
     // Simulate a completed historical session in a completely different workout ("Full Body Friday")
@@ -312,7 +312,7 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
 
   it('ignores non-completed sessions in history and permanently removes abandoned or deleted sessions', async () => {
     const catalog = await getCachedCatalog();
-    const { folders } = buildDefaultFoldersAndTemplates('user-1');
+    const { folders } = buildStarterWorkouts({ userId: 'user-1' });
     const template = folders[0]!.templates[0]!;
 
     const inProgress = createOfflineSessionFromTemplate(template, catalog, 'user-1');
@@ -373,7 +373,7 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
     );
     assert.equal(withImages.length / catalog.length >= 0.95, true);
 
-    const { folders } = buildDefaultFoldersAndTemplates('user-1');
+    const { folders } = buildStarterWorkouts({ userId: 'user-1' });
     const baseTemplate = folders[0]!.templates[0]!;
     const supersetTemplate = {
       ...baseTemplate,
@@ -423,7 +423,7 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
       unfiledTemplates: [],
     });
 
-    const { folders } = buildDefaultFoldersAndTemplates('user-1');
+    const { folders } = buildStarterWorkouts({ userId: 'user-1' });
     const active = createOfflineSessionFromTemplate(folders[0]!.templates[0]!, catalog, 'user-1');
     await saveLocalActiveSession(active);
     await enqueueSessionSync(active);
@@ -488,7 +488,7 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
 
   it('preserves Apple Watch HealthKit telemetry, heartRateSamples, and per-set HR fields in toSyncPayload', async () => {
     const catalog = await getCachedCatalog();
-    const { folders } = buildDefaultFoldersAndTemplates('user-1');
+    const { folders } = buildStarterWorkouts({ userId: 'user-1' });
     const session = createOfflineSessionFromTemplate(folders[0]!.templates[0]!, catalog, 'user-1');
     session.sourceDevice = SessionSourceDevice.APPLE_WATCH;
     session.healthKitWorkoutUuid = '550e8400-e29b-41d4-a716-446655440000';
@@ -518,7 +518,7 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
 
   it('groups Gymlife superset blocks and proposes max 1 smart exercise suggestion per workout', async () => {
     const catalog = await getCachedCatalog();
-    const { folders } = buildDefaultFoldersAndTemplates('user-1');
+    const { folders } = buildStarterWorkouts({ userId: 'user-1' });
 
     // PPL Push template has Lateral Raise (0s rest) paired with Tricep Pushdown (75s rest)
     const pplPushTemplate = folders[1]!.templates[0]!;
