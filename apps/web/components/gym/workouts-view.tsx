@@ -150,21 +150,6 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
     setExpandedTemplates((prev) => ({ ...prev, [templateId]: !prev[templateId] }));
   };
 
-  const allFolderIds = [
-    ...folders.map((f) => f.id),
-    ...(unfiledTemplates.length > 0 ? [UNFILED_KEY] : []),
-  ];
-  const areAllExpanded =
-    allFolderIds.length > 0 && allFolderIds.every((id) => Boolean(expandedFolders[id]));
-
-  const toggleAllFolders = () => {
-    if (areAllExpanded) {
-      setExpandedFolders({});
-    } else {
-      setExpandedFolders(Object.fromEntries(allFolderIds.map((id) => [id, true])));
-    }
-  };
-
   const openFolderModal = (folder?: WorkoutFolderDto) => {
     setEditingFolderId(folder?.id ?? null);
     setFolderName(folder?.name ?? '');
@@ -955,18 +940,6 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
           </DropdownMenu>
         </div>
       </header>
-
-      {allFolderIds.length > 1 && !isEditMode && (
-        <div className="-mt-2 flex justify-end">
-          <button
-            type="button"
-            onClick={toggleAllFolders}
-            className="text-primary text-[15px] font-medium"
-          >
-            {areAllExpanded ? t.workouts.collapseAll : t.workouts.expandAll}
-          </button>
-        </div>
-      )}
 
       <div className="space-y-4">
         {folders.map((folder, index) =>
