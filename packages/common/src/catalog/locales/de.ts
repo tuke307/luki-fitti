@@ -345,11 +345,12 @@ export const de: CatalogTranslation = {
     },
     'ex-machine-lateral-raise': {
       name: 'Seitheben (Maschine)',
-      description: 'Maschinenübung für die Schultern.',
+      description:
+        'Geführte Isolationsübung für die seitliche Schulter – konstante Spannung, kein Schwung.',
       instructions: [
-        'Setze dich aufrecht an die Maschine, die Polster liegen seitlich an den Oberarmen bzw. Ellbogen an. Das ist die Ausgangsposition.',
+        'Setze dich aufrecht an die Maschine und stelle den Sitz so ein, dass deine Schultern auf Höhe der Drehpunkte sind und die Polster außen an den Oberarmen anliegen. Das ist die Ausgangsposition.',
         'Hebe die Arme bei ruhigem Oberkörper (kein Schwung) mit leicht gebeugten Ellbogen seitlich an, bis die Oberarme parallel zum Boden sind. Atme dabei aus und halte oben eine Sekunde.',
-        'Senke die Arme beim Einatmen langsam in die Ausgangsposition ab.',
+        'Senke die Polster beim Einatmen langsam in die Ausgangsposition ab, ohne dass der Gewichtsstapel aufsetzt.',
         'Wiederhole die Übung für die empfohlene Anzahl an Wiederholungen.',
       ],
     },
