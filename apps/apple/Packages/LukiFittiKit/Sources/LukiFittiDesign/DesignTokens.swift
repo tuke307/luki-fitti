@@ -26,6 +26,33 @@ public enum LukiColors {
     public static let watchActionPauseSky = Color(red: 0.75, green: 0.86, blue: 0.99) // #BFDBFE
     public static let watchActionFinishMint = Color(red: 0.65, green: 0.95, blue: 0.82) // #A7F3D0
 
+    // Folder accent palette — mirrors FOLDER_COLOR_PALETTE in @luki-fitti/common.
+    public static let folderPaletteHex = ["#E8743B", "#3A7BD5", "#5E9C76", "#8E6CC4", "#D9577B", "#7C8794"]
+    public static let defaultFolderHex = "#E8743B"
+
+    /// Neon colors from before the redesign, mapped to their palette replacement.
+    public static let legacyFolderHexMap: [String: String] = [
+        "#CCFF00": "#5E9C76",
+        "#00E5FF": "#3A7BD5",
+        "#FF6B00": "#E8743B",
+        "#A855F7": "#8E6CC4",
+        "#22C55E": "#5E9C76",
+    ]
+
+    /// Normalizes a stored folder color, upgrading legacy neon values and falling back to the default.
+    public static func resolveFolderHex(_ hex: String?) -> String {
+        let normalized = (hex ?? "").trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let isValid = normalized.count == 7
+            && normalized.hasPrefix("#")
+            && normalized.dropFirst().allSatisfy(\.isHexDigit)
+        guard isValid else { return defaultFolderHex }
+        return legacyFolderHexMap[normalized] ?? normalized
+    }
+
+    public static func folderColor(_ hex: String?) -> Color {
+        colorFromHex(resolveFolderHex(hex))
+    }
+
     public static func colorFromHex(_ hex: String) -> Color {
         let cleaned = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var int: UInt64 = 0

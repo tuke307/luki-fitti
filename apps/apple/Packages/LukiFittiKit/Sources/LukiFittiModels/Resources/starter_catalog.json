@@ -2535,7 +2535,7 @@
       "id": "folder-4er-split",
       "userId": "local-user",
       "name": "4er Split (Hypertrophy)",
-      "color": "#CCFF00",
+      "color": "#5E9C76",
       "sortOrder": 0,
       "templates": [
         {
@@ -3813,7 +3813,7 @@
       "id": "folder-ppl-split",
       "userId": "local-user",
       "name": "Push / Pull / Legs (PPL)",
-      "color": "#00E5FF",
+      "color": "#3A7BD5",
       "sortOrder": 1,
       "templates": [
         {
@@ -4826,7 +4826,7 @@
       "id": "folder-5er-brosplit",
       "userId": "local-user",
       "name": "5er Split (Bro Split)",
-      "color": "#A855F7",
+      "color": "#8E6CC4",
       "sortOrder": 2,
       "templates": [
         {

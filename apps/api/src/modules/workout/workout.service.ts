@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { resolveExerciseMedia } from '@luki-fitti/common/catalog';
+import { DEFAULT_FOLDER_COLOR } from '@luki-fitti/common/utils';
 import type {
   CreateFolderDto,
   UpdateFolderDto,
@@ -76,7 +77,7 @@ export class WorkoutService {
       data: {
         userId,
         name: dto.name.trim(),
-        color: dto.color ?? '#CCFF00',
+        color: dto.color ?? DEFAULT_FOLDER_COLOR,
         sortOrder: dto.sortOrder ?? 0,
       },
     });

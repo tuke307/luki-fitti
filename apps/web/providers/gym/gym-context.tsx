@@ -42,7 +42,10 @@ import {
   SetType,
   WeightUnit,
 } from '@luki-fitti/common/enums';
-import { applyExerciseHistoryToSessionExercise } from '@luki-fitti/common/utils/client';
+import {
+  applyExerciseHistoryToSessionExercise,
+  DEFAULT_FOLDER_COLOR,
+} from '@luki-fitti/common/utils/client';
 import { resolveExerciseMedia } from '@luki-fitti/common/catalog';
 import type {
   CreateExerciseDto,
@@ -98,7 +101,9 @@ interface GymContextValue {
   updateSet: (
     clientExerciseId: string,
     clientSetId: string,
-    patch: Partial<Pick<SessionSetDto, 'weight' | 'reps' | 'durationSeconds' | 'rpe' | 'setType' | 'notes'>>,
+    patch: Partial<
+      Pick<SessionSetDto, 'weight' | 'reps' | 'durationSeconds' | 'rpe' | 'setType' | 'notes'>
+    >,
   ) => Promise<void>;
   toggleCompleteSet: (clientExerciseId: string, clientSetId: string) => Promise<void>;
   addSetToExercise: (clientExerciseId: string, setType?: SetType) => Promise<void>;
@@ -193,9 +198,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
             continue;
           }
 
-          const payload = forceOverwrite
-            ? { ...item.payload, forceOverwrite: true }
-            : item.payload;
+          const payload = forceOverwrite ? { ...item.payload, forceOverwrite: true } : item.payload;
           const res = await api.sessions.sync(payload);
 
           if (deletedSessionIdsRef.current.has(item.clientSessionId)) {
@@ -527,7 +530,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
       id: `folder-${Date.now()}`,
       userId: user?.id ?? 'local-athlete',
       name: dto.name.trim(),
-      color: dto.color ?? '#CCFF00',
+      color: dto.color ?? DEFAULT_FOLDER_COLOR,
       sortOrder: folders.length,
       templates: [],
     };
@@ -673,8 +676,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
         name: dto.name ?? t.name,
         description: dto.description !== undefined ? (dto.description ?? null) : t.description,
         folderId: dto.folderId !== undefined ? dto.folderId : t.folderId,
-        estimatedDurationMinutes:
-          dto.estimatedDurationMinutes ?? t.estimatedDurationMinutes,
+        estimatedDurationMinutes: dto.estimatedDurationMinutes ?? t.estimatedDurationMinutes,
         updatedAt: new Date().toISOString(),
         exercises:
           dto.exercises !== undefined
@@ -1245,8 +1247,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
 
   const adjustRestTimer = async (deltaSeconds: number) => {
     if (!activeSession) return;
-    const { remainingSeconds, totalSeconds, isPaused } =
-      computeRemainingRestSeconds(activeSession);
+    const { remainingSeconds, totalSeconds, isPaused } = computeRemainingRestSeconds(activeSession);
     const nextRemaining = Math.max(0, remainingSeconds + deltaSeconds);
     const nextTotal = Math.max(nextRemaining, totalSeconds + deltaSeconds);
 

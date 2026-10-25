@@ -6,22 +6,13 @@ import {
   SetType,
   WeightUnit,
 } from '../enums';
-import type {
-  ExerciseDto,
-  SessionExerciseDto,
-  SessionSetDto,
-  WorkoutSessionDto,
-} from '../schemas';
+import type { ExerciseDto, SessionExerciseDto, SessionSetDto, WorkoutSessionDto } from '../schemas';
 
 const LBS_TO_KG = 0.45359237;
 const KG_TO_LBS = 1 / LBS_TO_KG;
 
 export type ProgressionPhase =
-  | 'INCREASE_WEIGHT'
-  | 'INCREASE_REPS'
-  | 'DELOAD'
-  | 'MAINTAIN'
-  | 'BASELINE';
+  'INCREASE_WEIGHT' | 'INCREASE_REPS' | 'DELOAD' | 'MAINTAIN' | 'BASELINE';
 
 export interface SetProgressionSuggestion {
   workingSetIndex: number;
@@ -85,8 +76,7 @@ export function estimateOneRepMax(weight: number, reps: number, rpe?: number | n
   if (effectiveReps === 1) return weight;
 
   const epley = weight * (1 + effectiveReps / 30);
-  const brzycki =
-    effectiveReps < 35 ? weight * (36 / (37 - effectiveReps)) : epley;
+  const brzycki = effectiveReps < 35 ? weight * (36 / (37 - effectiveReps)) : epley;
   const blended = effectiveReps <= 10 ? (epley + brzycki) / 2 : epley;
   return Math.round(blended * 100) / 100;
 }
@@ -200,22 +190,18 @@ export function extractGlobalExerciseHistory(
         (workingSets.reduce((sum, ws) => sum + ws.weightNormalized, 0) / workingSets.length) * 10,
       ) / 10;
     const avgReps =
-      Math.round(
-        (workingSets.reduce((sum, ws) => sum + ws.reps, 0) / workingSets.length) * 10,
-      ) / 10;
+      Math.round((workingSets.reduce((sum, ws) => sum + ws.reps, 0) / workingSets.length) * 10) /
+      10;
 
     const rpeSets = workingSets.filter((ws) => ws.rpe !== null && ws.rpe !== undefined);
     const avgRpe =
       rpeSets.length > 0
-        ? Math.round(
-            (rpeSets.reduce((sum, ws) => sum + (ws.rpe ?? 0), 0) / rpeSets.length) * 10,
-          ) / 10
+        ? Math.round((rpeSets.reduce((sum, ws) => sum + (ws.rpe ?? 0), 0) / rpeSets.length) * 10) /
+          10
         : null;
 
     const totalVolumeNormalized =
-      Math.round(
-        workingSets.reduce((sum, ws) => sum + ws.weightNormalized * ws.reps, 0) * 10,
-      ) / 10;
+      Math.round(workingSets.reduce((sum, ws) => sum + ws.weightNormalized * ws.reps, 0) * 10) / 10;
 
     entries.push({
       clientSessionId: session.clientSessionId,
@@ -357,11 +343,7 @@ export function computeExerciseProgression(params: {
 
   const lastWorkingSets = lastSession.workingSets;
   const primaryLastWeight = lastWorkingSets[0]?.weightNormalized ?? 0;
-  const stepIncrement = getStandardWeightIncrement(
-    weightUnit,
-    catalogExercise,
-    primaryLastWeight,
-  );
+  const stepIncrement = getStandardWeightIncrement(weightUnit, catalogExercise, primaryLastWeight);
 
   // Determine overall exercise phase from recent performance & fatigue
   const allSetsHitTopOfBand = lastWorkingSets.every((s) => s.reps >= repMax);
@@ -384,7 +366,10 @@ export function computeExerciseProgression(params: {
     overallPhase = 'INCREASE_REPS';
   }
 
-  const confidence = Math.min(0.95, Math.round((0.45 + Math.min(history.length, 5) * 0.1) * 100) / 100);
+  const confidence = Math.min(
+    0.95,
+    Math.round((0.45 + Math.min(history.length, 5) * 0.1) * 100) / 100,
+  );
 
   // Build per-working-set suggestions and deltas against either the current input or last session
   const currentWorkingSets = currentSets
@@ -400,8 +385,7 @@ export function computeExerciseProgression(params: {
   const setSuggestions: SetProgressionSuggestion[] = [];
 
   for (let idx = 0; idx < totalSetsToSuggest; idx++) {
-    const historicalSet =
-      lastWorkingSets[idx] ?? lastWorkingSets[lastWorkingSets.length - 1]!;
+    const historicalSet = lastWorkingSets[idx] ?? lastWorkingSets[lastWorkingSets.length - 1]!;
     const lastW = historicalSet.weightNormalized;
     const lastR = historicalSet.reps;
     const lastRpe = historicalSet.rpe;
@@ -452,8 +436,7 @@ export function computeExerciseProgression(params: {
       suggestedWeight !== null && baselineWeight > 0
         ? Math.round((suggestedWeight - baselineWeight) * 100) / 100
         : 0;
-    const repsDelta =
-      suggestedReps !== null && baselineReps > 0 ? suggestedReps - baselineReps : 0;
+    const repsDelta = suggestedReps !== null && baselineReps > 0 ? suggestedReps - baselineReps : 0;
 
     setSuggestions.push({
       workingSetIndex: idx,
@@ -598,9 +581,9 @@ export function formatRestDurationMinSec(seconds: number): string {
  * Groups consecutive exercises linked with `restSeconds === 0` into unified Gymlife-style
  * Superset blocks while preserving standalone exercises as `'single'` blocks.
  */
-export function groupExercisesIntoBlocks<
-  T extends { restSeconds: number; plannedSets?: number },
->(exercises: T[]): Array<ExerciseRenderBlock<T>> {
+export function groupExercisesIntoBlocks<T extends { restSeconds: number; plannedSets?: number }>(
+  exercises: T[],
+): Array<ExerciseRenderBlock<T>> {
   const blocks: Array<ExerciseRenderBlock<T>> = [];
   let i = 0;
 
@@ -666,14 +649,7 @@ export function groupExercisesIntoBlocks<
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type WorkoutSplitArchetype =
-  | 'PUSH'
-  | 'PULL'
-  | 'LEGS'
-  | 'ARMS'
-  | 'SHOULDERS'
-  | 'CHEST_BACK'
-  | 'UPPER'
-  | 'FULL_BODY';
+  'PUSH' | 'PULL' | 'LEGS' | 'ARMS' | 'SHOULDERS' | 'CHEST_BACK' | 'UPPER' | 'FULL_BODY';
 
 export type ExerciseSuggestionReasonType = 'PLATEAU' | 'HIGH_FATIGUE' | 'SPLIT_BALANCE';
 
@@ -704,12 +680,7 @@ export interface WorkoutSuggestionInputExercise {
 const SPLIT_MUSCLE_PRIORITY: Record<WorkoutSplitArchetype, MuscleGroup[]> = {
   PUSH: [MuscleGroup.SHOULDERS, MuscleGroup.CHEST, MuscleGroup.TRICEPS],
   PULL: [MuscleGroup.BACK, MuscleGroup.BICEPS, MuscleGroup.SHOULDERS],
-  LEGS: [
-    MuscleGroup.QUADRICEPS,
-    MuscleGroup.HAMSTRINGS,
-    MuscleGroup.GLUTES,
-    MuscleGroup.CALVES,
-  ],
+  LEGS: [MuscleGroup.QUADRICEPS, MuscleGroup.HAMSTRINGS, MuscleGroup.GLUTES, MuscleGroup.CALVES],
   ARMS: [MuscleGroup.BICEPS, MuscleGroup.TRICEPS, MuscleGroup.SHOULDERS, MuscleGroup.FOREARMS],
   SHOULDERS: [MuscleGroup.SHOULDERS, MuscleGroup.TRICEPS, MuscleGroup.ABS_CORE],
   CHEST_BACK: [MuscleGroup.CHEST, MuscleGroup.BACK, MuscleGroup.SHOULDERS],
@@ -822,9 +793,7 @@ export function computeWorkoutExerciseSuggestion(params: {
     const catEx =
       (ex.exerciseId ? catalog.find((c) => c.id === ex.exerciseId) : null) ??
       (ex.exerciseName
-        ? catalog.find(
-            (c) => c.name.trim().toLowerCase() === ex.exerciseName!.trim().toLowerCase(),
-          )
+        ? catalog.find((c) => c.name.trim().toLowerCase() === ex.exerciseName!.trim().toLowerCase())
         : null) ??
       null;
 
@@ -925,10 +894,7 @@ export function computeWorkoutExerciseSuggestion(params: {
       setsByMuscle.set(m, 0);
     }
     for (const r of resolvedExercises) {
-      setsByMuscle.set(
-        r.muscle,
-        (setsByMuscle.get(r.muscle) ?? 0) + (r.input.plannedSets ?? 3),
-      );
+      setsByMuscle.set(r.muscle, (setsByMuscle.get(r.muscle) ?? 0) + (r.input.plannedSets ?? 3));
     }
 
     let minSets = Number.POSITIVE_INFINITY;

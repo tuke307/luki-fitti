@@ -313,7 +313,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                   aria-label="Filter by equipment"
                   value={selectedEquipment}
                   onChange={(e) => setSelectedEquipment(e.target.value as EquipmentType | 'ALL')}
-                  className="bg-secondary h-8 w-full text-xs sm:w-auto"
+                  className="w-full sm:w-auto"
                 >
                   <option value="ALL">{t.exercises.allEquipment}</option>
                   {Object.values(EquipmentType).map((eq) => (
@@ -1119,7 +1119,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                               prev.map((p, i) => (i === idx ? { ...p, sets: val } : p)),
                             )
                           }
-                          className="h-9 text-xs sm:h-8"
+                          className="h-10"
                         />
                       </div>
                       <div>
@@ -1136,7 +1136,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                               prev.map((p, i) => (i === idx ? { ...p, durationSeconds: val } : p)),
                             )
                           }
-                          className="h-9 text-xs sm:h-8"
+                          className="h-10"
                         />
                       </div>
                       <div>
@@ -1155,7 +1155,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                               ),
                             )
                           }
-                          className="h-9 text-xs sm:h-8"
+                          className="h-10"
                         />
                       </div>
                     </div>

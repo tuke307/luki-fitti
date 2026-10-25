@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DEFAULT_FOLDER_COLOR } from '../utils/folder-color.util';
 import {
   DistanceUnit,
   EmailStatus,
@@ -266,7 +267,7 @@ export interface ExerciseDto {
 // ─────────────────────────────────────────────────────────────────────────────
 export const CreateFolderSchema = z.object({
   name: z.string().trim().min(1, 'Folder name is required').max(80),
-  color: z.string().trim().default('#CCFF00'),
+  color: z.string().trim().default(DEFAULT_FOLDER_COLOR),
   sortOrder: z.number().int().min(0).default(0).optional(),
 });
 
@@ -715,6 +716,3 @@ export interface AnalyticsSummaryDto {
     estimated1RM: number;
   }>;
 }
-
-
-

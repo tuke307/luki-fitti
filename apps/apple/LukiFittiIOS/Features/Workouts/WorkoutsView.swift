@@ -12,7 +12,7 @@ public struct WorkoutsView: View {
     @State private var showingFolderModal = false
     @State private var editingFolderId: String?
     @State private var folderName = ""
-    @State private var folderColor = "#CCFF00"
+    @State private var folderColor = LukiColors.defaultFolderHex
 
     // Workout Template Builder Modal State
     @State private var activeBuilderContext: TemplateBuilderContext?
@@ -36,7 +36,7 @@ public struct WorkoutsView: View {
         let isFolder: Bool
     }
 
-    private let folderAccentPalette = ["#CCFF00", "#00E5FF", "#FF6B00", "#A855F7", "#22C55E"]
+    private let folderAccentPalette = LukiColors.folderPaletteHex
 
     public init(viewModel: LukiAppViewModel) {
         self.viewModel = viewModel
@@ -213,7 +213,7 @@ public struct WorkoutsView: View {
                             .font(.caption.bold())
                             .foregroundStyle(.secondary)
                         Circle()
-                            .fill(LukiColors.colorFromHex(folder.color))
+                            .fill(LukiColors.folderColor(folder.color))
                             .frame(width: 10, height: 10)
                         Image(systemName: "folder.fill")
                             .foregroundStyle(LukiColors.neonLime)
@@ -669,14 +669,14 @@ public struct WorkoutsView: View {
     private func openCreateFolderModal() {
         editingFolderId = nil
         folderName = ""
-        folderColor = "#CCFF00"
+        folderColor = LukiColors.defaultFolderHex
         showingFolderModal = true
     }
 
     private func openRenameFolderModal(_ folder: WorkoutFolderDto) {
         editingFolderId = folder.id
         folderName = folder.name
-        folderColor = folder.color
+        folderColor = LukiColors.resolveFolderHex(folder.color)
         showingFolderModal = true
     }
 
