@@ -132,9 +132,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
         .map((s) => s.trim())
         .filter(Boolean),
       category:
-        newType === ExerciseType.STRETCHING
-          ? ExerciseCategory.STRETCH
-          : ExerciseCategory.COMPOUND,
+        newType === ExerciseType.STRETCHING ? ExerciseCategory.STRETCH : ExerciseCategory.COMPOUND,
       exerciseType: newType,
       primaryMuscleGroup: newPrimaryMuscle,
       secondaryMuscleGroups: newSecondaryMuscles,
@@ -358,10 +356,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                       <ExerciseVisual exercise={ex} variant="card" className="mb-3" />
 
                       <div className="flex items-start justify-between gap-2">
-                        <Badge
-                          variant={isStretch ? 'accent' : 'default'}
-                          className="text-xs"
-                        >
+                        <Badge variant={isStretch ? 'accent' : 'default'} className="text-xs">
                           {muscleLabel(ex.primaryMuscleGroup)}
                         </Badge>
                         <Badge variant="secondary" className="text-muted-foreground text-xs">
@@ -1058,7 +1053,9 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-semibold">{t.exercises.stretchesDrillsLabel}</Label>
+                  <Label className="text-xs font-semibold">
+                    {t.exercises.stretchesDrillsLabel}
+                  </Label>
                   <Button
                     type="button"
                     variant="link"
@@ -1136,9 +1133,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                           value={item.durationSeconds ?? 45}
                           onValueChange={(val) =>
                             setRoutineItems((prev) =>
-                              prev.map((p, i) =>
-                                i === idx ? { ...p, durationSeconds: val } : p,
-                              ),
+                              prev.map((p, i) => (i === idx ? { ...p, durationSeconds: val } : p)),
                             )
                           }
                           className="h-9 text-xs sm:h-8"

@@ -112,8 +112,7 @@ export const en = {
   },
   picker: {
     selectExercise: 'Select Exercise',
-    searchPlaceholder:
-      'Search 130+ exercises by name, muscle, equipment, or German alias...',
+    searchPlaceholder: 'Search 130+ exercises by name, muscle, equipment, or German alias...',
     allMuscles: 'All Muscles',
     noResults: 'No matching exercises found',
     clearSelection: 'None configured',
@@ -233,7 +232,8 @@ export const en = {
     supersetRoundsFormat: '× {rounds} rounds',
     supersetSubtitleFormat: 'No rest between exercises · {rest} between rounds',
     smartSuggestionBadge: 'Suggestion',
-    suggestionReasonPlateau: '{stalling} has stalled. {name} could give your {muscle} a fresh challenge.',
+    suggestionReasonPlateau:
+      '{stalling} has stalled. {name} could give your {muscle} a fresh challenge.',
     suggestionReasonHighFatigue: '{stalling} has felt heavy lately. Try {name} for your {muscle}.',
     suggestionReasonSplitBalance: '{name} would round out your {split} split.',
     addSuggestedBtn: 'Add',
@@ -481,7 +481,8 @@ export const en = {
     authenticatedBadge: 'Signed in',
     offlineLocalBadge: 'Guest',
     authenticatedDesc: 'Your workouts are backed up and synced across your devices.',
-    guestDesc: 'Your workouts are saved on this device only. Sign in to back them up and use them on your other devices.',
+    guestDesc:
+      'Your workouts are saved on this device only. Sign in to back them up and use them on your other devices.',
     changePasswordBtn: 'Change Password',
     signOutBtn: 'Sign Out',
     deleteAccountBtn: 'Delete Account',
@@ -522,7 +523,8 @@ export const en = {
     exerciseSuggestionsLabel: 'Exercise suggestions',
     exerciseSuggestionsSub: 'Occasionally suggest a new exercise',
     usageStatsLabel: 'Share usage statistics',
-    usageStatsSub: 'Anonymous and cookie-free. Never includes workout or health data. Applies to this device.',
+    usageStatsSub:
+      'Anonymous and cookie-free. Never includes workout or health data. Applies to this device.',
     enabledOption: 'On',
     disabledOption: 'Off',
     exportTitle: 'Export',
@@ -535,7 +537,8 @@ export const en = {
     exportJsonBtn: 'Full Backup (JSON)',
     exportCsvBtn: 'Workout Log (CSV)',
     deleteDialogTitle: 'Delete account',
-    deleteDialogDesc: 'Enter your password and we’ll email you a link to confirm. Nothing is deleted until you open that link.',
+    deleteDialogDesc:
+      'Enter your password and we’ll email you a link to confirm. Nothing is deleted until you open that link.',
     currentPasswordLabel: 'Current Password',
     currentPasswordPlaceholder: 'Enter your current password',
     sendDeletionLinkBtn: 'Send Deletion Confirmation Email',

@@ -475,9 +475,7 @@ export function DiaryAnalyticsView() {
         </Card>
 
         <Card className="p-4">
-          <p className="text-muted-foreground text-xs font-medium">
-            {t.diary.workingVolumeTitle}
-          </p>
+          <p className="text-muted-foreground text-xs font-medium">{t.diary.workingVolumeTitle}</p>
           <p className="tabular-nums mt-1 text-2xl font-semibold">
             {stats.totalVolumeKg.toLocaleString()} <span className="text-sm font-normal">kg</span>
           </p>
@@ -494,9 +492,7 @@ export function DiaryAnalyticsView() {
               ({stats.totalReps} {t.common.reps})
             </span>
           </p>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            {t.diary.completedSetsRepsSub}
-          </p>
+          <p className="text-muted-foreground mt-0.5 text-xs">{t.diary.completedSetsRepsSub}</p>
         </Card>
 
         <Card className="p-4">
@@ -506,9 +502,7 @@ export function DiaryAnalyticsView() {
           <p className="tabular-nums text-accent mt-1 text-2xl font-semibold">
             {stats.totalStretchMinutes} <span className="text-sm font-normal">{t.common.min}</span>
           </p>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            {t.diary.stretchingMobilitySub}
-          </p>
+          <p className="text-muted-foreground mt-0.5 text-xs">{t.diary.stretchingMobilitySub}</p>
         </Card>
       </div>
 
@@ -535,10 +529,7 @@ export function DiaryAnalyticsView() {
             {period === 'month' && (
               <div className="grid grid-cols-7 gap-2 text-center">
                 {t.diary.weekdaysShort.map((weekday) => (
-                  <span
-                    key={weekday}
-                    className="text-muted-foreground text-xs font-semibold"
-                  >
+                  <span key={weekday} className="text-muted-foreground text-xs font-semibold">
                     {weekday}
                   </span>
                 ))}
@@ -643,8 +634,7 @@ export function DiaryAnalyticsView() {
               <TrendingUp className="text-primary h-4 w-4" />
               {selectedExerciseId !== 'ALL'
                 ? format(t.diary.exerciseProgressionTitle, {
-                    name:
-                      catalog.find((c) => c.id === selectedExerciseId)?.name ?? 'Exercise',
+                    name: catalog.find((c) => c.id === selectedExerciseId)?.name ?? 'Exercise',
                   })
                 : t.diary.sessionVolumeProgressionTitle}
             </h2>
@@ -661,9 +651,7 @@ export function DiaryAnalyticsView() {
             </span>
             <span className="flex items-center gap-1.5 font-semibold">
               <span className="bg-accent inline-block h-2.5 w-2.5 rounded-full" />
-              {selectedExerciseId !== 'ALL'
-                ? t.diary.maxWeightLegend
-                : t.diary.completedSetsLegend}
+              {selectedExerciseId !== 'ALL' ? t.diary.maxWeightLegend : t.diary.completedSetsLegend}
             </span>
           </div>
         </div>
@@ -707,13 +695,15 @@ export function DiaryAnalyticsView() {
                   tickLine={false}
                 />
                 <Tooltip
-                  cursor={{ stroke: 'color-mix(in oklch, var(--muted-foreground) 30%, transparent)', strokeWidth: 1 }}
+                  cursor={{
+                    stroke: 'color-mix(in oklch, var(--muted-foreground) 30%, transparent)',
+                    strokeWidth: 1,
+                  }}
                   wrapperStyle={{ outline: 'none' }}
                   content={({ active, payload, label }) => {
                     if (!active || !payload?.length) return null;
                     const row = payload[0]?.payload as
-                      | { fullDate?: string; workoutName?: string }
-                      | undefined;
+                      { fullDate?: string; workoutName?: string } | undefined;
                     return (
                       <div className="bg-popover/95 text-popover-foreground border-border pointer-events-none max-w-[200px] rounded-xl border px-2.5 py-1.5 text-xs leading-tight shadow-md backdrop-blur-sm">
                         <p className="text-foreground truncate font-semibold">
@@ -926,7 +916,10 @@ export function DiaryAnalyticsView() {
                       </Badge>
                     )}
                     {session.healthKitWorkoutUuid && (
-                      <Badge variant="outline" className="gap-1 border-destructive/40 text-xs text-destructive">
+                      <Badge
+                        variant="outline"
+                        className="gap-1 border-destructive/40 text-xs text-destructive"
+                      >
                         <Heart className="h-3 w-3 fill-destructive text-destructive" />
                         {t.diary.syncedWithAppleHealth}
                       </Badge>
@@ -1100,8 +1093,16 @@ export function DiaryAnalyticsView() {
                             >
                               <defs>
                                 <linearGradient id="hrCurveGrad" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor="var(--destructive)" stopOpacity={0.55} />
-                                  <stop offset="100%" stopColor="var(--destructive)" stopOpacity={0.05} />
+                                  <stop
+                                    offset="0%"
+                                    stopColor="var(--destructive)"
+                                    stopOpacity={0.55}
+                                  />
+                                  <stop
+                                    offset="100%"
+                                    stopColor="var(--destructive)"
+                                    stopOpacity={0.05}
+                                  />
                                 </linearGradient>
                               </defs>
                               <CartesianGrid
@@ -1171,9 +1172,7 @@ export function DiaryAnalyticsView() {
                             )}
                           </div>
                           <div className="ml-auto flex shrink-0 items-center gap-2">
-                            <Label className="text-muted-foreground text-xs">
-                              {weightUnit}
-                            </Label>
+                            <Label className="text-muted-foreground text-xs">{weightUnit}</Label>
                             <NumberInput
                               allowNull
                               step="0.5"
@@ -1201,9 +1200,7 @@ export function DiaryAnalyticsView() {
                               }}
                               className="bg-secondary tabular-nums h-8 w-16 px-2 text-center text-xs sm:h-7"
                             />
-                            <Label className="text-muted-foreground text-xs">
-                              {t.common.reps}
-                            </Label>
+                            <Label className="text-muted-foreground text-xs">{t.common.reps}</Label>
                             <NumberInput
                               allowNull
                               min={0}

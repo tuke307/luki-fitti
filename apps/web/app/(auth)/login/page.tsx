@@ -14,15 +14,8 @@ import { useLocale } from '@/providers/i18n/locale-context';
 
 export default function LoginPage() {
   const router = useRouter();
-  const {
-    login,
-    register,
-    resendConfirmation,
-    continueOfflineLocal,
-    error,
-    infoMessage,
-    loading,
-  } = useAuth();
+  const { login, register, resendConfirmation, continueOfflineLocal, error, infoMessage, loading } =
+    useAuth();
   const { t } = useLocale();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');

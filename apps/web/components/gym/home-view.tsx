@@ -216,7 +216,9 @@ export function HomeView({ onNavigate }: HomeViewProps) {
         <section className="bg-card space-y-4 rounded-[1.25rem] p-5">
           <div className="space-y-1">
             <p className="text-primary text-[13px] font-semibold">{t.home.sessionInProgress}</p>
-            <h2 className="text-[22px] leading-snug font-bold">{activeSession.workoutNameSnapshot}</h2>
+            <h2 className="text-[22px] leading-snug font-bold">
+              {activeSession.workoutNameSnapshot}
+            </h2>
             <p className="text-muted-foreground text-[15px]">
               {format(t.home.setsLoggedVolume, {
                 sets: activeSession.totalSetsCompleted,
@@ -231,7 +233,9 @@ export function HomeView({ onNavigate }: HomeViewProps) {
       ) : (
         <section className="bg-card space-y-4 rounded-[1.25rem] p-5">
           <div className="space-y-1">
-            <p className="text-muted-foreground text-[13px] font-semibold">{t.home.startNextTitle}</p>
+            <p className="text-muted-foreground text-[13px] font-semibold">
+              {t.home.startNextTitle}
+            </p>
             <h2 className="text-[22px] leading-snug font-bold">
               {suggestedTemplate?.template.name ?? t.home.startNextSub}
             </h2>
@@ -272,7 +276,10 @@ export function HomeView({ onNavigate }: HomeViewProps) {
         </section>
       )}
 
-      <section aria-labelledby="home-week" className="bg-card flex items-center gap-5 rounded-[1.25rem] p-5">
+      <section
+        aria-labelledby="home-week"
+        className="bg-card flex items-center gap-5 rounded-[1.25rem] p-5"
+      >
         <WeeklyRing progress={goalProgress} />
         <div className="min-w-0 space-y-0.5">
           <h2 id="home-week" className="text-[17px] font-semibold">
@@ -312,7 +319,10 @@ export function HomeView({ onNavigate }: HomeViewProps) {
         </button>
       </section>
 
-      <section aria-labelledby="home-weekly" className="bg-card min-w-0 space-y-4 rounded-[1.25rem] p-5">
+      <section
+        aria-labelledby="home-weekly"
+        className="bg-card min-w-0 space-y-4 rounded-[1.25rem] p-5"
+      >
         <div>
           <h2 id="home-weekly" className="text-[17px] font-semibold">
             {t.home.weeklyChartTitle}
@@ -357,7 +367,12 @@ export function HomeView({ onNavigate }: HomeViewProps) {
                   );
                 }}
               />
-              <Bar dataKey="volumeTons" fill="var(--chart-1)" radius={[6, 6, 6, 6]} maxBarSize={22} />
+              <Bar
+                dataKey="volumeTons"
+                fill="var(--chart-1)"
+                radius={[6, 6, 6, 6]}
+                maxBarSize={22}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -371,7 +386,10 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             </h2>
             <p className="text-muted-foreground text-[13px]">{t.home.muscleChartSub}</p>
           </div>
-          <Tabs value={muscleRange} onValueChange={(v) => setMuscleRange(v as '30d' | '90d' | 'all')}>
+          <Tabs
+            value={muscleRange}
+            onValueChange={(v) => setMuscleRange(v as '30d' | '90d' | 'all')}
+          >
             <TabsList>
               <TabsTrigger value="30d">30d</TabsTrigger>
               <TabsTrigger value="90d">90d</TabsTrigger>
@@ -397,7 +415,9 @@ export function HomeView({ onNavigate }: HomeViewProps) {
                 <div className="bg-secondary h-1.5 overflow-hidden rounded-full">
                   <div
                     className="bg-primary h-full rounded-full transition-[width] duration-500 ease-(--ease-out-quart)"
-                    style={{ width: `${maxMuscleSets > 0 ? (entry.sets / maxMuscleSets) * 100 : 0}%` }}
+                    style={{
+                      width: `${maxMuscleSets > 0 ? (entry.sets / maxMuscleSets) * 100 : 0}%`,
+                    }}
                   />
                 </div>
               </li>

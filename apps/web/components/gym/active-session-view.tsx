@@ -254,7 +254,10 @@ export function ActiveSessionView({
   const restInfo = computeRemainingRestSeconds(activeSession, nowMs);
   const restProgressPct =
     restInfo.totalSeconds > 0
-      ? Math.max(0, Math.min(100, Math.round((restInfo.remainingSeconds / restInfo.totalSeconds) * 100)))
+      ? Math.max(
+          0,
+          Math.min(100, Math.round((restInfo.remainingSeconds / restInfo.totalSeconds) * 100)),
+        )
       : 0;
 
   const exerciseBlocks = groupExercisesIntoBlocks(activeSession.exercises);
@@ -354,9 +357,7 @@ export function ActiveSessionView({
               <span className="bg-accent/20 text-accent tabular-nums rounded-md px-1.5 py-0.5 font-semibold">
                 {formatExercisePillText(ex)}
               </span>
-              <span className="text-muted-foreground">
-                {muscleLabel(ex.primaryMuscleSnapshot)}
-              </span>
+              <span className="text-muted-foreground">{muscleLabel(ex.primaryMuscleSnapshot)}</span>
             </div>
           </div>
         </div>
@@ -410,9 +411,7 @@ export function ActiveSessionView({
                 <span className="text-primary/70 text-xs font-semibold leading-none">
                   {supersetStepNumber ? `#${supersetStepNumber}` : t.session.exShort}
                 </span>
-                <span className="tabular-nums text-lg font-bold leading-tight">
-                  {idx + 1}
-                </span>
+                <span className="tabular-nums text-lg font-bold leading-tight">{idx + 1}</span>
               </div>
 
               <div className="min-w-0 space-y-1.5">
@@ -505,7 +504,9 @@ export function ActiveSessionView({
               </span>
               <span className="tabular-nums text-foreground mt-0.5 block text-sm font-semibold">
                 {ex.restSeconds}s
-                {ex.targetWeight ? ` • ${ex.targetWeight}${activeSession.weightUnit.toLowerCase()}` : ''}
+                {ex.targetWeight
+                  ? ` • ${ex.targetWeight}${activeSession.weightUnit.toLowerCase()}`
+                  : ''}
               </span>
             </div>
 
@@ -757,11 +758,7 @@ export function ActiveSessionView({
                               : 'border-primary/35 bg-primary/15 text-primary'
                       }`}
                     >
-                      {set.completed ? (
-                        <Check className="h-4 w-4 stroke-[3]" />
-                      ) : (
-                        sIdx + 1
-                      )}
+                      {set.completed ? <Check className="h-4 w-4 stroke-[3]" /> : sIdx + 1}
                     </span>
 
                     <NativeSelect
@@ -812,16 +809,13 @@ export function ActiveSessionView({
                     >
                       <span className="flex items-end gap-0.5" aria-hidden="true">
                         {[1, 2, 3].map((barIdx) => {
-                          const barHeight =
-                            barIdx === 1 ? 'h-2' : barIdx === 2 ? 'h-3' : 'h-4';
+                          const barHeight = barIdx === 1 ? 'h-2' : barIdx === 2 ? 'h-3' : 'h-4';
                           const isFilled = barIdx <= intensityLevel;
                           return (
                             <span
                               key={barIdx}
                               className={`w-1 rounded-full transition-colors ${barHeight} ${
-                                isFilled
-                                  ? intensityMeta.activeBarClass
-                                  : 'bg-muted-foreground/25'
+                                isFilled ? intensityMeta.activeBarClass : 'bg-muted-foreground/25'
                               }`}
                             />
                           );
@@ -1023,16 +1017,13 @@ export function ActiveSessionView({
                   >
                     <span className="flex items-end gap-0.5" aria-hidden="true">
                       {[1, 2, 3].map((barIdx) => {
-                        const barHeight =
-                          barIdx === 1 ? 'h-2' : barIdx === 2 ? 'h-3' : 'h-4';
+                        const barHeight = barIdx === 1 ? 'h-2' : barIdx === 2 ? 'h-3' : 'h-4';
                         const isFilled = barIdx <= intensityLevel;
                         return (
                           <span
                             key={barIdx}
                             className={`w-1 rounded-full transition-colors ${barHeight} ${
-                              isFilled
-                                ? intensityMeta.activeBarClass
-                                : 'bg-muted-foreground/25'
+                              isFilled ? intensityMeta.activeBarClass : 'bg-muted-foreground/25'
                             }`}
                           />
                         );
@@ -1176,9 +1167,7 @@ export function ActiveSessionView({
 
           <div className="flex items-center gap-2">
             <div className="bg-secondary/80 rounded-2xl px-3.5 py-2 text-right">
-              <p className="text-muted-foreground text-xs font-bold">
-                {t.session.elapsedLabel}
-              </p>
+              <p className="text-muted-foreground text-xs font-bold">{t.session.elapsedLabel}</p>
               <p className="tabular-nums text-primary text-lg font-semibold">
                 {formatTimer(elapsedSeconds)}
               </p>

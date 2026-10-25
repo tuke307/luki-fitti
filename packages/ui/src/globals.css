@@ -178,14 +178,18 @@
 @layer utilities {
   .font-display {
     font-family:
-      -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, 'Segoe UI', Roboto,
-      sans-serif;
+      -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, 'Segoe UI', Roboto, sans-serif;
   }
 
   /* Large numerals (weights, reps, timers) use SF Rounded where available. */
   .font-rounded {
     font-family:
-      ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      ui-rounded,
+      'SF Pro Rounded',
+      -apple-system,
+      BlinkMacSystemFont,
+      system-ui,
+      sans-serif;
     font-variant-numeric: tabular-nums;
   }
 

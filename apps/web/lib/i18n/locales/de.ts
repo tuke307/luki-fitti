@@ -113,8 +113,7 @@ export const de = {
   },
   picker: {
     selectExercise: 'Übung auswählen',
-    searchPlaceholder:
-      '130+ Übungen nach Name, Muskel, Gerät oder Begriff durchsuchen...',
+    searchPlaceholder: '130+ Übungen nach Name, Muskel, Gerät oder Begriff durchsuchen...',
     allMuscles: 'Alle Muskeln',
     noResults: 'Keine passenden Übungen gefunden',
     clearSelection: 'Keine ausgewählt',
@@ -235,7 +234,8 @@ export const de = {
     supersetSubtitleFormat: 'Keine Pause zwischen Übungen · {rest} zwischen Runden',
     smartSuggestionBadge: 'Vorschlag',
     suggestionReasonPlateau: '{stalling} stagniert. {name} könnte deinen {muscle} neu fordern.',
-    suggestionReasonHighFatigue: '{stalling} fühlte sich zuletzt schwer an. Probier {name} für deinen {muscle}.',
+    suggestionReasonHighFatigue:
+      '{stalling} fühlte sich zuletzt schwer an. Probier {name} für deinen {muscle}.',
     suggestionReasonSplitBalance: '{name} würde deinen {split}-Split ergänzen.',
     addSuggestedBtn: 'Hinzufügen',
     swapSuggestedBtn: '{name} ersetzen',
@@ -481,8 +481,10 @@ export const de = {
     accountSectionTitle: 'Konto',
     authenticatedBadge: 'Angemeldet',
     offlineLocalBadge: 'Gast',
-    authenticatedDesc: 'Deine Trainings werden gesichert und zwischen deinen Geräten synchronisiert.',
-    guestDesc: 'Deine Trainings sind nur auf diesem Gerät gespeichert. Melde dich an, um sie zu sichern und auf deinen anderen Geräten zu nutzen.',
+    authenticatedDesc:
+      'Deine Trainings werden gesichert und zwischen deinen Geräten synchronisiert.',
+    guestDesc:
+      'Deine Trainings sind nur auf diesem Gerät gespeichert. Melde dich an, um sie zu sichern und auf deinen anderen Geräten zu nutzen.',
     changePasswordBtn: 'Passwort ändern',
     signOutBtn: 'Abmelden',
     deleteAccountBtn: 'Konto löschen',
@@ -523,7 +525,8 @@ export const de = {
     exerciseSuggestionsLabel: 'Übungsvorschläge',
     exerciseSuggestionsSub: 'Gelegentlich eine neue Übung vorschlagen',
     usageStatsLabel: 'Nutzungsstatistik teilen',
-    usageStatsSub: 'Anonym und ohne Cookies. Enthält nie Trainings- oder Gesundheitsdaten. Gilt für dieses Gerät.',
+    usageStatsSub:
+      'Anonym und ohne Cookies. Enthält nie Trainings- oder Gesundheitsdaten. Gilt für dieses Gerät.',
     enabledOption: 'An',
     disabledOption: 'Aus',
     exportTitle: 'Exportieren',
@@ -536,7 +539,8 @@ export const de = {
     exportJsonBtn: 'Komplettes Backup (JSON)',
     exportCsvBtn: 'Trainingsprotokoll (CSV)',
     deleteDialogTitle: 'Konto löschen',
-    deleteDialogDesc: 'Gib dein Passwort ein und wir senden dir einen Bestätigungslink. Erst wenn du ihn öffnest, wird etwas gelöscht.',
+    deleteDialogDesc:
+      'Gib dein Passwort ein und wir senden dir einen Bestätigungslink. Erst wenn du ihn öffnest, wird etwas gelöscht.',
     currentPasswordLabel: 'Aktuelles Passwort',
     currentPasswordPlaceholder: 'Aktuelles Passwort eingeben',
     sendDeletionLinkBtn: 'Lösch-Bestätigungslink senden',
