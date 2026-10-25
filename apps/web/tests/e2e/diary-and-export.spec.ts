@@ -20,7 +20,7 @@ test.describe('Training Diary Analytics & Backup Exports', () => {
     await toggleCompleteSetRow(page, 2);
     await finishActiveWorkout(page);
 
-    await page.getByRole('button', { name: /View in Training Diary/i }).click();
+    await page.getByRole('button', { name: /View in History/i }).click();
     const sessionCard = page.getByTestId(`diary-session-card-${WORKOUT_NAME}`);
     await expect(sessionCard).toBeVisible();
 
@@ -35,7 +35,7 @@ test.describe('Training Diary Analytics & Backup Exports', () => {
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     await expect(dialog.getByRole('heading', { name: WORKOUT_NAME })).toBeVisible();
-    await clickDialogButton(page, /Save Corrections/i);
+    await clickDialogButton(page, /^(Save|Speichern)$/);
 
     // Delete historical session
     await sessionCard.getByTestId('diary-session-delete').click();

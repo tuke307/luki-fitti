@@ -11,25 +11,25 @@ test.describe('PWA Shell, Navigation & Preferences', () => {
     page,
   }) => {
     await expectSyncBadge(page, /Guest/i);
-    await expect(page.getByText('7-Day Frequency')).toBeVisible();
-    await expect(page.getByText('30-Day Volume')).toBeVisible();
-    await expect(page.getByText('Total Workouts')).toBeVisible();
-    await expect(page.getByText('Avg. Session Load')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'This week' })).toBeVisible();
+    await expect(page.getByText('Last 30 days')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible();
+    await expect(page.getByText('Per workout')).toBeVisible();
 
     // Navigate to Workouts
     await navigateToTab(page, 'workouts');
-    await expect(page.getByRole('heading', { name: 'Workout Templates & Splits' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Workouts', exact: true })).toBeVisible();
 
     // Navigate to Diary
     await navigateToTab(page, 'diary');
     await expect(
-      page.getByRole('heading', { name: 'Training Diary & Progress Analytics' }),
+      page.getByRole('heading', { name: 'History', exact: true }),
     ).toBeVisible();
 
     // Navigate to Exercises
     await navigateToTab(page, 'exercises');
     await expect(
-      page.getByRole('heading', { name: 'Exercise & Mobility Library' }),
+      page.getByRole('heading', { name: 'Library', exact: true }),
     ).toBeVisible();
 
     // Navigate to Profile
@@ -38,7 +38,7 @@ test.describe('PWA Shell, Navigation & Preferences', () => {
 
     // Brand logo returns to Home
     await page.getByRole('button', { name: 'LukiFitti Home' }).click();
-    await expect(page.getByText('Weekly Volume & Session Trend')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Weekly volume' })).toBeVisible();
   });
 
   test('can switch language between English and German across views', async ({ page }) => {
@@ -51,7 +51,7 @@ test.describe('PWA Shell, Navigation & Preferences', () => {
 
     // Navigate to Workouts and confirm German headings render
     await navigateToTab(page, 'workouts');
-    await expect(page.getByRole('heading', { name: 'Workout-Vorlagen & Splits' })).toBeVisible();
+    await expect(page.getByText('Deine Pläne, nach Split sortiert.')).toBeVisible();
 
     // Switch back to English
     await navigateToTab(page, 'profile');

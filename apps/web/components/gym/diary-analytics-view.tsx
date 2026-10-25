@@ -48,6 +48,8 @@ import {
   formatDateTime,
   formatLongDateTime,
   formatShortDayMonth,
+  isoWeekDays,
+  startOfIsoWeek,
 } from '@luki-fitti/common/utils/client';
 import {
   ExerciseType,
@@ -86,7 +88,7 @@ export function DiaryAnalyticsView() {
   const filteredSessions = useMemo(() => {
     const cutoffMs =
       period === 'week'
-        ? nowMs - 7 * 86400000
+        ? startOfIsoWeek(nowMs).getTime()
         : period === 'month'
           ? nowMs - 30 * 86400000
           : period === 'year'
@@ -284,8 +286,7 @@ export function DiaryAnalyticsView() {
         dayNum: number;
         sessions: WorkoutSessionDto[];
       }> = [];
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - i);
+      for (const d of isoWeekDays(nowDate)) {
         const iso = toLocalDateIso(d);
         days.push({
           iso,
@@ -296,7 +297,7 @@ export function DiaryAnalyticsView() {
       }
       return {
         mode: 'days' as const,
-        title: t.diary.last7DaysTitle,
+        title: t.diary.thisWeekTitle,
         leadingEmptyDays: 0,
         items: days,
       };
@@ -435,7 +436,7 @@ export function DiaryAnalyticsView() {
           aria-label="Filter analytics by muscle group"
           value={filterMuscle}
           onChange={(e) => setFilterMuscle(e.target.value as MuscleGroup | 'ALL')}
-          className="bg-secondary h-8 w-full text-xs sm:w-auto"
+          className="w-full sm:w-auto"
         >
           <option value="ALL">{t.diary.allMuscleGroups}</option>
           {Object.values(MuscleGroup).map((mg) => (
@@ -457,54 +458,43 @@ export function DiaryAnalyticsView() {
         />
       </Card>
 
-      {/* Top KPI Cards (Strength Volume vs Stretching Duration strictly separated) */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Card className="p-4">
-          <p className="text-muted-foreground text-xs font-medium">
-            {t.diary.completedSessionsTitle}
-          </p>
-          <p className="tabular-nums text-primary mt-1 text-2xl font-semibold">
-            {stats.totalSessions}
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            {format(t.diary.strengthVsStretchSub, {
+      <dl className="bg-card divide-border/70 divide-y overflow-hidden rounded-[1.25rem]">
+        {[
+          {
+            label: t.diary.completedSessionsTitle,
+            value: String(stats.totalSessions),
+            sub: format(t.diary.strengthVsStretchSub, {
               strength: stats.strengthSessions,
               stretch: stats.stretchingSessions,
-            })}
-          </p>
-        </Card>
-
-        <Card className="p-4">
-          <p className="text-muted-foreground text-xs font-medium">{t.diary.workingVolumeTitle}</p>
-          <p className="tabular-nums mt-1 text-2xl font-semibold">
-            {stats.totalVolumeKg.toLocaleString()} <span className="text-sm font-normal">kg</span>
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-xs">{t.diary.workingVolumeSub}</p>
-        </Card>
-
-        <Card className="p-4">
-          <p className="text-muted-foreground text-xs font-medium">
-            {t.diary.completedSetsRepsTitle}
-          </p>
-          <p className="tabular-nums mt-1 text-2xl font-semibold">
-            {stats.totalSets}{' '}
-            <span className="text-muted-foreground text-xs font-normal">
-              ({stats.totalReps} {t.common.reps})
-            </span>
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-xs">{t.diary.completedSetsRepsSub}</p>
-        </Card>
-
-        <Card className="p-4">
-          <p className="text-muted-foreground text-xs font-medium">
-            {t.diary.stretchingMobilityTitle}
-          </p>
-          <p className="tabular-nums text-accent mt-1 text-2xl font-semibold">
-            {stats.totalStretchMinutes} <span className="text-sm font-normal">{t.common.min}</span>
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-xs">{t.diary.stretchingMobilitySub}</p>
-        </Card>
-      </div>
+            }),
+          },
+          {
+            label: t.diary.workingVolumeTitle,
+            value: `${stats.totalVolumeKg.toLocaleString()} kg`,
+            sub: t.diary.workingVolumeSub,
+          },
+          {
+            label: t.diary.completedSetsRepsTitle,
+            value: `${stats.totalSets} · ${stats.totalReps} ${t.common.reps}`,
+            sub: null,
+          },
+          {
+            label: t.diary.stretchingMobilityTitle,
+            value: `${stats.totalStretchMinutes} ${t.common.min}`,
+            sub: null,
+          },
+        ].map((row) => (
+          <div key={row.label} className="flex items-center justify-between gap-4 px-5 py-3.5">
+            <dt className="min-w-0">
+              <span className="block text-[17px]">{row.label}</span>
+              {row.sub && (
+                <span className="text-muted-foreground block text-[13px]">{row.sub}</span>
+              )}
+            </dt>
+            <dd className="text-muted-foreground shrink-0 text-[17px] tabular-nums">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
 
       {/* Period-Aware Training Activity Strip / Breakdown */}
       <Card className="space-y-3 rounded-[1.25rem] p-5">
@@ -561,9 +551,9 @@ export function DiaryAnalyticsView() {
                       period === 'week' ? 'min-h-16' : 'h-12'
                     } ${
                       hasStrength
-                        ? 'border-primary/60 bg-primary/20 text-primary cursor-pointer font-bold'
+                        ? 'border-primary/60 bg-primary/12 text-primary cursor-pointer font-bold'
                         : hasStretch
-                          ? 'border-accent/60 bg-accent/20 text-accent cursor-pointer font-bold'
+                          ? 'border-accent/60 bg-accent/12 text-accent cursor-pointer font-bold'
                           : 'bg-secondary/30 text-muted-foreground'
                     }`}
                   >
@@ -601,7 +591,7 @@ export function DiaryAnalyticsView() {
                   }}
                   className={`flex flex-col justify-between rounded-2xl border p-3 text-xs transition ${
                     hasSessions
-                      ? 'border-primary/50 bg-primary/15 cursor-pointer'
+                      ? 'border-primary/50 bg-primary/12 cursor-pointer'
                       : 'bg-secondary/30 text-muted-foreground'
                   }`}
                 >

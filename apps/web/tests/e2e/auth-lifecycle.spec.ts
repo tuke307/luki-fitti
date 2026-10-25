@@ -60,8 +60,8 @@ test.describe('Full Account Lifecycle via Mailpit Emails', () => {
 
     // ── 4. Sign out and request a password reset email (/forgot-password) ──
     await gotoProfileTab(page);
-    await expect(page.getByText('Authenticated Server Session')).toBeVisible();
-    await page.getByRole('button', { name: /Sign Out of Server Session/i }).click();
+    await expect(page.getByText('Signed in', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: /^Sign Out$/i }).click();
     await expectSyncBadge(page, /Guest/i);
 
     await clearMailboxForRecipient(email);

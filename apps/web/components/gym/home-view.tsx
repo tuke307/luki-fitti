@@ -8,7 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useGym } from '@/providers/gym/gym-context';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
-import { formatShortDayMonth } from '@luki-fitti/common/utils/client';
+import { formatShortDayMonth, startOfIsoWeek } from '@luki-fitti/common/utils/client';
 import type { WorkoutTemplateDto } from '@luki-fitti/common/schemas';
 import {
   ExerciseType,
@@ -25,14 +25,6 @@ interface HomeViewProps {
 
 const LBS_TO_KG = 0.45359237;
 
-function getMondayOfWeek(d: Date): Date {
-  const date = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const day = date.getDay();
-  const diff = (day + 6) % 7;
-  date.setDate(date.getDate() - diff);
-  return date;
-}
-
 export function HomeView({ onNavigate }: HomeViewProps) {
   const { user } = useAuth();
   const { activeSession, historySessions, folders, unfiledTemplates, startWorkoutFromTemplate } =
@@ -44,9 +36,8 @@ export function HomeView({ onNavigate }: HomeViewProps) {
   const weeklyGoal = user?.preferences?.weeklyGoalSessions ?? 4;
 
   const summaryMetrics = useMemo(() => {
-    const sessions7d = historySessions.filter(
-      (s) => nowMs - Date.parse(s.startedAt) <= 7 * 86400000,
-    ).length;
+    const weekStartMs = startOfIsoWeek(nowMs).getTime();
+    const sessions7d = historySessions.filter((s) => Date.parse(s.startedAt) >= weekStartMs).length;
     const sessions30d = historySessions.filter(
       (s) => nowMs - Date.parse(s.startedAt) <= 30 * 86400000,
     );
@@ -91,7 +82,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
       historySessions.length > 0
         ? Math.max(nowMs, ...historySessions.map((s) => Date.parse(s.startedAt)))
         : nowMs;
-    const currentMonday = getMondayOfWeek(new Date(anchorSessionMs));
+    const currentMonday = startOfIsoWeek(new Date(anchorSessionMs));
 
     const weeks: Array<{
       key: string;

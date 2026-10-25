@@ -30,7 +30,7 @@ test.describe('Offline Durability & Sync Conflict Resolution', () => {
 
     // Navigate back to Home -> active session banner must show 2 sets logged
     await expect(page.getByText('Session In Progress')).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText(/2 sets logged/i)).toBeVisible();
+    await expect(page.getByText(/^2 sets ·/i)).toBeVisible();
   });
 
   test('detects server version conflict on sync and resolves via Conflict Dialog', async ({

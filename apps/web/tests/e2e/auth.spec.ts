@@ -92,9 +92,9 @@ test.describe('Authentication & Guest Flows', () => {
     await gotoProfileTab(page);
 
     await expect(page.getByText(TEST_USER_EMAIL)).toBeVisible();
-    await expect(page.getByText('Authenticated Server Session')).toBeVisible();
+    await expect(page.getByText('Signed in', { exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: /Sign Out of Server Session|Abmelden/i }).click();
+    await page.getByRole('button', { name: /^(Sign Out|Abmelden)$/i }).click();
     await expectSyncBadge(page, /Guest/i);
   });
 });

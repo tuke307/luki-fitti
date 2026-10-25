@@ -1,26 +1,25 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
-  Folder,
-  FolderPlus,
-  Plus,
-  Play,
-  Copy,
-  Trash2,
-  Edit3,
-  ArrowUp,
+  AlertTriangle,
   ArrowDown,
   ArrowRightLeft,
-  Dumbbell,
-  AlertTriangle,
-  ChevronDown,
+  ArrowUp,
   ChevronRight,
-  ChevronsDownUp,
-  ChevronsUpDown,
+  Copy,
+  Dumbbell,
+  FolderInput,
+  FolderPlus,
+  Inbox,
+  MinusCircle,
+  MoreHorizontal,
+  Pencil,
+  Play,
+  Plus,
+  PlusCircle,
+  Trash2,
   Zap,
-  History,
-  Calendar,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -34,12 +33,6 @@ import {
 } from '@luki-fitti/ui/components/ui/alert-dialog';
 import { Badge } from '@luki-fitti/ui/components/ui/badge';
 import { Button } from '@luki-fitti/ui/components/ui/button';
-import { Card } from '@luki-fitti/ui/components/ui/card';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@luki-fitti/ui/components/ui/collapsible';
 import {
   Dialog,
   DialogContent,
@@ -48,6 +41,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@luki-fitti/ui/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from '@luki-fitti/ui/components/ui/dropdown-menu';
 import { Input } from '@luki-fitti/ui/components/ui/input';
 import { Label } from '@luki-fitti/ui/components/ui/label';
 import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
@@ -58,16 +63,19 @@ import { useLocale } from '@/providers/i18n/locale-context';
 import {
   computeWorkoutExerciseSuggestion,
   formatDate,
-  formatDateTime,
   formatRestDurationMinSec,
   groupExercisesIntoBlocks,
   type WorkoutExerciseSuggestion,
+  DEFAULT_FOLDER_COLOR,
+  FOLDER_COLOR_PALETTE,
+  resolveFolderColor,
 } from '@luki-fitti/common/utils/client';
 import { SessionStatus } from '@luki-fitti/common/enums';
 import { ExercisePicker } from './exercise-picker';
 import { ExerciseVisual } from './exercise-visual';
 import { NumberInput } from './number-input';
 import { RainbowExerciseSuggestionCard } from './rainbow-suggestion-card';
+import { SwipeRow } from './swipe-row';
 import type {
   TemplateExerciseInputDto,
   WorkoutFolderDto,
@@ -106,7 +114,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [folderName, setFolderName] = useState('');
-  const [folderColor, setFolderColor] = useState('#CCFF00');
+  const [folderColor, setFolderColor] = useState<string>(DEFAULT_FOLDER_COLOR);
 
   const [editingTemplate, setEditingTemplate] = useState<WorkoutTemplateDto | null>(null);
   const [showTemplateBuilder, setShowTemplateBuilder] = useState(false);
@@ -122,33 +130,48 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
     name: string;
   } | null>(null);
 
-  const [collapsedFolders, setCollapsedFolders] = useState<Record<string, boolean>>({});
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
+  const [expandedTemplates, setExpandedTemplates] = useState<Record<string, boolean>>({});
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [openMenuTemplateId, setOpenMenuTemplateId] = useState<string | null>(null);
+  const lastMenuPointerType = useRef<string>('mouse');
   const [highlightedTemplateId, setHighlightedTemplateId] = useState<string | null>(null);
 
-  const toggleFolderCollapsed = (folderId: string) => {
-    setCollapsedFolders((prev) => ({
-      ...prev,
-      [folderId]: !prev[folderId],
-    }));
+  const UNFILED_KEY = '__unfiled__';
+  const folderKey = (folderId: string | null) => folderId ?? UNFILED_KEY;
+
+  const toggleFolderExpanded = (key: string) => {
+    setExpandedFolders((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const expandFolder = (key: string) => {
+    setExpandedFolders((prev) => ({ ...prev, [key]: true }));
+  };
+
+  const toggleTemplateExpanded = (templateId: string) => {
+    setExpandedTemplates((prev) => ({ ...prev, [templateId]: !prev[templateId] }));
   };
 
   const allFolderIds = [
     ...folders.map((f) => f.id),
-    ...(unfiledTemplates.length > 0 ? ['__unfiled__'] : []),
+    ...(unfiledTemplates.length > 0 ? [UNFILED_KEY] : []),
   ];
-  const areAllCollapsed =
-    allFolderIds.length > 0 && allFolderIds.every((id) => Boolean(collapsedFolders[id]));
+  const areAllExpanded =
+    allFolderIds.length > 0 && allFolderIds.every((id) => Boolean(expandedFolders[id]));
 
   const toggleAllFolders = () => {
-    if (areAllCollapsed) {
-      setCollapsedFolders({});
+    if (areAllExpanded) {
+      setExpandedFolders({});
     } else {
-      const next: Record<string, boolean> = {};
-      for (const id of allFolderIds) {
-        next[id] = true;
-      }
-      setCollapsedFolders(next);
+      setExpandedFolders(Object.fromEntries(allFolderIds.map((id) => [id, true])));
     }
+  };
+
+  const openFolderModal = (folder?: WorkoutFolderDto) => {
+    setEditingFolderId(folder?.id ?? null);
+    setFolderName(folder?.name ?? '');
+    setFolderColor(folder ? resolveFolderColor(folder.color) : DEFAULT_FOLDER_COLOR);
+    setShowFolderModal(true);
   };
 
   const openNewTemplateBuilder = (defaultFolderId: string | null = null) => {
@@ -240,6 +263,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
     } else {
       await createTemplate(payload);
     }
+    expandFolder(folderKey(tplFolderId));
     setShowTemplateBuilder(false);
     setEditingTemplate(null);
   };
@@ -249,6 +273,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
     if (!duplicated) return;
 
     toast.success(format(t.workouts.duplicatedToast, { name: duplicated.name }));
+    expandFolder(folderKey(duplicated.folderId));
     setHighlightedTemplateId(duplicated.id);
 
     window.setTimeout(() => {
@@ -278,19 +303,6 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
     return {
       totalCount: matched.length,
       lastSessionDate: sorted[0]?.startedAt ?? null,
-    };
-  };
-
-  const getFolderSessionStats = (folder: WorkoutFolderDto) => {
-    const tplIds = new Set(folder.templates.map((t) => t.id));
-    const matched = historySessions.filter(
-      (s) => s.status === SessionStatus.COMPLETED && s.templateId && tplIds.has(s.templateId),
-    );
-    const sorted = [...matched].sort((a, b) => b.startedAt.localeCompare(a.startedAt));
-    return {
-      totalCount: matched.length,
-      lastSessionDate: sorted[0]?.startedAt ?? null,
-      lastWorkoutName: sorted[0]?.workoutNameSnapshot ?? null,
     };
   };
 
@@ -340,9 +352,10 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
     });
   };
 
-  const renderTemplateCard = (tpl: WorkoutTemplateDto) => {
+  const renderTemplateRow = (tpl: WorkoutTemplateDto) => {
     const tplStats = getTemplateSessionStats(tpl);
     const isHighlighted = highlightedTemplateId === tpl.id;
+    const isExpanded = Boolean(expandedTemplates[tpl.id]);
     const blocks = groupExercisesIntoBlocks(tpl.exercises);
     const folderName = folders.find((f) => f.id === tpl.folderId)?.name ?? null;
 
@@ -378,62 +391,204 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
       return `${ex.plannedSets}×${repsPart}${weightPart}`;
     };
 
+    const metaLine = [
+      tpl.exercises.length === 1
+        ? t.workouts.exerciseCountOne
+        : format(t.workouts.exerciseCount, { count: tpl.exercises.length }),
+      `~${tpl.estimatedDurationMinutes ?? 60} ${t.common.min}`,
+      tplStats.lastSessionDate
+        ? format(t.workouts.lastTrainedShort, { date: formatDate(tplStats.lastSessionDate) })
+        : t.workouts.neverTrained,
+    ].join(' · ');
+
+    const startWorkout = async () => {
+      await startWorkoutFromTemplate(tpl.id);
+      onStartSessionNavigation();
+    };
+
     return (
-      <Card
+      <div
         key={tpl.id}
         data-template-id={tpl.id}
         data-testid={`template-card-${tpl.name}`}
         tabIndex={-1}
-        className={`hover:border-primary/40 min-w-0 justify-between overflow-hidden p-4 transition duration-300 outline-none sm:p-5 ${
-          isHighlighted ? 'border-primary ring-primary/40 ring-2' : ''
+        className={`border-border/70 min-w-0 border-t outline-none transition-shadow duration-300 ${
+          isHighlighted ? 'ring-primary/50 ring-2 ring-inset' : ''
         }`}
       >
-        <div>
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <div className="min-w-0">
-              <h3 className="font-display text-base font-bold sm:text-lg">{tpl.name}</h3>
-              {tpl.description && (
-                <p className="text-muted-foreground mt-0.5 text-xs">{tpl.description}</p>
-              )}
-            </div>
-            <Badge variant="secondary" className="tabular-nums shrink-0 px-2.5 py-1 text-xs">
-              {tpl.exercises.length} ex • ~{tpl.estimatedDurationMinutes ?? 60}m
-            </Badge>
-          </div>
+        <SwipeRow
+          disabled={isEditMode}
+          leadingActions={[
+            {
+              id: 'edit',
+              label: t.common.edit,
+              icon: Pencil,
+              tone: 'neutral',
+              onSelect: () => openEditTemplateBuilder(tpl),
+            },
+            {
+              id: 'duplicate',
+              label: t.workouts.duplicateBtn,
+              icon: Copy,
+              tone: 'accent',
+              onSelect: () => void handleDuplicateTemplate(tpl),
+            },
+          ]}
+          trailingActions={[
+            {
+              id: 'delete',
+              label: t.common.delete,
+              icon: Trash2,
+              tone: 'destructive',
+              onSelect: () => setConfirmDelete({ type: 'template', id: tpl.id, name: tpl.name }),
+            },
+          ]}
+        >
+          <div className="flex min-h-[60px] items-center gap-2 py-2 pr-3 pl-4">
+            {isEditMode && (
+              <button
+                type="button"
+                data-testid="template-action-delete"
+                aria-label={`Delete workout ${tpl.name}`}
+                onClick={() => setConfirmDelete({ type: 'template', id: tpl.id, name: tpl.name })}
+                className="text-destructive -ml-1 flex size-9 shrink-0 items-center justify-center"
+              >
+                <MinusCircle className="h-[22px] w-[22px] fill-current stroke-white" />
+              </button>
+            )}
 
-          {/* Session Telemetry Strip: Total Completed & Last Session Date */}
-          <div className="bg-secondary/40 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs">
-            <span className="flex items-center gap-1.5 font-semibold">
-              <History className="text-primary h-3.5 w-3.5 shrink-0" />
-              {t.workouts.totalLabel}{' '}
-              <strong className="tabular-nums text-primary">
-                {tplStats.totalCount}{' '}
-                {tplStats.totalCount === 1 ? t.common.session : t.common.sessions}
-              </strong>
-            </span>
-            <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
-              <Calendar className="h-3.5 w-3.5 shrink-0" />
-              {t.workouts.lastLabel}{' '}
-              <strong className="tabular-nums text-foreground">
-                {tplStats.lastSessionDate
-                  ? formatDateTime(tplStats.lastSessionDate)
-                  : t.workouts.neverTrained}
-              </strong>
-            </span>
-          </div>
+            <button
+              type="button"
+              data-testid="template-details-toggle"
+              aria-expanded={isExpanded}
+              onClick={() => toggleTemplateExpanded(tpl.id)}
+              className="min-w-0 flex-1 py-1 text-left"
+            >
+              <h3 className="truncate text-[17px] leading-snug font-medium">{tpl.name}</h3>
+              <p className="text-muted-foreground truncate text-[13px] tabular-nums">{metaLine}</p>
+            </button>
 
-          {/* Ordered Exercise List Preview (Gymlife-style Rows & Superset Containers) */}
-          <div className="mt-3.5 space-y-2.5">
+            {isEditMode ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                data-testid="template-action-edit"
+                aria-label={`${t.common.edit} ${tpl.name}`}
+                onClick={() => openEditTemplateBuilder(tpl)}
+                className="text-primary size-10 shrink-0"
+              >
+                <Pencil className="h-[18px] w-[18px]" />
+              </Button>
+            ) : (
+              <>
+                <DropdownMenu
+                  open={openMenuTemplateId === tpl.id}
+                  onOpenChange={(open) => setOpenMenuTemplateId(open ? tpl.id : null)}
+                >
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      // Touch: open on tap (click) instead of pointerdown, so starting a swipe on
+                      // this button doesn't pop the menu open.
+                      onPointerDown={(e) => {
+                        lastMenuPointerType.current = e.pointerType;
+                        if (e.pointerType !== 'mouse') e.preventDefault();
+                      }}
+                      onClick={(e) => {
+                        if (e.detail > 0 && lastMenuPointerType.current !== 'mouse') {
+                          setOpenMenuTemplateId((prev) => (prev === tpl.id ? null : tpl.id));
+                        }
+                      }}
+                      data-testid="template-action-menu"
+                      aria-label={format(t.workouts.moreActionsLabel, { name: tpl.name })}
+                      className="text-muted-foreground size-10 shrink-0"
+                    >
+                      <MoreHorizontal className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem
+                      data-testid="template-action-edit"
+                      onSelect={() => openEditTemplateBuilder(tpl)}
+                    >
+                      <Pencil /> {t.common.edit}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      data-testid="template-action-duplicate"
+                      onSelect={() => void handleDuplicateTemplate(tpl)}
+                    >
+                      <Copy /> {t.workouts.duplicateBtn}
+                    </DropdownMenuItem>
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger data-testid="template-action-move">
+                        <FolderInput /> {t.workouts.moveToBtn}
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        <DropdownMenuRadioGroup
+                          value={tpl.folderId ?? ''}
+                          onValueChange={(value) => {
+                            const target = value || null;
+                            void moveTemplate(tpl.id, target);
+                            expandFolder(folderKey(target));
+                          }}
+                        >
+                          <DropdownMenuRadioItem value="">
+                            {t.workouts.unfiledOption}
+                          </DropdownMenuRadioItem>
+                          {folders.map((f) => (
+                            <DropdownMenuRadioItem key={f.id} value={f.id}>
+                              {f.name}
+                            </DropdownMenuRadioItem>
+                          ))}
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      variant="destructive"
+                      data-testid="template-action-delete"
+                      onSelect={() =>
+                        setConfirmDelete({ type: 'template', id: tpl.id, name: tpl.name })
+                      }
+                    >
+                      <Trash2 /> {t.common.delete}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <Button
+                  type="button"
+                  size="icon"
+                  data-testid="template-action-start"
+                  aria-label={format(t.workouts.startWorkoutAria, { name: tpl.name })}
+                  onClick={() => void startWorkout()}
+                  className="size-10 shrink-0"
+                >
+                  <Play className="h-4 w-4 translate-x-px fill-current" />
+                </Button>
+              </>
+            )}
+          </div>
+        </SwipeRow>
+
+        {isExpanded && (
+          <div className="animate-in fade-in slide-in-from-top-1 space-y-2.5 px-4 pb-4 duration-200">
+            {tpl.description && (
+              <p className="text-muted-foreground text-[15px]">{tpl.description}</p>
+            )}
             {blocks.map((block) => {
               if (block.type === 'superset') {
                 return (
                   <div
                     key={`superset-${block.startIndex}`}
                     data-testid="superset-block-card"
-                    className="border-accent/40 bg-card overflow-hidden rounded-2xl border"
+                    className="bg-secondary/60 overflow-hidden rounded-2xl"
                   >
                     {/* Gymlife Dark Superset Header Banner */}
-                    <div className="flex items-center justify-between gap-2 border-b border-border bg-secondary px-3.5 py-2.5 text-foreground">
+                    <div className="text-foreground flex items-center justify-between gap-2 px-3.5 pt-3 pb-1">
                       <div>
                         <div className="flex items-center gap-1.5 text-xs font-semibold">
                           <span className="text-accent">{t.workouts.supersetHeaderLabel}</span>
@@ -447,13 +602,11 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                           })}
                         </p>
                       </div>
-                      <Badge variant="accent" className="px-2 py-0.5 text-xs font-bold">
-                        <Zap className="h-2.5 w-2.5" /> {block.items.length} ex
-                      </Badge>
+                      <Zap aria-hidden="true" className="text-primary h-4 w-4 shrink-0" />
                     </div>
 
                     {/* Grouped Superset Exercise Rows */}
-                    <div className="divide-border/60 divide-y">
+                    <div className="divide-border/60 divide-y px-1 pb-1">
                       {block.items.map(({ item: ex, globalIndex, stepNumber }) => {
                         const exObj = ex.exercise ?? catalog.find((c) => c.id === ex.exerciseId);
                         const altNames = (ex.alternativeExerciseIds ?? [])
@@ -463,7 +616,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                         return (
                           <div
                             key={ex.id ?? globalIndex}
-                            className="bg-secondary/25 flex items-center justify-between gap-2.5 px-3 py-2.5 text-xs"
+                            className="flex items-center justify-between gap-2.5 px-2.5 py-2.5"
                           >
                             <div className="flex min-w-0 items-center gap-2.5">
                               <div className="relative shrink-0">
@@ -483,19 +636,17 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                               </div>
 
                               <div className="min-w-0 space-y-1">
+                                <p className="truncate text-[15px] font-medium">
+                                  {exObj?.name ?? 'Exercise'}
+                                </p>
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className="truncate font-semibold">
-                                    {exObj?.name ?? 'Exercise'}
-                                  </span>
-                                  {exObj && (
-                                    <span className="text-muted-foreground text-xs">
-                                      ({muscleLabel(exObj.primaryMuscleGroup)})
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className="bg-accent/20 text-accent tabular-nums inline-flex items-center rounded-lg px-2 py-0.5 text-xs font-semibold">
-                                    {formatTargetPillText(ex)}
+                                  <span className="text-muted-foreground text-[13px] tabular-nums">
+                                    {[
+                                      exObj ? muscleLabel(exObj.primaryMuscleGroup) : null,
+                                      formatTargetPillText(ex),
+                                    ]
+                                      .filter(Boolean)
+                                      .join(' · ')}
                                   </span>
                                   {altNames.length > 0 && (
                                     <Badge
@@ -532,7 +683,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               return (
                 <div
                   key={ex.id ?? globalIndex}
-                  className="bg-secondary/50 flex items-center justify-between gap-2.5 rounded-xl px-3 py-2.5 text-xs"
+                  className="flex items-center justify-between gap-3 py-1.5"
                 >
                   <div className="flex min-w-0 items-center gap-2.5">
                     {exObj && (
@@ -542,43 +693,35 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                         className="h-10 w-12 shrink-0"
                       />
                     )}
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-primary tabular-nums font-bold">
-                          {globalIndex + 1}.
+                    <div className="min-w-0">
+                      <p className="truncate text-[15px] font-medium">
+                        <span className="text-muted-foreground tabular-nums">
+                          {globalIndex + 1}.{' '}
                         </span>
-                        <span className="truncate font-semibold">{exObj?.name ?? 'Exercise'}</span>
-                        {exObj && (
-                          <span className="text-muted-foreground text-xs">
-                            ({muscleLabel(exObj.primaryMuscleGroup)})
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="bg-accent/20 text-accent tabular-nums inline-flex items-center rounded-lg px-2 py-0.5 text-xs font-semibold">
-                          {formatTargetPillText(ex)}
-                        </span>
-                        {altNames.length > 0 && (
-                          <Badge
-                            variant="default"
-                            title={format(t.workouts.backupsTitle, { names: altNames.join(', ') })}
-                            className="px-1.5 py-0.5 text-xs"
-                          >
-                            <ArrowRightLeft className="h-2.5 w-2.5" />
-                            {altNames.length}{' '}
-                            {altNames.length > 1
-                              ? t.workouts.backupPlural
-                              : t.workouts.backupSingular}
-                          </Badge>
-                        )}
-                      </div>
+                        {exObj?.name ?? 'Exercise'}
+                      </p>
+                      <p className="text-muted-foreground truncate text-[13px] tabular-nums">
+                        {[
+                          exObj ? muscleLabel(exObj.primaryMuscleGroup) : null,
+                          formatTargetPillText(ex),
+                          `${ex.restSeconds} ${t.common.sec}`,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </p>
+                      {altNames.length > 0 && (
+                        <p
+                          className="text-muted-foreground flex items-center gap-1 text-[13px]"
+                          title={format(t.workouts.backupsTitle, { names: altNames.join(', ') })}
+                        >
+                          <ArrowRightLeft className="h-3 w-3" />
+                          {altNames.length}{' '}
+                          {altNames.length > 1
+                            ? t.workouts.backupPlural
+                            : t.workouts.backupSingular}
+                        </p>
+                      )}
                     </div>
-                  </div>
-
-                  <div className="flex shrink-0 flex-col items-end gap-1">
-                    <span className="bg-secondary text-foreground tabular-nums rounded-lg border px-2 py-0.5 text-xs font-bold">
-                      {ex.restSeconds} {t.common.sec}
-                    </span>
                   </div>
                 </div>
               );
@@ -599,304 +742,233 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               </div>
             )}
           </div>
-        </div>
+        )}
+      </div>
+    );
+  };
 
-        {/* Template Actions */}
-        <div className="mt-5 flex flex-col gap-2.5 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-1.5">
+  const renderFolderGroup = (options: {
+    key: string;
+    folder: WorkoutFolderDto | null;
+    index: number;
+    templates: WorkoutTemplateDto[];
+  }) => {
+    const { key, folder, index, templates } = options;
+    const isExpanded = Boolean(expandedFolders[key]);
+    const name = folder?.name ?? t.workouts.unfiledWorkoutsTitle;
+
+    const header = (
+      <div className="flex min-h-[60px] items-center gap-2 py-2 pr-3 pl-4">
+        {isEditMode && folder && (
+          <button
+            type="button"
+            aria-label={`Delete folder ${folder.name}`}
+            onClick={() => setConfirmDelete({ type: 'folder', id: folder.id, name: folder.name })}
+            className="text-destructive -ml-1 flex size-9 shrink-0 items-center justify-center"
+          >
+            <MinusCircle className="h-[22px] w-[22px] fill-current stroke-white" />
+          </button>
+        )}
+
+        <button
+          type="button"
+          aria-expanded={isExpanded}
+          aria-label={`${isExpanded ? 'Collapse' : 'Expand'} folder ${name}`}
+          onClick={() => toggleFolderExpanded(key)}
+          className="flex min-w-0 flex-1 items-center gap-3 py-1 text-left"
+        >
+          {folder ? (
+            <span
+              aria-hidden="true"
+              className="size-3 shrink-0 rounded-full"
+              style={{ backgroundColor: resolveFolderColor(folder.color) }}
+            />
+          ) : (
+            <Inbox className="text-muted-foreground h-4 w-4 shrink-0" />
+          )}
+          <h2 className="min-w-0 flex-1 truncate text-[17px] font-semibold">{name}</h2>
+          {!isEditMode && (
+            <span className="text-muted-foreground shrink-0 text-[15px] tabular-nums">
+              {templates.length}
+            </span>
+          )}
+          <ChevronRight
+            aria-hidden="true"
+            className={`text-muted-foreground h-4 w-4 shrink-0 transition-transform duration-200 ${
+              isExpanded ? 'rotate-90' : ''
+            } ${isEditMode ? 'hidden' : ''}`}
+          />
+        </button>
+
+        {isEditMode && folder && (
+          <div className="flex shrink-0 items-center">
             <Button
               type="button"
-              data-testid="template-action-edit"
-              variant="secondary"
-              size="sm"
-              onClick={() => openEditTemplateBuilder(tpl)}
-            >
-              <Edit3 className="h-3.5 w-3.5" /> {t.workouts.editBtn}
-            </Button>
-            <Button
-              type="button"
-              data-testid="template-action-duplicate"
-              variant="secondary"
-              size="sm"
-              onClick={() => void handleDuplicateTemplate(tpl)}
-              title={t.workouts.duplicateTitle}
-            >
-              <Copy className="h-3.5 w-3.5" /> {t.workouts.duplicateBtn}
-            </Button>
-            <NativeSelect
-              data-testid="template-action-move"
-              aria-label={`Move ${tpl.name} to folder`}
-              value={tpl.folderId ?? ''}
-              onChange={(e) => void moveTemplate(tpl.id, e.target.value || null)}
-              className="bg-secondary h-8 max-w-[165px] truncate text-xs"
-            >
-              <option value="">{t.workouts.unfiledOption}</option>
-              {folders.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {format(t.workouts.folderPrefix, { name: f.name })}
-                </option>
-              ))}
-            </NativeSelect>
-            <Button
-              type="button"
-              data-testid="template-action-delete"
               variant="ghost"
               size="icon"
-              aria-label={`Delete workout ${tpl.name}`}
-              onClick={() => setConfirmDelete({ type: 'template', id: tpl.id, name: tpl.name })}
-              className="text-muted-foreground hover:text-destructive size-8"
+              disabled={index === 0}
+              onClick={() => void reorderFolder(folder.id, 'UP')}
+              aria-label={`Move folder ${folder.name} up`}
+              className="size-9"
             >
-              <Trash2 className="h-4 w-4" />
+              <ArrowUp className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              disabled={index === folders.length - 1}
+              onClick={() => void reorderFolder(folder.id, 'DOWN')}
+              aria-label={`Move folder ${folder.name} down`}
+              className="size-9"
+            >
+              <ArrowDown className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              data-testid={`folder-rename-${folder.name}`}
+              aria-label={`${t.workouts.renameBtn} ${folder.name}`}
+              onClick={() => openFolderModal(folder)}
+              className="text-primary size-9"
+            >
+              <Pencil className="h-4 w-4" />
             </Button>
           </div>
+        )}
+      </div>
+    );
 
-          <Button
-            type="button"
-            data-testid="template-action-start"
-            onClick={async () => {
-              await startWorkoutFromTemplate(tpl.id);
-              onStartSessionNavigation();
-            }}
-            className="w-full sm:w-auto"
+    return (
+      <section key={key} className="bg-card overflow-hidden rounded-[1.25rem]">
+        {folder ? (
+          <SwipeRow
+            disabled={isEditMode}
+            leadingActions={[
+              {
+                id: 'rename',
+                label: t.workouts.renameBtn,
+                icon: Pencil,
+                tone: 'neutral',
+                onSelect: () => openFolderModal(folder),
+              },
+              {
+                id: 'add',
+                label: t.workouts.addWorkoutShort,
+                icon: Plus,
+                tone: 'accent',
+                onSelect: () => openNewTemplateBuilder(folder.id),
+              },
+            ]}
+            trailingActions={[
+              {
+                id: 'delete',
+                label: t.common.delete,
+                icon: Trash2,
+                tone: 'destructive',
+                onSelect: () =>
+                  setConfirmDelete({ type: 'folder', id: folder.id, name: folder.name }),
+              },
+            ]}
           >
-            <Play className="h-3.5 w-3.5 fill-current" />
-            {t.workouts.startSessionBtn}
-          </Button>
-        </div>
-      </Card>
+            {header}
+          </SwipeRow>
+        ) : (
+          header
+        )}
+
+        {isExpanded &&
+          (templates.length === 0 ? (
+            <p className="border-border/70 text-muted-foreground border-t px-4 py-4 text-[15px]">
+              {t.workouts.emptyFolderText}
+            </p>
+          ) : (
+            templates.map(renderTemplateRow)
+          ))}
+
+        {isExpanded && isEditMode && folder && (
+          <button
+            type="button"
+            onClick={() => openNewTemplateBuilder(folder.id)}
+            className="border-border/70 text-primary flex min-h-[52px] w-full items-center gap-3 border-t px-4 text-left text-[17px]"
+          >
+            <PlusCircle className="h-[22px] w-[22px]" />
+            {t.workouts.addWorkoutShort}
+          </button>
+        )}
+      </section>
     );
   };
 
   return (
-    <div className="min-w-0 max-w-full space-y-6 pb-10">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-            {t.workouts.title}
-          </h1>
-          <p className="text-muted-foreground text-xs sm:text-sm">{t.workouts.subtitle}</p>
+    <div className="mx-auto max-w-2xl min-w-0 space-y-6 pb-10">
+      <header className="flex items-end justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <h1 className="text-[34px] leading-tight font-bold">{t.workouts.title}</h1>
+          <p className="text-muted-foreground text-[15px]">{t.workouts.subtitle}</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {allFolderIds.length > 1 && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={toggleAllFolders}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              {areAllCollapsed ? (
-                <>
-                  <ChevronsUpDown className="h-4 w-4" />
-                  {t.workouts.expandAll}
-                </>
-              ) : (
-                <>
-                  <ChevronsDownUp className="h-4 w-4" />
-                  {t.workouts.collapseAll}
-                </>
-              )}
-            </Button>
-          )}
+        <div className="flex shrink-0 items-center gap-1">
           <Button
             type="button"
-            variant="secondary"
+            variant="ghost"
             size="sm"
-            onClick={() => {
-              setEditingFolderId(null);
-              setFolderName('');
-              setFolderColor('#CCFF00');
-              setShowFolderModal(true);
-            }}
+            data-testid="workouts-edit-toggle"
+            onClick={() => setIsEditMode((v) => !v)}
+            className="text-primary text-[17px] font-medium"
           >
-            <FolderPlus className="h-4 w-4" />
-            {t.workouts.newFolder}
+            {isEditMode ? t.common.done : t.workouts.editListBtn}
           </Button>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => openNewTemplateBuilder(folders[0]?.id ?? null)}
-          >
-            <Plus className="h-4 w-4" />
-            {t.workouts.newWorkout}
-          </Button>
-        </div>
-      </div>
-
-      {/* Folders Section */}
-      {folders.map((folder, folderIdx) => {
-        const isCollapsed = Boolean(collapsedFolders[folder.id]);
-        const folderStats = getFolderSessionStats(folder);
-        return (
-          <Collapsible
-            key={folder.id}
-            open={!isCollapsed}
-            onOpenChange={() => toggleFolderCollapsed(folder.id)}
-            className="min-w-0 space-y-3"
-          >
-            {/* Mobile-First Folder Header: Full-width Title on Top, Controls & Reorder Below on Mobile */}
-            <div className="bg-card/60 flex flex-col gap-2.5 rounded-2xl border p-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-4 sm:py-3">
-              <CollapsibleTrigger asChild>
-                <button
-                  type="button"
-                  aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} folder ${folder.name}`}
-                  className="hover:text-primary flex w-full min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-left transition"
-                >
-                  {isCollapsed ? (
-                    <ChevronRight className="text-muted-foreground h-4 w-4 shrink-0" />
-                  ) : (
-                    <ChevronDown className="text-muted-foreground h-4 w-4 shrink-0" />
-                  )}
-                  <span
-                    className="h-3.5 w-3.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: folder.color || '#CCFF00' }}
-                  />
-                  <Folder className="text-primary h-5 w-5 shrink-0" />
-                  <h2 className="font-display min-w-0 flex-1 truncate text-base font-semibold tracking-tight sm:text-lg">
-                    {folder.name}
-                  </h2>
-                  <Badge
-                    variant="secondary"
-                    className="shrink-0 rounded-full px-2.5 py-0.5 text-xs"
-                  >
-                    {folder.templates.length}{' '}
-                    {folder.templates.length === 1 ? t.common.workout : t.common.workouts}
-                  </Badge>
-                </button>
-              </CollapsibleTrigger>
-
-              {/* Folder Telemetry + Reorder & Edit Controls */}
-              <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-2 sm:justify-end sm:border-t-0 sm:pt-0">
-                <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
-                  <span className="tabular-nums font-semibold">
-                    {format(t.workouts.totalSessionsCount, { count: folderStats.totalCount })}
-                  </span>
-                  <span>•</span>
-                  <span>
-                    {t.workouts.lastLabel}{' '}
-                    <strong className="tabular-nums text-foreground">
-                      {folderStats.lastSessionDate ? formatDate(folderStats.lastSessionDate) : '—'}
-                    </strong>
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    disabled={folderIdx === 0}
-                    onClick={() => void reorderFolder(folder.id, 'UP')}
-                    aria-label={`Move folder ${folder.name} up`}
-                    title={t.workouts.moveUpTitle}
-                    className="size-7 rounded-lg"
-                  >
-                    <ArrowUp className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    disabled={folderIdx === folders.length - 1}
-                    onClick={() => void reorderFolder(folder.id, 'DOWN')}
-                    aria-label={`Move folder ${folder.name} down`}
-                    title={t.workouts.moveDownTitle}
-                    className="size-7 rounded-lg"
-                  >
-                    <ArrowDown className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="xs"
-                    onClick={() => openNewTemplateBuilder(folder.id)}
-                    className="text-primary hover:bg-primary/10 font-semibold"
-                  >
-                    {t.workouts.addWorkoutShort}
-                  </Button>
-                  <Button
-                    type="button"
-                    data-testid={`folder-rename-${folder.name}`}
-                    variant="ghost"
-                    size="xs"
-                    onClick={() => {
-                      setEditingFolderId(folder.id);
-                      setFolderName(folder.name);
-                      setFolderColor(folder.color);
-                      setShowFolderModal(true);
-                    }}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    {t.workouts.renameBtn}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label={`Delete folder ${folder.name}`}
-                    onClick={() =>
-                      setConfirmDelete({ type: 'folder', id: folder.id, name: folder.name })
-                    }
-                    className="text-muted-foreground hover:text-destructive size-7"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <CollapsibleContent>
-              {folder.templates.length === 0 ? (
-                <Card className="bg-card/50 text-muted-foreground border-dashed p-6 text-center text-xs">
-                  {t.workouts.emptyFolderText}
-                </Card>
-              ) : (
-                <div className="grid gap-4 lg:grid-cols-2">
-                  {folder.templates.map(renderTemplateCard)}
-                </div>
-              )}
-            </CollapsibleContent>
-          </Collapsible>
-        );
-      })}
-
-      {/* Unfiled Workouts Section */}
-      {unfiledTemplates.length > 0 && (
-        <Collapsible
-          open={!collapsedFolders['__unfiled__']}
-          onOpenChange={() => toggleFolderCollapsed('__unfiled__')}
-          className="space-y-3"
-        >
-          <div className="flex items-center justify-between border-b pb-2.5">
-            <CollapsibleTrigger asChild>
-              <button
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
                 type="button"
-                className="hover:text-primary flex cursor-pointer items-center gap-2 text-left transition"
+                size="icon"
+                variant="secondary"
+                aria-label={t.workouts.addMenuLabel}
+                data-testid="workouts-add-menu"
+                className="text-primary size-10"
               >
-                {collapsedFolders['__unfiled__'] ? (
-                  <ChevronRight className="text-muted-foreground h-4 w-4 shrink-0" />
-                ) : (
-                  <ChevronDown className="text-muted-foreground h-4 w-4 shrink-0" />
-                )}
-                <Dumbbell className="text-muted-foreground h-5 w-5" />
-                <h2 className="font-display text-lg font-bold">
-                  {t.workouts.unfiledWorkoutsTitle}
-                </h2>
-                <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 text-xs">
-                  {unfiledTemplates.length}
-                </Badge>
-              </button>
-            </CollapsibleTrigger>
-          </div>
-          <CollapsibleContent>
-            <div className="grid gap-4 lg:grid-cols-2">
-              {unfiledTemplates.map(renderTemplateCard)}
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
+                <Plus className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onSelect={() => openNewTemplateBuilder(folders[0]?.id ?? null)}>
+                <Dumbbell /> {t.workouts.newWorkout}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => openFolderModal()}>
+                <FolderPlus /> {t.workouts.newFolder}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </header>
+
+      {allFolderIds.length > 1 && !isEditMode && (
+        <div className="-mt-2 flex justify-end">
+          <button
+            type="button"
+            onClick={toggleAllFolders}
+            className="text-primary text-[15px] font-medium"
+          >
+            {areAllExpanded ? t.workouts.collapseAll : t.workouts.expandAll}
+          </button>
+        </div>
       )}
+
+      <div className="space-y-4">
+        {folders.map((folder, index) =>
+          renderFolderGroup({ key: folder.id, folder, index, templates: folder.templates }),
+        )}
+        {unfiledTemplates.length > 0 &&
+          renderFolderGroup({
+            key: UNFILED_KEY,
+            folder: null,
+            index: folders.length,
+            templates: unfiledTemplates,
+          })}
+      </div>
 
       {/* Folder Create/Rename Modal */}
       <Dialog open={showFolderModal} onOpenChange={setShowFolderModal}>
@@ -925,7 +997,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">{t.workouts.accentColorLabel}</Label>
               <div className="flex gap-2">
-                {['#CCFF00', '#00E5FF', '#FF6B00', '#A855F7', '#22C55E'].map((c) => (
+                {FOLDER_COLOR_PALETTE.map(({ hex: c }) => (
                   <button
                     key={c}
                     type="button"

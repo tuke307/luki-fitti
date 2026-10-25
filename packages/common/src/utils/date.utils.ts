@@ -163,3 +163,23 @@ export function extractTime(isoString?: string | null | undefined): string {
     return '';
   }
 }
+
+/**
+ * Returns local midnight of the Monday that starts the calendar week containing `dateInput`
+ * (ISO 8601 weeks run Monday–Sunday).
+ */
+export function startOfIsoWeek(dateInput: Date | string | number): Date {
+  const d = toDate(dateInput);
+  const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  return monday;
+}
+
+/** Returns the seven local-midnight dates (Monday → Sunday) of the week containing `dateInput`. */
+export function isoWeekDays(dateInput: Date | string | number): Date[] {
+  const monday = startOfIsoWeek(dateInput);
+  return Array.from(
+    { length: 7 },
+    (_, i) => new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i),
+  );
+}
