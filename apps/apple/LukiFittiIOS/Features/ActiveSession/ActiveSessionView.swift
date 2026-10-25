@@ -35,7 +35,7 @@ public struct ActiveSessionView: View {
                     .padding(.bottom, 6)
             }
         }
-        .background(LukiColors.darkBackground)
+        .background(LukiColors.groupedBackground)
         .onReceive(Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()) { tick in
             nowTick = tick
         }
@@ -60,10 +60,10 @@ public struct ActiveSessionView: View {
         VStack(spacing: 14) {
             Image(systemName: "trophy.fill")
                 .font(.system(size: 38))
-                .foregroundStyle(LukiColors.neonLime)
+                .foregroundStyle(LukiColors.accent)
             Text("Session Saved & Queued for Sync")
-                .font(.caption.bold())
-                .foregroundStyle(LukiColors.neonLime)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(LukiColors.accent)
             Text("\(session.workoutNameSnapshot) Complete!")
                 .font(.title2.bold())
                 .foregroundStyle(.primary)
@@ -88,20 +88,20 @@ public struct ActiveSessionView: View {
                     .foregroundStyle(LukiColors.accentForeground)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(LukiColors.neonLime))
+                    .background(RoundedRectangle(cornerRadius: 12).fill(LukiColors.accent))
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("ios.session.viewInDiaryButton")
         }
         .padding(20)
-        .background(RoundedRectangle(cornerRadius: 20).fill(LukiColors.darkCard))
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("ios.session.trophyCard")
     }
 
     private func statPill(label: String, value: String) -> some View {
         VStack(spacing: 2) {
-            Text(label).font(.caption2).foregroundStyle(.secondary)
+            Text(label).font(.footnote).foregroundStyle(.secondary)
             Text(value).font(.subheadline.bold().monospacedDigit()).foregroundStyle(.primary)
         }
         .padding(.horizontal, 12)
@@ -119,11 +119,11 @@ public struct ActiveSessionView: View {
         return VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(session.status == .PAUSED ? "PAUSED" : "LIVE SESSION")
-                    .font(.caption2.bold())
+                    .font(.footnote.weight(.medium))
                     .foregroundStyle(LukiColors.accentForeground)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(Capsule().fill(session.status == .PAUSED ? LukiColors.calorieAmber : LukiColors.neonLime))
+                    .background(Capsule().fill(session.status == .PAUSED ? LukiColors.calorieAmber : LukiColors.accent))
 
                 Spacer()
 
@@ -152,7 +152,7 @@ public struct ActiveSessionView: View {
                 Button(session.status == .PAUSED ? "Resume" : "Pause") {
                     viewModel.togglePauseActiveSession()
                 }
-                .font(.caption.bold())
+                .font(.subheadline.weight(.semibold))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(Capsule().fill(LukiColors.fill))
@@ -164,14 +164,14 @@ public struct ActiveSessionView: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 Text("\(Int(session.totalVolumeKg)) kg vol")
-                    .font(.caption2.bold().monospacedDigit())
-                    .foregroundStyle(LukiColors.neonLime)
+                    .font(.footnote.monospacedDigit())
+                    .foregroundStyle(LukiColors.accent)
             }
             ProgressView(value: pct)
-                .tint(LukiColors.neonLime)
+                .tint(LukiColors.accent)
         }
         .padding(14)
-        .background(RoundedRectangle(cornerRadius: 16).fill(LukiColors.darkCard))
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
     }
 
     // MARK: - Persistent Rest Timer Card (Matches Web App `active-session-view.tsx`)
@@ -194,13 +194,13 @@ public struct ActiveSessionView: View {
                         .frame(width: 38, height: 38)
                         .background(
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(isActive ? LukiColors.neonLime : LukiColors.fill)
+                                .fill(isActive ? LukiColors.accent : LukiColors.fill)
                         )
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text(statusTitle)
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(isActive ? LukiColors.neonLime : .secondary)
+                            .font(.footnote)
+                            .foregroundStyle(isActive ? LukiColors.accent : .secondary)
 
                         HStack(alignment: .firstTextBaseline, spacing: 4) {
                             Text(formatTimer(rest.remainingSeconds))
@@ -224,7 +224,7 @@ public struct ActiveSessionView: View {
                             viewModel.startRestTimer(durationSeconds: sec)
                         } label: {
                             Text(label)
-                                .font(.caption2.bold().monospacedDigit())
+                                .font(.footnote.monospacedDigit())
                                 .padding(.horizontal, 9)
                                 .padding(.vertical, 6)
                                 .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
@@ -238,7 +238,7 @@ public struct ActiveSessionView: View {
             if isActive {
                 if rest.totalSeconds > 0 {
                     ProgressView(value: Double(rest.remainingSeconds), total: Double(max(1, rest.totalSeconds)))
-                        .tint(LukiColors.neonLime)
+                        .tint(LukiColors.accent)
                 }
 
                 HStack(spacing: 8) {
@@ -270,7 +270,7 @@ public struct ActiveSessionView: View {
                         viewModel.togglePauseRestTimer()
                     } label: {
                         Text(rest.isPaused ? "Resume" : "Pause")
-                            .font(.caption.bold())
+                            .font(.subheadline.weight(.semibold))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 7)
                             .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
@@ -284,7 +284,7 @@ public struct ActiveSessionView: View {
                         viewModel.skipRestTimer()
                     } label: {
                         Text("Skip Rest")
-                            .font(.caption.bold())
+                            .font(.subheadline.weight(.semibold))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 7)
                             .background(RoundedRectangle(cornerRadius: 8).fill(Color.red.opacity(0.22)))
@@ -296,11 +296,11 @@ public struct ActiveSessionView: View {
         }
         .padding(14)
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(isActive ? LukiColors.neonLime.opacity(0.12) : LukiColors.darkCard)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(isActive ? LukiColors.accent.opacity(0.12) : LukiColors.cardBackground)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(isActive ? LukiColors.neonLime.opacity(0.45) : Color.clear, lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(isActive ? LukiColors.accent.opacity(0.45) : Color.clear, lineWidth: 1)
                 )
         )
     }
@@ -323,15 +323,15 @@ public struct ActiveSessionView: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
                                 HStack(spacing: 4) {
-                                    Text("SUPERSET")
-                                        .font(.caption.weight(.heavy))
-                                        .foregroundStyle(LukiColors.electricCyan)
+                                    Text("Superset")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(LukiColors.accent)
                                     Text("× \(block.rounds) ROUNDS")
                                         .font(.caption.weight(.heavy).monospacedDigit())
                                         .foregroundStyle(.primary)
                                 }
                                 Text("Rest 0 s between exercises · \(ProgressionEngine.formatRestDurationMinSec(block.roundRestSeconds)) between rounds")
-                                    .font(.system(size: 10, weight: .semibold))
+                                    .font(.footnote)
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
@@ -358,10 +358,10 @@ public struct ActiveSessionView: View {
                         }
                         .padding(10)
                     }
-                    .background(RoundedRectangle(cornerRadius: 18).fill(LukiColors.darkCard.opacity(0.85)))
+                    .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground.opacity(0.85)))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 18)
-                            .stroke(LukiColors.electricCyan.opacity(0.45), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(LukiColors.accent.opacity(0.45), lineWidth: 1)
                     )
                 } else if let firstItem = block.items.first {
                     if firstItem.globalIndex == safeIdx {
@@ -395,11 +395,11 @@ public struct ActiveSessionView: View {
                         .font(.subheadline.bold())
                         .foregroundStyle(.primary)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("SMART SUGGESTION • \(suggestion.suggestedExercise.name)")
-                            .font(.caption.weight(.heavy))
+                        Text("Suggestion · \(suggestion.suggestedExercise.name)")
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.primary)
                         Text(suggestion.reasonText)
-                            .font(.caption2)
+                            .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -410,7 +410,7 @@ public struct ActiveSessionView: View {
                         }
                     } label: {
                         Text("+ Add")
-                            .font(.caption.bold())
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(LukiColors.accentForeground)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
@@ -420,28 +420,14 @@ public struct ActiveSessionView: View {
                 }
                 .padding(12)
                 .background(
-                    RoundedRectangle(cornerRadius: 14)
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
                         .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color.pink.opacity(0.28),
-                                    Color.orange.opacity(0.22),
-                                    Color.green.opacity(0.22),
-                                    Color.cyan.opacity(0.25),
-                                    Color.purple.opacity(0.28)
-                                ],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
+                            LukiColors.cardBackground
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 14)
+                            RoundedRectangle(cornerRadius: 22, style: .continuous)
                                 .stroke(
-                                    LinearGradient(
-                                        colors: [.pink, .orange, .yellow, .green, .cyan, .purple],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    ),
+                                    LukiColors.separator,
                                     lineWidth: 1.5
                                 )
                         )
@@ -453,11 +439,11 @@ public struct ActiveSessionView: View {
                 showingAddExerciseSheet = true
             } label: {
                 Label("Add Exercise", systemImage: "plus")
-                    .font(.caption.bold())
+                    .font(.subheadline.weight(.semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(LukiColors.darkCard))
-                    .foregroundStyle(LukiColors.neonLime)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(LukiColors.cardBackground))
+                    .foregroundStyle(LukiColors.accent)
             }
             .buttonStyle(.plain)
         }
@@ -480,7 +466,7 @@ public struct ActiveSessionView: View {
                     .frame(width: 26, height: 26)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(isCompleted ? LukiColors.neonLime : LukiColors.fill)
+                            .fill(isCompleted ? LukiColors.accent : LukiColors.fill)
                     )
                 VStack(alignment: .leading, spacing: 2) {
                     Text(exercise.exerciseNameSnapshot)
@@ -489,20 +475,20 @@ public struct ActiveSessionView: View {
                         .lineLimit(1)
                     Text("\(exercise.plannedSets)×\(exercise.targetRepsMin ?? 8)-\(exercise.targetRepsMax ?? 12) reps")
                         .font(.caption2.monospacedDigit())
-                        .foregroundStyle(LukiColors.electricCyan)
+                        .foregroundStyle(LukiColors.accent)
                 }
                 Spacer()
                 Text("\(doneCount)/\(exercise.sets.count) sets")
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.footnote)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(Capsule().fill(Color.black.opacity(0.3)))
-                    .foregroundStyle(isCompleted ? LukiColors.neonLime : .secondary)
+                    .foregroundStyle(isCompleted ? LukiColors.accent : .secondary)
             }
             .padding(12)
             .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(isCompleted ? LukiColors.neonLime.opacity(0.12) : LukiColors.darkCard)
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(isCompleted ? LukiColors.accent.opacity(0.12) : LukiColors.cardBackground)
             )
         }
         .buttonStyle(.plain)
@@ -535,7 +521,7 @@ public struct ActiveSessionView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(exercise.exerciseNameSnapshot)
-                        .font(.headline.bold())
+                        .font(.headline)
                         .foregroundStyle(.primary)
                     Text("\(LukiI18n.muscleLabel(exercise.primaryMuscleSnapshot)) • \(exercise.plannedSets) × \(exercise.targetRepsMin ?? 8)-\(exercise.targetRepsMax ?? 12) reps • \(exercise.restSeconds)s rest")
                         .font(.caption2.monospacedDigit())
@@ -543,7 +529,7 @@ public struct ActiveSessionView: View {
                     if let last = insight.lastSession {
                         Text("Last (\(last.workoutName)): \(last.workingSets.prefix(3).map { "\(String(format: "%g", $0.weightNormalized))kg×\($0.reps)" }.joined(separator: ", "))")
                             .font(.caption2.monospacedDigit())
-                            .foregroundStyle(LukiColors.neonLime)
+                            .foregroundStyle(LukiColors.accent)
                     }
                 }
                 Spacer()
@@ -555,7 +541,7 @@ public struct ActiveSessionView: View {
                     showingSwapSheet = true
                 } label: {
                     Label("Swap / Alternative", systemImage: "arrow.triangle.swap")
-                        .font(.caption2.bold())
+                        .font(.footnote.weight(.medium))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                         .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
@@ -567,7 +553,7 @@ public struct ActiveSessionView: View {
                     viewModel.toggleSkipExercise(clientExerciseId: exercise.clientExerciseId)
                 } label: {
                     Label(exercise.status == .SKIPPED ? "Unskip" : "Skip", systemImage: "forward.end")
-                        .font(.caption2.bold())
+                        .font(.footnote.weight(.medium))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                         .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
@@ -582,7 +568,7 @@ public struct ActiveSessionView: View {
                     selectedExerciseIndex = max(0, exerciseIndex - 1)
                 } label: {
                     Image(systemName: "arrow.up")
-                        .font(.caption.bold())
+                        .font(.subheadline.weight(.semibold))
                         .frame(width: 28, height: 28)
                         .background(RoundedRectangle(cornerRadius: 7).fill(LukiColors.fill))
                 }
@@ -594,7 +580,7 @@ public struct ActiveSessionView: View {
                     selectedExerciseIndex = min(session.exercises.count - 1, exerciseIndex + 1)
                 } label: {
                     Image(systemName: "arrow.down")
-                        .font(.caption.bold())
+                        .font(.subheadline.weight(.semibold))
                         .frame(width: 28, height: 28)
                         .background(RoundedRectangle(cornerRadius: 7).fill(LukiColors.fill))
                 }
@@ -620,7 +606,7 @@ public struct ActiveSessionView: View {
                     viewModel.addSetToExercise(clientExerciseId: exercise.clientExerciseId, setType: .WORKING)
                 } label: {
                     Label("Add Working Set", systemImage: "plus")
-                        .font(.caption.bold())
+                        .font(.subheadline.weight(.semibold))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 8)
                         .background(RoundedRectangle(cornerRadius: 9).fill(LukiColors.fill))
@@ -632,7 +618,7 @@ public struct ActiveSessionView: View {
                     viewModel.addSetToExercise(clientExerciseId: exercise.clientExerciseId, setType: .WARMUP)
                 } label: {
                     Text("+ Warm-up Set")
-                        .font(.caption.bold())
+                        .font(.subheadline.weight(.semibold))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 8)
                         .background(RoundedRectangle(cornerRadius: 9).fill(LukiColors.fill))
@@ -647,15 +633,15 @@ public struct ActiveSessionView: View {
                         selectedExerciseIndex = exerciseIndex + 1
                     } label: {
                         Text("Next →")
-                            .font(.caption.bold())
-                            .foregroundStyle(LukiColors.neonLime)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(LukiColors.accent)
                     }
                     .buttonStyle(.plain)
                 }
             }
         }
         .padding(14)
-        .background(RoundedRectangle(cornerRadius: 18).fill(LukiColors.darkCard))
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
         .sheet(isPresented: $showingSwapSheet) {
             SearchableExercisePickerSheet(
                 title: "Replace \(exercise.exerciseNameSnapshot)",
@@ -698,7 +684,7 @@ public struct ActiveSessionView: View {
                     .frame(width: 28, height: 28)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(set.completed ? LukiColors.neonLime : LukiColors.neonLime.opacity(0.15))
+                            .fill(set.completed ? LukiColors.accent : LukiColors.accent.opacity(0.15))
                     )
 
                 Menu {
@@ -714,7 +700,7 @@ public struct ActiveSessionView: View {
                 } label: {
                     HStack(spacing: 4) {
                         Text(set.setType.rawValue)
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.footnote)
                         Image(systemName: "chevron.down")
                             .font(.system(size: 8, weight: .bold))
                     }
@@ -743,7 +729,7 @@ public struct ActiveSessionView: View {
                         Image(systemName: "chart.bar.fill")
                             .font(.system(size: 9))
                         Text(effortLabel)
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.footnote)
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 5)
@@ -778,7 +764,7 @@ public struct ActiveSessionView: View {
                         )
                     } label: {
                         Text("-2.5")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.footnote)
                             .foregroundStyle(.secondary)
                             .frame(width: 32, height: 34)
                     }
@@ -802,8 +788,8 @@ public struct ActiveSessionView: View {
                         )
                     } label: {
                         Text("+2.5")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(LukiColors.neonLime)
+                            .font(.footnote)
+                            .foregroundStyle(LukiColors.accent)
                             .frame(width: 32, height: 34)
                     }
                     .buttonStyle(.plain)
@@ -821,7 +807,7 @@ public struct ActiveSessionView: View {
                         )
                     } label: {
                         Text("-1")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.footnote)
                             .foregroundStyle(.secondary)
                             .frame(width: 26, height: 34)
                     }
@@ -845,8 +831,8 @@ public struct ActiveSessionView: View {
                         )
                     } label: {
                         Text("+1")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(LukiColors.neonLime)
+                            .font(.footnote)
+                            .foregroundStyle(LukiColors.accent)
                             .frame(width: 26, height: 34)
                     }
                     .buttonStyle(.plain)
@@ -872,7 +858,7 @@ public struct ActiveSessionView: View {
                     .frame(maxWidth: .infinity, minHeight: 36)
                     .background(
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(set.completed ? LukiColors.neonLime : LukiColors.fill)
+                            .fill(set.completed ? LukiColors.accent : LukiColors.fill)
                     )
                 }
                 .buttonStyle(.plain)
@@ -896,22 +882,22 @@ public struct ActiveSessionView: View {
                         Image(systemName: "sparkles")
                         Text("Suggested progression: \(wDelta) \(session.weightUnit.rawValue.lowercased()) (Tap to apply \(String(format: "%g", suggestedW)) \(session.weightUnit.rawValue.lowercased()))")
                     }
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(LukiColors.neonLime)
+                    .font(.footnote)
+                    .foregroundStyle(LukiColors.accent)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Capsule().fill(LukiColors.neonLime.opacity(0.15)))
+                    .background(Capsule().fill(LukiColors.accent.opacity(0.15)))
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(set.completed ? LukiColors.neonLime.opacity(0.10) : LukiColors.fill)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(set.completed ? LukiColors.accent.opacity(0.10) : LukiColors.fill)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(set.completed ? LukiColors.neonLime.opacity(0.45) : LukiColors.fill, lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(set.completed ? LukiColors.accent.opacity(0.45) : LukiColors.fill, lineWidth: 1)
                 )
         )
     }
@@ -936,7 +922,7 @@ public struct ActiveSessionView: View {
                 viewModel.abandonActiveSession()
             } label: {
                 Text("Abandon Session")
-                    .font(.caption.bold())
+                    .font(.subheadline.weight(.semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
                     .background(RoundedRectangle(cornerRadius: 12).fill(Color.red.opacity(0.18)))
@@ -948,11 +934,11 @@ public struct ActiveSessionView: View {
                 Task { await viewModel.finishActiveSession() }
             } label: {
                 Text("Finish & Save Workout")
-                    .font(.caption.bold())
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(LukiColors.accentForeground)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(LukiColors.neonLime))
+                    .background(RoundedRectangle(cornerRadius: 12).fill(LukiColors.accent))
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("ios.session.finishButton")

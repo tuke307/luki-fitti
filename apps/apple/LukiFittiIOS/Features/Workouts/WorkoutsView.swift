@@ -380,15 +380,15 @@ public struct WorkoutsView: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     HStack(spacing: 4) {
-                                        Text("SUPERSET")
-                                            .font(.caption.weight(.heavy))
-                                            .foregroundStyle(LukiColors.electricCyan)
+                                        Text("Superset")
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(LukiColors.accent)
                                         Text("× \(block.rounds) ROUNDS")
                                             .font(.caption.weight(.heavy).monospacedDigit())
                                             .foregroundStyle(.primary)
                                     }
                                     Text("Rest 0 s between exercises · \(ProgressionEngine.formatRestDurationMinSec(block.roundRestSeconds)) between rounds")
-                                        .font(.system(size: 10, weight: .semibold))
+                                        .font(.footnote)
                                         .foregroundStyle(.secondary)
                                 }
                                 Spacer()
@@ -402,21 +402,21 @@ public struct WorkoutsView: View {
                                 let exInfo = ex.exercise ?? viewModel.store.catalog.first { $0.id == ex.exerciseId }
                                 HStack(spacing: 8) {
                                     Text("\(blockItem.stepNumber)")
-                                        .font(.system(size: 10, weight: .bold))
-                                        .foregroundStyle(LukiColors.electricCyan)
+                                        .font(.footnote)
+                                        .foregroundStyle(LukiColors.accent)
                                         .frame(width: 20, height: 20)
                                         .background(Circle().fill(Color.black))
                                     Text(exInfo?.name ?? "Exercise")
-                                        .font(.caption.bold())
+                                        .font(.subheadline.weight(.semibold))
                                         .foregroundStyle(.primary)
                                         .lineLimit(1)
                                     Spacer()
                                     Text("\(ex.plannedSets)×\(ex.targetRepsMin ?? 8)-\(ex.targetRepsMax ?? 12)")
-                                        .font(.caption2.bold().monospacedDigit())
-                                        .foregroundStyle(LukiColors.electricCyan)
+                                        .font(.footnote.monospacedDigit())
+                                        .foregroundStyle(LukiColors.accent)
                                         .padding(.horizontal, 7)
                                         .padding(.vertical, 3)
-                                        .background(RoundedRectangle(cornerRadius: 6).fill(LukiColors.electricCyan.opacity(0.18)))
+                                        .background(RoundedRectangle(cornerRadius: 6).fill(LukiColors.accent.opacity(0.18)))
                                 }
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 7)
@@ -425,7 +425,7 @@ public struct WorkoutsView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(LukiColors.electricCyan.opacity(0.45), lineWidth: 1)
+                                .stroke(LukiColors.accent.opacity(0.45), lineWidth: 1)
                         )
                     } else if let firstItem = block.items.first {
                         let ex = firstItem.item
@@ -434,25 +434,25 @@ public struct WorkoutsView: View {
                         HStack(spacing: 8) {
                             Text("\(idx + 1).")
                                 .font(.caption.bold().monospacedDigit())
-                                .foregroundStyle(LukiColors.neonLime)
+                                .foregroundStyle(LukiColors.accent)
                             Text(exInfo?.name ?? "Exercise")
-                                .font(.caption.bold())
+                                .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.primary)
                                 .lineLimit(1)
                             Spacer()
                             if !ex.alternativeExerciseIds.isEmpty {
                                 Text("+\(ex.alternativeExerciseIds.count) backup")
-                                    .font(.system(size: 9, weight: .semibold))
+                                    .font(.footnote)
                                     .foregroundStyle(.secondary)
                             }
                             Text("\(ex.plannedSets)×\(ex.targetRepsMin ?? 8)-\(ex.targetRepsMax ?? 12)")
-                                .font(.caption2.bold().monospacedDigit())
-                                .foregroundStyle(LukiColors.electricCyan)
+                                .font(.footnote.monospacedDigit())
+                                .foregroundStyle(LukiColors.accent)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background(RoundedRectangle(cornerRadius: 6).fill(LukiColors.electricCyan.opacity(0.16)))
+                                .background(RoundedRectangle(cornerRadius: 6).fill(LukiColors.accent.opacity(0.16)))
                             Text("\(ex.restSeconds)s")
-                                .font(.system(size: 10, weight: .bold))
+                                .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
                         .padding(.horizontal, 8)
@@ -472,11 +472,11 @@ public struct WorkoutsView: View {
                    ) {
                     HStack(spacing: 8) {
                         Image(systemName: "sparkles")
-                            .font(.caption.bold())
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.primary)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("SMART SUGGESTION • \(suggestion.suggestedExercise.name)")
-                                .font(.system(size: 10, weight: .semibold))
+                            Text("Suggestion · \(suggestion.suggestedExercise.name)")
+                                .font(.footnote)
                                 .foregroundStyle(.primary)
                                 .lineLimit(1)
                             Text(suggestion.reasonText)
@@ -490,26 +490,12 @@ public struct WorkoutsView: View {
                     .background(
                         RoundedRectangle(cornerRadius: 10)
                             .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color.pink.opacity(0.25),
-                                        Color.orange.opacity(0.22),
-                                        Color.green.opacity(0.22),
-                                        Color.cyan.opacity(0.25),
-                                        Color.purple.opacity(0.25)
-                                    ],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
+                                LukiColors.cardBackground
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 10)
                                     .stroke(
-                                        LinearGradient(
-                                            colors: [.pink, .orange, .yellow, .green, .cyan, .purple],
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        ),
+                                        LukiColors.separator,
                                         lineWidth: 1.5
                                     )
                             )
@@ -827,13 +813,13 @@ private struct TemplateBuilderSheetView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Workout Name *")
-                            .font(.caption.bold())
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.secondary)
                         TextField("e.g. Push A — Chest, Shoulders & Triceps", text: $name)
                             .textFieldStyle(.roundedBorder)
 
                         Text("Folder")
-                            .font(.caption.bold())
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.secondary)
                         Picker("Folder", selection: $folderId) {
                             Text("Unfiled (No Folder)").tag("")
@@ -844,7 +830,7 @@ private struct TemplateBuilderSheetView: View {
                         .pickerStyle(.menu)
 
                         Text("Notes / Focus")
-                            .font(.caption.bold())
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.secondary)
                         TextField("Optional focus notes...", text: $desc)
                             .textFieldStyle(.roundedBorder)
@@ -854,22 +840,22 @@ private struct TemplateBuilderSheetView: View {
                             .foregroundStyle(.primary)
                     }
                     .padding(14)
-                    .background(RoundedRectangle(cornerRadius: 16).fill(LukiColors.darkCard))
+                    .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
 
                     HStack {
                         Text("Ordered Exercises (\(exercises.count))")
-                            .font(.headline.bold())
+                            .font(.headline)
                             .foregroundStyle(.primary)
                         Spacer()
                         Button {
                             showingAddPickerSheet = true
                         } label: {
                             Text("+ Add Exercise Slot")
-                                .font(.caption.bold())
+                                .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(LukiColors.accentForeground)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 7)
-                                .background(Capsule().fill(LukiColors.neonLime))
+                                .background(Capsule().fill(LukiColors.accent))
                         }
                         .buttonStyle(.plain)
                     }
@@ -887,24 +873,24 @@ private struct TemplateBuilderSheetView: View {
                                     .foregroundStyle(LukiColors.accentForeground)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
-                                    .background(Capsule().fill(LukiColors.neonLime))
+                                    .background(Capsule().fill(LukiColors.accent))
 
                                 Button {
                                     pickingSlotId = slot.id
                                 } label: {
                                     HStack(spacing: 6) {
                                         Image(systemName: "magnifyingglass")
-                                            .font(.caption2.bold())
-                                            .foregroundStyle(LukiColors.neonLime)
+                                            .font(.footnote.weight(.medium))
+                                            .foregroundStyle(LukiColors.accent)
                                         Text(resolvedEx?.name ?? "Select Exercise")
                                             .font(.subheadline.bold())
-                                            .foregroundStyle(LukiColors.neonLime)
+                                            .foregroundStyle(LukiColors.accent)
                                             .lineLimit(1)
                                             .truncationMode(.tail)
                                         Spacer(minLength: 4)
                                         Image(systemName: "chevron.up.chevron.down")
-                                            .font(.caption2.bold())
-                                            .foregroundStyle(LukiColors.neonLime)
+                                            .font(.footnote.weight(.medium))
+                                            .foregroundStyle(LukiColors.accent)
                                     }
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 7)
@@ -917,7 +903,7 @@ private struct TemplateBuilderSheetView: View {
                                     exercises.swapAt(idx, idx - 1)
                                 } label: {
                                     Image(systemName: "arrow.up")
-                                        .font(.caption.bold())
+                                        .font(.subheadline.weight(.semibold))
                                         .frame(width: 28, height: 28)
                                         .background(RoundedRectangle(cornerRadius: 7).fill(LukiColors.fill))
                                 }
@@ -929,7 +915,7 @@ private struct TemplateBuilderSheetView: View {
                                     exercises.swapAt(idx, idx + 1)
                                 } label: {
                                     Image(systemName: "arrow.down")
-                                        .font(.caption.bold())
+                                        .font(.subheadline.weight(.semibold))
                                         .frame(width: 28, height: 28)
                                         .background(RoundedRectangle(cornerRadius: 7).fill(LukiColors.fill))
                                 }
@@ -940,7 +926,7 @@ private struct TemplateBuilderSheetView: View {
                                     exercises.removeAll { $0.id == slot.id }
                                 } label: {
                                     Image(systemName: "trash")
-                                        .font(.caption.bold())
+                                        .font(.subheadline.weight(.semibold))
                                         .foregroundStyle(.red)
                                         .frame(width: 28, height: 28)
                                         .background(RoundedRectangle(cornerRadius: 7).fill(Color.red.opacity(0.14)))
@@ -1003,19 +989,19 @@ private struct TemplateBuilderSheetView: View {
                                             : "Pair as Superset w/ #\(idx + 2)",
                                         systemImage: "bolt.fill"
                                     )
-                                    .font(.caption2.bold())
-                                    .foregroundStyle(isSupersetWithNext ? LukiColors.electricCyan : .secondary)
+                                    .font(.footnote.weight(.medium))
+                                    .foregroundStyle(isSupersetWithNext ? LukiColors.accent : .secondary)
                                 }
                                 .buttonStyle(.plain)
                             }
                         }
                         .padding(12)
-                        .background(RoundedRectangle(cornerRadius: 14).fill(LukiColors.darkCard))
+                        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
                     }
                 }
                 .padding(16)
             }
-            .background(LukiColors.darkBackground)
+            .background(LukiColors.groupedBackground)
             .navigationTitle(context.editingTemplateId == nil ? "Create Workout Template" : "Edit Workout")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -1083,14 +1069,14 @@ private struct TemplateBuilderSheetView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
-                .font(.system(size: 9, weight: .bold))
+                .font(.footnote)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
 
             HStack(spacing: 0) {
                 Button(action: onDecrement) {
                     Image(systemName: "minus")
-                        .font(.caption.bold())
+                        .font(.subheadline.weight(.semibold))
                         .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.plain)
@@ -1102,7 +1088,7 @@ private struct TemplateBuilderSheetView: View {
 
                 Button(action: onIncrement) {
                     Image(systemName: "plus")
-                        .font(.caption.bold())
+                        .font(.subheadline.weight(.semibold))
                         .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.plain)

@@ -18,7 +18,7 @@ public struct WatchWorkoutSummaryView: View {
                 HStack(spacing: 8) {
                     ZStack {
                         Circle()
-                            .fill(LukiColors.neonLime)
+                            .fill(LukiColors.accent)
                             .frame(width: 26, height: 26)
                         Image(systemName: "checkmark")
                             .font(.system(size: 13, weight: .bold))
@@ -32,18 +32,18 @@ public struct WatchWorkoutSummaryView: View {
 
                 Text(formattedDuration(session.activeDurationSeconds))
                     .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(LukiColors.neonLime)
+                    .foregroundStyle(LukiColors.accent)
 
                 dividerLine
 
                 // STRENGTH VOLUME
                 VStack(spacing: 3) {
                     Text("Strength Volume")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.footnote)
                         .foregroundStyle(.white)
                     Text("\(Int(session.totalVolumeKg)) kg • \(session.totalSetsCompleted) sets")
                         .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(LukiColors.neonLime)
+                        .foregroundStyle(LukiColors.accent)
                 }
 
                 dividerLine
@@ -51,11 +51,11 @@ public struct WatchWorkoutSummaryView: View {
                 // CARDIO / STRETCHING
                 VStack(spacing: 3) {
                     Text("Cardio")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.footnote)
                         .foregroundStyle(.white)
                     HStack(spacing: 6) {
                         Image(systemName: "figure.run")
-                            .foregroundStyle(LukiColors.electricCyan)
+                            .foregroundStyle(LukiColors.accent)
                         Text(formattedDuration(session.totalStretchSeconds))
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(.white)
@@ -67,11 +67,11 @@ public struct WatchWorkoutSummaryView: View {
                 // CALORIES BURNED
                 VStack(spacing: 3) {
                     Text("Calories Burned")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.footnote)
                         .foregroundStyle(.white)
                     HStack(spacing: 6) {
                         Image(systemName: "flame.fill")
-                            .foregroundStyle(LukiColors.electricCyan)
+                            .foregroundStyle(LukiColors.accent)
                         Text("\(Int(session.activeCaloriesKcal ?? 0)) KCal")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(.white)
@@ -83,7 +83,7 @@ public struct WatchWorkoutSummaryView: View {
                 // HEART RATE
                 VStack(spacing: 3) {
                     Text("Heart Rate")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.footnote)
                         .foregroundStyle(.white)
                     Text("❤️ \(session.avgHeartRateBpm.map(String.init) ?? "-") avg · \(session.maxHeartRateBpm.map(String.init) ?? "-") max")
                         .font(.system(size: 12, weight: .bold))
@@ -96,7 +96,7 @@ public struct WatchWorkoutSummaryView: View {
                         .foregroundStyle(LukiColors.accentForeground)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
-                        .background(RoundedRectangle(cornerRadius: 14).fill(LukiColors.neonLime))
+                        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.accent))
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("watch.summary.doneButton")

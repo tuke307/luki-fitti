@@ -81,7 +81,7 @@ public struct WatchActiveWorkoutView: View {
         Button(action: action) {
             VStack(spacing: 4) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 20)
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
                         .fill(fill)
                         .frame(height: 54)
                     Image(systemName: systemImage)
@@ -89,7 +89,7 @@ public struct WatchActiveWorkoutView: View {
                         .foregroundStyle(LukiColors.accentForeground)
                 }
                 Text(title)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.footnote)
                     .foregroundStyle(.white)
             }
         }
@@ -130,10 +130,10 @@ public struct WatchActiveWorkoutView: View {
                             : formattedElapsed(session?.activeDurationSeconds ?? 10)
                     )
                     .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(LukiColors.neonLime)
+                    .foregroundStyle(LukiColors.accent)
 
                     Text(currentExercise?.exerciseNameSnapshot ?? "Workout")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.footnote)
                         .foregroundStyle(.white)
                         .lineLimit(2)
                         .multilineTextAlignment(.trailing)
@@ -171,7 +171,7 @@ public struct WatchActiveWorkoutView: View {
                             Circle()
                                 .trim(from: 0, to: max(0.08, min(1.0, ringProgress)))
                                 .stroke(
-                                    LukiColors.neonLime,
+                                    LukiColors.accent,
                                     style: StrokeStyle(lineWidth: 6, lineCap: .round)
                                 )
                                 .rotationEffect(.degrees(-90))
@@ -192,7 +192,7 @@ public struct WatchActiveWorkoutView: View {
                         .frame(width: 58, height: 58)
 
                         Text(restStatus.isRunning ? "Tap to skip rest" : "Tap when done")
-                            .font(.system(size: 9, weight: .semibold))
+                            .font(.footnote)
                             .foregroundStyle(.white)
                             .accessibilityIdentifier("watch.execution.ringSubtitle")
                     }
@@ -239,7 +239,7 @@ public struct WatchActiveWorkoutView: View {
 
                     Text(currentExercise.exerciseNameSnapshot)
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(LukiColors.neonLime)
+                        .foregroundStyle(LukiColors.accent)
 
                     let secondaryText = (catalogInfo?.secondaryMuscleGroups ?? [])
                         .map { LukiI18n.muscleLabel($0) }
@@ -249,7 +249,7 @@ public struct WatchActiveWorkoutView: View {
                             ? LukiI18n.muscleLabel(currentExercise.primaryMuscleSnapshot)
                             : "\(LukiI18n.muscleLabel(currentExercise.primaryMuscleSnapshot)) · \(secondaryText)"
                     )
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.footnote)
                     .foregroundStyle(.white)
 
                     Rectangle()
@@ -280,11 +280,11 @@ public struct WatchActiveWorkoutView: View {
                 } label: {
                     HStack {
                         Text("\(idx + 1). \(ex.exerciseNameSnapshot)")
-                            .font(.caption.bold())
+                            .font(.subheadline.weight(.semibold))
                         Spacer()
                         if idx == viewModel.currentExerciseIndex {
                             Image(systemName: "checkmark")
-                                .foregroundStyle(LukiColors.neonLime)
+                                .foregroundStyle(LukiColors.accent)
                         }
                     }
                 }
@@ -302,8 +302,8 @@ public struct WatchActiveWorkoutView: View {
 
         return VStack(spacing: 8) {
             Text("Edit Set #\(setIdx + 1)")
-                .font(.caption.bold())
-                .foregroundStyle(LukiColors.neonLime)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(LukiColors.accent)
 
             HStack {
                 Button("-2.5") { adjustSet(weightDelta: -2.5, repsDelta: 0) }
@@ -323,7 +323,7 @@ public struct WatchActiveWorkoutView: View {
                 viewModel.showingEditSetSheet = false
                 viewModel.activePageTab = 2
             }
-            .foregroundStyle(LukiColors.neonLime)
+            .foregroundStyle(LukiColors.accent)
         }
         .padding(8)
     }
