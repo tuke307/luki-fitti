@@ -4,8 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'LukiFitti',
     short_name: 'LukiFitti',
-    description:
-      'Plan your workouts, log every set, and see your progress — even offline.',
+    description: 'Plan your workouts, log every set, and see your progress — even offline.',
     start_url: '/',
     scope: '/',
     display: 'standalone',

@@ -123,9 +123,7 @@ export function RainbowExerciseSuggestionCard({
                       : ''}
                   </span>
                 </div>
-                <p className="text-muted-foreground mt-0.5 text-xs leading-snug">
-                  {reasonText}
-                </p>
+                <p className="text-muted-foreground mt-0.5 text-xs leading-snug">{reasonText}</p>
               </div>
             </div>
 

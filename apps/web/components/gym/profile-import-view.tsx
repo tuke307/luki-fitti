@@ -75,13 +75,7 @@ export function ProfileImportView() {
     infoMessage: authInfoMessage,
     loading: authLoading,
   } = useAuth();
-  const {
-    folders,
-    unfiledTemplates,
-    stretchingRoutines,
-    historySessions,
-    catalog,
-  } = useGym();
+  const { folders, unfiledTemplates, stretchingRoutines, historySessions, catalog } = useGym();
   const { theme, setTheme } = useTheme();
   const { t, format, languagePreference, setLanguagePreference } = useLocale();
 
@@ -264,9 +258,7 @@ export function ProfileImportView() {
               <p className="text-sm font-bold">{user.name || 'GymBuddy'}</p>
               <p className="text-muted-foreground">{user.email}</p>
               <p className="text-muted-foreground mt-1 text-xs">
-                {authMode === 'AUTHENTICATED'
-                  ? t.profile.authenticatedDesc
-                  : t.profile.guestDesc}
+                {authMode === 'AUTHENTICATED' ? t.profile.authenticatedDesc : t.profile.guestDesc}
               </p>
             </div>
           )}
@@ -534,15 +526,11 @@ export function ProfileImportView() {
                   <Sparkles className="h-3.5 w-3.5 text-warning" />
                   {t.profile.exerciseSuggestionsLabel}
                 </p>
-                <p className="text-muted-foreground text-xs">
-                  {t.profile.exerciseSuggestionsSub}
-                </p>
+                <p className="text-muted-foreground text-xs">{t.profile.exerciseSuggestionsSub}</p>
               </div>
               <Tabs
                 data-testid="profile-exercise-suggestions-tabs"
-                value={
-                  (user?.preferences?.exerciseSuggestionsEnabled ?? true) ? 'on' : 'off'
-                }
+                value={(user?.preferences?.exerciseSuggestionsEnabled ?? true) ? 'on' : 'off'}
                 onValueChange={(val) =>
                   void updatePreferences({ exerciseSuggestionsEnabled: val === 'on' })
                 }
@@ -622,9 +610,7 @@ export function ProfileImportView() {
                 </div>
                 <Tabs
                   value={(user?.preferences?.restTimerSound ?? true) ? 'on' : 'off'}
-                  onValueChange={(val) =>
-                    void updatePreferences({ restTimerSound: val === 'on' })
-                  }
+                  onValueChange={(val) => void updatePreferences({ restTimerSound: val === 'on' })}
                 >
                   <TabsList>
                     <TabsTrigger value="on">{t.profile.enabledOption}</TabsTrigger>
@@ -705,9 +691,7 @@ export function ProfileImportView() {
               <span className="text-muted-foreground block text-xs">
                 {t.profile.completedSetsStat}
               </span>
-              <strong className="tabular-nums text-base">
-                {totalLoggedSets.toLocaleString()}
-              </strong>
+              <strong className="tabular-nums text-base">{totalLoggedSets.toLocaleString()}</strong>
             </div>
           </div>
 

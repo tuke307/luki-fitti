@@ -50,10 +50,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className="antialiased"
-        suppressHydrationWarning
-      >
+      <body className="antialiased" suppressHydrationWarning>
         <Suspense fallback={<RootLoading />}>
           <Providers>{children}</Providers>
         </Suspense>

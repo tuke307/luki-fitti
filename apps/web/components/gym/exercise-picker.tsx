@@ -13,11 +13,7 @@ import {
 } from '@luki-fitti/ui/components/ui/dialog';
 import { Input } from '@luki-fitti/ui/components/ui/input';
 import { cn } from '@luki-fitti/ui/lib/utils';
-import {
-  EQUIPMENT_LABELS,
-  MUSCLE_GROUP_LABELS,
-  MuscleGroup,
-} from '@luki-fitti/common/enums';
+import { EQUIPMENT_LABELS, MUSCLE_GROUP_LABELS, MuscleGroup } from '@luki-fitti/common/enums';
 import type { ExerciseDto } from '@luki-fitti/common/schemas';
 import { de } from '@/lib/i18n';
 import { useLocale } from '@/providers/i18n/locale-context';
@@ -246,8 +242,7 @@ export function ExercisePicker({
                               {muscleLabel(ex.primaryMuscleGroup)}
                             </Badge>
                             <span className="text-muted-foreground text-xs">
-                              {equipmentLabel(ex.equipment)} •{' '}
-                              {exerciseTypeLabel(ex.exerciseType)}
+                              {equipmentLabel(ex.equipment)} • {exerciseTypeLabel(ex.exerciseType)}
                             </span>
                           </div>
                         </div>

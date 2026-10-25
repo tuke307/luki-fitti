@@ -66,8 +66,8 @@ export default function DeleteAccountPage() {
             </div>
             <h1 className="font-display text-2xl font-bold">Account Permanently Deleted</h1>
             <p className="text-muted-foreground text-xs leading-relaxed">
-              Your LukiFitti account and all associated workout templates, split folders,
-              stretching routines, and training history have been permanently deleted.
+              Your LukiFitti account and all associated workout templates, split folders, stretching
+              routines, and training history have been permanently deleted.
             </p>
             <Button type="button" size="lg" onClick={() => router.push('/')} className="w-full">
               Return to LukiFitti (Guest Mode) →

@@ -84,7 +84,8 @@ export function PwaShell() {
         void triggerWorkoutNotification({
           title: t.session.restCompleteTitle,
           body: format(t.session.restCompleteBody, {
-            exercise: nextEx?.exerciseNameSnapshot ?? activeSession?.workoutNameSnapshot ?? 'Workout',
+            exercise:
+              nextEx?.exerciseNameSnapshot ?? activeSession?.workoutNameSnapshot ?? 'Workout',
           }),
           tag: 'luki-fitti-rest-done',
           playSound: soundOn,
@@ -219,7 +220,9 @@ export function PwaShell() {
                 title={syncStatusText}
                 aria-label={syncStatusText}
                 className={`flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[13px] font-medium ${
-                  syncState === 'AUTH_EXPIRED' ? 'bg-warning/15 text-warning' : 'text-muted-foreground'
+                  syncState === 'AUTH_EXPIRED'
+                    ? 'bg-warning/15 text-warning'
+                    : 'text-muted-foreground'
                 }`}
               >
                 {isOffline ? (
@@ -305,7 +308,8 @@ export function PwaShell() {
               </span>
               <span className="text-muted-foreground font-rounded block text-[13px]">
                 {formatClock(sessionElapsedSeconds)}
-                {isRestVisible && ` · ${t.session.restTimerActive} ${formatClock(restInfo.remainingSeconds)}`}
+                {isRestVisible &&
+                  ` · ${t.session.restTimerActive} ${formatClock(restInfo.remainingSeconds)}`}
               </span>
             </span>
             <span className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-full">
@@ -351,7 +355,9 @@ export function PwaShell() {
               {format(t.shell.conflictDescPrefix, {
                 version: conflictServerSession?.version ?? 1,
               })}{' '}
-              <strong className="text-foreground">{conflictServerSession?.workoutNameSnapshot}</strong>{' '}
+              <strong className="text-foreground">
+                {conflictServerSession?.workoutNameSnapshot}
+              </strong>{' '}
               {t.shell.conflictDescSuffix}
             </DialogDescription>
           </DialogHeader>

@@ -61,9 +61,7 @@ export function ExerciseVisual({
             src={currentFrame.url}
             alt={exercise.name}
             loading="lazy"
-            onError={() =>
-              setFailedUrls((prev) => ({ ...prev, [currentFrame.url]: true }))
-            }
+            onError={() => setFailedUrls((prev) => ({ ...prev, [currentFrame.url]: true }))}
             className="h-full w-full object-cover"
           />
         ) : (
@@ -94,9 +92,7 @@ export function ExerciseVisual({
                   src={frame.url}
                   alt={`${exercise.name} step ${idx + 1}`}
                   loading="lazy"
-                  onError={() =>
-                    setFailedUrls((prev) => ({ ...prev, [frame.url]: true }))
-                  }
+                  onError={() => setFailedUrls((prev) => ({ ...prev, [frame.url]: true }))}
                   className={`h-full w-full object-cover transition duration-300 ${
                     isPlayingLoop && activeFrameIdx === idx
                       ? 'scale-105 brightness-110'
@@ -115,9 +111,7 @@ export function ExerciseVisual({
             src={currentFrame.url}
             alt={exercise.name}
             loading="lazy"
-            onError={() =>
-              setFailedUrls((prev) => ({ ...prev, [currentFrame.url]: true }))
-            }
+            onError={() => setFailedUrls((prev) => ({ ...prev, [currentFrame.url]: true }))}
             className="h-full w-full object-cover"
           />
         ) : (
@@ -190,9 +184,7 @@ export function ExerciseVisual({
                 <img
                   src={currentFrame.url}
                   alt={currentFrame.caption ?? exercise.name}
-                  onError={() =>
-                    setFailedUrls((prev) => ({ ...prev, [currentFrame.url]: true }))
-                  }
+                  onError={() => setFailedUrls((prev) => ({ ...prev, [currentFrame.url]: true }))}
                   className="h-full w-full object-cover"
                 />
                 <span className="bg-primary text-primary-foreground tabular-nums absolute top-2 left-2 rounded-md px-2 py-0.5 text-xs font-semibold">
@@ -223,9 +215,7 @@ export function ExerciseVisual({
                   <img
                     src={frame.url}
                     alt={`${exercise.name} frame ${idx + 1}`}
-                    onError={() =>
-                      setFailedUrls((prev) => ({ ...prev, [frame.url]: true }))
-                    }
+                    onError={() => setFailedUrls((prev) => ({ ...prev, [frame.url]: true }))}
                     className="h-full w-full object-cover"
                   />
                   <span className="bg-background/85 text-foreground absolute bottom-2 left-2 rounded-md px-2 py-0.5 text-xs font-bold backdrop-blur-xs">
@@ -246,9 +236,7 @@ export function ExerciseVisual({
             secondary={exercise.secondaryMuscleGroups ?? []}
           />
           <div>
-            <p className="text-xs font-bold">
-              {t.visual.targetMusclesBadge}
-            </p>
+            <p className="text-xs font-bold">{t.visual.targetMusclesBadge}</p>
             <p className="text-primary mt-0.5 text-sm font-bold">
               {t.visual.primaryLabel} {muscleLabel(exercise.primaryMuscleGroup)}
             </p>

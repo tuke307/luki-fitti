@@ -322,8 +322,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           userId: user.id,
           weightUnit: data.weightUnit ?? user.preferences?.weightUnit ?? WeightUnit.KG,
           distanceUnit: data.distanceUnit ?? user.preferences?.distanceUnit ?? DistanceUnit.KM,
-          defaultRestSeconds:
-            data.defaultRestSeconds ?? user.preferences?.defaultRestSeconds ?? 90,
+          defaultRestSeconds: data.defaultRestSeconds ?? user.preferences?.defaultRestSeconds ?? 90,
           theme: data.theme ?? user.preferences?.theme ?? 'system',
           language: data.language ?? user.preferences?.language ?? 'system',
           restTimerSound: data.restTimerSound ?? user.preferences?.restTimerSound ?? true,
@@ -331,8 +330,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             data.notificationsEnabled ?? user.preferences?.notificationsEnabled ?? true,
           exerciseSuggestionsEnabled:
             data.exerciseSuggestionsEnabled ?? user.preferences?.exerciseSuggestionsEnabled ?? true,
-          weeklyGoalSessions:
-            data.weeklyGoalSessions ?? user.preferences?.weeklyGoalSessions ?? 4,
+          weeklyGoalSessions: data.weeklyGoalSessions ?? user.preferences?.weeklyGoalSessions ?? 4,
         },
       };
       setUser(next);

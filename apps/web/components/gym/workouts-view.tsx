@@ -374,9 +374,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
         ex.targetRepsMin && ex.targetRepsMax && ex.targetRepsMin !== ex.targetRepsMax
           ? `${ex.targetRepsMin}–${ex.targetRepsMax}`
           : `${ex.targetRepsMin ?? 10}`;
-      const weightPart = ex.targetWeight
-        ? ` ${ex.targetWeight} ${weightUnit.toLowerCase()}`
-        : '';
+      const weightPart = ex.targetWeight ? ` ${ex.targetWeight} ${weightUnit.toLowerCase()}` : '';
       return `${ex.plannedSets}×${repsPart}${weightPart}`;
     };
 
@@ -449,10 +447,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                           })}
                         </p>
                       </div>
-                      <Badge
-                        variant="accent"
-                        className="px-2 py-0.5 text-xs font-bold"
-                      >
+                      <Badge variant="accent" className="px-2 py-0.5 text-xs font-bold">
                         <Zap className="h-2.5 w-2.5" /> {block.items.length} ex
                       </Badge>
                     </div>
@@ -599,9 +594,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                   testId={`template-suggestion-${tpl.id}`}
                   analyticsContext="template"
                   onAdd={(sug) => void handleAddSuggestionToTemplate(tpl, sug)}
-                  onDismiss={() =>
-                    setDismissedSuggestions((prev) => ({ ...prev, [tpl.id]: true }))
-                  }
+                  onDismiss={() => setDismissedSuggestions((prev) => ({ ...prev, [tpl.id]: true }))}
                 />
               </div>
             )}
@@ -1112,7 +1105,8 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                 </div>
 
                 {tplExercises.map((slot, idx) => {
-                  const isSupersetWithNext = slot.restSeconds === 0 && idx < tplExercises.length - 1;
+                  const isSupersetWithNext =
+                    slot.restSeconds === 0 && idx < tplExercises.length - 1;
                   const isSupersetFromPrev = idx > 0 && tplExercises[idx - 1]?.restSeconds === 0;
 
                   return (
