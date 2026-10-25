@@ -28,6 +28,7 @@ export const en = {
     reps: 'reps',
     sec: 'sec',
     min: 'min',
+    done: 'Done',
   },
   nav: {
     home: 'Today',
@@ -239,6 +240,14 @@ export const en = {
     addSuggestedBtn: 'Add',
     swapSuggestedBtn: 'Replace {name}',
     dismissSuggestionTitle: 'Dismiss suggestion',
+    exerciseCount: '{count} exercises',
+    exerciseCountOne: '1 exercise',
+    lastTrainedShort: 'Last {date}',
+    moreActionsLabel: 'More actions for {name}',
+    moveToBtn: 'Move to',
+    startWorkoutAria: 'Start {name}',
+    editListBtn: 'Edit',
+    addMenuLabel: 'Add',
   },
   session: {
     savedQueuedBadge: 'Workout saved',

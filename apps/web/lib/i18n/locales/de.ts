@@ -29,6 +29,7 @@ export const de = {
     reps: 'Wdh.',
     sec: 'Sek.',
     min: 'Min.',
+    done: 'Fertig',
   },
   nav: {
     home: 'Heute',
@@ -240,6 +241,14 @@ export const de = {
     addSuggestedBtn: 'Hinzufügen',
     swapSuggestedBtn: '{name} ersetzen',
     dismissSuggestionTitle: 'Vorschlag ausblenden',
+    exerciseCount: '{count} Übungen',
+    exerciseCountOne: '1 Übung',
+    lastTrainedShort: 'Zuletzt {date}',
+    moreActionsLabel: 'Weitere Aktionen für {name}',
+    moveToBtn: 'Verschieben nach',
+    startWorkoutAria: '{name} starten',
+    editListBtn: 'Bearbeiten',
+    addMenuLabel: 'Hinzufügen',
   },
   session: {
     savedQueuedBadge: 'Training gespeichert',
