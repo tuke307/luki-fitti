@@ -9,7 +9,7 @@ test.describe('Exercise Catalog & Stretching Studio', () => {
     await resetOfflineStore(page);
     await navigateToTab(page, 'exercises');
     await expect(
-      page.getByRole('heading', { name: 'Exercise & Mobility Library' }),
+      page.getByRole('heading', { name: 'Library', exact: true }),
     ).toBeVisible();
   });
 
@@ -40,7 +40,7 @@ test.describe('Exercise Catalog & Stretching Studio', () => {
     await expect(dialog).toBeVisible();
     await dialog.locator('#new-ex-name').fill(CUSTOM_EX);
     await dialog.locator('#new-ex-desc').fill('Explosive overhead shoulder press variation');
-    await clickDialogButton(page, /Save Exercise/i);
+    await clickDialogButton(page, /^(Save|Speichern)$/);
 
     const searchInput = page.getByPlaceholder(/Search exercise/i);
     await searchInput.fill(CUSTOM_EX);
@@ -50,14 +50,14 @@ test.describe('Exercise Catalog & Stretching Studio', () => {
   test('creates a stretching routine and completes a stretching session', async ({ page }) => {
     const ROUTINE_NAME = 'E2E Post-Lift Mobility';
 
-    await page.getByRole('tab', { name: /Stretching Studio/i }).click();
+    await page.getByRole('tab', { name: /^Stretching$/i }).click();
     await page.getByRole('button', { name: /New Routine/i }).click();
 
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     await dialog.locator('#routine-name').fill(ROUTINE_NAME);
     await dialog.locator('#routine-area').fill('Hips & Thoracic Spine');
-    await clickDialogButton(page, /Save Routine/i);
+    await clickDialogButton(page, /^(Save|Speichern)$/);
 
     const routineHeading = page.getByRole('heading', { name: ROUTINE_NAME });
     await expect(routineHeading).toBeVisible();

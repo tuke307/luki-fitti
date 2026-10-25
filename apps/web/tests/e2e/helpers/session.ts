@@ -54,8 +54,8 @@ export async function finishActiveWorkout(page: Page, notes?: string): Promise<v
   if (notes) {
     await page.locator('#session-notes').fill(notes);
   }
-  await page.getByRole('button', { name: /Finish & Save Workout|Training beenden/i }).click();
+  await page.getByRole('button', { name: /Finish Workout|Training beenden/i }).click();
   await expect(
-    page.getByText(/Session Saved & Queued for Sync|Training gespeichert/i),
+    page.getByText(/Workout saved|Training gespeichert/i),
   ).toBeVisible({ timeout: 10_000 });
 }

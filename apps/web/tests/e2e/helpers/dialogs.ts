@@ -25,7 +25,7 @@ export async function clickDialogButton(
  */
 export async function confirmAlertDialog(
   page: Page,
-  name: RegExp | string = /Confirm Delete|Discard Session/i,
+  name: RegExp | string = /^(Delete|Löschen|Discard|Verwerfen)$/,
   timeout = 10_000,
 ): Promise<void> {
   const modal = page.getByRole('alertdialog').or(page.getByRole('dialog'));
