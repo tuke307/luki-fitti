@@ -212,11 +212,12 @@ final class LukiFittiDomainTests: XCTestCase {
 
         let suggestion = ProgressionEngine.computeWorkoutExerciseSuggestion(
             workoutName: "Push Day — Chest & Shoulders",
-            existingExerciseIds: ["ex-barbell-bench-press"],
+            exercises: [WorkoutSuggestionInputExercise(exerciseId: "ex-barbell-bench-press")],
             catalog: bundleData.exercises,
             historySessions: []
         )
         XCTAssertNotNil(suggestion)
+        XCTAssertEqual(suggestion?.reasonType, .MISSING_MUSCLE)
         XCTAssertNotEqual(suggestion?.suggestedExercise.id, "ex-barbell-bench-press")
 
         // Verify legacy FAILURE and MOBILITY JSON values decode safely

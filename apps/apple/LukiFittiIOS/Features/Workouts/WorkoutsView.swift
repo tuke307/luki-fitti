@@ -465,40 +465,18 @@ public struct WorkoutsView: View {
                 if viewModel.store.preferences.exerciseSuggestionsEnabled,
                    let suggestion = ProgressionEngine.computeWorkoutExerciseSuggestion(
                        workoutName: template.name,
-                       existingExerciseIds: template.exercises.map(\.exerciseId),
+                       folderName: viewModel.store.folders.first { $0.id == template.folderId }?.name,
+                       exercises: template.exercises.map {
+                           WorkoutSuggestionInputExercise(exerciseId: $0.exerciseId, plannedSets: $0.plannedSets)
+                       },
                        catalog: viewModel.store.catalog,
                        historySessions: viewModel.store.historySessions,
                        weightUnit: viewModel.store.preferences.weightUnit
                    ) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "sparkles")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.primary)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Suggestion · \(suggestion.suggestedExercise.name)")
-                                .font(.footnote)
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-                            Text(suggestion.reasonText)
-                                .font(.system(size: 9))
-                                .foregroundStyle(.secondary)
-                                .lineLimit(2)
-                        }
-                        Spacer()
-                    }
-                    .padding(9)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(
-                                LukiColors.cardBackground
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(
-                                        LukiColors.separator,
-                                        lineWidth: 1.5
-                                    )
-                            )
+                    SuggestionCardView(
+                        suggestion: suggestion,
+                        locale: SupportedLocale.resolve(viewModel.store.preferences.language),
+                        compact: true
                     )
                     .accessibilityIdentifier("ios.workouts.rainbowSuggestion.\(template.id)")
                 }

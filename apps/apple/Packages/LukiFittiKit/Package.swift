@@ -39,7 +39,7 @@ let package = Package(
         ),
         .target(
             name: "LukiFittiDesign",
-            dependencies: ["LukiFittiModels"]
+            dependencies: ["LukiFittiModels", "LukiFittiDomain"]
         ),
         .target(
             name: "LukiFittiDomain",

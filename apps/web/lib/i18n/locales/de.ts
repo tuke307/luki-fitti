@@ -234,10 +234,21 @@ export const de = {
     supersetRoundsFormat: '× {rounds} Runden',
     supersetSubtitleFormat: 'Keine Pause zwischen Übungen · {rest} zwischen Runden',
     smartSuggestionBadge: 'Vorschlag',
-    suggestionReasonPlateau: '{stalling} stagniert. {name} könnte deinen {muscle} neu fordern.',
-    suggestionReasonHighFatigue:
-      '{stalling} fühlte sich zuletzt schwer an. Probier {name} für deinen {muscle}.',
-    suggestionReasonSplitBalance: '{name} würde deinen {split}-Split ergänzen.',
+    suggestionReasonPlateau:
+      '{stalling} hat schon länger keine neue Bestleistung. {name} bringt einen neuen Reiz für: {muscle}.',
+    suggestionReasonGrinding:
+      '{stalling} braucht Maximaleinsatz, ohne dass es vorangeht. Probier {name} für: {muscle}.',
+    suggestionReasonRegression:
+      '{stalling} geht zurück. {name} bringt dich bei {muscle} wieder in die Spur.',
+    suggestionReasonMissingMuscle:
+      'Dein {split}-Workout hat noch nichts für {muscle}. {name} schließt die Lücke.',
+    suggestionReasonLowVolume:
+      '{muscle} bekommt weniger Sätze als der Rest dieses Workouts. {name} gleicht das aus.',
+    suggestionChipPlateau: '{sessions} Einheiten ohne neue Bestleistung',
+    suggestionChipPlateauWeeks: '{sessions} Einheiten · {weeks} Wo. ohne neue Bestleistung',
+    suggestionChipGrinding: 'Maximaleinsatz {hard} von {window} · kein Zuwachs',
+    suggestionChipRegression: '{change} % in den letzten {window} Einheiten',
+    suggestionChipSets: '{sets} von {total} Sätzen',
     addSuggestedBtn: 'Hinzufügen',
     swapSuggestedBtn: '{name} ersetzen',
     dismissSuggestionTitle: 'Vorschlag ausblenden',
@@ -307,10 +318,10 @@ export const de = {
     intensityLightHint: 'Fühlte sich leicht an — nächstes Mal schwerer',
     intensitySweetSpot: 'Genau richtig',
     intensitySweetSpotHint: 'Genau richtig',
-    intensityLimit: 'Schwer',
-    intensityLimitHint: 'Fühlte sich schwer an — Gewicht halten',
+    intensityLimit: 'Max',
+    intensityLimitHint: 'Maximaleinsatz — nichts mehr im Tank',
     intensityEffort: 'Intensität',
-    intensityEffortHint: 'Wie hat es sich angefühlt? Leicht → Genau richtig → Schwer',
+    intensityEffortHint: 'Wie hat es sich angefühlt? Leicht → Genau richtig → Max',
     doneSetBtn: 'Erledigt',
     logSetBtn: 'Erledigt',
     setLoggedStatus: 'Erledigt',
