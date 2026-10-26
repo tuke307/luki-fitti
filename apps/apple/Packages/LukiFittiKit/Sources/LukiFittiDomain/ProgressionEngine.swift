@@ -150,6 +150,27 @@ public enum ProgressionEngine {
     public static let lbsToKg: Double = 0.45359237
     public static let kgToLbs: Double = 1.0 / 0.45359237
 
+    /// RPE logged by the 3-bar "Max" effort level — nothing left in the tank.
+    public static let maxEffortRpe: Double = 9.5
+
+    /// Stall detection thresholds. Mirrored 1:1 from `SUGGESTION_THRESHOLDS` in
+    /// `packages/common/src/utils/progression.util.ts` — keep both in sync.
+    public enum SuggestionThresholds {
+        /// Sessions compared for grinding / regression.
+        public static let recentWindow = 3
+        /// Max-effort sessions within the recent window that count as grinding.
+        public static let grindingMinHardSessions = 2
+        /// Estimated 1RM gain (%) across the window below which max effort is "no gain".
+        public static let grindingMaxGainPct = 1.0
+        /// Estimated 1RM drop (%) across the window that counts as a regression.
+        public static let regressionDropPct = 4.0
+        public static let plateauMinSessions = 4
+        public static let plateauMinWeeks = 3.0
+        public static let plateauMinSessionsSinceBest = 3
+        /// A key split muscle with fewer than this share of the busiest muscle's sets is low volume.
+        public static let lowVolumeRatio = 0.5
+    }
+
     public static func convertWeight(_ weight: Double, from fromUnit: WeightUnit, to toUnit: WeightUnit) -> Double {
         if fromUnit == toUnit { return weight }
         let converted = fromUnit == .LBS ? weight * lbsToKg : weight * kgToLbs
@@ -432,17 +453,20 @@ public enum ProgressionEngine {
 
         let allSetsHitTopOfBand = lastWorkingSets.allSatisfy { $0.reps >= repMax }
         let majoritySetsBelowMin = Double(lastWorkingSets.filter { $0.reps < repMin }.count) > Double(lastWorkingSets.count) / 2.0
-        let highFatigueLast = (lastSession.avgRpe ?? 8.0) >= 9.5 || elevatedSystemicFatigueFromHR
+        let maxEffortLast = (lastSession.avgRpe ?? 8.0) >= maxEffortRpe || elevatedSystemicFatigueFromHR
         let consecutiveRegression = prevSession != nil &&
             lastSession.bestEstimated1RM < (prevSession?.bestEstimated1RM ?? 0) * 0.96 &&
-            (majoritySetsBelowMin || highFatigueLast)
+            (majoritySetsBelowMin || maxEffortLast)
 
+        // Max effort is a normal training outcome: topping out the rep band still earns
+        // more weight, and only a max effort below the top holds the prescription.
+        // Watch HR recovery fatigue (no effort logged) still holds the weight.
         let overallPhase: ProgressionPhase
-        if consecutiveRegression || (majoritySetsBelowMin && highFatigueLast) {
+        if consecutiveRegression || (majoritySetsBelowMin && maxEffortLast) {
             overallPhase = .DELOAD
-        } else if allSetsHitTopOfBand && !highFatigueLast && primaryLastWeight > 0 {
+        } else if allSetsHitTopOfBand && !elevatedSystemicFatigueFromHR && primaryLastWeight > 0 {
             overallPhase = .INCREASE_WEIGHT
-        } else if highFatigueLast && !majoritySetsBelowMin {
+        } else if maxEffortLast && !majoritySetsBelowMin {
             overallPhase = .MAINTAIN
         } else {
             overallPhase = .INCREASE_REPS
@@ -476,12 +500,13 @@ public enum ProgressionEngine {
                 suggestedWeight = roundToGymStep(reduced, step: 0.5)
                 suggestedReps = max(repMin, min(repMax, lastR))
                 setPhase = .DELOAD
+            } else if lastR >= repMax && lastW > 0 && !elevatedSystemicFatigueFromHR {
+                // Individual set topped out rep range even if later sets didn't -> suggest micro weight bump
+                suggestedWeight = roundToGymStep(lastW + stepIncrement, step: 0.5)
+                suggestedReps = repMin
+                setPhase = .INCREASE_WEIGHT
             } else if overallPhase == .INCREASE_REPS {
-                if lastR >= repMax && lastW > 0 && (lastRpe ?? 8.0) < 9.5 {
-                    suggestedWeight = roundToGymStep(lastW + stepIncrement, step: 0.5)
-                    suggestedReps = repMin
-                    setPhase = .INCREASE_WEIGHT
-                } else if lastR < repMax && (lastRpe ?? 8.0) <= 9.0 {
+                if lastR < repMax && (lastRpe ?? 8.0) <= 9.0 {
                     suggestedWeight = lastW > 0 ? lastW : targetWeight
                     suggestedReps = min(repMax, lastR + 1)
                     setPhase = .INCREASE_REPS
@@ -717,14 +742,117 @@ public enum ProgressionEngine {
         return blocks
     }
 
+    // MARK: - Exercise Trend & Stall Detection
+
+    /// Summarizes whether an exercise is still moving: a single max-effort session is
+    /// normal training, a stall is max effort or time passing without results.
+    public static func analyzeExerciseTrend(_ history: [ExerciseHistorySessionEntry]) -> ExerciseTrend {
+        guard let first = history.first, let last = history.last else { return ExerciseTrend() }
+        let n = history.count
+
+        var bestIndex = 0
+        for i in 1..<n where history[i].bestEstimated1RM > history[bestIndex].bestEstimated1RM {
+            bestIndex = i
+        }
+
+        let recent = Array(history.suffix(SuggestionThresholds.recentWindow))
+        let windowStart = recent[0].bestEstimated1RM
+        let changePct = recent.count >= 2 && windowStart > 0
+            ? (((last.bestEstimated1RM - windowStart) / windowStart) * 1000.0).rounded() / 10.0
+            : 0
+
+        return ExerciseTrend(
+            sessionsCount: n,
+            spanWeeks: weeksBetween(first.startedAt, last.startedAt),
+            sessionsSinceBest: n - 1 - bestIndex,
+            weeksSinceBest: Int(weeksBetween(history[bestIndex].startedAt, last.startedAt).rounded(.down)),
+            hardSessionsRecent: recent.filter { ($0.avgRpe ?? 0) >= maxEffortRpe }.count,
+            recentWindow: recent.count,
+            changePct: changePct
+        )
+    }
+
+    /// Classifies an exercise trend as a stall, or `nil` when it is still progressing.
+    /// Priority: REGRESSION > GRINDING > PLATEAU.
+    public static func classifyExerciseStall(_ trend: ExerciseTrend) -> ExerciseSuggestionReasonType? {
+        typealias T = SuggestionThresholds
+        let fullWindow = trend.recentWindow >= T.recentWindow
+        if fullWindow && trend.changePct <= -T.regressionDropPct { return .REGRESSION }
+        if fullWindow &&
+            trend.hardSessionsRecent >= T.grindingMinHardSessions &&
+            trend.changePct < T.grindingMaxGainPct {
+            return .GRINDING
+        }
+        if trend.sessionsCount >= T.plateauMinSessions &&
+            trend.spanWeeks >= T.plateauMinWeeks &&
+            trend.sessionsSinceBest >= T.plateauMinSessionsSinceBest {
+            return .PLATEAU
+        }
+        return nil
+    }
+
+    private static func weeksBetween(_ from: String, _ to: String) -> Double {
+        guard let start = parseIsoDate(from), let end = parseIsoDate(to) else { return 0 }
+        return end.timeIntervalSince(start) / (7 * 24 * 60 * 60)
+    }
+
+    private static func parseIsoDate(_ value: String) -> Date? {
+        (try? Date.ISO8601FormatStyle(includingFractionalSeconds: true).parse(value))
+            ?? (try? Date.ISO8601FormatStyle().parse(value))
+    }
+
     // MARK: - Smart Workout Exercise Suggestion Engine (Max 1 per Workout)
 
+    private static let splitMusclePriority: [WorkoutSplitArchetype: [MuscleGroup]] = [
+        .PUSH: [.SHOULDERS, .CHEST, .TRICEPS],
+        .PULL: [.BACK, .BICEPS, .SHOULDERS],
+        .LEGS: [.QUADRICEPS, .HAMSTRINGS, .GLUTES, .CALVES],
+        .ARMS: [.BICEPS, .TRICEPS, .SHOULDERS, .FOREARMS],
+        .SHOULDERS: [.SHOULDERS, .TRICEPS, .ABS_CORE],
+        .CHEST_BACK: [.CHEST, .BACK, .SHOULDERS],
+        .UPPER: [.SHOULDERS, .CHEST, .BACK, .BICEPS, .TRICEPS],
+        .FULL_BODY: [.SHOULDERS, .CHEST, .BACK, .QUADRICEPS, .HAMSTRINGS],
+    ]
+
+    public static func inferWorkoutSplitArchetype(
+        workoutName: String,
+        folderName: String?,
+        musclesInWorkout: [MuscleGroup]
+    ) -> WorkoutSplitArchetype {
+        let text = "\(workoutName) \(folderName ?? "")".lowercased()
+
+        if text.contains("push") || (text.contains("chest") && text.contains("tricep")) { return .PUSH }
+        if text.contains("pull") || (text.contains("back") && text.contains("bicep")) { return .PULL }
+        if text.contains("leg") || text.contains("bein") || text.contains("quad") || text.contains("lower") {
+            return .LEGS
+        }
+        if text.contains("arm") || text.contains("bicep") || text.contains("tricep") { return .ARMS }
+        if text.contains("shoulder") || text.contains("schulter") || text.contains("delt") { return .SHOULDERS }
+
+        let muscleSet = Set(musclesInWorkout)
+        let hasPush = muscleSet.contains(.CHEST) && (muscleSet.contains(.TRICEPS) || muscleSet.contains(.SHOULDERS))
+        let hasPull = muscleSet.contains(.BACK) && muscleSet.contains(.BICEPS)
+        let hasLegs = muscleSet.contains(.QUADRICEPS) || muscleSet.contains(.HAMSTRINGS) || muscleSet.contains(.GLUTES)
+
+        if hasPush && !hasPull && !hasLegs { return .PUSH }
+        if hasPull && !hasPush && !hasLegs { return .PULL }
+        if hasLegs && !hasPush && !hasPull { return .LEGS }
+        if (muscleSet.contains(.BICEPS) || muscleSet.contains(.TRICEPS)) &&
+            !hasLegs && !muscleSet.contains(.CHEST) && !muscleSet.contains(.BACK) {
+            return .ARMS
+        }
+        if hasPush && hasPull && !hasLegs { return .UPPER }
+        return .FULL_BODY
+    }
+
+    /// Proposes at most ONE smart exercise suggestion for a workout, and only when there is a
+    /// concrete reason: an exercise that regressed, grinds at max effort without gains, or
+    /// plateaued for weeks, or a key split muscle that is missing or under-trained.
+    /// Returns `nil` otherwise. Mirrors `computeWorkoutExerciseSuggestion` in progression.util.ts.
     public static func computeWorkoutExerciseSuggestion(
         workoutName: String,
         folderName: String? = nil,
-        existingExerciseIds: [String],
-        existingExerciseNames: [String] = [],
-        existingMuscles: [MuscleGroup] = [],
+        exercises: [WorkoutSuggestionInputExercise],
         catalog: [ExerciseDto],
         historySessions: [WorkoutSessionDto],
         weightUnit: WeightUnit = .KG
@@ -732,74 +860,165 @@ public enum ProgressionEngine {
         let strengthCatalog = catalog.filter { $0.exerciseType == .STRENGTH }
         guard !strengthCatalog.isEmpty else { return nil }
 
-        let idSet = Set(existingExerciseIds)
-        let nameSet = Set(existingExerciseNames.map { $0.lowercased() })
+        var existingIds = Set<String>()
+        var existingNames = Set<String>()
+        var resolved: [(input: WorkoutSuggestionInputExercise, catalogEx: ExerciseDto?, muscle: MuscleGroup)] = []
 
-        let text = "\(workoutName) \(folderName ?? "")".lowercased()
-        let splitMuscles: [MuscleGroup]
-        if text.contains("push") || (text.contains("chest") && text.contains("tricep")) {
-            splitMuscles = [.SHOULDERS, .CHEST, .TRICEPS]
-        } else if text.contains("pull") || (text.contains("back") && text.contains("bicep")) {
-            splitMuscles = [.BACK, .BICEPS, .SHOULDERS]
-        } else if text.contains("leg") || text.contains("bein") || text.contains("quad") {
-            splitMuscles = [.QUADRICEPS, .HAMSTRINGS, .GLUTES, .CALVES]
-        } else if text.contains("arm") || text.contains("bicep") || text.contains("tricep") {
-            splitMuscles = [.BICEPS, .TRICEPS, .SHOULDERS]
-        } else if text.contains("shoulder") || text.contains("schulter") {
-            splitMuscles = [.SHOULDERS, .TRICEPS, .ABS_CORE]
-        } else if !existingMuscles.isEmpty {
-            splitMuscles = Array(Set(existingMuscles))
-        } else {
-            splitMuscles = [.SHOULDERS, .CHEST, .BACK]
+        for ex in exercises {
+            let normalizedName = ex.exerciseName?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let catEx = ex.exerciseId.flatMap { id in catalog.first { $0.id == id } }
+                ?? normalizedName.flatMap { name in
+                    catalog.first { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == name }
+                }
+
+            if let id = ex.exerciseId { existingIds.insert(id) }
+            if let catEx {
+                existingIds.insert(catEx.id)
+                existingNames.insert(catEx.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
+            }
+            if let normalizedName { existingNames.insert(normalizedName) }
+
+            resolved.append((ex, catEx, ex.primaryMuscleGroup ?? catEx?.primaryMuscleGroup ?? .CHEST))
         }
 
-        var stallingEx: ExerciseDto?
-        var stallingReason: String?
+        let splitArchetype = inferWorkoutSplitArchetype(
+            workoutName: workoutName,
+            folderName: folderName,
+            musclesInWorkout: resolved.map(\.muscle)
+        )
+        let splitMuscles = splitMusclePriority[splitArchetype] ?? [.SHOULDERS]
 
-        for exId in existingExerciseIds {
-            guard let catEx = catalog.first(where: { $0.id == exId }) else { continue }
-            let insight = computeExerciseProgression(
-                exerciseId: catEx.id,
-                exerciseName: catEx.name,
-                historySessions: historySessions,
-                catalogExercise: catEx,
-                weightUnit: weightUnit
+        var setsByMuscle: [MuscleGroup: Int] = Dictionary(uniqueKeysWithValues: splitMuscles.map { ($0, 0) })
+        for r in resolved { setsByMuscle[r.muscle, default: 0] += r.input.plannedSets }
+        let setsTotal = resolved.reduce(0) { $0 + $1.input.plannedSets }
+
+        // Find the exercise in the workout that stalls hardest (regression > grinding > plateau)
+        var worst: (
+            exerciseId: String?, exerciseName: String, muscle: MuscleGroup, equipment: EquipmentType?,
+            reasonType: ExerciseSuggestionReasonType, trend: ExerciseTrend, severity: Double
+        )?
+
+        for item in resolved {
+            let exId = item.input.exerciseId ?? item.catalogEx?.id
+            let exName = item.input.exerciseName ?? item.catalogEx?.name
+            if exId == nil && exName == nil { continue }
+
+            let trend = analyzeExerciseTrend(
+                extractGlobalExerciseHistory(
+                    exerciseId: exId,
+                    exerciseName: exName,
+                    historySessions: historySessions,
+                    targetUnit: weightUnit
+                )
             )
-            guard insight.sessionsCount > 0, let last = insight.lastSession else { continue }
-            let avgRpe = last.avgRpe ?? 8.0
-            if avgRpe >= 9.0 || insight.phase == .DELOAD {
-                stallingEx = catEx
-                stallingReason = "\(catEx.name) felt heavy recently — try a fresh \(catEx.primaryMuscleGroup.rawValue.lowercased()) stimulus"
-                break
-            } else if insight.sessionsCount >= 2 && (insight.slopePerSession <= 0.15 || insight.phase == .MAINTAIN) {
-                stallingEx = catEx
-                stallingReason = "Progress on \(catEx.name) has plateaued — rotate or add a complementary \(catEx.primaryMuscleGroup.rawValue.lowercased()) movement"
-                break
+            guard let stall = classifyExerciseStall(trend) else { continue }
+
+            // Give a bonus to the key split muscle (e.g. SHOULDERS in PUSH) when tied
+            let splitBonus = item.muscle == splitMuscles.first ? 1.5 : 0
+            let (base, detail): (Double, Double) = switch stall {
+            case .REGRESSION: (100, min(20, -trend.changePct))
+            case .GRINDING: (50, Double(trend.hardSessionsRecent) * 5)
+            default: (10, Double(min(20, trend.sessionsSinceBest)))
+            }
+            let severity = base + detail + splitBonus
+
+            if worst == nil || severity > worst!.severity {
+                worst = (exId, exName ?? "Exercise", item.muscle, item.catalogEx?.equipment, stall, trend, severity)
             }
         }
 
-        let targetMuscle = stallingEx?.primaryMuscleGroup ?? splitMuscles.first ?? .SHOULDERS
-        let pool = strengthCatalog.filter {
-            !idSet.contains($0.id) &&
-            !nameSet.contains($0.name.lowercased()) &&
-            $0.primaryMuscleGroup == targetMuscle
-        }
-        let fallbackPool = pool.isEmpty
-            ? strengthCatalog.filter { !idSet.contains($0.id) && !nameSet.contains($0.name.lowercased()) }
-            : pool
+        let targetMuscle: MuscleGroup
+        let reasonType: ExerciseSuggestionReasonType
+        var stallingExerciseId: String?
+        var stallingExerciseName: String?
+        let avoidEquipment: EquipmentType?
+        var trend: ExerciseTrend?
 
-        guard let chosen = fallbackPool.first else { return nil }
-        let reason = stallingReason ?? "Recommended \(chosen.primaryMuscleGroup.rawValue.lowercased()) exercise to complement \(workoutName)"
-        let defaultWeight: Double = (chosen.primaryMuscleGroup == .SHOULDERS || chosen.primaryMuscleGroup == .BICEPS || chosen.primaryMuscleGroup == .TRICEPS)
-            ? (weightUnit == .LBS ? 25.0 : 12.5)
-            : (weightUnit == .LBS ? 95.0 : 40.0)
+        if let worst {
+            targetMuscle = worst.muscle
+            reasonType = worst.reasonType
+            stallingExerciseId = worst.exerciseId
+            stallingExerciseName = worst.exerciseName
+            avoidEquipment = worst.equipment
+            trend = worst.trend
+        } else {
+            // No stall: only suggest when a key split muscle is missing or clearly under-trained
+            var minSets = Int.max
+            var maxSets = 0
+            var chosenMuscle = splitMuscles.first ?? .SHOULDERS
+            for m in splitMuscles {
+                let count = setsByMuscle[m] ?? 0
+                maxSets = max(maxSets, count)
+                if count < minSets {
+                    minSets = count
+                    chosenMuscle = m
+                }
+            }
+
+            if minSets == 0 {
+                reasonType = .MISSING_MUSCLE
+            } else if Double(minSets) < Double(maxSets) * SuggestionThresholds.lowVolumeRatio {
+                reasonType = .LOW_VOLUME
+            } else {
+                return nil
+            }
+            targetMuscle = chosenMuscle
+            avoidEquipment = resolved.first { $0.muscle == chosenMuscle }?.catalogEx?.equipment
+        }
+
+        // Pick the best candidate for the target muscle that is not already in the workout.
+        // No candidate means no honest suggestion, so the card stays hidden.
+        let pool = strengthCatalog.filter {
+            !existingIds.contains($0.id) &&
+                !existingNames.contains($0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) &&
+                $0.primaryMuscleGroup == targetMuscle
+        }
+        guard !pool.isEmpty else { return nil }
+
+        // Score candidates: prefer predefined alternatives of stalling exercise, or fresh equipment
+        let preferredAltIds = Set(
+            stallingExerciseId.flatMap { id in catalog.first { $0.id == id } }?.alternativeExerciseIds ?? []
+        )
+        let scored = pool.map { candidate -> (candidate: ExerciseDto, score: Int) in
+            var score = 0
+            if preferredAltIds.contains(candidate.id) { score += 5 }
+            if let avoidEquipment, candidate.equipment != avoidEquipment { score += 3 }
+            if [.CABLE, .DUMBBELL, .MACHINE].contains(candidate.equipment) { score += 2 }
+            return (candidate, score)
+        }
+        // Stable max: first candidate with the highest score, matching the TS sort order
+        let chosen = scored.reduce(scored[0]) { $1.score > $0.score ? $1 : $0 }.candidate
+
+        let chosenInsight = computeExerciseProgression(
+            exerciseId: chosen.id,
+            exerciseName: chosen.name,
+            historySessions: historySessions,
+            catalogExercise: chosen,
+            plannedSets: 3,
+            targetRepsMin: 10,
+            targetRepsMax: 14,
+            weightUnit: weightUnit
+        )
+        let isSmallMuscle = [.SHOULDERS, .BICEPS, .TRICEPS].contains(chosen.primaryMuscleGroup)
+        let defaultWeight = chosenInsight.setSuggestions.first?.suggestedWeight
+            ?? (isSmallMuscle ? (weightUnit == .LBS ? 25.0 : 12.5) : (weightUnit == .LBS ? 95.0 : 40.0))
 
         return WorkoutExerciseSuggestion(
             suggestedExercise: chosen,
             targetMuscle: chosen.primaryMuscleGroup,
-            reasonText: reason,
-            stallingExerciseId: stallingEx?.id,
-            stallingExerciseName: stallingEx?.name,
+            splitArchetype: splitArchetype,
+            reasonType: reasonType,
+            stallingExerciseId: stallingExerciseId,
+            stallingExerciseName: stallingExerciseName,
+            evidence: WorkoutSuggestionEvidence(
+                sessionsSinceBest: trend?.sessionsSinceBest ?? 0,
+                weeksSinceBest: trend?.weeksSinceBest ?? 0,
+                hardSessionsRecent: trend?.hardSessionsRecent ?? 0,
+                recentWindow: trend?.recentWindow ?? 0,
+                changePct: trend?.changePct ?? 0,
+                setsForMuscle: setsByMuscle[targetMuscle] ?? 0,
+                setsTotal: setsTotal
+            ),
             recommendedSets: 3,
             recommendedRepsMin: chosen.category == .COMPOUND ? 8 : 10,
             recommendedRepsMax: chosen.category == .COMPOUND ? 12 : 15,
@@ -843,12 +1062,107 @@ public struct ExerciseRenderBlock<T: Sendable>: Sendable {
     }
 }
 
+public enum WorkoutSplitArchetype: String, Sendable, Equatable, Hashable {
+    case PUSH, PULL, LEGS, ARMS, SHOULDERS, CHEST_BACK, UPPER, FULL_BODY
+}
+
+public enum ExerciseSuggestionReasonType: String, Sendable, Equatable, Hashable {
+    case PLATEAU, GRINDING, REGRESSION, MISSING_MUSCLE, LOW_VOLUME
+
+    /// Stall reasons reference an existing exercise that can be swapped out.
+    public var isStall: Bool { self == .PLATEAU || self == .GRINDING || self == .REGRESSION }
+}
+
+public struct ExerciseTrend: Sendable, Equatable {
+    public var sessionsCount: Int
+    /// Weeks between the first and last logged session.
+    public var spanWeeks: Double
+    /// Sessions logged after the one that set the current best estimated 1RM.
+    public var sessionsSinceBest: Int
+    /// Whole weeks between the best session and the last session.
+    public var weeksSinceBest: Int
+    /// Sessions in the recent window logged at max effort.
+    public var hardSessionsRecent: Int
+    public var recentWindow: Int
+    /// Estimated 1RM change (%) from the start to the end of the recent window.
+    public var changePct: Double
+
+    public init(
+        sessionsCount: Int = 0,
+        spanWeeks: Double = 0,
+        sessionsSinceBest: Int = 0,
+        weeksSinceBest: Int = 0,
+        hardSessionsRecent: Int = 0,
+        recentWindow: Int = 0,
+        changePct: Double = 0
+    ) {
+        self.sessionsCount = sessionsCount
+        self.spanWeeks = spanWeeks
+        self.sessionsSinceBest = sessionsSinceBest
+        self.weeksSinceBest = weeksSinceBest
+        self.hardSessionsRecent = hardSessionsRecent
+        self.recentWindow = recentWindow
+        self.changePct = changePct
+    }
+}
+
+/// Numbers behind a suggestion, formatted by the UI into a short evidence chip.
+public struct WorkoutSuggestionEvidence: Sendable, Equatable {
+    public var sessionsSinceBest: Int
+    public var weeksSinceBest: Int
+    public var hardSessionsRecent: Int
+    public var recentWindow: Int
+    public var changePct: Double
+    public var setsForMuscle: Int
+    public var setsTotal: Int
+
+    public init(
+        sessionsSinceBest: Int = 0,
+        weeksSinceBest: Int = 0,
+        hardSessionsRecent: Int = 0,
+        recentWindow: Int = 0,
+        changePct: Double = 0,
+        setsForMuscle: Int = 0,
+        setsTotal: Int = 0
+    ) {
+        self.sessionsSinceBest = sessionsSinceBest
+        self.weeksSinceBest = weeksSinceBest
+        self.hardSessionsRecent = hardSessionsRecent
+        self.recentWindow = recentWindow
+        self.changePct = changePct
+        self.setsForMuscle = setsForMuscle
+        self.setsTotal = setsTotal
+    }
+}
+
+public struct WorkoutSuggestionInputExercise: Sendable, Equatable {
+    public var exerciseId: String?
+    public var exerciseName: String?
+    public var primaryMuscleGroup: MuscleGroup?
+    public var plannedSets: Int
+
+    public init(
+        exerciseId: String? = nil,
+        exerciseName: String? = nil,
+        primaryMuscleGroup: MuscleGroup? = nil,
+        plannedSets: Int = 3
+    ) {
+        self.exerciseId = exerciseId
+        self.exerciseName = exerciseName
+        self.primaryMuscleGroup = primaryMuscleGroup
+        self.plannedSets = plannedSets
+    }
+}
+
 public struct WorkoutExerciseSuggestion: Sendable, Equatable {
     public var suggestedExercise: ExerciseDto
     public var targetMuscle: MuscleGroup
-    public var reasonText: String
+    public var splitArchetype: WorkoutSplitArchetype
+    public var reasonType: ExerciseSuggestionReasonType
+    /// Only set for stall reasons (PLATEAU / GRINDING / REGRESSION).
     public var stallingExerciseId: String?
     public var stallingExerciseName: String?
+    public var evidence: WorkoutSuggestionEvidence
     public var recommendedSets: Int
     public var recommendedRepsMin: Int
     public var recommendedRepsMax: Int
@@ -858,9 +1172,11 @@ public struct WorkoutExerciseSuggestion: Sendable, Equatable {
     public init(
         suggestedExercise: ExerciseDto,
         targetMuscle: MuscleGroup,
-        reasonText: String,
+        splitArchetype: WorkoutSplitArchetype,
+        reasonType: ExerciseSuggestionReasonType,
         stallingExerciseId: String? = nil,
         stallingExerciseName: String? = nil,
+        evidence: WorkoutSuggestionEvidence = WorkoutSuggestionEvidence(),
         recommendedSets: Int = 3,
         recommendedRepsMin: Int = 10,
         recommendedRepsMax: Int = 14,
@@ -869,9 +1185,11 @@ public struct WorkoutExerciseSuggestion: Sendable, Equatable {
     ) {
         self.suggestedExercise = suggestedExercise
         self.targetMuscle = targetMuscle
-        self.reasonText = reasonText
+        self.splitArchetype = splitArchetype
+        self.reasonType = reasonType
         self.stallingExerciseId = stallingExerciseId
         self.stallingExerciseName = stallingExerciseName
+        self.evidence = evidence
         self.recommendedSets = recommendedSets
         self.recommendedRepsMin = recommendedRepsMin
         self.recommendedRepsMax = recommendedRepsMax

@@ -532,6 +532,21 @@ public final class LukiAppViewModel {
         watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
     }
 
+    /// Replaces an exercise in the active session, keeping its slot and pre-filling the
+    /// replacement's sets from global history.
+    public func substituteExerciseInSession(clientExerciseId: String, with replacement: ExerciseDto) {
+        guard let session = store.activeSession else { return }
+        let updated = SessionCalculator.substituteExerciseInSession(
+            session: session,
+            clientExerciseId: clientExerciseId,
+            replacementExercise: replacement,
+            historySessions: store.historySessions
+        )
+        store.saveActiveSession(updated)
+        store.enqueueSessionSync(updated)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(updated)
+    }
+
     public func togglePauseActiveSession() {
         guard var session = store.activeSession else { return }
         if session.status == .PAUSED {
