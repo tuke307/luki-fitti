@@ -234,9 +234,20 @@ export const en = {
     supersetSubtitleFormat: 'No rest between exercises · {rest} between rounds',
     smartSuggestionBadge: 'Suggestion',
     suggestionReasonPlateau:
-      '{stalling} has stalled. {name} could give your {muscle} a fresh challenge.',
-    suggestionReasonHighFatigue: '{stalling} has felt heavy lately. Try {name} for your {muscle}.',
-    suggestionReasonSplitBalance: '{name} would round out your {split} split.',
+      '{stalling} hasn’t hit a new best in a while. {name} could give your {muscle} a fresh challenge.',
+    suggestionReasonGrinding:
+      '{stalling} keeps taking max effort without moving up. Try {name} for your {muscle}.',
+    suggestionReasonRegression:
+      '{stalling} is trending down. {name} can get your {muscle} back on track.',
+    suggestionReasonMissingMuscle:
+      'Your {split} workout has no {muscle} work yet. {name} fills the gap.',
+    suggestionReasonLowVolume:
+      '{muscle} gets fewer sets than the rest of this workout. {name} balances it out.',
+    suggestionChipPlateau: '{sessions} sessions without a new best',
+    suggestionChipPlateauWeeks: '{sessions} sessions · {weeks} wks without a new best',
+    suggestionChipGrinding: 'Max effort {hard} of last {window} · no gain',
+    suggestionChipRegression: '{change}% over last {window} sessions',
+    suggestionChipSets: '{sets} of {total} sets',
     addSuggestedBtn: 'Add',
     swapSuggestedBtn: 'Replace {name}',
     dismissSuggestionTitle: 'Dismiss suggestion',
@@ -306,10 +317,10 @@ export const en = {
     intensityLightHint: 'Felt easy — go heavier next time',
     intensitySweetSpot: 'Just right',
     intensitySweetSpotHint: 'Felt just right',
-    intensityLimit: 'Hard',
-    intensityLimitHint: 'Felt hard — keep the weight',
+    intensityLimit: 'Max',
+    intensityLimitHint: 'Max effort — nothing left in the tank',
     intensityEffort: 'Effort',
-    intensityEffortHint: 'How did it feel? Easy → Just right → Hard',
+    intensityEffortHint: 'How did it feel? Easy → Just right → Max',
     doneSetBtn: 'Done',
     logSetBtn: 'Done',
     setLoggedStatus: 'Done',

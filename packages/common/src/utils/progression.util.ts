@@ -10,6 +10,30 @@ import type { ExerciseDto, SessionExerciseDto, SessionSetDto, WorkoutSessionDto 
 
 const LBS_TO_KG = 0.45359237;
 const KG_TO_LBS = 1 / LBS_TO_KG;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** RPE logged by the 3-bar "Max" effort level — nothing left in the tank. */
+export const MAX_EFFORT_RPE = 9.5;
+
+/**
+ * Stall detection thresholds. Mirrored 1:1 in the Swift `ProgressionEngine` —
+ * keep both in sync.
+ */
+export const SUGGESTION_THRESHOLDS = {
+  /** Sessions compared for grinding / regression. */
+  recentWindow: 3,
+  /** Max-effort sessions within the recent window that count as grinding. */
+  grindingMinHardSessions: 2,
+  /** Estimated 1RM gain (%) across the window below which max effort is "no gain". */
+  grindingMaxGainPct: 1,
+  /** Estimated 1RM drop (%) across the window that counts as a regression. */
+  regressionDropPct: 4,
+  plateauMinSessions: 4,
+  plateauMinWeeks: 3,
+  plateauMinSessionsSinceBest: 3,
+  /** A key split muscle with fewer than this share of the busiest muscle's sets is low volume. */
+  lowVolumeRatio: 0.5,
+} as const;
 
 export type ProgressionPhase =
   'INCREASE_WEIGHT' | 'INCREASE_REPS' | 'DELOAD' | 'MAINTAIN' | 'BASELINE';
@@ -265,6 +289,67 @@ function computeTrendTelemetry(entries: ExerciseHistorySessionEntry[]): {
   };
 }
 
+export interface ExerciseTrend {
+  sessionsCount: number;
+  /** Weeks between the first and last logged session. */
+  spanWeeks: number;
+  /** Sessions logged after the one that set the current best estimated 1RM. */
+  sessionsSinceBest: number;
+  /** Whole weeks between the best session and the last session. */
+  weeksSinceBest: number;
+  /** Sessions in the recent window logged at max effort. */
+  hardSessionsRecent: number;
+  recentWindow: number;
+  /** Estimated 1RM change (%) from the start to the end of the recent window. */
+  changePct: number;
+}
+
+/**
+ * Summarizes whether an exercise is still moving: a single max-effort session is
+ * normal training, a stall is max effort or time passing without results.
+ */
+export function analyzeExerciseTrend(history: ExerciseHistorySessionEntry[]): ExerciseTrend {
+  const n = history.length;
+  if (n === 0) {
+    return {
+      sessionsCount: 0,
+      spanWeeks: 0,
+      sessionsSinceBest: 0,
+      weeksSinceBest: 0,
+      hardSessionsRecent: 0,
+      recentWindow: 0,
+      changePct: 0,
+    };
+  }
+
+  let bestIndex = 0;
+  for (let i = 1; i < n; i++) {
+    if (history[i]!.bestEstimated1RM > history[bestIndex]!.bestEstimated1RM) bestIndex = i;
+  }
+
+  const first = history[0]!;
+  const last = history[n - 1]!;
+  const weeksBetween = (from: string, to: string) =>
+    (Date.parse(to) - Date.parse(from)) / (7 * DAY_MS);
+
+  const recent = history.slice(-SUGGESTION_THRESHOLDS.recentWindow);
+  const windowStart = recent[0]!.bestEstimated1RM;
+  const changePct =
+    recent.length >= 2 && windowStart > 0
+      ? Math.round(((last.bestEstimated1RM - windowStart) / windowStart) * 1000) / 10
+      : 0;
+
+  return {
+    sessionsCount: n,
+    spanWeeks: weeksBetween(first.startedAt, last.startedAt),
+    sessionsSinceBest: n - 1 - bestIndex,
+    weeksSinceBest: Math.floor(weeksBetween(history[bestIndex]!.startedAt, last.startedAt)),
+    hardSessionsRecent: recent.filter((e) => (e.avgRpe ?? 0) >= MAX_EFFORT_RPE).length,
+    recentWindow: recent.length,
+    changePct,
+  };
+}
+
 /**
  * Statistical / ML Progressive Overload & Autoregulation Engine.
  *
@@ -349,18 +434,20 @@ export function computeExerciseProgression(params: {
   const allSetsHitTopOfBand = lastWorkingSets.every((s) => s.reps >= repMax);
   const majoritySetsBelowMin =
     lastWorkingSets.filter((s) => s.reps < repMin).length > lastWorkingSets.length / 2;
-  const highFatigueLast = (lastSession.avgRpe ?? 8) >= 9.5;
+  const maxEffortLast = (lastSession.avgRpe ?? 8) >= MAX_EFFORT_RPE;
   const consecutiveRegression =
     prevSession !== null &&
     lastSession.bestEstimated1RM < prevSession.bestEstimated1RM * 0.96 &&
-    (majoritySetsBelowMin || highFatigueLast);
+    (majoritySetsBelowMin || maxEffortLast);
 
+  // Max effort is a normal training outcome: topping out the rep band still earns
+  // more weight, and only a max effort below the top holds the prescription.
   let overallPhase: ProgressionPhase;
-  if (consecutiveRegression || (majoritySetsBelowMin && highFatigueLast)) {
+  if (consecutiveRegression || (majoritySetsBelowMin && maxEffortLast)) {
     overallPhase = 'DELOAD';
-  } else if (allSetsHitTopOfBand && !highFatigueLast && primaryLastWeight > 0) {
+  } else if (allSetsHitTopOfBand && primaryLastWeight > 0) {
     overallPhase = 'INCREASE_WEIGHT';
-  } else if (highFatigueLast && !majoritySetsBelowMin) {
+  } else if (maxEffortLast && !majoritySetsBelowMin) {
     overallPhase = 'MAINTAIN';
   } else {
     overallPhase = 'INCREASE_REPS';
@@ -407,13 +494,13 @@ export function computeExerciseProgression(params: {
       suggestedWeight = roundToGymStep(reduced, 0.5);
       suggestedReps = Math.max(repMin, Math.min(repMax, lastR));
       setPhase = 'DELOAD';
+    } else if (lastR >= repMax && lastW > 0) {
+      // Individual set topped out rep range even if later sets didn't -> suggest micro weight bump
+      suggestedWeight = roundToGymStep(lastW + stepIncrement, 0.5);
+      suggestedReps = repMin;
+      setPhase = 'INCREASE_WEIGHT';
     } else if (overallPhase === 'INCREASE_REPS') {
-      if (lastR >= repMax && lastW > 0 && (lastRpe ?? 8) < 9.5) {
-        // Individual set topped out rep range even if later sets didn't -> suggest micro weight bump or hold
-        suggestedWeight = roundToGymStep(lastW + stepIncrement, 0.5);
-        suggestedReps = repMin;
-        setPhase = 'INCREASE_WEIGHT';
-      } else if (lastR < repMax && (lastRpe ?? 8) <= 9) {
+      if (lastR < repMax && (lastRpe ?? 8) <= 9) {
         suggestedWeight = lastW > 0 ? lastW : targetWeight;
         suggestedReps = Math.min(repMax, lastR + 1);
         setPhase = 'INCREASE_REPS';
@@ -651,15 +738,29 @@ export function groupExercisesIntoBlocks<T extends { restSeconds: number; planne
 export type WorkoutSplitArchetype =
   'PUSH' | 'PULL' | 'LEGS' | 'ARMS' | 'SHOULDERS' | 'CHEST_BACK' | 'UPPER' | 'FULL_BODY';
 
-export type ExerciseSuggestionReasonType = 'PLATEAU' | 'HIGH_FATIGUE' | 'SPLIT_BALANCE';
+export type ExerciseSuggestionReasonType =
+  'PLATEAU' | 'GRINDING' | 'REGRESSION' | 'MISSING_MUSCLE' | 'LOW_VOLUME';
+
+/** Numbers behind a suggestion, formatted by the UI into a short evidence chip. */
+export interface WorkoutSuggestionEvidence {
+  sessionsSinceBest: number;
+  weeksSinceBest: number;
+  hardSessionsRecent: number;
+  recentWindow: number;
+  changePct: number;
+  setsForMuscle: number;
+  setsTotal: number;
+}
 
 export interface WorkoutExerciseSuggestion {
   suggestedExercise: ExerciseDto;
   targetMuscle: MuscleGroup;
   splitArchetype: WorkoutSplitArchetype;
   reasonType: ExerciseSuggestionReasonType;
+  /** Only set for stall reasons (PLATEAU / GRINDING / REGRESSION). */
   stallingExerciseId: string | null;
   stallingExerciseName: string | null;
+  evidence: WorkoutSuggestionEvidence;
   recommendedSets: number;
   recommendedRepsMin: number;
   recommendedRepsMax: number;
@@ -754,12 +855,39 @@ export function inferWorkoutSplitArchetype(
 }
 
 /**
+ * Classifies an exercise trend as a stall, or `null` when it is still progressing.
+ * Priority: REGRESSION > GRINDING > PLATEAU.
+ */
+export function classifyExerciseStall(
+  trend: ExerciseTrend,
+): 'PLATEAU' | 'GRINDING' | 'REGRESSION' | null {
+  const T = SUGGESTION_THRESHOLDS;
+  const fullWindow = trend.recentWindow >= T.recentWindow;
+  if (fullWindow && trend.changePct <= -T.regressionDropPct) return 'REGRESSION';
+  if (
+    fullWindow &&
+    trend.hardSessionsRecent >= T.grindingMinHardSessions &&
+    trend.changePct < T.grindingMaxGainPct
+  ) {
+    return 'GRINDING';
+  }
+  if (
+    trend.sessionsCount >= T.plateauMinSessions &&
+    trend.spanWeeks >= T.plateauMinWeeks &&
+    trend.sessionsSinceBest >= T.plateauMinSessionsSinceBest
+  ) {
+    return 'PLATEAU';
+  }
+  return null;
+}
+
+const STALL_BASE_SEVERITY = { REGRESSION: 100, GRINDING: 50, PLATEAU: 10 } as const;
+
+/**
  * Proposes at most ONE smart exercise suggestion for a workout (template preview,
- * template builder, or live active session) based on split balance, progression slope
- * plateau, and RPE/effort fatigue.
- *
- * Example: In a Push workout where existing shoulder exercises have plateaued or feel
- * consistently hard (high RPE / DELOAD / flat slope), suggests a fresh shoulder exercise.
+ * template builder, or live active session), and only when there is a concrete reason:
+ * an exercise that regressed, grinds at max effort without gains, or plateaued for weeks,
+ * or a key split muscle that is missing or under-trained. Returns `null` otherwise.
  */
 export function computeWorkoutExerciseSuggestion(params: {
   workoutName: string;
@@ -817,13 +945,21 @@ export function computeWorkoutExerciseSuggestion(params: {
   );
   const splitMuscles = SPLIT_MUSCLE_PRIORITY[splitArchetype];
 
-  // Evaluate progression & fatigue across exercises currently in the workout
+  const setsByMuscle = new Map<MuscleGroup, number>();
+  for (const m of splitMuscles) setsByMuscle.set(m, 0);
+  for (const r of resolvedExercises) {
+    setsByMuscle.set(r.muscle, (setsByMuscle.get(r.muscle) ?? 0) + (r.input.plannedSets ?? 3));
+  }
+  const setsTotal = resolvedExercises.reduce((sum, r) => sum + (r.input.plannedSets ?? 3), 0);
+
+  // Find the exercise in the workout that stalls hardest (regression > grinding > plateau)
   let worstStalling: {
     exerciseId: string | null;
     exerciseName: string;
     muscle: MuscleGroup;
     equipment: EquipmentType | null;
-    reasonType: ExerciseSuggestionReasonType;
+    reasonType: 'PLATEAU' | 'GRINDING' | 'REGRESSION';
+    trend: ExerciseTrend;
     severityScore: number;
   } | null = null;
 
@@ -832,35 +968,21 @@ export function computeWorkoutExerciseSuggestion(params: {
     const exName = item.input.exerciseName ?? item.catalogEx?.name ?? null;
     if (!exId && !exName) continue;
 
-    const insight = computeExerciseProgression({
-      exerciseId: exId,
-      exerciseName: exName,
-      historySessions,
-      catalogExercise: item.catalogEx,
-      plannedSets: item.input.plannedSets ?? 3,
-      targetRepsMin: item.input.targetRepsMin ?? 8,
-      targetRepsMax: item.input.targetRepsMax ?? 12,
-      targetWeight: item.input.targetWeight ?? null,
-      weightUnit,
-    });
+    const trend = analyzeExerciseTrend(
+      extractGlobalExerciseHistory(exId, exName, historySessions, weightUnit),
+    );
+    const stall = classifyExerciseStall(trend);
+    if (!stall) continue;
 
-    if (insight.sessionsCount === 0 || !insight.lastSession) continue;
-
-    const avgRpe = insight.lastSession.avgRpe ?? 8;
-    const isHighFatigue = avgRpe >= 9.0 || insight.phase === 'DELOAD';
-    const isPlateau =
-      insight.sessionsCount >= 2 &&
-      (insight.slopePerSession <= 0.15 || insight.phase === 'MAINTAIN');
-
-    if (!isHighFatigue && !isPlateau) continue;
-
-    // Give a bonus to accessory/key split muscles (e.g. SHOULDERS in PUSH) when tied
+    // Give a bonus to the key split muscle (e.g. SHOULDERS in PUSH) when tied
     const splitBonus = item.muscle === splitMuscles[0] ? 1.5 : 0;
-    const severityScore =
-      (insight.phase === 'DELOAD' ? 4 : 0) +
-      (avgRpe >= 9.0 ? 3 : avgRpe >= 8.5 ? 1.5 : 0) +
-      (isPlateau ? 2.5 - Math.max(-1, Math.min(1, insight.slopePerSession)) : 0) +
-      splitBonus;
+    const detail =
+      stall === 'REGRESSION'
+        ? Math.min(20, -trend.changePct)
+        : stall === 'GRINDING'
+          ? trend.hardSessionsRecent * 5
+          : Math.min(20, trend.sessionsSinceBest);
+    const severityScore = STALL_BASE_SEVERITY[stall] + detail + splitBonus;
 
     if (!worstStalling || severityScore > worstStalling.severityScore) {
       worstStalling = {
@@ -868,18 +990,19 @@ export function computeWorkoutExerciseSuggestion(params: {
         exerciseName: exName ?? item.catalogEx?.name ?? 'Exercise',
         muscle: item.muscle,
         equipment: item.catalogEx?.equipment ?? null,
-        reasonType: isHighFatigue ? 'HIGH_FATIGUE' : 'PLATEAU',
+        reasonType: stall,
+        trend,
         severityScore,
       };
     }
   }
 
-  // Determine target muscle group
   let targetMuscle: MuscleGroup;
-  let reasonType: ExerciseSuggestionReasonType = 'SPLIT_BALANCE';
+  let reasonType: ExerciseSuggestionReasonType;
   let stallingExerciseId: string | null = null;
   let stallingExerciseName: string | null = null;
   let avoidEquipment: EquipmentType | null = null;
+  let trend: ExerciseTrend | null = null;
 
   if (worstStalling) {
     targetMuscle = worstStalling.muscle;
@@ -887,60 +1010,41 @@ export function computeWorkoutExerciseSuggestion(params: {
     stallingExerciseId = worstStalling.exerciseId;
     stallingExerciseName = worstStalling.exerciseName;
     avoidEquipment = worstStalling.equipment;
+    trend = worstStalling.trend;
   } else {
-    // Find the muscle in the split archetype with the fewest planned sets in this workout
-    const setsByMuscle = new Map<MuscleGroup, number>();
-    for (const m of splitMuscles) {
-      setsByMuscle.set(m, 0);
-    }
-    for (const r of resolvedExercises) {
-      setsByMuscle.set(r.muscle, (setsByMuscle.get(r.muscle) ?? 0) + (r.input.plannedSets ?? 3));
-    }
-
+    // No stall: only suggest when a key split muscle is missing or clearly under-trained
     let minSets = Number.POSITIVE_INFINITY;
+    let maxSets = 0;
     let chosenMuscle = splitMuscles[0] ?? MuscleGroup.SHOULDERS;
     for (const m of splitMuscles) {
       const count = setsByMuscle.get(m) ?? 0;
+      maxSets = Math.max(maxSets, count);
       if (count < minSets) {
         minSets = count;
         chosenMuscle = m;
       }
     }
-    targetMuscle = chosenMuscle;
 
-    // If there is already an exercise of this muscle in the workout, reference it for context
-    const existingForMuscle = resolvedExercises.find((r) => r.muscle === targetMuscle);
-    if (existingForMuscle) {
-      stallingExerciseId =
-        existingForMuscle.input.exerciseId ?? existingForMuscle.catalogEx?.id ?? null;
-      stallingExerciseName =
-        existingForMuscle.input.exerciseName ?? existingForMuscle.catalogEx?.name ?? null;
-      avoidEquipment = existingForMuscle.catalogEx?.equipment ?? null;
+    if (minSets === 0) {
+      reasonType = 'MISSING_MUSCLE';
+    } else if (minSets < maxSets * SUGGESTION_THRESHOLDS.lowVolumeRatio) {
+      reasonType = 'LOW_VOLUME';
+    } else {
+      return null;
     }
+    targetMuscle = chosenMuscle;
+    avoidEquipment =
+      resolvedExercises.find((r) => r.muscle === targetMuscle)?.catalogEx?.equipment ?? null;
   }
 
-  // Pick the best candidate from the catalog not already in the workout
-  const candidates = strengthCatalog.filter(
+  // Pick the best candidate for the target muscle that is not already in the workout.
+  // No candidate means no honest suggestion, so the card stays hidden.
+  const pool = strengthCatalog.filter(
     (c) =>
       !existingIds.has(c.id) &&
       !existingNames.has(c.name.trim().toLowerCase()) &&
       c.primaryMuscleGroup === targetMuscle,
   );
-
-  const fallbackCandidates =
-    candidates.length > 0
-      ? candidates
-      : strengthCatalog.filter(
-          (c) =>
-            !existingIds.has(c.id) &&
-            !existingNames.has(c.name.trim().toLowerCase()) &&
-            splitMuscles.includes(c.primaryMuscleGroup),
-        );
-
-  const pool =
-    fallbackCandidates.length > 0
-      ? fallbackCandidates
-      : strengthCatalog.filter((c) => !existingIds.has(c.id));
 
   if (pool.length === 0) return null;
 
@@ -999,6 +1103,15 @@ export function computeWorkoutExerciseSuggestion(params: {
     reasonType,
     stallingExerciseId,
     stallingExerciseName,
+    evidence: {
+      sessionsSinceBest: trend?.sessionsSinceBest ?? 0,
+      weeksSinceBest: trend?.weeksSinceBest ?? 0,
+      hardSessionsRecent: trend?.hardSessionsRecent ?? 0,
+      recentWindow: trend?.recentWindow ?? 0,
+      changePct: trend?.changePct ?? 0,
+      setsForMuscle: setsByMuscle.get(targetMuscle) ?? 0,
+      setsTotal,
+    },
     recommendedSets: 3,
     recommendedRepsMin: chosen.category === ExerciseCategory.COMPOUND ? 8 : 10,
     recommendedRepsMax: chosen.category === ExerciseCategory.COMPOUND ? 12 : 15,

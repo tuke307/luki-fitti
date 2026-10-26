@@ -383,54 +383,41 @@ public struct ActiveSessionView: View {
             if viewModel.store.preferences.exerciseSuggestionsEnabled,
                let suggestion = ProgressionEngine.computeWorkoutExerciseSuggestion(
                    workoutName: session.workoutNameSnapshot,
-                   existingExerciseIds: session.exercises.compactMap(\.exerciseId),
-                   existingExerciseNames: session.exercises.map(\.exerciseNameSnapshot),
-                   existingMuscles: session.exercises.map(\.primaryMuscleSnapshot),
+                   exercises: session.exercises.map {
+                       WorkoutSuggestionInputExercise(
+                           exerciseId: $0.exerciseId,
+                           exerciseName: $0.exerciseNameSnapshot,
+                           primaryMuscleGroup: $0.primaryMuscleSnapshot,
+                           plannedSets: $0.plannedSets
+                       )
+                   },
                    catalog: viewModel.store.catalog,
                    historySessions: viewModel.store.historySessions,
                    weightUnit: session.weightUnit
                ) {
-                HStack(spacing: 10) {
-                    Image(systemName: "sparkles")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.primary)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Suggestion · \(suggestion.suggestedExercise.name)")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.primary)
-                        Text(suggestion.reasonText)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Button {
+                let stallingExercise = session.exercises.first {
+                    $0.exerciseId != nil && $0.exerciseId == suggestion.stallingExerciseId
+                }
+                SuggestionCardView(
+                    suggestion: suggestion,
+                    locale: locale,
+                    onAdd: {
                         viewModel.addUnplannedExerciseToSession(suggestion.suggestedExercise)
                         if let count = viewModel.store.activeSession?.exercises.count, count > 0 {
                             selectedExerciseIndex = count - 1
                         }
-                    } label: {
-                        Text("+ Add")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(LukiColors.accentForeground)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(Capsule().fill(LukiColors.cardBackground))
+                    },
+                    onReplace: stallingExercise.map { target in
+                        {
+                            viewModel.substituteExerciseInSession(
+                                clientExerciseId: target.clientExerciseId,
+                                with: suggestion.suggestedExercise
+                            )
+                            if let idx = session.exercises.firstIndex(where: { $0.clientExerciseId == target.clientExerciseId }) {
+                                selectedExerciseIndex = idx
+                            }
+                        }
                     }
-                    .buttonStyle(.plain)
-                }
-                .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(
-                            LukiColors.cardBackground
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                                .stroke(
-                                    LukiColors.separator,
-                                    lineWidth: 1.5
-                                )
-                        )
                 )
                 .accessibilityIdentifier("ios.session.rainbowSuggestion")
             }
@@ -648,16 +635,7 @@ public struct ActiveSessionView: View {
                 exercises: viewModel.store.catalog,
                 selectedExerciseId: exercise.exerciseId
             ) { candidate in
-                guard let currentSession = viewModel.store.activeSession else { return }
-                let updated = SessionCalculator.substituteExerciseInSession(
-                    session: currentSession,
-                    clientExerciseId: exercise.clientExerciseId,
-                    replacementExercise: candidate,
-                    historySessions: viewModel.store.historySessions
-                )
-                viewModel.store.saveActiveSession(updated)
-                viewModel.store.enqueueSessionSync(updated)
-                viewModel.watchSyncCoordinator.broadcastActiveSessionSnapshot(updated)
+                viewModel.substituteExerciseInSession(clientExerciseId: exercise.clientExerciseId, with: candidate)
                 showingSwapSheet = false
             }
         }
@@ -902,17 +880,18 @@ public struct ActiveSessionView: View {
         )
     }
 
+    private var locale: SupportedLocale {
+        SupportedLocale.resolve(viewModel.store.preferences.language)
+    }
+
     private func rpeEffortLabel(_ rpe: Double?) -> String {
-        guard let rpe else { return "Effort" }
-        if rpe <= 7.5 { return "Light" }
-        if rpe < 9.5 { return "Sweet Spot" }
-        return "Limit"
+        LukiI18n.effortLabel(rpe: rpe, locale: locale)
     }
 
     private func nextCycleRpe(_ rpe: Double?) -> Double? {
         guard let rpe else { return 7.0 }
         if rpe <= 7.5 { return 8.0 }
-        if rpe < 9.5 { return 9.5 }
+        if rpe < ProgressionEngine.maxEffortRpe { return ProgressionEngine.maxEffortRpe }
         return nil
     }
 

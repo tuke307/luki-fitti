@@ -32,27 +32,54 @@ export function RainbowExerciseSuggestionCard({
   analyticsContext: context = 'session',
 }: RainbowExerciseSuggestionCardProps) {
   const { t, format, muscleLabel } = useLocale();
-  const { suggestedExercise, targetMuscle, reasonType, stallingExerciseName, splitArchetype } =
-    suggestion;
+  const {
+    suggestedExercise,
+    targetMuscle,
+    reasonType,
+    stallingExerciseName,
+    splitArchetype,
+    evidence,
+  } = suggestion;
 
-  const reasonText =
-    reasonType === 'HIGH_FATIGUE' && stallingExerciseName
-      ? format(t.workouts.suggestionReasonHighFatigue, {
-          stalling: stallingExerciseName,
-          name: suggestedExercise.name,
-          muscle: muscleLabel(targetMuscle),
-        })
-      : reasonType === 'PLATEAU' && stallingExerciseName
-        ? format(t.workouts.suggestionReasonPlateau, {
-            muscle: muscleLabel(targetMuscle),
-            stalling: stallingExerciseName,
-            name: suggestedExercise.name,
+  const reasonTemplates: Record<WorkoutExerciseSuggestion['reasonType'], string> = {
+    PLATEAU: t.workouts.suggestionReasonPlateau,
+    GRINDING: t.workouts.suggestionReasonGrinding,
+    REGRESSION: t.workouts.suggestionReasonRegression,
+    MISSING_MUSCLE: t.workouts.suggestionReasonMissingMuscle,
+    LOW_VOLUME: t.workouts.suggestionReasonLowVolume,
+  };
+  const reasonText = format(reasonTemplates[reasonType], {
+    stalling: stallingExerciseName ?? '',
+    name: suggestedExercise.name,
+    muscle: muscleLabel(targetMuscle),
+    split: splitArchetype.replace('_', ' '),
+  });
+
+  const roundedChange = Math.round(evidence.changePct);
+  const evidenceText =
+    reasonType === 'PLATEAU'
+      ? format(
+          evidence.weeksSinceBest >= 1
+            ? t.workouts.suggestionChipPlateauWeeks
+            : t.workouts.suggestionChipPlateau,
+          { sessions: evidence.sessionsSinceBest, weeks: evidence.weeksSinceBest },
+        )
+      : reasonType === 'GRINDING'
+        ? format(t.workouts.suggestionChipGrinding, {
+            hard: evidence.hardSessionsRecent,
+            window: evidence.recentWindow,
           })
-        : format(t.workouts.suggestionReasonSplitBalance, {
-            name: suggestedExercise.name,
-            muscle: muscleLabel(targetMuscle),
-            split: splitArchetype.replace('_', ' '),
-          });
+        : reasonType === 'REGRESSION'
+          ? format(t.workouts.suggestionChipRegression, {
+              change: `${roundedChange < 0 ? '−' : ''}${Math.abs(roundedChange)}`,
+              window: evidence.recentWindow,
+            })
+          : evidence.setsTotal > 0
+            ? format(t.workouts.suggestionChipSets, {
+                sets: evidence.setsForMuscle,
+                total: evidence.setsTotal,
+              })
+            : null;
 
   const repRangeText =
     suggestion.recommendedRepsMin !== suggestion.recommendedRepsMax
@@ -106,6 +133,14 @@ export function RainbowExerciseSuggestionCard({
                 </span>
               </div>
               <p className="text-muted-foreground text-[13px] leading-snug">{reasonText}</p>
+              {evidenceText && (
+                <span
+                  data-testid={`${testId}-evidence`}
+                  className="bg-secondary/60 text-muted-foreground tabular-nums inline-block rounded-full px-2 py-0.5 text-[12px] font-medium"
+                >
+                  {evidenceText}
+                </span>
+              )}
             </div>
           </div>
 
