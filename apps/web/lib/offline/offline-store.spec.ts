@@ -533,38 +533,49 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
     assert.equal(formatRestDurationMinSec(60), '1:00');
     assert.equal(formatRestDurationMinSec(75), '1:15');
 
-    // Simulate a Push workout where Shoulder Press feels hard (RPE 9.5) and plateaus
-    const fatiguedSession = createOfflineSessionFromTemplate(pplPushTemplate, catalog, 'user-1');
-    fatiguedSession.status = SessionStatus.COMPLETED;
-    fatiguedSession.completedAt = new Date().toISOString();
-    const shoulderEx = fatiguedSession.exercises.find(
-      (e) => e.primaryMuscleSnapshot === MuscleGroup.SHOULDERS,
-    )!;
-    for (const s of shoulderEx.sets) {
-      s.completed = true;
-      s.weight = 28;
-      s.reps = 6;
-      s.rpe = 9.5;
-    }
+    // Simulate a Push workout where Shoulder Press needs max effort (RPE 9.5) without gains
+    const grindingSession = (dayOffset: number) => {
+      const session = createOfflineSessionFromTemplate(pplPushTemplate, catalog, 'user-1');
+      session.status = SessionStatus.COMPLETED;
+      session.startedAt = new Date(Date.UTC(2026, 9, 1 + dayOffset, 17)).toISOString();
+      session.completedAt = session.startedAt;
+      const shoulderEx = session.exercises.find(
+        (e) => e.primaryMuscleSnapshot === MuscleGroup.SHOULDERS,
+      )!;
+      for (const s of shoulderEx.sets) {
+        s.completed = true;
+        s.weight = 28;
+        s.reps = 6;
+        s.rpe = 9.5;
+      }
+      return session;
+    };
 
-    const suggestion = computeWorkoutExerciseSuggestion({
-      workoutName: pplPushTemplate.name,
-      folderName: 'Push / Pull / Legs (PPL)',
-      exercises: pplPushTemplate.exercises.map((ex) => ({
-        exerciseId: ex.exerciseId,
-        plannedSets: ex.plannedSets,
-        targetRepsMin: ex.targetRepsMin,
-        targetRepsMax: ex.targetRepsMax,
-        targetWeight: ex.targetWeight,
-      })),
-      catalog,
-      historySessions: [fatiguedSession],
-      weightUnit: WeightUnit.KG,
-    });
+    const suggestFrom = (historySessions: WorkoutSessionDto[]) =>
+      computeWorkoutExerciseSuggestion({
+        workoutName: pplPushTemplate.name,
+        folderName: 'Push / Pull / Legs (PPL)',
+        exercises: pplPushTemplate.exercises.map((ex) => ({
+          exerciseId: ex.exerciseId,
+          plannedSets: ex.plannedSets,
+          targetRepsMin: ex.targetRepsMin,
+          targetRepsMax: ex.targetRepsMax,
+          targetWeight: ex.targetWeight,
+        })),
+        catalog,
+        historySessions,
+        weightUnit: WeightUnit.KG,
+      });
+
+    // A single max-effort session is normal training, not a reason to suggest anything
+    assert.notEqual(suggestFrom([grindingSession(0)])?.reasonType, 'GRINDING');
+
+    const suggestion = suggestFrom([grindingSession(0), grindingSession(7), grindingSession(14)]);
 
     assert.notEqual(suggestion, null);
     assert.equal(suggestion!.targetMuscle, MuscleGroup.SHOULDERS);
-    assert.equal(suggestion!.reasonType, 'HIGH_FATIGUE');
+    assert.equal(suggestion!.reasonType, 'GRINDING');
+    assert.equal(suggestion!.evidence.hardSessionsRecent, 3);
     assert.equal(
       pplPushTemplate.exercises.some((e) => e.exerciseId === suggestion!.suggestedExercise.id),
       false,

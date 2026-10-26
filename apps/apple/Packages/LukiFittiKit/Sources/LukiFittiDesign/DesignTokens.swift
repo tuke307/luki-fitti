@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import LukiFittiModels
+import LukiFittiDomain
 
 #if canImport(UIKit)
 import UIKit
@@ -131,6 +132,16 @@ public enum LukiColors {
 public enum LukiI18n {
     public static func resolveLocale(_ pref: LanguagePreference?) -> SupportedLocale {
         SupportedLocale.resolve(pref)
+    }
+
+    /// Effort level label for a logged RPE. Mirrors `session.intensity*` in the web locales:
+    /// 1 bar = Easy (RPE 7), 2 bars = Just right (RPE 8), 3 bars = Max (RPE 9.5).
+    public static func effortLabel(rpe: Double?, locale: SupportedLocale = .en) -> String {
+        let de = locale == .de
+        guard let rpe else { return de ? "Intensität" : "Effort" }
+        if rpe <= 7.5 { return de ? "Leicht" : "Easy" }
+        if rpe < ProgressionEngine.maxEffortRpe { return de ? "Genau richtig" : "Just right" }
+        return "Max"
     }
 
     public static func muscleLabel(_ muscle: MuscleGroup, locale: SupportedLocale = .en) -> String {
