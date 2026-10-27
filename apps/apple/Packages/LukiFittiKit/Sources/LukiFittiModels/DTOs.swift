@@ -730,6 +730,10 @@ public struct SyncSessionPayloadDto: Codable, Sendable, Equatable, Hashable {
     public var minHeartRateBpm: Int?
     public var heartRateSamples: [HeartRateSampleDto]?
     public var version: Int
+    /// Stable random id of this app install; lets the server recognise its own retried syncs.
+    public var deviceId: String?
+    /// Last server version this device acknowledged; used for optimistic concurrency.
+    public var baseVersion: Int?
     public var forceOverwrite: Bool?
     public var exercises: [SessionExerciseDto]
 

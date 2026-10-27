@@ -761,23 +761,45 @@ public struct AppShellView: View {
             }
         }
         .alert(
-            "Workout Sync Conflict Detected",
+            "Workout changed on another device",
             isPresented: Binding(
                 get: { viewModel.store.conflictItem != nil },
                 set: { if !$0 { viewModel.store.conflictItem = nil } }
             )
         ) {
             if let conflict = viewModel.store.conflictItem {
-                Button("Use Other Device") {
+                Button("Use other device") {
                     Task { await viewModel.store.resolveConflict(clientSessionId: conflict.clientSessionId, keepLocal: false) }
                 }
-                Button("Keep Local Workout Data") {
+                Button("Keep this device") {
                     Task { await viewModel.store.resolveConflict(clientSessionId: conflict.clientSessionId, keepLocal: true) }
                 }
             }
         } message: {
-            Text("A newer version of this workout exists on another device. Which one do you want to keep?")
+            Text(conflictMessage(viewModel.store.conflictItem))
         }
+    }
+
+    private func conflictMessage(_ item: QueuedSessionSyncItem?) -> String {
+        guard let item else { return "" }
+        let local = viewModel.store.activeSession?.clientSessionId == item.clientSessionId
+            ? viewModel.store.activeSession
+            : nil
+        let summary: (WorkoutSessionDto?) -> String = { session in
+            guard let session else { return "–" }
+            return "\(session.totalSetsCompleted) sets done · changed \(Self.conflictTime(session.lastSyncedAt))"
+        }
+        return """
+        Both this device and another one changed \(item.payload.workoutNameSnapshot). Pick the version you want to keep.
+
+        This device: \(summary(local))
+        Other device: \(summary(item.serverConflictSession))
+        """
+    }
+
+    private static func conflictTime(_ iso: String?) -> String {
+        guard let iso, let date = ISO8601DateFormatter.lukiParse(iso) else { return "–" }
+        return date.formatted(date: .omitted, time: .shortened)
     }
 
     /// Bridges the view model's single `selectedTab` (still used by feature views) onto the

@@ -494,6 +494,10 @@ export const SyncSessionPayloadSchema = z.object({
   minHeartRateBpm: z.number().int().min(20).max(260).nullable().optional(),
   heartRateSamples: z.array(HeartRateSampleSchema).max(3600).nullable().optional(),
   version: z.number().int().min(1).default(1),
+  /** Stable random id of the sending app install; lets the server recognise its own retries. */
+  deviceId: z.string().min(8).max(64).optional(),
+  /** Last server version this device has acknowledged; used for optimistic concurrency. */
+  baseVersion: z.number().int().min(1).optional(),
   forceOverwrite: z.boolean().default(false).optional(),
   exercises: z.array(SessionExerciseSyncSchema).default([]),
 });

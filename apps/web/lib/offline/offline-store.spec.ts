@@ -6,9 +6,11 @@ import {
   createOfflineSessionFromStretchingRoutine,
   createOfflineSessionFromTemplate,
   enqueueSessionSync,
+  getAcknowledgedServerVersion,
   getCachedCatalog,
   getCachedStretchingRoutines,
   getCachedWorkouts,
+  getDeviceId,
   getLocalActiveSession,
   getLocalHistorySessions,
   getSyncQueue,
@@ -17,6 +19,7 @@ import {
   removeLocalHistorySession,
   saveLocalActiveSession,
   saveLocalHistorySession,
+  setAcknowledgedServerVersion,
   setCachedCatalog,
   setCachedWorkouts,
   substituteExerciseInSession,
@@ -580,5 +583,16 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
       pplPushTemplate.exercises.some((e) => e.exerciseId === suggestion!.suggestedExercise.id),
       false,
     );
+  });
+
+  it('keeps a stable device id and per-session acknowledged server versions for sync', async () => {
+    const deviceId = await getDeviceId();
+    assert.ok(deviceId.length >= 8);
+    assert.equal(await getDeviceId(), deviceId);
+
+    await setAcknowledgedServerVersion('sess-ack', 7);
+    assert.equal(await getAcknowledgedServerVersion('sess-ack'), 7);
+    await setAcknowledgedServerVersion('sess-ack', null);
+    assert.equal(await getAcknowledgedServerVersion('sess-ack'), undefined);
   });
 });

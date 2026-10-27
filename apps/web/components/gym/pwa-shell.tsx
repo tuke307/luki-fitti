@@ -16,13 +16,13 @@ import {
 } from 'lucide-react';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@luki-fitti/ui/components/ui/dialog';
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@luki-fitti/ui/components/ui/alert-dialog';
 import { useGym } from '@/providers/gym/gym-context';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
@@ -42,9 +42,10 @@ export function PwaShell() {
   const [activeTab, setActiveTab] = useState<NavTab>('home');
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const { isAuthenticated, user } = useAuth();
-  const { t, format } = useLocale();
+  const { t, format, bcp47 } = useLocale();
   const {
     activeSession,
+    historySessions,
     isOnline,
     syncState,
     pendingSyncCount,
@@ -55,6 +56,12 @@ export function PwaShell() {
   } = useGym();
 
   const notifiedEndsAtRef = useRef<string | null>(null);
+  const conflictLocalSession = conflictServerSession
+    ? activeSession?.clientSessionId === conflictServerSession.clientSessionId
+      ? activeSession
+      : (historySessions.find((s) => s.clientSessionId === conflictServerSession.clientSessionId) ??
+        null)
+    : null;
 
   useEffect(() => {
     const id = window.setInterval(() => setNowMs(Date.now()), 500);
@@ -347,21 +354,40 @@ export function PwaShell() {
         </nav>
       </div>
 
-      <Dialog open={Boolean(conflictServerSession)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t.shell.conflictTitle}</DialogTitle>
-            <DialogDescription className="text-[15px]">
-              {format(t.shell.conflictDescPrefix, {
-                version: conflictServerSession?.version ?? 1,
-              })}{' '}
+      {/* Forced choice: no close button, no outside dismiss — one version has to win. */}
+      <AlertDialog open={Boolean(conflictServerSession)}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader className="text-left">
+            <AlertDialogTitle>{t.shell.conflictTitle}</AlertDialogTitle>
+            <AlertDialogDescription className="text-[15px]">
+              {t.shell.conflictDescPrefix}{' '}
               <strong className="text-foreground">
                 {conflictServerSession?.workoutNameSnapshot}
               </strong>{' '}
               {t.shell.conflictDescSuffix}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="pt-2">
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {conflictServerSession && (
+            <dl className="grid grid-cols-2 gap-2 text-[13px]">
+              {[
+                { label: t.shell.conflictThisDevice, session: conflictLocalSession },
+                { label: t.shell.conflictServer, session: conflictServerSession },
+              ].map(({ label, session }) => (
+                <div key={label} className="bg-secondary rounded-xl px-3 py-2">
+                  <dt className="font-semibold">{label}</dt>
+                  <dd className="text-muted-foreground tabular-nums">
+                    {session
+                      ? format(t.shell.conflictVersionSummary, {
+                          sets: session.totalSetsCompleted,
+                          time: formatConflictTime(session.lastSyncedAt, bcp47),
+                        })
+                      : '–'}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          )}
+          <AlertDialogFooter className="pt-2">
             <Button
               type="button"
               variant="secondary"
@@ -376,11 +402,17 @@ export function PwaShell() {
             >
               {t.shell.keepLocalData}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
+}
+
+function formatConflictTime(iso: string | null | undefined, bcp47: string): string {
+  const ms = iso ? Date.parse(iso) : Number.NaN;
+  if (Number.isNaN(ms)) return '–';
+  return new Date(ms).toLocaleTimeString(bcp47, { hour: '2-digit', minute: '2-digit' });
 }
 
 function formatClock(totalSeconds: number): string {
