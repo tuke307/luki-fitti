@@ -227,6 +227,34 @@ export async function saveLocalActiveSession(session: WorkoutSessionDto | null):
   await idbSet('active_workout_session', session);
 }
 
+/** Stable random id of this browser install, sent with every sync so the server can recognise
+ * its own retried writes (e.g. after iOS froze the tab before a sync response arrived). */
+export async function getDeviceId(): Promise<string> {
+  const existing = await idbGet<string>('device_id');
+  if (existing) return existing;
+  const id = generateId('web');
+  await idbSet('device_id', id);
+  return id;
+}
+
+/** Server version this device last acknowledged per session — the base for optimistic concurrency. */
+export async function getAcknowledgedServerVersion(
+  clientSessionId: string,
+): Promise<number | undefined> {
+  const map = await idbGet<Record<string, number>>('server_versions');
+  return map?.[clientSessionId];
+}
+
+export async function setAcknowledgedServerVersion(
+  clientSessionId: string,
+  version: number | null,
+): Promise<void> {
+  const map = { ...((await idbGet<Record<string, number>>('server_versions')) ?? {}) };
+  if (version === null) delete map[clientSessionId];
+  else map[clientSessionId] = version;
+  await idbSet('server_versions', map);
+}
+
 export function recalculateSessionTotals(session: WorkoutSessionDto): WorkoutSessionDto {
   let totalVolumeKg = 0;
   let totalSetsCompleted = 0;

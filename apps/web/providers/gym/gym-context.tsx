@@ -17,9 +17,11 @@ import {
   createOfflineSessionFromStretchingRoutine,
   createOfflineSessionFromTemplate,
   enqueueSessionSync,
+  getAcknowledgedServerVersion,
   getCachedCatalog,
   getCachedStretchingRoutines,
   getCachedWorkouts,
+  getDeviceId,
   getLocalActiveSession,
   getLocalHistorySessions,
   getSyncQueue,
@@ -28,6 +30,7 @@ import {
   removeLocalHistorySession,
   saveLocalActiveSession,
   saveLocalHistorySession,
+  setAcknowledgedServerVersion,
   setCachedCatalog,
   setCachedStretchingRoutines,
   setCachedWorkouts,
@@ -225,6 +228,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
       setSyncState('SYNCING');
 
       try {
+        const deviceId = await getDeviceId();
         let pending = queue;
         while (pending.length > 0) {
           let hasNewerLocalEdits = false;
@@ -234,9 +238,13 @@ export function GymProvider({ children }: { children: ReactNode }) {
               continue;
             }
 
-            const payload = forceOverwrite
-              ? { ...item.payload, forceOverwrite: true }
-              : item.payload;
+            const baseVersion = await getAcknowledgedServerVersion(item.clientSessionId);
+            const payload = {
+              ...item.payload,
+              deviceId,
+              ...(baseVersion !== undefined ? { baseVersion } : {}),
+              ...(forceOverwrite ? { forceOverwrite: true } : {}),
+            };
             const res = await api.sessions.sync(payload);
 
             if (deletedSessionIdsRef.current.has(item.clientSessionId)) {
@@ -253,6 +261,11 @@ export function GymProvider({ children }: { children: ReactNode }) {
                 isFlushingRef.current = false;
                 return;
               }
+
+              await setAcknowledgedServerVersion(
+                item.clientSessionId,
+                res.data.session.status === SessionStatus.COMPLETED ? null : res.data.serverVersion,
+              );
 
               // The user may have edited the session while this request was in flight.
               // Applying the (now stale) server echo would revert that edit, and dropping
@@ -427,6 +440,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
           ) {
             setActiveSession(serverActive);
             await saveLocalActiveSession(serverActive);
+            await setAcknowledgedServerVersion(serverActive.clientSessionId, serverActive.version);
           }
         } else if (!serverActive && localActive && !hasPendingLocalActiveSync) {
           // Session was finished or abandoned on another device
@@ -1529,6 +1543,10 @@ export function GymProvider({ children }: { children: ReactNode }) {
       } else {
         await saveLocalActiveSession(conflictServerSession);
         setActiveSession(conflictServerSession);
+        await setAcknowledgedServerVersion(
+          conflictServerSession.clientSessionId,
+          conflictServerSession.version,
+        );
       }
       setConflictServerSession(null);
       setSyncState('SYNCED');
