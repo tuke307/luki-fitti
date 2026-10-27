@@ -117,7 +117,8 @@ interface GymContextValue {
     >,
   ) => Promise<void>;
   toggleCompleteSet: (clientExerciseId: string, clientSetId: string) => Promise<void>;
-  addSetToExercise: (clientExerciseId: string, setType?: SetType) => Promise<void>;
+  /** Pass several ids to add one set to each in a single update (e.g. a superset round). */
+  addSetToExercise: (clientExerciseIds: string | string[], setType?: SetType) => Promise<void>;
   removeSetFromExercise: (clientExerciseId: string, clientSetId: string) => Promise<void>;
   skipExercise: (clientExerciseId: string) => Promise<void>;
   substituteExercise: (clientExerciseId: string, replacementExerciseId: string) => Promise<void>;
@@ -1142,10 +1143,16 @@ export function GymProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const addSetToExercise = async (clientExerciseId: string, setType: SetType = SetType.WORKING) => {
+  const addSetToExercise = async (
+    clientExerciseIds: string | string[],
+    setType: SetType = SetType.WORKING,
+  ) => {
     if (!activeSession) return;
+    const targets = new Set(
+      Array.isArray(clientExerciseIds) ? clientExerciseIds : [clientExerciseIds],
+    );
     const nextExercises = activeSession.exercises.map((ex) => {
-      if (ex.clientExerciseId !== clientExerciseId) return ex;
+      if (!targets.has(ex.clientExerciseId)) return ex;
       const lastSet = ex.sets[ex.sets.length - 1];
       const newSet: SessionSetDto = {
         id: `set-${Date.now()}`,

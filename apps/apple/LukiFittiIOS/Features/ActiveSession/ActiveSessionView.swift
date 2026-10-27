@@ -6,7 +6,7 @@ import LukiFittiDomain
 public struct ActiveSessionView: View {
     @Bindable public var viewModel: LukiAppViewModel
     @State private var selectedExerciseIndex: Int = 0
-    @State private var showingSwapSheet = false
+    @State private var swapTargetId: String?
     @State private var showingAddExerciseSheet = false
     @State private var nowTick: Date = Date()
 
@@ -38,6 +38,21 @@ public struct ActiveSessionView: View {
         .background(LukiColors.groupedBackground)
         .onReceive(Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()) { tick in
             nowTick = tick
+        }
+        .sheet(isPresented: Binding(
+            get: { swapTargetId != nil },
+            set: { if !$0 { swapTargetId = nil } }
+        )) {
+            if let target = viewModel.store.activeSession?.exercises.first(where: { $0.clientExerciseId == swapTargetId }) {
+                SearchableExercisePickerSheet(
+                    title: "Replace \(target.exerciseNameSnapshot)",
+                    exercises: viewModel.store.catalog,
+                    selectedExerciseId: target.exerciseId
+                ) { candidate in
+                    viewModel.substituteExerciseInSession(clientExerciseId: target.clientExerciseId, with: candidate)
+                    swapTargetId = nil
+                }
+            }
         }
         .sheet(isPresented: $showingAddExerciseSheet) {
             SearchableExercisePickerSheet(
@@ -319,50 +334,7 @@ public struct ActiveSessionView: View {
         return VStack(alignment: .leading, spacing: 12) {
             ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
                 if block.isSuperset {
-                    VStack(alignment: .leading, spacing: 0) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 4) {
-                                    Text("Superset")
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(LukiColors.accent)
-                                    Text("× \(block.rounds) ROUNDS")
-                                        .font(.caption.weight(.heavy).monospacedDigit())
-                                        .foregroundStyle(.primary)
-                                }
-                                Text("Rest 0 s between exercises · \(ProgressionEngine.formatRestDurationMinSec(block.roundRestSeconds)) between rounds")
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                        }
-                        .padding(12)
-                        .background(Color.black.opacity(0.75))
-
-                        VStack(spacing: 8) {
-                            ForEach(Array(block.items.enumerated()), id: \.offset) { _, item in
-                                if item.globalIndex == safeIdx {
-                                    activeExerciseCard(
-                                        session: session,
-                                        exercise: item.item,
-                                        exerciseIndex: item.globalIndex
-                                    )
-                                } else {
-                                    collapsedExerciseRow(
-                                        exercise: item.item,
-                                        index: item.globalIndex,
-                                        stepBadge: item.stepNumber
-                                    )
-                                }
-                            }
-                        }
-                        .padding(10)
-                    }
-                    .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground.opacity(0.85)))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .stroke(LukiColors.accent.opacity(0.45), lineWidth: 1)
-                    )
+                    supersetBlock(session: session, block: block)
                 } else if let firstItem = block.items.first {
                     if firstItem.globalIndex == safeIdx {
                         activeExerciseCard(
@@ -371,56 +343,12 @@ public struct ActiveSessionView: View {
                             exerciseIndex: firstItem.globalIndex
                         )
                     } else {
-                        collapsedExerciseRow(
-                            exercise: firstItem.item,
-                            index: firstItem.globalIndex,
-                            stepBadge: nil
-                        )
+                        collapsedExerciseRow(exercise: firstItem.item, index: firstItem.globalIndex)
                     }
                 }
             }
 
-            if viewModel.store.preferences.exerciseSuggestionsEnabled,
-               let suggestion = ProgressionEngine.computeWorkoutExerciseSuggestion(
-                   workoutName: session.workoutNameSnapshot,
-                   exercises: session.exercises.map {
-                       WorkoutSuggestionInputExercise(
-                           exerciseId: $0.exerciseId,
-                           exerciseName: $0.exerciseNameSnapshot,
-                           primaryMuscleGroup: $0.primaryMuscleSnapshot,
-                           plannedSets: $0.plannedSets
-                       )
-                   },
-                   catalog: viewModel.store.catalog,
-                   historySessions: viewModel.store.historySessions,
-                   weightUnit: session.weightUnit
-               ) {
-                let stallingExercise = session.exercises.first {
-                    $0.exerciseId != nil && $0.exerciseId == suggestion.stallingExerciseId
-                }
-                SuggestionCardView(
-                    suggestion: suggestion,
-                    locale: locale,
-                    onAdd: {
-                        viewModel.addUnplannedExerciseToSession(suggestion.suggestedExercise)
-                        if let count = viewModel.store.activeSession?.exercises.count, count > 0 {
-                            selectedExerciseIndex = count - 1
-                        }
-                    },
-                    onReplace: stallingExercise.map { target in
-                        {
-                            viewModel.substituteExerciseInSession(
-                                clientExerciseId: target.clientExerciseId,
-                                with: suggestion.suggestedExercise
-                            )
-                            if let idx = session.exercises.firstIndex(where: { $0.clientExerciseId == target.clientExerciseId }) {
-                                selectedExerciseIndex = idx
-                            }
-                        }
-                    }
-                )
-                .accessibilityIdentifier("ios.session.rainbowSuggestion")
-            }
+            sessionSuggestionCard(session)
 
             Button {
                 showingAddExerciseSheet = true
@@ -436,55 +364,108 @@ public struct ActiveSessionView: View {
         }
     }
 
-    private func collapsedExerciseRow(
-        exercise: SessionExerciseDto,
-        index: Int,
-        stepBadge: Int?
-    ) -> some View {
+    // MARK: - Exercise Swipe Actions (swap / skip ← → remove)
+
+    private func leadingExerciseActions(_ exercise: SessionExerciseDto) -> [LukiSwipeAction] {
+        [
+            LukiSwipeAction(id: "swap", label: locale == .de ? "Ersetzen" : "Replace", systemImage: "arrow.triangle.swap") {
+                swapTargetId = exercise.clientExerciseId
+            },
+            LukiSwipeAction(
+                id: "skip",
+                label: exercise.status == .SKIPPED
+                    ? (locale == .de ? "Aufnehmen" : "Unskip")
+                    : (locale == .de ? "Überspringen" : "Skip"),
+                systemImage: "forward.end",
+                tone: .accent
+            ) {
+                viewModel.toggleSkipExercise(clientExerciseId: exercise.clientExerciseId)
+            },
+        ]
+    }
+
+    private func trailingExerciseActions(_ exercise: SessionExerciseDto) -> [LukiSwipeAction] {
+        [
+            LukiSwipeAction(id: "remove", label: locale == .de ? "Löschen" : "Delete", systemImage: "trash", tone: .destructive) {
+                viewModel.removeExerciseFromSession(clientExerciseId: exercise.clientExerciseId)
+            },
+        ]
+    }
+
+    /// Reordering does not fit a swipe, so it stays in a compact menu.
+    private func reorderMenu(session: WorkoutSessionDto, exercise: SessionExerciseDto, exerciseIndex: Int) -> some View {
+        Menu {
+            Button {
+                viewModel.reorderExerciseInSession(clientExerciseId: exercise.clientExerciseId, moveUp: true)
+                selectedExerciseIndex = max(0, exerciseIndex - 1)
+            } label: {
+                Label(locale == .de ? "Nach oben" : "Move earlier", systemImage: "arrow.up")
+            }
+            .disabled(exerciseIndex == 0)
+            Button {
+                viewModel.reorderExerciseInSession(clientExerciseId: exercise.clientExerciseId, moveUp: false)
+                selectedExerciseIndex = min(session.exercises.count - 1, exerciseIndex + 1)
+            } label: {
+                Label(locale == .de ? "Nach unten" : "Move later", systemImage: "arrow.down")
+            }
+            .disabled(exerciseIndex == session.exercises.count - 1)
+        } label: {
+            Image(systemName: "arrow.up.arrow.down")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 32, height: 32)
+        }
+        .accessibilityLabel(locale == .de ? "Reihenfolge ändern" : "Reorder")
+    }
+
+    private func collapsedExerciseRow(exercise: SessionExerciseDto, index: Int) -> some View {
         let doneCount = exercise.sets.filter(\.completed).count
         let isCompleted = exercise.status == .COMPLETED
-        return Button {
-            selectedExerciseIndex = index
-        } label: {
-            HStack(spacing: 10) {
-                Text(isCompleted ? "✓" : "\(stepBadge ?? (index + 1))")
-                    .font(.caption.bold().monospacedDigit())
-                    .foregroundStyle(isCompleted ? LukiColors.accentForeground : .primary)
-                    .frame(width: 26, height: 26)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(isCompleted ? LukiColors.accent : LukiColors.fill)
-                    )
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(exercise.exerciseNameSnapshot)
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                    Text("\(exercise.plannedSets)×\(exercise.targetRepsMin ?? 8)-\(exercise.targetRepsMax ?? 12) reps")
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(LukiColors.accent)
+        return LukiSwipeRow(leading: leadingExerciseActions(exercise), trailing: trailingExerciseActions(exercise)) {
+            Button {
+                selectedExerciseIndex = index
+            } label: {
+                HStack(spacing: 10) {
+                    Text(isCompleted ? "✓" : "\(index + 1)")
+                        .font(.caption.bold().monospacedDigit())
+                        .foregroundStyle(isCompleted ? LukiColors.accentForeground : .primary)
+                        .frame(width: 26, height: 26)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(isCompleted ? LukiColors.accent : LukiColors.fill)
+                        )
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(exercise.exerciseNameSnapshot)
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.primary)
+                            .strikethrough(exercise.status == .SKIPPED)
+                            .lineLimit(1)
+                        Text("\(exercise.plannedSets)×\(exercise.targetRepsMin ?? 8)-\(exercise.targetRepsMax ?? 12) reps")
+                            .font(.caption2.monospacedDigit())
+                            .foregroundStyle(LukiColors.accent)
+                    }
+                    Spacer()
+                    Text("\(doneCount)/\(exercise.sets.count) sets")
+                        .font(.footnote)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(Color.black.opacity(0.3)))
+                        .foregroundStyle(isCompleted ? LukiColors.accent : .secondary)
                 }
-                Spacer()
-                Text("\(doneCount)/\(exercise.sets.count) sets")
-                    .font(.footnote)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Capsule().fill(Color.black.opacity(0.3)))
-                    .foregroundStyle(isCompleted ? LukiColors.accent : .secondary)
+                .padding(12)
+                .background(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(LukiColors.cardBackground)
+                )
             }
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(isCompleted ? LukiColors.accent.opacity(0.12) : LukiColors.cardBackground)
-            )
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Active Exercise Card & Ergonomic Set Rows (Matches Web App)
 
-    private func activeExerciseCard(session: WorkoutSessionDto, exercise: SessionExerciseDto, exerciseIndex: Int) -> some View {
-        let insight = ProgressionEngine.computeExerciseProgression(
+    private func insightFor(session: WorkoutSessionDto, exercise: SessionExerciseDto) -> ExerciseProgressionInsight {
+        ProgressionEngine.computeExerciseProgression(
             exerciseId: exercise.exerciseId,
             exerciseName: exercise.exerciseNameSnapshot,
             historySessions: viewModel.store.historySessions,
@@ -496,120 +477,88 @@ public struct ActiveSessionView: View {
             weightUnit: session.weightUnit,
             currentSets: exercise.sets
         )
+    }
+
+    /// Progression suggestions only apply to working-type sets; warm-ups and stretches get none.
+    private func alignedSuggestions(_ exercise: SessionExerciseDto, insight: ExerciseProgressionInsight) -> [SetProgressionSuggestion?] {
+        var workingIdx = 0
+        return exercise.sets.map { set in
+            if set.setType == .WARMUP || set.setType == .STRETCH || exercise.exerciseTypeSnapshot == .STRETCHING {
+                return nil
+            }
+            defer { workingIdx += 1 }
+            if workingIdx < insight.setSuggestions.count { return insight.setSuggestions[workingIdx] }
+            return insight.setSuggestions.last
+        }
+    }
+
+    private func lastSessionLine(_ insight: ExerciseProgressionInsight) -> some View {
+        Group {
+            if let last = insight.lastSession {
+                Text("Last (\(last.workoutName)): \(last.workingSets.prefix(3).map { "\(String(format: "%g", $0.weightNormalized))kg×\($0.reps)" }.joined(separator: ", "))")
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(LukiColors.accent)
+            }
+        }
+    }
+
+    private func activeExerciseCard(session: WorkoutSessionDto, exercise: SessionExerciseDto, exerciseIndex: Int) -> some View {
+        let insight = insightFor(session: session, exercise: exercise)
+        let suggestions = alignedSuggestions(exercise, insight: insight)
+        let labels = LukiI18n.setBadgeLabels(exercise.sets.map(\.setType))
 
         return VStack(alignment: .leading, spacing: 14) {
-            // Exercise Header
-            HStack(alignment: .top, spacing: 10) {
-                ExerciseVectorVisualView(
-                    exerciseName: exercise.exerciseNameSnapshot,
-                    primaryMuscle: exercise.primaryMuscleSnapshot,
-                    compact: true
-                )
+            LukiSwipeRow(
+                leading: leadingExerciseActions(exercise),
+                trailing: trailingExerciseActions(exercise),
+                cornerRadius: 14
+            ) {
+                HStack(alignment: .top, spacing: 10) {
+                    ExerciseVectorVisualView(
+                        exerciseName: exercise.exerciseNameSnapshot,
+                        primaryMuscle: exercise.primaryMuscleSnapshot,
+                        compact: true
+                    )
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(exercise.exerciseNameSnapshot)
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                    Text("\(LukiI18n.muscleLabel(exercise.primaryMuscleSnapshot)) • \(exercise.plannedSets) × \(exercise.targetRepsMin ?? 8)-\(exercise.targetRepsMax ?? 12) reps • \(exercise.restSeconds)s rest")
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                    if let last = insight.lastSession {
-                        Text("Last (\(last.workoutName)): \(last.workingSets.prefix(3).map { "\(String(format: "%g", $0.weightNormalized))kg×\($0.reps)" }.joined(separator: ", "))")
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(exercise.exerciseNameSnapshot)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                            .strikethrough(exercise.status == .SKIPPED)
+                        Text("\(LukiI18n.muscleLabel(exercise.primaryMuscleSnapshot)) • \(exercise.plannedSets) × \(exercise.targetRepsMin ?? 8)-\(exercise.targetRepsMax ?? 12) reps • \(exercise.restSeconds)s rest")
                             .font(.caption2.monospacedDigit())
-                            .foregroundStyle(LukiColors.accent)
+                            .foregroundStyle(.secondary)
+                        lastSessionLine(insight)
                     }
+                    Spacer()
+                    reorderMenu(session: session, exercise: exercise, exerciseIndex: exerciseIndex)
                 }
-                Spacer()
+                .padding(4)
+                .background(LukiColors.cardBackground)
+                .accessibilityIdentifier("ios.session.exerciseHeader.\(exerciseIndex + 1)")
             }
 
-            // Exercise Action Bar: Swap / Alternative, Skip, Move Up / Down
-            HStack(spacing: 8) {
-                Button {
-                    showingSwapSheet = true
-                } label: {
-                    Label("Swap / Alternative", systemImage: "arrow.triangle.swap")
-                        .font(.footnote.weight(.medium))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
-                        .foregroundStyle(.primary)
-                }
-                .buttonStyle(.plain)
-
-                Button {
-                    viewModel.toggleSkipExercise(clientExerciseId: exercise.clientExerciseId)
-                } label: {
-                    Label(exercise.status == .SKIPPED ? "Unskip" : "Skip", systemImage: "forward.end")
-                        .font(.footnote.weight(.medium))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
-                        .foregroundStyle(.primary)
-                }
-                .buttonStyle(.plain)
-
-                Spacer()
-
-                Button {
-                    viewModel.reorderExerciseInSession(clientExerciseId: exercise.clientExerciseId, moveUp: true)
-                    selectedExerciseIndex = max(0, exerciseIndex - 1)
-                } label: {
-                    Image(systemName: "arrow.up")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(width: 28, height: 28)
-                        .background(RoundedRectangle(cornerRadius: 7).fill(LukiColors.fill))
-                }
-                .buttonStyle(.plain)
-                .disabled(exerciseIndex == 0)
-
-                Button {
-                    viewModel.reorderExerciseInSession(clientExerciseId: exercise.clientExerciseId, moveUp: false)
-                    selectedExerciseIndex = min(session.exercises.count - 1, exerciseIndex + 1)
-                } label: {
-                    Image(systemName: "arrow.down")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(width: 28, height: 28)
-                        .background(RoundedRectangle(cornerRadius: 7).fill(LukiColors.fill))
-                }
-                .buttonStyle(.plain)
-                .disabled(exerciseIndex == session.exercises.count - 1)
-            }
-
-            // Ergonomic One-Handed Set Cards
             ForEach(Array(exercise.sets.enumerated()), id: \.element.clientSetId) { idx, set in
-                let suggestion = idx < insight.setSuggestions.count ? insight.setSuggestions[idx] : nil
                 setRowCard(
                     session: session,
                     exercise: exercise,
                     set: set,
                     setIndex: idx,
-                    suggestion: suggestion
+                    badgeLabel: idx < labels.count ? labels[idx] : "\(idx + 1)",
+                    suggestion: idx < suggestions.count ? suggestions[idx] : nil
                 )
             }
 
-            // Add Set & Next Exercise Row
             HStack(spacing: 8) {
                 Button {
                     viewModel.addSetToExercise(clientExerciseId: exercise.clientExerciseId, setType: .WORKING)
                 } label: {
-                    Label("Add Working Set", systemImage: "plus")
+                    Label(locale == .de ? "Satz hinzufügen" : "Add Set", systemImage: "plus")
                         .font(.subheadline.weight(.semibold))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 8)
                         .background(RoundedRectangle(cornerRadius: 9).fill(LukiColors.fill))
                         .foregroundStyle(.primary)
-                }
-                .buttonStyle(.plain)
-
-                Button {
-                    viewModel.addSetToExercise(clientExerciseId: exercise.clientExerciseId, setType: .WARMUP)
-                } label: {
-                    Text("+ Warm-up Set")
-                        .font(.subheadline.weight(.semibold))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .background(RoundedRectangle(cornerRadius: 9).fill(LukiColors.fill))
-                        .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
 
@@ -629,16 +578,130 @@ public struct ActiveSessionView: View {
         }
         .padding(14)
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
-        .sheet(isPresented: $showingSwapSheet) {
-            SearchableExercisePickerSheet(
-                title: "Replace \(exercise.exerciseNameSnapshot)",
-                exercises: viewModel.store.catalog,
-                selectedExerciseId: exercise.exerciseId
-            ) { candidate in
-                viewModel.substituteExerciseInSession(clientExerciseId: exercise.clientExerciseId, with: candidate)
-                showingSwapSheet = false
+    }
+
+    // MARK: - Superset Rounds (A1 + B1 together, then A2 + B2 …)
+
+    private func supersetBlock(session: WorkoutSessionDto, block: ExerciseRenderBlock<SessionExerciseDto>) -> some View {
+        let members: [(exercise: SessionExerciseDto, index: Int, letter: String, insight: ExerciseProgressionInsight, labels: [String], suggestions: [SetProgressionSuggestion?])] =
+            block.items.enumerated().map { offset, item in
+                let insight = insightFor(session: session, exercise: item.item)
+                return (
+                    item.item,
+                    item.globalIndex,
+                    String(UnicodeScalar(UInt8(65 + offset))),
+                    insight,
+                    LukiI18n.setBadgeLabels(item.item.sets.map(\.setType)),
+                    alignedSuggestions(item.item, insight: insight)
+                )
             }
+        let rounds = members.map(\.exercise.sets.count).max() ?? 0
+
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text("Superset")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(LukiColors.accent)
+                        Text("× \(block.rounds) ROUNDS")
+                            .font(.caption.weight(.heavy).monospacedDigit())
+                            .foregroundStyle(.primary)
+                    }
+                    Text("Rest 0 s between exercises · \(ProgressionEngine.formatRestDurationMinSec(block.roundRestSeconds)) between rounds")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .padding(12)
+
+            VStack(spacing: 8) {
+                ForEach(members, id: \.exercise.clientExerciseId) { member in
+                    LukiSwipeRow(
+                        leading: leadingExerciseActions(member.exercise),
+                        trailing: trailingExerciseActions(member.exercise),
+                        cornerRadius: 16
+                    ) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(spacing: 10) {
+                                Text(member.letter)
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(LukiColors.accent)
+                                    .frame(width: 28, height: 28)
+                                    .background(Circle().fill(LukiColors.accent.opacity(0.15)))
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(member.exercise.exerciseNameSnapshot)
+                                        .font(.subheadline.bold())
+                                        .strikethrough(member.exercise.status == .SKIPPED)
+                                        .lineLimit(1)
+                                    Text("\(LukiI18n.muscleLabel(member.exercise.primaryMuscleSnapshot)) • \(member.exercise.plannedSets)×\(member.exercise.targetRepsMin ?? 8)-\(member.exercise.targetRepsMax ?? 12)")
+                                        .font(.caption2.monospacedDigit())
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                reorderMenu(session: session, exercise: member.exercise, exerciseIndex: member.index)
+                            }
+                            lastSessionLine(member.insight)
+                        }
+                        .padding(10)
+                        .background(LukiColors.cardBackground)
+                        .accessibilityIdentifier("ios.session.superset.exercise.\(member.letter)")
+                    }
+                }
+
+                ForEach(0..<rounds, id: \.self) { round in
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(locale == .de ? "Runde \(round + 1) von \(rounds)" : "Round \(round + 1) of \(rounds)")
+                            .font(.footnote.weight(.semibold).monospacedDigit())
+                            .foregroundStyle(.secondary)
+                        ForEach(members, id: \.exercise.clientExerciseId) { member in
+                            if round < member.exercise.sets.count {
+                                let set = member.exercise.sets[round]
+                                setRowCard(
+                                    session: session,
+                                    exercise: member.exercise,
+                                    set: set,
+                                    setIndex: round,
+                                    badgeLabel: round < member.labels.count ? member.labels[round] : "\(round + 1)",
+                                    suggestion: round < member.suggestions.count ? member.suggestions[round] : nil,
+                                    contextLabel: "\(member.letter) · \(member.exercise.exerciseNameSnapshot)",
+                                    accessibilityId: "ios.session.superset.set.\(member.letter)\(round + 1)"
+                                )
+                            } else {
+                                Text("\(member.letter) · \(member.exercise.exerciseNameSnapshot) · –")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                                    .padding(.vertical, 6)
+                            }
+                        }
+                    }
+                    .padding(10)
+                    .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(LukiColors.cardBackground))
+                    .accessibilityIdentifier("ios.session.superset.round.\(round + 1)")
+                }
+
+                Button {
+                    for member in members {
+                        viewModel.addSetToExercise(clientExerciseId: member.exercise.clientExerciseId, setType: .WORKING)
+                    }
+                } label: {
+                    Label(locale == .de ? "Runde hinzufügen" : "Add Round", systemImage: "plus")
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(RoundedRectangle(cornerRadius: 9).fill(LukiColors.cardBackground))
+                        .foregroundStyle(.primary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(10)
         }
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.fill))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(LukiColors.accent.opacity(0.45), lineWidth: 1)
+        )
     }
 
     private func setRowCard(
@@ -646,238 +709,276 @@ public struct ActiveSessionView: View {
         exercise: SessionExerciseDto,
         set: SessionSetDto,
         setIndex: Int,
-        suggestion: SetProgressionSuggestion?
+        badgeLabel: String,
+        suggestion: SetProgressionSuggestion?,
+        contextLabel: String? = nil,
+        accessibilityId: String? = nil
     ) -> some View {
         let currentWeight = set.weight ?? 0
         let currentReps = set.reps ?? 0
         let effortLabel = rpeEffortLabel(set.rpe)
         let nextRpe = nextCycleRpe(set.rpe)
+        let typeColor = LukiColors.setTypeColor(set.setType)
 
-        return VStack(alignment: .leading, spacing: 10) {
-            // Row 1: Set Number Badge + Set Type Menu + Effort (RPE) Cycle Button + Delete Set
-            HStack(spacing: 8) {
-                Text("\(setIndex + 1)")
-                    .font(.caption.bold().monospacedDigit())
-                    .foregroundStyle(set.completed ? LukiColors.accentForeground : LukiColors.accent)
-                    .frame(width: 28, height: 28)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(set.completed ? LukiColors.accent : LukiColors.accent.opacity(0.15))
-                    )
+        return LukiSwipeRow(trailing: [
+            LukiSwipeAction(id: "delete", label: locale == .de ? "Löschen" : "Delete", systemImage: "trash", tone: .destructive) {
+                viewModel.removeSetFromExercise(clientExerciseId: exercise.clientExerciseId, clientSetId: set.clientSetId)
+            },
+        ]) {
+            VStack(alignment: .leading, spacing: 10) {
+                if let contextLabel {
+                    Text(contextLabel)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
 
-                Menu {
-                    ForEach(SetType.allCases, id: \.self) { st in
-                        Button(st.rawValue) {
+                // Row 1: Set-type badge (tap to change type) + type label + effort cycle
+                HStack(spacing: 8) {
+                    Menu {
+                        ForEach(SetType.allCases, id: \.self) { st in
+                            Button(LukiI18n.setTypeLabel(st, locale: locale)) {
+                                viewModel.updateSet(
+                                    clientExerciseId: exercise.clientExerciseId,
+                                    clientSetId: set.clientSetId,
+                                    setType: st
+                                )
+                            }
+                        }
+                    } label: {
+                        SetTypeBadge(setType: set.setType, label: badgeLabel, completed: set.completed)
+                    }
+                    .accessibilityIdentifier("ios.session.setType.\(setIndex + 1)")
+
+                    if set.setType != .WORKING {
+                        Text(LukiI18n.setTypeLabel(set.setType, locale: locale))
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(typeColor ?? .primary)
+                    }
+
+                    if let peakHr = set.peakHeartRateBpm {
+                        Text("❤️ \(peakHr)")
+                            .font(.caption2.monospacedDigit())
+                            .foregroundStyle(LukiColors.heartRose)
+                    }
+
+                    Spacer()
+
+                    Button {
+                        viewModel.updateSet(
+                            clientExerciseId: exercise.clientExerciseId,
+                            clientSetId: set.clientSetId,
+                            rpe: .some(nextRpe)
+                        )
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chart.bar.fill")
+                                .font(.system(size: 9))
+                            Text(effortLabel)
+                                .font(.footnote)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
+                        .foregroundStyle(.primary)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                // Row 2: [-2.5 Weight +2.5] + [-1 Reps +1] + Large "Log Set" / "✓ Done" Button
+                HStack(spacing: 8) {
+                    HStack(spacing: 2) {
+                        Button {
                             viewModel.updateSet(
                                 clientExerciseId: exercise.clientExerciseId,
                                 clientSetId: set.clientSetId,
-                                setType: st
+                                weight: max(0, currentWeight - 2.5)
                             )
+                        } label: {
+                            Text("-2.5")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 32, height: 34)
+                        }
+                        .buttonStyle(.plain)
+
+                        VStack(spacing: 0) {
+                            Text(String(format: "%g", currentWeight))
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.primary)
+                            Text(session.weightUnit.rawValue.lowercased())
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(minWidth: 34)
+
+                        Button {
+                            viewModel.updateSet(
+                                clientExerciseId: exercise.clientExerciseId,
+                                clientSetId: set.clientSetId,
+                                weight: currentWeight + 2.5
+                            )
+                        } label: {
+                            Text("+2.5")
+                                .font(.footnote)
+                                .foregroundStyle(LukiColors.accent)
+                                .frame(width: 32, height: 34)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 4)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.35)))
+
+                    HStack(spacing: 2) {
+                        Button {
+                            viewModel.updateSet(
+                                clientExerciseId: exercise.clientExerciseId,
+                                clientSetId: set.clientSetId,
+                                reps: max(0, currentReps - 1)
+                            )
+                        } label: {
+                            Text("-1")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 26, height: 34)
+                        }
+                        .buttonStyle(.plain)
+
+                        VStack(spacing: 0) {
+                            Text("\(currentReps)")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.primary)
+                            Text("reps")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(minWidth: 28)
+
+                        Button {
+                            viewModel.updateSet(
+                                clientExerciseId: exercise.clientExerciseId,
+                                clientSetId: set.clientSetId,
+                                reps: currentReps + 1
+                            )
+                        } label: {
+                            Text("+1")
+                                .font(.footnote)
+                                .foregroundStyle(LukiColors.accent)
+                                .frame(width: 26, height: 34)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 4)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.35)))
+
+                    Button {
+                        viewModel.toggleCompleteSet(
+                            clientExerciseId: exercise.clientExerciseId,
+                            clientSetId: set.clientSetId
+                        )
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: set.completed ? "checkmark.circle.fill" : "checkmark")
+                                .font(.system(size: 12, weight: .bold))
+                            Text(set.completed ? "\(String(format: "%g", currentWeight))\(session.weightUnit.rawValue.lowercased())×\(currentReps) • Logged" : "Log Set")
+                                .font(.system(size: 12, weight: .semibold))
+                                .lineLimit(1)
+                        }
+                        .foregroundStyle(set.completed ? LukiColors.accentForeground : .primary)
+                        .frame(maxWidth: .infinity, minHeight: 36)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(set.completed ? LukiColors.accent : LukiColors.fill)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier(accessibilityId ?? "ios.session.completeSet.\(setIndex + 1)")
+                }
+
+                if !set.completed,
+                   let suggestion,
+                   let wDelta = ProgressionEngine.formatCompactDelta(suggestion.weightDelta),
+                   let suggestedW = suggestion.suggestedWeight {
+                    Button {
+                        viewModel.updateSet(
+                            clientExerciseId: exercise.clientExerciseId,
+                            clientSetId: set.clientSetId,
+                            weight: suggestedW,
+                            reps: suggestion.suggestedReps
+                        )
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "sparkles")
+                            Text("Suggested progression: \(wDelta) \(session.weightUnit.rawValue.lowercased()) (Tap to apply \(String(format: "%g", suggestedW)) \(session.weightUnit.rawValue.lowercased()))")
+                        }
+                        .font(.footnote)
+                        .foregroundStyle(LukiColors.accent)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(LukiColors.accent.opacity(0.15)))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(LukiColors.fill)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .fill((typeColor ?? LukiColors.accent).opacity(set.completed ? 0.10 : 0.0))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(set.completed ? (typeColor ?? LukiColors.accent).opacity(0.45) : LukiColors.fill, lineWidth: 1)
+                    )
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func sessionSuggestionCard(_ session: WorkoutSessionDto) -> some View {
+        if viewModel.store.preferences.exerciseSuggestionsEnabled,
+           let suggestion = ProgressionEngine.computeWorkoutExerciseSuggestion(
+               workoutName: session.workoutNameSnapshot,
+               exercises: session.exercises.map {
+                   WorkoutSuggestionInputExercise(
+                       exerciseId: $0.exerciseId,
+                       exerciseName: $0.exerciseNameSnapshot,
+                       primaryMuscleGroup: $0.primaryMuscleSnapshot,
+                       plannedSets: $0.plannedSets
+                   )
+               },
+               catalog: viewModel.store.catalog,
+               historySessions: viewModel.store.historySessions,
+               weightUnit: session.weightUnit
+           ) {
+            let stallingExercise = session.exercises.first {
+                $0.exerciseId != nil && $0.exerciseId == suggestion.stallingExerciseId
+            }
+            SuggestionCardView(
+                suggestion: suggestion,
+                locale: locale,
+                onAdd: {
+                    viewModel.addUnplannedExerciseToSession(suggestion.suggestedExercise)
+                    if let count = viewModel.store.activeSession?.exercises.count, count > 0 {
+                        selectedExerciseIndex = count - 1
+                    }
+                },
+                onReplace: stallingExercise.map { target in
+                    {
+                        viewModel.substituteExerciseInSession(
+                            clientExerciseId: target.clientExerciseId,
+                            with: suggestion.suggestedExercise
+                        )
+                        if let idx = session.exercises.firstIndex(where: { $0.clientExerciseId == target.clientExerciseId }) {
+                            selectedExerciseIndex = idx
                         }
                     }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(set.setType.rawValue)
-                            .font(.footnote)
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 8, weight: .bold))
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(RoundedRectangle(cornerRadius: 7).fill(LukiColors.fill))
-                    .foregroundStyle(set.setType == .WARMUP ? LukiColors.calorieAmber : .primary)
                 }
-
-                if let peakHr = set.peakHeartRateBpm {
-                    Text("❤️ \(peakHr)")
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(LukiColors.heartRose)
-                }
-
-                Spacer()
-
-                Button {
-                    viewModel.updateSet(
-                        clientExerciseId: exercise.clientExerciseId,
-                        clientSetId: set.clientSetId,
-                        rpe: .some(nextRpe)
-                    )
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chart.bar.fill")
-                            .font(.system(size: 9))
-                        Text(effortLabel)
-                            .font(.footnote)
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
-                    .foregroundStyle(.primary)
-                }
-                .buttonStyle(.plain)
-
-                Button(role: .destructive) {
-                    viewModel.removeSetFromExercise(
-                        clientExerciseId: exercise.clientExerciseId,
-                        clientSetId: set.clientSetId
-                    )
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.caption)
-                        .foregroundStyle(.red.opacity(0.85))
-                        .frame(width: 26, height: 26)
-                }
-                .buttonStyle(.plain)
-            }
-
-            // Row 2: [-2.5 Weight +2.5] + [-1 Reps +1] + Large "Log Set" / "✓ Done" Button
-            HStack(spacing: 8) {
-                // Weight Stepper Pill
-                HStack(spacing: 2) {
-                    Button {
-                        viewModel.updateSet(
-                            clientExerciseId: exercise.clientExerciseId,
-                            clientSetId: set.clientSetId,
-                            weight: max(0, currentWeight - 2.5)
-                        )
-                    } label: {
-                        Text("-2.5")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .frame(width: 32, height: 34)
-                    }
-                    .buttonStyle(.plain)
-
-                    VStack(spacing: 0) {
-                        Text(String(format: "%g", currentWeight))
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.primary)
-                        Text(session.weightUnit.rawValue.lowercased())
-                            .font(.system(size: 8, weight: .bold))
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(minWidth: 34)
-
-                    Button {
-                        viewModel.updateSet(
-                            clientExerciseId: exercise.clientExerciseId,
-                            clientSetId: set.clientSetId,
-                            weight: currentWeight + 2.5
-                        )
-                    } label: {
-                        Text("+2.5")
-                            .font(.footnote)
-                            .foregroundStyle(LukiColors.accent)
-                            .frame(width: 32, height: 34)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, 4)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.35)))
-
-                // Reps Stepper Pill
-                HStack(spacing: 2) {
-                    Button {
-                        viewModel.updateSet(
-                            clientExerciseId: exercise.clientExerciseId,
-                            clientSetId: set.clientSetId,
-                            reps: max(0, currentReps - 1)
-                        )
-                    } label: {
-                        Text("-1")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .frame(width: 26, height: 34)
-                    }
-                    .buttonStyle(.plain)
-
-                    VStack(spacing: 0) {
-                        Text("\(currentReps)")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.primary)
-                        Text("reps")
-                            .font(.system(size: 8, weight: .bold))
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(minWidth: 28)
-
-                    Button {
-                        viewModel.updateSet(
-                            clientExerciseId: exercise.clientExerciseId,
-                            clientSetId: set.clientSetId,
-                            reps: currentReps + 1
-                        )
-                    } label: {
-                        Text("+1")
-                            .font(.footnote)
-                            .foregroundStyle(LukiColors.accent)
-                            .frame(width: 26, height: 34)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, 4)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.35)))
-
-                // Large Full-Height Log Set / Logged Prescription Button (Matches Web App)
-                Button {
-                    viewModel.toggleCompleteSet(
-                        clientExerciseId: exercise.clientExerciseId,
-                        clientSetId: set.clientSetId
-                    )
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: set.completed ? "checkmark.circle.fill" : "checkmark")
-                            .font(.system(size: 12, weight: .bold))
-                        Text(set.completed ? "\(String(format: "%g", currentWeight))\(session.weightUnit.rawValue.lowercased())×\(currentReps) • Logged" : "Log Set")
-                            .font(.system(size: 12, weight: .semibold))
-                            .lineLimit(1)
-                    }
-                    .foregroundStyle(set.completed ? LukiColors.accentForeground : .primary)
-                    .frame(maxWidth: .infinity, minHeight: 36)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(set.completed ? LukiColors.accent : LukiColors.fill)
-                    )
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("ios.session.completeSet.\(setIndex + 1)")
-            }
-
-            // Optional Progressive Overload Suggestion Pill (Tap to Apply)
-            if !set.completed,
-               let suggestion,
-               let wDelta = ProgressionEngine.formatCompactDelta(suggestion.weightDelta),
-               let suggestedW = suggestion.suggestedWeight {
-                Button {
-                    viewModel.updateSet(
-                        clientExerciseId: exercise.clientExerciseId,
-                        clientSetId: set.clientSetId,
-                        weight: suggestedW,
-                        reps: suggestion.suggestedReps
-                    )
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "sparkles")
-                        Text("Suggested progression: \(wDelta) \(session.weightUnit.rawValue.lowercased()) (Tap to apply \(String(format: "%g", suggestedW)) \(session.weightUnit.rawValue.lowercased()))")
-                    }
-                    .font(.footnote)
-                    .foregroundStyle(LukiColors.accent)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Capsule().fill(LukiColors.accent.opacity(0.15)))
-                }
-                .buttonStyle(.plain)
-            }
+            )
+            .accessibilityIdentifier("ios.session.rainbowSuggestion")
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(set.completed ? LukiColors.accent.opacity(0.10) : LukiColors.fill)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .stroke(set.completed ? LukiColors.accent.opacity(0.45) : LukiColors.fill, lineWidth: 1)
-                )
-        )
     }
 
     private var locale: SupportedLocale {

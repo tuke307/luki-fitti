@@ -488,6 +488,20 @@ public final class LukiAppViewModel {
         watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
     }
 
+    public func removeExerciseFromSession(clientExerciseId: String) {
+        guard var session = store.activeSession else { return }
+        session.exercises.removeAll { $0.clientExerciseId == clientExerciseId }
+        for i in session.exercises.indices {
+            session.exercises[i].orderIndex = i
+        }
+        session.version += 1
+        let recalculated = SessionCalculator.recalculateSessionTotals(session)
+        store.saveActiveSession(recalculated)
+        store.enqueueSessionSync(recalculated)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(recalculated)
+        Task { await store.flushSyncQueue() }
+    }
+
     public func addUnplannedExerciseToSession(_ exercise: ExerciseDto) {
         guard var session = store.activeSession else { return }
         let clientExId = "sex-\(UUID().uuidString.lowercased())"

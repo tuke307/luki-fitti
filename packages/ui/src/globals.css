@@ -40,6 +40,10 @@
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
 
+  --color-set-warmup: var(--set-warmup);
+  --color-set-dropset: var(--set-dropset);
+  --color-set-stretch: var(--set-stretch);
+
   --color-scrim: var(--scrim);
 
   --color-border: var(--border);
@@ -89,6 +93,10 @@
     --success-foreground: oklch(1 0 0);
     --warning: oklch(0.6 0.13 75);
     --warning-foreground: oklch(1 0 0);
+    /* Set types — kept clear of the green/amber/red effort scale */
+    --set-warmup: oklch(0.55 0.14 240);
+    --set-dropset: oklch(0.52 0.19 300);
+    --set-stretch: oklch(0.55 0.1 195);
     --scrim: oklch(0.2 0.006 286);
     --border: oklch(0.9 0.004 286);
     --input: oklch(0.9 0.004 286);
@@ -124,6 +132,9 @@
     --success-foreground: oklch(0.18 0.03 150);
     --warning: oklch(0.82 0.15 85);
     --warning-foreground: oklch(0.2 0.03 85);
+    --set-warmup: oklch(0.74 0.13 240);
+    --set-dropset: oklch(0.72 0.17 300);
+    --set-stretch: oklch(0.78 0.11 195);
     --scrim: oklch(0 0 0);
     --border: oklch(0.32 0.004 286);
     --input: oklch(0.32 0.004 286);

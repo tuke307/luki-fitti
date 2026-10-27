@@ -20,9 +20,7 @@ import {
   Search,
   X,
   ChevronRight,
-  Minus,
   MoreHorizontal,
-  Sparkles,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -62,17 +60,17 @@ import { triggerWorkoutNotification } from '@/lib/notifications/notification-man
 import {
   computeExerciseProgression,
   computeWorkoutExerciseSuggestion,
-  formatCompactDelta,
   formatRestDurationMinSec,
   groupExercisesIntoBlocks,
+  type ExerciseRenderBlock,
 } from '@luki-fitti/common/utils/client';
 import { filterExercisesByQuery } from './exercise-picker';
 import { ExerciseVisual } from './exercise-visual';
-import { NumberInput } from './number-input';
 import { RainbowExerciseSuggestionCard } from './rainbow-suggestion-card';
+import { alignSetSuggestions, SessionSetRow } from './session-set-row';
+import { getSetBadgeLabels } from './set-type-badge';
 import { SwipeRow } from './swipe-row';
 import {
-  ExerciseType,
   MuscleGroup,
   SessionExerciseOrigin,
   SessionExerciseStatus,
@@ -95,10 +93,7 @@ export function ActiveSessionView({
     catalog,
     activeSession,
     historySessions,
-    updateSet,
-    toggleCompleteSet,
     addSetToExercise,
-    removeSetFromExercise,
     skipExercise,
     substituteExercise,
     addExerciseToSession,
@@ -114,7 +109,7 @@ export function ActiveSessionView({
     finishSession,
     abandonSession,
   } = useGym();
-  const { t, format, muscleLabel, equipmentLabel, setTypeLabel } = useLocale();
+  const { t, format, muscleLabel, equipmentLabel } = useLocale();
 
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const [selectedExerciseIdx, setSelectedExerciseIdx] = useState<number>(0);
@@ -238,7 +233,8 @@ export function ActiveSessionView({
     Math.max(0, selectedExerciseIdx),
     Math.max(0, activeSession.exercises.length - 1),
   );
-  const currentExercise = activeSession.exercises[safeIdx] ?? null;
+  const substituteTarget =
+    activeSession.exercises.find((e) => e.clientExerciseId === showSubstituteFor) ?? null;
   const nextExercise =
     activeSession.exercises
       .slice(safeIdx + 1)
@@ -289,76 +285,92 @@ export function ActiveSessionView({
     return `${ex.plannedSets}×${repsPart}${weightPart}`;
   };
 
-  const renderCollapsedExerciseHeader = (
-    ex: SessionExerciseDto,
-    idx: number,
-    supersetStepNumber?: number,
-  ) => {
-    const doneSets = ex.sets.filter((s) => s.completed).length;
-    const isCompleted = ex.status === SessionExerciseStatus.COMPLETED;
-    const isSkipped = ex.status === SessionExerciseStatus.SKIPPED;
-    const catEx = catalog.find((c) => c.id === ex.exerciseId);
-
-    return (
-      <button
-        key={ex.clientExerciseId}
-        type="button"
-        data-testid={`vertical-exercise-row-${idx + 1}`}
-        onClick={() => setSelectedExerciseIdx(idx)}
-        className={`bg-card flex w-full items-center justify-between gap-3 rounded-[1.25rem] p-3 text-left transition-colors ${
-          isSkipped ? 'opacity-60' : 'hover:bg-secondary/40'
-        }`}
-      >
-        <div className="flex min-w-0 items-center gap-3">
-          <span
-            className={`tabular-nums flex size-8 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold ${
-              isCompleted ? 'bg-success text-success-foreground' : 'bg-secondary text-foreground'
-            }`}
-          >
-            {isCompleted ? (
-              <Check className="h-4 w-4 stroke-[3]" />
-            ) : (
-              (supersetStepNumber ?? idx + 1)
-            )}
-          </span>
-
-          <ExerciseVisual
-            exercise={{
-              id: ex.exerciseId ?? ex.clientExerciseId,
-              slug: catEx?.slug,
-              name: ex.exerciseNameSnapshot,
-              primaryMuscleGroup: ex.primaryMuscleSnapshot,
-              media: catEx?.media,
-            }}
-            variant="thumbnail"
-            className="h-10 w-12 shrink-0"
-          />
-
-          <div className="min-w-0">
-            <p className={`truncate text-[15px] font-medium ${isSkipped ? 'line-through' : ''}`}>
-              {ex.exerciseNameSnapshot}
-            </p>
-            <p className="text-muted-foreground truncate text-[13px] tabular-nums">
-              {muscleLabel(ex.primaryMuscleSnapshot)} · {formatExercisePillText(ex)}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-2">
-          <span className="text-muted-foreground text-[13px] tabular-nums">
-            {doneSets}/{ex.sets.length}
-          </span>
-          <ChevronRight className="text-muted-foreground h-4 w-4" />
-        </div>
-      </button>
-    );
+  const openSubstitute = (ex: SessionExerciseDto) => {
+    setSubstituteSearch('');
+    setShowSubstituteFor(ex.clientExerciseId);
   };
 
-  const renderExpandedExerciseCard = (
+  const exerciseSwipeActions = (
     ex: SessionExerciseDto,
-    idx: number,
-    supersetStepNumber?: number,
-  ) => {
+  ): Pick<React.ComponentProps<typeof SwipeRow>, 'leadingActions' | 'trailingActions'> => ({
+    leadingActions: [
+      {
+        id: 'swap',
+        label: t.session.swapAlternativeBtn,
+        icon: ArrowRightLeft,
+        tone: 'neutral',
+        testId: `swipe-swap-${ex.clientExerciseId}`,
+        onSelect: () => openSubstitute(ex),
+      },
+      {
+        id: 'skip',
+        label:
+          ex.status === SessionExerciseStatus.SKIPPED ? t.session.unskipBtn : t.session.skipBtn,
+        icon: SkipForward,
+        tone: 'accent',
+        testId: `swipe-skip-${ex.clientExerciseId}`,
+        onSelect: () => void skipExercise(ex.clientExerciseId),
+      },
+    ],
+    trailingActions: [
+      {
+        id: 'remove',
+        label: t.common.delete,
+        icon: Trash2,
+        tone: 'destructive',
+        testId: `swipe-remove-${ex.clientExerciseId}`,
+        onSelect: () => void removeExerciseFromSession(ex.clientExerciseId),
+      },
+    ],
+  });
+
+  /** Pointer/keyboard fallback for the swipe actions; hidden on touch screens. */
+  const renderExerciseMenu = (ex: SessionExerciseDto, idx: number) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label={format(t.workouts.moreActionsLabel, { name: ex.exerciseNameSnapshot })}
+          className="text-muted-foreground pointer-coarse:hidden -mt-1 -mr-1 size-10 shrink-0"
+        >
+          <MoreHorizontal className="h-5 w-5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuItem onSelect={() => openSubstitute(ex)}>
+          <ArrowRightLeft /> {t.session.swapAlternativeBtn}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => void skipExercise(ex.clientExerciseId)}>
+          <SkipForward />
+          {ex.status === SessionExerciseStatus.SKIPPED ? t.session.unskipBtn : t.session.skipBtn}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={idx === 0}
+          onSelect={() => void reorderExercise(ex.clientExerciseId, 'UP')}
+        >
+          <ArrowUp /> {t.session.moveEarlierTitle}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={idx === activeSession.exercises.length - 1}
+          onSelect={() => void reorderExercise(ex.clientExerciseId, 'DOWN')}
+        >
+          <ArrowDown /> {t.session.moveLaterTitle}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          variant="destructive"
+          aria-label="Remove exercise from session"
+          onSelect={() => void removeExerciseFromSession(ex.clientExerciseId)}
+        >
+          <Trash2 /> {t.session.removeFromSessionTitle}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const progressionFor = (ex: SessionExerciseDto) => {
     const catEx = catalog.find((c) => c.id === ex.exerciseId) ?? null;
     const insight = computeExerciseProgression({
       exerciseId: ex.exerciseId,
@@ -372,15 +384,118 @@ export function ActiveSessionView({
       weightUnit: activeSession.weightUnit,
       currentSets: ex.sets,
     });
+    return {
+      catEx,
+      insight,
+      suggestions: alignSetSuggestions(ex, insight),
+      labels: getSetBadgeLabels(ex.sets),
+    };
+  };
 
-    let workingSetRenderCounter = 0;
+  const renderLastSessionLine = (insight: ReturnType<typeof progressionFor>['insight']) => (
+    <p className="text-muted-foreground text-[13px] tabular-nums">
+      {insight.lastSession ? (
+        <>
+          {format(t.session.lastSessionFrom, { name: insight.lastSession.workoutName })}:{' '}
+          <span className="text-foreground">
+            {insight.lastSession.workingSets
+              .slice(0, 4)
+              .map(
+                (ws) =>
+                  `${ws.weightNormalized} ${activeSession.weightUnit.toLowerCase()} × ${ws.reps}`,
+              )
+              .join(' · ')}
+          </span>
+        </>
+      ) : (
+        t.session.firstLoggedSession
+      )}
+    </p>
+  );
 
+  const renderStatusChips = (ex: SessionExerciseDto) => {
+    const chips = [
+      ex.origin === SessionExerciseOrigin.SUBSTITUTED
+        ? format(t.session.replacedBadge, { name: ex.replacedExerciseName ?? '' })
+        : null,
+      ex.origin === SessionExerciseOrigin.ADDED ? t.session.addedUnplannedBadge : null,
+      ex.status === SessionExerciseStatus.SKIPPED ? t.session.skippedBadge : null,
+    ].filter((c): c is string => Boolean(c));
+    return chips.length > 0 ? (
+      <p className="text-warning mt-0.5 text-[13px] font-medium">{chips.join(' · ')}</p>
+    ) : null;
+  };
+
+  const renderCollapsedExerciseHeader = (ex: SessionExerciseDto, idx: number) => {
+    const doneSets = ex.sets.filter((s) => s.completed).length;
+    const isCompleted = ex.status === SessionExerciseStatus.COMPLETED;
+    const isSkipped = ex.status === SessionExerciseStatus.SKIPPED;
+    const catEx = catalog.find((c) => c.id === ex.exerciseId);
+
+    return (
+      <SwipeRow
+        key={ex.clientExerciseId}
+        className="rounded-[1.25rem]"
+        {...exerciseSwipeActions(ex)}
+      >
+        <button
+          type="button"
+          data-testid={`vertical-exercise-row-${idx + 1}`}
+          onClick={() => setSelectedExerciseIdx(idx)}
+          className={`bg-card flex w-full items-center justify-between gap-3 rounded-[1.25rem] p-3 text-left transition-colors ${
+            isSkipped ? 'opacity-60' : 'hover:bg-secondary/40'
+          }`}
+        >
+          <div className="flex min-w-0 items-center gap-3">
+            <span
+              className={`tabular-nums flex size-8 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold ${
+                isCompleted ? 'bg-success text-success-foreground' : 'bg-secondary text-foreground'
+              }`}
+            >
+              {isCompleted ? <Check className="h-4 w-4 stroke-[3]" /> : idx + 1}
+            </span>
+
+            <ExerciseVisual
+              exercise={{
+                id: ex.exerciseId ?? ex.clientExerciseId,
+                slug: catEx?.slug,
+                name: ex.exerciseNameSnapshot,
+                primaryMuscleGroup: ex.primaryMuscleSnapshot,
+                media: catEx?.media,
+                isSystem: catEx?.isSystem,
+              }}
+              variant="thumbnail"
+              className="h-10 w-12 shrink-0"
+            />
+
+            <div className="min-w-0">
+              <p className={`truncate text-[15px] font-medium ${isSkipped ? 'line-through' : ''}`}>
+                {ex.exerciseNameSnapshot}
+              </p>
+              <p className="text-muted-foreground truncate text-[13px] tabular-nums">
+                {muscleLabel(ex.primaryMuscleSnapshot)} · {formatExercisePillText(ex)}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="text-muted-foreground text-[13px] tabular-nums">
+              {doneSets}/{ex.sets.length}
+            </span>
+            <ChevronRight className="text-muted-foreground h-4 w-4" />
+          </div>
+        </button>
+      </SwipeRow>
+    );
+  };
+
+  const renderExpandedExerciseCard = (ex: SessionExerciseDto, idx: number) => {
+    const { catEx, insight, suggestions, labels } = progressionFor(ex);
     const repsText =
       ex.targetRepsMin && ex.targetRepsMax && ex.targetRepsMin !== ex.targetRepsMax
         ? `${ex.targetRepsMin}–${ex.targetRepsMax}`
         : `${ex.targetRepsMin ?? 10}`;
     const goalLine = [
-      supersetStepNumber ? `${t.workouts.supersetHeaderLabel} ${supersetStepNumber}` : null,
       muscleLabel(ex.primaryMuscleSnapshot),
       `${ex.plannedSets}×${repsText}${ex.targetWeight ? ` · ${ex.targetWeight} ${activeSession.weightUnit.toLowerCase()}` : ''}`,
       ex.restSeconds > 0
@@ -389,19 +504,6 @@ export function ActiveSessionView({
     ]
       .filter(Boolean)
       .join(' · ');
-    const statusChips = [
-      ex.origin === SessionExerciseOrigin.SUBSTITUTED
-        ? format(t.session.replacedBadge, { name: ex.replacedExerciseName ?? '' })
-        : null,
-      ex.origin === SessionExerciseOrigin.ADDED ? t.session.addedUnplannedBadge : null,
-      ex.status === SessionExerciseStatus.SKIPPED ? t.session.skippedBadge : null,
-    ].filter((c): c is string => Boolean(c));
-    const supersetPartnerIdx =
-      ex.restSeconds === 0 && activeSession.exercises[idx + 1]
-        ? idx + 1
-        : idx > 0 && activeSession.exercises[idx - 1]?.restSeconds === 0
-          ? idx - 1
-          : null;
 
     return (
       <section
@@ -409,97 +511,30 @@ export function ActiveSessionView({
         data-testid={`active-exercise-card-${idx + 1}`}
         className="bg-card space-y-3 rounded-[1.25rem] p-4"
       >
-        <div className="flex items-start gap-3">
-          <ExerciseVisual
-            exercise={{
-              id: ex.exerciseId,
-              slug: catEx?.slug,
-              name: ex.exerciseNameSnapshot,
-              primaryMuscleGroup: ex.primaryMuscleSnapshot,
-              media: catEx?.media,
-            }}
-            variant="thumbnail"
-            className="h-14 w-16"
-          />
-          <div className="min-w-0 flex-1">
-            <h2 className="text-[20px] leading-snug font-semibold">{ex.exerciseNameSnapshot}</h2>
-            <p className="text-muted-foreground text-[13px] tabular-nums">{goalLine}</p>
-            {statusChips.length > 0 && (
-              <p className="text-warning mt-0.5 text-[13px] font-medium">
-                {statusChips.join(' · ')}
-              </p>
-            )}
+        <SwipeRow className="-m-1 rounded-xl" {...exerciseSwipeActions(ex)}>
+          <div data-testid={`exercise-header-${idx + 1}`} className="flex items-start gap-3 p-1">
+            <ExerciseVisual
+              exercise={{
+                id: ex.exerciseId,
+                slug: catEx?.slug,
+                name: ex.exerciseNameSnapshot,
+                primaryMuscleGroup: ex.primaryMuscleSnapshot,
+                media: catEx?.media,
+                isSystem: catEx?.isSystem,
+              }}
+              variant="thumbnail"
+              className="h-14 w-16"
+            />
+            <div className="min-w-0 flex-1">
+              <h2 className="text-[20px] leading-snug font-semibold">{ex.exerciseNameSnapshot}</h2>
+              <p className="text-muted-foreground text-[13px] tabular-nums">{goalLine}</p>
+              {renderStatusChips(ex)}
+            </div>
+            {renderExerciseMenu(ex, idx)}
           </div>
+        </SwipeRow>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={format(t.workouts.moreActionsLabel, { name: ex.exerciseNameSnapshot })}
-                className="text-muted-foreground -mt-1 -mr-1 size-10 shrink-0"
-              >
-                <MoreHorizontal className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem
-                onSelect={() => {
-                  setSubstituteSearch('');
-                  setShowSubstituteFor(ex.clientExerciseId);
-                }}
-              >
-                <ArrowRightLeft /> {t.session.swapAlternativeBtn}
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => void skipExercise(ex.clientExerciseId)}>
-                <SkipForward />
-                {ex.status === SessionExerciseStatus.SKIPPED
-                  ? t.session.unskipBtn
-                  : t.session.skipBtn}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={idx === 0}
-                onSelect={() => void reorderExercise(ex.clientExerciseId, 'UP')}
-              >
-                <ArrowUp /> {t.session.moveEarlierTitle}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={idx === activeSession.exercises.length - 1}
-                onSelect={() => void reorderExercise(ex.clientExerciseId, 'DOWN')}
-              >
-                <ArrowDown /> {t.session.moveLaterTitle}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                aria-label="Remove exercise from session"
-                onSelect={() => void removeExerciseFromSession(ex.clientExerciseId)}
-              >
-                <Trash2 /> {t.session.removeFromSessionTitle}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        <p className="text-muted-foreground text-[13px] tabular-nums">
-          {insight.lastSession ? (
-            <>
-              {format(t.session.lastSessionFrom, { name: insight.lastSession.workoutName })}:{' '}
-              <span className="text-foreground">
-                {insight.lastSession.workingSets
-                  .slice(0, 4)
-                  .map(
-                    (ws) =>
-                      `${ws.weightNormalized} ${activeSession.weightUnit.toLowerCase()} × ${ws.reps}`,
-                  )
-                  .join(' · ')}
-              </span>
-            </>
-          ) : (
-            t.session.firstLoggedSession
-          )}
-        </p>
+        {renderLastSessionLine(insight)}
 
         {ex.notes && (
           <p className="bg-secondary text-secondary-foreground rounded-xl px-3 py-2 text-[13px]">
@@ -507,389 +542,29 @@ export function ActiveSessionView({
           </p>
         )}
 
-        {supersetPartnerIdx !== null && (
-          <button
-            type="button"
-            onClick={() => setSelectedExerciseIdx(supersetPartnerIdx)}
-            className="text-primary flex w-full items-center gap-1.5 text-left text-[13px] font-medium"
-          >
-            <Zap className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">
-              {format(t.session.supersetPairedBanner, {
-                index: supersetPartnerIdx + 1,
-                name: activeSession.exercises[supersetPartnerIdx]?.exerciseNameSnapshot ?? '',
-              })}
-            </span>
-            <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-          </button>
-        )}
-
-        {/* Sets Table — Ergonomic One-Handed Gym Controls with Clear Logged State */}
         <div className="divide-border/60 divide-y">
-          {ex.sets.map((set, sIdx) => {
-            const isStretchSet =
-              ex.exerciseTypeSnapshot === ExerciseType.STRETCHING ||
-              set.setType === SetType.STRETCH;
-            const isWorkingType =
-              !isStretchSet && set.setType !== SetType.WARMUP && set.setType !== SetType.STRETCH;
-
-            const setSuggestion =
-              isWorkingType && insight
-                ? (insight.setSuggestions[workingSetRenderCounter++] ??
-                  insight.setSuggestions[insight.setSuggestions.length - 1] ??
-                  null)
-                : null;
-
-            const dynamicWeightDelta =
-              setSuggestion?.suggestedWeight !== null &&
-              setSuggestion?.suggestedWeight !== undefined &&
-              (set.weight ?? setSuggestion.lastWeight ?? 0) > 0
-                ? Math.round(
-                    (setSuggestion.suggestedWeight -
-                      (set.weight ?? setSuggestion.lastWeight ?? 0)) *
-                      100,
-                  ) / 100
-                : 0;
-
-            const dynamicRepsDelta =
-              setSuggestion?.suggestedReps !== null &&
-              setSuggestion?.suggestedReps !== undefined &&
-              (set.reps ?? setSuggestion.lastReps ?? 0) > 0
-                ? setSuggestion.suggestedReps - (set.reps ?? setSuggestion.lastReps ?? 0)
-                : 0;
-
-            const weightBadgeLabel = !set.completed ? formatCompactDelta(dynamicWeightDelta) : null;
-            const repsBadgeLabel = !set.completed ? formatCompactDelta(dynamicRepsDelta) : null;
-
-            const intensityLevel =
-              set.rpe === null || set.rpe === undefined
-                ? 0
-                : set.rpe <= 7.5
-                  ? 1
-                  : set.rpe < 9.5
-                    ? 2
-                    : 3;
-
-            const intensityMeta =
-              intensityLevel === 1
-                ? {
-                    label: t.session.intensityLight,
-                    hint: t.session.intensityLightHint,
-                    nextRpe: 8,
-                    containerClass: 'border-success/40 bg-success/10 text-success',
-                    activeBarClass: 'bg-success',
-                  }
-                : intensityLevel === 2
-                  ? {
-                      label: t.session.intensitySweetSpot,
-                      hint: t.session.intensitySweetSpotHint,
-                      nextRpe: 9.5,
-                      containerClass: 'border-warning/40 bg-warning/10 text-warning',
-                      activeBarClass: 'bg-warning',
-                    }
-                  : intensityLevel === 3
-                    ? {
-                        label: t.session.intensityLimit,
-                        hint: t.session.intensityLimitHint,
-                        nextRpe: null,
-                        containerClass: 'border-destructive/40 bg-destructive/10 text-destructive',
-                        activeBarClass: 'bg-destructive',
-                      }
-                    : {
-                        label: t.session.intensityEffort,
-                        hint: t.session.intensityEffortHint,
-                        nextRpe: 7,
-                        containerClass:
-                          'border-border bg-background text-muted-foreground hover:text-foreground',
-                        activeBarClass: 'bg-muted-foreground/30',
-                      };
-
-            const loggedPrescriptionSummary = isStretchSet
-              ? `${set.durationSeconds ?? 45} ${t.common.sec}`
-              : `${set.weight ?? 0}${set.weightUnit.toLowerCase()} × ${set.reps ?? 0}`;
-
-            const setBadgeLabel =
-              set.setType === SetType.WARMUP
-                ? 'W'
-                : set.setType === SetType.DROPSET
-                  ? 'D'
-                  : set.setType === SetType.STRETCH
-                    ? 'S'
-                    : String(sIdx + 1);
-
-            const hasSuggestion =
-              !set.completed &&
-              setSuggestion &&
-              ((weightBadgeLabel && setSuggestion.suggestedWeight !== null) ||
-                (repsBadgeLabel && setSuggestion.suggestedReps !== null));
-
-            const stepperBtn =
-              'text-muted-foreground hover:text-foreground flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors active:bg-background/70';
-
-            return (
-              <SwipeRow
-                key={set.clientSetId}
-                className="rounded-xl"
-                trailingActions={[
-                  {
-                    id: 'delete',
-                    label: t.common.delete,
-                    icon: Trash2,
-                    tone: 'destructive',
-                    onSelect: () =>
-                      void removeSetFromExercise(ex.clientExerciseId, set.clientSetId),
-                  },
-                ]}
-              >
-                <div
-                  data-testid={`session-set-row-${sIdx + 1}`}
-                  data-set-logged={set.completed ? 'true' : 'false'}
-                  className="py-1.5"
-                >
-                  <div className="flex items-center gap-2">
-                    {/* Set badge doubles as the set-type picker */}
-                    <div className="relative shrink-0">
-                      <span
-                        aria-hidden="true"
-                        className={`tabular-nums flex size-9 items-center justify-center rounded-full text-[15px] font-semibold ${
-                          set.completed
-                            ? 'bg-success text-success-foreground'
-                            : set.setType === SetType.WARMUP
-                              ? 'bg-warning/15 text-warning'
-                              : 'bg-secondary text-foreground'
-                        }`}
-                      >
-                        {set.completed ? <Check className="h-4 w-4 stroke-[3]" /> : setBadgeLabel}
-                      </span>
-                      <select
-                        aria-label={`Set ${sIdx + 1} type`}
-                        value={set.setType}
-                        onChange={(e) =>
-                          void updateSet(ex.clientExerciseId, set.clientSetId, {
-                            setType: e.target.value as SetType,
-                          })
-                        }
-                        className="absolute inset-0 cursor-pointer opacity-0"
-                      >
-                        <option value={SetType.WARMUP}>{setTypeLabel(SetType.WARMUP)}</option>
-                        <option value={SetType.WORKING}>{setTypeLabel(SetType.WORKING)}</option>
-                        <option value={SetType.DROPSET}>{setTypeLabel(SetType.DROPSET)}</option>
-                        <option value={SetType.STRETCH}>{setTypeLabel(SetType.STRETCH)}</option>
-                      </select>
-                    </div>
-
-                    {set.completed ? (
-                      <span
-                        data-testid="logged-set-summary-pill"
-                        className="text-muted-foreground tabular-nums min-w-0 flex-1 truncate px-1 text-[17px]"
-                      >
-                        {loggedPrescriptionSummary}
-                      </span>
-                    ) : isStretchSet ? (
-                      <div className="bg-secondary flex h-11 min-w-0 flex-1 items-center justify-center gap-1 rounded-xl px-2">
-                        <NumberInput
-                          variant="bare"
-                          min={0}
-                          fallbackValue={45}
-                          aria-label={`Set ${sIdx + 1} duration seconds`}
-                          value={set.durationSeconds ?? 45}
-                          onValueChange={(val) =>
-                            void updateSet(ex.clientExerciseId, set.clientSetId, {
-                              durationSeconds: val,
-                            })
-                          }
-                          className="font-rounded w-14 bg-transparent text-center text-[17px] font-semibold outline-none"
-                        />
-                        <span className="text-muted-foreground text-[13px]">{t.common.sec}</span>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="bg-secondary flex h-11 min-w-0 flex-[1.3] items-center rounded-xl px-0.5">
-                          <button
-                            type="button"
-                            aria-label={`Decrease weight by 2.5, set ${sIdx + 1}`}
-                            onClick={() =>
-                              void updateSet(ex.clientExerciseId, set.clientSetId, {
-                                weight: Math.max(0, (set.weight ?? 0) - 2.5),
-                              })
-                            }
-                            className={stepperBtn}
-                          >
-                            <Minus className="h-4 w-4" />
-                          </button>
-                          <div className="flex min-w-0 flex-1 items-baseline justify-center gap-0.5">
-                            <NumberInput
-                              variant="bare"
-                              allowNull
-                              step="0.5"
-                              min={0}
-                              aria-label={`Set ${sIdx + 1} weight`}
-                              value={set.weight}
-                              onValueChange={(val) =>
-                                void updateSet(ex.clientExerciseId, set.clientSetId, {
-                                  weight: val,
-                                })
-                              }
-                              placeholder="0"
-                              className="font-rounded w-full min-w-0 bg-transparent text-center text-[17px] font-semibold outline-none"
-                            />
-                            <span className="text-muted-foreground text-[13px]">
-                              {set.weightUnit.toLowerCase()}
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            aria-label={`Increase weight by 2.5, set ${sIdx + 1}`}
-                            onClick={() =>
-                              void updateSet(ex.clientExerciseId, set.clientSetId, {
-                                weight: (set.weight ?? 0) + 2.5,
-                              })
-                            }
-                            className={stepperBtn}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </button>
-                        </div>
-
-                        <div className="bg-secondary flex h-11 min-w-0 flex-1 items-center rounded-xl px-0.5">
-                          <button
-                            type="button"
-                            aria-label={`Decrease reps, set ${sIdx + 1}`}
-                            onClick={() =>
-                              void updateSet(ex.clientExerciseId, set.clientSetId, {
-                                reps: Math.max(0, (set.reps ?? 0) - 1),
-                              })
-                            }
-                            className={stepperBtn}
-                          >
-                            <Minus className="h-4 w-4" />
-                          </button>
-                          <NumberInput
-                            variant="bare"
-                            allowNull
-                            min={0}
-                            aria-label={`Set ${sIdx + 1} reps`}
-                            value={set.reps}
-                            onValueChange={(val) =>
-                              void updateSet(ex.clientExerciseId, set.clientSetId, {
-                                reps: val,
-                              })
-                            }
-                            placeholder="0"
-                            className="font-rounded w-full min-w-0 bg-transparent text-center text-[17px] font-semibold outline-none"
-                          />
-                          <button
-                            type="button"
-                            aria-label={`Increase reps, set ${sIdx + 1}`}
-                            onClick={() =>
-                              void updateSet(ex.clientExerciseId, set.clientSetId, {
-                                reps: (set.reps ?? 0) + 1,
-                              })
-                            }
-                            className={stepperBtn}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </>
-                    )}
-
-                    {set.completed && (
-                      <button
-                        type="button"
-                        aria-label={`Set ${sIdx + 1} intensity: ${intensityMeta.label}`}
-                        title={intensityMeta.hint}
-                        onClick={() =>
-                          void updateSet(ex.clientExerciseId, set.clientSetId, {
-                            rpe: intensityMeta.nextRpe,
-                          })
-                        }
-                        className="hover:bg-secondary flex size-9 shrink-0 items-end justify-center gap-0.5 rounded-full pb-2.5 transition-colors"
-                      >
-                        {[1, 2, 3].map((barIdx) => (
-                          <span
-                            key={barIdx}
-                            aria-hidden="true"
-                            className={`w-1 rounded-full ${
-                              barIdx === 1 ? 'h-2' : barIdx === 2 ? 'h-3' : 'h-4'
-                            } ${barIdx <= intensityLevel ? intensityMeta.activeBarClass : 'bg-muted-foreground/25'}`}
-                          />
-                        ))}
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() => void toggleCompleteSet(ex.clientExerciseId, set.clientSetId)}
-                      aria-label={set.completed ? 'Mark set incomplete' : 'Complete set'}
-                      title={set.completed ? t.session.tapToUndoSet : t.session.logSetBtn}
-                      className={`flex size-11 shrink-0 items-center justify-center rounded-full transition-[transform,background-color] duration-150 active:scale-90 ${
-                        set.completed
-                          ? 'bg-success text-success-foreground'
-                          : 'bg-primary/12 text-primary hover:bg-primary/18'
-                      }`}
-                    >
-                      <Check className="h-5 w-5 stroke-[2.5]" />
-                    </button>
-                  </div>
-
-                  {hasSuggestion && setSuggestion && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void updateSet(ex.clientExerciseId, set.clientSetId, {
-                          ...(setSuggestion.suggestedWeight !== null
-                            ? { weight: setSuggestion.suggestedWeight }
-                            : {}),
-                          ...(setSuggestion.suggestedReps !== null
-                            ? { reps: setSuggestion.suggestedReps }
-                            : {}),
-                        })
-                      }
-                      aria-label={`Apply suggestion ${[weightBadgeLabel, repsBadgeLabel].filter(Boolean).join(' ')}`}
-                      className="text-primary mt-1 ml-11 flex items-center gap-1 text-[13px] font-medium"
-                    >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      <span className="tabular-nums">
-                        {[
-                          weightBadgeLabel
-                            ? `${weightBadgeLabel} ${set.weightUnit.toLowerCase()}`
-                            : null,
-                          repsBadgeLabel ? `${repsBadgeLabel} ${t.common.reps}` : null,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </span>
-                    </button>
-                  )}
-                </div>
-              </SwipeRow>
-            );
-          })}
+          {ex.sets.map((set, sIdx) => (
+            <SessionSetRow
+              key={set.clientSetId}
+              exercise={ex}
+              set={set}
+              setIndex={sIdx}
+              badgeLabel={labels[sIdx] ?? String(sIdx + 1)}
+              suggestion={suggestions[sIdx] ?? null}
+            />
+          ))}
         </div>
 
-        {/* Add Set Buttons */}
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => void addSetToExercise(ex.clientExerciseId, SetType.WORKING)}
-              className="font-bold"
-            >
-              <Plus className="h-3.5 w-3.5" /> {t.session.addWorkingSetBtn}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => void addSetToExercise(ex.clientExerciseId, SetType.WARMUP)}
-              className="bg-secondary/60 text-muted-foreground hover:text-foreground font-semibold"
-            >
-              {t.session.addWarmupSetBtn}
-            </Button>
-          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => void addSetToExercise(ex.clientExerciseId, SetType.WORKING)}
+            className="font-bold"
+          >
+            <Plus className="h-3.5 w-3.5" /> {t.session.addWorkingSetBtn}
+          </Button>
 
           {idx < activeSession.exercises.length - 1 && (
             <Button
@@ -906,6 +581,152 @@ export function ActiveSessionView({
           )}
         </div>
       </section>
+    );
+  };
+
+  /**
+   * Supersets are logged round by round: set 1 of every exercise sits directly together, so
+   * finishing A1 puts B1 right underneath instead of in another card further down.
+   */
+  const renderSupersetBlock = (block: ExerciseRenderBlock<SessionExerciseDto>) => {
+    const members = block.items.map(({ item: ex, globalIndex }, i) => ({
+      ex,
+      globalIndex,
+      letter: String.fromCharCode(65 + i),
+      ...progressionFor(ex),
+    }));
+    const rounds = Math.max(0, ...members.map((m) => m.ex.sets.length));
+
+    return (
+      <div
+        key={`active-superset-${block.startIndex}`}
+        data-testid="active-superset-block"
+        className="bg-secondary/60 overflow-hidden rounded-[1.25rem]"
+      >
+        <div className="text-foreground flex items-center justify-between gap-2 px-4 pt-3.5 pb-1">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-semibold sm:text-sm">
+              <span className="text-accent">{t.workouts.supersetHeaderLabel}</span>
+              <span className="tabular-nums text-foreground">
+                {format(t.workouts.supersetRoundsFormat, { rounds: block.rounds })}
+              </span>
+            </div>
+            <p className="tabular-nums mt-0.5 text-xs text-muted-foreground">
+              {format(t.workouts.supersetSubtitleFormat, {
+                rest: formatRestDurationMinSec(block.roundRestSeconds),
+              })}
+            </p>
+          </div>
+          <Zap aria-hidden="true" className="text-primary h-4 w-4 shrink-0" />
+        </div>
+
+        <div className="space-y-2.5 p-3">
+          {members.map(({ ex, globalIndex, letter, catEx, insight }) => (
+            <SwipeRow
+              key={ex.clientExerciseId}
+              className="rounded-[1.25rem]"
+              {...exerciseSwipeActions(ex)}
+            >
+              <div
+                data-testid={`superset-exercise-${letter}`}
+                className={`bg-card space-y-1.5 rounded-[1.25rem] p-3 ${
+                  ex.status === SessionExerciseStatus.SKIPPED ? 'opacity-60' : ''
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="bg-primary/12 text-primary flex size-8 shrink-0 items-center justify-center rounded-full text-[13px] font-bold">
+                    {letter}
+                  </span>
+                  <ExerciseVisual
+                    exercise={{
+                      id: ex.exerciseId ?? ex.clientExerciseId,
+                      slug: catEx?.slug,
+                      name: ex.exerciseNameSnapshot,
+                      primaryMuscleGroup: ex.primaryMuscleSnapshot,
+                      media: catEx?.media,
+                      isSystem: catEx?.isSystem,
+                    }}
+                    variant="thumbnail"
+                    className="h-10 w-12 shrink-0"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className={`truncate text-[15px] font-semibold ${
+                        ex.status === SessionExerciseStatus.SKIPPED ? 'line-through' : ''
+                      }`}
+                    >
+                      {ex.exerciseNameSnapshot}
+                    </p>
+                    <p className="text-muted-foreground truncate text-[13px] tabular-nums">
+                      {muscleLabel(ex.primaryMuscleSnapshot)} · {formatExercisePillText(ex)}
+                    </p>
+                    {renderStatusChips(ex)}
+                  </div>
+                  {renderExerciseMenu(ex, globalIndex)}
+                </div>
+                {renderLastSessionLine(insight)}
+                {ex.notes && (
+                  <p className="bg-secondary text-secondary-foreground rounded-xl px-3 py-2 text-[13px]">
+                    {format(t.session.notePrefix, { note: ex.notes })}
+                  </p>
+                )}
+              </div>
+            </SwipeRow>
+          ))}
+
+          {Array.from({ length: rounds }, (_, r) => (
+            <div
+              key={r}
+              data-testid={`superset-round-${r + 1}`}
+              className="bg-card rounded-[1.25rem] px-3 pt-2.5 pb-1.5"
+            >
+              <p className="text-muted-foreground text-[13px] font-semibold tabular-nums">
+                {format(t.session.supersetRoundLabel, { round: r + 1, total: rounds })}
+              </p>
+              <div className="divide-border/60 divide-y">
+                {members.map(({ ex, letter, labels, suggestions }) => {
+                  const set = ex.sets[r];
+                  const contextLabel = `${letter} · ${ex.exerciseNameSnapshot}`;
+                  return set ? (
+                    <SessionSetRow
+                      key={set.clientSetId}
+                      exercise={ex}
+                      set={set}
+                      setIndex={r}
+                      badgeLabel={labels[r] ?? String(r + 1)}
+                      suggestion={suggestions[r] ?? null}
+                      contextLabel={contextLabel}
+                      testId={`superset-set-row-${letter}${r + 1}`}
+                    />
+                  ) : (
+                    <p
+                      key={`${ex.clientExerciseId}-missing-${r}`}
+                      className="text-muted-foreground py-2.5 pl-11 text-[13px]"
+                    >
+                      {contextLabel} · –
+                    </p>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() =>
+              void addSetToExercise(
+                members.map((m) => m.ex.clientExerciseId),
+                SetType.WORKING,
+              )
+            }
+            className="bg-card font-bold"
+          >
+            <Plus className="h-3.5 w-3.5" /> {t.session.addSupersetRoundBtn}
+          </Button>
+        </div>
+      </div>
     );
   };
 
@@ -995,42 +816,7 @@ export function ActiveSessionView({
       {activeSession.exercises.length > 0 ? (
         <div data-testid="vertical-exercise-stack" className="space-y-3">
           {exerciseBlocks.map((block) => {
-            if (block.type === 'superset') {
-              return (
-                <div
-                  key={`active-superset-${block.startIndex}`}
-                  data-testid="active-superset-block"
-                  className="bg-secondary/60 overflow-hidden rounded-[1.25rem]"
-                >
-                  {/* Gymlife Dark Superset Header Banner */}
-                  <div className="text-foreground flex items-center justify-between gap-2 px-4 pt-3.5 pb-1">
-                    <div>
-                      <div className="flex items-center gap-2 text-xs font-semibold sm:text-sm">
-                        <span className="text-accent">{t.workouts.supersetHeaderLabel}</span>
-                        <span className="tabular-nums text-foreground">
-                          {format(t.workouts.supersetRoundsFormat, { rounds: block.rounds })}
-                        </span>
-                      </div>
-                      <p className="tabular-nums mt-0.5 text-xs text-muted-foreground">
-                        {format(t.workouts.supersetSubtitleFormat, {
-                          rest: formatRestDurationMinSec(block.roundRestSeconds),
-                        })}
-                      </p>
-                    </div>
-                    <Zap aria-hidden="true" className="text-primary h-4 w-4 shrink-0" />
-                  </div>
-
-                  {/* Superset Items Vertically Stacked */}
-                  <div className="space-y-2.5 p-3">
-                    {block.items.map(({ item: ex, globalIndex, stepNumber }) =>
-                      globalIndex === safeIdx
-                        ? renderExpandedExerciseCard(ex, globalIndex, stepNumber)
-                        : renderCollapsedExerciseHeader(ex, globalIndex, stepNumber),
-                    )}
-                  </div>
-                </div>
-              );
-            }
+            if (block.type === 'superset') return renderSupersetBlock(block);
 
             const { item: ex, globalIndex } = block.items[0]!;
             return globalIndex === safeIdx
@@ -1263,18 +1049,18 @@ export function ActiveSessionView({
 
       {/* Substitute / Replace Exercise Modal */}
       <Dialog
-        open={Boolean(showSubstituteFor && currentExercise)}
+        open={Boolean(substituteTarget)}
         onOpenChange={(open) => {
           if (!open) setShowSubstituteFor(null);
         }}
       >
         <DialogContent className="max-h-[88dvh] overflow-hidden p-4 sm:max-w-md sm:p-5">
-          {currentExercise && (
+          {substituteTarget && (
             <div className="flex max-h-[calc(88dvh-2.5rem)] min-w-0 flex-col gap-3 overflow-hidden">
               <DialogHeader className="shrink-0">
                 <DialogTitle className="font-display text-lg font-bold">
                   {format(t.session.replaceModalTitle, {
-                    name: currentExercise.exerciseNameSnapshot,
+                    name: substituteTarget.exerciseNameSnapshot,
                   })}
                 </DialogTitle>
                 <DialogDescription className="text-xs">
@@ -1305,12 +1091,12 @@ export function ActiveSessionView({
               </div>
 
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-                {!substituteSearch.trim() && currentExercise.alternativeExerciseIds.length > 0 && (
+                {!substituteSearch.trim() && substituteTarget.alternativeExerciseIds.length > 0 && (
                   <div className="space-y-2">
                     <p className="text-primary text-xs font-bold">
                       {t.session.predefinedAlternatives}
                     </p>
-                    {currentExercise.alternativeExerciseIds.map((altId) => {
+                    {substituteTarget.alternativeExerciseIds.map((altId) => {
                       const alt = catalog.find((c) => c.id === altId);
                       if (!alt) return null;
                       return (
@@ -1319,7 +1105,7 @@ export function ActiveSessionView({
                           type="button"
                           variant="outline"
                           onClick={async () => {
-                            await substituteExercise(currentExercise.clientExerciseId, alt.id);
+                            await substituteExercise(substituteTarget.clientExerciseId, alt.id);
                             setShowSubstituteFor(null);
                           }}
                           className="bg-primary/12 border-primary/40 hover:bg-primary/12 flex h-auto w-full items-center justify-between rounded-2xl p-3.5 text-left text-xs font-bold"
@@ -1337,20 +1123,20 @@ export function ActiveSessionView({
                     {substituteSearch.trim()
                       ? t.session.allCatalogExercises
                       : format(t.session.sameMuscleGroup, {
-                          muscle: muscleLabel(currentExercise.primaryMuscleSnapshot),
+                          muscle: muscleLabel(substituteTarget.primaryMuscleSnapshot),
                         })}
                   </p>
                   {filterExercisesByQuery(
-                    catalog.filter((c) => c.id !== currentExercise.exerciseId),
+                    catalog.filter((c) => c.id !== substituteTarget.exerciseId),
                     substituteSearch,
-                    substituteSearch.trim() ? 'ALL' : currentExercise.primaryMuscleSnapshot,
+                    substituteSearch.trim() ? 'ALL' : substituteTarget.primaryMuscleSnapshot,
                   ).map((alt) => (
                     <Button
                       key={alt.id}
                       type="button"
                       variant="secondary"
                       onClick={async () => {
-                        await substituteExercise(currentExercise.clientExerciseId, alt.id);
+                        await substituteExercise(substituteTarget.clientExerciseId, alt.id);
                         setShowSubstituteFor(null);
                       }}
                       className="flex h-auto w-full items-center justify-between rounded-xl p-3 text-left text-xs font-medium"
