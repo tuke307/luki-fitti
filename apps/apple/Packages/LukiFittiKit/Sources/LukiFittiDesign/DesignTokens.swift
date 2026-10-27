@@ -37,6 +37,21 @@ public enum LukiColors {
     public static let heartRate = Color.red
     public static let calories = Color.orange
 
+    // Set types — kept clear of the green/amber/red effort scale (mirrors --set-* in globals.css).
+    public static let setWarmup = adaptive(light: (0.16, 0.45, 0.78), dark: (0.45, 0.68, 0.95))
+    public static let setDropset = adaptive(light: (0.53, 0.25, 0.78), dark: (0.74, 0.56, 0.98))
+    public static let setStretch = adaptive(light: (0.08, 0.53, 0.56), dark: (0.42, 0.82, 0.84))
+
+    /// Badge colour for a set type; working sets use `success` once logged and a neutral fill before.
+    public static func setTypeColor(_ type: SetType) -> Color? {
+        switch type {
+        case .WARMUP: return setWarmup
+        case .DROPSET: return setDropset
+        case .STRETCH: return setStretch
+        case .WORKING: return nil
+        }
+    }
+
     // MARK: Legacy names (pre-redesign) mapped onto the semantic palette
 
     public static let neonLime = accent
@@ -142,6 +157,32 @@ public enum LukiI18n {
         if rpe <= 7.5 { return de ? "Leicht" : "Easy" }
         if rpe < ProgressionEngine.maxEffortRpe { return de ? "Genau richtig" : "Just right" }
         return "Max"
+    }
+
+    /// Mirrors `enums.setTypes` in the web locales.
+    public static func setTypeLabel(_ type: SetType, locale: SupportedLocale = .en) -> String {
+        let de = locale == .de
+        switch type {
+        case .WARMUP: return de ? "Aufwärmsatz" : "Warm-up"
+        case .WORKING: return de ? "Arbeitssatz" : "Working"
+        case .DROPSET: return de ? "Dropsatz" : "Dropset"
+        case .STRETCH: return de ? "Dehnung" : "Stretch"
+        }
+    }
+
+    /// Gym notation for set badges: W / D / S for special sets, only working sets are numbered.
+    public static func setBadgeLabels(_ types: [SetType]) -> [String] {
+        var working = 0
+        return types.map { type in
+            switch type {
+            case .WARMUP: return "W"
+            case .DROPSET: return "D"
+            case .STRETCH: return "S"
+            case .WORKING:
+                working += 1
+                return "\(working)"
+            }
+        }
     }
 
     public static func muscleLabel(_ muscle: MuscleGroup, locale: SupportedLocale = .en) -> String {

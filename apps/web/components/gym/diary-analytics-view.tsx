@@ -62,6 +62,7 @@ import {
 import type { WorkoutSessionDto } from '@luki-fitti/common/schemas';
 import { ExercisePicker } from './exercise-picker';
 import { NumberInput } from './number-input';
+import { getSetBadgeLabels, SET_TYPE_TEXT_CLASS, SetTypeBadge } from './set-type-badge';
 
 const LBS_TO_KG = 0.45359237;
 
@@ -1144,11 +1145,22 @@ export function DiaryAnalyticsView() {
                       {ex.sets.map((set, sIdx) => (
                         <div
                           key={set.clientSetId}
+                          data-set-type={set.setType}
                           className="bg-background flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs"
                         >
                           <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="tabular-nums shrink-0 font-bold">
-                              {t.common.set} {sIdx + 1} ({setTypeLabel(set.setType)})
+                            <SetTypeBadge
+                              size="sm"
+                              setType={set.setType}
+                              label={getSetBadgeLabels(ex.sets)[sIdx] ?? String(sIdx + 1)}
+                              completed={set.completed}
+                            />
+                            <span
+                              className={`tabular-nums shrink-0 font-bold ${SET_TYPE_TEXT_CLASS[set.setType]}`}
+                            >
+                              {set.setType === SetType.WORKING
+                                ? `${t.common.set} ${getSetBadgeLabels(ex.sets)[sIdx]}`
+                                : setTypeLabel(set.setType)}
                             </span>
                             {(set.peakHeartRateBpm || set.restEndHeartRateBpm) && (
                               <span className="tabular-nums inline-flex items-center gap-1 rounded-md bg-destructive/15 px-1.5 py-0.5 text-xs font-semibold text-destructive">
