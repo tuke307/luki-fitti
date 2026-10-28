@@ -124,7 +124,9 @@ export function RainbowExerciseSuggestionCard({
             />
             <div className="min-w-0 space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="truncate text-[0.9375rem] font-semibold">{suggestedExercise.name}</span>
+                <span className="truncate text-[0.9375rem] font-semibold">
+                  {suggestedExercise.name}
+                </span>
                 <span className="bg-secondary text-secondary-foreground tabular-nums rounded-full px-2.5 py-0.5 text-[0.8125rem] font-medium">
                   {suggestion.recommendedSets}×{repRangeText}
                   {suggestion.recommendedWeight

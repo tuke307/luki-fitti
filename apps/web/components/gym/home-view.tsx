@@ -10,12 +10,7 @@ import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { formatShortDayMonth, startOfIsoWeek } from '@luki-fitti/common/utils/client';
 import type { WorkoutTemplateDto } from '@luki-fitti/common/schemas';
-import {
-  ExerciseType,
-  MuscleGroup,
-  SetType,
-  WeightUnit,
-} from '@luki-fitti/common/enums';
+import { ExerciseType, MuscleGroup, SetType, WeightUnit } from '@luki-fitti/common/enums';
 import type { NavTab } from './pwa-shell';
 import { bigVolume, formatVolume, unitLabel } from '@/lib/format/weight';
 
@@ -179,7 +174,9 @@ export function HomeView({ onNavigate }: HomeViewProps) {
       {activeSession ? (
         <section className="bg-card space-y-4 rounded-[1.25rem] p-5">
           <div className="space-y-1">
-            <p className="text-primary text-[0.8125rem] font-semibold">{t.home.sessionInProgress}</p>
+            <p className="text-primary text-[0.8125rem] font-semibold">
+              {t.home.sessionInProgress}
+            </p>
             <h2 className="text-[1.375rem] leading-snug font-bold">
               {activeSession.workoutNameSnapshot}
             </h2>
@@ -252,7 +249,10 @@ export function HomeView({ onNavigate }: HomeViewProps) {
           </h2>
           <p className="font-rounded text-[1.75rem] leading-tight font-semibold">
             {summaryMetrics.sessions7d}
-            <span className="text-muted-foreground text-[1.0625rem] font-medium"> / {weeklyGoal}</span>
+            <span className="text-muted-foreground text-[1.0625rem] font-medium">
+              {' '}
+              / {weeklyGoal}
+            </span>
           </p>
           <p className="text-muted-foreground text-[0.9375rem]">
             {remainingToGoal === 0

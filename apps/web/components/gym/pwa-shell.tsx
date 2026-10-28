@@ -268,7 +268,11 @@ export function PwaShell() {
                     : 'bg-secondary text-muted-foreground'
                 } ${activeTab === 'profile' ? 'ring-primary ring-offset-background ring-2 ring-offset-2' : ''}`}
               >
-                {isAuthenticated && initials ? initials : <UserRound className="h-[18px] w-[18px]" />}
+                {isAuthenticated && initials ? (
+                  initials
+                ) : (
+                  <UserRound className="h-[18px] w-[18px]" />
+                )}
               </span>
             </button>
           </div>

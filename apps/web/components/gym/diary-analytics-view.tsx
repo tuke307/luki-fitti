@@ -497,7 +497,9 @@ export function DiaryAnalyticsView() {
                 <span className="text-muted-foreground block text-[0.8125rem]">{row.sub}</span>
               )}
             </dt>
-            <dd className="text-muted-foreground shrink-0 text-[1.0625rem] tabular-nums">{row.value}</dd>
+            <dd className="text-muted-foreground shrink-0 text-[1.0625rem] tabular-nums">
+              {row.value}
+            </dd>
           </div>
         ))}
       </dl>
@@ -667,9 +669,12 @@ export function DiaryAnalyticsView() {
           <div className="flex items-center gap-3 text-xs">
             <span className="flex items-center gap-1.5 font-semibold">
               <span className="bg-primary inline-block h-2.5 w-2.5 rounded-sm" />
-              {format(selectedExerciseId !== 'ALL' ? t.diary.est1RmLegend : t.diary.volumeTonsLegend, {
-                unit: selectedExerciseId !== 'ALL' ? unit : bigUnit,
-              })}
+              {format(
+                selectedExerciseId !== 'ALL' ? t.diary.est1RmLegend : t.diary.volumeTonsLegend,
+                {
+                  unit: selectedExerciseId !== 'ALL' ? unit : bigUnit,
+                },
+              )}
             </span>
             <span className="flex items-center gap-1.5 font-semibold">
               <span className="bg-chart-2 inline-block h-2.5 w-2.5 rounded-full" />
@@ -842,7 +847,8 @@ export function DiaryAnalyticsView() {
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold">{m.label}</span>
                     <span className="tabular-nums text-muted-foreground">
-                      {m.sets} {t.common.sets} ({m.pct}%) · {formatVolume(m.volumeKg, weightUnit)} {unit}
+                      {m.sets} {t.common.sets} ({m.pct}%) · {formatVolume(m.volumeKg, weightUnit)}{' '}
+                      {unit}
                     </span>
                   </div>
                   <Progress value={Math.max(4, m.pct)} className="bg-secondary h-2" />
