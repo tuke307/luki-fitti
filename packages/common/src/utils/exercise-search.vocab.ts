@@ -45,6 +45,18 @@ export const EXERCISE_SEARCH_PHRASES: ReadonlyArray<
   ['\\bmulti[ -]?press(e)?\\b', 'smith'],
 ];
 
+/** Canonical equipment words: they count double, a different piece of equipment is a different exercise. */
+export const EXERCISE_SEARCH_EQUIPMENT: readonly string[] = [
+  'dumbbell',
+  'barbell',
+  'cable',
+  'machine',
+  'smith',
+  'ezbar',
+  'band',
+  'kettlebell',
+];
+
 export const EXERCISE_SEARCH_SYNONYMS: Readonly<Record<string, readonly string[]>> = {
   // movements
   liegestutz: ['pushup'],
@@ -88,6 +100,20 @@ export const EXERCISE_SEARCH_SYNONYMS: Readonly<Record<string, readonly string[]
   dehnung: ['stretch'],
   dehnen: ['stretch'],
   stretching: ['stretch'],
+  // positions
+  sitzend: ['seated'],
+  sitzende: ['seated'],
+  sitzendes: ['seated'],
+  sitzender: ['seated'],
+  stehend: ['standing'],
+  stehende: ['standing'],
+  stehendes: ['standing'],
+  liegend: ['lying'],
+  liegende: ['lying'],
+  liegendes: ['lying'],
+  einarmig: ['single'],
+  einarmige: ['single'],
+  einarmiges: ['single'],
   // equipment
   kurzhantel: ['dumbbell'],
   kurzhanteln: ['dumbbell'],

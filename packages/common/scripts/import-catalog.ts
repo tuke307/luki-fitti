@@ -18,7 +18,7 @@ import { EXERCISE_OVERRIDES } from '../src/catalog/overrides';
 import { RETIRED_EXERCISE_IDS } from '../src/catalog/retired';
 import type { ExerciseRecord } from '../src/catalog/types';
 import { EquipmentType, ExerciseCategory, ExerciseType, MuscleGroup } from '../src/enums';
-import { exerciseTokens } from '../src/utils/exercise-match.util';
+import { exerciseTokens } from './exercise-tokens';
 
 const FEDB_URL =
   'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';

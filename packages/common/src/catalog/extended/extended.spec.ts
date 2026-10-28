@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { findSimilarExercises } from '../../utils/exercise-match.util';
+import { buildExerciseSearchIndex, searchExercises } from '../../utils/exercise-search.util';
 import {
   DEFAULT_STARTER_TEMPLATES,
   DEFAULT_STRETCHING_ROUTINES,
@@ -104,9 +104,10 @@ describe('extended exercise catalog', () => {
   });
 
   it('suggests the Smith machine shoulder press for "Sitzendes Schulterdrücken Multipresse"', () => {
-    const matches = findSimilarExercises(
+    const matches = searchExercises(
+      buildExerciseSearchIndex(ALL_SYSTEM_EXERCISES.map((e) => localizeExercise(e, 'de'))),
       'Sitzendes Schulterdrücken Multipresse',
-      ALL_SYSTEM_EXERCISES.map((e) => localizeExercise(e, 'de')),
+      { limit: 3, matchAllWords: false },
     );
     assert.ok(
       matches.some((m) => m.exercise.id === 'ex-smith-machine-overhead-shoulder-press'),

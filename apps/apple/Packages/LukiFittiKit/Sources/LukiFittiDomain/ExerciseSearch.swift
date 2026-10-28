@@ -15,6 +15,7 @@ public enum ExerciseSearchText {
             (try? NSRegularExpression(pattern: phrase.pattern)).map { ($0, phrase.replacement) }
         }
     private static let synonyms = ExerciseSearchData.bundled.synonyms
+    static let equipmentTokens = Set(ExerciseSearchData.bundled.equipment.map(stem))
 
     /// Lower case, umlauts and accents folded, punctuation (except hyphens) as spaces.
     public static func fold(_ text: String) -> String {
@@ -121,7 +122,14 @@ public struct ExerciseSearchIndex: Sendable {
     }
 
     /// Exercises matching `query`, best first. An empty query returns no results.
-    public func search(_ query: String, limit: Int? = nil, minScore: Double = 0.55) -> [ExerciseSearchResult] {
+    /// - Parameter matchAllWords: `false` also returns exercises matching most (by weight, at least
+    ///   half) of the words — for "Did you mean …?" suggestions.
+    public func search(
+        _ query: String,
+        limit: Int? = nil,
+        minScore: Double = 0.55,
+        matchAllWords: Bool = true
+    ) -> [ExerciseSearchResult] {
         let alternatives = ExerciseSearchText.tokenAlternatives(query)
         guard !alternatives.isEmpty else { return [] }
         let queryCompact = ExerciseSearchText.compact(query)
@@ -129,7 +137,7 @@ public struct ExerciseSearchIndex: Sendable {
         let queryTokens = alternatives.flatMap { $0.flatMap { $0 } }
         let results = entries.enumerated()
             .compactMap { offset, entry -> (offset: Int, entry: Entry, score: Double)? in
-                let score = Self.score(entry, alternatives, queryTokens, queryCompact, queryFolded)
+                let score = Self.score(entry, alternatives, queryTokens, queryCompact, queryFolded, matchAllWords)
                 guard score > 0 else { return nil }
                 let total = score + entry.boost
                 return total >= minScore ? (offset, entry, total) : nil
@@ -152,11 +160,15 @@ public struct ExerciseSearchIndex: Sendable {
         _ query: [[[String]]],
         _ queryTokens: [String],
         _ queryCompact: String,
-        _ queryFolded: String
+        _ queryFolded: String,
+        _ matchAllWords: Bool
     ) -> Double {
         var total = 0.0
-        var allMatched = true
+        var weights = 0.0
+        var unmatched = 0.0
         for alternatives in query {
+            // Equipment words count double: "Kurzhantel" is what tells two presses apart.
+            let weight: Double = alternatives.contains { $0.contains { ExerciseSearchText.equipmentTokens.contains($0) } } ? 2 : 1
             var best = 0.0
             for field in entry.fields {
                 for tokens in alternatives {
@@ -164,10 +176,12 @@ public struct ExerciseSearchIndex: Sendable {
                     best = max(best, s * field.weight)
                 }
             }
-            if best == 0 { allMatched = false }
-            total += best
+            if best == 0 { unmatched += weight }
+            total += best * weight
+            weights += weight
         }
-        var score = allMatched ? total / Double(query.count) : 0
+        let enoughWords = matchAllWords ? unmatched == 0 : unmatched <= weights / 2
+        var score = enoughWords ? total / weights : 0
         if queryCompact.count >= 4 {
             for field in entry.fields where field.compact.contains(where: { $0.contains(queryCompact) }) {
                 score = max(score, 0.85 * field.weight)

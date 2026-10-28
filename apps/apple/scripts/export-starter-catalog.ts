@@ -22,7 +22,11 @@ import {
   getAllLocalizedExercises,
 } from '@luki-fitti/common/catalog/extended';
 import { SUPPORTED_LOCALES } from '@luki-fitti/common/enums';
-import { EXERCISE_SEARCH_PHRASES, EXERCISE_SEARCH_SYNONYMS } from '@luki-fitti/common/utils/client';
+import {
+  EXERCISE_SEARCH_EQUIPMENT,
+  EXERCISE_SEARCH_PHRASES,
+  EXERCISE_SEARCH_SYNONYMS,
+} from '@luki-fitti/common/utils/client';
 
 const resource = (name: string) =>
   fileURLToPath(
@@ -44,6 +48,7 @@ const catalog = Object.fromEntries(
 const search = {
   phrases: EXERCISE_SEARCH_PHRASES.map(([pattern, replacement]) => ({ pattern, replacement })),
   synonyms: EXERCISE_SEARCH_SYNONYMS,
+  equipment: EXERCISE_SEARCH_EQUIPMENT,
   /** Ranked first among equal matches: the everyday exercises of the starter workouts. */
   coreExerciseIds: INITIAL_EXERCISE_CATALOG.map((e) => e.id),
   /** Names in every language, for exercises whose name differs between languages. */

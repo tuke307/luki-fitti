@@ -1,5 +1,9 @@
 import type { ExerciseDto } from '../schemas';
-import { EXERCISE_SEARCH_PHRASES, EXERCISE_SEARCH_SYNONYMS } from './exercise-search.vocab';
+import {
+  EXERCISE_SEARCH_EQUIPMENT,
+  EXERCISE_SEARCH_PHRASES,
+  EXERCISE_SEARCH_SYNONYMS,
+} from './exercise-search.vocab';
 
 /**
  * Forgiving, ranked exercise search shared by web, API and (ported 1:1) iOS:
@@ -63,6 +67,8 @@ export function searchTokenAlternatives(text: string): string[][][] {
         : []),
     ]);
 }
+
+const EQUIPMENT_TOKENS = new Set(EXERCISE_SEARCH_EQUIPMENT.map(stemSearchToken));
 
 function indexTokens(texts: string[]): Set<string> {
   return new Set(texts.flatMap((t) => searchTokenAlternatives(t).flat(2)));
@@ -180,10 +186,16 @@ function scoreEntry(
   query: string[][][],
   queryCompact: string,
   queryFolded: string,
+  matchAllWords: boolean,
 ): number {
   let total = 0;
-  let allMatched = true;
+  let weights = 0;
+  let unmatched = 0;
   for (const alternatives of query) {
+    // Equipment words count double: "Kurzhantel" is what tells two presses apart.
+    const weight = alternatives.some((tokens) => tokens.some((t) => EQUIPMENT_TOKENS.has(t)))
+      ? 2
+      : 1;
     let best = 0;
     for (const field of entry.fields) {
       for (const tokens of alternatives) {
@@ -191,10 +203,12 @@ function scoreEntry(
         best = Math.max(best, score * field.weight);
       }
     }
-    if (best === 0) allMatched = false;
-    total += best;
+    if (best === 0) unmatched += weight;
+    total += best * weight;
+    weights += weight;
   }
-  let score = allMatched ? total / query.length : 0;
+  const enoughWords = matchAllWords ? unmatched === 0 : unmatched <= weights / 2;
+  let score = enoughWords ? total / weights : 0;
   // "sit up" / "bizeps curl" against "Sit-Ups" / "Bizepscurls": compare without spaces.
   if (queryCompact.length >= 4) {
     for (const field of entry.fields) {
@@ -222,11 +236,21 @@ function scoreEntry(
   return score + 0.2 * precision;
 }
 
+export interface SearchExercisesOptions {
+  limit?: number;
+  minScore?: number;
+  /**
+   * `false` also returns exercises that match most (by weight, at least half) of the words —
+   * for suggestions like "Did you mean …?" before creating a custom exercise.
+   */
+  matchAllWords?: boolean;
+}
+
 /** Exercises matching `query`, best first. An empty query returns no results. */
 export function searchExercises(
   index: ExerciseSearchIndex,
   query: string,
-  { limit, minScore = MIN_SCORE }: { limit?: number; minScore?: number } = {},
+  { limit, minScore = MIN_SCORE, matchAllWords = true }: SearchExercisesOptions = {},
 ): ExerciseSearchResult[] {
   const alternatives = searchTokenAlternatives(query);
   if (alternatives.length === 0) return [];
@@ -235,7 +259,7 @@ export function searchExercises(
   const { boost } = index;
   const results = index.entries
     .map((entry) => {
-      const score = scoreEntry(entry, alternatives, queryCompact, queryFolded);
+      const score = scoreEntry(entry, alternatives, queryCompact, queryFolded, matchAllWords);
       return { entry, score: score > 0 ? score + (boost?.(entry.exercise) ?? 0) : 0 };
     })
     .filter((r) => r.score >= minScore)

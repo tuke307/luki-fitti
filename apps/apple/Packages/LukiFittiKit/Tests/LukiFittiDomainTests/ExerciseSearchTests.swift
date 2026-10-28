@@ -11,6 +11,7 @@ final class ExerciseSearchTests: XCTestCase {
         var top: Int
         var expect: [String]
         var exclude: [String]?
+        var matchAllWords: Bool?
     }
 
     private func loadCases() throws -> [SearchCase] {
@@ -33,7 +34,7 @@ final class ExerciseSearchTests: XCTestCase {
                 [LukiI18n.muscleLabel($0.primaryMuscleGroup), LukiI18n.equipmentLabel($0.equipment)]
             }
             for c in cases {
-                let results = index.search(c.query).map(\.exercise.id)
+                let results = index.search(c.query, matchAllWords: c.matchAllWords ?? true).map(\.exercise.id)
                 let top = Array(results.prefix(max(c.top, c.expect.count)))
                 for id in c.expect {
                     XCTAssertTrue(top.contains(id), "[\(locale)] \"\(c.query)\": \(id) not in \(results.prefix(8))")
