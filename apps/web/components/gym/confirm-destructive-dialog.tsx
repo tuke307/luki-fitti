@@ -39,7 +39,9 @@ export function ConfirmDestructiveDialog({
       <AlertDialogContent data-testid={testId}>
         <AlertDialogHeader className="text-left">
           <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription className="text-[0.9375rem]">{description}</AlertDialogDescription>
+          <AlertDialogDescription className="text-[0.9375rem]">
+            {description}
+          </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>

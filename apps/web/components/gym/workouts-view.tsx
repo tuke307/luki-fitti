@@ -427,7 +427,9 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               className="min-w-0 flex-1 py-1 text-left"
             >
               <h3 className="truncate text-[1.0625rem] leading-snug font-medium">{tpl.name}</h3>
-              <p className="text-muted-foreground truncate text-[0.8125rem] tabular-nums">{metaLine}</p>
+              <p className="text-muted-foreground truncate text-[0.8125rem] tabular-nums">
+                {metaLine}
+              </p>
             </button>
 
             {isEditMode ? (

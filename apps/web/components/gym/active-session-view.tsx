@@ -471,7 +471,9 @@ export function ActiveSessionView({
             />
 
             <div className="min-w-0">
-              <p className={`truncate text-[0.9375rem] font-medium ${isSkipped ? 'line-through' : ''}`}>
+              <p
+                className={`truncate text-[0.9375rem] font-medium ${isSkipped ? 'line-through' : ''}`}
+              >
                 {ex.exerciseNameSnapshot}
               </p>
               <p className="text-muted-foreground truncate text-[0.8125rem] tabular-nums">
@@ -528,7 +530,9 @@ export function ActiveSessionView({
               className="h-14 w-16"
             />
             <div className="min-w-0 flex-1">
-              <h2 className="text-[1.25rem] leading-snug font-semibold">{ex.exerciseNameSnapshot}</h2>
+              <h2 className="text-[1.25rem] leading-snug font-semibold">
+                {ex.exerciseNameSnapshot}
+              </h2>
               <p className="text-muted-foreground text-[0.8125rem] tabular-nums">{goalLine}</p>
               {renderStatusChips(ex)}
             </div>
@@ -781,7 +785,9 @@ export function ActiveSessionView({
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground text-[0.8125rem]">{t.session.completedSetsLabel}</dt>
+              <dt className="text-muted-foreground text-[0.8125rem]">
+                {t.session.completedSetsLabel}
+              </dt>
               <dd className="font-rounded text-[1.375rem] font-semibold">
                 {activeSession.totalSetsCompleted}
                 <span className="text-muted-foreground text-[0.9375rem] font-medium">
@@ -791,7 +797,9 @@ export function ActiveSessionView({
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground text-[0.8125rem]">{t.session.totalVolumeLabel}</dt>
+              <dt className="text-muted-foreground text-[0.8125rem]">
+                {t.session.totalVolumeLabel}
+              </dt>
               <dd className="font-rounded text-[1.375rem] font-semibold">
                 {formatVolume(activeSession.totalVolumeKg, activeSession.weightUnit)}
                 <span className="text-muted-foreground text-[0.9375rem] font-medium">
@@ -890,7 +898,10 @@ export function ActiveSessionView({
       {/* Session Notes & Finish / Abandon Footer */}
       <section className="bg-card space-y-4 rounded-[1.25rem] p-4">
         <div className="space-y-1.5">
-          <Label htmlFor="session-notes" className="text-muted-foreground text-[0.8125rem] font-medium">
+          <Label
+            htmlFor="session-notes"
+            className="text-muted-foreground text-[0.8125rem] font-medium"
+          >
             {t.session.sessionNotesLabel}
           </Label>
           <Input
