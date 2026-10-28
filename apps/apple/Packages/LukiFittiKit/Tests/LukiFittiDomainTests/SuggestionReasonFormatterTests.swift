@@ -6,7 +6,7 @@ import XCTest
 /// Expected strings are copied from `apps/web/lib/i18n/locales/{en,de}.ts` so iOS and web
 /// wording cannot drift apart unnoticed.
 final class SuggestionReasonFormatterTests: XCTestCase {
-    private lazy var lateralRaise = StarterCatalogLoader.load().exercises.first { $0.id == "ex-dumbbell-lateral-raise" }!
+    private lazy var lateralRaise = StarterCatalogLoader.load().exercises.first { $0.id == "ex-side-lateral-raise" }!
 
     private func suggestion(
         _ reason: ExerciseSuggestionReasonType,
@@ -18,7 +18,7 @@ final class SuggestionReasonFormatterTests: XCTestCase {
             targetMuscle: muscle,
             splitArchetype: .PUSH,
             reasonType: reason,
-            stallingExerciseId: reason.isStall ? "ex-seated-dumbbell-shoulder-press" : nil,
+            stallingExerciseId: reason.isStall ? "ex-dumbbell-shoulder-press" : nil,
             stallingExerciseName: reason.isStall ? "Shoulder Press" : nil,
             evidence: evidence
         )

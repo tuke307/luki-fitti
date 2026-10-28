@@ -8,7 +8,7 @@ http:
   url: "{{API_URL}}:{{API_PORT}}/api/exercises/:id"
   params:
     - name: id
-      value: "ex-barbell-bench-press"
+      value: "ex-barbell-bench-press-medium-grip"
       type: path
   auth: inherit
 

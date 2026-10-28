@@ -22,7 +22,7 @@ http:
         "exercises": [
           {
             "clientExerciseId": "sex-demo-1",
-            "exerciseId": "ex-leg-extension",
+            "exerciseId": "ex-leg-extensions",
             "exerciseNameSnapshot": "Seated Leg Extension",
             "primaryMuscleSnapshot": "QUADRICEPS",
             "exerciseTypeSnapshot": "STRENGTH",

@@ -28,7 +28,7 @@ describe('AnalyticsService — Frequency, Volume, PRs & Stretching Separation', 
             avgHeartRateBpm: 142,
             exercises: [
               {
-                exerciseId: 'ex-barbell-bench-press',
+                exerciseId: 'ex-barbell-bench-press-medium-grip',
                 exerciseNameSnapshot: 'Barbell Bench Press',
                 primaryMuscleSnapshot: MuscleGroup.CHEST,
                 exerciseTypeSnapshot: ExerciseType.STRENGTH,
@@ -61,7 +61,7 @@ describe('AnalyticsService — Frequency, Volume, PRs & Stretching Separation', 
             activeDurationSeconds: 600,
             exercises: [
               {
-                exerciseId: 'ex-couch-hip-flexor-stretch',
+                exerciseId: 'ex-kneeling-hip-flexor',
                 exerciseNameSnapshot: 'Couch Stretch',
                 primaryMuscleSnapshot: MuscleGroup.HIP_FLEXORS,
                 exerciseTypeSnapshot: ExerciseType.STRETCHING,

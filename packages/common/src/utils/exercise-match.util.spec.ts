@@ -49,6 +49,6 @@ describe('exercise matching', () => {
 
   it('works against the built-in catalog', () => {
     const matches = findSimilarExercises('Bankdrücken Langhantel', INITIAL_EXERCISE_CATALOG);
-    assert.equal(matches[0]?.exercise.id, 'ex-barbell-bench-press');
+    assert.equal(matches[0]?.exercise.id, 'ex-barbell-bench-press-medium-grip');
   });
 });
