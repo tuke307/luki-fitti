@@ -70,6 +70,7 @@ import { RainbowExerciseSuggestionCard } from './rainbow-suggestion-card';
 import { alignSetSuggestions, SessionSetRow } from './session-set-row';
 import { getSetBadgeLabels } from './set-type-badge';
 import { SwipeRow } from './swipe-row';
+import { formatVolume, unitLabel } from '@/lib/format/weight';
 import {
   MuscleGroup,
   SessionExerciseOrigin,
@@ -180,7 +181,7 @@ export function ActiveSessionView({
             <p className="tabular-nums mt-1 text-xl font-bold">
               {completedSummary.totalStretchSeconds > 0 && completedSummary.totalVolumeKg === 0
                 ? `${Math.round(completedSummary.totalStretchSeconds / 60)}m`
-                : `${completedSummary.totalVolumeKg.toLocaleString()} kg`}
+                : `${formatVolume(completedSummary.totalVolumeKg, completedSummary.weightUnit)} ${unitLabel(completedSummary.weightUnit)}`}
             </p>
           </div>
         </Card>
@@ -326,7 +327,7 @@ export function ActiveSessionView({
     ],
   });
 
-  /** Pointer/keyboard fallback for the swipe actions; hidden on touch screens. */
+  /** Same actions as the swipe, for every input: pointer, keyboard, touch and screen readers. */
   const renderExerciseMenu = (ex: SessionExerciseDto, idx: number) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -335,7 +336,7 @@ export function ActiveSessionView({
           variant="ghost"
           size="icon"
           aria-label={format(t.workouts.moreActionsLabel, { name: ex.exerciseNameSnapshot })}
-          className="text-muted-foreground pointer-coarse:hidden -mt-1 -mr-1 size-10 shrink-0"
+          className="text-muted-foreground -mt-1 -mr-1 size-11 shrink-0"
         >
           <MoreHorizontal className="h-5 w-5" />
         </Button>
@@ -363,7 +364,6 @@ export function ActiveSessionView({
         <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"
-          aria-label="Remove exercise from session"
           onSelect={() => void removeExerciseFromSession(ex.clientExerciseId)}
         >
           <Trash2 /> {t.session.removeFromSessionTitle}
@@ -395,7 +395,7 @@ export function ActiveSessionView({
   };
 
   const renderLastSessionLine = (insight: ReturnType<typeof progressionFor>['insight']) => (
-    <p className="text-muted-foreground text-[13px] tabular-nums">
+    <p className="text-muted-foreground text-[0.8125rem] tabular-nums">
       {insight.lastSession ? (
         <>
           {format(t.session.lastSessionFrom, { name: insight.lastSession.workoutName })}:{' '}
@@ -424,7 +424,7 @@ export function ActiveSessionView({
       ex.status === SessionExerciseStatus.SKIPPED ? t.session.skippedBadge : null,
     ].filter((c): c is string => Boolean(c));
     return chips.length > 0 ? (
-      <p className="text-warning mt-0.5 text-[13px] font-medium">{chips.join(' · ')}</p>
+      <p className="text-warning mt-0.5 text-[0.8125rem] font-medium">{chips.join(' · ')}</p>
     ) : null;
   };
 
@@ -450,7 +450,7 @@ export function ActiveSessionView({
         >
           <div className="flex min-w-0 items-center gap-3">
             <span
-              className={`tabular-nums flex size-8 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold ${
+              className={`tabular-nums flex size-8 shrink-0 items-center justify-center rounded-full text-[0.8125rem] font-semibold ${
                 isCompleted ? 'bg-success text-success-foreground' : 'bg-secondary text-foreground'
               }`}
             >
@@ -471,17 +471,19 @@ export function ActiveSessionView({
             />
 
             <div className="min-w-0">
-              <p className={`truncate text-[15px] font-medium ${isSkipped ? 'line-through' : ''}`}>
+              <p
+                className={`truncate text-[0.9375rem] font-medium ${isSkipped ? 'line-through' : ''}`}
+              >
                 {ex.exerciseNameSnapshot}
               </p>
-              <p className="text-muted-foreground truncate text-[13px] tabular-nums">
+              <p className="text-muted-foreground truncate text-[0.8125rem] tabular-nums">
                 {muscleLabel(ex.primaryMuscleSnapshot)} · {formatExercisePillText(ex)}
               </p>
             </div>
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            <span className="text-muted-foreground text-[13px] tabular-nums">
+            <span className="text-muted-foreground text-[0.8125rem] tabular-nums">
               {doneSets}/{ex.sets.length}
             </span>
             <ChevronRight className="text-muted-foreground h-4 w-4" />
@@ -528,8 +530,10 @@ export function ActiveSessionView({
               className="h-14 w-16"
             />
             <div className="min-w-0 flex-1">
-              <h2 className="text-[20px] leading-snug font-semibold">{ex.exerciseNameSnapshot}</h2>
-              <p className="text-muted-foreground text-[13px] tabular-nums">{goalLine}</p>
+              <h2 className="text-[1.25rem] leading-snug font-semibold">
+                {ex.exerciseNameSnapshot}
+              </h2>
+              <p className="text-muted-foreground text-[0.8125rem] tabular-nums">{goalLine}</p>
               {renderStatusChips(ex)}
             </div>
             {renderExerciseMenu(ex, idx)}
@@ -539,7 +543,7 @@ export function ActiveSessionView({
         {renderLastSessionLine(insight)}
 
         {ex.notes && (
-          <p className="bg-secondary text-secondary-foreground rounded-xl px-3 py-2 text-[13px]">
+          <p className="bg-secondary text-secondary-foreground rounded-xl px-3 py-2 text-[0.8125rem]">
             {format(t.session.notePrefix, { note: ex.notes })}
           </p>
         )}
@@ -636,7 +640,7 @@ export function ActiveSessionView({
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  <span className="bg-primary/12 text-primary flex size-8 shrink-0 items-center justify-center rounded-full text-[13px] font-bold">
+                  <span className="bg-primary/12 text-primary flex size-8 shrink-0 items-center justify-center rounded-full text-[0.8125rem] font-bold">
                     {letter}
                   </span>
                   <ExerciseVisual
@@ -653,13 +657,13 @@ export function ActiveSessionView({
                   />
                   <div className="min-w-0 flex-1">
                     <p
-                      className={`truncate text-[15px] font-semibold ${
+                      className={`truncate text-[0.9375rem] font-semibold ${
                         ex.status === SessionExerciseStatus.SKIPPED ? 'line-through' : ''
                       }`}
                     >
                       {ex.exerciseNameSnapshot}
                     </p>
-                    <p className="text-muted-foreground truncate text-[13px] tabular-nums">
+                    <p className="text-muted-foreground truncate text-[0.8125rem] tabular-nums">
                       {muscleLabel(ex.primaryMuscleSnapshot)} · {formatExercisePillText(ex)}
                     </p>
                     {renderStatusChips(ex)}
@@ -668,7 +672,7 @@ export function ActiveSessionView({
                 </div>
                 {renderLastSessionLine(insight)}
                 {ex.notes && (
-                  <p className="bg-secondary text-secondary-foreground rounded-xl px-3 py-2 text-[13px]">
+                  <p className="bg-secondary text-secondary-foreground rounded-xl px-3 py-2 text-[0.8125rem]">
                     {format(t.session.notePrefix, { note: ex.notes })}
                   </p>
                 )}
@@ -682,7 +686,7 @@ export function ActiveSessionView({
               data-testid={`superset-round-${r + 1}`}
               className="bg-card rounded-[1.25rem] px-3 pt-2.5 pb-1.5"
             >
-              <p className="text-muted-foreground text-[13px] font-semibold tabular-nums">
+              <p className="text-muted-foreground text-[0.8125rem] font-semibold tabular-nums">
                 {format(t.session.supersetRoundLabel, { round: r + 1, total: rounds })}
               </p>
               <div className="divide-border/60 divide-y">
@@ -703,7 +707,7 @@ export function ActiveSessionView({
                   ) : (
                     <p
                       key={`${ex.clientExerciseId}-missing-${r}`}
-                      className="text-muted-foreground py-2.5 pl-11 text-[13px]"
+                      className="text-muted-foreground py-2.5 pl-11 text-[0.8125rem]"
                     >
                       {contextLabel} · –
                     </p>
@@ -738,7 +742,7 @@ export function ActiveSessionView({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 space-y-0.5">
             <p
-              className={`text-[13px] font-semibold ${
+              className={`text-[0.8125rem] font-semibold ${
                 activeSession.status === SessionStatus.PAUSED ? 'text-warning' : 'text-primary'
               }`}
             >
@@ -746,7 +750,7 @@ export function ActiveSessionView({
                 ? t.session.pausedBadge
                 : t.session.liveSessionBadge}
             </p>
-            <h1 className="text-[28px] leading-tight font-bold">
+            <h1 className="text-[1.75rem] leading-tight font-bold">
               {activeSession.workoutNameSnapshot}
             </h1>
           </div>
@@ -775,26 +779,33 @@ export function ActiveSessionView({
         <div className="bg-card space-y-3 rounded-[1.25rem] p-4">
           <dl className="grid grid-cols-3 gap-2">
             <div>
-              <dt className="text-muted-foreground text-[13px]">{t.session.elapsedLabel}</dt>
-              <dd className="font-rounded text-[22px] font-semibold">
+              <dt className="text-muted-foreground text-[0.8125rem]">{t.session.elapsedLabel}</dt>
+              <dd className="font-rounded text-[1.375rem] font-semibold">
                 {formatTimer(elapsedSeconds)}
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground text-[13px]">{t.session.completedSetsLabel}</dt>
-              <dd className="font-rounded text-[22px] font-semibold">
+              <dt className="text-muted-foreground text-[0.8125rem]">
+                {t.session.completedSetsLabel}
+              </dt>
+              <dd className="font-rounded text-[1.375rem] font-semibold">
                 {activeSession.totalSetsCompleted}
-                <span className="text-muted-foreground text-[15px] font-medium">
+                <span className="text-muted-foreground text-[0.9375rem] font-medium">
                   {' '}
                   / {totalSetsPlanned}
                 </span>
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground text-[13px]">{t.session.totalVolumeLabel}</dt>
-              <dd className="font-rounded text-[22px] font-semibold">
-                {activeSession.totalVolumeKg.toLocaleString()}
-                <span className="text-muted-foreground text-[15px] font-medium"> kg</span>
+              <dt className="text-muted-foreground text-[0.8125rem]">
+                {t.session.totalVolumeLabel}
+              </dt>
+              <dd className="font-rounded text-[1.375rem] font-semibold">
+                {formatVolume(activeSession.totalVolumeKg, activeSession.weightUnit)}
+                <span className="text-muted-foreground text-[0.9375rem] font-medium">
+                  {' '}
+                  {unitLabel(activeSession.weightUnit)}
+                </span>
               </dd>
             </div>
           </dl>
@@ -804,7 +815,7 @@ export function ActiveSessionView({
             className="bg-secondary h-1.5"
           />
           {nextExercise && (
-            <p className="text-muted-foreground truncate text-[13px]">
+            <p className="text-muted-foreground truncate text-[0.8125rem]">
               {t.session.nextUpLabel}
               <span className="text-foreground font-medium">
                 {nextExercise.exerciseNameSnapshot}
@@ -887,7 +898,10 @@ export function ActiveSessionView({
       {/* Session Notes & Finish / Abandon Footer */}
       <section className="bg-card space-y-4 rounded-[1.25rem] p-4">
         <div className="space-y-1.5">
-          <Label htmlFor="session-notes" className="text-muted-foreground text-[13px] font-medium">
+          <Label
+            htmlFor="session-notes"
+            className="text-muted-foreground text-[0.8125rem] font-medium"
+          >
             {t.session.sessionNotesLabel}
           </Label>
           <Input
@@ -920,7 +934,8 @@ export function ActiveSessionView({
                     body: format(t.session.workoutCompleteNotifBody, {
                       name: finished.workoutNameSnapshot,
                       sets: finished.totalSetsCompleted,
-                      volume: finished.totalVolumeKg.toLocaleString(),
+                      volume: formatVolume(finished.totalVolumeKg, finished.weightUnit),
+                      unit: unitLabel(finished.weightUnit),
                     }),
                     tag: 'luki-fitti-workout-complete',
                     playSound: user?.preferences?.restTimerSound ?? true,
@@ -938,14 +953,14 @@ export function ActiveSessionView({
         </div>
       </section>
 
-      {/* Always-Visible Floating / Sticky Bottom Rest Timer HUD */}
+      {/* Floating rest timer: full controls while resting, a single preset row when idle */}
       <div
         data-testid="sticky-rest-timer-dock"
         className="fixed inset-x-3 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-md md:sticky md:inset-x-auto md:bottom-6 md:max-w-none"
       >
-        <Card className="material-bar border-border/60 overflow-hidden rounded-[1.5rem] border p-3 shadow-[0_8px_30px_rgb(0_0_0/0.12)] sm:px-4">
+        <Card className="material-bar border-border/60 overflow-hidden rounded-[1.5rem] border px-3 py-2 shadow-[0_8px_30px_rgb(0_0_0/0.12)] sm:px-4">
           {(restInfo.isRunning || restInfo.isPaused) && restInfo.totalSeconds > 0 && (
-            <div className="bg-secondary -mx-3 -mt-3 mb-2.5 h-1 overflow-hidden sm:-mx-4">
+            <div className="bg-secondary -mx-3 -mt-2 mb-2 h-1 overflow-hidden sm:-mx-4">
               <div
                 className="bg-primary h-full transition-[width] duration-300"
                 style={{ width: `${restProgressPct}%` }}
@@ -953,99 +968,87 @@ export function ActiveSessionView({
             </div>
           )}
 
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5">
-              <div
-                className={`flex size-9 shrink-0 items-center justify-center rounded-full ${
-                  restInfo.isRunning
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary text-muted-foreground'
-                }`}
-              >
-                <Timer className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="text-muted-foreground text-[13px] font-medium">
-                  {restInfo.isRunning
-                    ? t.session.restTimerActive
-                    : restInfo.isPaused
-                      ? t.session.restTimerPaused
-                      : t.session.restTimerReady}
+          {restInfo.isRunning || restInfo.isPaused ? (
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-muted-foreground text-[0.8125rem] font-medium">
+                  {restInfo.isRunning ? t.session.restTimerActive : t.session.restTimerPaused}
                 </p>
-                <p className="font-rounded text-[20px] leading-tight font-semibold">
+                <p className="font-rounded text-[1.375rem] leading-tight font-semibold">
                   {formatTimer(restInfo.remainingSeconds)}
                 </p>
               </div>
-            </div>
-
-            <div className="flex shrink-0 items-center gap-1.5">
-              {restInfo.isRunning || restInfo.isPaused ? (
-                <>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="h-11 px-3"
+                  onClick={() => void adjustRestTimer(-15)}
+                >
+                  -15s
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="h-11 px-3"
+                  onClick={() => void adjustRestTimer(15)}
+                >
+                  +15s
+                </Button>
+                {restInfo.isPaused ? (
                   <Button
                     type="button"
                     variant="secondary"
-                    size="xs"
-                    onClick={() => void adjustRestTimer(-15)}
-                  >
-                    -15s
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="xs"
-                    onClick={() => void adjustRestTimer(15)}
-                  >
-                    +15s
-                  </Button>
-                  {restInfo.isPaused ? (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="icon"
-                      aria-label={t.session.resumeBtn}
-                      onClick={() => void resumeRestTimer()}
-                      className="size-8"
-                    >
-                      <Play className="h-3.5 w-3.5 fill-current" />
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="icon"
-                      aria-label={t.session.pauseBtn}
-                      onClick={() => void pauseRestTimer()}
-                      className="size-8"
-                    >
-                      <Pause className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                  <Button
-                    type="button"
                     size="icon"
-                    aria-label={t.session.skipRestBtn}
-                    title={t.session.skipRestBtn}
-                    onClick={() => void skipRestTimer()}
-                    className="size-8"
+                    aria-label={t.session.resumeBtn}
+                    onClick={() => void resumeRestTimer()}
                   >
-                    <SkipForward className="h-3.5 w-3.5" />
+                    <Play className="h-4 w-4 fill-current" />
                   </Button>
-                </>
-              ) : (
-                [60, 90, 150].map((sec) => (
+                ) : (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    aria-label={t.session.pauseBtn}
+                    onClick={() => void pauseRestTimer()}
+                  >
+                    <Pause className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  size="icon"
+                  aria-label={t.session.skipRestBtn}
+                  title={t.session.skipRestBtn}
+                  onClick={() => void skipRestTimer()}
+                >
+                  <SkipForward className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ) : (
+            /* Idle: one quiet row of presets instead of a 0:00 clock. */
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-muted-foreground flex items-center gap-1.5 text-[0.8125rem] font-medium">
+                <Timer aria-hidden="true" className="h-4 w-4" />
+                {t.session.restStartLabel}
+              </p>
+              <div className="flex shrink-0 items-center gap-1.5">
+                {[60, 90, 150].map((sec) => (
                   <Button
                     key={sec}
                     type="button"
                     variant="secondary"
-                    size="xs"
+                    className="h-11 px-3.5"
                     onClick={() => void startRestTimer(sec)}
                   >
-                    {sec === 150 ? '2m30s' : `${sec}s`}
+                    {sec === 150 ? '2:30' : `${sec}s`}
                   </Button>
-                ))
-              )}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </Card>
       </div>
 

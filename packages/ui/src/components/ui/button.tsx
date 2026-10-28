@@ -5,7 +5,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@luki-fitti/ui/lib/utils';
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-[15px] font-semibold transition-[background-color,color,box-shadow,transform,opacity] duration-150 ease-(--ease-out-quart) active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-hidden focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-[0.9375rem] font-semibold transition-[background-color,color,box-shadow,transform,opacity] duration-150 ease-(--ease-out-quart) active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-hidden focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20",
   {
     variants: {
       variant: {
@@ -20,9 +20,9 @@ const buttonVariants = cva(
       },
       size: {
         default: 'h-11 px-5 has-[>svg]:px-4',
-        xs: 'h-8 gap-1 px-3 text-[13px]',
+        xs: 'h-8 gap-1 px-3 text-[0.8125rem]',
         sm: 'h-9 gap-1.5 px-4 has-[>svg]:px-3 text-sm',
-        lg: 'h-12 px-6 has-[>svg]:px-5 text-[17px]',
+        lg: 'h-12 px-6 has-[>svg]:px-5 text-[1.0625rem]',
         icon: 'size-11',
       },
     },

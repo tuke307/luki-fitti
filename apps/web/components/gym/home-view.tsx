@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { ChevronRight, Play } from 'lucide-react';
+import { Play } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
@@ -10,14 +10,9 @@ import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { formatShortDayMonth, startOfIsoWeek } from '@luki-fitti/common/utils/client';
 import type { WorkoutTemplateDto } from '@luki-fitti/common/schemas';
-import {
-  ExerciseType,
-  MuscleGroup,
-  SessionType,
-  SetType,
-  WeightUnit,
-} from '@luki-fitti/common/enums';
+import { ExerciseType, MuscleGroup, SetType, WeightUnit } from '@luki-fitti/common/enums';
 import type { NavTab } from './pwa-shell';
+import { bigVolume, formatVolume, unitLabel } from '@/lib/format/weight';
 
 interface HomeViewProps {
   onNavigate: (tab: NavTab) => void;
@@ -34,26 +29,13 @@ export function HomeView({ onNavigate }: HomeViewProps) {
   const [nowMs] = useState<number>(() => Date.now());
   const [muscleRange, setMuscleRange] = useState<'30d' | '90d' | 'all'>('90d');
   const weeklyGoal = user?.preferences?.weeklyGoalSessions ?? 4;
+  const weightUnit = user?.preferences?.weightUnit ?? WeightUnit.KG;
+  const firstName = user?.name?.split(' ')[0];
 
   const summaryMetrics = useMemo(() => {
     const weekStartMs = startOfIsoWeek(nowMs).getTime();
-    const sessions7d = historySessions.filter((s) => Date.parse(s.startedAt) >= weekStartMs).length;
-    const sessions30d = historySessions.filter(
-      (s) => nowMs - Date.parse(s.startedAt) <= 30 * 86400000,
-    );
-    const volume30dKg = sessions30d.reduce((acc, s) => acc + s.totalVolumeKg, 0);
-    const totalVolumeAllKg = historySessions.reduce((acc, s) => acc + s.totalVolumeKg, 0);
-    const strengthSessionsCount = historySessions.filter(
-      (s) => s.sessionType !== SessionType.STRETCHING && s.totalVolumeKg > 0,
-    ).length;
-    const avgSessionVolumeKg =
-      strengthSessionsCount > 0 ? Math.round(totalVolumeAllKg / strengthSessionsCount) : 0;
-
     return {
-      sessions7d,
-      volume30dKg: Math.round(volume30dKg),
-      totalSessions: historySessions.length,
-      avgSessionVolumeKg,
+      sessions7d: historySessions.filter((s) => Date.parse(s.startedAt) >= weekStartMs).length,
     };
   }, [historySessions, nowMs]);
 
@@ -115,13 +97,13 @@ export function HomeView({ onNavigate }: HomeViewProps) {
         weekLabel: label,
         sessions: inWeek.length,
         volumeKg: Math.round(volKg),
-        volumeTons: Math.round((volKg / 1000) * 10) / 10,
+        volumeTons: bigVolume(volKg, weightUnit).value,
         sets,
       });
     }
 
     return weeks;
-  }, [historySessions, nowMs]);
+  }, [historySessions, nowMs, weightUnit]);
 
   // Chart 2: Muscle Group Working Sets & Volume Balance
   const muscleChartData = useMemo(() => {
@@ -178,42 +160,31 @@ export function HomeView({ onNavigate }: HomeViewProps) {
   }).format(new Date(nowMs));
   const maxMuscleSets = muscleChartData[0]?.sets ?? 0;
 
-  const overviewRows = [
-    {
-      label: t.home.vol30dTitle,
-      value: format(t.home.vol30dSub, { volume: summaryMetrics.volume30dKg.toLocaleString() }),
-    },
-    { label: t.home.totalWorkoutsTitle, value: String(summaryMetrics.totalSessions) },
-    {
-      label: t.home.avgLoadTitle,
-      value: format(t.home.avgLoadSub, {
-        volume: summaryMetrics.avgSessionVolumeKg.toLocaleString(),
-      }),
-    },
-  ];
-
   return (
     <div className="mx-auto max-w-2xl min-w-0 space-y-8 pb-10">
       <header className="space-y-1">
-        <p className="text-muted-foreground text-[15px] font-medium first-letter:uppercase">
+        <p className="text-muted-foreground text-[0.9375rem] font-medium first-letter:uppercase">
           {todayLabel}
         </p>
-        <h1 className="text-[34px] leading-tight font-bold">
-          {format(t.home.greeting, { name: user?.name?.split(' ')[0] || 'GymBuddy' })}
+        <h1 className="text-[2.125rem] leading-tight font-bold">
+          {firstName ? format(t.home.greeting, { name: firstName }) : t.nav.home}
         </h1>
       </header>
 
       {activeSession ? (
         <section className="bg-card space-y-4 rounded-[1.25rem] p-5">
           <div className="space-y-1">
-            <p className="text-primary text-[13px] font-semibold">{t.home.sessionInProgress}</p>
-            <h2 className="text-[22px] leading-snug font-bold">
+            <p className="text-primary text-[0.8125rem] font-semibold">
+              {t.home.sessionInProgress}
+            </p>
+            <h2 className="text-[1.375rem] leading-snug font-bold">
               {activeSession.workoutNameSnapshot}
             </h2>
-            <p className="text-muted-foreground text-[15px]">
+            <p className="text-muted-foreground text-[0.9375rem]">
               {format(t.home.setsLoggedVolume, {
                 sets: activeSession.totalSetsCompleted,
-                volume: activeSession.totalVolumeKg.toLocaleString(),
+                volume: formatVolume(activeSession.totalVolumeKg, activeSession.weightUnit),
+                unit: unitLabel(activeSession.weightUnit),
               })}
             </p>
           </div>
@@ -224,14 +195,14 @@ export function HomeView({ onNavigate }: HomeViewProps) {
       ) : (
         <section className="bg-card space-y-4 rounded-[1.25rem] p-5">
           <div className="space-y-1">
-            <p className="text-muted-foreground text-[13px] font-semibold">
+            <p className="text-muted-foreground text-[0.8125rem] font-semibold">
               {t.home.startNextTitle}
             </p>
-            <h2 className="text-[22px] leading-snug font-bold">
+            <h2 className="text-[1.375rem] leading-snug font-bold">
               {suggestedTemplate?.template.name ?? t.home.startNextSub}
             </h2>
             {suggestedTemplate && (
-              <p className="text-muted-foreground text-[15px]">
+              <p className="text-muted-foreground text-[0.9375rem]">
                 {suggestedTemplate.lastMs > 0
                   ? format(t.home.lastTrained, {
                       date: formatShortDayMonth(new Date(suggestedTemplate.lastMs)),
@@ -273,14 +244,17 @@ export function HomeView({ onNavigate }: HomeViewProps) {
       >
         <WeeklyRing progress={goalProgress} />
         <div className="min-w-0 space-y-0.5">
-          <h2 id="home-week" className="text-[17px] font-semibold">
+          <h2 id="home-week" className="text-[1.0625rem] font-semibold">
             {t.home.freq7dTitle}
           </h2>
-          <p className="font-rounded text-[28px] leading-tight font-semibold">
+          <p className="font-rounded text-[1.75rem] leading-tight font-semibold">
             {summaryMetrics.sessions7d}
-            <span className="text-muted-foreground text-[17px] font-medium"> / {weeklyGoal}</span>
+            <span className="text-muted-foreground text-[1.0625rem] font-medium">
+              {' '}
+              / {weeklyGoal}
+            </span>
           </p>
-          <p className="text-muted-foreground text-[15px]">
+          <p className="text-muted-foreground text-[0.9375rem]">
             {remainingToGoal === 0
               ? t.home.goalReached
               : format(t.home.goalRemaining, { count: remainingToGoal })}
@@ -288,37 +262,15 @@ export function HomeView({ onNavigate }: HomeViewProps) {
         </div>
       </section>
 
-      <section aria-labelledby="home-overview" className="space-y-2">
-        <h2 id="home-overview" className="px-1 text-[20px] font-bold">
-          {t.home.statsTitle}
-        </h2>
-        <dl className="bg-card divide-border divide-y overflow-hidden rounded-[1.25rem]">
-          {overviewRows.map((row) => (
-            <div key={row.label} className="flex items-center justify-between gap-4 px-5 py-3.5">
-              <dt className="text-[17px]">{row.label}</dt>
-              <dd className="text-muted-foreground tabular-nums text-[17px]">{row.value}</dd>
-            </div>
-          ))}
-        </dl>
-        <button
-          type="button"
-          onClick={() => onNavigate('diary')}
-          className="text-primary flex items-center gap-0.5 px-1 py-1 text-[15px] font-medium"
-        >
-          {t.home.trainingDiaryBtn}
-          <ChevronRight className="h-4 w-4" />
-        </button>
-      </section>
-
       <section
         aria-labelledby="home-weekly"
         className="bg-card min-w-0 space-y-4 rounded-[1.25rem] p-5"
       >
         <div>
-          <h2 id="home-weekly" className="text-[17px] font-semibold">
+          <h2 id="home-weekly" className="text-[1.0625rem] font-semibold">
             {t.home.weeklyChartTitle}
           </h2>
-          <p className="text-muted-foreground text-[13px]">{t.home.weeklyChartSub}</p>
+          <p className="text-muted-foreground text-[0.8125rem]">{t.home.weeklyChartSub}</p>
         </div>
         <div className="h-52 w-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -335,7 +287,7 @@ export function HomeView({ onNavigate }: HomeViewProps) {
                 tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
                 axisLine={false}
                 tickLine={false}
-                unit="t"
+                unit={bigVolume(0, weightUnit).label}
                 width={44}
               />
               <Tooltip
@@ -346,12 +298,12 @@ export function HomeView({ onNavigate }: HomeViewProps) {
                   const row = payload[0]?.payload as (typeof weeklyTrendData)[number] | undefined;
                   if (!row) return null;
                   return (
-                    <div className="bg-popover text-popover-foreground pointer-events-none rounded-xl px-3 py-2 text-[13px]">
+                    <div className="bg-popover text-popover-foreground pointer-events-none rounded-xl px-3 py-2 text-[0.8125rem]">
                       <p className="font-semibold">
                         {format(t.home.weekOf, { date: String(label ?? '') })}
                       </p>
                       <p className="text-muted-foreground tabular-nums">
-                        {row.volumeTons} t · {row.sessions}{' '}
+                        {row.volumeTons} {bigVolume(0, weightUnit).label} · {row.sessions}{' '}
                         {row.sessions === 1 ? t.common.workout : t.common.workouts}
                       </p>
                     </div>
@@ -372,10 +324,10 @@ export function HomeView({ onNavigate }: HomeViewProps) {
       <section aria-labelledby="home-muscles" className="bg-card space-y-4 rounded-[1.25rem] p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 id="home-muscles" className="text-[17px] font-semibold">
+            <h2 id="home-muscles" className="text-[1.0625rem] font-semibold">
               {t.home.muscleChartTitle}
             </h2>
-            <p className="text-muted-foreground text-[13px]">{t.home.muscleChartSub}</p>
+            <p className="text-muted-foreground text-[0.8125rem]">{t.home.muscleChartSub}</p>
           </div>
           <Tabs
             value={muscleRange}
@@ -390,14 +342,14 @@ export function HomeView({ onNavigate }: HomeViewProps) {
         </div>
 
         {muscleChartData.length === 0 ? (
-          <p className="text-muted-foreground py-8 text-center text-[15px]">
+          <p className="text-muted-foreground py-8 text-center text-[0.9375rem]">
             {t.home.noLoggedWorkingSets}
           </p>
         ) : (
           <ul className="space-y-3">
             {muscleChartData.map((entry) => (
               <li key={entry.muscle} className="space-y-1.5">
-                <div className="flex items-baseline justify-between gap-3 text-[15px]">
+                <div className="flex items-baseline justify-between gap-3 text-[0.9375rem]">
                   <span>{entry.name}</span>
                   <span className="text-muted-foreground tabular-nums">
                     {entry.sets} {entry.sets === 1 ? t.common.set : t.common.sets}

@@ -39,6 +39,9 @@ test.describe('Training Diary Analytics & Backup Exports', () => {
 
     // Delete historical session
     await sessionCard.getByTestId('diary-session-delete').click();
+    const confirm = page.getByTestId('confirm-delete-session');
+    await expect(confirm).toBeVisible();
+    await confirm.getByRole('button', { name: /^(Delete Workout|Training löschen)$/ }).click();
     await expect(sessionCard).not.toBeVisible();
   });
 

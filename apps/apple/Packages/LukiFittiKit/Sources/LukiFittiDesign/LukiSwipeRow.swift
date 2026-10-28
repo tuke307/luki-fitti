@@ -20,9 +20,17 @@ public struct LukiSwipeAction: Identifiable {
 
     var background: Color {
         switch tone {
-        case .neutral: return Color.gray
+        case .neutral: return LukiColors.neutralAction
         case .accent: return LukiColors.accent
         case .destructive: return LukiColors.destructive
+        }
+    }
+
+    var foreground: Color {
+        switch tone {
+        case .neutral: return .white
+        case .accent: return LukiColors.accentForeground
+        case .destructive: return LukiColors.onTint
         }
     }
 }
@@ -89,13 +97,13 @@ public struct LukiSwipeRow<Content: View>: View {
                 } label: {
                     VStack(spacing: 4) {
                         Image(systemName: action.systemImage)
-                            .font(.system(size: 17, weight: .semibold))
+                            .font(.body.weight(.semibold))
                         Text(action.label)
                             .font(.caption.weight(.medium))
                             .lineLimit(2)
                             .multilineTextAlignment(.center)
                     }
-                    .foregroundStyle(.white)
+                    .foregroundStyle(action.foreground)
                     .frame(width: actionWidth)
                     .frame(maxHeight: .infinity)
                     .background(action.background)
@@ -146,6 +154,7 @@ public struct SetTypeBadge: View {
     let setType: SetType
     let label: String
     let completed: Bool
+    @ScaledMetric(relativeTo: .callout) private var size: CGFloat = 32
 
     public init(setType: SetType, label: String, completed: Bool) {
         self.setType = setType
@@ -156,16 +165,16 @@ public struct SetTypeBadge: View {
     public var body: some View {
         let typeColor = LukiColors.setTypeColor(setType)
         let fill: Color = completed ? (typeColor ?? LukiColors.success) : (typeColor?.opacity(0.18) ?? LukiColors.fill)
-        let foreground: Color = completed ? .white : (typeColor ?? .primary)
+        let foreground: Color = completed ? LukiColors.onTint : (typeColor ?? .primary)
         Text(label)
             .font(.callout.bold().monospacedDigit())
             .foregroundStyle(foreground)
-            .frame(width: 32, height: 32)
+            .frame(width: size, height: size)
             .background(Circle().fill(fill))
             .overlay(alignment: .bottomTrailing) {
                 if completed {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.caption.bold())
                         .foregroundStyle(LukiColors.success, LukiColors.cardBackground)
                         .background(Circle().fill(LukiColors.cardBackground))
                         .offset(x: 3, y: 3)

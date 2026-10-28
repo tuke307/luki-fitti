@@ -20,7 +20,7 @@ function NativeSelect({ className, children, ...props }: React.ComponentProps<'s
       <select
         data-slot="native-select"
         className={cn(
-          'bg-secondary text-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-10 w-full max-w-full min-w-0 truncate appearance-none rounded-xl border border-transparent py-2 pr-9 pl-3.5 text-base leading-tight transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 sm:text-[15px]',
+          'bg-secondary text-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-10 w-full max-w-full min-w-0 truncate appearance-none rounded-xl border border-transparent py-2 pr-9 pl-3.5 text-base leading-tight transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 sm:text-[0.9375rem]',
           className,
           'max-sm:text-base',
         )}

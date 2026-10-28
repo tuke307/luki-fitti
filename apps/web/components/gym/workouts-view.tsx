@@ -411,9 +411,9 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               <button
                 type="button"
                 data-testid="template-action-delete"
-                aria-label={`Delete workout ${tpl.name}`}
+                aria-label={format(t.a11y.deleteTemplate, { name: tpl.name })}
                 onClick={() => setConfirmDelete({ type: 'template', id: tpl.id, name: tpl.name })}
-                className="text-destructive -ml-1 flex size-9 shrink-0 items-center justify-center"
+                className="text-destructive -ml-1 flex size-11 shrink-0 items-center justify-center"
               >
                 <MinusCircle className="h-[22px] w-[22px] fill-current stroke-white" />
               </button>
@@ -426,8 +426,10 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               onClick={() => toggleTemplateExpanded(tpl.id)}
               className="min-w-0 flex-1 py-1 text-left"
             >
-              <h3 className="truncate text-[17px] leading-snug font-medium">{tpl.name}</h3>
-              <p className="text-muted-foreground truncate text-[13px] tabular-nums">{metaLine}</p>
+              <h3 className="truncate text-[1.0625rem] leading-snug font-medium">{tpl.name}</h3>
+              <p className="text-muted-foreground truncate text-[0.8125rem] tabular-nums">
+                {metaLine}
+              </p>
             </button>
 
             {isEditMode ? (
@@ -552,7 +554,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
         {isExpanded && (
           <div className="animate-in fade-in slide-in-from-top-1 space-y-2.5 px-4 pb-4 duration-200">
             {tpl.description && (
-              <p className="text-muted-foreground text-[15px]">{tpl.description}</p>
+              <p className="text-muted-foreground text-[0.9375rem]">{tpl.description}</p>
             )}
             {blocks.map((block) => {
               if (block.type === 'superset') {
@@ -611,11 +613,11 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                               </div>
 
                               <div className="min-w-0 space-y-1">
-                                <p className="truncate text-[15px] font-medium">
+                                <p className="truncate text-[0.9375rem] font-medium">
                                   {exObj?.name ?? t.common.exercise}
                                 </p>
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className="text-muted-foreground text-[13px] tabular-nums">
+                                  <span className="text-muted-foreground text-[0.8125rem] tabular-nums">
                                     {[
                                       exObj ? muscleLabel(exObj.primaryMuscleGroup) : null,
                                       formatTargetPillText(ex),
@@ -669,13 +671,13 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                       />
                     )}
                     <div className="min-w-0">
-                      <p className="truncate text-[15px] font-medium">
+                      <p className="truncate text-[0.9375rem] font-medium">
                         <span className="text-muted-foreground tabular-nums">
                           {globalIndex + 1}.{' '}
                         </span>
                         {exObj?.name ?? t.common.exercise}
                       </p>
-                      <p className="text-muted-foreground truncate text-[13px] tabular-nums">
+                      <p className="text-muted-foreground truncate text-[0.8125rem] tabular-nums">
                         {[
                           exObj ? muscleLabel(exObj.primaryMuscleGroup) : null,
                           formatTargetPillText(ex),
@@ -686,7 +688,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                       </p>
                       {altNames.length > 0 && (
                         <p
-                          className="text-muted-foreground flex items-center gap-1 text-[13px]"
+                          className="text-muted-foreground flex items-center gap-1 text-[0.8125rem]"
                           title={format(t.workouts.backupsTitle, { names: altNames.join(', ') })}
                         >
                           <ArrowRightLeft className="h-3 w-3" />
@@ -737,9 +739,9 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
         {isEditMode && folder && (
           <button
             type="button"
-            aria-label={`Delete folder ${folder.name}`}
+            aria-label={format(t.a11y.deleteFolder, { name: folder.name })}
             onClick={() => setConfirmDelete({ type: 'folder', id: folder.id, name: folder.name })}
-            className="text-destructive -ml-1 flex size-9 shrink-0 items-center justify-center"
+            className="text-destructive -ml-1 flex size-11 shrink-0 items-center justify-center"
           >
             <MinusCircle className="h-[22px] w-[22px] fill-current stroke-white" />
           </button>
@@ -761,9 +763,9 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
           ) : (
             <Inbox className="text-muted-foreground h-4 w-4 shrink-0" />
           )}
-          <h2 className="min-w-0 flex-1 truncate text-[17px] font-semibold">{name}</h2>
+          <h2 className="min-w-0 flex-1 truncate text-[1.0625rem] font-semibold">{name}</h2>
           {!isEditMode && (
-            <span className="text-muted-foreground shrink-0 text-[15px] tabular-nums">
+            <span className="text-muted-foreground shrink-0 text-[0.9375rem] tabular-nums">
               {templates.length}
             </span>
           )}
@@ -783,8 +785,8 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               size="icon"
               disabled={index === 0}
               onClick={() => void reorderFolder(folder.id, 'UP')}
-              aria-label={`Move folder ${folder.name} up`}
-              className="size-9"
+              aria-label={format(t.a11y.moveFolderUp, { name: folder.name })}
+              className="size-11"
             >
               <ArrowUp className="h-4 w-4" />
             </Button>
@@ -794,8 +796,8 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               size="icon"
               disabled={index === folders.length - 1}
               onClick={() => void reorderFolder(folder.id, 'DOWN')}
-              aria-label={`Move folder ${folder.name} down`}
-              className="size-9"
+              aria-label={format(t.a11y.moveFolderDown, { name: folder.name })}
+              className="size-11"
             >
               <ArrowDown className="h-4 w-4" />
             </Button>
@@ -855,7 +857,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
 
         {isExpanded &&
           (templates.length === 0 ? (
-            <p className="border-border/70 text-muted-foreground border-t px-4 py-4 text-[15px]">
+            <p className="border-border/70 text-muted-foreground border-t px-4 py-4 text-[0.9375rem]">
               {t.workouts.emptyFolderText}
             </p>
           ) : (
@@ -866,7 +868,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
           <button
             type="button"
             onClick={() => openNewTemplateBuilder(folder.id)}
-            className="border-border/70 text-primary flex min-h-[52px] w-full items-center gap-3 border-t px-4 text-left text-[17px]"
+            className="border-border/70 text-primary flex min-h-[52px] w-full items-center gap-3 border-t px-4 text-left text-[1.0625rem]"
           >
             <PlusCircle className="h-[22px] w-[22px]" />
             {t.workouts.addWorkoutShort}
@@ -880,8 +882,8 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
     <div className="mx-auto max-w-2xl min-w-0 space-y-6 pb-10">
       <header className="flex items-end justify-between gap-3">
         <div className="min-w-0 space-y-1">
-          <h1 className="text-[34px] leading-tight font-bold">{t.workouts.title}</h1>
-          <p className="text-muted-foreground text-[15px]">{t.workouts.subtitle}</p>
+          <h1 className="text-[2.125rem] leading-tight font-bold">{t.workouts.title}</h1>
+          <p className="text-muted-foreground text-[0.9375rem]">{t.workouts.subtitle}</p>
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
@@ -891,7 +893,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
             size="sm"
             data-testid="workouts-edit-toggle"
             onClick={() => setIsEditMode((v) => !v)}
-            className="text-primary text-[17px] font-medium"
+            className="text-primary text-[1.0625rem] font-medium"
           >
             {isEditMode ? t.common.done : t.workouts.editListBtn}
           </Button>

@@ -12,9 +12,8 @@ test.describe('PWA Shell, Navigation & Preferences', () => {
   }) => {
     await expectSyncBadge(page, /Guest/i);
     await expect(page.getByRole('heading', { name: 'This week' })).toBeVisible();
-    await expect(page.getByText('Last 30 days')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible();
-    await expect(page.getByText('Per workout')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Weekly volume' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Overview' })).toHaveCount(0);
 
     // Navigate to Workouts
     await navigateToTab(page, 'workouts');

@@ -93,7 +93,7 @@ export function RainbowExerciseSuggestionCard({
     >
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-primary flex items-center gap-1.5 text-[13px] font-semibold">
+          <p className="text-primary flex items-center gap-1.5 text-[0.8125rem] font-semibold">
             <Sparkles className="h-3.5 w-3.5" />
             {t.workouts.smartSuggestionBadge}
             <span className="text-muted-foreground font-medium">· {muscleLabel(targetMuscle)}</span>
@@ -124,19 +124,21 @@ export function RainbowExerciseSuggestionCard({
             />
             <div className="min-w-0 space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="truncate text-[15px] font-semibold">{suggestedExercise.name}</span>
-                <span className="bg-secondary text-secondary-foreground tabular-nums rounded-full px-2.5 py-0.5 text-[13px] font-medium">
+                <span className="truncate text-[0.9375rem] font-semibold">
+                  {suggestedExercise.name}
+                </span>
+                <span className="bg-secondary text-secondary-foreground tabular-nums rounded-full px-2.5 py-0.5 text-[0.8125rem] font-medium">
                   {suggestion.recommendedSets}×{repRangeText}
                   {suggestion.recommendedWeight
                     ? ` · ${suggestion.recommendedWeight} ${weightUnit.toLowerCase()}`
                     : ''}
                 </span>
               </div>
-              <p className="text-muted-foreground text-[13px] leading-snug">{reasonText}</p>
+              <p className="text-muted-foreground text-[0.8125rem] leading-snug">{reasonText}</p>
               {evidenceText && (
                 <span
                   data-testid={`${testId}-evidence`}
-                  className="bg-secondary/60 text-muted-foreground tabular-nums inline-block rounded-full px-2 py-0.5 text-[12px] font-medium"
+                  className="bg-secondary/60 text-muted-foreground tabular-nums inline-block rounded-full px-2 py-0.5 text-[0.75rem] font-medium"
                 >
                   {evidenceText}
                 </span>

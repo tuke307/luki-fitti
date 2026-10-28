@@ -9,11 +9,24 @@ import {
   type SetProgressionSuggestion,
 } from '@luki-fitti/common/utils/client';
 import type { SessionExerciseDto, SessionSetDto } from '@luki-fitti/common/schemas';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@luki-fitti/ui/components/ui/dropdown-menu';
 import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
+import { unitLabel, weightStep } from '@/lib/format/weight';
 import { NumberInput } from './number-input';
 import { SET_TYPE_TEXT_CLASS, SetTypeBadge } from './set-type-badge';
 import { SwipeRow } from './swipe-row';
+
+const SET_TYPE_ORDER = [SetType.WARMUP, SetType.WORKING, SetType.DROPSET, SetType.STRETCH] as const;
 
 /** Aligns progression suggestions to sets: only working-type sets get one (warm-ups/stretches don't). */
 export function alignSetSuggestions(
@@ -55,7 +68,11 @@ export function SessionSetRow({
   testId,
 }: SessionSetRowProps) {
   const { updateSet, toggleCompleteSet, removeSetFromExercise } = useGym();
-  const { t, setTypeLabel } = useLocale();
+  const { t, format, setTypeLabel } = useLocale();
+  const n = sIdx + 1;
+  const step = weightStep(set.weightUnit);
+  const unit = unitLabel(set.weightUnit);
+  const removeSet = () => void removeSetFromExercise(ex.clientExerciseId, set.clientSetId);
 
   const isStretchSet =
     ex.exerciseTypeSnapshot === ExerciseType.STRETCHING || set.setType === SetType.STRETCH;
@@ -111,7 +128,7 @@ export function SessionSetRow({
 
   const loggedPrescriptionSummary = isStretchSet
     ? `${set.durationSeconds ?? 45} ${t.common.sec}`
-    : `${set.weight ?? 0}${set.weightUnit.toLowerCase()} × ${set.reps ?? 0}`;
+    : `${set.weight ?? 0} ${unit} × ${set.reps ?? 0}`;
 
   const hasSuggestion =
     !set.completed &&
@@ -120,7 +137,7 @@ export function SessionSetRow({
       (repsBadgeLabel && setSuggestion.suggestedReps !== null));
 
   const stepperBtn =
-    'text-muted-foreground hover:text-foreground flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors active:bg-background/70';
+    'text-foreground/70 hover:text-foreground flex h-11 w-9 shrink-0 items-center justify-center rounded-lg transition-colors active:bg-background/70';
   const isSpecialType = set.setType !== SetType.WORKING;
 
   return (
@@ -132,7 +149,7 @@ export function SessionSetRow({
           label: t.common.delete,
           icon: Trash2,
           tone: 'destructive',
-          onSelect: () => void removeSetFromExercise(ex.clientExerciseId, set.clientSetId),
+          onSelect: removeSet,
         },
       ]}
     >
@@ -143,35 +160,50 @@ export function SessionSetRow({
         className="py-1.5"
       >
         {contextLabel && (
-          <p className="text-muted-foreground mb-1 ml-11 truncate text-[12px] font-medium">
+          <p className="text-muted-foreground mb-1 ml-11 truncate text-[0.75rem] font-medium">
             {contextLabel}
           </p>
         )}
         <div className="flex items-center gap-2">
-          {/* Set badge doubles as the set-type picker */}
-          <div className="relative shrink-0">
-            <SetTypeBadge setType={set.setType} label={badgeLabel} completed={set.completed} />
-            <select
-              aria-label={`Set ${sIdx + 1} type`}
-              value={set.setType}
-              onChange={(e) => patch({ setType: e.target.value as SetType })}
-              className="absolute inset-0 cursor-pointer opacity-0"
-            >
-              <option value={SetType.WARMUP}>{setTypeLabel(SetType.WARMUP)}</option>
-              <option value={SetType.WORKING}>{setTypeLabel(SetType.WORKING)}</option>
-              <option value={SetType.DROPSET}>{setTypeLabel(SetType.DROPSET)}</option>
-              <option value={SetType.STRETCH}>{setTypeLabel(SetType.STRETCH)}</option>
-            </select>
-          </div>
+          {/* Set badge opens the set menu: type picker plus Delete, so nothing is swipe-only. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                data-testid="set-menu-trigger"
+                aria-label={format(t.a11y.setTypeMenu, { n, type: setTypeLabel(set.setType) })}
+                className="focus-visible:ring-ring/50 -m-1 flex size-11 shrink-0 items-center justify-center rounded-full outline-hidden focus-visible:ring-[3px]"
+              >
+                <SetTypeBadge setType={set.setType} label={badgeLabel} completed={set.completed} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-52">
+              <DropdownMenuLabel>{t.session.setTypeHeading}</DropdownMenuLabel>
+              <DropdownMenuRadioGroup
+                value={set.setType}
+                onValueChange={(v) => patch({ setType: v as SetType })}
+              >
+                {SET_TYPE_ORDER.map((type) => (
+                  <DropdownMenuRadioItem key={type} value={type}>
+                    {setTypeLabel(type)}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onSelect={removeSet}>
+                <Trash2 /> {t.session.deleteSetBtn}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {set.completed ? (
             <span
               data-testid="logged-set-summary-pill"
-              className="tabular-nums min-w-0 flex-1 truncate px-1 text-[17px]"
+              className="tabular-nums min-w-0 flex-1 truncate px-1 text-[1.0625rem]"
             >
               {isSpecialType && (
                 <span
-                  className={`mr-1.5 text-[13px] font-semibold ${SET_TYPE_TEXT_CLASS[set.setType]}`}
+                  className={`mr-1.5 text-[0.8125rem] font-semibold ${SET_TYPE_TEXT_CLASS[set.setType]}`}
                 >
                   {setTypeLabel(set.setType)}
                 </span>
@@ -184,20 +216,20 @@ export function SessionSetRow({
                 variant="bare"
                 min={0}
                 fallbackValue={45}
-                aria-label={`Set ${sIdx + 1} duration seconds`}
+                aria-label={format(t.a11y.setDuration, { n })}
                 value={set.durationSeconds ?? 45}
                 onValueChange={(val) => patch({ durationSeconds: val })}
-                className="font-rounded w-14 bg-transparent text-center text-[17px] font-semibold outline-none"
+                className="font-rounded w-14 bg-transparent text-center text-[1.0625rem] font-semibold outline-none"
               />
-              <span className="text-muted-foreground text-[13px]">{t.common.sec}</span>
+              <span className="text-muted-foreground text-[0.8125rem]">{t.common.sec}</span>
             </div>
           ) : (
             <>
               <div className="bg-secondary flex h-11 min-w-0 flex-[1.3] items-center rounded-xl px-0.5">
                 <button
                   type="button"
-                  aria-label={`Decrease weight by 2.5, set ${sIdx + 1}`}
-                  onClick={() => patch({ weight: Math.max(0, (set.weight ?? 0) - 2.5) })}
+                  aria-label={format(t.a11y.decreaseWeight, { step, n })}
+                  onClick={() => patch({ weight: Math.max(0, (set.weight ?? 0) - step) })}
                   className={stepperBtn}
                 >
                   <Minus className="h-4 w-4" />
@@ -208,20 +240,18 @@ export function SessionSetRow({
                     allowNull
                     step="0.5"
                     min={0}
-                    aria-label={`Set ${sIdx + 1} weight`}
+                    aria-label={format(t.a11y.setWeight, { n })}
                     value={set.weight}
                     onValueChange={(val) => patch({ weight: val })}
                     placeholder="0"
-                    className="font-rounded w-full min-w-0 bg-transparent text-center text-[17px] font-semibold outline-none"
+                    className="font-rounded w-full min-w-0 bg-transparent text-center text-[1.0625rem] font-semibold outline-none"
                   />
-                  <span className="text-muted-foreground text-[13px]">
-                    {set.weightUnit.toLowerCase()}
-                  </span>
+                  <span className="text-muted-foreground text-[0.8125rem]">{unit}</span>
                 </div>
                 <button
                   type="button"
-                  aria-label={`Increase weight by 2.5, set ${sIdx + 1}`}
-                  onClick={() => patch({ weight: (set.weight ?? 0) + 2.5 })}
+                  aria-label={format(t.a11y.increaseWeight, { step, n })}
+                  onClick={() => patch({ weight: (set.weight ?? 0) + step })}
                   className={stepperBtn}
                 >
                   <Plus className="h-4 w-4" />
@@ -231,7 +261,7 @@ export function SessionSetRow({
               <div className="bg-secondary flex h-11 min-w-0 flex-1 items-center rounded-xl px-0.5">
                 <button
                   type="button"
-                  aria-label={`Decrease reps, set ${sIdx + 1}`}
+                  aria-label={format(t.a11y.decreaseReps, { n })}
                   onClick={() => patch({ reps: Math.max(0, (set.reps ?? 0) - 1) })}
                   className={stepperBtn}
                 >
@@ -241,15 +271,15 @@ export function SessionSetRow({
                   variant="bare"
                   allowNull
                   min={0}
-                  aria-label={`Set ${sIdx + 1} reps`}
+                  aria-label={format(t.a11y.setReps, { n })}
                   value={set.reps}
                   onValueChange={(val) => patch({ reps: val })}
                   placeholder="0"
-                  className="font-rounded w-full min-w-0 bg-transparent text-center text-[17px] font-semibold outline-none"
+                  className="font-rounded w-full min-w-0 bg-transparent text-center text-[1.0625rem] font-semibold outline-none"
                 />
                 <button
                   type="button"
-                  aria-label={`Increase reps, set ${sIdx + 1}`}
+                  aria-label={format(t.a11y.increaseReps, { n })}
                   onClick={() => patch({ reps: (set.reps ?? 0) + 1 })}
                   className={stepperBtn}
                 >
@@ -262,10 +292,10 @@ export function SessionSetRow({
           {set.completed && (
             <button
               type="button"
-              aria-label={`Set ${sIdx + 1} intensity: ${intensityMeta.label}`}
+              aria-label={format(t.a11y.setIntensity, { n, label: intensityMeta.label })}
               title={intensityMeta.hint}
               onClick={() => patch({ rpe: intensityMeta.nextRpe })}
-              className="hover:bg-secondary flex size-9 shrink-0 items-end justify-center gap-0.5 rounded-full pb-2.5 transition-colors"
+              className="hover:bg-secondary flex size-11 shrink-0 items-end justify-center gap-0.5 rounded-full pb-3.5 transition-colors"
             >
               {[1, 2, 3].map((barIdx) => (
                 <span
@@ -282,7 +312,7 @@ export function SessionSetRow({
           <button
             type="button"
             onClick={() => void toggleCompleteSet(ex.clientExerciseId, set.clientSetId)}
-            aria-label={set.completed ? 'Mark set incomplete' : 'Complete set'}
+            aria-label={format(set.completed ? t.a11y.uncompleteSet : t.a11y.completeSet, { n })}
             title={set.completed ? t.session.tapToUndoSet : t.session.logSetBtn}
             className={`flex size-11 shrink-0 items-center justify-center rounded-full transition-[transform,background-color] duration-150 active:scale-90 ${
               set.completed
@@ -307,13 +337,15 @@ export function SessionSetRow({
                   : {}),
               })
             }
-            aria-label={`Apply suggestion ${[weightBadgeLabel, repsBadgeLabel].filter(Boolean).join(' ')}`}
-            className="text-primary mt-1 ml-11 flex items-center gap-1 text-[13px] font-medium"
+            aria-label={format(t.a11y.applySuggestion, {
+              value: [weightBadgeLabel, repsBadgeLabel].filter(Boolean).join(' '),
+            })}
+            className="text-primary ml-11 flex min-h-11 items-center gap-1 text-[0.8125rem] font-medium"
           >
             <Sparkles className="h-3.5 w-3.5" />
             <span className="tabular-nums">
               {[
-                weightBadgeLabel ? `${weightBadgeLabel} ${set.weightUnit.toLowerCase()}` : null,
+                weightBadgeLabel ? `${weightBadgeLabel} ${unit}` : null,
                 repsBadgeLabel ? `${repsBadgeLabel} ${t.common.reps}` : null,
               ]
                 .filter(Boolean)

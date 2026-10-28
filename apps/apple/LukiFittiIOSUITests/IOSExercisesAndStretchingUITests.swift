@@ -6,7 +6,7 @@ final class IOSExercisesAndStretchingUITests: XCTestCase {
         let app = IOSUITestHelpers.launchApp()
         IOSUITestHelpers.navigateToTab(app, label: "Library")
 
-        let searchField = app.textFields["Search exercises by name, muscle or equipment…"]
+        let searchField = app.textFields["Search exercises"]
         XCTAssertTrue(searchField.waitForExistence(timeout: 8))
         searchField.tap()
         searchField.typeText("Barbell Bench Press")
@@ -14,10 +14,10 @@ final class IOSExercisesAndStretchingUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Barbell Bench Press"].waitForExistence(timeout: 5))
 
         // Switch segmented control to Stretching Studio
-        let stretchingSegment = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Stretching Studio'")).firstMatch
+        let stretchingSegment = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Stretching'")).firstMatch
         if stretchingSegment.exists {
             stretchingSegment.tap()
-            let startStretchBtn = app.buttons["Start Stretching Session"].firstMatch
+            let startStretchBtn = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'ios.library.startRoutine.'")).firstMatch
             XCTAssertTrue(startStretchBtn.waitForExistence(timeout: 5))
             startStretchBtn.tap()
 

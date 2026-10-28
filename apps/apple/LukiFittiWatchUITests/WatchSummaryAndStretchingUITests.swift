@@ -15,6 +15,11 @@ final class WatchSummaryAndStretchingUITests: XCTestCase {
         XCTAssertTrue(finishTile.waitForExistence(timeout: 5))
         finishTile.tap()
 
+        // Ending a workout asks first.
+        let confirmEnd = app.buttons["End Workout"].firstMatch
+        XCTAssertTrue(confirmEnd.waitForExistence(timeout: 5))
+        confirmEnd.tap()
+
         // Verify WatchWorkoutSummaryView renders
         let summaryTitle = app.staticTexts["watch.summary.title"]
         XCTAssertTrue(summaryTitle.waitForExistence(timeout: 8))
