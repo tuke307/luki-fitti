@@ -29,7 +29,7 @@ const CORE_EXERCISE_IDS = new Set(INITIAL_EXERCISE_CATALOG.map((e) => e.id));
 const searchIndexes = new WeakMap<ExerciseDto[], ExerciseSearchIndex>();
 
 /** Search index of a catalog array, built once per array (the catalog is replaced, not mutated). */
-function searchIndexFor(exercises: ExerciseDto[]): ExerciseSearchIndex {
+export function searchIndexFor(exercises: ExerciseDto[]): ExerciseSearchIndex {
   let index = searchIndexes.get(exercises);
   if (!index) {
     index = buildExerciseSearchIndex(exercises, {

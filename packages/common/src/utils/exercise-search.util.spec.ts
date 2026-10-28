@@ -17,6 +17,8 @@ interface SearchCase {
   top: number;
   expect: string[];
   exclude?: string[];
+  /** `false`: suggestion mode ("Did you mean …?"), see `SearchExercisesOptions`. */
+  matchAllWords?: boolean;
 }
 
 /** Shared with the Swift port (`ExerciseSearchTests.swift`). */
@@ -36,7 +38,9 @@ for (const locale of SUPPORTED_LOCALES) {
 
     for (const c of CASES) {
       it(`"${c.query}" finds ${c.expect.join(', ')} in the top ${c.top}`, () => {
-        const results = searchExercises(index, c.query).map((r) => r.exercise.id);
+        const results = searchExercises(index, c.query, { matchAllWords: c.matchAllWords }).map(
+          (r) => r.exercise.id,
+        );
         const top = results.slice(0, Math.max(c.top, c.expect.length));
         for (const id of c.expect) {
           assert.ok(top.includes(id), `${id} not in [${results.slice(0, 8).join(', ')}]`);
@@ -51,6 +55,31 @@ for (const locale of SUPPORTED_LOCALES) {
     });
   });
 }
+
+describe('suggestions before creating a custom exercise', () => {
+  const base = INITIAL_EXERCISE_CATALOG[0]!;
+  const fake = (id: string, name: string) => ({ ...base, id, slug: id, name, tags: [] });
+  const index = buildExerciseSearchIndex([
+    fake('dumbbell-shoulder-press', 'Seated Dumbbell Shoulder Press'),
+    fake('smith-machine-overhead-shoulder-press', 'Smith Machine Overhead Shoulder Press'),
+    fake('barbell-curl', 'Barbell Curl'),
+  ]);
+  const suggest = (name: string) =>
+    searchExercises(index, name, { matchAllWords: false }).map((r) => r.exercise.id);
+
+  it('prefers the same equipment over the same position', () => {
+    assert.equal(
+      suggest('Sitzendes Schulterdrücken Multipresse')[0],
+      'smith-machine-overhead-shoulder-press',
+    );
+    assert.equal(suggest('Sitzendes Schulterdrücken Kurzhantel')[0], 'dumbbell-shoulder-press');
+  });
+
+  it('finds nothing for unrelated names, and requires every word by default', () => {
+    assert.deepEqual(suggest('Torso-Rotation-Maschine'), []);
+    assert.deepEqual(searchExercises(index, 'Sitzendes Schulterdrücken Multipresse'), []);
+  });
+});
 
 describe('search text normalization', () => {
   it('folds umlauts with or without e and joins multi-word exercise names', () => {
