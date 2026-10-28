@@ -70,6 +70,18 @@ export function getExerciseText(exerciseId: string, locale: SupportedLocale): Ex
   );
 }
 
+/** Names of a system exercise in every supported language (for search); none for custom ones. */
+export function getExerciseSearchNames(exercise: Pick<ExerciseDto, 'id' | 'isSystem'>): string[] {
+  if (!exercise.isSystem) return [];
+  return Array.from(
+    new Set(
+      SUPPORTED_LOCALES.map((locale) => getExerciseText(exercise.id, locale)?.name).filter(
+        (name): name is string => !!name,
+      ),
+    ),
+  );
+}
+
 export function getStarterFolderName(systemKey: string, locale: SupportedLocale): string | null {
   const source = FOLDERS.get(systemKey);
   if (!source) return null;

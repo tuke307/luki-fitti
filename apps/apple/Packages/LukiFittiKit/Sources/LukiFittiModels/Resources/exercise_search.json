@@ -1,0 +1,1073 @@
+{
+  "phrases": [
+    { "pattern": "\\bpush[ -]?ups?\\b", "replacement": "pushup" },
+    { "pattern": "\\bsit[ -]?ups?\\b", "replacement": "situp" },
+    { "pattern": "\\bpull[ -]?ups?\\b", "replacement": "pullup" },
+    { "pattern": "\\bchin[ -]?ups?\\b", "replacement": "chinup" },
+    { "pattern": "\\bstep[ -]?ups?\\b", "replacement": "stepup" },
+    { "pattern": "\\bface[ -]?pulls?\\b", "replacement": "facepull" },
+    { "pattern": "\\bpull[ -]?downs?\\b", "replacement": "pulldown" },
+    { "pattern": "\\bpush[ -]?downs?\\b", "replacement": "pushdown" },
+    { "pattern": "\\bpress[ -]?downs?\\b", "replacement": "pushdown" },
+    { "pattern": "\\bskull[ -]?crushers?\\b", "replacement": "skullcrusher" },
+    { "pattern": "\\bfrench[ -]?press(es)?\\b", "replacement": "skullcrusher" },
+    { "pattern": "\\bbench[ -]?press(es)?\\b", "replacement": "benchpress" },
+    { "pattern": "\\bleg[ -]?press(es)?\\b", "replacement": "legpress" },
+    { "pattern": "\\bchest[ -]?press(es)?\\b", "replacement": "chestpress" },
+    {
+      "pattern": "\\b(shoulder|overhead|military)[ -]?press(es)?\\b",
+      "replacement": "shoulderpress"
+    },
+    { "pattern": "\\b(romanian|stiff[ -]?legged?) deadlifts?\\b", "replacement": "rdl" },
+    { "pattern": "\\brumanisch\\w* kreuzheben\\b", "replacement": "rdl" },
+    { "pattern": "\\bhip[ -]?thrusts?\\b", "replacement": "hipthrust" },
+    { "pattern": "\\bcalf[ -]?raises?\\b", "replacement": "calfraise" },
+    { "pattern": "\\b(lateral|side)[ -]?raises?\\b", "replacement": "lateralraise" },
+    { "pattern": "\\bfront[ -]?raises?\\b", "replacement": "frontraise" },
+    { "pattern": "\\bleg[ -]?raises?\\b", "replacement": "legraise" },
+    { "pattern": "\\bleg[ -]?curls?\\b", "replacement": "legcurl" },
+    { "pattern": "\\bleg[ -]?extensions?\\b", "replacement": "legextension" },
+    { "pattern": "\\blat[ -]?pulldown\\b", "replacement": "latpulldown" },
+    { "pattern": "\\bpec[ -]?deck\\b", "replacement": "butterfly" },
+    { "pattern": "\\bgood[ -]?mornings?\\b", "replacement": "goodmorning" },
+    { "pattern": "\\bmountain[ -]?climbers?\\b", "replacement": "mountainclimber" },
+    { "pattern": "\\bjumping[ -]?jacks?\\b", "replacement": "jumpingjack" },
+    { "pattern": "\\b(e[ -]?z|s[ -]?z)[ -]?(curl )?(bar|stange)\\b", "replacement": "ezbar" },
+    { "pattern": "\\bsmith[ -]?machine\\b", "replacement": "smith" },
+    { "pattern": "\\bmulti[ -]?press(e)?\\b", "replacement": "smith" }
+  ],
+  "synonyms": {
+    "liegestutz": ["pushup"],
+    "liegestutze": ["pushup"],
+    "klimmzug": ["pullup"],
+    "klimmzuge": ["pullup"],
+    "kniebeuge": ["squat"],
+    "kniebeugen": ["squat"],
+    "kreuzheben": ["deadlift"],
+    "bankdrucken": ["benchpress"],
+    "schragbankdrucken": ["incline", "benchpress"],
+    "schulterdrucken": ["shoulderpress"],
+    "schulterpresse": ["shoulderpress"],
+    "uberkopfdrucken": ["shoulderpress"],
+    "frontdrucken": ["shoulderpress"],
+    "ohp": ["shoulderpress"],
+    "brustpresse": ["chestpress"],
+    "beinpresse": ["legpress"],
+    "beinstrecker": ["legextension"],
+    "beinbeuger": ["legcurl"],
+    "latzug": ["latpulldown"],
+    "seitheben": ["lateralraise"],
+    "frontheben": ["frontraise"],
+    "wadenheben": ["calfraise"],
+    "beinheben": ["legraise"],
+    "ausfallschritt": ["lunge"],
+    "ausfallschritte": ["lunge"],
+    "fliegende": ["fly"],
+    "flies": ["fly"],
+    "flyes": ["fly"],
+    "flys": ["fly"],
+    "flye": ["fly"],
+    "scott": ["preacher"],
+    "scottcurl": ["preacher", "curl"],
+    "scottcurls": ["preacher", "curl"],
+    "frenchpress": ["skullcrusher"],
+    "rudern": ["row"],
+    "rowing": ["row"],
+    "unterarmstutz": ["plank"],
+    "seitstutz": ["side", "plank"],
+    "dehnung": ["stretch"],
+    "dehnen": ["stretch"],
+    "stretching": ["stretch"],
+    "kurzhantel": ["dumbbell"],
+    "kurzhanteln": ["dumbbell"],
+    "kh": ["dumbbell"],
+    "db": ["dumbbell"],
+    "langhantel": ["barbell"],
+    "lh": ["barbell"],
+    "bb": ["barbell"],
+    "sz": ["ezbar"],
+    "ez": ["ezbar"],
+    "multipresse": ["smith"],
+    "mp": ["smith"],
+    "kabelzug": ["cable"],
+    "kabel": ["cable"],
+    "seilzug": ["cable"],
+    "maschine": ["machine"],
+    "gerat": ["machine"],
+    "lever": ["machine"],
+    "leverage": ["machine"],
+    "korpergewicht": ["bodyweight"],
+    "bizeps": ["biceps"],
+    "bicep": ["biceps"],
+    "trizeps": ["triceps"],
+    "tricep": ["triceps"],
+    "brust": ["chest"],
+    "pec": ["chest"],
+    "pecs": ["chest"],
+    "schulter": ["shoulder"],
+    "schultern": ["shoulder"],
+    "rucken": ["back"],
+    "bauch": ["abs"],
+    "rumpf": ["core"],
+    "hufte": ["hip"],
+    "wade": ["calf"],
+    "waden": ["calf"],
+    "calves": ["calf"],
+    "po": ["glutes"],
+    "gesass": ["glutes"],
+    "beine": ["legs"]
+  },
+  "coreExerciseIds": [
+    "ex-barbell-bench-press-medium-grip",
+    "ex-incline-dumbbell-press",
+    "ex-leverage-chest-press",
+    "ex-cable-crossover",
+    "ex-pushups",
+    "ex-dumbbell-bench-press",
+    "ex-dumbbell-flyes",
+    "ex-incline-dumbbell-flyes",
+    "ex-barbell-incline-bench-press-medium-grip",
+    "ex-butterfly",
+    "ex-leverage-incline-chest-press",
+    "ex-pullups",
+    "ex-wide-grip-lat-pulldown",
+    "ex-bent-over-barbell-row",
+    "ex-seated-cable-rows",
+    "ex-chin-up",
+    "ex-dumbbell-incline-row",
+    "ex-one-arm-dumbbell-row",
+    "ex-straight-arm-pulldown",
+    "ex-bent-over-two-dumbbell-row",
+    "ex-hyperextensions-back-extensions",
+    "ex-close-grip-front-lat-pulldown",
+    "ex-seated-one-arm-cable-pulley-rows",
+    "ex-leverage-high-row",
+    "ex-barbell-shoulder-press",
+    "ex-dumbbell-shoulder-press",
+    "ex-side-lateral-raise",
+    "ex-face-pull",
+    "ex-machine-shoulder-military-press",
+    "ex-arnold-dumbbell-press",
+    "ex-standing-dumbbell-press",
+    "ex-machine-lateral-raise",
+    "ex-cable-seated-lateral-raise",
+    "ex-front-plate-raise",
+    "ex-front-dumbbell-raise",
+    "ex-upright-cable-row",
+    "ex-seated-bent-over-rear-delt-raise",
+    "ex-reverse-machine-flyes",
+    "ex-cable-rear-delt-fly",
+    "ex-barbell-shrug",
+    "ex-dumbbell-shrug",
+    "ex-cable-shrugs",
+    "ex-ez-bar-curl",
+    "ex-incline-dumbbell-curl",
+    "ex-hammer-curls",
+    "ex-barbell-curl",
+    "ex-seated-dumbbell-curl",
+    "ex-standing-biceps-cable-curl",
+    "ex-preacher-curl",
+    "ex-machine-preacher-curls",
+    "ex-high-cable-curls",
+    "ex-triceps-pushdown-rope-attachment",
+    "ex-cable-rope-overhead-triceps-extension",
+    "ex-close-grip-barbell-bench-press",
+    "ex-lying-dumbbell-tricep-extension",
+    "ex-seated-triceps-press",
+    "ex-dumbbell-one-arm-triceps-extension",
+    "ex-tricep-dumbbell-kickback",
+    "ex-dips-triceps-version",
+    "ex-bench-dips",
+    "ex-reverse-grip-triceps-pushdown",
+    "ex-palms-up-barbell-wrist-curl-over-a-bench",
+    "ex-barbell-squat",
+    "ex-leg-press",
+    "ex-split-squat-with-dumbbells",
+    "ex-leg-extensions",
+    "ex-bodyweight-squat",
+    "ex-dumbbell-lunges",
+    "ex-barbell-lunge",
+    "ex-goblet-squat",
+    "ex-smith-machine-squat",
+    "ex-romanian-deadlift",
+    "ex-seated-leg-curl",
+    "ex-lying-leg-curls",
+    "ex-standing-leg-curl",
+    "ex-barbell-hip-thrust",
+    "ex-thigh-abductor",
+    "ex-butt-lift-bridge",
+    "ex-barbell-glute-bridge",
+    "ex-standing-calf-raises",
+    "ex-seated-calf-raise",
+    "ex-hanging-leg-raise",
+    "ex-cable-crunch",
+    "ex-standing-hip-flexors",
+    "ex-barbell-deadlift",
+    "ex-rowing-stationary",
+    "ex-crunches",
+    "ex-decline-crunch",
+    "ex-ab-crunch-machine",
+    "ex-alternate-heel-touchers",
+    "ex-flutter-kicks",
+    "ex-cross-body-crunch",
+    "ex-bird-dog",
+    "ex-standing-cable-wood-chop",
+    "ex-knee-hip-raise-on-parallel-bars",
+    "ex-side-bridge",
+    "ex-side-jackknife",
+    "ex-jackknife-sit-up",
+    "ex-leg-pull-in",
+    "ex-flat-bench-lying-leg-raise",
+    "ex-reverse-crunch",
+    "ex-exercise-ball-crunch",
+    "ex-kneeling-hip-flexor",
+    "ex-90-90-hamstring",
+    "ex-spinal-stretch",
+    "ex-chest-and-front-of-shoulder-stretch",
+    "ex-leg-up-hamstring-stretch",
+    "ex-ankle-on-the-knee",
+    "ex-worlds-greatest-stretch",
+    "ex-groin-and-back-stretch",
+    "ex-sit-squats",
+    "ex-standing-gastrocnemius-calf-stretch",
+    "ex-standing-elevated-quad-stretch",
+    "ex-seated-floor-hamstring-stretch",
+    "ex-childs-pose",
+    "ex-shoulder-stretch",
+    "ex-overhead-triceps",
+    "ex-one-handed-hang",
+    "ex-kneeling-forearm-stretch",
+    "ex-cat-stretch",
+    "ex-hug-knees-to-chest",
+    "ex-side-neck-stretch"
+  ],
+  "exerciseNames": {
+    "ex-barbell-bench-press-medium-grip": ["Barbell Bench Press", "Bankdrücken (Langhantel)"],
+    "ex-incline-dumbbell-press": ["Incline Dumbbell Press", "Schrägbankdrücken (Kurzhanteln)"],
+    "ex-leverage-chest-press": ["Seated Machine Chest Press", "Brustpresse (Maschine, sitzend)"],
+    "ex-cable-crossover": ["Cable Chest Fly", "Cable Fly (Kabelzug)"],
+    "ex-pushups": ["Push-Up", "Liegestütz"],
+    "ex-dumbbell-bench-press": ["Dumbbell Bench Press", "Bankdrücken (Kurzhanteln)"],
+    "ex-dumbbell-flyes": ["Dumbbell Fly", "Fliegende (Kurzhanteln)"],
+    "ex-incline-dumbbell-flyes": ["Incline Dumbbell Fly", "Schrägbank-Fliegende (Kurzhanteln)"],
+    "ex-barbell-incline-bench-press-medium-grip": [
+      "Incline Barbell Bench Press",
+      "Schrägbankdrücken (Langhantel)"
+    ],
+    "ex-butterfly": ["Pec Deck (Butterfly)", "Butterfly (Maschine)"],
+    "ex-leverage-incline-chest-press": [
+      "Machine Incline Chest Press",
+      "Schrägbank-Brustpresse (Maschine)"
+    ],
+    "ex-pullups": [
+      "Pull-Up (Bodyweight / Weighted)",
+      "Klimmzug (Körpergewicht / mit Zusatzgewicht)"
+    ],
+    "ex-wide-grip-lat-pulldown": ["Wide-Grip Lat Pulldown", "Latzug (breiter Griff)"],
+    "ex-bent-over-barbell-row": ["Barbell Bent-Over Row", "Vorgebeugtes Rudern (Langhantel)"],
+    "ex-seated-cable-rows": ["Seated Cable Row", "Rudern am Kabelzug (sitzend)"],
+    "ex-chin-up": ["Chin-Up", "Klimmzug (Untergriff, Chin-Up)"],
+    "ex-dumbbell-incline-row": [
+      "Chest-Supported Dumbbell Row",
+      "Rudern auf der Schrägbank (Kurzhanteln)"
+    ],
+    "ex-one-arm-dumbbell-row": ["One-Arm Dumbbell Row", "Einarmiges Kurzhantelrudern"],
+    "ex-straight-arm-pulldown": ["Straight-Arm Pulldown", "Überzüge am Kabel (gestreckte Arme)"],
+    "ex-bent-over-two-dumbbell-row": [
+      "Dumbbell Bent-Over Row",
+      "Vorgebeugtes Rudern (Kurzhanteln)"
+    ],
+    "ex-hyperextensions-back-extensions": ["Back Extension", "Rückenstrecker (Hyperextension)"],
+    "ex-close-grip-front-lat-pulldown": ["Close-Grip Lat Pulldown", "Latzug (enger Griff)"],
+    "ex-seated-one-arm-cable-pulley-rows": [
+      "Single-Arm Seated Cable Row",
+      "Einarmiges Rudern am Kabelzug (sitzend)"
+    ],
+    "ex-leverage-high-row": [
+      "Chest-Supported Machine Row (Wide)",
+      "Rudern an der Maschine mit Brustauflage (breit)"
+    ],
+    "ex-barbell-shoulder-press": [
+      "Overhead Barbell Press (OHP)",
+      "Schulterdrücken stehend (Langhantel, OHP)"
+    ],
+    "ex-dumbbell-shoulder-press": [
+      "Seated Dumbbell Shoulder Press",
+      "Schulterdrücken sitzend (Kurzhanteln)"
+    ],
+    "ex-side-lateral-raise": ["Dumbbell Lateral Raise", "Seitheben (Kurzhanteln)"],
+    "ex-face-pull": ["Rope Cable Face Pull", "Face Pulls (Seil am Kabelzug)"],
+    "ex-machine-shoulder-military-press": ["Machine Shoulder Press", "Schulterpresse (Maschine)"],
+    "ex-standing-dumbbell-press": [
+      "Standing Dumbbell Shoulder Press",
+      "Schulterdrücken stehend (Kurzhanteln)"
+    ],
+    "ex-machine-lateral-raise": ["Machine Lateral Raise", "Seitheben (Maschine)"],
+    "ex-cable-seated-lateral-raise": [
+      "Single-Arm Cable Lateral Raise",
+      "Einarmiges Seitheben am Kabelzug"
+    ],
+    "ex-front-plate-raise": ["Barbell Front Raise", "Frontheben (Langhantel)"],
+    "ex-front-dumbbell-raise": ["Dumbbell Front Raise", "Frontheben (Kurzhanteln)"],
+    "ex-upright-cable-row": ["Cable Upright Row", "Aufrechtes Rudern am Kabelzug"],
+    "ex-seated-bent-over-rear-delt-raise": ["Dumbbell Reverse Fly", "Reverse Flys (Kurzhanteln)"],
+    "ex-reverse-machine-flyes": ["Reverse Pec Deck", "Reverse Butterfly (Maschine)"],
+    "ex-cable-rear-delt-fly": ["Cable Reverse Fly", "Reverse Flys am Kabelzug"],
+    "ex-barbell-shrug": ["Barbell Shrug", "Shrugs (Langhantel)"],
+    "ex-dumbbell-shrug": ["Dumbbell Shrug", "Shrugs (Kurzhanteln)"],
+    "ex-cable-shrugs": ["Cable Shrug", "Shrugs am Kabelzug"],
+    "ex-ez-bar-curl": ["EZ-Bar Bicep Curl", "Bizepscurls (SZ-Stange)"],
+    "ex-incline-dumbbell-curl": ["Incline Dumbbell Curl", "Schrägbank-Curls (Kurzhanteln)"],
+    "ex-hammer-curls": ["Dumbbell Hammer Curl", "Hammercurls (Kurzhanteln)"],
+    "ex-barbell-curl": ["Barbell Curl", "Bizepscurls (Langhantel)"],
+    "ex-seated-dumbbell-curl": ["Seated Dumbbell Curl", "Bizepscurls sitzend (Kurzhanteln)"],
+    "ex-standing-biceps-cable-curl": ["Standing Cable Curl", "Bizepscurls am Kabelzug (stehend)"],
+    "ex-preacher-curl": ["EZ-Bar Preacher Curl", "Scottcurls (SZ-Stange)"],
+    "ex-machine-preacher-curls": ["Machine Preacher Curl", "Scottcurls (Maschine)"],
+    "ex-high-cable-curls": ["Overhead Cable Curl", "Bizepscurls am oberen Kabelzug"],
+    "ex-triceps-pushdown-rope-attachment": [
+      "Cable Rope Tricep Pushdown",
+      "Trizepsdrücken am Seil (Kabelzug)"
+    ],
+    "ex-cable-rope-overhead-triceps-extension": [
+      "Overhead Cable Tricep Extension",
+      "Trizepsstrecken über Kopf (Kabelzug)"
+    ],
+    "ex-close-grip-barbell-bench-press": ["Close-Grip Bench Press", "Enges Bankdrücken"],
+    "ex-lying-dumbbell-tricep-extension": [
+      "Lying Dumbbell Triceps Extension",
+      "French Press liegend (Kurzhanteln)"
+    ],
+    "ex-seated-triceps-press": [
+      "Seated Overhead Dumbbell Extension",
+      "Trizepsstrecken über Kopf sitzend (Kurzhantel)"
+    ],
+    "ex-dumbbell-one-arm-triceps-extension": [
+      "Single-Arm Overhead Dumbbell Extension",
+      "Einarmiges Trizepsstrecken über Kopf (Kurzhantel)"
+    ],
+    "ex-tricep-dumbbell-kickback": ["Dumbbell Triceps Kickback", "Trizeps-Kickbacks (Kurzhantel)"],
+    "ex-dips-triceps-version": ["Triceps Dip", "Dips (Trizeps)"],
+    "ex-bench-dips": ["Bench Dip", "Bank-Dips"],
+    "ex-reverse-grip-triceps-pushdown": [
+      "Single-Arm Reverse-Grip Pushdown",
+      "Einarmiges Trizepsdrücken im Untergriff (Kabelzug)"
+    ],
+    "ex-palms-up-barbell-wrist-curl-over-a-bench": [
+      "Seated Forearm Wrist Curl",
+      "Handgelenkcurls sitzend"
+    ],
+    "ex-barbell-squat": ["Barbell Back Squat", "Kniebeuge (Langhantel)"],
+    "ex-leg-press": ["45-Degree Leg Press", "Beinpresse (45 Grad)"],
+    "ex-split-squat-with-dumbbells": [
+      "Dumbbell Bulgarian Split Squat",
+      "Bulgarische Kniebeuge (Kurzhanteln)"
+    ],
+    "ex-leg-extensions": ["Seated Leg Extension", "Beinstrecker (sitzend)"],
+    "ex-bodyweight-squat": ["Bodyweight Squat", "Kniebeuge (Körpergewicht)"],
+    "ex-dumbbell-lunges": ["Dumbbell Lunge", "Ausfallschritte (Kurzhanteln)"],
+    "ex-barbell-lunge": ["Barbell Lunge", "Ausfallschritte (Langhantel)"],
+    "ex-smith-machine-squat": ["Smith Machine Squat", "Kniebeuge an der Multipresse"],
+    "ex-romanian-deadlift": [
+      "Barbell Romanian Deadlift (RDL)",
+      "Rumänisches Kreuzheben (Langhantel, RDL)"
+    ],
+    "ex-seated-leg-curl": ["Seated Leg Curl", "Beinbeuger (sitzend)"],
+    "ex-lying-leg-curls": ["Lying Leg Curls", "Beinbeuger (liegend)"],
+    "ex-standing-leg-curl": ["Standing Leg Curl", "Beinbeuger (stehend)"],
+    "ex-barbell-hip-thrust": ["Barbell Hip Thrust", "Hip Thrust (Langhantel)"],
+    "ex-thigh-abductor": [
+      "Hüftabduktion / Hip Adduction",
+      "Hüftabduktion / Hüftadduktion (Maschine)"
+    ],
+    "ex-butt-lift-bridge": ["Glute Bridge", "Glute Bridge (Beckenheben)"],
+    "ex-barbell-glute-bridge": ["Weighted Glute Bridge", "Glute Bridge mit Gewicht"],
+    "ex-standing-calf-raises": ["Standing Calf Raise", "Wadenheben (stehend)"],
+    "ex-seated-calf-raise": ["Seated Calf Raise", "Wadenheben (sitzend)"],
+    "ex-hanging-leg-raise": ["Hanging Leg Raise", "Beinheben im Hang"],
+    "ex-cable-crunch": ["Kneeling Cable Crunch", "Kniender Crunch am Kabelzug"],
+    "ex-standing-hip-flexors": [
+      "Standing Psoas / Hip Flexor March",
+      "Hüftbeuger-Marsch im Stand (Psoas)"
+    ],
+    "ex-barbell-deadlift": ["Conventional Barbell Deadlift", "Kreuzheben (Langhantel, klassisch)"],
+    "ex-rowing-stationary": ["Rowing Ergometer (Concept2)", "Rudergerät (Concept2)"],
+    "ex-decline-crunch": ["Decline Bench Crunch", "Crunch auf der Negativbank"],
+    "ex-ab-crunch-machine": ["Ab Crunch Machine", "Bauchmaschine (Crunch)"],
+    "ex-alternate-heel-touchers": ["Alternate Heel Touchers", "Wechselseitiges Fersentippen"],
+    "ex-flutter-kicks": ["Flutter Kicks", "Flutter Kicks (Beinschlag)"],
+    "ex-cross-body-crunch": ["Elbow-to-Knee Crunch", "Crunch Ellbogen zum Knie"],
+    "ex-bird-dog": ["Bird Dog", "Bird Dog (Vierfüßlerstand)"],
+    "ex-standing-cable-wood-chop": ["Cable Core Rotation", "Rumpfrotation am Kabelzug"],
+    "ex-knee-hip-raise-on-parallel-bars": [
+      "Captain's Chair Knee Raise",
+      "Knieheben am Dip-Barren (Captain’s Chair)"
+    ],
+    "ex-side-bridge": ["Side Plank", "Seitstütz"],
+    "ex-side-jackknife": ["Side Jackknife", "Seitliches Klappmesser"],
+    "ex-jackknife-sit-up": ["Jackknife Sit-Up", "Klappmesser (Jackknife Sit-Up)"],
+    "ex-leg-pull-in": ["Leg Pull-In", "Beine anziehen (Leg Pull-In)"],
+    "ex-flat-bench-lying-leg-raise": ["Lying Leg Raise", "Beinheben liegend"],
+    "ex-exercise-ball-crunch": ["Exercise Ball Crunch", "Crunch auf dem Gymnastikball"],
+    "ex-kneeling-hip-flexor": [
+      "Couch Stretch (Hip Flexor & Quad)",
+      "Couch Stretch (Hüftbeuger & Quadrizeps)"
+    ],
+    "ex-90-90-hamstring": [
+      "90/90 Hip Internal & External Rotation",
+      "90/90 Hüftrotation (innen & außen)"
+    ],
+    "ex-spinal-stretch": [
+      "Thoracic Spine Open Book & Pec Stretch",
+      "Open Book für die Brustwirbelsäule & Brustdehnung"
+    ],
+    "ex-chest-and-front-of-shoulder-stretch": [
+      "Doorway Pec Major & Minor Stretch",
+      "Brustdehnung im Türrahmen"
+    ],
+    "ex-leg-up-hamstring-stretch": [
+      "Supine Banded Hamstring & Calf Stretch",
+      "Hamstring- & Wadendehnung mit Band (Rückenlage)"
+    ],
+    "ex-ankle-on-the-knee": [
+      "Pigeon / Figure-4 Piriformis & Glute Stretch",
+      "Taube / Figure-4: Piriformis- & Gesäßdehnung"
+    ],
+    "ex-worlds-greatest-stretch": [
+      "World's Greatest Stretch (Lunge & T-Spine Reach)",
+      "World’s Greatest Stretch (Ausfallschritt & Rotation)"
+    ],
+    "ex-groin-and-back-stretch": [
+      "Seated Butterfly Groin & Adductor Stretch",
+      "Schmetterlingsdehnung (Leiste & Adduktoren, sitzend)"
+    ],
+    "ex-sit-squats": [
+      "Deep Squat Hold & Ankle Dorsiflexion Pry",
+      "Tiefe Hocke & Sprunggelenk-Mobilisation"
+    ],
+    "ex-standing-gastrocnemius-calf-stretch": [
+      "Standing Wall Gastrocnemius & Soleus Stretch",
+      "Wadendehnung an der Wand (Gastrocnemius & Soleus)"
+    ],
+    "ex-standing-elevated-quad-stretch": [
+      "Standing / Side-Lying Quadriceps Stretch",
+      "Quadrizepsdehnung (stehend / in Seitenlage)"
+    ],
+    "ex-seated-floor-hamstring-stretch": [
+      "Seated Floor Hamstring & Posterior Chain Fold",
+      "Vorbeuge im Sitzen (hintere Oberschenkel & hintere Kette)"
+    ],
+    "ex-childs-pose": [
+      "Child's Pose & Side-Reach Lat Decompression",
+      "Kindhaltung mit seitlicher Lat-Dehnung"
+    ],
+    "ex-shoulder-stretch": [
+      "Cross-Body Posterior Deltoid & Capsule Stretch",
+      "Schulterdehnung quer vor dem Körper (hintere Schulter)"
+    ],
+    "ex-overhead-triceps": [
+      "Overhead Triceps & Lateral Fascia Stretch",
+      "Trizeps- & Flankendehnung über Kopf"
+    ],
+    "ex-one-handed-hang": [
+      "Passive Bar Hang (Shoulder & Spinal Decompression)",
+      "Passives Hängen (Schulter- & Wirbelsäulenentlastung)"
+    ],
+    "ex-kneeling-forearm-stretch": [
+      "Kneeling Wrist Flexor & Extensor Mobility",
+      "Handgelenk-Mobilisation im Knien (Beuger & Strecker)"
+    ],
+    "ex-cat-stretch": [
+      "Cat-Cow Segmental Spinal Articulation",
+      "Katze-Kuh (Wirbelsäulenmobilisation)"
+    ],
+    "ex-hug-knees-to-chest": [
+      "Supine Knee-to-Chest & Lumbar Decompression",
+      "Knie zur Brust in Rückenlage (Lendenwirbelsäule entlasten)"
+    ],
+    "ex-side-neck-stretch": [
+      "Lateral Neck & Upper Trapezius Release",
+      "Seitliche Nacken- & Trapezdehnung"
+    ],
+    "ex-1-2-kneeling-thoracic-rotation": [
+      "1/2 Kneeling Thoracic Rotation",
+      "Brustwirbelsäulen-Rotation im halben Kniestand"
+    ],
+    "ex-1-leg-box-squat": ["1 Leg Box Squat", "Einbeinige Box-Kniebeuge"],
+    "ex-4-count-burpees": ["4-count burpees", "Burpees mit 4 Zählzeiten"],
+    "ex-ab-wheel": ["Ab wheel", "Bauchroller"],
+    "ex-abdominal-draw-in": ["Abdominal Draw-In", "Bauchnabel einziehen"],
+    "ex-abduction-while-standing": ["Abduction while standing", "Abduktion im Stand"],
+    "ex-alternating-bicep-curls": ["Alternating bicep curls", "Abwechselnde Bizepscurls"],
+    "ex-alternating-high-cable-row": [
+      "Alternating High Cable Row",
+      "Abwechselndes hohes Kabelrudern"
+    ],
+    "ex-alternative-db-gorilla-rows": [
+      "Alternative DB Gorilla rows",
+      "Alternatives Gorilla-Rudern mit Kurzhanteln"
+    ],
+    "ex-ankle-dorsiflexion-rocks": [
+      "ankle dorsiflexion rocks",
+      "Wippen in die Sprunggelenk-Dorsalflexion"
+    ],
+    "ex-arabesque": ["Arabesque", "Arabeske"],
+    "ex-archer-pull-up": ["Archer Pull Up", "Archer-Klimmzug"],
+    "ex-arm-and-neck-stretch": ["Arm and neck stretch", "Arm- und Nackendehnung"],
+    "ex-arm-raises-t-y-i": ["Arm Raises (T/Y/I)", "Armheben (T/Y/I)"],
+    "ex-australian-pull-ups": ["Australian pull-ups", "Australian Pull-ups (umgekehrtes Rudern)"],
+    "ex-back-bridge": ["Back bridge", "Rückenbrücke"],
+    "ex-back-neck-stretch": ["Back neck stretch", "Nackendehnung"],
+    "ex-backward-arm-circles": ["Backward arm circles", "Armkreisen rückwärts"],
+    "ex-backward-shoulder-rotation": [
+      "Backward shoulder rotation",
+      "Rückwärtsdrehung der Schulter"
+    ],
+    "ex-band-pull-apart-with-external-rotation": [
+      "Band pull-apart with external rotation",
+      "Band Pull-Apart mit Außenrotation"
+    ],
+    "ex-band-pull-aparts": ["Band pull-aparts", "Band Pull-Aparts"],
+    "ex-banded-clamshell": ["Banded Clamshell", "Clamshell mit Band"],
+    "ex-banded-scapular-retraction": ["Banded Scapular Retraction", "Schulter-Rückzieher"],
+    "ex-banded-shoulder-drills": ["Banded Shoulder Drills", "Schulterübungen mit Band"],
+    "ex-barbell-ab-rollout": ["Barbell Ab Rollout", "Rollout mit der Langhantel"],
+    "ex-barbell-full-squat": ["Barbell Full Squat", "Tiefe Kniebeuge mit Langhantel"],
+    "ex-barbell-lunges-standing": [
+      "Barbell Lunges Standing",
+      "Stehende Ausfallschritte mit Langhantel"
+    ],
+    "ex-barbell-row-underhand": ["Barbell Row (Underhand)", "Langhantelrudern (Untergriff)"],
+    "ex-barbell-silverback-shrug": ["Barbell Silverback Shrug", "Langhantel-Silverback-Shrug"],
+    "ex-barbell-step-back-lunge": [
+      "Barbell Step Back Lunge",
+      "Ausfallschritt nach hinten mit Langhantel"
+    ],
+    "ex-bear-crawl-pull-through": ["Bear crawl pull through", "Bear Crawl Pull Through"],
+    "ex-bear-walk-2": ["Bear Walk 2", "Bear Walk"],
+    "ex-behind-the-back-cable-lateral-raise": [
+      "Behind the Back Cable Lateral Raise",
+      "Seitheben am Kabelzug hinter dem Rücken"
+    ],
+    "ex-bent-high-pulls": ["Bent High Pulls", "Vorgebeugtes High Pull"],
+    "ex-bent-over-lateral-raises": ["Bent-over Lateral Raises", "Vorgebeugtes Seitheben"],
+    "ex-bent-over-row-to-external-rotation": [
+      "Bent over row to external rotation",
+      "Vorgebeugtes Rudern mit Außenrotation"
+    ],
+    "ex-biceps-curl-with-cable": ["Biceps Curl With Cable", "Bizeps am Kabel"],
+    "ex-biceps-with-trx": ["Biceps with TRX", "Bizeps mit TRX"],
+    "ex-bicycle-crunches": ["bicycle crunches", "Bicycle Crunches"],
+    "ex-bizeps-curls-trifecta": ["Bizeps Curls Trifecta", "Bizeps-Curls-Trifecta"],
+    "ex-bodyweight-biceps-curl": [
+      "Bodyweight Biceps Curl",
+      "Bizeps-Curl mit dem eigenen Körpergewicht"
+    ],
+    "ex-bodyweight-lunge": ["Bodyweight lunge", "Ausfallschritt mit Körpergewicht"],
+    "ex-braced-squat": ["Braced Squat", "Goblet-Kniebeuge mit Scheibe"],
+    "ex-bretzel-stretch": ["Bretzel stretch", "Bretzel-Dehnung"],
+    "ex-butchers-block-stretch": ["Butchers Block Stretch", "Butcher's Block Dehnung"],
+    "ex-butterfly-narrow-grip": ["Butterfly Narrow Grip", "Butterfly Eng"],
+    "ex-butterfly-sit-up": ["Butterfly Sit Up", "Butterfly Sit-up"],
+    "ex-cable-concentration-curl": ["Cable Concentration Curl", "Konzentrationscurl am Kabelzug"],
+    "ex-cable-cross-over": ["Cable Cross-over", "Kabelcross"],
+    "ex-cable-front-raise-with-a-small-bar": [
+      "Cable Front Raise with a small bar",
+      "Frontheben am Kabelzug mit kurzer Stange"
+    ],
+    "ex-cable-glute-extension": ["Cable glute extension", "Gesäßstrecken am Kabelzug"],
+    "ex-cable-rear-delt-fly-single-arm": [
+      "Cable Rear-Delt Fly (single arm)",
+      "Reverse Butterfly am Kabel (einarmig)"
+    ],
+    "ex-cable-tri-extension-internal-rotation": [
+      "Cable Tri Extension - Internal Rotation",
+      "Trizepsstrecken am Kabelzug mit Innenrotation"
+    ],
+    "ex-cable-tricep-kickback": ["Cable Tricep Kickback", "Trizeps-Kickback am Kabelzug"],
+    "ex-cable-woodchoppers": ["Cable Woodchoppers", "Holzhacker am Kabelzug"],
+    "ex-cable-wrist-curl": ["Cable Wrist Curl", "Handgelenk-Curl am Kabelzug"],
+    "ex-cat-plank": ["Cat Plank", "Katzen-Plank"],
+    "ex-chair-dips": ["Chair dips", "Dips am Stuhl"],
+    "ex-chest-supported-rear-delt-raise": [
+      "Chest-Supported Rear Delt Raise",
+      "Reverse Flys für die hintere Schulter mit Brustauflage"
+    ],
+    "ex-chin-tuck": ["Chin tuck", "Schluckübungen"],
+    "ex-clamshell": ["Clamshell", "Clamshell (Muschel)"],
+    "ex-clamshell-to-reverse-clamshell": [
+      "Clamshell to Reverse Clamshell",
+      "Clamshell zu Reverse Clamshell"
+    ],
+    "ex-clap-push-up": ["Clap Push-UP", "Liegestütz mit Klatschen"],
+    "ex-clean-and-press": ["Clean and Press", "Umsetzen und Stoßen"],
+    "ex-clockwise-neck-circles": ["Clockwise neck circles", "Halskreise im Uhrzeigersinn"],
+    "ex-cobra-stretch": ["Cobra Stretch", "Kobra-Dehnung"],
+    "ex-commando-pull-ups": ["commando pull-ups", "Commando Pull-ups"],
+    "ex-concentration-curls": ["Concentration Curls", "Konzentrations-Curls"],
+    "ex-copenhagen-adduction-exercise": ["Copenhagen Adduction Exercise", "Copenhagen-Adduktion"],
+    "ex-core-rotation": ["Core Rotation", "Rumpfrotation"],
+    "ex-cossack-squat": ["Cossack squat", "Kosaken-Kniebeuge"],
+    "ex-counterclockwise-neck-circles": [
+      "Counterclockwise neck circles",
+      "Nackenkreise gegen den Uhrzeigersinn"
+    ],
+    "ex-cross-bench-dumbbell-pullovers": ["Cross-Bench Dumbbell Pullovers", "Pull-Over"],
+    "ex-crossbody-hamstring-stretch": [
+      "Crossbody Hamstring Stretch",
+      "Dehnung der hinteren Oberschenkelmuskulatur über Kreuz"
+    ],
+    "ex-crossbody-leg-swings": ["Crossbody Leg Swings", "Beinschwingen über Kreuz"],
+    "ex-crunches-with-legs-up": ["Crunches With Legs Up", "Crunches mit gestreckten Beinen"],
+    "ex-curl-with-kettlebell-two-hands": [
+      "Curl with kettlebell two hands",
+      "Curl mit Kettlebell beidhändig"
+    ],
+    "ex-curl-with-shoulder-elevated": [
+      "Curl - With Shoulder Elevated",
+      "Curl mit angehobener Schulter"
+    ],
+    "ex-db-upper-chest-variation": [
+      "DB Upper Chest Variation",
+      "Kurzhantel-Variation für die obere Brust"
+    ],
+    "ex-db-wrist-extension": ["DB Wrist Extension", "Handgelenkstreckung mit Kurzhanteln"],
+    "ex-decline-barbell-bench-press": ["Decline Barbell Bench Press", "Negativ Bankdrücken"],
+    "ex-decline-bench-leg-raise": ["Decline Bench Leg Raise", "Beinheben auf der Schrägbank"],
+    "ex-decline-dumbbell-bench-press": ["Decline Dumbbell Bench Press", "Negativ Bankdrücken KH"],
+    "ex-deficit-deadlift": ["Deficit Deadlift", "Defizit Kreuzheben"],
+    "ex-diagonal-shoulder-press": ["Diagonal Shoulder Press", "Diagonales Schulterdrücken"],
+    "ex-diamond-push-ups": ["Diamond push ups", "Liegestüzten Diamond"],
+    "ex-dips-between-two-benches": ["Dips Between Two Benches", "Dips Zwischen 2 Bänke"],
+    "ex-double-kettlebell-clean-and-press": [
+      "Double Kettlebell Clean and Press",
+      "Doppeltes Kettlebell Clean and Press"
+    ],
+    "ex-double-leg-abdominal-press": [
+      "Double-Leg Abdominal Press",
+      "Bauchpresse mit beiden Beinen"
+    ],
+    "ex-double-leg-calf-raise": ["Double Leg Calf Raise", "Beidbeiniges Wadenheben"],
+    "ex-dragon-flag": ["Dragon-flag", "Dragon Flag"],
+    "ex-dragon-squat": ["Dragon squat", "Dragon Squat"],
+    "ex-dumbbell-bent-over-face-pull": [
+      "Dumbbell Bent Over Face Pull",
+      "Face Pull mit Kurzhanteln in vorgebeugter Haltung"
+    ],
+    "ex-dumbbell-bicep-curl": ["Dumbbell Bicep Curl", "Bizeps KH-Curls"],
+    "ex-dumbbell-bicep-curl-to-press": [
+      "Dumbbell bicep curl to press",
+      "Kurzhantel-Bizeps-Curl mit Schulterdrücken"
+    ],
+    "ex-dumbbell-bradford-press": ["Dumbbell Bradford press", "Bradford-Drücken mit Kurzhanteln"],
+    "ex-dumbbell-cheat-curl": ["Dumbbell Cheat Curl", "Kurzhantel-Cheat-Curl"],
+    "ex-dumbbell-crunches": ["Dumbbell Crunches", "Kurzhantel-Crunches"],
+    "ex-dumbbell-curl": ["Dumbbell Curl", "Kurzhantel-Curl"],
+    "ex-dumbbell-donkey-kick": ["Dumbbell donkey kick", "Eselstritt mit Kurzhantel"],
+    "ex-dumbbell-drag-curls": ["Dumbbell drag curls", "Kurzhantel-Drag-Curls"],
+    "ex-dumbbell-floor-press": ["Dumbbell Floor Press", "Kurzhantel-Bodendrücken"],
+    "ex-dumbbell-front-squat": ["Dumbbell Front Squat", "Frontkniebeuge mit Kurzhanteln"],
+    "ex-dumbbell-hang-power-cleans": [
+      "Dumbbell Hang Power Cleans",
+      "Hang Power Cleans mit Kurzhanteln"
+    ],
+    "ex-dumbbell-hex-press": ["Dumbbell Hex Press", "Hex Press mit Kurzhanteln"],
+    "ex-dumbbell-hip-thrust": ["Dumbbell Hip Thrust", "Hip Thrust mit Kurzhantel"],
+    "ex-dumbbell-lunges-walking": ["Dumbbell Lunges Walking", "Ausfallschritte im Gehen"],
+    "ex-dumbbell-rear-lunge": [
+      "Dumbbell Rear Lunge",
+      "Rückwärtiger Ausfallschritt mit Kurzhanteln"
+    ],
+    "ex-dumbbell-romanian-deadlift": [
+      "Dumbbell Romanian Deadlift",
+      "Rumänisches Kreuzheben mit Kurzhanteln"
+    ],
+    "ex-dumbbell-scaption": ["Dumbbell Scaption", "Kurzhantel-Scaption"],
+    "ex-dumbbell-shoulder-rotations": [
+      "Dumbbell Shoulder Rotations",
+      "Schulterrotationen mit Kurzhantel"
+    ],
+    "ex-dumbbell-side-bend": ["Dumbbell Side Bend", "Seitneigung mit Kurzhantel"],
+    "ex-dumbbell-side-squat": ["Dumbbell Side Squat", "Seitliche Kniebeuge mit Kurzhantel"],
+    "ex-dumbbell-single-leg-hip-thrust": [
+      "Dumbbell Single-leg Hip Thrust",
+      "Einbeiniger Hip Thrust mit Kurzhantel"
+    ],
+    "ex-dumbbell-snatch": ["dumbbell snatch", "Kurzhantel-Reißen (Dumbbell Snatch)"],
+    "ex-dumbbell-sumo-deadlift": ["Dumbbell sumo deadlift", "Sumo-Kreuzheben mit Kurzhantel"],
+    "ex-dumbbell-thruster": ["Dumbbell Thruster", "Kurzhantel-Thruster"],
+    "ex-dumbbell-underhand-dead-row": [
+      "Dumbbell Underhand Dead Row",
+      "Kurzhantel-Rudern im Untergriff aus dem Dead Stop"
+    ],
+    "ex-dynamic-planche": ["Dynamic Planche", "Dynamische Planche"],
+    "ex-dynamic-side-hold": ["Dynamic side hold", "Dynamisches seitliches Halten"],
+    "ex-dynamic-side-plank": ["Dynamic side plank", "Dynamischer Seitstütz"],
+    "ex-elevated-prayer-stretch": ["Elevated prayer stretch", "Erhöhte Gebets-Dehnung"],
+    "ex-exercise-band-plantarflexion": [
+      "Exercise Band Plantarflexion",
+      "Plantarflexion mit Widerstandsband"
+    ],
+    "ex-external-rotation-stretch": ["External Rotation Stretch", "Dehnung mit Außenrotation"],
+    "ex-external-rotation-with-cable": [
+      "External Rotation with Cable",
+      "Außenrotation am Kabelzug"
+    ],
+    "ex-ez-bar-skullcrusher": ["EZ-Bar Skullcrusher", "Frenchpress SZ-Stange"],
+    "ex-face-pulls-with-yellow-green-band": [
+      "Face pulls with yellow/green band",
+      "Face Pulls mit gelbem/grünem Band"
+    ],
+    "ex-finger-pushup": ["Finger Pushup", "Fingerliegestütz"],
+    "ex-fingerboard-20-mm-edge": ["Fingerboard 20 mm edge", "Leisten hängen an 20 mm Kante"],
+    "ex-floor-dips": ["Floor dips", "Bodensenken"],
+    "ex-floor-glider-hamstring-curls": [
+      "Floor Glider Hamstring Curls",
+      "Beinbeuger am Boden mit Glidern"
+    ],
+    "ex-forward-arm-circles": ["Forward arm circles", "Armkreisen vorwärts"],
+    "ex-forward-shoulder-rotation": ["Forward shoulder rotation", "Vorwärtsdrehung der Schulter"],
+    "ex-frog-stand": ["Frog stand", "Froschstand"],
+    "ex-frog-stretch": ["Frog Stretch", "Froschdehnung"],
+    "ex-front-barbell-squat": ["Front Barbell Squat", "Front Kniebeuge"],
+    "ex-front-lever-tuck": ["Front lever tuck", "Front Lever Tuck"],
+    "ex-front-neck-stretch": ["Front neck stretch", "Nackenstütze vorne"],
+    "ex-front-raises-with-plates": ["Front Raises with Plates", "Frontheben Mit Scheibe"],
+    "ex-glute-bridge-single-arm-press": [
+      "Glute Bridge Single-Arm Press",
+      "Glute Bridge mit einarmigem Drücken"
+    ],
+    "ex-hammercurls-on-cable": ["Hammercurls on Cable", "Hammercurls am Seil"],
+    "ex-hamstring-kicks": ["Hamstring Kicks", "Hamstring-Kicks"],
+    "ex-hamstring-stretch": ["Hamstring Stretch", "Hamstring-Dehnung"],
+    "ex-handstand-pushup": ["Handstand Pushup", "Handstand-Liegestütz"],
+    "ex-head-tilts": ["Head tilts", "Kopf neigen"],
+    "ex-head-turns": ["Head turns", "Kopf drehen"],
+    "ex-high-cable-cross-tricep-extention-nb": [
+      "High-Cable Cross Tricep Extention - NB",
+      "Trizepsstrecken über Kreuz am hohen Kabelzug"
+    ],
+    "ex-high-cable-lateral-raise": ["High-Cable Lateral Raise", "Seitheben am hohen Kabelzug"],
+    "ex-high-plank": ["High plank", "Hohe Planke"],
+    "ex-high-pulley-pullover": ["High-pulley pullover", "Pullover am hohen Kabelzug"],
+    "ex-hindu-pushups": ["Hindu Pushups", "Hindu-Liegestütze"],
+    "ex-hindu-squats": ["Hindu Squats", "Hindu-Kniebeugen"],
+    "ex-hip-bridge": ["Hip Bridge", "Hüftbrücke"],
+    "ex-hip-hinge": ["Hip hinge", "Hip Hinge"],
+    "ex-hip-raise-lying": ["Hip Raise, Lying", "Hüftheben in Rückenlage"],
+    "ex-horizontal-shoulder-flexion-stretch": [
+      "Horizontal Shoulder Flexion Stretch",
+      "Dehnung der horizontalen Schulterflexion"
+    ],
+    "ex-horse-stance-side-splits": ["Horse Stance (Side Splits)", "Reiterstellung (Seitspagat)"],
+    "ex-hyper-y-w-combo": ["Hyper Y W Combo", "Hyper Y-W-Kombination"],
+    "ex-ice-cream-maker": ["Ice cream maker", "Ice Scream Maker"],
+    "ex-incline-bench-reverse-fly": ["Incline Bench Reverse Fly", "Reverse Fly auf der Schrägbank"],
+    "ex-incline-cable-chest-press": [
+      "Incline Cable Chest Press",
+      "Brustdrücken am Kabelzug auf der Schrägbank"
+    ],
+    "ex-incline-crunches": ["Incline Crunches", "Crunches an Schrägbank"],
+    "ex-incline-db-y-raise": ["Incline DB Y-Raise", "Y-Raise mit Kurzhanteln auf der Schrägbank"],
+    "ex-incline-ohp-db": ["Incline OHP DB", "Schrägbank-Schulterdrücken mit Kurzhanteln"],
+    "ex-incline-plank-with-alternate-floor-touch": [
+      "Incline Plank With Alternate Floor Touch",
+      "Negativ Plank Mit Abwechselnden Fuß-Kontakt"
+    ],
+    "ex-incline-shoulder-press-up": [
+      "Incline Shoulder Press Up",
+      "Schulterdrücken auf der Bank (Scapular Push-up)"
+    ],
+    "ex-incline-static-hold": ["Incline Static Hold", "Statisches Halten auf der Schrägbank"],
+    "ex-inverted-row": ["Inverted Row", "Inverted Rows (umgekehrtes Rudern)"],
+    "ex-isometria-alle-parallele": ["Isometria alle parallele", "Isometrisches Halten am Barren"],
+    "ex-isometric-squat-to-failure": [
+      "Isometric Squat to Failure",
+      "Isometrische Kniebeuge bis zum Muskelversagen"
+    ],
+    "ex-jerk": ["Jerk", "Jerk (Stoßen)"],
+    "ex-jumping-jacks": ["Jumping Jacks", "Hampelmann"],
+    "ex-kettlebell-deadlifts": ["Kettlebell deadlifts", "Kettlebell Kreuzheben"],
+    "ex-kettlebell-one-legged-deadlift": [
+      "Kettlebell One-Legged Deadlift",
+      "Einbeiniges Kreuzheben mit Kettlebell"
+    ],
+    "ex-kettlebell-sumo-deadlift": ["kettlebell sumo deadlift", "Sumo-Kreuzheben mit Kettlebell"],
+    "ex-knee-push-ups": ["knee push-ups", "Liegestütze auf den Knien"],
+    "ex-kneeling-kickbacks": ["Kneeling kickbacks", "Kniende Rückschläge"],
+    "ex-kneeling-superman": ["Kneeling Superman", "Kniender Superman"],
+    "ex-kreis-press-db": ["Kreis Press DB", "Kreis-Press mit Kurzhanteln"],
+    "ex-l-sit": ["L-sit", "L-Sit"],
+    "ex-landmine-rotation": ["Landmine Rotation", "Landmine-Rotation"],
+    "ex-landmine-squat-to-press": [
+      "Landmine Squat to Press",
+      "Landmine Kniebeuge mit Überkopfdrücken"
+    ],
+    "ex-lat-pulldown-cross-body-single-arm": [
+      "Lat Pulldown - Cross Body Single Arm",
+      "Latzug einarmig über Kreuz"
+    ],
+    "ex-lateral-rows-on-cable-one-armed": [
+      "Lateral Rows on Cable, One Armed",
+      "Seitheben am Kabel, Einarmig"
+    ],
+    "ex-lateral-walk": ["Lateral Walk", "Seitwärtsgehen (Lateral Walk)"],
+    "ex-leg-presses-narrow": ["Leg Presses (narrow)", "Beinpresse Eng"],
+    "ex-leg-presses-wide": ["Leg Presses (wide)", "Beinpresse (weit)"],
+    "ex-leg-raises-standing": ["Leg Raises, Standing", "Beinheben Aufrecht"],
+    "ex-leg-wheel": ["Leg Wheel", "Beinkreisen"],
+    "ex-long-pulley-low-row": ["Long-Pulley (low Row)", "Long-Pulley"],
+    "ex-long-pulley-narrow": ["Long-Pulley, Narrow", "Long-Pulley (eng)"],
+    "ex-low-box-squat-wide-stance": ["Low Box Squat - Wide Stance", "Box Squat mit weitem Stand"],
+    "ex-low-cable-cross-over-nb": ["Low-Cable Cross-Over - NB", "Low-Cable Cross-Over am Kabelzug"],
+    "ex-low-pulley-cable-fly": ["Low Pulley Cable Fly", "Kabel-Fly am unteren Kabelzug"],
+    "ex-lunges": ["Lunges", "Ausfallschritte"],
+    "ex-lying-rotator-cuff-exercise": [
+      "Lying Rotator Cuff Exercise",
+      "Rotatorenmanschette im Liegen"
+    ],
+    "ex-lying-triceps-extensions": ["Lying Triceps Extensions", "Liegendes Trizepsstrecken"],
+    "ex-lying-triceps-kickback": ["Lying Triceps Kickback", "Liegender Trizeps-Kickback"],
+    "ex-machine-bench-press": ["Machine Bench Press", "Brustdrücken an der Maschine (flach)"],
+    "ex-machine-bicep-curl": ["Machine Bicep Curl", "Bizepscurl-Maschine"],
+    "ex-machine-glute-extension": ["Machine glute extension", "Gesäßstrecken an der Maschine"],
+    "ex-marching-high-knees": ["Marching High Knees", "Knieheben im Stand"],
+    "ex-mentzer-pulldown": ["Mentzer Pulldown", "Mentzer-Latzug"],
+    "ex-military-press-mit-sz-bar": ["Military Press mit SZ-Bar", "Military Press mit SZ-Stange"],
+    "ex-mountain-climbers": ["Mountain Climbers", "Bergsteiger"],
+    "ex-muscle-up": ["Muscle Up", "Muscle-up"],
+    "ex-neck-half-circles": ["Neck half circles", "Nacken-Halbkreise"],
+    "ex-neutral-grip-chest-pulldown": [
+      "Neutral-grip chest pulldown",
+      "Latzug zur Brust mit neutralem Griff"
+    ],
+    "ex-neutral-grip-pull-ups-or-trx-rows": [
+      "Neutral-grip pull-ups or TRX rows",
+      "Klimmzüge im neutralen Griff oder TRX-Rudern"
+    ],
+    "ex-no-leg-drive-dumbbell-chest-press": [
+      "No Leg Drive Dumbbell Chest Press",
+      "Kurzhantel-Brustdrücken ohne Beineinsatz"
+    ],
+    "ex-no-push-up-burpees": ["No push-up burpees", "Keine Liegestütz-Burpees"],
+    "ex-one-arm-heavy-row": ["One-Arm Heavy Row", "Schweres einarmiges Rudern"],
+    "ex-one-handed-kettlebell-curls": ["one-handed kettlebell curls", "Einarmige Kettlebell-Curls"],
+    "ex-overhead-squat": ["Overhead Squat", "Überkopfkniebeuge"],
+    "ex-parallel-bar-hold": ["Parallel Bar Hold", "Halten am Barren"],
+    "ex-pause-hack-squats": ["Pause Hack Squats", "Hack Squats mit Pause"],
+    "ex-paused-squats": ["Paused Squats", "Pausiertes Kniebeugen"],
+    "ex-pendulum-squat": ["Pendulum Squat", "Pendelkniebeube"],
+    "ex-perpendicular-unilateral-landmine-row": [
+      "Perpendicular Unilateral Landmine Row",
+      "Einarmiges Landmine-Rudern (senkrecht)"
+    ],
+    "ex-pike-push-ups": ["Pike Push Ups", "Hecht-Liegestütze"],
+    "ex-pin-bench-press-bb": ["Pin Bench Press BB", "Pin Bench Press"],
+    "ex-pistol-squat": ["Pistol Squat", "Einbeinige Kniebeuge"],
+    "ex-plank-reach": ["Plank Reach", "Unterarmstütz mit Armheben"],
+    "ex-power-clean": ["Power Clean", "Umsetzen"],
+    "ex-preacher-curl-internally-rotated": [
+      "Preacher Curl - Internally Rotated",
+      "Scott-Curl mit Innenrotation"
+    ],
+    "ex-prone-scapular-retraction-arms-at-side": [
+      "Prone Scapular Retraction - Arms at Side",
+      "Schulterblatt-Retraktion in Bauchlage – Arme seitlich"
+    ],
+    "ex-pseudo-planche-push-up": ["Pseudo Planche Push-up", "Pseudo-Planche-Liegestütz"],
+    "ex-pull-through": ["Pull Through", "Cable Pull Through"],
+    "ex-pull-ups-wide-grip": ["Pull-Ups (Wide Grip)", "Klimmzüge (weiter Griff)"],
+    "ex-pullup-on-fingerboard": ["Pullup on fingerboard", "Klimmzug an Leiste"],
+    "ex-push-up-rotations": ["Push-up rotations", "Liegestütz-Drehungen"],
+    "ex-push-up-wide": ["Push-Up Wide", "Breiter Liegestütz"],
+    "ex-push-ups-decline": ["Push-Ups | Decline", "Liegestütze | abfallend (Decline)"],
+    "ex-push-ups-incline": ["Push-Ups | Incline", "Liegestütze | erhöht (Incline)"],
+    "ex-push-ups-parallettes": ["Push-Ups | Parallettes", "Liegestütze | Parallettes"],
+    "ex-quadriped-arm-and-leg-raise": [
+      "Quadriped Arm and Leg Raise",
+      "Arm- und Beinheben im Vierfüßlerstand"
+    ],
+    "ex-quadruped-hip-abduction": ["Quadruped Hip Abduction", "Hüftabduktion im Vierfüßlerstand"],
+    "ex-reach-ups": ["Reach ups", "Reach-ups"],
+    "ex-rear-foot-elevated-hip-flexor-stretch": [
+      "Rear-foot-elevated Hip Flexor Stretch",
+      "Hüftbeuger-Dehnung mit erhöhtem hinterem Fuß"
+    ],
+    "ex-reverse-barbell-curl": ["Reverse Barbell Curl", "Reverse Curls"],
+    "ex-reverse-fly-standing": ["Reverse Fly Standing", "Reverse Fly im Stehen"],
+    "ex-reverse-hyperextension": ["Reverse Hyperextension", "Umgekehrte Hyperextension"],
+    "ex-reverse-lunges": ["Reverse lunges", "Umgekehrte Ausfallschritte"],
+    "ex-reverse-wood-chops": ["Reverse Wood Chops", "Umgekehrte Holzhacker"],
+    "ex-ring-support-hold": ["Ring Support Hold", "Stützhalt an den Ringen"],
+    "ex-roman-chair-crunch": ["Roman Chair Crunch", "Beinheben am Roman Chair"],
+    "ex-rope-pullover-row": ["Rope Pullover/row", "Seilzug-Pullover/Rudern"],
+    "ex-rotary-torso-machine": ["Rotary Torso Machine", "Torso-Rotation-Maschine"],
+    "ex-row": ["Row", "Rudern"],
+    "ex-rowing-t-bar": ["Rowing, T-bar", "T-Bar Rudern (breit)"],
+    "ex-rowing-with-trx-band": ["Rowing with TRX band", "TRX Rudern"],
+    "ex-rubber-band-glute-kickback": [
+      "rubber band glute kickback",
+      "Glute Kickback mit Widerstandsband"
+    ],
+    "ex-scissors": ["Scissors", "Schere"],
+    "ex-scorpion-kick": ["Scorpion Kick", "Skorpion-Kick"],
+    "ex-seated-corkscrew": ["Seated Corkscrew", "Sitzender Korkenzieher"],
+    "ex-seated-figure-four": ["seated figure four", "Figur-Vier-Dehnung im Sitzen"],
+    "ex-seated-hip-abduction": ["Seated Hip Abduction", "Hüftabduktion sitzend"],
+    "ex-seated-piriformis-stretch": ["Seated Piriformis Stretch", "Sitzende Piriformis-Dehnung"],
+    "ex-seated-shoulder-extension-stretch": [
+      "Seated Shoulder Extension Stretch",
+      "Sitzende Schulterextensions-Dehnung"
+    ],
+    "ex-seated-v-grip-row": ["Seated V-Grip Row", "Sitzendes Rudern mit V-Griff"],
+    "ex-seated-w-curl": ["Seated W Curl", "Sitzender W-Curl"],
+    "ex-shinbox-ir-stretch": ["Shinbox IR Stretch", "Shinbox-Innenrotations-Dehnung"],
+    "ex-shoulder-dislocates": ["Shoulder dislocates", "Schulterdislokationen"],
+    "ex-shoulder-dumbbell-pendular-exercise": [
+      "Shoulder Dumbbell Pendular Exercise",
+      "Pendelübung für die Schulter mit Kurzhantel"
+    ],
+    "ex-shoulder-raise-side-and-front-db": [
+      "Shoulder Raise Side and Front DB",
+      "Seitheben und Frontheben mit Kurzhanteln"
+    ],
+    "ex-shoulder-shrug": ["Shoulder Shrug", "Schulterzucken"],
+    "ex-shoulder-width-three-point-push-up": [
+      "Shoulder width three-point push-up",
+      "Schulterbreite Dreipunkt-Liegestütze"
+    ],
+    "ex-side-dumbbell-trunk-flexion": [
+      "Side Dumbbell Trunk Flexion",
+      "Seitliches Oberkörperbeugen Mit"
+    ],
+    "ex-side-laying-interior-rotation": [
+      "Side-laying interior rotation",
+      "Innenrotation in Seitenlage"
+    ],
+    "ex-side-lying-external-rotation": [
+      "Side-lying External Rotation",
+      "Außenrotation in Seitenlage"
+    ],
+    "ex-side-lying-hip-abduction": ["Side Lying Hip Abduction", "Hüftabduktion in Seitenlage"],
+    "ex-side-slides-squats": ["Side Slides + Squats", "Seitliche Slides + Kniebeugen"],
+    "ex-side-straight-arm-pulldown-cable": [
+      "Side Straight-Arm Pulldown (Cable)",
+      "Seitlicher Überzug mit gestrecktem Arm am Kabelzug"
+    ],
+    "ex-side-to-side-push-ups": ["Side to Side Push Ups", "Liegestütze seitlich"],
+    "ex-single-arm-cable-row-w-rotation-floor": [
+      "Single-Arm Cable Row /w Rotation (floor)",
+      "Rudern am Kabelzug mit Rotation"
+    ],
+    "ex-single-arm-preacher-curl": ["Single-arm Preacher Curl", "Einarmiger Scott-Curl"],
+    "ex-single-leg-deadlift-with-dumbbell": [
+      "Single-Leg Deadlift with Dumbbell",
+      "Einbeiniges Kreuzheben mit Kurzhantel"
+    ],
+    "ex-single-leg-hamstring-stretch": [
+      "Single Leg Hamstring Stretch",
+      "Einbeiniges Dehnen der hinteren Oberschenkelmuskulatur"
+    ],
+    "ex-single-leg-leg-extension": ["Single-Leg Leg Extension", "Beinstrecker Einbeinig"],
+    "ex-single-leg-lunge-with-kettlebell": [
+      "Single-Leg Lunge with Kettlebell:",
+      "Einbeiniger Ausfallschritt mit Kettlebell"
+    ],
+    "ex-single-leg-rdl": [
+      "Single Leg RDL",
+      "Einbeiniges Kreuzheben mit gestreckten Beinen (Single Leg RDL)"
+    ],
+    "ex-single-leg-side-glute-press": [
+      "Single-leg side glute press",
+      "Einbeinige seitliche Gesäßpresse"
+    ],
+    "ex-sit-up-elbow-thrust": ["Sit Up Elbow Thrust", "Sit-Ups (Ellenbogen zum Knie)"],
+    "ex-sit-ups": ["Sit-ups", "Sit Ups"],
+    "ex-skydiver-with-arms-in-t-position": [
+      "Skydiver with arms in T-position",
+      "Fallschirmspringer in T-Position"
+    ],
+    "ex-sliding-lateral-lunge": ["Sliding Lateral Lunge", "Seitlicher Ausfallschritt mit Slider"],
+    "ex-sloper-hanging": ["Sloper hanging", "Sloper hängen"],
+    "ex-slow-squat": ["Slow Squat", "Langsame Kniebeuge"],
+    "ex-smith-machine-bench-press": ["Smith Machine Bench Press", "Bankdrücken an der Multipresse"],
+    "ex-smith-machine-calf-raise": ["Smith Machine Calf Raise", "Wadenheben an der Multipresse"],
+    "ex-smith-machine-close-grip-bench-press": [
+      "Smith Machine Close-Grip Bench Press",
+      "Enges Bankdrücken an der Multipresse"
+    ],
+    "ex-smith-machine-incline-bench-press": [
+      "Smith Machine Incline Bench Press",
+      "Schrägbankdrücken an der Multipresse"
+    ],
+    "ex-smith-machine-overhead-shoulder-press": [
+      "Smith Machine Overhead Shoulder Press",
+      "Schulterdrücken an der Multipresse"
+    ],
+    "ex-smith-machine-upright-row": [
+      "Smith Machine Upright Row",
+      "Aufrechtes Rudern an der Multipresse"
+    ],
+    "ex-snatch": ["Snatch", "Reißen (Snatch)"],
+    "ex-squat-jumps": ["Squat Jumps", "Tiefe Hocksprünge"],
+    "ex-squat-thrust": ["Squat Thrust", "Hocksprung"],
+    "ex-standing-adduction-cable": ["Standing Adduction (Cable)", "Adduktion im Stehen (Kabelzug)"],
+    "ex-standing-calf-stretch": ["Standing Calf Stretch", "Stehende Wadendehnung"],
+    "ex-standing-pancake": ["Standing Pancake", "Stehender Pancake"],
+    "ex-standing-pancake-good-morning": [
+      "Standing Pancake Good Morning",
+      "Stehendes Good Morning mit weitem Stand (Pancake)"
+    ],
+    "ex-standing-rope-forearm": [
+      "Standing Rope Forearm",
+      "Unterarmtraining mit Rollstange im Stehen"
+    ],
+    "ex-standing-side-crunches": ["Standing Side Crunches", "Stehende seitliche Crunches"],
+    "ex-step-ups": ["Step-ups", "Steigungen"],
+    "ex-straight-arm-pull-down-bar-attachment": [
+      "Straight-arm Pull Down (bar Attachment)",
+      "Lat-Ziehen Mit Gesteckten Armen Mit (Stange)"
+    ],
+    "ex-sumo-deadlift": ["Sumo Deadlift", "Sumo Kreuzheben"],
+    "ex-sumo-squats": ["Sumo Squats", "Sumo Kniebeuge"],
+    "ex-supine-hip-abduction": ["Supine Hip Abduction", "Hüftabduktion in Rückenlage"],
+    "ex-tate-press": ["Tate Press", "Tate Press mit Kurzhanteln"],
+    "ex-toe-touch": ["Toe Touch", "Zehenberührung"],
+    "ex-torso-rotation": ["Torso Rotation", "Rumpfdrehung"],
+    "ex-torso-rotation-stretch": ["Torso rotation stretch", "Rumpfrotations-Dehnung"],
+    "ex-towel-superman": ["Towel Superman", "Handtuch-Superman"],
+    "ex-trap-3-raise": ["Trap-3 Raise", "Trap-3-Raise"],
+    "ex-trap-bar-squat": ["Trap Bar Squat", "Trap-Bar-Kniebeuge"],
+    "ex-trap-press": ["Trap press", "Trapez-Press"],
+    "ex-triceps-extensions-on-cable": ["Triceps Extensions on Cable", "Trizeps Seildrücken"],
+    "ex-triceps-on-machine": ["Triceps on Machine", "Trizepsmaschine"],
+    "ex-triceps-pushdown": ["Triceps Pushdown", "Trizepsdrücken am Kabelzug"],
+    "ex-trx-dips": ["TRX dips", "TRX Dips"],
+    "ex-trx-gorilla-biceps-curl": ["TRX gorilla biceps curl", "TRX Gorilla-Bizeps-Curl"],
+    "ex-trx-hammer-curl": ["TRX hammer curl", "TRX Hammer-Curl"],
+    "ex-trx-obliques": ["TRX Obliques", "TRX Bauchmuskeln seitlich"],
+    "ex-trx-roll-out": ["TRX roll out", "TRX Roll-out"],
+    "ex-trx-single-arm-bicep-curl": ["Trx Single Arm Bicep Curl", "TRX einarmiger Bizeps-Curl"],
+    "ex-trx-tricep-extension": ["TRX Tricep Extension", "TRX Trizepsstrecken"],
+    "ex-tuck-l-sit": ["Tuck L-sit", "Tuck L-Sit"],
+    "ex-typewriter-pull-ups": ["Typewriter Pull-ups", "Typewriter-Klimmzüge"],
+    "ex-underhand-lat-pull-down": ["Underhand Lat Pull Down", "Latzug im Untergriff"],
+    "ex-unilateral-cross-body-cable-pull-down": [
+      "unilateral cross body cable pull down",
+      "Einarmiger Cable Pulldown über Kreuz"
+    ],
+    "ex-upright-row-sz-bar": ["Upright Row, SZ-bar", "Rudern Aufrecht ß-Stange"],
+    "ex-walking-bridge": ["walking bridge", "Wandernde Brücke"],
+    "ex-wall-drills": ["Wall Drills", "Wand-Drills"],
+    "ex-wall-handstand": ["Wall Handstand", "Handstand Gegen Die Wand"],
+    "ex-wall-sit": ["Wall-sit", "Wandsitz"],
+    "ex-wall-slides": ["Wall Slides", "Wandgleiten"],
+    "ex-weighted-crunches": ["Weighted Crunches", "Crunch mit Zusatzgewicht"],
+    "ex-weighted-push-ups": ["Weighted push-ups", "Liegestütze mit Zusatzgewicht"],
+    "ex-windshield-wipers": ["Windshield Wipers", "Scheibenwischer"],
+    "ex-wrist-curl-dumbbells": ["Wrist curl, dumbbells", "Handgelenk-Curl mit Kurzhanteln"],
+    "ex-wrist-stretch": ["Wrist Stretch", "Handgelenks-Dehnung"],
+    "ex-ytwl-exercise": ["YTWL Exercise", "YTWL-Übung"],
+    "ex-zottman-curl": ["Zottman Curl", "Zottman-Curl"]
+  }
+}

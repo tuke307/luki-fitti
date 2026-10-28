@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import {
+  getExerciseSearchNames,
   INITIAL_EXERCISE_CATALOG,
   localizeExercise,
   resolveExerciseMedia,
@@ -12,7 +13,15 @@ import type {
   ExerciseQueryDto,
   UpdateExerciseDto,
 } from '@luki-fitti/common/schemas';
-import type { MuscleGroup, SupportedLocale } from '@luki-fitti/common/enums';
+import {
+  EQUIPMENT_LABELS,
+  MUSCLE_GROUP_LABELS,
+  type MuscleGroup,
+  type SupportedLocale,
+} from '@luki-fitti/common/enums';
+import { buildExerciseSearchIndex, searchExercises } from '@luki-fitti/common/utils';
+
+const CORE_EXERCISE_IDS = new Set(INITIAL_EXERCISE_CATALOG.map((e) => e.id));
 
 @Injectable()
 export class ExerciseService {
@@ -124,15 +133,18 @@ export class ExerciseService {
       );
 
     if (query.search?.trim()) {
-      const q = query.search.trim().toLowerCase();
-      return mapped.filter(
-        (ex) =>
-          ex.name.toLowerCase().includes(q) ||
-          ex.description.toLowerCase().includes(q) ||
-          ex.primaryMuscleGroup.toLowerCase().includes(q) ||
-          ex.equipment.toLowerCase().includes(q) ||
-          ex.tags.some((t) => t.toLowerCase().includes(q)),
-      );
+      // Same ranked, typo-tolerant, bilingual search as the apps.
+      const index = buildExerciseSearchIndex(mapped, {
+        names: getExerciseSearchNames,
+        labels: (ex) => [
+          MUSCLE_GROUP_LABELS[ex.primaryMuscleGroup],
+          EQUIPMENT_LABELS[ex.equipment],
+          ex.primaryMuscleGroup,
+          ex.equipment,
+        ],
+        boost: (ex) => (CORE_EXERCISE_IDS.has(ex.id) ? 0.1 : 0),
+      });
+      return searchExercises(index, query.search).map((r) => r.exercise);
     }
 
     return mapped;

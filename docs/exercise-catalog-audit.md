@@ -20,7 +20,9 @@ _Date: 2026-10-28 · Scope: all system exercises after PR #8 (`e4d2eaa`, `2d0938
   against Postgres 17 with templates, sessions, alternatives and replaced ids.
 - Regression tests: no two system exercises share an EN or DE name, every retired id points to an
   existing exercise, and starter content only uses core exercises.
-- **Search (§8)**: follow-up PR.
+- **Search (§8)** is implemented as `exercise-search.util.ts` (+ vocabulary) in common, used by web
+  and the API, with a 1:1 Swift port (`ExerciseSearch.swift`). Both run the shared fixture
+  `__fixtures__/exercise-search-cases.json`.
 - Still open: the data-quality items in §5 (equipment/muscle mislabels, non-English names, German
   names missing for 655 imported exercises).
 
