@@ -5,6 +5,8 @@ import {
   INITIAL_EXERCISE_CATALOG,
   DEFAULT_STARTER_TEMPLATES,
   DEFAULT_STRETCHING_ROUTINES,
+  isRetiredExerciseId,
+  resolveExerciseId,
   resolveExerciseMedia,
 } from '@luki-fitti/common/catalog';
 import {
@@ -128,12 +130,53 @@ export function mergeMissingExercises(
   return missing.length > 0 ? [...current, ...missing] : current;
 }
 
+const CORE_EXERCISES_BY_ID = new Map(INITIAL_EXERCISE_CATALOG.map((e) => [e.id, e]));
+
+interface ExerciseRefs {
+  exerciseId?: string | null;
+  replacedExerciseId?: string | null;
+  alternativeExerciseIds?: string[] | null;
+  exercise?: ExerciseDto | null;
+}
+
+/**
+ * Points a cached template/routine/session exercise at the exercises that replaced merged ones
+ * (see `RETIRED_EXERCISE_IDS`). Returns the item itself when it references none.
+ */
+export function withCurrentExerciseIds<T extends ExerciseRefs>(item: T): T {
+  const ids = [item.exerciseId, item.replacedExerciseId, ...(item.alternativeExerciseIds ?? [])];
+  if (!ids.some((id) => id && isRetiredExerciseId(id))) return item;
+  const exerciseId = item.exerciseId ? resolveExerciseId(item.exerciseId) : item.exerciseId;
+  return {
+    ...item,
+    exerciseId,
+    replacedExerciseId: item.replacedExerciseId && resolveExerciseId(item.replacedExerciseId),
+    alternativeExerciseIds: item.alternativeExerciseIds && [
+      ...new Set(item.alternativeExerciseIds.map(resolveExerciseId)),
+    ],
+    exercise:
+      item.exercise && item.exercise.id !== exerciseId
+        ? (CORE_EXERCISES_BY_ID.get(exerciseId ?? '') ?? { ...item.exercise, id: exerciseId! })
+        : item.exercise,
+  };
+}
+
+function withCurrentTemplateExerciseIds(template: WorkoutTemplateDto): WorkoutTemplateDto {
+  return { ...template, exercises: template.exercises.map(withCurrentExerciseIds) };
+}
+
+function withCurrentSessionExerciseIds(session: WorkoutSessionDto): WorkoutSessionDto {
+  return { ...session, exercises: session.exercises.map(withCurrentExerciseIds) };
+}
+
 export async function getCachedCatalog(): Promise<ExerciseDto[]> {
-  const cached = await idbGet<ExerciseDto[]>('exercise_catalog');
+  const stored = await idbGet<ExerciseDto[]>('exercise_catalog');
   const systemExercises = INITIAL_EXERCISE_CATALOG;
+  // System exercises merged into another one are gone from the catalog.
+  const cached = stored?.filter((e) => !(e.isSystem && isRetiredExerciseId(e.id)));
   if (cached && cached.length > 0) {
     const bySlug = new Map(cached.map((e) => [e.slug, e]));
-    let changed = false;
+    let changed = cached.length !== stored!.length;
     for (const sysEx of systemExercises) {
       if (!bySlug.has(sysEx.slug)) {
         bySlug.set(sysEx.slug, sysEx);
@@ -186,8 +229,11 @@ export async function getCachedWorkouts(): Promise<{
   if (cached && cached.folders.length > 0) {
     cached.folders = cached.folders.map((f) => ({
       ...linkLegacyStarterCopy(f, DEFAULT_STARTER_FOLDERS),
-      templates: f.templates.map((t) => linkLegacyStarterCopy(t, DEFAULT_STARTER_TEMPLATES)),
+      templates: f.templates.map((t) =>
+        withCurrentTemplateExerciseIds(linkLegacyStarterCopy(t, DEFAULT_STARTER_TEMPLATES)),
+      ),
     }));
+    cached.unfiledTemplates = cached.unfiledTemplates.map(withCurrentTemplateExerciseIds);
     const existingIds = new Set(cached.folders.map((f) => f.id));
     const existingNames = new Set(cached.folders.map((f) => f.name.toLowerCase()));
     const missingFolders = defaults.folders.filter(
@@ -223,7 +269,10 @@ export async function getCachedStretchingRoutines(): Promise<StretchingRoutineDt
   const stored = await idbGet<StretchingRoutineDto[]>('stretching_routines');
   const defaults = buildStarterStretchingRoutines();
   if (stored && stored.length > 0) {
-    const cached = stored.map((r) => linkLegacyStarterCopy(r, DEFAULT_STRETCHING_ROUTINES));
+    const cached = stored.map((r) => {
+      const linked = linkLegacyStarterCopy(r, DEFAULT_STRETCHING_ROUTINES);
+      return { ...linked, exercises: linked.exercises.map(withCurrentExerciseIds) };
+    });
     const existingNames = new Set(cached.map((r) => r.name.toLowerCase()));
     const missing = defaults.filter(
       (d) => !existingNames.has(d.name.toLowerCase()) && !cached.some((c) => c.id === d.id),
@@ -247,7 +296,8 @@ export async function setCachedStretchingRoutines(routines: StretchingRoutineDto
 // Active Session Persistence & Offline Queue (IndexedDB)
 // ─────────────────────────────────────────────────────────────────────────────
 export async function getLocalActiveSession(): Promise<WorkoutSessionDto | null> {
-  return idbGet<WorkoutSessionDto>('active_workout_session');
+  const session = await idbGet<WorkoutSessionDto>('active_workout_session');
+  return session && withCurrentSessionExerciseIds(session);
 }
 
 export async function saveLocalActiveSession(session: WorkoutSessionDto | null): Promise<void> {
@@ -506,6 +556,7 @@ export async function getLocalHistorySessions(): Promise<WorkoutSessionDto[]> {
   if (!hasIndexedDb()) {
     return Array.from(memoryHistory.values())
       .filter((s) => s.status === SessionStatus.COMPLETED)
+      .map(withCurrentSessionExerciseIds)
       .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
   }
   const db = await openDatabase();
@@ -514,9 +565,9 @@ export async function getLocalHistorySessions(): Promise<WorkoutSessionDto[]> {
     const store = tx.objectStore(STORES.SESSION_HISTORY);
     const req = store.getAll();
     req.onsuccess = () => {
-      const list = ((req.result as WorkoutSessionDto[]) ?? []).filter(
-        (s) => s.status === SessionStatus.COMPLETED,
-      );
+      const list = ((req.result as WorkoutSessionDto[]) ?? [])
+        .filter((s) => s.status === SessionStatus.COMPLETED)
+        .map(withCurrentSessionExerciseIds);
       resolve(list.sort((a, b) => b.startedAt.localeCompare(a.startedAt)));
     };
     req.onerror = () => reject(req.error);

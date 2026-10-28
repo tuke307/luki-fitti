@@ -22,9 +22,9 @@ import {
   type WorkoutSuggestionInputExercise,
 } from './progression.util';
 
-const BENCH = 'ex-barbell-bench-press';
-const SHOULDER_PRESS = 'ex-seated-dumbbell-shoulder-press';
-const PUSHDOWN = 'ex-cable-tricep-pushdown';
+const BENCH = 'ex-barbell-bench-press-medium-grip';
+const SHOULDER_PRESS = 'ex-dumbbell-shoulder-press';
+const PUSHDOWN = 'ex-triceps-pushdown-rope-attachment';
 
 const catalog = INITIAL_EXERCISE_CATALOG;
 const DAY_MS = 24 * 60 * 60 * 1000;

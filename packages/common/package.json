@@ -47,7 +47,7 @@
   "scripts": {
     "build": "tsc --build && tsc-alias -p tsconfig.json -f -fe .js",
     "lint": "eslint . --max-warnings 0",
-    "test": "node --import tsx --test src/**/*.spec.ts",
+    "test": "node --import tsx --test 'src/**/*.spec.ts'",
     "catalog:import": "tsx scripts/import-catalog.ts"
   },
   "dependencies": {

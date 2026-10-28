@@ -1,8 +1,15 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { findSimilarExercises } from '../../utils/exercise-match.util';
-import { INITIAL_EXERCISE_CATALOG, resolveExerciseMedia } from '../data';
+import {
+  DEFAULT_STARTER_TEMPLATES,
+  DEFAULT_STRETCHING_ROUTINES,
+  INITIAL_EXERCISE_CATALOG,
+  resolveExerciseMedia,
+} from '../data';
 import { localizeExercise } from '../localize';
+import { EXERCISE_OVERRIDES } from '../overrides';
+import { RETIRED_EXERCISE_IDS, resolveExerciseId } from '../retired';
 import { ALL_SYSTEM_EXERCISES, EXTENDED_EXERCISE_CATALOG } from './index';
 
 describe('extended exercise catalog', () => {
@@ -21,6 +28,54 @@ describe('extended exercise catalog', () => {
       ALL_SYSTEM_EXERCISES.length,
       INITIAL_EXERCISE_CATALOG.length + EXTENDED_EXERCISE_CATALOG.length,
     );
+  });
+
+  it('never shows two exercises with the same name', () => {
+    const norm = (s: string) =>
+      s
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+    for (const locale of ['en', 'de'] as const) {
+      const seen = new Map<string, string>();
+      for (const ex of ALL_SYSTEM_EXERCISES) {
+        const key = norm(localizeExercise(ex, locale).name);
+        assert.ok(!seen.has(key), `${locale}: ${ex.id} and ${seen.get(key)} are both "${key}"`);
+        seen.set(key, ex.id);
+      }
+    }
+  });
+
+  it('replaces every retired id with an existing exercise', () => {
+    const ids = new Set(ALL_SYSTEM_EXERCISES.map((e) => e.id));
+    for (const [retired, target] of Object.entries(RETIRED_EXERCISE_IDS)) {
+      assert.ok(!ids.has(retired), `retired id ${retired} is still in the catalog`);
+      assert.ok(ids.has(target), `${retired} → ${target} does not exist`);
+    }
+    assert.equal(resolveExerciseId('ex-benchpress-dumbbells'), 'ex-dumbbell-bench-press');
+    assert.equal(resolveExerciseId('ex-barbell-bench-press'), 'ex-barbell-bench-press-medium-grip');
+    assert.equal(resolveExerciseId('ex-dumbbell-bench-press'), 'ex-dumbbell-bench-press');
+  });
+
+  it('builds every core exercise on a dataset entry with its hand-written text', () => {
+    for (const [id, override] of Object.entries(EXERCISE_OVERRIDES)) {
+      const ex = INITIAL_EXERCISE_CATALOG.find((e) => e.id === id);
+      assert.ok(ex, `override ${id} has no dataset exercise`);
+      assert.equal(ex.name, override.name);
+      for (const alt of override.alternativeExerciseIds) {
+        assert.ok(
+          ALL_SYSTEM_EXERCISES.some((e) => e.id === alt),
+          `${id}: unknown alternative ${alt}`,
+        );
+      }
+    }
+    const starterIds = [
+      ...DEFAULT_STARTER_TEMPLATES.flatMap((t) => t.exercises),
+      ...DEFAULT_STRETCHING_ROUTINES.flatMap((r) => r.exercises),
+    ].map((e) => e.exerciseId);
+    for (const id of starterIds) assert.ok(id in EXERCISE_OVERRIDES, `starter uses ${id}`);
   });
 
   it('contains the requested machine variants with German names', () => {

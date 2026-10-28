@@ -15,7 +15,7 @@ final class LukiFittiDomainTests: XCTestCase {
         let english = StarterCatalogLoader.load(locale: .en)
         let german = StarterCatalogLoader.load(locale: .de)
         XCTAssertEqual(german.exercises.map(\.id), english.exercises.map(\.id))
-        XCTAssertEqual(german.exercises.first { $0.id == "ex-barbell-bench-press" }?.name, "Bankdrücken (Langhantel)")
+        XCTAssertEqual(german.exercises.first { $0.id == "ex-barbell-bench-press-medium-grip" }?.name, "Bankdrücken (Langhantel)")
         XCTAssertEqual(german.folders.first?.templates.first?.name, "Tag 1 — Brust & Trizeps")
     }
 
@@ -33,7 +33,7 @@ final class LukiFittiDomainTests: XCTestCase {
 
     func testGlobalExerciseHistoryAndProgressiveOverloadRecommendation() {
         let bundleData = StarterCatalogLoader.load()
-        let benchCatalog = bundleData.exercises.first { $0.id == "ex-barbell-bench-press" }
+        let benchCatalog = bundleData.exercises.first { $0.id == "ex-barbell-bench-press-medium-grip" }
         XCTAssertNotNil(benchCatalog)
 
         let pastSet1 = SessionSetDto(
@@ -80,7 +80,7 @@ final class LukiFittiDomainTests: XCTestCase {
             id: "sex-1",
             clientExerciseId: "sex-1",
             sessionId: "hist-1",
-            exerciseId: "ex-barbell-bench-press",
+            exerciseId: "ex-barbell-bench-press-medium-grip",
             exerciseNameSnapshot: "Barbell Bench Press",
             primaryMuscleSnapshot: .CHEST,
             exerciseTypeSnapshot: .STRENGTH,
@@ -110,7 +110,7 @@ final class LukiFittiDomainTests: XCTestCase {
         )
 
         let insight = ProgressionEngine.computeExerciseProgression(
-            exerciseId: "ex-barbell-bench-press",
+            exerciseId: "ex-barbell-bench-press-medium-grip",
             exerciseName: "Barbell Bench Press",
             historySessions: [pastSession],
             catalogExercise: benchCatalog,
@@ -142,7 +142,7 @@ final class LukiFittiDomainTests: XCTestCase {
         )
         let fatiguedEx = SessionExerciseDto(
             sessionId: "sess-hr",
-            exerciseId: "ex-barbell-bench-press",
+            exerciseId: "ex-barbell-bench-press-medium-grip",
             exerciseNameSnapshot: "Barbell Bench Press",
             primaryMuscleSnapshot: .CHEST,
             orderIndex: 0,
@@ -162,7 +162,7 @@ final class LukiFittiDomainTests: XCTestCase {
         )
 
         let insight = ProgressionEngine.computeExerciseProgression(
-            exerciseId: "ex-barbell-bench-press",
+            exerciseId: "ex-barbell-bench-press-medium-grip",
             exerciseName: "Barbell Bench Press",
             historySessions: [fatiguedSession],
             plannedSets: 1,
@@ -179,21 +179,21 @@ final class LukiFittiDomainTests: XCTestCase {
         let bundleData = StarterCatalogLoader.load()
         let ex1 = WorkoutTemplateExerciseDto(
             templateId: "tpl-1",
-            exerciseId: "ex-barbell-bench-press",
+            exerciseId: "ex-barbell-bench-press-medium-grip",
             orderIndex: 0,
             plannedSets: 3,
             restSeconds: 120
         )
         let ex2 = WorkoutTemplateExerciseDto(
             templateId: "tpl-1",
-            exerciseId: "ex-dumbbell-lateral-raise",
+            exerciseId: "ex-side-lateral-raise",
             orderIndex: 1,
             plannedSets: 3,
             restSeconds: 0
         )
         let ex3 = WorkoutTemplateExerciseDto(
             templateId: "tpl-1",
-            exerciseId: "ex-cable-tricep-pushdown",
+            exerciseId: "ex-triceps-pushdown-rope-attachment",
             orderIndex: 2,
             plannedSets: 3,
             restSeconds: 60
@@ -212,13 +212,13 @@ final class LukiFittiDomainTests: XCTestCase {
 
         let suggestion = ProgressionEngine.computeWorkoutExerciseSuggestion(
             workoutName: "Push Day — Chest & Shoulders",
-            exercises: [WorkoutSuggestionInputExercise(exerciseId: "ex-barbell-bench-press")],
+            exercises: [WorkoutSuggestionInputExercise(exerciseId: "ex-barbell-bench-press-medium-grip")],
             catalog: bundleData.exercises,
             historySessions: []
         )
         XCTAssertNotNil(suggestion)
         XCTAssertEqual(suggestion?.reasonType, .MISSING_MUSCLE)
-        XCTAssertNotEqual(suggestion?.suggestedExercise.id, "ex-barbell-bench-press")
+        XCTAssertNotEqual(suggestion?.suggestedExercise.id, "ex-barbell-bench-press-medium-grip")
 
         // Verify legacy FAILURE and MOBILITY JSON values decode safely
         let legacySetType = try JSONDecoder().decode(SetType.self, from: Data("\"FAILURE\"".utf8))

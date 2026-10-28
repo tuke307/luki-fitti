@@ -16,7 +16,7 @@ http:
         "estimatedDurationMinutes": 75,
         "exercises": [
           {
-            "exerciseId": "ex-leg-extension",
+            "exerciseId": "ex-leg-extensions",
             "orderIndex": 0,
             "plannedSets": 5,
             "warmupSets": 0,
@@ -37,7 +37,7 @@ http:
             "targetWeight": 310,
             "weightUnit": "KG",
             "restSeconds": 150,
-            "alternativeExerciseIds": ["ex-barbell-back-squat"]
+            "alternativeExerciseIds": ["ex-barbell-squat"]
           }
         ]
       }

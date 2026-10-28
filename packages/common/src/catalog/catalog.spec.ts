@@ -15,6 +15,7 @@ import {
   resolveSupportedLocale,
   SOURCE_LOCALE,
 } from './localize';
+import { EXERCISE_OVERRIDES } from './overrides';
 import { buildStarterStretchingRoutines, buildStarterWorkouts } from './starter';
 
 const translatedLocales = SUPPORTED_LOCALES.filter((l) => l !== SOURCE_LOCALE);
@@ -23,9 +24,9 @@ for (const locale of translatedLocales) {
   describe(`catalog translation completeness (${locale})`, () => {
     const tr = getCatalogTranslation(locale)!;
 
-    it('translates every system exercise with the same number of steps', () => {
+    it('translates every core exercise with the same number of steps', () => {
       for (const ex of INITIAL_EXERCISE_CATALOG) {
-        const text = tr.exercises[ex.id];
+        const text = EXERCISE_OVERRIDES[ex.id]?.[locale];
         assert.ok(text, `missing translation for ${ex.id}`);
         assert.ok(text.name.trim() && text.description.trim(), `empty text for ${ex.id}`);
         assert.equal(text.instructions.length, ex.instructions.length, `step count for ${ex.id}`);
@@ -47,7 +48,6 @@ for (const locale of translatedLocales) {
     it('has no stale keys', () => {
       const ids = (items: Array<{ id: string }>) => new Set(items.map((i) => i.id));
       const sections: Array<[Record<string, unknown>, Set<string>]> = [
-        [tr.exercises, ids(INITIAL_EXERCISE_CATALOG)],
         [tr.folders, ids(DEFAULT_STARTER_FOLDERS)],
         [tr.templates, ids(DEFAULT_STARTER_TEMPLATES)],
         [tr.routines, ids(DEFAULT_STRETCHING_ROUTINES)],
@@ -76,7 +76,9 @@ describe('resolveSupportedLocale', () => {
 });
 
 describe('catalog localization', () => {
-  const bench = INITIAL_EXERCISE_CATALOG.find((e) => e.id === 'ex-barbell-bench-press')!;
+  const bench = INITIAL_EXERCISE_CATALOG.find(
+    (e) => e.id === 'ex-barbell-bench-press-medium-grip',
+  )!;
 
   it('resolves system exercise text from the catalog and keeps the source name searchable', () => {
     const de = localizeExercise({ ...bench, name: 'stale db text' }, 'de');
@@ -119,7 +121,7 @@ describe('catalog localization', () => {
     const tpl = buildStarterWorkouts().folders[0]!.templates[0]!;
     const swapped = {
       ...tpl,
-      exercises: [{ ...tpl.exercises[0]!, exerciseId: 'ex-push-up', notes: 'own note' }],
+      exercises: [{ ...tpl.exercises[0]!, exerciseId: 'ex-pushups', notes: 'own note' }],
     };
     assert.equal(localizeTemplate(swapped, 'de').exercises[0]!.notes, 'own note');
   });
