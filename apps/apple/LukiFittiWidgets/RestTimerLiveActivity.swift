@@ -6,149 +6,143 @@ import LukiFittiDesign
 
 #if canImport(ActivityKit)
 import ActivityKit
-
-public struct WorkoutActivityAttributes: ActivityAttributes, Sendable {
-    public struct ContentState: Codable, Hashable, Sendable {
-        public var currentExerciseName: String
-        public var currentSetLabel: String
-        public var targetLoadLabel: String
-        public var liveHeartRateBpm: Int?
-        public var restTimerEndsAt: Date?
-        public var elapsedSeconds: Int
-
-        public init(
-            currentExerciseName: String,
-            currentSetLabel: String,
-            targetLoadLabel: String,
-            liveHeartRateBpm: Int? = nil,
-            restTimerEndsAt: Date? = nil,
-            elapsedSeconds: Int = 0
-        ) {
-            self.currentExerciseName = currentExerciseName
-            self.currentSetLabel = currentSetLabel
-            self.targetLoadLabel = targetLoadLabel
-            self.liveHeartRateBpm = liveHeartRateBpm
-            self.restTimerEndsAt = restTimerEndsAt
-            self.elapsedSeconds = elapsedSeconds
-        }
-    }
-
-    public var workoutName: String
-
-    public init(workoutName: String) {
-        self.workoutName = workoutName
-    }
-}
-
-public struct AddRestTimeIntent: AppIntent {
-    public static let title: LocalizedStringResource = "Add 15 Seconds Rest"
-    public init() {}
-    public func perform() async throws -> some IntentResult {
-        .result()
-    }
-}
-
-public struct SkipRestTimerIntent: AppIntent {
-    public static let title: LocalizedStringResource = "Skip Rest Timer"
-    public init() {}
-    public func perform() async throws -> some IntentResult {
-        .result()
-    }
-}
+import LukiFittiLiveActivity
 
 public struct RestTimerLiveActivity: Widget {
     public init() {}
 
     public var body: some WidgetConfiguration {
         ActivityConfiguration(for: WorkoutActivityAttributes.self) { context in
-            // Lock Screen / Banner Live Activity UI
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text(context.attributes.workoutName)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(LukiColors.accent)
-                    Spacer()
-                    if let bpm = context.state.liveHeartRateBpm {
-                        Text("❤️ \(bpm) BPM")
-                            .font(.caption.bold().monospacedDigit())
-                            .foregroundStyle(LukiColors.heartRose)
-                    }
-                }
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(context.state.currentExerciseName)
-                            .font(.subheadline.bold())
-                            .foregroundStyle(.white)
-                        Text("\(context.state.currentSetLabel) • \(context.state.targetLoadLabel)")
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    if let endsAt = context.state.restTimerEndsAt, endsAt > Date() {
-                        Text(timerInterval: Date()...endsAt, countsDown: true)
-                            .font(.title3.bold().monospacedDigit())
-                            .foregroundStyle(LukiColors.accent)
-                    }
-                }
-                HStack(spacing: 10) {
-                    Button(intent: AddRestTimeIntent()) {
-                        Text("+15s")
-                            .font(.footnote.weight(.medium))
-                    }
-                    Button(intent: SkipRestTimerIntent()) {
-                        Text("Skip Rest")
-                            .font(.footnote.weight(.medium))
-                    }
-                }
-            }
-            .padding(14)
-            .activityBackgroundTint(Color.black.opacity(0.9))
+            LockScreenWorkoutView(context: context)
+                .padding(14)
+                .activityBackgroundTint(nil)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    Text(context.state.currentSetLabel)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(LukiColors.accent)
-                }
-                DynamicIslandExpandedRegion(.trailing) {
-                    if let bpm = context.state.liveHeartRateBpm {
-                        Text("❤️ \(bpm)")
-                            .font(.caption.bold().monospacedDigit())
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(context.state.currentExerciseName)
+                            .font(.subheadline.weight(.semibold))
+                            .lineLimit(1)
+                        Text(context.state.currentSetLabel)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
                 }
+                DynamicIslandExpandedRegion(.trailing) {
+                    TimerValue(state: context.state)
+                        .font(.title3.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(LukiColors.accent)
+                }
                 DynamicIslandExpandedRegion(.bottom) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("\(context.state.currentExerciseName) — \(context.state.targetLoadLabel)")
-                            .font(.subheadline.weight(.semibold))
-                        HStack {
-                            Button(intent: AddRestTimeIntent()) {
-                                Text("+15s")
-                            }
-                            Button(intent: SkipRestTimerIntent()) {
-                                Text("Skip Rest")
-                            }
-                        }
-                        .font(.footnote.weight(.medium))
+                    HStack(spacing: 8) {
+                        Text(context.state.targetLoadLabel)
+                            .font(.subheadline.weight(.medium).monospacedDigit())
+                        Spacer()
+                        RestButtons(labels: context.attributes.labels, isResting: context.state.isResting)
                     }
                 }
             } compactLeading: {
-                Text(context.state.currentSetLabel)
-                    .font(.footnote.weight(.medium))
+                Image(systemName: context.state.isResting ? "timer" : "dumbbell.fill")
                     .foregroundStyle(LukiColors.accent)
             } compactTrailing: {
-                if let endsAt = context.state.restTimerEndsAt, endsAt > Date() {
-                    Text(timerInterval: Date()...endsAt, countsDown: true)
-                        .font(.footnote.monospacedDigit())
-                        .foregroundStyle(LukiColors.accent)
-                } else if let bpm = context.state.liveHeartRateBpm {
-                    Text("\(bpm) ♥")
-                        .font(.footnote.monospacedDigit())
-                        .foregroundStyle(LukiColors.heartRose)
-                }
-            } minimal: {
-                Image(systemName: "dumbbell.fill")
+                TimerValue(state: context.state)
+                    .font(.footnote.weight(.semibold).monospacedDigit())
                     .foregroundStyle(LukiColors.accent)
+                    .frame(maxWidth: 52)
+            } minimal: {
+                // Remaining rest (or elapsed time) instead of a static logo.
+                TimerValue(state: context.state)
+                    .font(.caption2.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(LukiColors.accent)
+                    .minimumScaleFactor(0.7)
             }
+        }
+    }
+}
+
+private struct LockScreenWorkoutView: View {
+    let context: ActivityViewContext<WorkoutActivityAttributes>
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(context.attributes.workoutName)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Spacer()
+                if let bpm = context.state.liveHeartRateBpm {
+                    Label("\(bpm)", systemImage: "heart.fill")
+                        .font(.footnote.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(LukiColors.heartRate)
+                        .accessibilityLabel("\(bpm) bpm")
+                }
+            }
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(context.state.currentExerciseName)
+                        .font(.headline)
+                        .lineLimit(1)
+                    Text([context.state.currentSetLabel, context.state.targetLoadLabel].filter { !$0.isEmpty }.joined(separator: " · "))
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 0) {
+                    Text(caption)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                    TimerValue(state: context.state)
+                        .font(.title2.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(context.state.isResting ? LukiColors.accent : .primary)
+                        .multilineTextAlignment(.trailing)
+                }
+            }
+            if context.state.isResting {
+                RestButtons(labels: context.attributes.labels, isResting: true)
+            }
+        }
+    }
+
+    private var caption: String {
+        if context.state.restPausedRemainingSeconds != nil { return context.attributes.labels.restPaused }
+        return context.state.isResting ? context.attributes.labels.rest : context.attributes.labels.elapsed
+    }
+}
+
+/// Counts down rest while resting, otherwise counts up the workout.
+private struct TimerValue: View {
+    let state: WorkoutActivityAttributes.ContentState
+
+    var body: some View {
+        if let paused = state.restPausedRemainingSeconds {
+            Text(LukiFormat.clock(paused))
+        } else if let endsAt = state.restTimerEndsAt, endsAt > Date() {
+            Text(timerInterval: Date()...endsAt, countsDown: true)
+        } else {
+            Text(state.workoutStartedAt, style: .timer)
+        }
+    }
+}
+
+private struct RestButtons: View {
+    let labels: WorkoutActivityAttributes.Labels
+    let isResting: Bool
+
+    var body: some View {
+        if isResting {
+            HStack(spacing: 8) {
+                Button(intent: AddRestTimeIntent()) {
+                    Text(labels.addRest)
+                }
+                .buttonStyle(.bordered)
+                Button(intent: SkipRestTimerIntent()) {
+                    Label(labels.skipRest, systemImage: "forward.end.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(LukiColors.accent)
+            }
+            .font(.subheadline.weight(.semibold))
         }
     }
 }

@@ -22,7 +22,7 @@ final class IOSActiveSessionUITests: XCTestCase {
             app.buttons["Skip Rest"].tap()
         }
 
-        // Scroll down to Finish & Save Workout button
+        // Scroll down to the Finish Workout button
         let finishBtn = app.buttons["ios.session.finishButton"]
         var scrollAttempts = 0
         while !finishBtn.isHittable && scrollAttempts < 5 {

@@ -5,14 +5,15 @@ final class IOSNavigationAndDashboardUITests: XCTestCase {
     func testDashboardRendersKPIsAndNavigatesAcrossAllTabs() {
         let app = IOSUITestHelpers.launchApp(extraArguments: ["--uitesting-seed-history"])
 
-        // Toolbar sync status (always reachable via accessibility) reports guest mode
-        let syncBadge = app.buttons["ios.header.syncBadge"].firstMatch
-        XCTAssertTrue(syncBadge.waitForExistence(timeout: 10))
-                XCTAssertTrue(syncBadge.label.contains("Guest"))
+        // Sync status is quiet in the toolbar but stays readable by VoiceOver on the profile button
+        let profileButton = app.buttons["ios.header.profileButton"].firstMatch
+        XCTAssertTrue(profileButton.waitForExistence(timeout: 10))
+        XCTAssertTrue(profileButton.label.contains("Guest"))
+        XCTAssertFalse(app.buttons["ios.header.syncBadge"].exists)
 
-        // Today: weekly goal and overview
+        // Today: weekly goal and weekly volume
         XCTAssertTrue(app.staticTexts["This week"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Last 30 days"].exists)
+        XCTAssertTrue(app.staticTexts["Weekly volume"].exists)
 
         // Navigate across tabs
         IOSUITestHelpers.navigateToTab(app, label: "Workouts")

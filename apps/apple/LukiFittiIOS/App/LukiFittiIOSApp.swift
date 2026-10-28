@@ -8,6 +8,7 @@ import LukiFittiAPI
 import LukiFittiStore
 import LukiFittiHealth
 import LukiFittiWatchSync
+import LukiFittiLiveActivity
 
 public enum LukiMainTab: String, CaseIterable, Sendable {
     case home
@@ -24,12 +25,16 @@ public final class LukiAppViewModel {
     public let store: OfflineStore
     public let healthCoordinator: HealthKitWorkoutCoordinator
     public let watchSyncCoordinator: WatchSyncCoordinator
+    private let liveActivity = WorkoutLiveActivityController()
 
     public var selectedTab: LukiMainTab = .home
     public var completedSummarySession: WorkoutSessionDto?
     public var showSyncConflictDialog: Bool = false
     public var deepLinkTokenType: String?
     public var deepLinkToken: String?
+
+    /// App language from the in-app preference (System / English / Deutsch).
+    public var locale: SupportedLocale { SupportedLocale.resolve(store.preferences.language) }
 
     public init(
         store: OfflineStore = OfflineStore(),
@@ -60,8 +65,19 @@ public final class LukiAppViewModel {
         self.watchSyncCoordinator.onCompletedSessionReceived = { [weak self] completed in
             self?.mergeIncomingWatchCompletedSession(completed)
         }
+        WorkoutLiveActivityActions.addRest = { [weak self] in self?.adjustRestTimer(deltaSeconds: 15) }
+        WorkoutLiveActivityActions.skipRest = { [weak self] in self?.skipRestTimer() }
         pushContextToWatch()
         pullFromWatchAndServer()
+    }
+
+    /// Mirrors the active session onto the Lock Screen and Dynamic Island.
+    public func syncLiveActivity() {
+        liveActivity.sync(
+            session: store.activeSession,
+            heartRate: healthCoordinator.currentHeartRateBpm,
+            locale: locale
+        )
     }
 
     public func pullFromWatchAndServer() {
@@ -420,26 +436,12 @@ public final class LukiAppViewModel {
 
     public func scheduleRestTimerNotification(seconds: Int, exerciseName: String) {
         guard store.preferences.notificationsEnabled, seconds > 0 else { return }
-        let center = UNUserNotificationCenter.current()
-        center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
-            guard granted else { return }
-            let content = UNMutableNotificationContent()
-            content.title = "Rest Timer Done!"
-            content.body = "Ready for your next set of \(exerciseName)."
-            if self.store.preferences.restTimerSound {
-                content.sound = .default
-            }
-            let trigger = UNTimeIntervalNotificationTrigger(
-                timeInterval: TimeInterval(max(1, seconds)),
-                repeats: false
-            )
-            let req = UNNotificationRequest(
-                identifier: "lukifitti.rest.timer",
-                content: content,
-                trigger: trigger
-            )
-            center.add(req)
-        }
+        scheduleNotification(
+            identifier: "lukifitti.rest.timer",
+            title: locale("Rest is over"),
+            body: locale("Time for your next set of %@.", exerciseName),
+            after: TimeInterval(max(1, seconds))
+        )
     }
 
     public func cancelRestTimerNotification() {
@@ -449,22 +451,27 @@ public final class LukiAppViewModel {
     }
 
     public func sendTestNotification() {
-        let center = UNUserNotificationCenter.current()
-        center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+        scheduleNotification(
+            identifier: "lukifitti.test.notification",
+            title: locale("Rest is over"),
+            body: locale("This is how rest timer alerts will look."),
+            after: 1
+        )
+    }
+
+    /// Strings and preferences are resolved on the main actor before the authorization callback.
+    private func scheduleNotification(identifier: String, title: String, body: String, after interval: TimeInterval) {
+        let playSound = store.preferences.restTimerSound
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
             guard granted else { return }
             let content = UNMutableNotificationContent()
-            content.title = "Rest Done — LukiFitti Test"
-            content.body = "Notifications and gym timer alerts are active for your workouts!"
-            if self.store.preferences.restTimerSound {
+            content.title = title
+            content.body = body
+            if playSound {
                 content.sound = .default
             }
-            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-            let req = UNNotificationRequest(
-                identifier: "lukifitti.test.notification",
-                content: content,
-                trigger: trigger
-            )
-            center.add(req)
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
+            UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: identifier, content: content, trigger: trigger))
         }
     }
 
@@ -733,6 +740,10 @@ public struct LukiFittiIOSApp: App {
     public var body: some Scene {
         WindowGroup {
             AppShellView(viewModel: viewModel)
+                .environment(\.lukiLocale, viewModel.locale)
+                .onChange(of: viewModel.store.activeSession, initial: true) {
+                    viewModel.syncLiveActivity()
+                }
                 .onOpenURL { url in
                     viewModel.handleUniversalLink(url)
                 }
@@ -753,6 +764,7 @@ public struct AppShellView: View {
     @State private var contentTab: LukiMainTab = .home
     @State private var isSessionPresented = false
     @State private var isProfilePresented = false
+    @Environment(\.lukiLocale) private var tr
 
     public init(viewModel: LukiAppViewModel) {
         self.viewModel = viewModel
@@ -764,17 +776,17 @@ public struct AppShellView: View {
 
     public var body: some View {
         TabView(selection: $contentTab) {
-            Tab("Today", systemImage: "sun.max", value: LukiMainTab.home) {
-                tabRoot(title: "Today") { HomeDashboardView(viewModel: viewModel) }
+            Tab(tr("Today"), systemImage: "sun.max", value: LukiMainTab.home) {
+                tabRoot(title: tr("Today")) { HomeDashboardView(viewModel: viewModel) }
             }
-            Tab("Workouts", systemImage: "dumbbell", value: LukiMainTab.workouts) {
-                tabRoot(title: "Workouts") { WorkoutsView(viewModel: viewModel) }
+            Tab(tr("Workouts"), systemImage: "dumbbell", value: LukiMainTab.workouts) {
+                tabRoot(title: tr("Workouts")) { WorkoutsView(viewModel: viewModel) }
             }
-            Tab("History", systemImage: "clock.arrow.circlepath", value: LukiMainTab.diary) {
-                tabRoot(title: "History") { DiaryAnalyticsView(viewModel: viewModel) }
+            Tab(tr("History"), systemImage: "clock.arrow.circlepath", value: LukiMainTab.diary) {
+                tabRoot(title: tr("History")) { DiaryAnalyticsView(viewModel: viewModel) }
             }
-            Tab("Library", systemImage: "books.vertical", value: LukiMainTab.exercises) {
-                tabRoot(title: "Library") { ExercisesAndStretchingView(viewModel: viewModel) }
+            Tab(tr("Library"), systemImage: "books.vertical", value: LukiMainTab.exercises) {
+                tabRoot(title: tr("Library")) { ExercisesAndStretchingView(viewModel: viewModel) }
             }
         }
         .tint(LukiColors.accent)
@@ -790,9 +802,9 @@ public struct AppShellView: View {
                             Button {
                                 isSessionPresented = false
                             } label: {
-                                Image(systemName: "chevron.down")
+                                Label(tr("Minimize"), systemImage: "chevron.down")
                             }
-                            .accessibilityLabel("Minimize workout")
+                            .accessibilityLabel(tr("Minimize workout"))
                             .accessibilityIdentifier("ios.session.minimizeButton")
                         }
                     }
@@ -802,11 +814,11 @@ public struct AppShellView: View {
         .sheet(isPresented: $isProfilePresented, onDismiss: syncSelectionFromContent) {
             NavigationStack {
                 ProfileAndAuthView(viewModel: viewModel)
-                    .navigationTitle("Profile")
+                    .navigationTitle(tr("Profile"))
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
-                            Button("Done") { isProfilePresented = false }
+                            Button(tr("Done")) { isProfilePresented = false }
                         }
                     }
             }
@@ -821,17 +833,17 @@ public struct AppShellView: View {
             }
         }
         .alert(
-            "Workout changed on another device",
+            tr("Workout changed on another device"),
             isPresented: Binding(
                 get: { viewModel.store.conflictItem != nil },
                 set: { if !$0 { viewModel.store.conflictItem = nil } }
             )
         ) {
             if let conflict = viewModel.store.conflictItem {
-                Button("Use other device") {
+                Button(tr("Use other device")) {
                     Task { await viewModel.store.resolveConflict(clientSessionId: conflict.clientSessionId, keepLocal: false) }
                 }
-                Button("Keep this device") {
+                Button(tr("Keep this device")) {
                     Task { await viewModel.store.resolveConflict(clientSessionId: conflict.clientSessionId, keepLocal: true) }
                 }
             }
@@ -847,14 +859,14 @@ public struct AppShellView: View {
             : nil
         let summary: (WorkoutSessionDto?) -> String = { session in
             guard let session else { return "–" }
-            return "\(session.totalSetsCompleted) sets done · changed \(Self.conflictTime(session.lastSyncedAt))"
+            return tr("%d sets done · changed %@", session.totalSetsCompleted, Self.conflictTime(session.lastSyncedAt))
         }
-        return """
-        Both this device and another one changed \(item.payload.workoutNameSnapshot). Pick the version you want to keep.
-
-        This device: \(summary(local))
-        Other device: \(summary(item.serverConflictSession))
-        """
+        return [
+            tr("Both this device and another one changed %@. Pick the version you want to keep.", item.payload.workoutNameSnapshot),
+            "",
+            tr("This device: %@", summary(local)),
+            tr("Other device: %@", summary(item.serverConflictSession)),
+        ].joined(separator: "\n")
     }
 
     private static func conflictTime(_ iso: String?) -> String {
@@ -894,13 +906,19 @@ public struct AppShellView: View {
                 .toolbar {
                     ToolbarItemGroup(placement: .topBarTrailing) {
                         restTimerPill
-                        syncIndicator
+                        if showsSyncIndicator {
+                            syncIndicator
+                        }
                         Button {
                             viewModel.selectedTab = .profile
                         } label: {
-                            Image(systemName: viewModel.store.currentUser == nil ? "person.crop.circle" : "person.crop.circle.fill")
+                            Label(
+                                tr("Profile and settings"),
+                                systemImage: viewModel.store.currentUser == nil ? "person.crop.circle" : "person.crop.circle.fill"
+                            )
                         }
-                        .accessibilityLabel("Profile and settings")
+                        // Sync status stays available to VoiceOver even while the icon is hidden.
+                        .accessibilityLabel(profileAccessibilityLabel)
                         .accessibilityIdentifier("ios.header.profileButton")
                     }
                 }
@@ -914,19 +932,29 @@ public struct AppShellView: View {
             Button {
                 viewModel.selectedTab = .session
             } label: {
-                Label(
-                    String(format: "%d:%02d", restStatus.remainingSeconds / 60, restStatus.remainingSeconds % 60),
-                    systemImage: "timer"
-                )
-                .labelStyle(.titleAndIcon)
-                .monospacedDigit()
+                Label(LukiFormat.clock(restStatus.remainingSeconds), systemImage: "timer")
+                    .labelStyle(.titleAndIcon)
+                    .monospacedDigit()
             }
+            .accessibilityLabel(tr("Rest %@", LukiFormat.clock(restStatus.remainingSeconds)))
             .accessibilityIdentifier("ios.header.restTimerPill")
         }
     }
 
-    /// Always reachable by VoiceOver/UI tests; visually it is a quiet cloud glyph that only
-    /// changes when the user needs to act (offline, unsynced changes, sign-in needed).
+    /// Quiet until it matters: the icon only appears while syncing or when the person can act on
+    /// it (offline with changes, sign-in needed, conflict). The profile button carries the status
+    /// for VoiceOver the rest of the time.
+    private var showsSyncIndicator: Bool {
+        syncNeedsAttention || (viewModel.store.currentUser != nil && viewModel.store.syncState == .SYNCING)
+    }
+
+    /// Mentions the sync state only when it isn't the quiet "synced" default.
+    private var profileAccessibilityLabel: String {
+        let base = tr("Profile and settings")
+        let isQuiet = viewModel.store.currentUser != nil && viewModel.store.syncState == .SYNCED
+        return isQuiet ? base : "\(base). \(syncBadgeTitle)"
+    }
+
     private var syncIndicator: some View {
         Button {
             if viewModel.store.currentUser == nil {
@@ -965,15 +993,15 @@ public struct AppShellView: View {
 
     private var syncBadgeTitle: String {
         if viewModel.store.currentUser == nil {
-            return "Guest – saved on this device only"
+            return tr("Guest – saved on this device only")
         }
         switch viewModel.store.syncState {
-        case .SYNCED: return "Synced"
-        case .SYNCING: return "Syncing"
-        case .SAVED_LOCALLY: return "Saved Locally (\(viewModel.store.syncQueue.count))"
-        case .CONFLICT: return "Sync Conflict"
-        case .AUTH_EXPIRED: return "Sign in to sync"
-        case .OFFLINE: return "Offline (\(viewModel.store.syncQueue.count))"
+        case .SYNCED: return tr("Synced")
+        case .SYNCING: return tr("Syncing")
+        case .SAVED_LOCALLY: return tr("Not synced yet: %d changes", viewModel.store.syncQueue.count)
+        case .CONFLICT: return tr("Changed on two devices")
+        case .AUTH_EXPIRED: return tr("Sign in to sync")
+        case .OFFLINE: return tr("Offline. %d changes saved on this device", viewModel.store.syncQueue.count)
         }
     }
 }
@@ -982,6 +1010,7 @@ public struct AppShellView: View {
 struct SessionAccessoryView: View {
     @Bindable var viewModel: LukiAppViewModel
     let onOpen: () -> Void
+    @Environment(\.lukiLocale) private var tr
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -992,8 +1021,9 @@ struct SessionAccessoryView: View {
                     Circle()
                         .fill(LukiColors.accent)
                         .frame(width: 8, height: 8)
+                        .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 0) {
-                        Text(session?.workoutNameSnapshot ?? viewModel.completedSummarySession?.workoutNameSnapshot ?? "Workout")
+                        Text(session?.workoutNameSnapshot ?? viewModel.completedSummarySession?.workoutNameSnapshot ?? tr("Workout"))
                             .font(.subheadline.weight(.semibold))
                             .lineLimit(1)
                         Text(subtitle(session: session, rest: rest, now: context.date))
@@ -1005,23 +1035,25 @@ struct SessionAccessoryView: View {
                     Image(systemName: "chevron.up")
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
                 }
                 .padding(.horizontal, 16)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Return to workout")
+            .accessibilityLabel(tr("Return to workout"))
+            .accessibilityValue(subtitle(session: session, rest: rest, now: context.date))
             .accessibilityIdentifier("ios.shell.sessionAccessory")
         }
     }
 
     private func subtitle(session: WorkoutSessionDto?, rest: RestTimerStatus, now: Date) -> String {
-        guard let session else { return "Done" }
+        guard let session else { return tr("Done") }
         let started = ISO8601DateFormatter.lukiParse(session.startedAt) ?? now
         let elapsed = session.status == .PAUSED ? session.activeDurationSeconds : max(0, Int(now.timeIntervalSince(started)))
-        var text = String(format: "%d:%02d", elapsed / 60, elapsed % 60)
+        var text = LukiFormat.clock(elapsed)
         if rest.isRunning || rest.isPaused {
-            text += String(format: " · Rest %d:%02d", rest.remainingSeconds / 60, rest.remainingSeconds % 60)
+            text += " · " + tr("Rest %@", LukiFormat.clock(rest.remainingSeconds))
         }
         return text
     }
