@@ -310,7 +310,7 @@ function ServiceCarouselCard({
           className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
         {aiBadgeLabel && (
-          <span className="absolute top-2 right-2 z-10 inline-flex items-center gap-1 rounded px-2 py-0.5 bg-black/60 text-white text-[10px] leading-none font-medium backdrop-blur-sm pointer-events-none select-none">
+          <span className="absolute top-2 right-2 z-10 inline-flex items-center gap-1 rounded px-2 py-0.5 bg-black/60 text-white text-[0.625rem] leading-none font-medium backdrop-blur-sm pointer-events-none select-none">
             ✦ {aiBadgeLabel}
           </span>
         )}

@@ -2,7 +2,7 @@
  * Shared helpers for Active Session (`ActiveSessionView`) set logging, rest
  * timer interaction, and session completion.
  */
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 /**
  * Toggle completion on the 1-indexed set row (`session-set-row-<setNumber>`),
@@ -13,7 +13,7 @@ export async function toggleCompleteSetRow(page: Page, setNumber: number): Promi
   await expect(row).toBeVisible({ timeout: 10_000 });
 
   const buttons = row.getByRole('button', {
-    name: /Complete set|Mark set incomplete/i,
+    name: /Complete set|not done/i,
   });
   const count = await buttons.count();
   for (let i = 0; i < count; i++) {
@@ -58,4 +58,24 @@ export async function finishActiveWorkout(page: Page, notes?: string): Promise<v
   await expect(
     page.getByText(/Workout saved|Training gespeichert/i),
   ).toBeVisible({ timeout: 10_000 });
+}
+
+/**
+ * Open the set badge menu for a 1-indexed set inside `scope` and pick an item, e.g. a set type
+ * ("Warm-up") or "Delete Set".
+ */
+export async function chooseFromSetMenu(
+  page: Page,
+  scope: Locator,
+  setNumber: number,
+  item: string,
+): Promise<void> {
+  await scope.getByRole('button', { name: new RegExp(`^Set ${setNumber}:`) }).click();
+  const menu = page.getByRole('menu');
+  await menu
+    .getByRole('menuitemradio', { name: item, exact: true })
+    .or(menu.getByRole('menuitem', { name: item, exact: true }))
+    .click();
+  // The rest of the page is hidden from assistive tech until the menu has fully closed.
+  await expect(menu).toBeHidden();
 }

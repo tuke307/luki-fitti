@@ -278,15 +278,17 @@ function MuscleAnatomySvg({
   primary: MuscleGroup;
   secondary: MuscleGroup[];
 }) {
-  const getFill = (mg: MuscleGroup) => {
-    if (primary === mg || primary === MuscleGroup.FULL_BODY) return '#CCFF00';
-    if (secondary.includes(mg)) return '#00E5FF';
-    return 'currentColor';
-  };
+  const { t } = useLocale();
+
+  // Primary and secondary muscles share the accent and differ by strength, not by hue.
+  const getFill = (mg: MuscleGroup) =>
+    primary === mg || primary === MuscleGroup.FULL_BODY || secondary.includes(mg)
+      ? 'var(--primary)'
+      : 'currentColor';
 
   const getOpacity = (mg: MuscleGroup) => {
     if (primary === mg || primary === MuscleGroup.FULL_BODY) return 0.95;
-    if (secondary.includes(mg)) return 0.65;
+    if (secondary.includes(mg)) return 0.45;
     return 0.16;
   };
 
@@ -294,7 +296,8 @@ function MuscleAnatomySvg({
     <svg
       viewBox="0 0 120 110"
       className="text-muted-foreground h-16 w-20 shrink-0"
-      aria-label="Anatomical Muscle Highlight"
+      role="img"
+      aria-label={t.a11y.muscleHighlight}
     >
       {/* Front Silhouette (Left) */}
       <g transform="translate(8, 4)">

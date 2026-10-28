@@ -61,7 +61,9 @@ import {
 } from '@luki-fitti/common/enums';
 import type { WorkoutSessionDto } from '@luki-fitti/common/schemas';
 import { ExercisePicker } from './exercise-picker';
+import { ConfirmDestructiveDialog } from './confirm-destructive-dialog';
 import { NumberInput } from './number-input';
+import { bigVolume, formatVolume, unitLabel, weightInUnit } from '@/lib/format/weight';
 import { getSetBadgeLabels, SET_TYPE_TEXT_CLASS, SetTypeBadge } from './set-type-badge';
 
 const LBS_TO_KG = 0.45359237;
@@ -85,6 +87,9 @@ export function DiaryAnalyticsView() {
   const [selectedExerciseId, setSelectedExerciseId] = useState<string>('ALL');
   const [inspectingSession, setInspectingSession] = useState<WorkoutSessionDto | null>(null);
   const [visibleCount, setVisibleCount] = useState<number>(20);
+  const [pendingDelete, setPendingDelete] = useState<WorkoutSessionDto | null>(null);
+  const unit = unitLabel(weightUnit);
+  const bigUnit = bigVolume(0, weightUnit).label;
 
   const filteredSessions = useMemo(() => {
     const cutoffMs =
@@ -251,9 +256,9 @@ export function DiaryAnalyticsView() {
         label: formatShortDayMonth(p.date),
         fullDate: formatDateTime(p.date),
         workoutName: p.workoutName,
-        est1RM: p.est1RM,
-        maxWeightKg: p.maxWeightKg,
-        volumeTons: Math.round((p.volumeKg / 1000) * 10) / 10,
+        est1RM: weightInUnit(p.est1RM, weightUnit),
+        maxWeightKg: weightInUnit(p.maxWeightKg, weightUnit),
+        volumeTons: bigVolume(p.volumeKg, weightUnit).value,
         volumeKg: p.volumeKg,
         sets: 0,
       }));
@@ -270,11 +275,11 @@ export function DiaryAnalyticsView() {
       workoutName: s.workoutNameSnapshot,
       est1RM: 0,
       maxWeightKg: 0,
-      volumeTons: Math.round((s.totalVolumeKg / 1000) * 10) / 10,
+      volumeTons: bigVolume(s.totalVolumeKg, weightUnit).value,
       volumeKg: Math.round(s.totalVolumeKg),
       sets: s.totalSetsCompleted,
     }));
-  }, [filteredSessions, selectedExerciseId, stats.progression]);
+  }, [filteredSessions, selectedExerciseId, stats.progression, weightUnit]);
 
   // Dynamic activity breakdown matching the selected period ('week' | 'month' | 'year' | 'all')
   const activityData = useMemo(() => {
@@ -434,7 +439,7 @@ export function DiaryAnalyticsView() {
           <Filter className="h-3.5 w-3.5 shrink-0" /> {t.diary.filterAnalyticsLabel}
         </div>
         <NativeSelect
-          aria-label="Filter analytics by muscle group"
+          aria-label={t.a11y.filterMuscle}
           value={filterMuscle}
           onChange={(e) => setFilterMuscle(e.target.value as MuscleGroup | 'ALL')}
           className="w-full sm:w-auto"
@@ -452,7 +457,7 @@ export function DiaryAnalyticsView() {
           value={selectedExerciseId}
           emptyOptionLabel={t.diary.allExercises}
           emptyOptionValue="ALL"
-          ariaLabel="Filter analytics by exercise"
+          ariaLabel={t.a11y.filterExercise}
           onValueChange={(val) => setSelectedExerciseId(val || 'ALL')}
           className="w-full sm:w-72"
           triggerClassName="bg-secondary h-8 text-xs"
@@ -471,7 +476,7 @@ export function DiaryAnalyticsView() {
           },
           {
             label: t.diary.workingVolumeTitle,
-            value: `${stats.totalVolumeKg.toLocaleString()} kg`,
+            value: `${formatVolume(stats.totalVolumeKg, weightUnit)} ${unit}`,
             sub: t.diary.workingVolumeSub,
           },
           {
@@ -487,12 +492,12 @@ export function DiaryAnalyticsView() {
         ].map((row) => (
           <div key={row.label} className="flex items-center justify-between gap-4 px-5 py-3.5">
             <dt className="min-w-0">
-              <span className="block text-[17px]">{row.label}</span>
+              <span className="block text-[1.0625rem]">{row.label}</span>
               {row.sub && (
-                <span className="text-muted-foreground block text-[13px]">{row.sub}</span>
+                <span className="text-muted-foreground block text-[0.8125rem]">{row.sub}</span>
               )}
             </dt>
-            <dd className="text-muted-foreground shrink-0 text-[17px] tabular-nums">{row.value}</dd>
+            <dd className="text-muted-foreground shrink-0 text-[1.0625rem] tabular-nums">{row.value}</dd>
           </div>
         ))}
       </dl>
@@ -509,7 +514,7 @@ export function DiaryAnalyticsView() {
               {t.diary.strengthLegend}
             </span>
             <span className="flex items-center gap-1">
-              <span className="bg-accent inline-block h-2.5 w-2.5 rounded-sm" />{' '}
+              <span className="border-set-stretch inline-block h-2.5 w-2.5 rounded-full border-2" />{' '}
               {t.diary.stretchingLegend}
             </span>
           </div>
@@ -541,23 +546,17 @@ export function DiaryAnalyticsView() {
                 const hasStretch = day.sessions.some(
                   (s) => s.sessionType === SessionType.STRETCHING,
                 );
-                return (
-                  <div
-                    key={day.iso}
-                    onClick={() => {
-                      if (day.sessions[0]) setInspectingSession(day.sessions[0]);
-                    }}
-                    title={`${day.iso} (${day.weekdayLabel}): ${day.sessions.length} ${t.common.sessions}`}
-                    className={`flex flex-col items-center justify-center rounded-xl border px-1.5 py-2 text-xs transition ${
-                      period === 'week' ? 'min-h-16' : 'h-12'
-                    } ${
-                      hasStrength
-                        ? 'border-primary/60 bg-primary/12 text-primary cursor-pointer font-bold'
-                        : hasStretch
-                          ? 'border-accent/60 bg-accent/12 text-accent cursor-pointer font-bold'
-                          : 'bg-secondary/30 text-muted-foreground'
-                    }`}
-                  >
+                const dayClass = `relative flex flex-col items-center justify-center rounded-xl border px-1.5 py-2 text-xs transition ${
+                  period === 'week' ? 'min-h-16' : 'h-12'
+                } ${
+                  hasStrength
+                    ? 'border-primary/60 bg-primary/12 text-primary font-bold'
+                    : hasStretch
+                      ? 'border-set-stretch border-2 bg-card text-foreground font-bold'
+                      : 'bg-secondary/30 text-muted-foreground'
+                }`;
+                const dayContent = (
+                  <>
                     {period === 'week' && (
                       <span className="text-xs font-medium opacity-75">{day.weekdayLabel}</span>
                     )}
@@ -565,7 +564,34 @@ export function DiaryAnalyticsView() {
                     {day.sessions.length > 0 && (
                       <span className="text-xs">{day.sessions.length}x</span>
                     )}
-                  </div>
+                    {hasStrength && hasStretch && (
+                      <span
+                        aria-hidden="true"
+                        className="border-set-stretch absolute top-1 right-1 size-2 rounded-full border-2"
+                      />
+                    )}
+                  </>
+                );
+                if (day.sessions.length === 0) {
+                  return (
+                    <div key={day.iso} className={dayClass}>
+                      {dayContent}
+                    </div>
+                  );
+                }
+                return (
+                  <button
+                    key={day.iso}
+                    type="button"
+                    onClick={() => setInspectingSession(day.sessions[0]!)}
+                    aria-label={format(t.a11y.dayWorkouts, {
+                      date: `${day.weekdayLabel} ${day.dayNum}`,
+                      count: day.sessions.length,
+                    })}
+                    className={`${dayClass} focus-visible:ring-ring/50 outline-hidden focus-visible:ring-[3px]`}
+                  >
+                    {dayContent}
+                  </button>
                 );
               })}
             </div>
@@ -585,18 +611,20 @@ export function DiaryAnalyticsView() {
             {activityData.items.map((bucket) => {
               const hasSessions = bucket.sessions.length > 0;
               return (
-                <div
+                <button
                   key={bucket.key}
+                  type="button"
+                  disabled={!hasSessions}
                   onClick={() => {
                     if (bucket.sessions[0]) setInspectingSession(bucket.sessions[0]);
                   }}
-                  className={`flex flex-col justify-between rounded-2xl border p-3 text-xs transition ${
+                  className={`focus-visible:ring-ring/50 flex flex-col justify-between rounded-2xl border p-3 text-left text-xs outline-hidden transition focus-visible:ring-[3px] ${
                     hasSessions
-                      ? 'border-primary/50 bg-primary/12 cursor-pointer'
+                      ? 'border-primary/50 bg-primary/12'
                       : 'bg-secondary/30 text-muted-foreground'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
+                  <span className="flex w-full items-center justify-between">
                     <span className="font-display font-bold">{bucket.label}</span>
                     <span
                       className={`tabular-nums text-xs font-semibold ${
@@ -605,12 +633,12 @@ export function DiaryAnalyticsView() {
                     >
                       {bucket.sessions.length} {t.diary.sessShort}
                     </span>
-                  </div>
-                  <div className="text-muted-foreground tabular-nums mt-2 text-xs">
-                    {bucket.totalSets} {t.common.sets} • {(bucket.totalVolumeKg / 1000).toFixed(1)}t
-                    vol
-                  </div>
-                </div>
+                  </span>
+                  <span className="text-muted-foreground tabular-nums mt-2 block text-xs">
+                    {bucket.totalSets} {t.common.sets} ·{' '}
+                    {bigVolume(bucket.totalVolumeKg, weightUnit).value} {bigUnit}
+                  </span>
+                </button>
               );
             })}
           </div>
@@ -639,11 +667,15 @@ export function DiaryAnalyticsView() {
           <div className="flex items-center gap-3 text-xs">
             <span className="flex items-center gap-1.5 font-semibold">
               <span className="bg-primary inline-block h-2.5 w-2.5 rounded-sm" />
-              {selectedExerciseId !== 'ALL' ? t.diary.est1RmLegend : t.diary.volumeTonsLegend}
+              {format(selectedExerciseId !== 'ALL' ? t.diary.est1RmLegend : t.diary.volumeTonsLegend, {
+                unit: selectedExerciseId !== 'ALL' ? unit : bigUnit,
+              })}
             </span>
             <span className="flex items-center gap-1.5 font-semibold">
-              <span className="bg-accent inline-block h-2.5 w-2.5 rounded-full" />
-              {selectedExerciseId !== 'ALL' ? t.diary.maxWeightLegend : t.diary.completedSetsLegend}
+              <span className="bg-chart-2 inline-block h-2.5 w-2.5 rounded-full" />
+              {selectedExerciseId !== 'ALL'
+                ? format(t.diary.maxWeightLegend, { unit })
+                : t.diary.completedSetsLegend}
             </span>
           </div>
         </div>
@@ -668,21 +700,21 @@ export function DiaryAnalyticsView() {
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.18)" />
                 <XAxis
                   dataKey="label"
-                  tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+                  tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
                   yAxisId="left"
-                  tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+                  tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
                   axisLine={false}
                   tickLine={false}
-                  unit={selectedExerciseId !== 'ALL' ? 'kg' : 't'}
+                  unit={selectedExerciseId !== 'ALL' ? unit : bigUnit}
                 />
                 <YAxis
                   yAxisId="right"
                   orientation="right"
-                  tick={{ fontSize: 10, fill: 'var(--accent)' }}
+                  tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
                   axisLine={false}
                   tickLine={false}
                 />
@@ -717,21 +749,21 @@ export function DiaryAnalyticsView() {
                                 : key === 'sets'
                                   ? t.diary.setsSmall
                                   : key === 'est1RM'
-                                    ? 'Est. 1RM'
-                                    : t.diary.maxWeightLegend;
+                                    ? t.diary.estMaxLabel
+                                    : format(t.diary.maxWeightLegend, { unit });
                             const metricValue =
                               key === 'volumeTons'
-                                ? `${val} t`
+                                ? `${val} ${bigUnit}`
                                 : key === 'sets'
                                   ? `${val} ${t.common.sets}`
-                                  : `${val} kg`;
+                                  : `${val} ${unit}`;
 
                             return (
                               <div key={key} className="flex items-center justify-between gap-2.5">
                                 <span className="text-muted-foreground flex items-center gap-1.5">
                                   <span
                                     className={`inline-block h-2 w-2 shrink-0 rounded-full ${
-                                      isPrimary ? 'bg-primary' : 'bg-accent'
+                                      isPrimary ? 'bg-primary' : 'bg-chart-2'
                                     }`}
                                   />
                                   {metricLabel}
@@ -810,7 +842,7 @@ export function DiaryAnalyticsView() {
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold">{m.label}</span>
                     <span className="tabular-nums text-muted-foreground">
-                      {m.sets} {t.common.sets} ({m.pct}%) • {m.volumeKg.toLocaleString()} kg
+                      {m.sets} {t.common.sets} ({m.pct}%) · {formatVolume(m.volumeKg, weightUnit)} {unit}
                     </span>
                   </div>
                   <Progress value={Math.max(4, m.pct)} className="bg-secondary h-2" />
@@ -844,10 +876,10 @@ export function DiaryAnalyticsView() {
                   </div>
                   <div className="text-right">
                     <p className="tabular-nums text-primary font-semibold">
-                      {pr.maxWeightKg} kg × {pr.reps}
+                      {weightInUnit(pr.maxWeightKg, weightUnit)} {unit} × {pr.reps}
                     </p>
                     <p className="text-muted-foreground tabular-nums text-xs">
-                      Est. 1RM: {pr.est1RM} kg
+                      {t.diary.estMaxLabel}: {weightInUnit(pr.est1RM, weightUnit)} {unit}
                     </p>
                   </div>
                 </div>
@@ -972,7 +1004,7 @@ export function DiaryAnalyticsView() {
                       <strong className="tabular-nums text-primary">
                         {session.sessionType === SessionType.STRETCHING
                           ? `${Math.round(session.totalStretchSeconds / 60)}m`
-                          : `${session.totalVolumeKg.toLocaleString()} kg`}
+                          : `${formatVolume(session.totalVolumeKg, weightUnit)} ${unit}`}
                       </strong>
                     </div>
                   </div>
@@ -992,9 +1024,11 @@ export function DiaryAnalyticsView() {
                       data-testid="diary-session-delete"
                       variant="ghost"
                       size="icon"
-                      aria-label={`Delete session ${session.workoutNameSnapshot}`}
-                      onClick={() => void deleteHistoricalSession(session.clientSessionId)}
-                      className="text-muted-foreground hover:text-destructive size-8"
+                      aria-label={format(t.a11y.deleteWorkoutSession, {
+                        name: session.workoutNameSnapshot,
+                      })}
+                      onClick={() => setPendingDelete(session)}
+                      className="text-muted-foreground hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -1103,13 +1137,13 @@ export function DiaryAnalyticsView() {
                               />
                               <XAxis
                                 dataKey="minLabel"
-                                tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+                                tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
                                 axisLine={false}
                                 tickLine={false}
                               />
                               <YAxis
                                 domain={['dataMin - 10', 'dataMax + 10']}
-                                tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+                                tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
                                 axisLine={false}
                                 tickLine={false}
                               />
@@ -1260,6 +1294,21 @@ export function DiaryAnalyticsView() {
           )}
         </DialogContent>
       </Dialog>
+      <ConfirmDestructiveDialog
+        open={Boolean(pendingDelete)}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null);
+        }}
+        testId="confirm-delete-session"
+        title={t.diary.deleteWorkoutTitle}
+        description={format(t.diary.deleteWorkoutDesc, {
+          name: pendingDelete?.workoutNameSnapshot ?? '',
+        })}
+        confirmLabel={t.diary.deleteWorkoutBtn}
+        onConfirm={async () => {
+          if (pendingDelete) await deleteHistoricalSession(pendingDelete.clientSessionId);
+        }}
+      />
     </div>
   );
 }

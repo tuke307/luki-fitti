@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { resetOfflineStore } from './helpers/offline-store.js';
-import { finishActiveWorkout, toggleCompleteSetRow } from './helpers/session.js';
+import { chooseFromSetMenu, finishActiveWorkout, toggleCompleteSetRow } from './helpers/session.js';
 import { navigateToTab } from './helpers/shell.js';
 import { createWorkoutTemplate, gotoWorkoutsTab, startWorkoutByName } from './helpers/workouts.js';
 
@@ -17,7 +17,7 @@ test.describe('Active Session — set types, supersets & exercise actions', () =
     await startWorkoutByName(page, PUSH);
 
     const row = page.getByTestId('session-set-row-1').first();
-    await row.getByLabel('Set 1 type').selectOption('WARMUP');
+    await chooseFromSetMenu(page, row, 1, 'Warm-up');
     await toggleCompleteSetRow(page, 1);
 
     await expect(row).toHaveAttribute('data-set-logged', 'true');
@@ -47,14 +47,24 @@ test.describe('Active Session — set types, supersets & exercise actions', () =
     await expect(block.locator('[data-testid^="superset-round-"]')).toHaveCount(roundsBefore + 1);
   });
 
-  test('skips an exercise from the actions menu on pointer devices', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name === 'mobile', 'Touch devices use swipe actions instead');
+  test('skips an exercise from the actions menu on every device', async ({ page }) => {
     await startWorkoutByName(page, PUSH);
 
     const header = page.getByTestId('exercise-header-1');
     await header.getByRole('button', { name: /More actions/i }).click();
     await page.getByRole('menuitem', { name: 'Skip' }).click();
     await expect(page.getByTestId('active-exercise-card-1')).toContainText('Skipped');
+  });
+
+  test('deletes a set from the set menu without swiping', async ({ page }) => {
+    await startWorkoutByName(page, PUSH);
+    const card = page.getByTestId('active-exercise-card-1');
+    const rows = card.locator('[data-testid^="session-set-row-"]');
+    await expect(rows.first()).toBeVisible();
+    const before = await rows.count();
+
+    await chooseFromSetMenu(page, card, 1, 'Delete Set');
+    await expect(rows).toHaveCount(before - 1);
   });
 
   test('writes changes made during the workout back into the template', async ({ page }) => {
@@ -66,7 +76,7 @@ test.describe('Active Session — set types, supersets & exercise actions', () =
 
     await card.getByRole('button', { name: /^Add Set$/ }).click();
     await expect(rows).toHaveCount(before + 1);
-    await card.getByLabel(`Set ${before + 1} type`).selectOption('WARMUP');
+    await chooseFromSetMenu(page, card, before + 1, 'Warm-up');
     // Warm-ups move to the top of the exercise.
     await expect(rows.first()).toHaveAttribute('data-set-type', 'WARMUP');
     const weight = rows.first().getByLabel('Set 1 weight');
