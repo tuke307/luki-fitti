@@ -5,9 +5,11 @@ import LukiFittiDomain
 
 public struct ActiveSessionView: View {
     @Bindable public var viewModel: LukiAppViewModel
+    @Environment(\.lukiLocale) private var tr
     @State private var selectedExerciseIndex: Int = 0
     @State private var swapTargetId: String?
     @State private var showingAddExerciseSheet = false
+    @State private var showingDiscardConfirmation = false
     @State private var nowTick: Date = Date()
 
     public init(viewModel: LukiAppViewModel) {
@@ -18,9 +20,9 @@ public struct ActiveSessionView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 if let completed = viewModel.completedSummarySession {
-                    trophySummaryCard(completed)
+                    summaryCard(completed)
                 } else if let session = viewModel.store.activeSession {
-                    liveTelemetryBanner(session)
+                    sessionHeader(session)
                     verticalExerciseStack(session)
                     sessionFooterActions
                 }
@@ -45,7 +47,7 @@ public struct ActiveSessionView: View {
         )) {
             if let target = viewModel.store.activeSession?.exercises.first(where: { $0.clientExerciseId == swapTargetId }) {
                 SearchableExercisePickerSheet(
-                    title: "Replace \(target.exerciseNameSnapshot)",
+                    title: tr("Replace %@", target.exerciseNameSnapshot),
                     exercises: viewModel.store.catalog,
                     selectedExerciseId: target.exerciseId
                 ) { candidate in
@@ -56,7 +58,7 @@ public struct ActiveSessionView: View {
         }
         .sheet(isPresented: $showingAddExerciseSheet) {
             SearchableExercisePickerSheet(
-                title: "Add Unplanned Exercise",
+                title: tr("Add Exercise"),
                 exercises: viewModel.store.catalog,
                 selectedExerciseId: nil
             ) { chosen in
@@ -67,51 +69,77 @@ public struct ActiveSessionView: View {
                 showingAddExerciseSheet = false
             }
         }
+        .confirmationDialog(
+            tr("Discard this workout?"),
+            isPresented: $showingDiscardConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(tr("Discard Workout"), role: .destructive) {
+                viewModel.abandonActiveSession()
+            }
+            .accessibilityIdentifier("ios.session.confirmDiscardButton")
+            Button(tr("Keep Training"), role: .cancel) {}
+        } message: {
+            Text(tr("It won’t be saved to your history. Your plan stays the same."))
+        }
     }
 
-    // MARK: - Trophy Summary Card
+    private var unit: WeightUnit {
+        viewModel.store.activeSession?.weightUnit ?? viewModel.store.preferences.weightUnit
+    }
 
-    private func trophySummaryCard(_ session: WorkoutSessionDto) -> some View {
+    // MARK: - Summary
+
+    private func summaryCard(_ session: WorkoutSessionDto) -> some View {
         VStack(spacing: 14) {
-            Image(systemName: "trophy.fill")
-                .font(.system(size: 38))
+            Image(systemName: "checkmark.seal.fill")
+                .font(.largeTitle)
                 .foregroundStyle(LukiColors.accent)
-            Text("Session Saved & Queued for Sync")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(LukiColors.accent)
-            Text("\(session.workoutNameSnapshot) Complete!")
-                .font(.title2.bold())
-                .foregroundStyle(.primary)
+                .accessibilityHidden(true)
+            VStack(spacing: 4) {
+                Text(tr("Workout saved"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Text(tr("%@ done", session.workoutNameSnapshot))
+                    .font(.title2.bold())
+                    .multilineTextAlignment(.center)
+                Text(tr("Nice work. It’s in your history now."))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
 
-            HStack(spacing: 12) {
-                statPill(label: "Sets", value: "\(session.totalSetsCompleted)")
-                statPill(label: "Volume", value: "\(Int(session.totalVolumeKg)) kg")
-                if let kcal = session.activeCaloriesKcal, kcal > 0 {
-                    statPill(label: "Active Kcal", value: "\(Int(kcal))")
-                }
-                if let avgHr = session.avgHeartRateBpm {
-                    statPill(label: "Avg HR", value: "\(avgHr) bpm")
-                }
+            ViewThatFits {
+                HStack(spacing: 12) { summaryStats(session) }
+                VStack(spacing: 8) { summaryStats(session) }
             }
 
             Button {
                 viewModel.completedSummarySession = nil
                 viewModel.selectedTab = .diary
             } label: {
-                Text("View in Training Diary")
-                    .font(.subheadline.bold())
-                    .foregroundStyle(LukiColors.accentForeground)
+                Text(tr("View in History"))
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(LukiColors.accent))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
             .accessibilityIdentifier("ios.session.viewInDiaryButton")
         }
         .padding(20)
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("ios.session.trophyCard")
+    }
+
+    @ViewBuilder
+    private func summaryStats(_ session: WorkoutSessionDto) -> some View {
+        statPill(label: tr("Sets"), value: "\(session.totalSetsCompleted)")
+        statPill(label: tr("Volume"), value: LukiFormat.volume(kg: session.totalVolumeKg, unit: session.weightUnit))
+        if let kcal = session.activeCaloriesKcal, kcal > 0 {
+            statPill(label: tr("Active energy"), value: "\(Int(kcal)) kcal")
+        }
+        if let avgHr = session.avgHeartRateBpm {
+            statPill(label: tr("Avg heart rate"), value: "\(avgHr) bpm")
+        }
     }
 
     private func statPill(label: String, value: String) -> some View {
@@ -122,210 +150,150 @@ public struct ActiveSessionView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.fill))
+        .accessibilityElement(children: .combine)
     }
 
-    // MARK: - Live Telemetry Banner
+    // MARK: - Header
 
-    private func liveTelemetryBanner(_ session: WorkoutSessionDto) -> some View {
+    private func sessionHeader(_ session: WorkoutSessionDto) -> some View {
         let totalSets = session.exercises.reduce(0) { $0 + $1.sets.count }
         let doneSets = session.totalSetsCompleted
         let pct = totalSets > 0 ? Double(doneSets) / Double(totalSets) : 0
+        let isPaused = session.status == .PAUSED
 
         return VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(session.status == .PAUSED ? "PAUSED" : "LIVE SESSION")
-                    .font(.footnote.weight(.medium))
-                    .foregroundStyle(LukiColors.accentForeground)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Capsule().fill(session.status == .PAUSED ? LukiColors.calorieAmber : LukiColors.accent))
-
-                Spacer()
-
-                HStack(spacing: 10) {
-                    Label(
-                        "\(viewModel.healthCoordinator.currentHeartRateBpm.map(String.init) ?? "--") BPM",
-                        systemImage: "heart.fill"
-                    )
-                    .font(.caption.bold().monospacedDigit())
-                    .foregroundStyle(LukiColors.heartRose)
-
-                    Label(
-                        "\(Int(viewModel.healthCoordinator.activeCaloriesKcal)) KCal",
-                        systemImage: "flame.fill"
-                    )
-                    .font(.caption.bold().monospacedDigit())
-                    .foregroundStyle(LukiColors.calorieAmber)
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(isPaused ? tr("Paused") : tr("In Progress"))
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(isPaused ? Color.secondary : LukiColors.accent)
+                    Text(session.workoutNameSnapshot)
+                        .font(.title3.bold())
                 }
-            }
-
-            HStack {
-                Text(session.workoutNameSnapshot)
-                    .font(.title3.bold())
-                    .foregroundStyle(.primary)
                 Spacer()
-                Button(session.status == .PAUSED ? "Resume" : "Pause") {
+                Button {
                     viewModel.togglePauseActiveSession()
+                } label: {
+                    Label(isPaused ? tr("Resume") : tr("Pause"), systemImage: isPaused ? "play.fill" : "pause.fill")
                 }
-                .font(.subheadline.weight(.semibold))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Capsule().fill(LukiColors.fill))
+                .buttonStyle(.bordered)
             }
 
-            HStack {
-                Text("Progress: \(Int((pct * 100).rounded()))% (\(doneSets)/\(totalSets) sets)")
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(.secondary)
+            HStack(spacing: 14) {
+                Label(
+                    "\(viewModel.healthCoordinator.currentHeartRateBpm.map(String.init) ?? "–") bpm",
+                    systemImage: "heart.fill"
+                )
+                .foregroundStyle(LukiColors.heartRate)
+                Label("\(Int(viewModel.healthCoordinator.activeCaloriesKcal)) kcal", systemImage: "flame.fill")
+                    .foregroundStyle(LukiColors.calories)
                 Spacer()
-                Text("\(Int(session.totalVolumeKg)) kg vol")
-                    .font(.footnote.monospacedDigit())
-                    .foregroundStyle(LukiColors.accent)
+                Text(LukiFormat.volume(kg: session.totalVolumeKg, unit: session.weightUnit))
+                    .foregroundStyle(.secondary)
             }
-            ProgressView(value: pct)
-                .tint(LukiColors.accent)
+            .font(.footnote.weight(.medium).monospacedDigit())
+            .labelStyle(.titleAndIcon)
+
+            ProgressView(value: pct) {
+                Text(tr("%d of %d sets", doneSets, totalSets))
+                    .font(.footnote.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+            .tint(LukiColors.accent)
         }
         .padding(14)
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
     }
 
-    // MARK: - Persistent Rest Timer Card (Matches Web App `active-session-view.tsx`)
+    // MARK: - Rest timer
 
     private func restTimerCard(_ session: WorkoutSessionDto) -> some View {
         let rest = SessionCalculator.computeRemainingRestSeconds(session: session, now: nowTick)
         let isActive = rest.isRunning || rest.isPaused
-        let statusTitle = rest.isRunning
-            ? "REST TIMER ACTIVE"
-            : rest.isPaused
-                ? "REST TIMER PAUSED"
-                : "REST TIMER READY"
 
-        return VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                HStack(spacing: 10) {
-                    Image(systemName: "timer")
-                        .font(.title3.bold())
-                        .foregroundStyle(isActive ? LukiColors.accentForeground : LukiColors.accent)
-                        .frame(width: 38, height: 38)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(isActive ? LukiColors.accent : LukiColors.fill)
-                        )
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(statusTitle)
-                            .font(.footnote)
-                            .foregroundStyle(isActive ? LukiColors.accent : .secondary)
-
-                        HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text(formatTimer(rest.remainingSeconds))
-                                .font(.title2.bold().monospacedDigit())
-                                .foregroundStyle(.primary)
-                            if rest.totalSeconds > 0 {
-                                Text("/ \(formatTimer(rest.totalSeconds))")
-                                    .font(.caption.monospacedDigit())
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                }
-
-                Spacer()
-
-                // Preset buttons (60s, 90s, 2m30s)
-                HStack(spacing: 6) {
-                    ForEach([(60, "60s"), (90, "90s"), (150, "2m30s")], id: \.0) { sec, label in
-                        Button {
-                            viewModel.startRestTimer(durationSeconds: sec)
-                        } label: {
-                            Text(label)
-                                .font(.footnote.monospacedDigit())
-                                .padding(.horizontal, 9)
-                                .padding(.vertical, 6)
-                                .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
-                                .foregroundStyle(.primary)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-
+        return VStack(alignment: .leading, spacing: 8) {
             if isActive {
                 if rest.totalSeconds > 0 {
                     ProgressView(value: Double(rest.remainingSeconds), total: Double(max(1, rest.totalSeconds)))
                         .tint(LukiColors.accent)
                 }
-
-                HStack(spacing: 8) {
-                    Button {
-                        viewModel.adjustRestTimer(deltaSeconds: -15)
-                    } label: {
-                        Text("-15s")
-                            .font(.caption.bold().monospacedDigit())
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
-                            .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
-                            .foregroundStyle(.primary)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        restClock(rest)
+                        Spacer(minLength: 4)
+                        restControls(rest)
                     }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        viewModel.adjustRestTimer(deltaSeconds: 15)
-                    } label: {
-                        Text("+15s")
-                            .font(.caption.bold().monospacedDigit())
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
-                            .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
-                            .foregroundStyle(.primary)
+                    VStack(alignment: .leading, spacing: 8) {
+                        restClock(rest)
+                        HStack(spacing: 8) { restControls(rest) }
                     }
-                    .buttonStyle(.plain)
-
-                    Button {
-                        viewModel.togglePauseRestTimer()
-                    } label: {
-                        Text(rest.isPaused ? "Resume" : "Pause")
-                            .font(.subheadline.weight(.semibold))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
-                            .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
-                            .foregroundStyle(.primary)
+                }
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        Label(tr("Start rest"), systemImage: "timer")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.secondary)
+                        Spacer(minLength: 4)
+                        restPresets
                     }
-                    .buttonStyle(.plain)
-
-                    Spacer()
-
-                    Button {
-                        viewModel.skipRestTimer()
-                    } label: {
-                        Text("Skip Rest")
-                            .font(.subheadline.weight(.semibold))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
-                            .background(RoundedRectangle(cornerRadius: 8).fill(Color.red.opacity(0.22)))
-                            .foregroundStyle(.red)
-                    }
-                    .buttonStyle(.plain)
+                    HStack(spacing: 8) { restPresets }
                 }
             }
         }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(isActive ? LukiColors.accent.opacity(0.12) : LukiColors.cardBackground)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .stroke(isActive ? LukiColors.accent.opacity(0.45) : Color.clear, lineWidth: 1)
-                )
-        )
+        .padding(12)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 
-    private func formatTimer(_ sec: Int) -> String {
-        let s = max(0, sec)
-        return String(format: "%d:%02d", s / 60, s % 60)
+    private func restClock(_ rest: RestTimerStatus) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(rest.isPaused ? tr("Rest paused") : tr("Rest"))
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(.secondary)
+            Text(LukiFormat.clock(rest.remainingSeconds))
+                .font(.system(.title2, design: .rounded).weight(.semibold).monospacedDigit())
+        }
+        .accessibilityElement(children: .combine)
     }
 
-    // MARK: - Vertical Collapsible Exercise Stack (Gymlife Supersets & Rainbow Suggestion)
+    @ViewBuilder
+    private func restControls(_ rest: RestTimerStatus) -> some View {
+        Button("-15s") { viewModel.adjustRestTimer(deltaSeconds: -15) }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
+        Button("+15s") { viewModel.adjustRestTimer(deltaSeconds: 15) }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
+        Button {
+            viewModel.togglePauseRestTimer()
+        } label: {
+            Image(systemName: rest.isPaused ? "play.fill" : "pause.fill")
+                .frame(minWidth: 24, minHeight: 28)
+        }
+        .buttonStyle(.bordered)
+        .accessibilityLabel(rest.isPaused ? tr("Resume") : tr("Pause"))
+        Button {
+            viewModel.skipRestTimer()
+        } label: {
+            Image(systemName: "forward.end.fill")
+                .frame(minWidth: 24, minHeight: 28)
+        }
+        .buttonStyle(.borderedProminent)
+        .accessibilityLabel(tr("Skip Rest"))
+    }
+
+    private var restPresets: some View {
+        HStack(spacing: 6) {
+            ForEach([(60, "60s"), (90, "90s"), (150, "2:30")], id: \.0) { sec, label in
+                Button(label) { viewModel.startRestTimer(durationSeconds: sec) }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    .monospacedDigit()
+            }
+        }
+    }
+
+    // MARK: - Exercise stack
 
     private func verticalExerciseStack(_ session: WorkoutSessionDto) -> some View {
         let safeIdx = min(max(0, selectedExerciseIndex), max(0, session.exercises.count - 1))
@@ -353,29 +321,24 @@ public struct ActiveSessionView: View {
             Button {
                 showingAddExerciseSheet = true
             } label: {
-                Label("Add Exercise", systemImage: "plus")
-                    .font(.subheadline.weight(.semibold))
+                Label(tr("Add Exercise"), systemImage: "plus")
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(LukiColors.cardBackground))
-                    .foregroundStyle(LukiColors.accent)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bordered)
+            .controlSize(.large)
         }
     }
 
-    // MARK: - Exercise Swipe Actions (swap / skip ← → remove)
+    // MARK: - Exercise actions (swipe, VoiceOver actions and the ⋯ menu share these)
 
     private func leadingExerciseActions(_ exercise: SessionExerciseDto) -> [LukiSwipeAction] {
         [
-            LukiSwipeAction(id: "swap", label: locale == .de ? "Ersetzen" : "Replace", systemImage: "arrow.triangle.swap") {
+            LukiSwipeAction(id: "swap", label: tr("Replace"), systemImage: "arrow.triangle.swap") {
                 swapTargetId = exercise.clientExerciseId
             },
             LukiSwipeAction(
                 id: "skip",
-                label: exercise.status == .SKIPPED
-                    ? (locale == .de ? "Aufnehmen" : "Unskip")
-                    : (locale == .de ? "Überspringen" : "Skip"),
+                label: exercise.status == .SKIPPED ? tr("Unskip") : tr("Skip"),
                 systemImage: "forward.end",
                 tone: .accent
             ) {
@@ -386,36 +349,58 @@ public struct ActiveSessionView: View {
 
     private func trailingExerciseActions(_ exercise: SessionExerciseDto) -> [LukiSwipeAction] {
         [
-            LukiSwipeAction(id: "remove", label: locale == .de ? "Löschen" : "Delete", systemImage: "trash", tone: .destructive) {
+            LukiSwipeAction(id: "remove", label: tr("Delete"), systemImage: "trash", tone: .destructive) {
                 viewModel.removeExerciseFromSession(clientExerciseId: exercise.clientExerciseId)
             },
         ]
     }
 
-    /// Reordering does not fit a swipe, so it stays in a compact menu.
-    private func reorderMenu(session: WorkoutSessionDto, exercise: SessionExerciseDto, exerciseIndex: Int) -> some View {
+    private func exerciseMenu(session: WorkoutSessionDto, exercise: SessionExerciseDto, exerciseIndex: Int) -> some View {
         Menu {
+            Button {
+                swapTargetId = exercise.clientExerciseId
+            } label: {
+                Label(tr("Replace"), systemImage: "arrow.triangle.swap")
+            }
+            Button {
+                viewModel.toggleSkipExercise(clientExerciseId: exercise.clientExerciseId)
+            } label: {
+                Label(exercise.status == .SKIPPED ? tr("Unskip") : tr("Skip"), systemImage: "forward.end")
+            }
             Button {
                 viewModel.reorderExerciseInSession(clientExerciseId: exercise.clientExerciseId, moveUp: true)
                 selectedExerciseIndex = max(0, exerciseIndex - 1)
             } label: {
-                Label(locale == .de ? "Nach oben" : "Move earlier", systemImage: "arrow.up")
+                Label(tr("Move Earlier"), systemImage: "arrow.up")
             }
             .disabled(exerciseIndex == 0)
             Button {
                 viewModel.reorderExerciseInSession(clientExerciseId: exercise.clientExerciseId, moveUp: false)
                 selectedExerciseIndex = min(session.exercises.count - 1, exerciseIndex + 1)
             } label: {
-                Label(locale == .de ? "Nach unten" : "Move later", systemImage: "arrow.down")
+                Label(tr("Move Later"), systemImage: "arrow.down")
             }
             .disabled(exerciseIndex == session.exercises.count - 1)
+            Divider()
+            Button(role: .destructive) {
+                viewModel.removeExerciseFromSession(clientExerciseId: exercise.clientExerciseId)
+            } label: {
+                Label(tr("Remove from this workout"), systemImage: "trash")
+            }
         } label: {
-            Image(systemName: "arrow.up.arrow.down")
-                .font(.subheadline.weight(.semibold))
+            Image(systemName: "ellipsis")
+                .font(.body.weight(.semibold))
                 .foregroundStyle(.secondary)
-                .frame(width: 32, height: 32)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
         }
-        .accessibilityLabel(locale == .de ? "Reihenfolge ändern" : "Reorder")
+        .accessibilityLabel(tr("More actions for %@", exercise.exerciseNameSnapshot))
+    }
+
+    private func repsTarget(_ exercise: SessionExerciseDto) -> String {
+        let minReps = exercise.targetRepsMin ?? 8
+        let maxReps = exercise.targetRepsMax ?? 12
+        return minReps == maxReps ? "\(exercise.plannedSets)×\(minReps)" : "\(exercise.plannedSets)×\(minReps)–\(maxReps)"
     }
 
     private func collapsedExerciseRow(exercise: SessionExerciseDto, index: Int) -> some View {
@@ -426,43 +411,55 @@ public struct ActiveSessionView: View {
                 selectedExerciseIndex = index
             } label: {
                 HStack(spacing: 10) {
-                    Text(isCompleted ? "✓" : "\(index + 1)")
-                        .font(.caption.bold().monospacedDigit())
-                        .foregroundStyle(isCompleted ? LukiColors.accentForeground : .primary)
-                        .frame(width: 26, height: 26)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(isCompleted ? LukiColors.accent : LukiColors.fill)
-                        )
+                    Group {
+                        if isCompleted {
+                            Image(systemName: "checkmark")
+                                .font(.footnote.bold())
+                                .foregroundStyle(LukiColors.onTint)
+                        } else {
+                            Text("\(index + 1)")
+                                .font(.footnote.bold().monospacedDigit())
+                                .foregroundStyle(.primary)
+                        }
+                    }
+                    .frame(minWidth: 28, minHeight: 28)
+                    .background(Circle().fill(isCompleted ? LukiColors.success : LukiColors.fill))
+                    .accessibilityHidden(true)
+
                     VStack(alignment: .leading, spacing: 2) {
                         Text(exercise.exerciseNameSnapshot)
-                            .font(.subheadline.bold())
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.primary)
                             .strikethrough(exercise.status == .SKIPPED)
                             .lineLimit(1)
-                        Text("\(exercise.plannedSets)×\(exercise.targetRepsMin ?? 8)-\(exercise.targetRepsMax ?? 12) reps")
-                            .font(.caption2.monospacedDigit())
-                            .foregroundStyle(LukiColors.accent)
+                        Text("\(LukiI18n.muscleLabel(exercise.primaryMuscleSnapshot, locale: tr)) · \(repsTarget(exercise))")
+                            .font(.footnote.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
                     }
                     Spacer()
-                    Text("\(doneCount)/\(exercise.sets.count) sets")
-                        .font(.footnote)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(Color.black.opacity(0.3)))
-                        .foregroundStyle(isCompleted ? LukiColors.accent : .secondary)
+                    Text("\(doneCount)/\(exercise.sets.count)")
+                        .font(.footnote.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .accessibilityHidden(true)
                 }
                 .padding(12)
+                .frame(minHeight: 44)
                 .background(
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
                         .fill(LukiColors.cardBackground)
                 )
+                .opacity(exercise.status == .SKIPPED ? 0.6 : 1)
             }
             .buttonStyle(.plain)
+            .accessibilityValue(tr("%d of %d sets", doneCount, exercise.sets.count))
         }
     }
 
-    // MARK: - Active Exercise Card & Ergonomic Set Rows (Matches Web App)
+    // MARK: - Active exercise card
 
     private func insightFor(session: WorkoutSessionDto, exercise: SessionExerciseDto) -> ExerciseProgressionInsight {
         ProgressionEngine.computeExerciseProgression(
@@ -495,19 +492,29 @@ public struct ActiveSessionView: View {
     private func lastSessionLine(_ insight: ExerciseProgressionInsight) -> some View {
         Group {
             if let last = insight.lastSession {
-                Text("Last (\(last.workoutName)): \(last.workingSets.prefix(3).map { "\(String(format: "%g", $0.weightNormalized))kg×\($0.reps)" }.joined(separator: ", "))")
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(LukiColors.accent)
+                let sets = last.workingSets.prefix(4)
+                    .map { "\(LukiFormat.weight($0.weightNormalized)) \(LukiFormat.unitLabel(unit)) × \($0.reps)" }
+                    .joined(separator: " · ")
+                Text("\(tr("Last time (%@)", last.workoutName)): \(sets)")
+            } else {
+                Text(tr("First time doing this exercise"))
             }
         }
+        .font(.footnote.monospacedDigit())
+        .foregroundStyle(.secondary)
     }
 
     private func activeExerciseCard(session: WorkoutSessionDto, exercise: SessionExerciseDto, exerciseIndex: Int) -> some View {
         let insight = insightFor(session: session, exercise: exercise)
         let suggestions = alignedSuggestions(exercise, insight: insight)
         let labels = LukiI18n.setBadgeLabels(exercise.sets.map(\.setType))
+        let goal = [
+            LukiI18n.muscleLabel(exercise.primaryMuscleSnapshot, locale: tr),
+            repsTarget(exercise),
+            exercise.restSeconds > 0 ? tr("%d s rest", exercise.restSeconds) : nil,
+        ].compactMap { $0 }.joined(separator: " · ")
 
-        return VStack(alignment: .leading, spacing: 14) {
+        return VStack(alignment: .leading, spacing: 12) {
             LukiSwipeRow(
                 leading: leadingExerciseActions(exercise),
                 trailing: trailingExerciseActions(exercise),
@@ -519,68 +526,77 @@ public struct ActiveSessionView: View {
                         primaryMuscle: exercise.primaryMuscleSnapshot,
                         compact: true
                     )
+                    .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(exercise.exerciseNameSnapshot)
-                            .font(.headline)
+                            .font(.title3.weight(.semibold))
                             .foregroundStyle(.primary)
                             .strikethrough(exercise.status == .SKIPPED)
-                        Text("\(LukiI18n.muscleLabel(exercise.primaryMuscleSnapshot)) • \(exercise.plannedSets) × \(exercise.targetRepsMin ?? 8)-\(exercise.targetRepsMax ?? 12) reps • \(exercise.restSeconds)s rest")
-                            .font(.caption2.monospacedDigit())
+                        Text(goal)
+                            .font(.footnote.monospacedDigit())
                             .foregroundStyle(.secondary)
-                        lastSessionLine(insight)
                     }
-                    Spacer()
-                    reorderMenu(session: session, exercise: exercise, exerciseIndex: exerciseIndex)
+                    Spacer(minLength: 0)
+                    exerciseMenu(session: session, exercise: exercise, exerciseIndex: exerciseIndex)
                 }
                 .padding(4)
                 .background(LukiColors.cardBackground)
                 .accessibilityIdentifier("ios.session.exerciseHeader.\(exerciseIndex + 1)")
             }
 
-            ForEach(Array(exercise.sets.enumerated()), id: \.element.clientSetId) { idx, set in
-                setRowCard(
-                    session: session,
-                    exercise: exercise,
-                    set: set,
-                    setIndex: idx,
-                    badgeLabel: idx < labels.count ? labels[idx] : "\(idx + 1)",
-                    suggestion: idx < suggestions.count ? suggestions[idx] : nil
-                )
+            lastSessionLine(insight)
+
+            VStack(spacing: 0) {
+                ForEach(Array(exercise.sets.enumerated()), id: \.element.clientSetId) { idx, set in
+                    if idx > 0 { Divider() }
+                    setRow(
+                        session: session,
+                        exercise: exercise,
+                        set: set,
+                        setIndex: idx,
+                        badgeLabel: idx < labels.count ? labels[idx] : "\(idx + 1)",
+                        suggestion: idx < suggestions.count ? suggestions[idx] : nil
+                    )
+                }
             }
 
-            HStack(spacing: 8) {
-                Button {
-                    viewModel.addSetToExercise(clientExerciseId: exercise.clientExerciseId, setType: .WORKING)
-                } label: {
-                    Label(locale == .de ? "Satz hinzufügen" : "Add Set", systemImage: "plus")
-                        .font(.subheadline.weight(.semibold))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .background(RoundedRectangle(cornerRadius: 9).fill(LukiColors.fill))
-                        .foregroundStyle(.primary)
-                }
-                .buttonStyle(.plain)
-
-                Spacer()
-
-                if exerciseIndex < session.exercises.count - 1 {
-                    Button {
-                        selectedExerciseIndex = exerciseIndex + 1
-                    } label: {
-                        Text("Next →")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(LukiColors.accent)
-                    }
-                    .buttonStyle(.plain)
-                }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) { exerciseFooter(session: session, exercise: exercise, exerciseIndex: exerciseIndex) }
+                VStack(alignment: .leading, spacing: 8) { exerciseFooter(session: session, exercise: exercise, exerciseIndex: exerciseIndex) }
             }
         }
         .padding(14)
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
     }
 
-    // MARK: - Superset Rounds (A1 + B1 together, then A2 + B2 …)
+    @ViewBuilder
+    private func exerciseFooter(session: WorkoutSessionDto, exercise: SessionExerciseDto, exerciseIndex: Int) -> some View {
+        Button {
+            viewModel.addSetToExercise(clientExerciseId: exercise.clientExerciseId, setType: .WORKING)
+        } label: {
+            Label(tr("Add Set"), systemImage: "plus")
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+
+        Spacer(minLength: 0)
+
+        if exerciseIndex < session.exercises.count - 1 {
+            Button {
+                selectedExerciseIndex = exerciseIndex + 1
+            } label: {
+                Label(tr("Next: %@", session.exercises[exerciseIndex + 1].exerciseNameSnapshot), systemImage: "arrow.right")
+                    .labelStyle(TrailingIconLabelStyle())
+                    .lineLimit(1)
+            }
+            .font(.subheadline.weight(.semibold))
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+    }
+
+    // MARK: - Superset rounds (A1 + B1 together, then A2 + B2 …)
 
     private func supersetBlock(session: WorkoutSessionDto, block: ExerciseRenderBlock<SessionExerciseDto>) -> some View {
         let members: [(exercise: SessionExerciseDto, index: Int, letter: String, insight: ExerciseProgressionInsight, labels: [String], suggestions: [SetProgressionSuggestion?])] =
@@ -598,21 +614,12 @@ public struct ActiveSessionView: View {
         let rounds = members.map(\.exercise.sets.count).max() ?? 0
 
         return VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 4) {
-                        Text("Superset")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(LukiColors.accent)
-                        Text("× \(block.rounds) ROUNDS")
-                            .font(.caption.weight(.heavy).monospacedDigit())
-                            .foregroundStyle(.primary)
-                    }
-                    Text("Rest 0 s between exercises · \(ProgressionEngine.formatRestDurationMinSec(block.roundRestSeconds)) between rounds")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
+            VStack(alignment: .leading, spacing: 2) {
+                Text(tr("Superset · %d rounds", block.rounds))
+                    .font(.subheadline.weight(.semibold))
+                Text(tr("No rest between exercises · %@ between rounds", ProgressionEngine.formatRestDurationMinSec(block.roundRestSeconds)))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
             .padding(12)
 
@@ -628,19 +635,19 @@ public struct ActiveSessionView: View {
                                 Text(member.letter)
                                     .font(.subheadline.bold())
                                     .foregroundStyle(LukiColors.accent)
-                                    .frame(width: 28, height: 28)
-                                    .background(Circle().fill(LukiColors.accent.opacity(0.15)))
+                                    .frame(minWidth: 28, minHeight: 28)
+                                    .background(Circle().fill(LukiColors.accent.opacity(0.12)))
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(member.exercise.exerciseNameSnapshot)
                                         .font(.subheadline.bold())
                                         .strikethrough(member.exercise.status == .SKIPPED)
                                         .lineLimit(1)
-                                    Text("\(LukiI18n.muscleLabel(member.exercise.primaryMuscleSnapshot)) • \(member.exercise.plannedSets)×\(member.exercise.targetRepsMin ?? 8)-\(member.exercise.targetRepsMax ?? 12)")
-                                        .font(.caption2.monospacedDigit())
+                                    Text("\(LukiI18n.muscleLabel(member.exercise.primaryMuscleSnapshot, locale: tr)) · \(repsTarget(member.exercise))")
+                                        .font(.footnote.monospacedDigit())
                                         .foregroundStyle(.secondary)
                                 }
                                 Spacer()
-                                reorderMenu(session: session, exercise: member.exercise, exerciseIndex: member.index)
+                                exerciseMenu(session: session, exercise: member.exercise, exerciseIndex: member.index)
                             }
                             lastSessionLine(member.insight)
                         }
@@ -652,13 +659,13 @@ public struct ActiveSessionView: View {
 
                 ForEach(0..<rounds, id: \.self) { round in
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(locale == .de ? "Runde \(round + 1) von \(rounds)" : "Round \(round + 1) of \(rounds)")
+                        Text(tr("Round %d of %d", round + 1, rounds))
                             .font(.footnote.weight(.semibold).monospacedDigit())
                             .foregroundStyle(.secondary)
                         ForEach(members, id: \.exercise.clientExerciseId) { member in
                             if round < member.exercise.sets.count {
                                 let set = member.exercise.sets[round]
-                                setRowCard(
+                                setRow(
                                     session: session,
                                     exercise: member.exercise,
                                     set: set,
@@ -686,25 +693,19 @@ public struct ActiveSessionView: View {
                         viewModel.addSetToExercise(clientExerciseId: member.exercise.clientExerciseId, setType: .WORKING)
                     }
                 } label: {
-                    Label(locale == .de ? "Runde hinzufügen" : "Add Round", systemImage: "plus")
-                        .font(.subheadline.weight(.semibold))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .background(RoundedRectangle(cornerRadius: 9).fill(LukiColors.cardBackground))
-                        .foregroundStyle(.primary)
+                    Label(tr("Add Round"), systemImage: "plus")
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bordered)
+                .controlSize(.large)
             }
             .padding(10)
         }
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.fill))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(LukiColors.accent.opacity(0.45), lineWidth: 1)
-        )
     }
 
-    private func setRowCard(
+    // MARK: - Set row
+
+    private func setRow(
         session: WorkoutSessionDto,
         exercise: SessionExerciseDto,
         set: SessionSetDto,
@@ -714,18 +715,28 @@ public struct ActiveSessionView: View {
         contextLabel: String? = nil,
         accessibilityId: String? = nil
     ) -> some View {
+        let n = setIndex + 1
         let currentWeight = set.weight ?? 0
         let currentReps = set.reps ?? 0
-        let effortLabel = rpeEffortLabel(set.rpe)
-        let nextRpe = nextCycleRpe(set.rpe)
+        let step = LukiFormat.weightStep(set.weightUnit)
+        let unitText = LukiFormat.unitLabel(set.weightUnit)
         let typeColor = LukiColors.setTypeColor(set.setType)
+        let update: (Double?, Int?) -> Void = { weight, reps in
+            viewModel.updateSet(
+                clientExerciseId: exercise.clientExerciseId,
+                clientSetId: set.clientSetId,
+                weight: weight,
+                reps: reps
+            )
+        }
+        let deleteSet = {
+            viewModel.removeSetFromExercise(clientExerciseId: exercise.clientExerciseId, clientSetId: set.clientSetId)
+        }
 
         return LukiSwipeRow(trailing: [
-            LukiSwipeAction(id: "delete", label: locale == .de ? "Löschen" : "Delete", systemImage: "trash", tone: .destructive) {
-                viewModel.removeSetFromExercise(clientExerciseId: exercise.clientExerciseId, clientSetId: set.clientSetId)
-            },
+            LukiSwipeAction(id: "delete", label: tr("Delete"), systemImage: "trash", tone: .destructive, action: deleteSet),
         ]) {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 6) {
                 if let contextLabel {
                     Text(contextLabel)
                         .font(.caption.weight(.medium))
@@ -733,143 +744,80 @@ public struct ActiveSessionView: View {
                         .lineLimit(1)
                 }
 
-                // Row 1: Set-type badge (tap to change type) + type label + effort cycle
                 HStack(spacing: 8) {
+                    // Badge opens the set menu: type picker and Delete, so nothing is swipe-only.
                     Menu {
-                        ForEach(SetType.allCases, id: \.self) { st in
-                            Button(LukiI18n.setTypeLabel(st, locale: locale)) {
+                        Picker(tr("Set type"), selection: Binding(
+                            get: { set.setType },
+                            set: { newType in
                                 viewModel.updateSet(
                                     clientExerciseId: exercise.clientExerciseId,
                                     clientSetId: set.clientSetId,
-                                    setType: st
+                                    setType: newType
                                 )
                             }
+                        )) {
+                            ForEach(SetType.allCases, id: \.self) { st in
+                                Text(LukiI18n.setTypeLabel(st, locale: tr)).tag(st)
+                            }
+                        }
+                        Divider()
+                        Button(role: .destructive, action: deleteSet) {
+                            Label(tr("Delete Set"), systemImage: "trash")
                         }
                     } label: {
                         SetTypeBadge(setType: set.setType, label: badgeLabel, completed: set.completed)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
-                    .accessibilityIdentifier("ios.session.setType.\(setIndex + 1)")
+                    .accessibilityLabel(tr("Set %d: %@", n, LukiI18n.setTypeLabel(set.setType, locale: tr)))
+                    .accessibilityIdentifier("ios.session.setType.\(n)")
 
-                    if set.setType != .WORKING {
-                        Text(LukiI18n.setTypeLabel(set.setType, locale: locale))
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(typeColor ?? .primary)
-                    }
+                    if set.completed {
+                        HStack(spacing: 6) {
+                            if set.setType != .WORKING {
+                                Text(LukiI18n.setTypeLabel(set.setType, locale: tr))
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(typeColor ?? .primary)
+                            }
+                            Text("\(LukiFormat.weight(currentWeight)) \(unitText) × \(currentReps)")
+                                .font(.body.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                    if let peakHr = set.peakHeartRateBpm {
-                        Text("❤️ \(peakHr)")
-                            .font(.caption2.monospacedDigit())
-                            .foregroundStyle(LukiColors.heartRose)
-                    }
-
-                    Spacer()
-
-                    Button {
-                        viewModel.updateSet(
-                            clientExerciseId: exercise.clientExerciseId,
-                            clientSetId: set.clientSetId,
-                            rpe: .some(nextRpe)
+                        Button {
+                            viewModel.updateSet(
+                                clientExerciseId: exercise.clientExerciseId,
+                                clientSetId: set.clientSetId,
+                                rpe: .some(nextCycleRpe(set.rpe))
+                            )
+                        } label: {
+                            Label(LukiI18n.effortLabel(rpe: set.rpe, locale: tr), systemImage: "chart.bar.fill")
+                                .font(.footnote)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.large)
+                    } else {
+                        stepper(
+                            value: LukiFormat.weight(currentWeight),
+                            unit: unitText,
+                            minusLabel: tr("Decrease weight by %@, set %d", LukiFormat.weight(step), n),
+                            plusLabel: tr("Increase weight by %@, set %d", LukiFormat.weight(step), n),
+                            onMinus: { update(max(0, currentWeight - step), nil) },
+                            onPlus: { update(currentWeight + step, nil) }
                         )
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chart.bar.fill")
-                                .font(.system(size: 9))
-                            Text(effortLabel)
-                                .font(.footnote)
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 5)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
-                        .foregroundStyle(.primary)
+                        .layoutPriority(1)
+                        stepper(
+                            value: "\(currentReps)",
+                            unit: tr("reps"),
+                            minusLabel: tr("Decrease reps, set %d", n),
+                            plusLabel: tr("Increase reps, set %d", n),
+                            onMinus: { update(nil, max(0, currentReps - 1)) },
+                            onPlus: { update(nil, currentReps + 1) }
+                        )
                     }
-                    .buttonStyle(.plain)
-                }
-
-                // Row 2: [-2.5 Weight +2.5] + [-1 Reps +1] + Large "Log Set" / "✓ Done" Button
-                HStack(spacing: 8) {
-                    HStack(spacing: 2) {
-                        Button {
-                            viewModel.updateSet(
-                                clientExerciseId: exercise.clientExerciseId,
-                                clientSetId: set.clientSetId,
-                                weight: max(0, currentWeight - 2.5)
-                            )
-                        } label: {
-                            Text("-2.5")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                                .frame(width: 32, height: 34)
-                        }
-                        .buttonStyle(.plain)
-
-                        VStack(spacing: 0) {
-                            Text(String(format: "%g", currentWeight))
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(.primary)
-                            Text(session.weightUnit.rawValue.lowercased())
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(minWidth: 34)
-
-                        Button {
-                            viewModel.updateSet(
-                                clientExerciseId: exercise.clientExerciseId,
-                                clientSetId: set.clientSetId,
-                                weight: currentWeight + 2.5
-                            )
-                        } label: {
-                            Text("+2.5")
-                                .font(.footnote)
-                                .foregroundStyle(LukiColors.accent)
-                                .frame(width: 32, height: 34)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(.horizontal, 4)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.35)))
-
-                    HStack(spacing: 2) {
-                        Button {
-                            viewModel.updateSet(
-                                clientExerciseId: exercise.clientExerciseId,
-                                clientSetId: set.clientSetId,
-                                reps: max(0, currentReps - 1)
-                            )
-                        } label: {
-                            Text("-1")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                                .frame(width: 26, height: 34)
-                        }
-                        .buttonStyle(.plain)
-
-                        VStack(spacing: 0) {
-                            Text("\(currentReps)")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(.primary)
-                            Text("reps")
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(minWidth: 28)
-
-                        Button {
-                            viewModel.updateSet(
-                                clientExerciseId: exercise.clientExerciseId,
-                                clientSetId: set.clientSetId,
-                                reps: currentReps + 1
-                            )
-                        } label: {
-                            Text("+1")
-                                .font(.footnote)
-                                .foregroundStyle(LukiColors.accent)
-                                .frame(width: 26, height: 34)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(.horizontal, 4)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.black.opacity(0.35)))
 
                     Button {
                         viewModel.toggleCompleteSet(
@@ -877,22 +825,15 @@ public struct ActiveSessionView: View {
                             clientSetId: set.clientSetId
                         )
                     } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: set.completed ? "checkmark.circle.fill" : "checkmark")
-                                .font(.system(size: 12, weight: .bold))
-                            Text(set.completed ? "\(String(format: "%g", currentWeight))\(session.weightUnit.rawValue.lowercased())×\(currentReps) • Logged" : "Log Set")
-                                .font(.system(size: 12, weight: .semibold))
-                                .lineLimit(1)
-                        }
-                        .foregroundStyle(set.completed ? LukiColors.accentForeground : .primary)
-                        .frame(maxWidth: .infinity, minHeight: 36)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(set.completed ? LukiColors.accent : LukiColors.fill)
-                        )
+                        Image(systemName: "checkmark")
+                            .font(.body.weight(.bold))
+                            .foregroundStyle(set.completed ? LukiColors.onTint : LukiColors.accent)
+                            .frame(width: 44, height: 44)
+                            .background(Circle().fill(set.completed ? LukiColors.success : LukiColors.accent.opacity(0.12)))
                     }
                     .buttonStyle(.plain)
-                    .accessibilityIdentifier(accessibilityId ?? "ios.session.completeSet.\(setIndex + 1)")
+                    .accessibilityLabel(set.completed ? tr("Mark set %d not done", n) : tr("Complete set %d", n))
+                    .accessibilityIdentifier(accessibilityId ?? "ios.session.completeSet.\(n)")
                 }
 
                 if !set.completed,
@@ -907,34 +848,70 @@ public struct ActiveSessionView: View {
                             reps: suggestion.suggestedReps
                         )
                     } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "sparkles")
-                            Text("Suggested progression: \(wDelta) \(session.weightUnit.rawValue.lowercased()) (Tap to apply \(String(format: "%g", suggestedW)) \(session.weightUnit.rawValue.lowercased()))")
-                        }
-                        .font(.footnote)
-                        .foregroundStyle(LukiColors.accent)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(LukiColors.accent.opacity(0.15)))
+                        Label(tr("Try %@ %@ (%@)", LukiFormat.weight(suggestedW), unitText, wDelta), systemImage: "sparkles")
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(LukiColors.accent)
                     }
                     .buttonStyle(.plain)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+                    .padding(.leading, 52)
+                    .accessibilityHint(tr("Applies the suggested weight to this set"))
                 }
             }
-            .padding(12)
+            .padding(.vertical, 4)
             .background(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(LukiColors.fill)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .fill((typeColor ?? LukiColors.accent).opacity(set.completed ? 0.10 : 0.0))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .stroke(set.completed ? (typeColor ?? LukiColors.accent).opacity(0.45) : LukiColors.fill, lineWidth: 1)
-                    )
+                (typeColor ?? LukiColors.success).opacity(set.completed ? 0.06 : 0)
             )
+            .background(LukiColors.cardBackground)
         }
     }
+
+    private func stepper(
+        value: String,
+        unit: String,
+        minusLabel: String,
+        plusLabel: String,
+        onMinus: @escaping () -> Void,
+        onPlus: @escaping () -> Void
+    ) -> some View {
+        HStack(spacing: 0) {
+            Button(action: onMinus) {
+                Image(systemName: "minus")
+                    .font(.footnote.weight(.bold))
+                    .foregroundStyle(.primary)
+                    .frame(minWidth: 36, minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(minusLabel)
+
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                Text(value)
+                    .font(.system(.body, design: .rounded).weight(.semibold).monospacedDigit())
+                Text(unit)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .frame(maxWidth: .infinity)
+            .accessibilityElement(children: .combine)
+
+            Button(action: onPlus) {
+                Image(systemName: "plus")
+                    .font(.footnote.weight(.bold))
+                    .foregroundStyle(.primary)
+                    .frame(minWidth: 36, minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(plusLabel)
+        }
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(LukiColors.fill))
+    }
+
+    // MARK: - Suggestion
 
     @ViewBuilder
     private func sessionSuggestionCard(_ session: WorkoutSessionDto) -> some View {
@@ -959,7 +936,7 @@ public struct ActiveSessionView: View {
             }
             SuggestionCardView(
                 suggestion: suggestion,
-                locale: locale,
+                locale: tr,
                 onAdd: {
                     dismiss(suggestion, in: session)
                     viewModel.addUnplannedExerciseToSession(suggestion.suggestedExercise)
@@ -995,14 +972,6 @@ public struct ActiveSessionView: View {
         viewModel.store.setDismissedSuggestions(next, clientSessionId: session.clientSessionId)
     }
 
-    private var locale: SupportedLocale {
-        SupportedLocale.resolve(viewModel.store.preferences.language)
-    }
-
-    private func rpeEffortLabel(_ rpe: Double?) -> String {
-        LukiI18n.effortLabel(rpe: rpe, locale: locale)
-    }
-
     private func nextCycleRpe(_ rpe: Double?) -> Double? {
         guard let rpe else { return 7.0 }
         if rpe <= 7.5 { return 8.0 }
@@ -1010,32 +979,40 @@ public struct ActiveSessionView: View {
         return nil
     }
 
-    private var sessionFooterActions: some View {
-        HStack(spacing: 12) {
-            Button(role: .destructive) {
-                viewModel.abandonActiveSession()
-            } label: {
-                Text("Abandon Session")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.red.opacity(0.18)))
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("ios.session.abandonButton")
+    // MARK: - Footer
 
+    private var sessionFooterActions: some View {
+        VStack(spacing: 10) {
             Button {
                 Task { await viewModel.finishActiveSession() }
             } label: {
-                Text("Finish & Save Workout")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(LukiColors.accentForeground)
+                Label(tr("Finish Workout"), systemImage: "checkmark.circle.fill")
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(LukiColors.accent))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
             .accessibilityIdentifier("ios.session.finishButton")
+
+            Button(role: .destructive) {
+                showingDiscardConfirmation = true
+            } label: {
+                Text(tr("Discard Workout"))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderless)
+            .tint(LukiColors.destructive)
+            .controlSize(.large)
+            .accessibilityIdentifier("ios.session.abandonButton")
+        }
+    }
+}
+
+/// "Next: Bench Press →" with the icon after the title.
+struct TrailingIconLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 4) {
+            configuration.title
+            configuration.icon.imageScale(.small)
         }
     }
 }

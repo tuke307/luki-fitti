@@ -22,6 +22,7 @@ public struct SearchableExercisePickerSheet: View {
     public let selectedExerciseId: String?
     public let onSelect: (ExerciseDto) -> Void
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.lukiLocale) private var tr
 
     @State private var searchText: String = ""
     @State private var selectedMuscle: MuscleGroup?
@@ -56,7 +57,7 @@ public struct SearchableExercisePickerSheet: View {
                     HStack(spacing: 8) {
                         Image(systemName: "magnifyingglass")
                             .foregroundStyle(.secondary)
-                        TextField("Search exercises by name, muscle or equipment…", text: $searchText)
+                        TextField(tr("Search exercises"), text: $searchText)
                             #if !os(macOS)
                             .textInputAutocapitalization(.never)
                             #endif
@@ -67,11 +68,14 @@ public struct SearchableExercisePickerSheet: View {
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
                                     .foregroundStyle(.secondary)
+                                    .frame(minWidth: 44, minHeight: 44)
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel(tr("Clear search"))
                         }
                     }
-                    .padding(10)
+                    .padding(.horizontal, 10)
+                    .frame(minHeight: 44)
                     .background(RoundedRectangle(cornerRadius: 12).fill(LukiColors.fill))
 
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -79,10 +83,10 @@ public struct SearchableExercisePickerSheet: View {
                             Button {
                                 selectedMuscle = nil
                             } label: {
-                                Text("All Muscles (\(exercises.count))")
-                                    .font(.footnote.weight(.medium))
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
+                                Text(tr("All Muscles (%d)", exercises.count))
+                                    .font(.subheadline.weight(.medium))
+                                    .padding(.horizontal, 12)
+                                    .frame(minHeight: 44)
                                     .background(
                                         Capsule().fill(selectedMuscle == nil ? LukiColors.accent : LukiColors.fill)
                                     )
@@ -94,10 +98,10 @@ public struct SearchableExercisePickerSheet: View {
                                 Button {
                                     selectedMuscle = muscle
                                 } label: {
-                                    Text(LukiI18n.muscleLabel(muscle))
-                                        .font(.footnote.weight(.medium))
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 6)
+                                    Text(LukiI18n.muscleLabel(muscle, locale: tr))
+                                        .font(.subheadline.weight(.medium))
+                                        .padding(.horizontal, 12)
+                                        .frame(minHeight: 44)
                                         .background(
                                             Capsule().fill(selectedMuscle == muscle ? LukiColors.accent : LukiColors.fill)
                                         )
@@ -119,7 +123,7 @@ public struct SearchableExercisePickerSheet: View {
                                 Image(systemName: "magnifyingglass")
                                     .font(.title2)
                                     .foregroundStyle(.secondary)
-                                Text("No matching exercises found")
+                                Text(tr("No results"))
                                     .font(.subheadline.bold())
                                     .foregroundStyle(.primary)
                             }
@@ -144,7 +148,7 @@ public struct SearchableExercisePickerSheet: View {
                                                 .foregroundStyle(isSelected ? LukiColors.accent : .primary)
                                                 .multilineTextAlignment(.leading)
 
-                                            Text("\(LukiI18n.muscleLabel(ex.primaryMuscleGroup)) • \(LukiI18n.equipmentLabel(ex.equipment))")
+                                            Text("\(LukiI18n.muscleLabel(ex.primaryMuscleGroup, locale: tr)) · \(LukiI18n.equipmentLabel(ex.equipment, locale: tr))")
                                                 .font(.footnote)
                                                 .foregroundStyle(.secondary)
                                         }
@@ -173,7 +177,7 @@ public struct SearchableExercisePickerSheet: View {
             .navigationTitle(title)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
+                    Button(tr("Close")) { dismiss() }
                 }
             }
             // Build the search index once per catalog instead of on every keystroke.

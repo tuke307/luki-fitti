@@ -5,6 +5,7 @@ import LukiFittiDomain
 
 public struct WorkoutsView: View {
     @Bindable public var viewModel: LukiAppViewModel
+    @Environment(\.lukiLocale) private var tr
 
     @State private var expandedFolderIds: Set<String> = []
     @State private var expandedTemplateIds: Set<String> = []
@@ -63,10 +64,10 @@ public struct WorkoutsView: View {
                     EmptyView()
                 } header: {
                     HStack {
-                        Text("Your plans, grouped by split.")
+                        Text(tr("Your plans, grouped by split."))
                             .textCase(nil)
                         Spacer()
-                        Button(areAllExpanded ? "Collapse All" : "Expand All") {
+                        Button(areAllExpanded ? tr("Collapse All") : tr("Expand All")) {
                             expandedFolderIds = areAllExpanded ? [] : Set(allFolderIds)
                         }
                         .textCase(nil)
@@ -81,7 +82,7 @@ public struct WorkoutsView: View {
                     folderHeaderRow(folder, index: idx)
                     if expandedFolderIds.contains(folder.id) {
                         if folder.templates.isEmpty {
-                            Text("No workouts here yet.")
+                            Text(tr("No workouts here yet."))
                                 .foregroundStyle(.secondary)
                         } else {
                             ForEach(folder.templates) { templateRow($0) }
@@ -90,7 +91,7 @@ public struct WorkoutsView: View {
                             Button {
                                 openNewTemplateBuilder(defaultFolderId: folder.id)
                             } label: {
-                                Label("Add Workout", systemImage: "plus.circle.fill")
+                                Label(tr("Add Workout"), systemImage: "plus.circle.fill")
                             }
                         }
                     }
@@ -105,7 +106,7 @@ public struct WorkoutsView: View {
                         HStack(spacing: 12) {
                             Image(systemName: "tray")
                                 .foregroundStyle(.secondary)
-                            Text("Unfiled Workouts")
+                            Text(tr("Unfiled Workouts"))
                                 .font(.headline)
                                 .foregroundStyle(.primary)
                             Spacer()
@@ -124,7 +125,7 @@ public struct WorkoutsView: View {
         .listSectionSpacing(14)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button(isEditing ? "Done" : "Edit") {
+                Button(isEditing ? tr("Done") : tr("Edit")) {
                     withAnimation { isEditing.toggle() }
                 }
                 .accessibilityIdentifier("ios.workouts.editToggle")
@@ -134,19 +135,19 @@ public struct WorkoutsView: View {
                     Button {
                         openNewTemplateBuilder(defaultFolderId: viewModel.store.folders.first?.id)
                     } label: {
-                        Label("New Workout", systemImage: "dumbbell")
+                        Label(tr("New Workout"), systemImage: "dumbbell")
                     }
                     .accessibilityIdentifier("ios.workouts.newWorkoutButton")
                     Button {
                         openCreateFolderModal()
                     } label: {
-                        Label("New Folder", systemImage: "folder.badge.plus")
+                        Label(tr("New Folder"), systemImage: "folder.badge.plus")
                     }
                     .accessibilityIdentifier("ios.workouts.newFolderButton")
                 } label: {
                     Image(systemName: "plus")
                 }
-                .accessibilityLabel("Add")
+                .accessibilityLabel(tr("Add"))
                 .accessibilityIdentifier("ios.workouts.addMenu")
             }
         }
@@ -175,17 +176,17 @@ public struct WorkoutsView: View {
             )
         }
         .alert(
-            deleteTarget?.isFolder == true ? "Delete folder?" : "Delete workout?",
+            deleteTarget?.isFolder == true ? tr("Delete folder?") : tr("Delete workout?"),
             isPresented: Binding(
                 get: { deleteTarget != nil },
                 set: { if !$0 { deleteTarget = nil } }
             )
         ) {
             if let target = deleteTarget {
-                Button("Cancel", role: .cancel) {
+                Button(tr("Cancel"), role: .cancel) {
                     deleteTarget = nil
                 }
-                Button("Delete", role: .destructive) {
+                Button(tr("Delete"), role: .destructive) {
                     if target.isFolder {
                         deleteFolder(target.id)
                     } else {
@@ -198,8 +199,8 @@ public struct WorkoutsView: View {
             if let target = deleteTarget {
                 Text(
                     target.isFolder
-                        ? "\"\(target.name)\" will be deleted. Its workouts move to Unfiled."
-                        : "\"\(target.name)\" will be deleted. Your past workouts stay in History."
+                        ? tr("“%@” will be deleted. Its workouts move to Unfiled.", target.name)
+                        : tr("“%@” will be deleted. Your past workouts stay in History.", target.name)
                 )
             }
         }
@@ -235,7 +236,7 @@ public struct WorkoutsView: View {
                         .font(.title3)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Delete folder \(folder.name)")
+                .accessibilityLabel(tr("Delete folder %@", folder.name))
             }
             Button {
                 toggleFolder(folder.id)
@@ -264,25 +265,27 @@ public struct WorkoutsView: View {
                 Button { reorderFolder(folder.id, moveUp: true) } label: { Image(systemName: "arrow.up") }
                     .buttonStyle(.borderless)
                     .disabled(index == 0)
+                    .accessibilityLabel(tr("Move folder %@ up", folder.name))
                 Button { reorderFolder(folder.id, moveUp: false) } label: { Image(systemName: "arrow.down") }
                     .buttonStyle(.borderless)
                     .disabled(index == viewModel.store.folders.count - 1)
+                    .accessibilityLabel(tr("Move folder %@ down", folder.name))
                 Button { openRenameFolderModal(folder) } label: { Image(systemName: "pencil") }
                     .buttonStyle(.borderless)
-                    .accessibilityLabel("Rename \(folder.name)")
+                    .accessibilityLabel(tr("Rename %@", folder.name))
             }
         }
         .swipeActions(edge: .leading, allowsFullSwipe: false) {
-            Button { openRenameFolderModal(folder) } label: { Label("Rename", systemImage: "pencil") }
+            Button { openRenameFolderModal(folder) } label: { Label(tr("Rename"), systemImage: "pencil") }
                 .tint(.gray)
-            Button { openNewTemplateBuilder(defaultFolderId: folder.id) } label: { Label("Add Workout", systemImage: "plus") }
+            Button { openNewTemplateBuilder(defaultFolderId: folder.id) } label: { Label(tr("Add Workout"), systemImage: "plus") }
                 .tint(LukiColors.accent)
         }
         .swipeActions(edge: .trailing) {
             Button(role: .destructive) {
                 deleteTarget = DeleteTarget(id: folder.id, name: folder.name, isFolder: true)
             } label: {
-                Label("Delete", systemImage: "trash")
+                Label(tr("Delete"), systemImage: "trash")
             }
         }
     }
@@ -291,7 +294,9 @@ public struct WorkoutsView: View {
         let history = viewModel.store.historySessions.filter {
             $0.templateId == template.id || $0.workoutNameSnapshot.lowercased() == template.name.lowercased()
         }
-        let lastText = history.first.map { "Last \(String($0.startedAt.prefix(10)))" } ?? "Never trained"
+        let lastText = history.first
+            .flatMap { ISO8601DateFormatter.workoutsParse($0.startedAt) }
+            .map { tr("Last %@", $0.formatted(.dateTime.day().month())) } ?? tr("Never trained")
         let isExpanded = expandedTemplateIds.contains(template.id)
 
         return VStack(alignment: .leading, spacing: 8) {
@@ -305,7 +310,7 @@ public struct WorkoutsView: View {
                         Text(template.name)
                             .foregroundStyle(.primary)
                             .lineLimit(1)
-                        Text("\(template.exercises.count) exercises · ~\(template.estimatedDurationMinutes ?? 60) min · \(lastText)")
+                        Text(tr("%d exercises · ~%d min · %@", template.exercises.count, template.estimatedDurationMinutes ?? 60, lastText))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
@@ -318,15 +323,19 @@ public struct WorkoutsView: View {
                 if isEditing {
                     Button { openEditTemplateBuilder(template) } label: { Image(systemName: "pencil") }
                         .buttonStyle(.borderless)
+                        .accessibilityLabel(tr("Edit %@", template.name))
                 } else {
+                    // Plain accent glyph: glass belongs to the bars, not to every list row.
                     Button {
                         viewModel.startSession(from: template, sourceDevice: .IPHONE)
                     } label: {
-                        Image(systemName: "play.fill")
+                        Image(systemName: "play.circle.fill")
+                            .font(.title)
+                            .foregroundStyle(LukiColors.accent)
+                            .frame(minWidth: 44, minHeight: 44)
                     }
-                    .buttonStyle(.glassProminent)
-                    .buttonBorderShape(.circle)
-                    .accessibilityLabel("Start \(template.name)")
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel(tr("Start %@", template.name))
                     .accessibilityIdentifier("ios.workouts.startTemplate.\(template.id)")
                 }
             }
@@ -335,34 +344,34 @@ public struct WorkoutsView: View {
             }
         }
         .swipeActions(edge: .leading, allowsFullSwipe: false) {
-            Button { openEditTemplateBuilder(template) } label: { Label("Edit", systemImage: "pencil") }
+            Button { openEditTemplateBuilder(template) } label: { Label(tr("Edit"), systemImage: "pencil") }
                 .tint(.gray)
-            Button { duplicateTemplate(template) } label: { Label("Duplicate", systemImage: "plus.square.on.square") }
+            Button { duplicateTemplate(template) } label: { Label(tr("Duplicate"), systemImage: "plus.square.on.square") }
                 .tint(LukiColors.accent)
         }
         .swipeActions(edge: .trailing) {
             Button(role: .destructive) {
                 deleteTarget = DeleteTarget(id: template.id, name: template.name, isFolder: false)
             } label: {
-                Label("Delete", systemImage: "trash")
+                Label(tr("Delete"), systemImage: "trash")
             }
         }
         .contextMenu {
-            Button { openEditTemplateBuilder(template) } label: { Label("Edit", systemImage: "pencil") }
-            Button { duplicateTemplate(template) } label: { Label("Duplicate", systemImage: "plus.square.on.square") }
+            Button { openEditTemplateBuilder(template) } label: { Label(tr("Edit"), systemImage: "pencil") }
+            Button { duplicateTemplate(template) } label: { Label(tr("Duplicate"), systemImage: "plus.square.on.square") }
             Menu {
-                Button("Unfiled") { moveTemplate(template, toFolderId: nil) }
+                Button(tr("Unfiled")) { moveTemplate(template, toFolderId: nil) }
                 ForEach(viewModel.store.folders) { f in
                     Button(f.name) { moveTemplate(template, toFolderId: f.id) }
                 }
             } label: {
-                Label("Move to", systemImage: "folder")
+                Label(tr("Move to"), systemImage: "folder")
             }
             Divider()
             Button(role: .destructive) {
                 deleteTarget = DeleteTarget(id: template.id, name: template.name, isFolder: false)
             } label: {
-                Label("Delete", systemImage: "trash")
+                Label(tr("Delete"), systemImage: "trash")
             }
         }
     }
@@ -379,15 +388,9 @@ public struct WorkoutsView: View {
                         VStack(alignment: .leading, spacing: 0) {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
-                                    HStack(spacing: 4) {
-                                        Text("Superset")
-                                            .font(.subheadline.weight(.semibold))
-                                            .foregroundStyle(LukiColors.accent)
-                                        Text("× \(block.rounds) ROUNDS")
-                                            .font(.caption.weight(.heavy).monospacedDigit())
-                                            .foregroundStyle(.primary)
-                                    }
-                                    Text("Rest 0 s between exercises · \(ProgressionEngine.formatRestDurationMinSec(block.roundRestSeconds)) between rounds")
+                                    Text(tr("Superset · %d rounds", block.rounds))
+                                        .font(.subheadline.weight(.semibold))
+                                    Text(tr("No rest between exercises · %@ between rounds", ProgressionEngine.formatRestDurationMinSec(block.roundRestSeconds)))
                                         .font(.footnote)
                                         .foregroundStyle(.secondary)
                                 }
@@ -395,7 +398,7 @@ public struct WorkoutsView: View {
                             }
                             .padding(.horizontal, 10)
                             .padding(.vertical, 8)
-                            .background(Color.black.opacity(0.65))
+                            .background(LukiColors.fill)
 
                             ForEach(Array(block.items.enumerated()), id: \.offset) { _, blockItem in
                                 let ex = blockItem.item
@@ -404,14 +407,14 @@ public struct WorkoutsView: View {
                                     Text("\(blockItem.stepNumber)")
                                         .font(.footnote)
                                         .foregroundStyle(LukiColors.accent)
-                                        .frame(width: 20, height: 20)
-                                        .background(Circle().fill(Color.black))
-                                    Text(exInfo?.name ?? "Exercise")
+                                        .frame(minWidth: 22, minHeight: 22)
+                                        .background(Circle().fill(LukiColors.fill))
+                                    Text(exInfo?.name ?? tr("Exercise"))
                                         .font(.subheadline.weight(.semibold))
                                         .foregroundStyle(.primary)
                                         .lineLimit(1)
                                     Spacer()
-                                    Text("\(ex.plannedSets)×\(ex.targetRepsMin ?? 8)-\(ex.targetRepsMax ?? 12)")
+                                    Text("\(ex.plannedSets)×\(ex.targetRepsMin ?? 8)–\(ex.targetRepsMax ?? 12)")
                                         .font(.footnote.monospacedDigit())
                                         .foregroundStyle(LukiColors.accent)
                                         .padding(.horizontal, 7)
@@ -435,17 +438,17 @@ public struct WorkoutsView: View {
                             Text("\(idx + 1).")
                                 .font(.caption.bold().monospacedDigit())
                                 .foregroundStyle(LukiColors.accent)
-                            Text(exInfo?.name ?? "Exercise")
+                            Text(exInfo?.name ?? tr("Exercise"))
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.primary)
                                 .lineLimit(1)
                             Spacer()
                             if !ex.alternativeExerciseIds.isEmpty {
-                                Text("+\(ex.alternativeExerciseIds.count) backup")
+                                Text(tr("+%d alternatives", ex.alternativeExerciseIds.count))
                                     .font(.footnote)
                                     .foregroundStyle(.secondary)
                             }
-                            Text("\(ex.plannedSets)×\(ex.targetRepsMin ?? 8)-\(ex.targetRepsMax ?? 12)")
+                            Text("\(ex.plannedSets)×\(ex.targetRepsMin ?? 8)–\(ex.targetRepsMax ?? 12)")
                                 .font(.footnote.monospacedDigit())
                                 .foregroundStyle(LukiColors.accent)
                                 .padding(.horizontal, 6)
@@ -475,7 +478,7 @@ public struct WorkoutsView: View {
                    ) {
                     SuggestionCardView(
                         suggestion: suggestion,
-                        locale: SupportedLocale.resolve(viewModel.store.preferences.language),
+                        locale: tr,
                         compact: true
                     )
                     .accessibilityIdentifier("ios.workouts.rainbowSuggestion.\(template.id)")
@@ -491,10 +494,10 @@ public struct WorkoutsView: View {
     private var folderEditorSheet: some View {
         NavigationStack {
             Form {
-                Section("Folder Details") {
-                    TextField("Folder Name (e.g. 4er Split)", text: $folderName)
+                Section(tr("Folder Details")) {
+                    TextField(tr("Folder Name (e.g. 4er Split)"), text: $folderName)
                 }
-                Section("Accent Color") {
+                Section(tr("Accent Color")) {
                     HStack(spacing: 14) {
                         ForEach(folderAccentPalette, id: \.self) { hex in
                             Button {
@@ -514,13 +517,13 @@ public struct WorkoutsView: View {
                     .padding(.vertical, 4)
                 }
             }
-            .navigationTitle(editingFolderId == nil ? "Create Workout Folder" : "Rename Folder")
+            .navigationTitle(editingFolderId == nil ? tr("Create Workout Folder") : tr("Rename Folder"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { showingFolderModal = false }
+                    Button(tr("Cancel")) { showingFolderModal = false }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save Folder") {
+                    Button(tr("Save Folder")) {
                         saveFolder()
                     }
                 }
@@ -697,7 +700,7 @@ public struct WorkoutsView: View {
     private func duplicateTemplate(_ template: WorkoutTemplateDto) {
         var copy = template
         copy.id = "tpl-\(UUID().uuidString.lowercased())"
-        copy.name = "\(template.name) (Copy)"
+        copy.name = tr("%@ (Copy)", template.name)
         var folders = viewModel.store.folders
         if let folderId = template.folderId,
            let idx = folders.firstIndex(where: { $0.id == folderId }) {
@@ -763,6 +766,7 @@ private struct TemplateBuilderSheetView: View {
     @State private var exercises: [WorkoutTemplateExerciseDto]
     @State private var pickingSlotId: String?
     @State private var showingAddPickerSheet: Bool = false
+    @Environment(\.lukiLocale) private var tr
 
     private struct PickingSlotItem: Identifiable {
         let id: String
@@ -794,30 +798,30 @@ private struct TemplateBuilderSheetView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Workout Name *")
+                        Text(tr("Name"))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.secondary)
-                        TextField("e.g. Push A — Chest, Shoulders & Triceps", text: $name)
+                        TextField(tr("e.g. Push A — Chest, Shoulders & Triceps"), text: $name)
                             .textFieldStyle(.roundedBorder)
 
-                        Text("Folder")
+                        Text(tr("Folder"))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.secondary)
-                        Picker("Folder", selection: $folderId) {
-                            Text("Unfiled (No Folder)").tag("")
+                        Picker(tr("Folder"), selection: $folderId) {
+                            Text(tr("Unfiled (No Folder)")).tag("")
                             ForEach(folders) { folder in
                                 Text(folder.name).tag(folder.id)
                             }
                         }
                         .pickerStyle(.menu)
 
-                        Text("Notes / Focus")
+                        Text(tr("Notes / Focus"))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.secondary)
-                        TextField("Optional focus notes...", text: $desc)
+                        TextField(tr("Optional focus notes..."), text: $desc)
                             .textFieldStyle(.roundedBorder)
 
-                        Stepper("Est. Duration: \(durationMin) min", value: $durationMin, in: 10...240, step: 5)
+                        Stepper(tr("About %d min", durationMin), value: $durationMin, in: 10...240, step: 5)
                             .font(.subheadline)
                             .foregroundStyle(.primary)
                     }
@@ -825,21 +829,16 @@ private struct TemplateBuilderSheetView: View {
                     .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
 
                     HStack {
-                        Text("Ordered Exercises (\(exercises.count))")
+                        Text(tr("Exercises (%d)", exercises.count))
                             .font(.headline)
                             .foregroundStyle(.primary)
                         Spacer()
                         Button {
                             showingAddPickerSheet = true
                         } label: {
-                            Text("+ Add Exercise Slot")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(LukiColors.accentForeground)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 7)
-                                .background(Capsule().fill(LukiColors.accent))
+                            Label(tr("Add Exercise"), systemImage: "plus")
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.bordered)
                     }
 
                     ForEach($exercises) { $slot in
@@ -864,7 +863,7 @@ private struct TemplateBuilderSheetView: View {
                                         Image(systemName: "magnifyingglass")
                                             .font(.footnote.weight(.medium))
                                             .foregroundStyle(LukiColors.accent)
-                                        Text(resolvedEx?.name ?? "Select Exercise")
+                                        Text(resolvedEx?.name ?? tr("Select Exercise"))
                                             .font(.subheadline.bold())
                                             .foregroundStyle(LukiColors.accent)
                                             .lineLimit(1)
@@ -875,10 +874,11 @@ private struct TemplateBuilderSheetView: View {
                                             .foregroundStyle(LukiColors.accent)
                                     }
                                     .padding(.horizontal, 10)
-                                    .padding(.vertical, 7)
-                                    .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
+                                    .frame(minHeight: 44)
+                                    .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.fill))
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityLabel(tr("Exercise %d: %@. Change exercise", idx + 1, resolvedEx?.name ?? tr("Select Exercise")))
 
                                 Button {
                                     guard idx > 0 else { return }
@@ -886,11 +886,12 @@ private struct TemplateBuilderSheetView: View {
                                 } label: {
                                     Image(systemName: "arrow.up")
                                         .font(.subheadline.weight(.semibold))
-                                        .frame(width: 28, height: 28)
-                                        .background(RoundedRectangle(cornerRadius: 7).fill(LukiColors.fill))
+                                        .frame(width: 44, height: 44)
+                                        .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.fill))
                                 }
                                 .buttonStyle(.plain)
                                 .disabled(idx == 0)
+                                .accessibilityLabel(tr("Move earlier"))
 
                                 Button {
                                     guard idx < exercises.count - 1 else { return }
@@ -898,22 +899,24 @@ private struct TemplateBuilderSheetView: View {
                                 } label: {
                                     Image(systemName: "arrow.down")
                                         .font(.subheadline.weight(.semibold))
-                                        .frame(width: 28, height: 28)
-                                        .background(RoundedRectangle(cornerRadius: 7).fill(LukiColors.fill))
+                                        .frame(width: 44, height: 44)
+                                        .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.fill))
                                 }
                                 .buttonStyle(.plain)
                                 .disabled(idx == exercises.count - 1)
+                                .accessibilityLabel(tr("Move later"))
 
                                 Button(role: .destructive) {
                                     exercises.removeAll { $0.id == slot.id }
                                 } label: {
                                     Image(systemName: "trash")
                                         .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(.red)
-                                        .frame(width: 28, height: 28)
-                                        .background(RoundedRectangle(cornerRadius: 7).fill(Color.red.opacity(0.14)))
+                                        .foregroundStyle(LukiColors.destructive)
+                                        .frame(width: 44, height: 44)
+                                        .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.fill))
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityLabel(tr("Remove exercise"))
                             }
 
                             TemplateSetsEditorView(slot: $slot, weightUnit: defaultWeightUnit)
@@ -921,21 +924,21 @@ private struct TemplateBuilderSheetView: View {
                             // Rep range goal and rest
                             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 8) {
                                 compactMetricStepper(
-                                    label: "MIN REPS",
+                                    label: tr("Min reps"),
                                     valueText: "\(slot.targetRepsMin ?? 8)",
                                     onDecrement: { slot.targetRepsMin = max(1, (slot.targetRepsMin ?? 8) - 1) },
                                     onIncrement: { slot.targetRepsMin = min(100, (slot.targetRepsMin ?? 8) + 1) }
                                 )
 
                                 compactMetricStepper(
-                                    label: "MAX REPS",
+                                    label: tr("Max reps"),
                                     valueText: "\(slot.targetRepsMax ?? 12)",
                                     onDecrement: { slot.targetRepsMax = max(1, (slot.targetRepsMax ?? 12) - 1) },
                                     onIncrement: { slot.targetRepsMax = min(100, (slot.targetRepsMax ?? 12) + 1) }
                                 )
 
                                 compactMetricStepper(
-                                    label: "REST (SEC)",
+                                    label: tr("Rest"),
                                     valueText: "\(slot.restSeconds)s",
                                     onDecrement: { slot.restSeconds = max(0, slot.restSeconds - 15) },
                                     onIncrement: { slot.restSeconds = min(600, slot.restSeconds + 15) }
@@ -948,14 +951,15 @@ private struct TemplateBuilderSheetView: View {
                                 } label: {
                                     Label(
                                         isSupersetWithNext
-                                            ? "Superset w/ #\(idx + 2) (0s Rest) — Tap to Unlink"
-                                            : "Pair as Superset w/ #\(idx + 2)",
+                                            ? tr("Superset with #%d · Tap to unlink", idx + 2)
+                                            : tr("Pair with #%d as a superset", idx + 2),
                                         systemImage: "bolt.fill"
                                     )
                                     .font(.footnote.weight(.medium))
                                     .foregroundStyle(isSupersetWithNext ? LukiColors.accent : .secondary)
                                 }
                                 .buttonStyle(.plain)
+                                .frame(minHeight: 44)
                             }
                         }
                         .padding(12)
@@ -965,13 +969,13 @@ private struct TemplateBuilderSheetView: View {
                 .padding(16)
             }
             .background(LukiColors.groupedBackground)
-            .navigationTitle(context.editingTemplateId == nil ? "Create Workout Template" : "Edit Workout")
+            .navigationTitle(context.editingTemplateId == nil ? tr("Create Workout Template") : tr("Edit Workout"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { onCancel() }
+                    Button(tr("Cancel")) { onCancel() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(context.editingTemplateId == nil ? "Create" : "Save Changes") {
+                    Button(context.editingTemplateId == nil ? tr("Create") : tr("Save Changes")) {
                         onSave(name, desc, folderId, durationMin, exercises)
                     }
                 }
@@ -984,7 +988,7 @@ private struct TemplateBuilderSheetView: View {
             ) { item in
                 let currentExId = exercises.first(where: { $0.id == item.id })?.exerciseId
                 SearchableExercisePickerSheet(
-                    title: "Change Exercise",
+                    title: tr("Change Exercise"),
                     exercises: catalog,
                     selectedExerciseId: currentExId
                 ) { chosen in
@@ -998,7 +1002,7 @@ private struct TemplateBuilderSheetView: View {
             }
             .sheet(isPresented: $showingAddPickerSheet) {
                 SearchableExercisePickerSheet(
-                    title: "Add Exercise to Workout",
+                    title: tr("Add Exercise"),
                     exercises: catalog,
                     selectedExerciseId: nil
                 ) { chosen in
@@ -1040,9 +1044,11 @@ private struct TemplateBuilderSheetView: View {
                 Button(action: onDecrement) {
                     Image(systemName: "minus")
                         .font(.subheadline.weight(.semibold))
-                        .frame(width: 28, height: 28)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(tr("Decrease %@", label))
 
                 Text(valueText)
                     .font(.subheadline.bold().monospacedDigit())
@@ -1052,13 +1058,13 @@ private struct TemplateBuilderSheetView: View {
                 Button(action: onIncrement) {
                     Image(systemName: "plus")
                         .font(.subheadline.weight(.semibold))
-                        .frame(width: 28, height: 28)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(tr("Increase %@", label))
             }
-            .padding(.horizontal, 4)
-            .padding(.vertical, 2)
-            .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
+            .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.fill))
         }
     }
 }
@@ -1067,6 +1073,7 @@ private struct TemplateBuilderSheetView: View {
 private struct TemplateSetsEditorView: View {
     @Binding var slot: WorkoutTemplateExerciseDto
     let weightUnit: WeightUnit
+    @Environment(\.lukiLocale) private var tr
 
     private var sets: [TemplateSetDto] { TemplateSets.resolve(slot) }
 
@@ -1082,7 +1089,7 @@ private struct TemplateSetsEditorView: View {
                 HStack(spacing: 8) {
                     Menu {
                         ForEach(SetType.allCases, id: \.self) { type in
-                            Button(LukiI18n.setTypeLabel(type)) {
+                            Button(LukiI18n.setTypeLabel(type, locale: tr)) {
                                 var next = current
                                 next[idx].setType = type
                                 commit(TemplateSets.orderWarmupsFirst(next, type: \.setType))
@@ -1090,25 +1097,28 @@ private struct TemplateSetsEditorView: View {
                         }
                     } label: {
                         SetTypeBadge(setType: set.setType, label: idx < labels.count ? labels[idx] : "", completed: false)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
+                    .accessibilityLabel(tr("Set %d: %@", idx + 1, LukiI18n.setTypeLabel(set.setType, locale: tr)))
 
                     stepper(
                         text: set.weight.map { String(format: "%g", $0) } ?? "–",
-                        unit: weightUnit.rawValue.lowercased(),
+                        unit: LukiFormat.unitLabel(weightUnit),
                         onMinus: {
                             var next = current
-                            next[idx].weight = max(0, (set.weight ?? 0) - 2.5)
+                            next[idx].weight = max(0, (set.weight ?? 0) - LukiFormat.weightStep(weightUnit))
                             commit(next)
                         },
                         onPlus: {
                             var next = current
-                            next[idx].weight = (set.weight ?? 0) + 2.5
+                            next[idx].weight = (set.weight ?? 0) + LukiFormat.weightStep(weightUnit)
                             commit(next)
                         }
                     )
                     stepper(
                         text: set.reps.map(String.init) ?? "–",
-                        unit: "reps",
+                        unit: tr("reps"),
                         onMinus: {
                             var next = current
                             next[idx].reps = max(0, (set.reps ?? 0) - 1)
@@ -1128,11 +1138,13 @@ private struct TemplateSetsEditorView: View {
                     } label: {
                         Image(systemName: "trash")
                             .font(.footnote)
-                            .foregroundStyle(.red.opacity(0.85))
-                            .frame(width: 26, height: 26)
+                            .foregroundStyle(LukiColors.destructive)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .disabled(current.count <= 1)
+                    .accessibilityLabel(tr("Delete set %d", idx + 1))
                 }
             }
 
@@ -1140,33 +1152,41 @@ private struct TemplateSetsEditorView: View {
                 let last = current.last
                 commit(current + [TemplateSetDto(setType: .WORKING, weight: last?.weight, reps: last?.reps ?? 10, durationSeconds: last?.durationSeconds)])
             } label: {
-                Label("Add Set", systemImage: "plus")
+                Label(tr("Add Set"), systemImage: "plus")
                     .font(.footnote.weight(.semibold))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bordered)
         }
     }
 
     private func stepper(text: String, unit: String, onMinus: @escaping () -> Void, onPlus: @escaping () -> Void) -> some View {
         HStack(spacing: 2) {
             Button(action: onMinus) {
-                Image(systemName: "minus").font(.caption.weight(.bold)).frame(width: 26, height: 30)
+                Image(systemName: "minus").font(.caption.weight(.bold)).frame(minWidth: 32, minHeight: 44).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            VStack(spacing: 0) {
-                Text(text).font(.system(size: 14, weight: .semibold).monospacedDigit())
-                Text(unit).font(.system(size: 8, weight: .bold)).foregroundStyle(.secondary)
+            .accessibilityLabel(tr("Decrease %@", unit))
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                Text(text).font(.subheadline.weight(.semibold).monospacedDigit())
+                Text(unit).font(.caption2).foregroundStyle(.secondary)
             }
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
             .frame(minWidth: 34)
             Button(action: onPlus) {
-                Image(systemName: "plus").font(.caption.weight(.bold)).frame(width: 26, height: 30)
+                Image(systemName: "plus").font(.caption.weight(.bold)).frame(minWidth: 32, minHeight: 44).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(tr("Increase %@", unit))
         }
-        .padding(.horizontal, 2)
-        .background(RoundedRectangle(cornerRadius: 9).fill(LukiColors.fill))
+        .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.fill))
+    }
+}
+
+private extension ISO8601DateFormatter {
+    static func workoutsParse(_ iso: String) -> Date? {
+        let withFraction = ISO8601DateFormatter()
+        withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return withFraction.date(from: iso) ?? ISO8601DateFormatter().date(from: iso)
     }
 }

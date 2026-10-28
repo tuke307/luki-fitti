@@ -6,18 +6,23 @@ import LukiFittiDomain
 
 public struct HomeDashboardView: View {
     @Bindable public var viewModel: LukiAppViewModel
+    @Environment(\.lukiLocale) private var tr
     @State private var muscleRange: String = "90d"
 
     public init(viewModel: LukiAppViewModel) {
         self.viewModel = viewModel
     }
 
+    private var unit: WeightUnit { viewModel.store.preferences.weightUnit }
+
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                Text(greeting)
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                if let greeting {
+                    Text(greeting)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
 
                 if let active = viewModel.store.activeSession {
                     resumeCard(active)
@@ -26,7 +31,6 @@ public struct HomeDashboardView: View {
                 }
 
                 weekCard
-                overviewSection
                 weeklyVolumeCard
                 musclesCard
             }
@@ -38,30 +42,31 @@ public struct HomeDashboardView: View {
 
     // MARK: Header & primary action
 
-    private var greeting: String {
-        let name = viewModel.store.currentUser?.name?.split(separator: " ").first.map(String.init) ?? "GymBuddy"
-        return "Hi, \(name)"
+    /// Only greets people by name; guests just see the Today title.
+    private var greeting: String? {
+        guard let name = viewModel.store.currentUser?.name?.split(separator: " ").first else { return nil }
+        return tr("Hi, %@", String(name))
     }
 
     private func resumeCard(_ active: WorkoutSessionDto) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Session In Progress")
+                Text(tr("In Progress"))
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(LukiColors.accent)
                 Text(active.workoutNameSnapshot)
                     .font(.title2.bold())
-                Text("\(active.totalSetsCompleted) sets · \(Int(active.totalVolumeKg)) kg")
+                Text(tr("%d sets · %@", active.totalSetsCompleted, LukiFormat.volume(kg: active.totalVolumeKg, unit: active.weightUnit)))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
             Button {
                 viewModel.selectedTab = .session
             } label: {
-                Label("Resume", systemImage: "play.fill")
+                Label(tr("Resume"), systemImage: "play.fill")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.glassProminent)
+            .buttonStyle(.borderedProminent)
             .controlSize(.large)
             .accessibilityIdentifier("ios.home.resumeSessionButton")
         }
@@ -75,43 +80,49 @@ public struct HomeDashboardView: View {
         let suggestion = suggestedTemplate
         return VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Ready when you are")
+                Text(tr("Ready when you are"))
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(.secondary)
-                Text(suggestion?.template.name ?? "Pick a workout to get going.")
+                Text(suggestion?.template.name ?? tr("Pick a workout to get going."))
                     .font(.title2.bold())
                 if let suggestion {
-                    Text(suggestion.lastDate.map { "Last trained \($0.formatted(.dateTime.day().month()))" } ?? "Never trained")
+                    Text(suggestion.lastDate.map { tr("Last trained %@", $0.formatted(.dateTime.day().month())) } ?? tr("Never trained"))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
             }
-            HStack(spacing: 10) {
-                if let suggestion {
-                    Button {
-                        viewModel.startSession(from: suggestion.template)
-                        viewModel.selectedTab = .session
-                    } label: {
-                        Label("Start", systemImage: "play.fill")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.glassProminent)
-                    .controlSize(.large)
-                    .accessibilityIdentifier("ios.home.startSuggestedButton")
-                }
-                Button {
-                    viewModel.selectedTab = .workouts
-                } label: {
-                    Text("Choose Workout")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.glass)
-                .controlSize(.large)
-                .accessibilityIdentifier("ios.home.chooseWorkoutButton")
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) { startButtons(suggestion) }
+                VStack(spacing: 10) { startButtons(suggestion) }
             }
         }
         .padding(18)
         .background(cardShape)
+    }
+
+    @ViewBuilder
+    private func startButtons(_ suggestion: (template: WorkoutTemplateDto, lastDate: Date?)?) -> some View {
+        if let suggestion {
+            Button {
+                viewModel.startSession(from: suggestion.template)
+                viewModel.selectedTab = .session
+            } label: {
+                Label(tr("Start"), systemImage: "play.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .accessibilityIdentifier("ios.home.startSuggestedButton")
+        }
+        Button {
+            viewModel.selectedTab = .workouts
+        } label: {
+            Text(tr("Choose Workout"))
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+        .accessibilityIdentifier("ios.home.chooseWorkoutButton")
     }
 
     private var suggestedTemplate: (template: WorkoutTemplateDto, lastDate: Date?)? {
@@ -128,10 +139,14 @@ public struct HomeDashboardView: View {
 
     // MARK: Weekly goal
 
-    private var sessionsThisWeek: Int {
+    private static var isoCalendar: Calendar {
         var calendar = Calendar(identifier: .iso8601)
         calendar.timeZone = .current
-        guard let weekStart = calendar.dateInterval(of: .weekOfYear, for: Date())?.start else { return 0 }
+        return calendar
+    }
+
+    private var sessionsThisWeek: Int {
+        guard let weekStart = Self.isoCalendar.dateInterval(of: .weekOfYear, for: Date())?.start else { return 0 }
         return viewModel.store.historySessions.filter { parseDate($0.startedAt) >= weekStart }.count
     }
 
@@ -153,14 +168,10 @@ public struct HomeDashboardView: View {
             .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("This week")
+                Text(tr("This week"))
                     .font(.headline)
-                Text("\(done)")
-                    .font(.system(.title, design: .rounded).weight(.semibold))
-                    + Text(" / \(goal)")
-                    .font(.system(.headline, design: .rounded))
-                    .foregroundStyle(.secondary)
-                Text(remaining == 0 ? "Weekly goal reached. Nice work." : "\(remaining) more to reach your goal")
+                Text("\(Text("\(done)").font(.system(.title, design: .rounded).weight(.semibold))) \(Text("/ \(goal)").font(.system(.headline, design: .rounded)).foregroundStyle(.secondary))")
+                Text(remaining == 0 ? tr("Weekly goal reached. Nice work.") : tr("%d more to reach your goal", remaining))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -171,77 +182,50 @@ public struct HomeDashboardView: View {
         .accessibilityElement(children: .combine)
     }
 
-    // MARK: Overview
-
-    private var overviewSection: some View {
-        let history = viewModel.store.historySessions
-        let cutoff = Date().addingTimeInterval(-30 * 86_400)
-        let volume30d = history.filter { parseDate($0.startedAt) >= cutoff }.reduce(0.0) { $0 + $1.totalVolumeKg }
-        let strength = history.filter { $0.totalVolumeKg > 0 }
-        let perWorkout = strength.isEmpty ? 0 : Int(strength.reduce(0.0) { $0 + $1.totalVolumeKg } / Double(strength.count))
-
-        return VStack(alignment: .leading, spacing: 8) {
-            Text("Overview")
-                .font(.title3.bold())
-                .padding(.horizontal, 4)
-            VStack(spacing: 0) {
-                overviewRow("Last 30 days", "\(Int(volume30d).formatted()) kg lifted")
-                Divider().padding(.leading, 18)
-                overviewRow("Workouts", "\(history.count)")
-                Divider().padding(.leading, 18)
-                overviewRow("Per workout", "\(perWorkout.formatted()) kg on average")
-            }
-            .background(cardShape)
-            Button {
-                viewModel.selectedTab = .diary
-            } label: {
-                Label("History", systemImage: "chevron.right")
-                    .labelStyle(TrailingIconLabelStyle())
-                    .font(.subheadline.weight(.medium))
-            }
-            .padding(.horizontal, 4)
-            .accessibilityIdentifier("ios.home.trainingDiaryButton")
-        }
-    }
-
-    private func overviewRow(_ label: String, _ value: String) -> some View {
-        HStack {
-            Text(label)
-            Spacer()
-            Text(value)
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-        }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 13)
-    }
-
     // MARK: Charts
 
+    /// Volume per ISO week for the last 8 weeks, in the person's unit (thousands).
+    private var weeklyVolume: [(weekStart: Date, value: Double)] {
+        let calendar = Self.isoCalendar
+        guard let thisWeek = calendar.dateInterval(of: .weekOfYear, for: Date())?.start else { return [] }
+        return (0..<8).reversed().compactMap { offset in
+            guard let start = calendar.date(byAdding: .weekOfYear, value: -offset, to: thisWeek),
+                  let end = calendar.date(byAdding: .weekOfYear, value: 1, to: start) else { return nil }
+            let kg = viewModel.store.historySessions
+                .filter { let d = parseDate($0.startedAt); return d >= start && d < end }
+                .reduce(0.0) { $0 + $1.totalVolumeKg }
+            return (start, Double(LukiFormat.volumeValue(kg: kg, unit: unit)) / 1000.0)
+        }
+    }
+
     private var weeklyVolumeCard: some View {
-        let sessions = Array(viewModel.store.historySessions.prefix(10).reversed())
+        let weeks = weeklyVolume
+        let bigUnit = unit == .LBS ? "k lb" : "t"
         return VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Weekly volume").font(.headline)
-                Text("Recent workouts").font(.footnote).foregroundStyle(.secondary)
+                Text(tr("Weekly volume")).font(.headline)
+                Text(tr("Last 8 weeks")).font(.footnote).foregroundStyle(.secondary)
             }
-            if sessions.isEmpty {
-                Text("No workouts yet.")
+            if viewModel.store.historySessions.isEmpty {
+                Text(tr("No workouts yet."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, minHeight: 120)
             } else {
-                Chart {
-                    ForEach(Array(sessions.enumerated()), id: \.offset) { idx, session in
-                        BarMark(
-                            x: .value("Workout", idx + 1),
-                            y: .value("Volume (t)", session.totalVolumeKg / 1000.0)
-                        )
-                        .foregroundStyle(LukiColors.accent)
-                        .clipShape(Capsule())
+                Chart(weeks, id: \.weekStart) { week in
+                    BarMark(
+                        x: .value(tr("Week"), week.weekStart, unit: .weekOfYear),
+                        y: .value(tr("Volume (%@)", bigUnit), week.value)
+                    )
+                    .foregroundStyle(LukiColors.accent)
+                    .clipShape(Capsule())
+                }
+                .chartXAxis {
+                    AxisMarks(values: .stride(by: .weekOfYear, count: 2)) {
+                        AxisValueLabel(format: .dateTime.day().month(.abbreviated))
                     }
                 }
-                .chartXAxis(.hidden)
+                .chartYAxisLabel(bigUnit)
                 .frame(height: 150)
             }
         }
@@ -267,22 +251,19 @@ public struct HomeDashboardView: View {
         let maxSets = counts.first?.1 ?? 1
 
         return VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Muscles trained").font(.headline)
-                    Text("Working sets per muscle group").font(.footnote).foregroundStyle(.secondary)
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top) {
+                    musclesTitle
+                    Spacer()
+                    musclesRangePicker.fixedSize()
                 }
-                Spacer()
-                Picker("Range", selection: $muscleRange) {
-                    Text("30d").tag("30d")
-                    Text("90d").tag("90d")
-                    Text("All").tag("all")
+                VStack(alignment: .leading, spacing: 10) {
+                    musclesTitle
+                    musclesRangePicker
                 }
-                .pickerStyle(.segmented)
-                .frame(width: 150)
             }
             if counts.isEmpty {
-                Text("No sets logged in this period yet.")
+                Text(tr("No sets logged in this period yet."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, minHeight: 80)
@@ -290,9 +271,9 @@ public struct HomeDashboardView: View {
                 ForEach(counts.prefix(8), id: \.0) { muscle, sets in
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
-                            Text(LukiI18n.muscleLabel(muscle))
+                            Text(LukiI18n.muscleLabel(muscle, locale: tr))
                             Spacer()
-                            Text("\(sets) sets")
+                            Text(tr("%d sets", sets))
                                 .foregroundStyle(.secondary)
                                 .monospacedDigit()
                         }
@@ -307,12 +288,30 @@ public struct HomeDashboardView: View {
                                 }
                         }
                         .frame(height: 6)
+                        .accessibilityHidden(true)
                     }
+                    .accessibilityElement(children: .combine)
                 }
             }
         }
         .padding(18)
         .background(cardShape)
+    }
+
+    private var musclesTitle: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(tr("Muscles trained")).font(.headline)
+            Text(tr("Working sets per muscle group")).font(.footnote).foregroundStyle(.secondary)
+        }
+    }
+
+    private var musclesRangePicker: some View {
+        Picker(tr("Range"), selection: $muscleRange) {
+            Text("30d").tag("30d")
+            Text("90d").tag("90d")
+            Text(tr("All")).tag("all")
+        }
+        .pickerStyle(.segmented)
     }
 
     // MARK: Helpers
@@ -333,14 +332,5 @@ public struct HomeDashboardView: View {
         Self.isoFormatterWithFractional.date(from: iso)
             ?? Self.isoFormatterStandard.date(from: iso)
             ?? Date()
-    }
-}
-
-private struct TrailingIconLabelStyle: LabelStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: 2) {
-            configuration.title
-            configuration.icon.imageScale(.small)
-        }
     }
 }

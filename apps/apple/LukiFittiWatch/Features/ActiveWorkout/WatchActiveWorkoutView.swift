@@ -6,6 +6,8 @@ import LukiFittiWatchSync
 
 public struct WatchActiveWorkoutView: View {
     @Bindable public var viewModel: WatchWorkoutViewModel
+    @Environment(\.lukiLocale) private var tr
+    @State private var showingFinishConfirmation = false
 
     public init(viewModel: WatchWorkoutViewModel) {
         self.viewModel = viewModel
@@ -13,215 +15,183 @@ public struct WatchActiveWorkoutView: View {
 
     public var body: some View {
         TabView(selection: $viewModel.activePageTab) {
-            page1ActionGrid
+            controlsPage
                 .tag(1)
 
-            page2ExerciseExecution
+            executionPage
                 .tag(2)
 
-            page3FormGuide
+            formGuidePage
                 .tag(3)
         }
         .tabViewStyle(.page)
-        .background(Color.black)
         .sheet(isPresented: $viewModel.showingChangeExerciseSheet) {
             changeExerciseSheet
         }
         .sheet(isPresented: $viewModel.showingEditSetSheet) {
-            editCurrentSetSheet
+            WatchEditSetSheet(viewModel: viewModel)
         }
-    }
-
-    // MARK: - Page 1 (Left Dot): 2×2 Pastel Action Grid (Change, Edit, Pause, Finish)
-
-    private var page1ActionGrid: some View {
-        let isPaused = viewModel.store.activeSession?.status == .PAUSED
-        return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-            actionTile(
-                title: "Change",
-                systemImage: "arrow.triangle.swap",
-                fill: LukiColors.watchActionChangeLavender
-            ) {
-                viewModel.showingChangeExerciseSheet = true
-            }
-
-            actionTile(
-                title: "Edit",
-                systemImage: "pencil",
-                fill: LukiColors.watchActionEditCream
-            ) {
-                viewModel.showingEditSetSheet = true
-            }
-
-            actionTile(
-                title: isPaused ? "Resume" : "Pause",
-                systemImage: isPaused ? "play.fill" : "pause",
-                fill: LukiColors.watchActionPauseSky
-            ) {
-                viewModel.togglePause()
-            }
-
-            actionTile(
-                title: "Finish",
-                systemImage: "checkmark",
-                fill: LukiColors.watchActionFinishMint
-            ) {
+        .confirmationDialog(tr("End this workout?"), isPresented: $showingFinishConfirmation) {
+            Button(tr("End Workout")) {
                 Task { await viewModel.finishWorkout() }
             }
+            .accessibilityIdentifier("watch.finish.confirm")
+            Button(tr("Cancel"), role: .cancel) {}
         }
-        .padding(8)
     }
 
-    private func actionTile(
+    private var session: WorkoutSessionDto? { viewModel.store.activeSession }
+
+    private var currentExercise: SessionExerciseDto? {
+        let exercises = session?.exercises ?? []
+        guard !exercises.isEmpty else { return nil }
+        return exercises[min(max(0, viewModel.currentExerciseIndex), exercises.count - 1)]
+    }
+
+    // MARK: - Page 1: controls
+
+    private var controlsPage: some View {
+        let isPaused = session?.status == .PAUSED
+        return ScrollView {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                controlButton(id: "change", title: tr("Change"), systemImage: "arrow.triangle.swap") {
+                    viewModel.showingChangeExerciseSheet = true
+                }
+                controlButton(id: "edit", title: tr("Edit"), systemImage: "pencil") {
+                    viewModel.showingEditSetSheet = true
+                }
+                controlButton(
+                    id: "pause",
+                    title: isPaused ? tr("Resume") : tr("Pause"),
+                    systemImage: isPaused ? "play.fill" : "pause.fill"
+                ) {
+                    viewModel.togglePause()
+                }
+                controlButton(id: "finish", title: tr("End"), systemImage: "xmark", tint: LukiColors.destructive) {
+                    showingFinishConfirmation = true
+                }
+            }
+            .padding(.horizontal, 4)
+        }
+    }
+
+    private func controlButton(
+        id: String,
         title: String,
         systemImage: String,
-        fill: Color,
+        tint: Color = LukiColors.accent,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
             VStack(spacing: 4) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(fill)
-                        .frame(height: 54)
-                    Image(systemName: systemImage)
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(LukiColors.accentForeground)
-                }
+                Image(systemName: systemImage)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(tint)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.fill))
                 Text(title)
                     .font(.footnote)
-                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
         }
         .buttonStyle(.plain)
-        .accessibilityIdentifier("watch.action.\(title.lowercased())")
+        .accessibilityLabel(title)
+        .accessibilityIdentifier("watch.action.\(id)")
     }
 
-    // MARK: - Page 2 (Center Dot, Default): Exercise Execution & "Tap when done" Neon-Lime Ring
+    // MARK: - Page 2: current set
 
-    private var page2ExerciseExecution: some View {
-        let session = viewModel.store.activeSession
-        let exercises = session?.exercises ?? []
-        let safeIdx = min(max(0, viewModel.currentExerciseIndex), max(0, exercises.count - 1))
-        let currentExercise = exercises.isEmpty ? nil : exercises[safeIdx]
-        let completedSetsCount = currentExercise?.sets.filter(\.completed).count ?? 0
-        let totalSetsCount = max(1, currentExercise?.sets.count ?? 1)
-        let activeSet = currentExercise?.sets.first(where: { !$0.completed }) ?? currentExercise?.sets.last
-        let restStatus = SessionCalculator.computeRemainingRestSeconds(session: session)
-        let ringProgress = restStatus.isRunning && restStatus.totalSeconds > 0
-            ? Double(restStatus.remainingSeconds) / Double(restStatus.totalSeconds)
-            : Double(completedSetsCount) / Double(totalSetsCount)
+    private var executionPage: some View {
+        let exercise = currentExercise
+        let completedSets = exercise?.sets.filter(\.completed).count ?? 0
+        let totalSets = max(1, exercise?.sets.count ?? 1)
+        let activeSet = exercise?.sets.first(where: { !$0.completed }) ?? exercise?.sets.last
+        let rest = SessionCalculator.computeRemainingRestSeconds(session: session)
+        let ringProgress = rest.isRunning && rest.totalSeconds > 0
+            ? Double(rest.remainingSeconds) / Double(rest.totalSeconds)
+            : Double(completedSets) / Double(totalSets)
+        let isStretch = activeSet?.setType == .STRETCH || exercise?.exerciseTypeSnapshot == .STRETCHING
+        let valueText = isStretch
+            ? "\(activeSet?.durationSeconds ?? 45)"
+            : LukiFormat.weight(activeSet?.weight ?? exercise?.targetWeight ?? 0)
+        let unitText = isStretch ? tr("sec") : LukiFormat.unitLabel(session?.weightUnit ?? .KG)
 
-        return VStack(spacing: 6) {
-            // Top Row: Dual-Pose Exercise Visual (Left) + Timer & SETS/REPS (Right)
-            HStack(alignment: .top, spacing: 8) {
-                if let currentExercise {
-                    ExerciseVectorVisualView(
-                        exerciseName: currentExercise.exerciseNameSnapshot,
-                        primaryMuscle: currentExercise.primaryMuscleSnapshot,
-                        compact: true
-                    )
-                }
-
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(
-                        restStatus.isRunning
-                            ? String(format: "%d:%02d", restStatus.remainingSeconds / 60, restStatus.remainingSeconds % 60)
-                            : formattedElapsed(session?.activeDurationSeconds ?? 10)
-                    )
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(LukiColors.accent)
-
-                    Text(currentExercise?.exerciseNameSnapshot ?? "Workout")
-                        .font(.footnote)
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.trailing)
-
-                    HStack(spacing: 10) {
-                        VStack(alignment: .trailing, spacing: 0) {
-                            Text("Sets")
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundStyle(.secondary)
-                            Text("\(min(completedSetsCount + 1, totalSetsCount))/\(totalSetsCount)")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(.white)
-                        }
-                        VStack(alignment: .trailing, spacing: 0) {
-                            Text("Reps")
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundStyle(.secondary)
-                            Text("\(activeSet?.reps ?? currentExercise?.targetRepsMin ?? 12)")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(.white)
-                        }
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(rest.isRunning ? tr("Rest") : tr("Set %d of %d", min(completedSets + 1, totalSets), totalSets))
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(rest.isRunning ? LukiColors.accent : .secondary)
+                    Spacer()
+                    if let bpm = viewModel.healthCoordinator.currentHeartRateBpm {
+                        Label("\(bpm)", systemImage: "heart.fill")
+                            .font(.footnote.weight(.semibold).monospacedDigit())
+                            .foregroundStyle(LukiColors.heartRate)
+                            .accessibilityLabel("\(bpm) bpm")
                     }
                 }
-            }
 
-            // Bottom Row: Interactive Neon-Lime Weight & Completion Ring (Left) + Live Heart Rate (Right)
-            HStack(alignment: .bottom, spacing: 10) {
+                Text(exercise?.exerciseNameSnapshot ?? tr("Workout"))
+                    .font(.headline)
+                    .lineLimit(2)
+
                 Button {
                     viewModel.tapCompleteCurrentSetOrSkipRest()
                 } label: {
-                    VStack(spacing: 3) {
+                    HStack(spacing: 10) {
                         ZStack {
                             Circle()
-                                .stroke(Color.white.opacity(0.18), lineWidth: 6)
+                                .stroke(LukiColors.fill, lineWidth: 6)
                             Circle()
-                                .trim(from: 0, to: max(0.08, min(1.0, ringProgress)))
-                                .stroke(
-                                    LukiColors.accent,
-                                    style: StrokeStyle(lineWidth: 6, lineCap: .round)
-                                )
+                                .trim(from: 0, to: max(0.04, min(1.0, ringProgress)))
+                                .stroke(LukiColors.accent, style: StrokeStyle(lineWidth: 6, lineCap: .round))
                                 .rotationEffect(.degrees(-90))
-
-                            VStack(spacing: 0) {
-                                Text(activeSet?.setType == .STRETCH ? "SEC" : (session?.weightUnit.rawValue ?? "KG"))
-                                    .font(.system(size: 8, weight: .bold))
-                                    .foregroundStyle(.secondary)
-                                Text(
-                                    activeSet?.setType == .STRETCH
-                                        ? "\(activeSet?.durationSeconds ?? 45)"
-                                        : String(format: "%g", activeSet?.weight ?? currentExercise?.targetWeight ?? 50)
-                                )
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundStyle(.white)
+                            Group {
+                                if rest.isRunning {
+                                    Text(LukiFormat.clock(rest.remainingSeconds))
+                                } else {
+                                    Image(systemName: "checkmark")
+                                }
                             }
+                            .font(.headline.monospacedDigit())
                         }
-                        .frame(width: 58, height: 58)
+                        .frame(width: 56, height: 56)
 
-                        Text(restStatus.isRunning ? "Tap to skip rest" : "Tap when done")
-                            .font(.footnote)
-                            .foregroundStyle(.white)
-                            .accessibilityIdentifier("watch.execution.ringSubtitle")
+                        VStack(alignment: .leading, spacing: 0) {
+                            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                                Text(valueText)
+                                    .font(.system(.title3, design: .rounded).weight(.semibold).monospacedDigit())
+                                Text(unitText)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            if !isStretch {
+                                Text(tr("%d reps", activeSet?.reps ?? exercise?.targetRepsMin ?? 0))
+                                    .font(.footnote.monospacedDigit())
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text(rest.isRunning ? tr("Tap to skip rest") : tr("Tap when done"))
+                                .font(.footnote)
+                                .foregroundStyle(LukiColors.accent)
+                                .accessibilityIdentifier("watch.execution.ringSubtitle")
+                        }
+                        Spacer(minLength: 0)
                     }
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(rest.isRunning ? tr("Skip rest") : tr("Complete set"))
+                .accessibilityValue("\(valueText) \(unitText)")
                 .accessibilityIdentifier("watch.execution.ringButton")
-
-                Spacer()
-
-                HStack(spacing: 4) {
-                    Text("❤️")
-                        .font(.system(size: 13))
-                    Text(viewModel.healthCoordinator.currentHeartRateBpm.map(String.init) ?? "-")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(.white)
-                }
-                .padding(.bottom, 4)
             }
+            .padding(.horizontal, 4)
         }
-        .padding(.horizontal, 8)
     }
 
-    // MARK: - Page 3 (Right Dot): Exercise Form Guide & Target Muscles
+    // MARK: - Page 3: how to
 
-    private var page3FormGuide: some View {
-        let session = viewModel.store.activeSession
-        let exercises = session?.exercises ?? []
-        let safeIdx = min(max(0, viewModel.currentExerciseIndex), max(0, exercises.count - 1))
-        let currentExercise = exercises.isEmpty ? nil : exercises[safeIdx]
+    private var formGuidePage: some View {
         let catalogInfo = viewModel.store.catalog.first { $0.id == currentExercise?.exerciseId }
 
         return ScrollView {
@@ -234,43 +204,36 @@ public struct WatchActiveWorkoutView: View {
                             primaryMuscle: currentExercise.primaryMuscleSnapshot,
                             compact: true
                         )
+                        .accessibilityHidden(true)
                         Spacer()
                     }
 
                     Text(currentExercise.exerciseNameSnapshot)
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(LukiColors.accent)
+                        .font(.headline)
 
-                    let secondaryText = (catalogInfo?.secondaryMuscleGroups ?? [])
-                        .map { LukiI18n.muscleLabel($0) }
+                    let muscles = ([currentExercise.primaryMuscleSnapshot] + (catalogInfo?.secondaryMuscleGroups ?? []))
+                        .map { LukiI18n.muscleLabel($0, locale: tr) }
                         .joined(separator: ", ")
-                    Text(
-                        secondaryText.isEmpty
-                            ? LukiI18n.muscleLabel(currentExercise.primaryMuscleSnapshot)
-                            : "\(LukiI18n.muscleLabel(currentExercise.primaryMuscleSnapshot)) · \(secondaryText)"
-                    )
-                    .font(.footnote)
-                    .foregroundStyle(.white)
+                    Text(muscles)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
 
-                    Rectangle()
-                        .fill(Color.white)
-                        .frame(height: 1)
+                    Divider()
 
-                    ForEach(catalogInfo?.instructions ?? ["Maintain controlled form through the full range of motion."], id: \.self) { step in
-                        Text("• \(step)")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.white.opacity(0.9))
+                    ForEach(catalogInfo?.instructions ?? [tr("Keep the movement controlled through the full range of motion.")], id: \.self) { step in
+                        Text(step)
+                            .font(.footnote)
                     }
                 }
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 4)
         }
     }
 
-    // MARK: - Sheets for Change & Edit
+    // MARK: - Change exercise
 
     private var changeExerciseSheet: some View {
-        let exercises = viewModel.store.activeSession?.exercises ?? []
+        let exercises = session?.exercises ?? []
         return List {
             ForEach(Array(exercises.enumerated()), id: \.element.clientExerciseId) { idx, ex in
                 Button {
@@ -285,60 +248,103 @@ public struct WatchActiveWorkoutView: View {
                         if idx == viewModel.currentExerciseIndex {
                             Image(systemName: "checkmark")
                                 .foregroundStyle(LukiColors.accent)
+                                .accessibilityLabel(tr("Current"))
                         }
                     }
                 }
             }
         }
     }
+}
 
-    private var editCurrentSetSheet: some View {
-        let exercises = viewModel.store.activeSession?.exercises ?? []
-        let safeIdx = min(max(0, viewModel.currentExerciseIndex), max(0, exercises.count - 1))
-        let currentEx = exercises.isEmpty ? nil : exercises[safeIdx]
-        let setIdx = currentEx?.sets.firstIndex(where: { !$0.completed }) ?? 0
-        let currentWeight = currentEx?.sets[safeIdx < exercises.count && setIdx < (currentEx?.sets.count ?? 0) ? setIdx : 0].weight ?? 50
-        let currentReps = currentEx?.sets[safeIdx < exercises.count && setIdx < (currentEx?.sets.count ?? 0) ? setIdx : 0].reps ?? 10
+/// Edit the next set: the Digital Crown sets the weight, buttons adjust reps.
+private struct WatchEditSetSheet: View {
+    @Bindable var viewModel: WatchWorkoutViewModel
+    @Environment(\.lukiLocale) private var tr
+    @State private var crownWeight: Double = 0
+    @State private var didLoad = false
 
-        return VStack(spacing: 8) {
-            Text("Edit Set #\(setIdx + 1)")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(LukiColors.accent)
+    private var target: (exIdx: Int, setIdx: Int)? {
+        guard let session = viewModel.store.activeSession, !session.exercises.isEmpty else { return nil }
+        let exIdx = min(max(0, viewModel.currentExerciseIndex), session.exercises.count - 1)
+        let sets = session.exercises[exIdx].sets
+        guard !sets.isEmpty else { return nil }
+        return (exIdx, sets.firstIndex(where: { !$0.completed }) ?? 0)
+    }
+
+    private var unit: WeightUnit { viewModel.store.activeSession?.weightUnit ?? .KG }
+
+    var body: some View {
+        let set = target.flatMap { t in viewModel.store.activeSession?.exercises[t.exIdx].sets[t.setIdx] }
+        let step = LukiFormat.weightStep(unit)
+        VStack(spacing: 8) {
+            Text(tr("Set %d", (target?.setIdx ?? 0) + 1))
+                .font(.headline)
+
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                Text(LukiFormat.weight(crownWeight))
+                    .font(.system(.title2, design: .rounded).weight(.semibold).monospacedDigit())
+                Text(LukiFormat.unitLabel(unit))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            .focusable()
+            .digitalCrownRotation($crownWeight, from: 0, through: 500, by: step, sensitivity: .medium, isContinuous: false, isHapticFeedbackEnabled: true)
+            .accessibilityLabel(tr("Weight"))
+            .accessibilityValue("\(LukiFormat.weight(crownWeight)) \(LukiFormat.unitLabel(unit))")
+            .accessibilityAdjustableAction { direction in
+                switch direction {
+                case .increment: crownWeight += step
+                case .decrement: crownWeight = max(0, crownWeight - step)
+                @unknown default: break
+                }
+            }
+            Text(tr("Turn the Digital Crown"))
+                .font(.caption2)
+                .foregroundStyle(.secondary)
 
             HStack {
-                Button("-2.5") { adjustSet(weightDelta: -2.5, repsDelta: 0) }
-                Text("\(String(format: "%g", currentWeight)) kg")
-                    .font(.caption.bold().monospacedDigit())
-                Button("+2.5") { adjustSet(weightDelta: 2.5, repsDelta: 0) }
+                Button {
+                    apply(repsDelta: -1)
+                } label: {
+                    Image(systemName: "minus")
+                }
+                .accessibilityLabel(tr("Fewer reps"))
+                Text(tr("%d reps", set?.reps ?? 0))
+                    .font(.headline.monospacedDigit())
+                    .frame(minWidth: 60)
+                Button {
+                    apply(repsDelta: 1)
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel(tr("More reps"))
             }
 
-            HStack {
-                Button("-1") { adjustSet(weightDelta: 0, repsDelta: -1) }
-                Text("\(currentReps) reps")
-                    .font(.caption.bold().monospacedDigit())
-                Button("+1") { adjustSet(weightDelta: 0, repsDelta: 1) }
-            }
-
-            Button("Done") {
+            Button(tr("Done")) {
                 viewModel.showingEditSetSheet = false
                 viewModel.activePageTab = 2
             }
-            .foregroundStyle(LukiColors.accent)
+            .tint(LukiColors.accent)
         }
-        .padding(8)
+        .padding(.horizontal, 4)
+        .onAppear {
+            guard !didLoad else { return }
+            didLoad = true
+            crownWeight = set?.weight ?? 0
+        }
+        .onChange(of: crownWeight) { _, newValue in
+            apply(weight: newValue)
+        }
     }
 
-    private func adjustSet(weightDelta: Double, repsDelta: Int) {
-        guard var session = viewModel.store.activeSession else { return }
-        let exIdx = min(max(0, viewModel.currentExerciseIndex), max(0, session.exercises.count - 1))
-        guard !session.exercises.isEmpty else { return }
-        let setIdx = session.exercises[exIdx].sets.firstIndex(where: { !$0.completed }) ?? 0
-        guard setIdx < session.exercises[exIdx].sets.count else { return }
-
-        let oldW = session.exercises[exIdx].sets[setIdx].weight ?? 20
-        let oldR = session.exercises[exIdx].sets[setIdx].reps ?? 10
-        session.exercises[exIdx].sets[setIdx].weight = max(0, oldW + weightDelta)
-        session.exercises[exIdx].sets[setIdx].reps = max(1, oldR + repsDelta)
+    private func apply(weight: Double? = nil, repsDelta: Int = 0) {
+        guard var session = viewModel.store.activeSession, let t = target else { return }
+        var set = session.exercises[t.exIdx].sets[t.setIdx]
+        if let weight { set.weight = max(0, weight) }
+        if repsDelta != 0 { set.reps = max(1, (set.reps ?? 10) + repsDelta) }
+        guard set != session.exercises[t.exIdx].sets[t.setIdx] else { return }
+        session.exercises[t.exIdx].sets[t.setIdx] = set
         session.version += 1
 
         let recalculated = SessionCalculator.recalculateSessionTotals(session)
@@ -346,33 +352,24 @@ public struct WatchActiveWorkoutView: View {
         viewModel.store.enqueueSessionSync(recalculated)
         viewModel.watchSyncCoordinator.broadcastActiveSessionSnapshot(recalculated)
 
-        let set = recalculated.exercises[exIdx].sets[setIdx]
-        let packet = SessionMutationPacket(
-            clientSessionId: recalculated.clientSessionId,
-            clientExerciseId: recalculated.exercises[exIdx].clientExerciseId,
-            clientSetId: set.clientSetId,
-            weight: set.weight,
-            reps: set.reps,
-            rpe: set.rpe,
-            completed: set.completed,
-            avgHeartRateBpm: set.avgHeartRateBpm,
-            peakHeartRateBpm: set.peakHeartRateBpm,
-            restEndHeartRateBpm: set.restEndHeartRateBpm,
-            restTimerEndsAt: recalculated.restTimerEndsAt,
-            restTimerDurationSec: recalculated.restTimerDurationSec,
-            newVersion: recalculated.version
+        let saved = recalculated.exercises[t.exIdx].sets[t.setIdx]
+        viewModel.watchSyncCoordinator.broadcastSetMutation(
+            SessionMutationPacket(
+                clientSessionId: recalculated.clientSessionId,
+                clientExerciseId: recalculated.exercises[t.exIdx].clientExerciseId,
+                clientSetId: saved.clientSetId,
+                weight: saved.weight,
+                reps: saved.reps,
+                rpe: saved.rpe,
+                completed: saved.completed,
+                avgHeartRateBpm: saved.avgHeartRateBpm,
+                peakHeartRateBpm: saved.peakHeartRateBpm,
+                restEndHeartRateBpm: saved.restEndHeartRateBpm,
+                restTimerEndsAt: recalculated.restTimerEndsAt,
+                restTimerDurationSec: recalculated.restTimerDurationSec,
+                newVersion: recalculated.version
+            )
         )
-        viewModel.watchSyncCoordinator.broadcastSetMutation(packet)
-
         Task { await viewModel.store.flushSyncQueue() }
-    }
-
-    private func formattedElapsed(_ sec: Int) -> String {
-        let h = sec / 3600
-        let m = (sec % 3600) / 60
-        let s = sec % 60
-        return h > 0
-            ? String(format: "%d:%02d:%02d", h, m, s)
-            : String(format: "%d:%02d:%02d", 0, m, s)
     }
 }

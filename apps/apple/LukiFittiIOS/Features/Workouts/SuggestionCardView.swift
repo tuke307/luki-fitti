@@ -47,6 +47,8 @@ struct SuggestionCardView: View {
                             .foregroundStyle(.secondary)
                             .frame(width: 28, height: 28)
                             .background(Circle().fill(LukiColors.fill))
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(locale == .de ? "Vorschlag ausblenden" : "Dismiss suggestion")
@@ -104,8 +106,8 @@ struct SuggestionCardView: View {
             }
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(prominent ? LukiColors.accentForeground : .primary)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 12)
+            .frame(minHeight: 44)
             .background(Capsule().fill(prominent ? LukiColors.accent : LukiColors.fill))
         }
         .buttonStyle(.plain)

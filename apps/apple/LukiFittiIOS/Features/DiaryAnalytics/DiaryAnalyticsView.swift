@@ -2,12 +2,15 @@ import SwiftUI
 import Charts
 import LukiFittiModels
 import LukiFittiDesign
+import LukiFittiDomain
 
 public struct DiaryAnalyticsView: View {
     @Bindable public var viewModel: LukiAppViewModel
     @State private var selectedPeriod: String = "month"
     @State private var filterMuscle: MuscleGroup?
     @State private var inspectingSession: WorkoutSessionDto?
+    @State private var pendingDelete: WorkoutSessionDto?
+    @Environment(\.lukiLocale) private var tr
 
     public init(viewModel: LukiAppViewModel) {
         self.viewModel = viewModel
@@ -67,19 +70,33 @@ public struct DiaryAnalyticsView: View {
         .sheet(item: $inspectingSession) { session in
             sessionInspectorSheet(session)
         }
+        .alert(
+            tr("Delete this workout?"),
+            isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
+            presenting: pendingDelete
+        ) { session in
+            Button(tr("Delete Workout"), role: .destructive) {
+                viewModel.store.deleteHistorySession(clientSessionId: session.clientSessionId)
+            }
+            Button(tr("Cancel"), role: .cancel) {}
+        } message: { session in
+            Text(tr("%@ will be removed from your history on all your devices. This can’t be undone.", session.workoutNameSnapshot))
+        }
     }
+
+    private var unit: WeightUnit { viewModel.store.preferences.weightUnit }
 
     private var headerAndPeriodPicker: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Every workout, and how you’re progressing.")
+            Text(tr("Every workout, and how you’re progressing."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Picker("Period", selection: $selectedPeriod) {
-                Text("This week").tag("week")
-                Text("This month").tag("month")
-                Text("This year").tag("year")
-                Text("All Time").tag("all")
+            Picker(tr("Period"), selection: $selectedPeriod) {
+                Text(tr("This week")).tag("week")
+                Text(tr("This month")).tag("month")
+                Text(tr("This year")).tag("year")
+                Text(tr("All Time")).tag("all")
             }
             .pickerStyle(.segmented)
         }
@@ -91,10 +108,10 @@ public struct DiaryAnalyticsView: View {
                 Button {
                     filterMuscle = nil
                 } label: {
-                    Text("All Muscles")
+                    Text(tr("All Muscles"))
                         .font(.subheadline.weight(.semibold))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
+                        .padding(.horizontal, 14)
+                        .frame(minHeight: 44)
                         .background(Capsule().fill(filterMuscle == nil ? LukiColors.accent : LukiColors.cardBackground))
                         .foregroundStyle(filterMuscle == nil ? LukiColors.accentForeground : .primary)
                 }
@@ -104,10 +121,10 @@ public struct DiaryAnalyticsView: View {
                     Button {
                         filterMuscle = muscle
                     } label: {
-                        Text(LukiI18n.muscleLabel(muscle))
+                        Text(LukiI18n.muscleLabel(muscle, locale: tr))
                             .font(.subheadline.weight(.semibold))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
+                            .padding(.horizontal, 14)
+                            .frame(minHeight: 44)
                             .background(Capsule().fill(filterMuscle == muscle ? LukiColors.accent : LukiColors.cardBackground))
                             .foregroundStyle(filterMuscle == muscle ? LukiColors.accentForeground : .primary)
                     }
@@ -121,56 +138,53 @@ public struct DiaryAnalyticsView: View {
         let sessions = filteredSessions
         let strengthCount = sessions.filter { $0.sessionType != .STRETCHING }.count
         let stretchCount = sessions.filter { $0.sessionType == .STRETCHING }.count
-        let totalVolKg = Int(sessions.reduce(0.0) { $0 + $1.totalVolumeKg })
+        let totalVolKg = sessions.reduce(0.0) { $0 + $1.totalVolumeKg }
         let totalSets = sessions.reduce(0) { $0 + $1.totalSetsCompleted }
         let totalReps = sessions.reduce(0) { $0 + $1.totalRepsCompleted }
         let totalStretchMin = sessions.reduce(0) { $0 + $1.totalStretchSeconds } / 60
 
         return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
             kpiCard(
-                title: "Completed Sessions",
+                title: tr("Workouts"),
                 value: "\(sessions.count)",
-                subtitle: "\(strengthCount) strength • \(stretchCount) stretch",
-                accent: LukiColors.accent
+                subtitle: tr("%d strength · %d stretching", strengthCount, stretchCount)
             )
             kpiCard(
-                title: "Working Strength Volume",
-                value: "\(totalVolKg) kg",
-                subtitle: "Excludes warm-ups & stretches",
-                accent: .primary
+                title: tr("Volume"),
+                value: LukiFormat.volume(kg: totalVolKg, unit: unit),
+                subtitle: tr("Without warm-ups")
             )
             kpiCard(
-                title: "Completed Sets & Reps",
-                value: "\(totalSets) (\(totalReps) reps)",
-                subtitle: "Logged across exercises",
-                accent: .primary
+                title: tr("Sets & reps"),
+                value: tr("%d · %d reps", totalSets, totalReps),
+                subtitle: tr("All exercises")
             )
             kpiCard(
-                title: "Stretching & Mobility",
-                value: "\(totalStretchMin) min",
-                subtitle: "Dedicated recovery time",
-                accent: LukiColors.accent
+                title: tr("Stretching"),
+                value: tr("%d min", totalStretchMin),
+                subtitle: tr("Time spent")
             )
         }
     }
 
-    private func kpiCard(title: String, value: String, subtitle: String, accent: Color) -> some View {
+    private func kpiCard(title: String, value: String, subtitle: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title).font(.footnote).foregroundStyle(.secondary)
-            Text(value).font(.title3.bold().monospacedDigit()).foregroundStyle(accent)
+            Text(value).font(.title3.bold().monospacedDigit()).foregroundStyle(.primary)
             Text(subtitle).font(.footnote).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
+        .accessibilityElement(children: .combine)
     }
 
     private var periodActivityCard: some View {
         let title: String = switch selectedPeriod {
-        case "week": "Last 7 Days Activity"
-        case "month": "Last 30 Days Activity Calendar"
-        case "year": "Last 12 Months Activity"
-        default: "All-Time Yearly Training Activity"
+        case "week": tr("Last 7 days")
+        case "month": tr("Last 30 days")
+        case "year": tr("Last 12 months")
+        default: tr("By year")
         }
 
         return VStack(alignment: .leading, spacing: 12) {
@@ -179,7 +193,7 @@ public struct DiaryAnalyticsView: View {
                     .font(.headline)
                     .foregroundStyle(.primary)
                 Spacer()
-                Text("\(filteredSessions.count) sess.")
+                Text(tr("%d workouts", filteredSessions.count))
                     .font(.caption.bold().monospacedDigit())
                     .foregroundStyle(LukiColors.accent)
             }
@@ -206,11 +220,11 @@ public struct DiaryAnalyticsView: View {
                                 Text("\(dayNumber)")
                                     .font(.footnote.monospacedDigit())
                                 if hasWorkout {
-                                    Text("\(daySessions.count)x")
-                                        .font(.system(size: 8, weight: .bold))
+                                    Text("\(daySessions.count)×")
+                                        .font(.caption2.bold())
                                 }
                             }
-                            .frame(maxWidth: .infinity, minHeight: 34)
+                            .frame(maxWidth: .infinity, minHeight: 44)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
                                     .fill(hasWorkout ? LukiColors.accent.opacity(0.22) : LukiColors.fill)
@@ -218,13 +232,15 @@ public struct DiaryAnalyticsView: View {
                             .foregroundStyle(hasWorkout ? LukiColors.accent : .secondary)
                         }
                         .buttonStyle(.plain)
+                        .disabled(!hasWorkout)
+                        .accessibilityLabel(tr("%@: %d workouts", dayDate.formatted(.dateTime.weekday(.wide).day().month()), daySessions.count))
                     }
                 }
             } else {
                 // Year or All-Time bucket summary
                 let buckets = buildBuckets()
                 if buckets.isEmpty {
-                    Text("No sessions found for this filter selection.")
+                    Text(tr("No workouts in this period."))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .padding(.vertical, 8)
@@ -237,12 +253,12 @@ public struct DiaryAnalyticsView: View {
                                         .font(.subheadline.weight(.semibold))
                                         .foregroundStyle(.primary)
                                     Spacer()
-                                    Text("\(bucket.count) sess.")
+                                    Text("\(bucket.count)")
                                         .font(.footnote.monospacedDigit())
                                         .foregroundStyle(bucket.count > 0 ? LukiColors.accent : .secondary)
                                 }
-                                Text("\(bucket.sets) sets • \(String(format: "%.1f", Double(bucket.volumeKg) / 1000.0))t")
-                                    .font(.system(size: 10))
+                                Text(tr("%d sets", bucket.sets) + " · " + LukiFormat.volume(kg: Double(bucket.volumeKg), unit: unit))
+                                    .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }
                             .padding(10)
@@ -297,11 +313,11 @@ public struct DiaryAnalyticsView: View {
     private var progressionChartCard: some View {
         let strengthSessions = Array(filteredSessions.filter { $0.sessionType != .STRETCHING && $0.totalVolumeKg > 0 }.reversed().suffix(15))
         return VStack(alignment: .leading, spacing: 10) {
-            Text("Session Volume & Working Sets Progression")
+            Text(tr("Progress"))
                 .font(.headline)
                 .foregroundStyle(.primary)
             if strengthSessions.isEmpty {
-                Text("No completed strength sessions match the current filter selection.")
+                Text(tr("No strength workouts in this period."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 12)
@@ -309,18 +325,19 @@ public struct DiaryAnalyticsView: View {
                 Chart {
                     ForEach(Array(strengthSessions.enumerated()), id: \.offset) { idx, s in
                         AreaMark(
-                            x: .value("Workout", "#\(idx + 1)"),
-                            y: .value("Volume (t)", s.totalVolumeKg / 1000.0)
+                            x: .value(tr("Workout"), "#\(idx + 1)"),
+                            y: .value(tr("Volume"), LukiFormat.volumeValue(kg: s.totalVolumeKg, unit: unit))
                         )
                         .foregroundStyle(LukiColors.accent.opacity(0.3))
 
                         LineMark(
-                            x: .value("Workout", "#\(idx + 1)"),
-                            y: .value("Volume (t)", s.totalVolumeKg / 1000.0)
+                            x: .value(tr("Workout"), "#\(idx + 1)"),
+                            y: .value(tr("Volume"), LukiFormat.volumeValue(kg: s.totalVolumeKg, unit: unit))
                         )
                         .foregroundStyle(LukiColors.accent)
                     }
                 }
+                .chartYAxisLabel(LukiFormat.unitLabel(unit))
                 .frame(height: 150)
             }
         }
@@ -330,7 +347,7 @@ public struct DiaryAnalyticsView: View {
 
     private var muscleAndPrGrid: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Muscle Group Distribution")
+            Text(tr("Muscles trained"))
                 .font(.headline)
                 .foregroundStyle(.primary)
 
@@ -340,11 +357,11 @@ public struct DiaryAnalyticsView: View {
                         .reduce(0) { $0 + $1.sets.filter(\.completed).count }
                 }
                 HStack {
-                    Text(LukiI18n.muscleLabel(muscle))
+                    Text(LukiI18n.muscleLabel(muscle, locale: tr))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
                     Spacer()
-                    Text("\(sets) sets")
+                    Text(tr("%d sets", sets))
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
@@ -356,12 +373,12 @@ public struct DiaryAnalyticsView: View {
 
     private var timelineSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Workout Diary Timeline (\(filteredSessions.count))")
+            Text(tr("Workouts (%d)", filteredSessions.count))
                 .font(.headline)
                 .foregroundStyle(.primary)
 
             if filteredSessions.isEmpty {
-                Text("No training sessions recorded in this period yet.")
+                Text(tr("No workouts in this period."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 12)
@@ -383,41 +400,46 @@ public struct DiaryAnalyticsView: View {
                 if session.sourceDevice == .APPLE_WATCH {
                     Label("Apple Watch", systemImage: "applewatch")
                         .font(.footnote.weight(.medium))
-                        .foregroundStyle(LukiColors.heartRose)
+                        .foregroundStyle(.secondary)
                 }
             }
 
-            Text(String(session.startedAt.prefix(10)))
+            Text(parseSessionDate(session.startedAt).formatted(date: .abbreviated, time: .shortened))
                 .font(.caption2.monospacedDigit())
                 .foregroundStyle(.secondary)
 
             HStack(spacing: 12) {
-                Text("\(session.totalSetsCompleted) sets")
-                Text("\(Int(session.totalVolumeKg)) kg")
+                Text(tr("%d sets", session.totalSetsCompleted))
+                Text(LukiFormat.volume(kg: session.totalVolumeKg, unit: session.weightUnit))
                 if let kcal = session.activeCaloriesKcal, kcal > 0 {
-                    Text("🔥 \(Int(kcal)) kcal")
-                        .foregroundStyle(LukiColors.calorieAmber)
+                    Label("\(Int(kcal)) kcal", systemImage: "flame.fill")
+                        .foregroundStyle(LukiColors.calories)
                 }
                 if let avgHr = session.avgHeartRateBpm {
-                    Text("❤️ \(avgHr) avg bpm")
-                        .foregroundStyle(LukiColors.heartRose)
+                    Label(tr("%d bpm avg", avgHr), systemImage: "heart.fill")
+                        .foregroundStyle(LukiColors.heartRate)
                 }
             }
             .font(.caption.monospacedDigit())
             .foregroundStyle(.secondary)
+            .labelStyle(.titleAndIcon)
 
             HStack {
-                Button("Inspect / Edit") {
+                Button(tr("Details")) {
                     inspectingSession = session
                 }
-                .font(.subheadline.weight(.semibold))
+                .buttonStyle(.bordered)
                 Spacer()
                 Button(role: .destructive) {
-                    viewModel.store.deleteHistorySession(clientSessionId: session.clientSessionId)
+                    pendingDelete = session
                 } label: {
                     Image(systemName: "trash")
-                        .font(.caption)
+                        .foregroundStyle(LukiColors.destructive)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel(tr("Delete workout %@", session.workoutNameSnapshot))
             }
         }
         .padding(14)
@@ -430,15 +452,15 @@ public struct DiaryAnalyticsView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     if let samples = session.heartRateSamples, samples.count > 1 {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Apple Watch Heart Rate Curve (BPM)")
+                            Text(tr("Heart rate"))
                                 .font(.headline)
-                                .foregroundStyle(LukiColors.heartRose)
+                                .foregroundStyle(LukiColors.heartRate)
                             Chart(samples, id: \.offsetSec) { pt in
                                 LineMark(
                                     x: .value("Sec", pt.offsetSec),
                                     y: .value("BPM", pt.bpm)
                                 )
-                                .foregroundStyle(LukiColors.heartRose)
+                                .foregroundStyle(LukiColors.heartRate)
                             }
                             .frame(height: 150)
                         }
@@ -452,15 +474,15 @@ public struct DiaryAnalyticsView: View {
                                 .font(.headline)
                             ForEach(ex.sets) { set in
                                 HStack {
-                                    Text("Set \(set.setNumber)")
+                                    Text(tr("Set %d", set.setNumber))
                                         .font(.subheadline.weight(.semibold))
                                     Spacer()
-                                    Text("\(String(format: "%g", set.weight ?? 0)) \(set.weightUnit.rawValue) × \(set.reps ?? 0)")
+                                    Text("\(LukiFormat.weight(set.weight ?? 0)) \(LukiFormat.unitLabel(set.weightUnit)) × \(set.reps ?? 0)")
                                         .font(.caption.monospacedDigit())
                                     if let peak = set.peakHeartRateBpm {
-                                        Text("❤️ \(peak) bpm")
+                                        Label("\(peak) bpm", systemImage: "heart.fill")
                                             .font(.caption2.monospacedDigit())
-                                            .foregroundStyle(LukiColors.heartRose)
+                                            .foregroundStyle(LukiColors.heartRate)
                                     }
                                 }
                             }

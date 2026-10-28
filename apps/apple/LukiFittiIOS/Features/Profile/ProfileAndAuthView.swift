@@ -13,6 +13,7 @@ public struct ProfileAndAuthView: View {
     @State private var newResetPassword: String = ""
     @State private var deleteAccountPassword: String = ""
     @State private var showingDeleteRequestField: Bool = false
+    @Environment(\.lukiLocale) private var tr
 
     public init(viewModel: LukiAppViewModel) {
         self.viewModel = viewModel
@@ -46,10 +47,10 @@ public struct ProfileAndAuthView: View {
     private func deepLinkActionCard(tokenType: String, token: String) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             if tokenType == "reset-password" {
-                Text("Reset Your Password")
+                Text(tr("Reset Your Password"))
                     .font(.headline)
                     .foregroundStyle(LukiColors.accent)
-                SecureField("New Password (min. 8 chars)", text: $newResetPassword)
+                SecureField(tr("New Password (min. 8 chars)"), text: $newResetPassword)
                     .textFieldStyle(.roundedBorder)
                     .accessibilityIdentifier("ios.profile.newPasswordField")
 
@@ -64,26 +65,23 @@ public struct ProfileAndAuthView: View {
                             viewModel.deepLinkToken = nil
                             newResetPassword = ""
                             authMode = "login"
-                            statusMessage = "Password has been reset successfully."
+                            statusMessage = tr("Your password has been reset. Sign in with the new one.")
                         } catch {
                             statusMessage = error.localizedDescription
                         }
                     }
                 } label: {
-                    Text("Save New Password")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(LukiColors.accentForeground)
+                    Text(tr("Save New Password"))
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.accent))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
                 .accessibilityIdentifier("ios.profile.confirmResetButton")
             } else if tokenType == "delete-account" {
-                Text("Confirm Permanent Account Deletion")
+                Text(tr("Delete your account?"))
                     .font(.headline)
-                    .foregroundStyle(.red)
-                Text("Confirm that you want to permanently delete your LukiFitti account and all workout data.")
+                    .foregroundStyle(LukiColors.destructive)
+                Text(tr("Your LukiFitti account and all workout data will be deleted. This can’t be undone."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -94,20 +92,18 @@ public struct ProfileAndAuthView: View {
                             viewModel.store.clearAllLocalData()
                             viewModel.deepLinkTokenType = nil
                             viewModel.deepLinkToken = nil
-                            statusMessage = "Account Permanently Deleted"
+                            statusMessage = tr("Your account has been deleted.")
                         } catch {
                             statusMessage = error.localizedDescription
                         }
                     }
                 } label: {
-                    Text("Yes, Permanently Delete My Account")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.primary)
+                    Text(tr("Delete Account"))
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(RoundedRectangle(cornerRadius: 10).fill(Color.red))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.borderedProminent)
+                .tint(LukiColors.destructive)
+                .controlSize(.large)
                 .accessibilityIdentifier("ios.profile.confirmDeleteAccountButton")
             }
         }
@@ -119,7 +115,7 @@ public struct ProfileAndAuthView: View {
 
     private func authenticatedAccountCard(_ user: UserDto) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Authenticated Server Session")
+            Text(tr("Signed in"))
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(LukiColors.accent)
                 .accessibilityIdentifier("ios.profile.authenticatedBadge")
@@ -130,12 +126,12 @@ public struct ProfileAndAuthView: View {
             if let statusMessage {
                 Text(statusMessage)
                     .font(.caption)
-                    .foregroundStyle(LukiColors.accent)
+                    .foregroundStyle(.secondary)
                     .accessibilityIdentifier("ios.profile.statusMessage")
             }
 
             HStack(spacing: 12) {
-                Button("Sign Out", role: .destructive) {
+                Button(tr("Sign Out"), role: .destructive) {
                     Task {
                         await viewModel.store.apiClient.logout()
                         viewModel.store.clearAllLocalData()
@@ -144,7 +140,7 @@ public struct ProfileAndAuthView: View {
                 .font(.subheadline.weight(.semibold))
                 .accessibilityIdentifier("ios.profile.signOutButton")
 
-                Button("Delete Account", role: .destructive) {
+                Button(tr("Delete Account"), role: .destructive) {
                     showingDeleteRequestField.toggle()
                 }
                 .font(.subheadline.weight(.semibold))
@@ -153,7 +149,7 @@ public struct ProfileAndAuthView: View {
 
             if showingDeleteRequestField {
                 VStack(alignment: .leading, spacing: 8) {
-                    SecureField("Current Password", text: $deleteAccountPassword)
+                    SecureField(tr("Current Password"), text: $deleteAccountPassword)
                         .textFieldStyle(.roundedBorder)
                         .accessibilityIdentifier("ios.profile.deletePasswordField")
 
@@ -165,20 +161,18 @@ public struct ProfileAndAuthView: View {
                                 )
                                 showingDeleteRequestField = false
                                 deleteAccountPassword = ""
-                                statusMessage = "Deletion confirmation link sent to your email."
+                                statusMessage = tr("Check your email to confirm the deletion.")
                             } catch {
                                 statusMessage = error.localizedDescription
                             }
                         }
                     } label: {
-                        Text("Send Deletion Confirmation Email")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.primary)
+                        Text(tr("Email Me a Confirmation Link"))
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 8)
-                            .background(RoundedRectangle(cornerRadius: 8).fill(Color.red.opacity(0.85)))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.bordered)
+                    .tint(LukiColors.destructive)
+                    .controlSize(.large)
                     .accessibilityIdentifier("ios.profile.sendDeleteEmailButton")
                 }
                 .padding(.top, 4)
@@ -191,36 +185,36 @@ public struct ProfileAndAuthView: View {
 
     private var guestAuthCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Picker("Mode", selection: $authMode) {
-                Text("Sign In").tag("login")
-                Text("Register Account").tag("register")
+            Picker(tr("Mode"), selection: $authMode) {
+                Text(tr("Sign In")).tag("login")
+                Text(tr("Register Account")).tag("register")
             }
             .pickerStyle(.segmented)
 
             if authMode == "register" {
-                TextField("Your Name (e.g. GymBuddy)", text: $name)
+                TextField(tr("Your name"), text: $name)
                     .textFieldStyle(.roundedBorder)
                     .autocorrectionDisabled()
                     .accessibilityIdentifier("ios.profile.nameField")
             }
-            TextField("Email address", text: $email)
+            TextField(tr("Email address"), text: $email)
                 .textFieldStyle(.roundedBorder)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .keyboardType(.emailAddress)
                 .accessibilityIdentifier("ios.profile.emailField")
-            SecureField("Password", text: $password)
+            SecureField(tr("Password"), text: $password)
                 .textFieldStyle(.roundedBorder)
                 .accessibilityIdentifier("ios.profile.passwordField")
 
             if authMode == "login" {
                 HStack {
                     Spacer()
-                    Button("Forgot password?") {
+                    Button(tr("Forgot password?")) {
                         Task {
                             do {
                                 try await viewModel.store.apiClient.forgotPassword(email: email)
-                                statusMessage = "If an account exists, a password reset link has been sent."
+                                statusMessage = tr("If an account exists for this email, we’ve sent a reset link.")
                             } catch {
                                 statusMessage = error.localizedDescription
                             }
@@ -235,8 +229,8 @@ public struct ProfileAndAuthView: View {
 
             if let statusMessage {
                 Text(statusMessage)
-                    .font(.caption)
-                    .foregroundStyle(LukiColors.accent)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
                     .accessibilityIdentifier("ios.profile.statusMessage")
             }
 
@@ -254,21 +248,18 @@ public struct ProfileAndAuthView: View {
                                 name: name.isEmpty ? nil : name,
                                 weightUnit: viewModel.store.preferences.weightUnit
                             )
-                            statusMessage = user.message ?? "Account created! Please check your email."
+                            statusMessage = user.message ?? tr("Account created. Check your email to confirm it.")
                         }
                     } catch {
                         statusMessage = error.localizedDescription
                     }
                 }
             } label: {
-                Text(authMode == "login" ? "Sign In" : "Create Account")
-                    .font(.subheadline.bold())
-                    .foregroundStyle(LukiColors.accentForeground)
+                Text(authMode == "login" ? tr("Sign In") : tr("Create Account"))
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.accent))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
             .accessibilityIdentifier("ios.profile.submitAuthButton")
         }
         .padding(16)
@@ -278,19 +269,30 @@ public struct ProfileAndAuthView: View {
     private var preferencesSection: some View {
         @Bindable var store = viewModel.store
         return VStack(alignment: .leading, spacing: 12) {
-            Text("Gym & Unit Preferences")
+            Text(tr("Preferences"))
                 .font(.headline)
                 .foregroundStyle(.primary)
 
-            Picker("Weight Unit", selection: $store.preferences.weightUnit) {
+            Picker(tr("Language"), selection: Binding(
+                get: { store.preferences.language ?? .system },
+                set: { store.preferences.language = $0 }
+            )) {
+                Text(tr("System")).tag(LanguagePreference.system)
+                Text("English").tag(LanguagePreference.en)
+                Text("Deutsch").tag(LanguagePreference.de)
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("ios.profile.languagePicker")
+
+            Picker(tr("Weight unit"), selection: $store.preferences.weightUnit) {
                 ForEach(WeightUnit.allCases, id: \.self) { unit in
-                    Text(unit.rawValue).tag(unit)
+                    Text(LukiFormat.unitLabel(unit)).tag(unit)
                 }
             }
             .pickerStyle(.segmented)
 
             Stepper(
-                "Weekly Goal: \(store.preferences.weeklyGoalSessions) sessions",
+                tr("Weekly goal: %d workouts", store.preferences.weeklyGoalSessions),
                 value: $store.preferences.weeklyGoalSessions,
                 in: 1...14
             )
@@ -301,10 +303,10 @@ public struct ProfileAndAuthView: View {
 
             Toggle(isOn: $store.preferences.exerciseSuggestionsEnabled) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Smart Exercise Suggestions")
+                    Text(tr("Exercise suggestions"))
                         .font(.subheadline.bold())
                         .foregroundStyle(.primary)
-                    Text("Propose up to 1 rainbow exercise suggestion per workout")
+                    Text(tr("Suggests at most one exercise per workout"))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -314,10 +316,10 @@ public struct ProfileAndAuthView: View {
 
             Toggle(isOn: $store.preferences.notificationsEnabled) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Workout & Rest Notifications")
+                    Text(tr("Notifications"))
                         .font(.subheadline.bold())
                         .foregroundStyle(.primary)
-                    Text("Alert when rest timer finishes or workout completes")
+                    Text(tr("When rest is over or a workout is done"))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -326,7 +328,7 @@ public struct ProfileAndAuthView: View {
             .accessibilityIdentifier("ios.profile.notificationsToggle")
 
             Toggle(isOn: $store.preferences.restTimerSound) {
-                Text("Rest Timer Chime Sound")
+                Text(tr("Rest timer sound"))
                     .font(.subheadline)
                     .foregroundStyle(.primary)
             }
@@ -334,16 +336,11 @@ public struct ProfileAndAuthView: View {
 
             Button {
                 viewModel.sendTestNotification()
-                statusMessage = "Test notification scheduled!"
+                statusMessage = tr("A test notification arrives in a second.")
             } label: {
-                Label("Test Notification", systemImage: "bell.badge.fill")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(LukiColors.accentForeground)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.accent))
+                Label(tr("Send Test Notification"), systemImage: "bell.badge")
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bordered)
             .accessibilityIdentifier("ios.profile.testNotificationButton")
         }
         .padding(16)
@@ -352,17 +349,14 @@ public struct ProfileAndAuthView: View {
 
     private var backupExportSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("JSON & CSV Workout Backup")
+            Text(tr("Backup"))
                 .font(.headline)
                 .foregroundStyle(.primary)
             let jsonBackup = (try? String(data: JSONEncoder().encode(viewModel.store.historySessions), encoding: .utf8)) ?? "[]"
             ShareLink(item: jsonBackup, preview: SharePreview("luki-fitti-backup.json")) {
-                Label("Export JSON Backup", systemImage: "square.and.arrow.up")
-                    .font(.subheadline.weight(.semibold))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 9)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.fill))
+                Label(tr("Export Backup"), systemImage: "square.and.arrow.up")
             }
+            .buttonStyle(.bordered)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
