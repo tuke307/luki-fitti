@@ -273,9 +273,22 @@ export const CreateFolderSchema = z.object({
 
 export const UpdateFolderSchema = CreateFolderSchema.partial();
 
+/** One planned set of a template exercise (type + target values). */
+export const TemplateSetSchema = z.object({
+  setType: z.enum(SetType).default(SetType.WORKING),
+  weight: z.number().min(0).max(1500).nullable().default(null),
+  reps: z.number().int().min(0).max(200).nullable().default(null),
+  durationSeconds: z.number().int().min(0).max(14400).nullable().default(null),
+});
+
 export const TemplateExerciseInputSchema = z.object({
   id: z.string().optional(),
   exerciseId: z.string().min(1, 'Exercise is required'),
+  /**
+   * Explicit per-set plan. When present it is the source of truth and the summary fields
+   * (`plannedSets`, `warmupSets`, `targetWeight`) are derived from it.
+   */
+  sets: z.array(TemplateSetSchema).max(40).nullable().optional(),
   orderIndex: z.number().int().min(0),
   plannedSets: z.number().int().min(1).max(30).default(3),
   warmupSets: z.number().int().min(0).max(10).default(0),
@@ -307,6 +320,7 @@ export const MoveTemplateSchema = z.object({
 
 export type CreateFolderDto = z.infer<typeof CreateFolderSchema>;
 export type UpdateFolderDto = z.infer<typeof UpdateFolderSchema>;
+export type TemplateSetDto = z.infer<typeof TemplateSetSchema>;
 export type TemplateExerciseInputDto = z.infer<typeof TemplateExerciseInputSchema>;
 export type CreateTemplateDto = z.infer<typeof CreateTemplateSchema>;
 export type UpdateTemplateDto = z.infer<typeof UpdateTemplateSchema>;
@@ -316,6 +330,8 @@ export interface WorkoutTemplateExerciseDto {
   id: string;
   templateId: string;
   exerciseId: string;
+  /** Explicit per-set plan; `null` for templates that only have summary values. */
+  sets?: TemplateSetDto[] | null;
   orderIndex: number;
   plannedSets: number;
   warmupSets: number;
@@ -494,6 +510,10 @@ export const SyncSessionPayloadSchema = z.object({
   minHeartRateBpm: z.number().int().min(20).max(260).nullable().optional(),
   heartRateSamples: z.array(HeartRateSampleSchema).max(3600).nullable().optional(),
   version: z.number().int().min(1).default(1),
+  /** Stable random id of the sending app install; lets the server recognise its own retries. */
+  deviceId: z.string().min(8).max(64).optional(),
+  /** Last server version this device has acknowledged; used for optimistic concurrency. */
+  baseVersion: z.number().int().min(1).optional(),
   forceOverwrite: z.boolean().default(false).optional(),
   exercises: z.array(SessionExerciseSyncSchema).default([]),
 });

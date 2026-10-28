@@ -109,12 +109,12 @@ test.describe('Offline Durability & Sync Conflict Resolution', () => {
 
     // Conflict resolution modal should appear automatically when sync queue flushes
     await expect(
-      page.getByRole('heading', { name: 'Workout Sync Conflict Detected' }),
+      page.getByRole('heading', { name: 'Workout changed on another device' }),
     ).toBeVisible({ timeout: 10_000 });
 
-    await page.getByRole('button', { name: 'Keep Local Workout Data' }).click();
+    await page.getByRole('button', { name: 'Keep this device' }).click();
     await expect(
-      page.getByRole('heading', { name: 'Workout Sync Conflict Detected' }),
+      page.getByRole('heading', { name: 'Workout changed on another device' }),
     ).not.toBeVisible();
   });
 });

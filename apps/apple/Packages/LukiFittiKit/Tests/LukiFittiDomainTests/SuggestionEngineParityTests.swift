@@ -55,14 +55,35 @@ final class SuggestionEngineParityTests: XCTestCase {
 
     private func suggest(
         _ exercises: [WorkoutSuggestionInputExercise],
-        _ history: [WorkoutSessionDto] = []
+        _ history: [WorkoutSessionDto] = [],
+        dismissed: [DismissedWorkoutSuggestion] = []
     ) -> WorkoutExerciseSuggestion? {
         ProgressionEngine.computeWorkoutExerciseSuggestion(
             workoutName: "Push Day",
             exercises: exercises,
             catalog: catalog,
-            historySessions: history
+            historySessions: history,
+            dismissed: dismissed
         )
+    }
+
+    func testDismissedSuggestionMovesOnToTheNextReason() {
+        let history = [0, 7, 14].map { session(day: $0, exerciseId: shoulderPress, weight: 28, reps: 6, rpe: 9.5) }
+            + [(0, 30.0), (7, 28.0), (14, 26.0)].map { session(day: $0.0, exerciseId: pushdown, weight: $0.1, reps: 12, rpe: 8) }
+        let first = suggest(balancedPush, history)
+        XCTAssertEqual(first?.reasonType, .REGRESSION)
+        XCTAssertEqual(first?.stallingExerciseId, pushdown)
+
+        let second = suggest(balancedPush, history, dismissed: [ProgressionEngine.toDismissedSuggestion(first!)])
+        XCTAssertEqual(second?.reasonType, .GRINDING)
+        XCTAssertEqual(second?.stallingExerciseId, shoulderPress)
+        XCTAssertNotEqual(second?.suggestedExercise.id, first?.suggestedExercise.id)
+    }
+
+    func testAllReasonsDismissedReturnsNil() {
+        let history = [0, 7, 14].map { session(day: $0, exerciseId: shoulderPress, weight: 28, reps: 6, rpe: 9.5) }
+        let first = suggest(balancedPush, history)!
+        XCTAssertNil(suggest(balancedPush, history, dismissed: [ProgressionEngine.toDismissedSuggestion(first)]))
     }
 
     func testTrendCountsSessionsAndWeeksSinceBestIgnoringTies() {

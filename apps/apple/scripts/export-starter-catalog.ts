@@ -8,11 +8,8 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { format, resolveConfig } from 'prettier';
-import {
-  buildStarterStretchingRoutines,
-  buildStarterWorkouts,
-  getLocalizedExerciseCatalog,
-} from '@luki-fitti/common/catalog';
+import { buildStarterStretchingRoutines, buildStarterWorkouts } from '@luki-fitti/common/catalog';
+import { getAllLocalizedExercises } from '@luki-fitti/common/catalog/extended';
 import { SUPPORTED_LOCALES } from '@luki-fitti/common/enums';
 
 const OUTPUT = fileURLToPath(
@@ -28,7 +25,7 @@ const catalog = Object.fromEntries(
   SUPPORTED_LOCALES.map((locale) => [
     locale,
     {
-      exercises: getLocalizedExerciseCatalog(locale),
+      exercises: getAllLocalizedExercises(locale),
       folders: buildStarterWorkouts({ locale, timestamp: TIMESTAMP }).folders,
       stretchingRoutines: buildStarterStretchingRoutines({ locale, timestamp: TIMESTAMP }),
     },

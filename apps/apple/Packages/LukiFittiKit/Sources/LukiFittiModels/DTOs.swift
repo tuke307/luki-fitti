@@ -257,10 +257,27 @@ public struct ExerciseDto: Codable, Sendable, Equatable, Hashable, Identifiable 
 
 // MARK: - Folders, Templates & Stretching Routines DTOs
 
+/// One planned set of a template exercise (mirrors `TemplateSetSchema` in @luki-fitti/common).
+public struct TemplateSetDto: Codable, Sendable, Equatable, Hashable {
+    public var setType: SetType
+    public var weight: Double?
+    public var reps: Int?
+    public var durationSeconds: Int?
+
+    public init(setType: SetType = .WORKING, weight: Double? = nil, reps: Int? = nil, durationSeconds: Int? = nil) {
+        self.setType = setType
+        self.weight = weight
+        self.reps = reps
+        self.durationSeconds = durationSeconds
+    }
+}
+
 public struct WorkoutTemplateExerciseDto: Codable, Sendable, Equatable, Hashable, Identifiable {
     public var id: String
     public var templateId: String
     public var exerciseId: String
+    /// Explicit per-set plan; `nil` for templates that only carry summary values.
+    public var sets: [TemplateSetDto]?
     public var orderIndex: Int
     public var plannedSets: Int
     public var warmupSets: Int
@@ -291,11 +308,13 @@ public struct WorkoutTemplateExerciseDto: Codable, Sendable, Equatable, Hashable
         targetDistanceMeters: Double? = nil,
         notes: String? = nil,
         alternativeExerciseIds: [String] = [],
-        exercise: ExerciseDto? = nil
+        exercise: ExerciseDto? = nil,
+        sets: [TemplateSetDto]? = nil
     ) {
         self.id = id
         self.templateId = templateId
         self.exerciseId = exerciseId
+        self.sets = sets
         self.orderIndex = orderIndex
         self.plannedSets = plannedSets
         self.warmupSets = warmupSets
@@ -730,6 +749,10 @@ public struct SyncSessionPayloadDto: Codable, Sendable, Equatable, Hashable {
     public var minHeartRateBpm: Int?
     public var heartRateSamples: [HeartRateSampleDto]?
     public var version: Int
+    /// Stable random id of this app install; lets the server recognise its own retried syncs.
+    public var deviceId: String?
+    /// Last server version this device acknowledged; used for optimistic concurrency.
+    public var baseVersion: Int?
     public var forceOverwrite: Bool?
     public var exercises: [SessionExerciseDto]
 

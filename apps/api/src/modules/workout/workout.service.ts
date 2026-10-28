@@ -7,8 +7,15 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import { localizeFolder, localizeTemplate, resolveExerciseMedia } from '@luki-fitti/common/catalog';
 import type { SupportedLocale } from '@luki-fitti/common/enums';
-import { DEFAULT_FOLDER_COLOR } from '@luki-fitti/common/utils';
+import {
+  buildTemplateExercisesFromSession,
+  DEFAULT_FOLDER_COLOR,
+  summarizeTemplateSets,
+} from '@luki-fitti/common/utils';
+import { TemplateSetSchema } from '@luki-fitti/common/schemas';
 import type {
+  TemplateExerciseInputDto,
+  WorkoutSessionDto,
   CreateFolderDto,
   UpdateFolderDto,
   CreateTemplateDto,
@@ -170,6 +177,32 @@ export class WorkoutService {
     return localizeTemplate(this.mapTemplateDto(tpl), locale);
   }
 
+  /**
+   * Row data for a template exercise. With an explicit per-set plan the summary columns are
+   * derived from it, so older clients reading only the summary still see the same workout.
+   */
+  private templateExerciseData(ex: TemplateExerciseInputDto, idx: number) {
+    const sets = ex.sets && ex.sets.length > 0 ? ex.sets : null;
+    const summary = sets ? summarizeTemplateSets(sets) : null;
+    return {
+      exerciseId: ex.exerciseId,
+      orderIndex: ex.orderIndex ?? idx,
+      // Rows are always re-created on update, so omitting the column stores NULL.
+      ...(sets ? { sets } : {}),
+      plannedSets: summary?.plannedSets ?? ex.plannedSets,
+      warmupSets: summary?.warmupSets ?? ex.warmupSets ?? 0,
+      targetRepsMin: ex.targetRepsMin ?? null,
+      targetRepsMax: ex.targetRepsMax ?? null,
+      targetWeight: summary ? summary.targetWeight : (ex.targetWeight ?? null),
+      weightUnit: ex.weightUnit,
+      restSeconds: ex.restSeconds,
+      targetDurationSeconds: ex.targetDurationSeconds ?? null,
+      targetDistanceMeters: ex.targetDistanceMeters ?? null,
+      notes: ex.notes ?? null,
+      alternativeExerciseIds: ex.alternativeExerciseIds ?? [],
+    };
+  }
+
   async createTemplate(
     userId: string,
     dto: CreateTemplateDto,
@@ -198,22 +231,7 @@ export class WorkoutService {
 
       for (const [idx, ex] of (dto.exercises ?? []).entries()) {
         await tx.workoutTemplateExercise.create({
-          data: {
-            templateId: tpl.id,
-            exerciseId: ex.exerciseId,
-            orderIndex: ex.orderIndex ?? idx,
-            plannedSets: ex.plannedSets,
-            warmupSets: ex.warmupSets ?? 0,
-            targetRepsMin: ex.targetRepsMin ?? null,
-            targetRepsMax: ex.targetRepsMax ?? null,
-            targetWeight: ex.targetWeight ?? null,
-            weightUnit: ex.weightUnit,
-            restSeconds: ex.restSeconds,
-            targetDurationSeconds: ex.targetDurationSeconds ?? null,
-            targetDistanceMeters: ex.targetDistanceMeters ?? null,
-            notes: ex.notes ?? null,
-            alternativeExerciseIds: ex.alternativeExerciseIds ?? [],
-          },
+          data: { templateId: tpl.id, ...this.templateExerciseData(ex, idx) },
         });
       }
 
@@ -295,22 +313,7 @@ export class WorkoutService {
         await tx.workoutTemplateExercise.deleteMany({ where: { templateId } });
         for (const [idx, ex] of dto.exercises.entries()) {
           await tx.workoutTemplateExercise.create({
-            data: {
-              templateId,
-              exerciseId: ex.exerciseId,
-              orderIndex: ex.orderIndex ?? idx,
-              plannedSets: ex.plannedSets,
-              warmupSets: ex.warmupSets ?? 0,
-              targetRepsMin: ex.targetRepsMin ?? null,
-              targetRepsMax: ex.targetRepsMax ?? null,
-              targetWeight: ex.targetWeight ?? null,
-              weightUnit: ex.weightUnit,
-              restSeconds: ex.restSeconds,
-              targetDurationSeconds: ex.targetDurationSeconds ?? null,
-              targetDistanceMeters: ex.targetDistanceMeters ?? null,
-              notes: ex.notes ?? null,
-              alternativeExerciseIds: ex.alternativeExerciseIds ?? [],
-            },
+            data: { templateId, ...this.templateExerciseData(ex, idx) },
           });
         }
       }
@@ -355,6 +358,7 @@ export class WorkoutService {
         sortOrder: targetSortOrder,
         exercises: source.exercises.map((ex, idx) => ({
           exerciseId: ex.exerciseId,
+          sets: ex.sets ?? null,
           orderIndex: idx,
           plannedSets: ex.plannedSets,
           warmupSets: ex.warmupSets,
@@ -443,6 +447,49 @@ export class WorkoutService {
     );
   }
 
+  /** The JSON column is untrusted input from the DB's point of view: validate before use. */
+  private parseTemplateSets(raw: unknown): WorkoutTemplateDto['exercises'][number]['sets'] {
+    if (raw === null || raw === undefined) return null;
+    const parsed = TemplateSetSchema.array().safeParse(raw);
+    return parsed.success && parsed.data.length > 0 ? parsed.data : null;
+  }
+
+  /**
+   * Applies a finished workout to the template it was started from (structure, set types,
+   * logged weights/reps). Runs when the completed session is first synced, so it also works
+   * for workouts finished offline. No-op when nothing changed or the template is not the user's.
+   */
+  async applyCompletedSessionToTemplate(
+    userId: string,
+    session: WorkoutSessionDto,
+    locale: SupportedLocale,
+  ): Promise<void> {
+    if (!session.templateId) return;
+    const tpl = await this.prisma.workoutTemplate.findUnique({
+      where: { id: session.templateId },
+      include: { exercises: { orderBy: { orderIndex: 'asc' }, include: { exercise: true } } },
+    });
+    if (!tpl || tpl.userId !== userId) return;
+
+    const exercises = buildTemplateExercisesFromSession(this.mapTemplateDto(tpl), session);
+    if (!exercises) return;
+
+    const knownIds = new Set(
+      (
+        await this.prisma.exercise.findMany({
+          where: { id: { in: exercises.map((e) => e.exerciseId) } },
+          select: { id: true },
+        })
+      ).map((e) => e.id),
+    );
+    await this.updateTemplate(
+      userId,
+      tpl.id,
+      { exercises: exercises.filter((e) => knownIds.has(e.exerciseId)) },
+      locale,
+    );
+  }
+
   private mapTemplateDto(tpl: {
     id: string;
     systemKey?: string | null;
@@ -458,6 +505,7 @@ export class WorkoutService {
       id: string;
       templateId: string;
       exerciseId: string;
+      sets?: unknown;
       orderIndex: number;
       plannedSets: number;
       warmupSets: number;
@@ -502,6 +550,7 @@ export class WorkoutService {
         id: e.id,
         templateId: e.templateId,
         exerciseId: e.exerciseId,
+        sets: this.parseTemplateSets(e.sets),
         orderIndex: e.orderIndex,
         plannedSets: e.plannedSets,
         warmupSets: e.warmupSets,
@@ -546,6 +595,7 @@ export class WorkoutService {
                 primaryMuscleGroup: e.exercise.primaryMuscleGroup as NonNullable<
                   WorkoutTemplateDto['exercises'][number]['exercise']
                 >['primaryMuscleGroup'],
+                isSystem: e.exercise.isSystem,
               }),
             }
           : undefined,

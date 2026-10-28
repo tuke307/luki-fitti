@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Optional } from '@nestjs/common';
 import crypto from 'crypto';
 import { PrismaService } from '../database/prisma.service';
+import { WorkoutService } from '../workout/workout.service';
 import {
   ExerciseType,
   SessionExerciseOrigin,
@@ -18,6 +19,7 @@ import {
   getStarterRoutineText,
   getStarterTemplateText,
 } from '@luki-fitti/common/catalog';
+import { TemplateSetSchema } from '@luki-fitti/common/schemas';
 import type {
   HeartRateSampleDto,
   StartSessionDto,
@@ -30,7 +32,10 @@ const LBS_TO_KG = 0.45359237;
 
 @Injectable()
 export class SessionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly workoutService?: WorkoutService,
+  ) {}
 
   /**
    * Computes volume and duration metrics consistently:
@@ -153,29 +158,46 @@ export class SessionService {
         const primaryLastWeight = lastEx?.sets[0]?.weight ?? te.targetWeight ?? null;
         const sets: Array<any> = [];
         let setNum = 1;
-        for (let w = 0; w < (te.warmupSets ?? 0); w++) {
-          sets.push({
-            clientSetId: crypto.randomUUID(),
-            setNumber: setNum++,
-            setType: SetType.WARMUP,
-            weight: primaryLastWeight ? Math.round(primaryLastWeight * 0.6 * 2) / 2 : null,
-            weightUnit: te.weightUnit,
-            reps: te.targetRepsMin ?? 10,
-            completed: false,
-          });
-        }
-        for (let s = 0; s < te.plannedSets; s++) {
-          const histSet = lastEx?.sets[s] ?? lastEx?.sets[lastEx.sets.length - 1];
-          sets.push({
-            clientSetId: crypto.randomUUID(),
-            setNumber: setNum++,
-            setType: SetType.WORKING,
-            weight: histSet?.weight ?? te.targetWeight ?? null,
-            weightUnit: te.weightUnit,
-            reps: histSet?.reps ?? te.targetRepsMin ?? 10,
-            durationSeconds: te.targetDurationSeconds ?? null,
-            completed: false,
-          });
+        const explicit = TemplateSetSchema.array().safeParse(te.sets ?? []);
+        if (explicit.success && explicit.data.length > 0) {
+          // An explicit per-set plan already reflects the last workout: copy it one to one.
+          for (const planned of explicit.data) {
+            sets.push({
+              clientSetId: crypto.randomUUID(),
+              setNumber: setNum++,
+              setType: planned.setType,
+              weight: planned.weight,
+              weightUnit: te.weightUnit,
+              reps: planned.reps,
+              durationSeconds: planned.durationSeconds ?? te.targetDurationSeconds ?? null,
+              completed: false,
+            });
+          }
+        } else {
+          for (let w = 0; w < (te.warmupSets ?? 0); w++) {
+            sets.push({
+              clientSetId: crypto.randomUUID(),
+              setNumber: setNum++,
+              setType: SetType.WARMUP,
+              weight: primaryLastWeight ? Math.round(primaryLastWeight * 0.6 * 2) / 2 : null,
+              weightUnit: te.weightUnit,
+              reps: te.targetRepsMin ?? 10,
+              completed: false,
+            });
+          }
+          for (let s = 0; s < te.plannedSets; s++) {
+            const histSet = lastEx?.sets[s] ?? lastEx?.sets[lastEx.sets.length - 1];
+            sets.push({
+              clientSetId: crypto.randomUUID(),
+              setNumber: setNum++,
+              setType: SetType.WORKING,
+              weight: histSet?.weight ?? te.targetWeight ?? null,
+              weightUnit: te.weightUnit,
+              reps: histSet?.reps ?? te.targetRepsMin ?? 10,
+              durationSeconds: te.targetDurationSeconds ?? null,
+              completed: false,
+            });
+          }
         }
 
         exercisesToCreate.push({
@@ -311,6 +333,23 @@ export class SessionService {
   }
 
   /**
+   * A sync is only a conflict when the server holds changes this device has not seen.
+   * Retries from the device that wrote the latest version (e.g. after iOS froze the tab before the
+   * response arrived) are never conflicts. Clients without a device id keep the legacy rule.
+   */
+  private isSyncConflict(
+    existing: { version: number; lastWriterDeviceId?: string | null },
+    payload: SyncSessionPayloadDto,
+  ): boolean {
+    const knownVersion = payload.baseVersion ?? payload.version;
+    if (!payload.deviceId) return existing.version > payload.version;
+    if (existing.lastWriterDeviceId === payload.deviceId) return false;
+    // Rows written before device ids existed were bumped one past the client version on every sync.
+    if (!existing.lastWriterDeviceId && existing.version - knownVersion <= 1) return false;
+    return existing.version > knownVersion;
+  }
+
+  /**
    * Idempotent synchronization of an offline-first session.
    * Uses clientSessionId, clientExerciseId, and clientSetId so repeated sync
    * attempts never create duplicate sessions or duplicate set entries.
@@ -318,6 +357,7 @@ export class SessionService {
   async syncSession(
     userId: string,
     payload: SyncSessionPayloadDto,
+    locale: SupportedLocale = 'en',
   ): Promise<SyncSessionResponseDto> {
     const existing = await this.prisma.workoutSession.findUnique({
       where: { clientSessionId: payload.clientSessionId },
@@ -333,7 +373,7 @@ export class SessionService {
       throw new ForbiddenException('Cannot synchronize a session owned by another user');
     }
 
-    if (existing && existing.version > payload.version && !payload.forceOverwrite) {
+    if (existing && !payload.forceOverwrite && this.isSyncConflict(existing, payload)) {
       return {
         session: this.mapSessionDto(existing),
         conflictDetected: true,
@@ -342,7 +382,12 @@ export class SessionService {
     }
 
     const metrics = this.computeSessionMetrics(payload.exercises);
-    const nextVersion = existing ? Math.max(existing.version, payload.version) + 1 : 1;
+    const nextVersion = existing
+      ? Math.max(existing.version, payload.version) + 1
+      : payload.deviceId
+        ? payload.version
+        : 1;
+    const lastWriterDeviceId = payload.deviceId ?? null;
 
     const hrSamples = payload.heartRateSamples ?? null;
     const allBpms: number[] = [];
@@ -470,6 +515,7 @@ export class SessionService {
           minHeartRateBpm,
           ...(heartRateSamplesJson !== undefined ? { heartRateSamplesJson } : {}),
           version: nextVersion,
+          lastWriterDeviceId,
           lastSyncedAt: new Date(),
         },
         create: {
@@ -501,7 +547,8 @@ export class SessionService {
           maxHeartRateBpm,
           minHeartRateBpm,
           ...(heartRateSamplesJson !== undefined ? { heartRateSamplesJson } : {}),
-          version: 1,
+          version: nextVersion,
+          lastWriterDeviceId,
           lastSyncedAt: new Date(),
         },
       });
@@ -628,8 +675,15 @@ export class SessionService {
       });
     });
 
+    const syncedDto = this.mapSessionDto(synced);
+    const justCompleted =
+      syncedDto.status === SessionStatus.COMPLETED && existing?.status !== SessionStatus.COMPLETED;
+    if (justCompleted && this.workoutService) {
+      await this.workoutService.applyCompletedSessionToTemplate(userId, syncedDto, locale);
+    }
+
     return {
-      session: this.mapSessionDto(synced),
+      session: syncedDto,
       conflictDetected: false,
       serverVersion: synced.version,
     };

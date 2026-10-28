@@ -270,6 +270,15 @@ public final class LukiAppViewModel {
         if let rpe { set.rpe = rpe }
         if let setType { set.setType = setType }
         session.exercises[exIdx].sets[setIdx] = set
+        if setType != nil {
+            // Warm-ups always come first, so a set switched to warm-up moves to the top.
+            let ordered = TemplateSets.orderWarmupsFirst(session.exercises[exIdx].sets, type: \.setType)
+            session.exercises[exIdx].sets = ordered.enumerated().map { idx, s in
+                var copy = s
+                copy.setNumber = idx + 1
+                return copy
+            }
+        }
         session.version += 1
 
         let recalculated = SessionCalculator.recalculateSessionTotals(session)
@@ -488,6 +497,20 @@ public final class LukiAppViewModel {
         watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
     }
 
+    public func removeExerciseFromSession(clientExerciseId: String) {
+        guard var session = store.activeSession else { return }
+        session.exercises.removeAll { $0.clientExerciseId == clientExerciseId }
+        for i in session.exercises.indices {
+            session.exercises[i].orderIndex = i
+        }
+        session.version += 1
+        let recalculated = SessionCalculator.recalculateSessionTotals(session)
+        store.saveActiveSession(recalculated)
+        store.enqueueSessionSync(recalculated)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(recalculated)
+        Task { await store.flushSyncQueue() }
+    }
+
     public func addUnplannedExerciseToSession(_ exercise: ExerciseDto) {
         guard var session = store.activeSession else { return }
         let clientExId = "sex-\(UUID().uuidString.lowercased())"
@@ -587,6 +610,8 @@ public final class LukiAppViewModel {
         session.version += 1
 
         let finalized = SessionCalculator.recalculateSessionTotals(session)
+        applyFinishedSessionToTemplate(finalized)
+        store.setDismissedSuggestions(nil, clientSessionId: finalized.clientSessionId)
         completedSummarySession = finalized
         store.saveActiveSession(nil)
         store.saveHistorySession(finalized)
@@ -595,9 +620,44 @@ public final class LukiAppViewModel {
         await store.flushSyncQueue()
     }
 
+    /// The template follows what was actually done, so the next session starts from it. Signed-in
+    /// users also get this from the server when the completed session syncs.
+    private func applyFinishedSessionToTemplate(_ session: WorkoutSessionDto) {
+        guard let templateId = session.templateId else { return }
+        var folders = store.folders
+        var unfiled = store.unfiledTemplates
+        func update(_ template: inout WorkoutTemplateDto) -> Bool {
+            guard template.id == templateId,
+                  let exercises = TemplateSets.buildTemplateExercises(template: template, session: session)
+            else { return false }
+            template.exercises = exercises.map { ex in
+                var copy = ex
+                if copy.exercise == nil {
+                    copy.exercise = store.catalog.first { $0.id == copy.exerciseId }
+                }
+                return copy
+            }
+            template.updatedAt = ISO8601DateFormatter().string(from: Date())
+            return true
+        }
+        var changed = false
+        for f in folders.indices {
+            for t in folders[f].templates.indices where update(&folders[f].templates[t]) {
+                changed = true
+            }
+        }
+        for t in unfiled.indices where update(&unfiled[t]) {
+            changed = true
+        }
+        if changed {
+            store.saveWorkoutsOverview(folders: folders, unfiledTemplates: unfiled)
+        }
+    }
+
     public func abandonActiveSession() {
         guard let session = store.activeSession else { return }
         store.saveActiveSession(nil)
+        store.setDismissedSuggestions(nil, clientSessionId: session.clientSessionId)
         store.removeFromSyncQueue(clientSessionId: session.clientSessionId)
         watchSyncCoordinator.broadcastActiveSessionSnapshot(nil)
         selectedTab = .workouts
@@ -761,23 +821,45 @@ public struct AppShellView: View {
             }
         }
         .alert(
-            "Workout Sync Conflict Detected",
+            "Workout changed on another device",
             isPresented: Binding(
                 get: { viewModel.store.conflictItem != nil },
                 set: { if !$0 { viewModel.store.conflictItem = nil } }
             )
         ) {
             if let conflict = viewModel.store.conflictItem {
-                Button("Use Other Device") {
+                Button("Use other device") {
                     Task { await viewModel.store.resolveConflict(clientSessionId: conflict.clientSessionId, keepLocal: false) }
                 }
-                Button("Keep Local Workout Data") {
+                Button("Keep this device") {
                     Task { await viewModel.store.resolveConflict(clientSessionId: conflict.clientSessionId, keepLocal: true) }
                 }
             }
         } message: {
-            Text("A newer version of this workout exists on another device. Which one do you want to keep?")
+            Text(conflictMessage(viewModel.store.conflictItem))
         }
+    }
+
+    private func conflictMessage(_ item: QueuedSessionSyncItem?) -> String {
+        guard let item else { return "" }
+        let local = viewModel.store.activeSession?.clientSessionId == item.clientSessionId
+            ? viewModel.store.activeSession
+            : nil
+        let summary: (WorkoutSessionDto?) -> String = { session in
+            guard let session else { return "–" }
+            return "\(session.totalSetsCompleted) sets done · changed \(Self.conflictTime(session.lastSyncedAt))"
+        }
+        return """
+        Both this device and another one changed \(item.payload.workoutNameSnapshot). Pick the version you want to keep.
+
+        This device: \(summary(local))
+        Other device: \(summary(item.serverConflictSession))
+        """
+    }
+
+    private static func conflictTime(_ iso: String?) -> String {
+        guard let iso, let date = ISO8601DateFormatter.lukiParse(iso) else { return "–" }
+        return date.formatted(date: .omitted, time: .shortened)
     }
 
     /// Bridges the view model's single `selectedTab` (still used by feature views) onto the

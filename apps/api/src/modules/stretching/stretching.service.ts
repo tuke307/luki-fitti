@@ -336,6 +336,7 @@ export class StretchingService {
                 slug: e.exercise.slug,
                 name: e.exercise.name,
                 primaryMuscleGroup: e.exercise.primaryMuscleGroup,
+                isSystem: e.exercise.isSystem,
               }),
             }
           : undefined,

@@ -21,8 +21,8 @@ import {
   DEFAULT_STARTER_FOLDERS,
   DEFAULT_STARTER_TEMPLATES,
   DEFAULT_STRETCHING_ROUTINES,
-  INITIAL_EXERCISE_CATALOG,
 } from '@luki-fitti/common/catalog';
+import { ALL_SYSTEM_EXERCISES } from '@luki-fitti/common/catalog/extended';
 import { DistanceUnit, type LanguagePreference, WeightUnit } from '@luki-fitti/common/enums';
 import type {
   RegisterDto,
@@ -51,9 +51,9 @@ export class AuthService {
 
   async ensureSystemCatalogSeeded(): Promise<void> {
     const count = await this.prisma.exercise.count({ where: { isSystem: true } });
-    if (count >= INITIAL_EXERCISE_CATALOG.length) return;
+    if (count >= ALL_SYSTEM_EXERCISES.length) return;
 
-    for (const item of INITIAL_EXERCISE_CATALOG) {
+    for (const item of ALL_SYSTEM_EXERCISES) {
       await this.prisma.exercise.upsert({
         where: { slug: item.slug },
         update: {},

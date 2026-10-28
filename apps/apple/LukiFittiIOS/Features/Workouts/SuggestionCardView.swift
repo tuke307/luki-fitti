@@ -12,6 +12,7 @@ struct SuggestionCardView: View {
     var onAdd: (() -> Void)?
     /// Only offered for stall reasons, where the suggestion targets an existing exercise.
     var onReplace: (() -> Void)?
+    var onDismiss: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -39,6 +40,18 @@ struct SuggestionCardView: View {
                     }
                 }
                 Spacer(minLength: 0)
+                if let onDismiss {
+                    Button(action: onDismiss) {
+                        Image(systemName: "xmark")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 28, height: 28)
+                            .background(Circle().fill(LukiColors.fill))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(locale == .de ? "Vorschlag ausblenden" : "Dismiss suggestion")
+                    .accessibilityIdentifier("suggestion.dismiss")
+                }
             }
 
             if onAdd != nil || showsReplace {
