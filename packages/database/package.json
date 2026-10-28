@@ -33,6 +33,7 @@
     "prisma-extension-pagination": "^0.7.6"
   },
   "devDependencies": {
+    "@luki-fitti/common": "*",
     "@luki-fitti/eslint-config": "*",
     "@luki-fitti/logger": "*",
     "@luki-fitti/typescript-config": "*",
