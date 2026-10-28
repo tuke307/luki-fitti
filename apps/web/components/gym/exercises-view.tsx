@@ -32,10 +32,10 @@ import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import {
   computeExerciseProgression,
-  findSimilarExercises,
   formatDateTime,
+  searchExercises,
 } from '@luki-fitti/common/utils/client';
-import { ExercisePicker, filterExercisesByQuery } from './exercise-picker';
+import { ExercisePicker, filterExercisesByQuery, searchIndexFor } from './exercise-picker';
 import { ExerciseVisual } from './exercise-visual';
 import { NumberInput } from './number-input';
 import {
@@ -103,15 +103,16 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
   >([]);
 
   // Before creating a custom exercise, point to catalog exercises that probably mean the same.
+  const systemCatalog = useMemo(() => catalog.filter((c) => c.isSystem), [catalog]);
   const similarExercises = useMemo(
     () =>
       newName.trim().length >= 3
-        ? findSimilarExercises(
-            newName,
-            catalog.filter((c) => c.isSystem),
-          )
+        ? searchExercises(searchIndexFor(systemCatalog), newName, {
+            limit: 3,
+            matchAllWords: false,
+          })
         : [],
-    [catalog, newName],
+    [systemCatalog, newName],
   );
 
   const filteredCatalog = useMemo(() => {

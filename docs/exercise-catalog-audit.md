@@ -20,7 +20,11 @@ _Date: 2026-10-28 · Scope: all system exercises after PR #8 (`e4d2eaa`, `2d0938
   against Postgres 17 with templates, sessions, alternatives and replaced ids.
 - Regression tests: no two system exercises share an EN or DE name, every retired id points to an
   existing exercise, and starter content only uses core exercises.
-- **Search (§8)**: follow-up PR.
+- **Search** is implemented as `exercise-search.util.ts` (+ vocabulary) in common, used by web
+  and the API (also for "Did you mean …?" before creating a custom exercise), with a 1:1 Swift port
+  (`ExerciseSearch.swift`). Both run the shared fixture `__fixtures__/exercise-search-cases.json`.
+  The old `exercise-match.util` matcher is gone; the importer keeps a frozen copy of its tokenizer
+  (`scripts/exercise-tokens.ts`) so re-imports produce the same ids.
 - Still open: the data-quality items in §5 (equipment/muscle mislabels, non-English names, German
   names missing for 655 imported exercises).
 
@@ -205,150 +209,16 @@ In <ref_file file="/Users/MEISSTO/source/luki-fitti/packages/common/scripts/impo
    wger's German names often match curated German names exactly ("Brustdehnung im Türrahmen").
 5. **Equipment is compared by name words, not by the resolved `EquipmentType`.**
 
-## 7. Recommended fixes
+## 7. Follow-ups
 
-1. **Importer**
-   - Use the improved shared normaliser from §8 (same code as search).
-   - Compare _movement tokens + resolved `EquipmentType`_ against curated **and** already-accepted
-     records, in **both** languages, in both passes.
-   - Add a hand-maintained `DUPLICATE_OF: Record<importedSlug, canonicalId>` and `SKIP` list for
-     edge cases, seeded with §2/§3.
-   - Fix equipment detection (MP/Multi Press → Smith, Latzug/Beinpresse/Butterfly → Machine/Cable)
-     and stop falling back to a category muscle when it's clearly wrong.
-2. **Regression test** in `extended.spec.ts`: no two system exercises may share
-   (normalised DE name) or (movement tokens + equipment).
-3. **Migration for existing data** — the API seeds via `upsert` and never deletes, and users may
-   already have logged sets/templates with the duplicate IDs. Follow the pattern of
-   `20261026110000_link_custom_smith_shoulder_press`: remap references
-   (workout sets, session exercises, template exercises, routines, favourites) from duplicate ID →
-   canonical ID, then delete the duplicate system rows.
-4. **Clients** — keep an `EXERCISE_ID_ALIASES` map (duplicate → canonical) in `@luki-fitti/common`
-   so the web offline store (IndexedDB) and iOS bundled data resolve old IDs; regenerate
-   `starter_catalog.json` with `apps/apple/scripts/export-starter-catalog.ts`.
+The duplicate fixes and the search are implemented (§0). Still open:
 
----
-
-## 8. Plan: smarter exercise search
-
-### 8.1 Current state
-
-| Surface                             | Implementation                                                                                                                                                                                                                                       |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Web picker, catalog, active session | `filterExercisesByQuery` in <ref_snippet file="/Users/MEISSTO/source/luki-fitti/apps/web/components/gym/exercise-picker.tsx" lines="23-70" /> — raw `includes()` on name, tags, labels, description; `findSimilarExercises` only if < 10 direct hits |
-| API `GET /exercises?search=`        | `includes()` on name/description/enum strings in <ref_snippet file="/Users/MEISSTO/source/luki-fitti/apps/api/src/modules/exercise/exercise.service.ts" lines="126-136" />                                                                           |
-| iOS                                 | `contains()` on name/tags/DE muscle label in <ref_snippet file="/Users/MEISSTO/source/luki-fitti/apps/apple/LukiFittiIOS/Features/Exercises/ExercisesAndStretchingView.swift" lines="131-140" />                                                     |
-
-Three different implementations, none normalise punctuation, plurals or umlauts, and there is no ranking.
-
-Measured against today's catalog (DE locale, web logic):
-
-| Query                     | Result today                                      | Expected                                |
-| ------------------------- | ------------------------------------------------- | --------------------------------------- |
-| `situp`                   | **0 results**                                     | Sit-Ups, 3/4 Sit-Up, …                  |
-| `bankdrucken` (no umlaut) | **0 direct**; fuzzy → "Bank-Dips"                 | Bankdrücken (LH/KH)                     |
-| `bizepcurl` (typo)        | **0 results**                                     | Bizepscurls …                           |
-| `pushup`                  | fuzzy top hits "Drop Push", "Push Press"          | Liegestütz first                        |
-| `rdl`                     | includes "Hurdle Hops" (substring in description) | only RDL variants                       |
-| `squat`                   | 80 hits in catalog order, no ranking              | Kniebeuge (LH) / Bodyweight Squat first |
-
-### 8.2 Goals
-
-- Forgiving input: spacing, hyphens, plurals, umlauts with or without `ue`, small typos.
-- Bilingual: German and English names, gym slang and abbreviations always searchable,
-  whatever the UI language is.
-- Relevance ranking instead of catalog order.
-- **One** algorithm for web, API and iOS, verified by the same test cases.
-- Fast enough for keystroke search (< 5 ms for 1,200 exercises, no network).
-
-### 8.3 Design — `packages/common/src/utils/exercise-search.util.ts`
-
-**1. Normalisation (index + query)**
-
-- Lowercase, NFD + strip diacritics, `ß→ss`, fold umlauts to **both** forms at index time
-  (`drücken` → `druecken` and `drucken`) so `bankdrucken`, `bankdruecken`, `bankdrücken` all match.
-- Replace punctuation/hyphens/apostrophes with spaces; collapse whitespace.
-- **Compact form**: remove all spaces (`"sit-ups"` → `situps`) and match the compact query against
-  compact names → `situp` ⊂ `situps` ✔.
-
-**2. Tokenisation & light stemming**
-
-- Plural/inflection stripping for EN (`-s`, `-es`) and DE (`-e`, `-en`, `-n`, `-er`, `-es`):
-  `pushups→pushup`, `klimmzüge→klimmzug`, `sitzendes→sitzend`.
-- German compound splitting with a known-morpheme list (`bizepscurl → bizeps curl`,
-  `schrägbankdrücken → schräg bank drücken`), reusing and extending `SYNONYMS`.
-
-**3. Synonyms & aliases** (one bidirectional dictionary, shared with the importer)
-
-- Movement: situp ↔ sit-up ↔ sit up; pushup ↔ liegestütz; pullup ↔ klimmzug; squat ↔ kniebeuge;
-  deadlift ↔ kreuzheben; bench press ↔ bankdrücken; pec deck ↔ butterfly;
-  skull crusher ↔ french press ↔ stirndrücken; preacher ↔ scott; plank ↔ unterarmstütz …
-- Abbreviations: OHP, RDL, DB/KH, BB/LH, SZ/EZ, MP/Multipresse/Smith.
-- Per-exercise aliases: add an optional `aliases: string[]` to curated exercises for colloquial names.
-
-**4. Matching tiers & scoring** (per exercise, highest tier wins, then summed bonuses)
-
-| Tier                                                                       | Example                           | Score |
-| -------------------------------------------------------------------------- | --------------------------------- | ----- |
-| Exact normalised name (DE or EN)                                           | `crunch` → Crunch                 | 100   |
-| Name starts with query / compact prefix                                    | `situp` → Sit-Ups                 | 90    |
-| All query tokens in name (any order, last token as prefix for as-you-type) | `kh bank` → Bankdrücken (KH)      | 75    |
-| All tokens via synonyms/aliases/tags                                       | `ohp` → Schulterdrücken (LH, OHP) | 60    |
-| Typo match (Damerau-Levenshtein ≤ 1 for 4–7 chars, ≤ 2 for ≥ 8)            | `bizepcurl`, `kniebuege`          | 45    |
-| Muscle / equipment label only                                              | `brust`, `kabelzug`               | 25    |
-
-- Tokens shorter than 4 characters must match a whole token (fixes `rdl` → "hurdle").
-- **Description is no longer searched** (main source of noise); optional low-weight fallback only
-  when there are zero hits.
-- Equipment conflict penalty (reuse the existing `findSimilarExercises` idea): query says
-  "Kurzhantel", exercise is Langhantel → ×0.5.
-- Tie-breakers: user's recently used / favourite exercises → custom exercises → curated →
-  imported with German name → imported; then shorter name; then alphabetical.
-
-**5. Index**
-
-- `buildExerciseSearchIndex(exercises, locale)` precomputes normalised DE+EN names, tags, aliases,
-  compact strings and token sets once (memoised on catalog identity). Needs both DE and EN names
-  per exercise, so the index is built from the unlocalised record plus the translation table, not
-  from the already-localised DTO.
-- `searchExercises(index, query, { filters, limit })` returns `{ exercise, score, matchedField }[]`.
-- Linear scan over ~1,200 entries is well under 5 ms; no search library needed, which keeps the
-  logic portable to Swift. (Alternative: MiniSearch on web only — rejected because iOS/API parity
-  would need a second implementation anyway.)
-
-**6. UX**
-
-- Highlight matched part of the name in results.
-- "Meintest du …?" suggestion when there are zero results (best typo/synonym candidate).
-- Optional later phase: collapse variants under the base exercise ("Kniebeuge · 12 Varianten").
-
-### 8.4 Rollout
-
-1. **Common module + tests** — `exercise-search.util.ts`, extend `SYNONYMS` and share the normaliser
-   with `exerciseTokens`/importer. Add a JSON fixture
-   `packages/common/src/utils/__fixtures__/exercise-search-cases.json` (query → expected top-3 IDs),
-   run by `node --test`.
-2. **Web** — replace `filterExercisesByQuery` internals (picker, catalog, active session); keep the
-   function signature so call sites don't change. Update the Playwright search spec.
-3. **API** — use `searchExercises` in `ExerciseService.findAll` so online and offline results match.
-4. **iOS** — Swift port in `LukiFittiKit` (`ExerciseSearch.swift`), driven by the same JSON fixture
-   in `LukiFittiDomainTests`; export synonyms with the starter catalog so they stay in sync.
-5. **Feedback loop** — track zero-result queries via the existing Umami integration (query text
-   only, no user identifiers) and add missing aliases from the results.
-6. **Dependency** — do the catalog dedupe (§7) first or in parallel; otherwise better search will
-   surface the duplicates even more prominently.
-
-### 8.5 Acceptance test cases (initial fixture)
-
-| Query                                        | Must rank in top 3                                      |
-| -------------------------------------------- | ------------------------------------------------------- |
-| `situp`, `sit up`, `Sit-Ups`                 | Sit-Ups                                                 |
-| `pushup`, `liegestütze`                      | `ex-push-up` (Liegestütz)                               |
-| `bankdrucken`, `bankdruecken`, `bench press` | `ex-barbell-bench-press`, `ex-dumbbell-bench-press`     |
-| `kh bank`                                    | `ex-dumbbell-bench-press` first                         |
-| `bizepcurl`, `bizeps curl`                   | `ex-barbell-curl` / `ex-ez-bar-bicep-curl`              |
-| `rdl`                                        | `ex-romanian-deadlift`; must **not** return Hurdle Hops |
-| `ohp`                                        | `ex-overhead-barbell-press`                             |
-| `klimmzüge`, `pullups`                       | `ex-weighted-pull-up`                                   |
-| `schulterdrücken multipresse`                | `ex-smith-machine-overhead-shoulder-press`              |
-| `kniebuege` (typo)                           | `ex-barbell-back-squat`                                 |
-| `latzug eng`                                 | `ex-close-grip-lat-pulldown`                            |
+- Data quality (§5): equipment detection in `wgerEquipment()` (MP / Multi Press, Latzug,
+  Beinpresse, Butterfly), implausible category-fallback muscles, non-English names that slip past
+  `NON_ENGLISH_CHARS`, unpolished German names, and German names for the remaining imported
+  exercises.
+- Search: track zero-result queries (Umami, query text only) and grow
+  `exercise-search.vocab.ts` from them; add new cases to the shared fixture
+  `packages/common/src/utils/__fixtures__/exercise-search-cases.json` (run by TS and Swift).
+- Retired ids: keep `RETIRED_EXERCISE_IDS` and the client/API remapping until no supported app
+  version can still send them; offline caches can live for months.
