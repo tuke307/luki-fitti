@@ -294,7 +294,7 @@ public struct LukiFittiWatchApp: App {
     public var body: some Scene {
         WindowGroup {
             WatchRootContainerView(viewModel: viewModel)
-                .preferredColorScheme(.dark)
+                .environment(\.lukiLocale, SupportedLocale.resolve(viewModel.store.preferences.language))
         }
     }
 }

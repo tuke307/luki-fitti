@@ -4,6 +4,7 @@ import LukiFittiDesign
 
 public struct WatchHomeView: View {
     @Bindable public var viewModel: WatchWorkoutViewModel
+    @Environment(\.lukiLocale) private var tr
 
     public init(viewModel: WatchWorkoutViewModel) {
         self.viewModel = viewModel
@@ -18,7 +19,7 @@ public struct WatchHomeView: View {
                     } label: {
                         Label {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Resume")
+                                Text(tr("Resume"))
                                     .font(.headline)
                                 Text(active.workoutNameSnapshot)
                                     .font(.footnote)
@@ -33,7 +34,7 @@ public struct WatchHomeView: View {
                     .listItemTint(LukiColors.accent.opacity(0.35))
                 }
 
-                Section("Workouts") {
+                Section(tr("Workouts")) {
                     ForEach(viewModel.store.folders) { folder in
                         NavigationLink {
                             WatchFolderTemplatesView(viewModel: viewModel, folder: folder)
@@ -49,12 +50,12 @@ public struct WatchHomeView: View {
                                 viewModel: viewModel,
                                 folder: WorkoutFolderDto(
                                     id: "folder-unfiled",
-                                    name: "Unfiled",
+                                    name: tr("Unfiled"),
                                     templates: viewModel.store.unfiledTemplates
                                 )
                             )
                         } label: {
-                            folderLabel(name: "Unfiled", count: viewModel.store.unfiledTemplates.count, color: .secondary)
+                            folderLabel(name: tr("Unfiled"), count: viewModel.store.unfiledTemplates.count, color: .secondary)
                         }
                     }
                 }
@@ -63,7 +64,7 @@ public struct WatchHomeView: View {
                     NavigationLink {
                         WatchStretchingListView(viewModel: viewModel)
                     } label: {
-                        Label("Stretching", systemImage: "figure.flexibility")
+                        Label(tr("Stretching"), systemImage: "figure.flexibility")
                     }
                     .accessibilityIdentifier("watch.home.stretchingLink")
                 }
@@ -74,7 +75,7 @@ public struct WatchHomeView: View {
 
     private func folderLabel(name: String, count: Int, color: Color) -> some View {
         HStack(spacing: 8) {
-            Circle().fill(color).frame(width: 8, height: 8)
+            Circle().fill(color).frame(width: 8, height: 8).accessibilityHidden(true)
             Text(name).lineLimit(2)
             Spacer(minLength: 4)
             Text("\(count)")
@@ -87,6 +88,7 @@ public struct WatchHomeView: View {
 public struct WatchFolderTemplatesView: View {
     @Bindable public var viewModel: WatchWorkoutViewModel
     public let folder: WorkoutFolderDto
+    @Environment(\.lukiLocale) private var tr
 
     public init(viewModel: WatchWorkoutViewModel, folder: WorkoutFolderDto) {
         self.viewModel = viewModel
@@ -104,7 +106,7 @@ public struct WatchFolderTemplatesView: View {
                         Text(template.name)
                             .font(.headline)
                             .lineLimit(2)
-                        Text(stats.totalCount > 0 ? "\(stats.dateText) · \(stats.durationText)" : "Never trained")
+                        Text(stats.totalCount > 0 ? "\(stats.dateText) · \(stats.durationText)" : tr("Never trained"))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .monospacedDigit()
@@ -126,7 +128,7 @@ public struct WatchFolderTemplatesView: View {
             return session.workoutNameSnapshot.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalizedTemplateName
         }
         guard let last = matched.first else {
-            return ("--:--", "Never trained", 0)
+            return ("–", tr("Never trained"), 0)
         }
         let sec = max(0, last.activeDurationSeconds)
         let h = sec / 3600
@@ -144,9 +146,7 @@ public struct WatchFolderTemplatesView: View {
         f1.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let f2 = ISO8601DateFormatter()
         if let date = f1.date(from: iso) ?? f2.date(from: iso) {
-            let out = DateFormatter()
-            out.dateFormat = "dd MMM"
-            return out.string(from: date)
+            return date.formatted(.dateTime.day().month(.abbreviated).locale(Locale(identifier: tr.rawValue)))
         }
         return String(iso.prefix(10))
     }
@@ -154,6 +154,7 @@ public struct WatchFolderTemplatesView: View {
 
 public struct WatchStretchingListView: View {
     @Bindable public var viewModel: WatchWorkoutViewModel
+    @Environment(\.lukiLocale) private var tr
 
     public init(viewModel: WatchWorkoutViewModel) {
         self.viewModel = viewModel
@@ -169,13 +170,13 @@ public struct WatchStretchingListView: View {
                         Text(routine.name)
                             .font(.headline)
                             .lineLimit(2)
-                        Text("\(routine.estimatedDurationSeconds / 60) min · \(routine.targetArea)")
+                        Text(tr("%d min · %@", routine.estimatedDurationSeconds / 60, routine.targetArea))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
                 }
             }
         }
-        .navigationTitle("Stretching")
+        .navigationTitle(tr("Stretching"))
     }
 }

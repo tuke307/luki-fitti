@@ -37,7 +37,9 @@ import {
 } from '@luki-fitti/common/utils/client';
 import { ExercisePicker, filterExercisesByQuery, searchIndexFor } from './exercise-picker';
 import { ExerciseVisual } from './exercise-visual';
+import { ConfirmDestructiveDialog } from './confirm-destructive-dialog';
 import { NumberInput } from './number-input';
+import { unitLabel } from '@/lib/format/weight';
 import {
   EquipmentType,
   ExerciseCategory,
@@ -71,6 +73,10 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
   const [selectedType, setSelectedType] = useState<ExerciseType | 'ALL'>('ALL');
   const [selectedEquipment, setSelectedEquipment] = useState<EquipmentType | 'ALL'>('ALL');
   const [selectedExercise, setSelectedExercise] = useState<ExerciseDto | null>(null);
+  const [routinePendingDelete, setRoutinePendingDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCreateRoutineModal, setShowCreateRoutineModal] = useState(false);
 
@@ -326,7 +332,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
 
               <div className="w-full pt-1 sm:ml-auto sm:w-auto sm:pt-0">
                 <NativeSelect
-                  aria-label="Filter by equipment"
+                  aria-label={t.a11y.filterEquipment}
                   value={selectedEquipment}
                   onChange={(e) => setSelectedEquipment(e.target.value as EquipmentType | 'ALL')}
                   className="w-full sm:w-auto"
@@ -362,8 +368,8 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                     >
                       <ExerciseVisual exercise={ex} variant="thumbnail" className="h-12 w-14" />
                       <span className="min-w-0 flex-1">
-                        <h3 className="truncate text-[17px] font-medium">{ex.name}</h3>
-                        <span className="text-muted-foreground block truncate text-[13px]">
+                        <h3 className="truncate text-[1.0625rem] font-medium">{ex.name}</h3>
+                        <span className="text-muted-foreground block truncate text-[0.8125rem]">
                           {muscleLabel(ex.primaryMuscleGroup)} · {equipmentLabel(ex.equipment)}
                           {isStretch && ex.recommendedDurationSeconds
                             ? ` · ${ex.recommendedDurationSeconds}${t.exercises.holdSuffix}`
@@ -462,8 +468,10 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                           variant="ghost"
                           size="icon"
                           aria-label={format(t.exercises.deleteRoutineAria, { name: routine.name })}
-                          onClick={() => void deleteStretchingRoutine(routine.id)}
-                          className="text-muted-foreground hover:text-destructive size-8"
+                          onClick={() =>
+                            setRoutinePendingDelete({ id: routine.id, name: routine.name })
+                          }
+                          className="text-muted-foreground hover:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -592,8 +600,8 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                     >
                       <ExerciseVisual exercise={ex} variant="thumbnail" className="h-12 w-14" />
                       <span className="min-w-0 flex-1">
-                        <h4 className="truncate text-[17px] font-medium">{ex.name}</h4>
-                        <span className="text-muted-foreground block truncate text-[13px] tabular-nums">
+                        <h4 className="truncate text-[1.0625rem] font-medium">{ex.name}</h4>
+                        <span className="text-muted-foreground block truncate text-[0.8125rem] tabular-nums">
                           {muscleLabel(ex.primaryMuscleGroup)} ·{' '}
                           {ex.recommendedDurationSeconds ?? 45}
                           {t.exercises.holdSuffix}
@@ -724,7 +732,10 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                         </h3>
                         {insight.ewma1RM > 0 && (
                           <Badge variant="default" className="tabular-nums text-xs">
-                            e1RM {insight.ewma1RM} {weightUnit.toLowerCase()}
+                            {format(t.exercises.strengthTrendBadge, {
+                              value: insight.ewma1RM,
+                              unit: unitLabel(weightUnit),
+                            })}
                           </Badge>
                         )}
                       </div>
@@ -819,7 +830,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                           className="h-9 w-11"
                         />
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[13px] font-medium">
+                          <span className="block truncate text-[0.8125rem] font-medium">
                             {exercise.name}
                           </span>
                           <span className="text-muted-foreground block truncate text-xs">
@@ -1161,6 +1172,21 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
           </form>
         </DialogContent>
       </Dialog>
+      <ConfirmDestructiveDialog
+        open={Boolean(routinePendingDelete)}
+        onOpenChange={(open) => {
+          if (!open) setRoutinePendingDelete(null);
+        }}
+        testId="confirm-delete-routine"
+        title={t.exercises.deleteRoutineTitle}
+        description={format(t.exercises.deleteRoutineDesc, {
+          name: routinePendingDelete?.name ?? '',
+        })}
+        confirmLabel={t.exercises.deleteRoutineBtn}
+        onConfirm={async () => {
+          if (routinePendingDelete) await deleteStretchingRoutine(routinePendingDelete.id);
+        }}
+      />
     </div>
   );
 }

@@ -31,16 +31,23 @@ public enum LukiColors {
     public static let separator = Color.white.opacity(0.15)
     #endif
 
-    public static let success = Color.green
+    /// Logged sets and goals reached. 4.57:1 with white in light, 10.4:1 with black in dark.
+    public static let success = adaptive(light: (0.110, 0.529, 0.259), dark: (0.188, 0.820, 0.345))
     public static let warning = Color.orange
-    public static let destructive = Color.red
-    public static let heartRate = Color.red
-    public static let calories = Color.orange
+    /// Destructive text and icons: 5.38:1 on white, 6.03:1 on #1C1C1E.
+    public static let destructive = adaptive(light: (0.843, 0.0, 0.082), dark: (1.0, 0.412, 0.380))
+    /// Neutral swipe actions (white text, 5.99:1).
+    public static let neutralAction = Color(red: 0.388, green: 0.388, blue: 0.400)
+    /// Text on filled set-type, success and destructive tints: white in light, black in dark.
+    public static let onTint = adaptive(light: (1, 1, 1), dark: (0, 0, 0))
+    /// Heart rate and energy as text: 5.38:1 / 5.28:1 on white, 6.0:1+ on #1C1C1E.
+    public static let heartRate = destructive
+    public static let calories = adaptive(light: (0.788, 0.204, 0.0), dark: (1.0, 0.624, 0.039))
 
     // Set types — kept clear of the green/amber/red effort scale (mirrors --set-* in globals.css).
     public static let setWarmup = adaptive(light: (0.16, 0.45, 0.78), dark: (0.45, 0.68, 0.95))
     public static let setDropset = adaptive(light: (0.53, 0.25, 0.78), dark: (0.74, 0.56, 0.98))
-    public static let setStretch = adaptive(light: (0.08, 0.53, 0.56), dark: (0.42, 0.82, 0.84))
+    public static let setStretch = adaptive(light: (0.05, 0.46, 0.49), dark: (0.42, 0.82, 0.84))
 
     /// Badge colour for a set type; working sets use `success` once logged and a neutral fill before.
     public static func setTypeColor(_ type: SetType) -> Color? {
@@ -51,26 +58,6 @@ public enum LukiColors {
         case .WORKING: return nil
         }
     }
-
-    // MARK: Legacy names (pre-redesign) mapped onto the semantic palette
-
-    public static let neonLime = accent
-    public static let electricCyan = accent
-    public static let vibrantPurple = Color.indigo
-    public static let heartRose = heartRate
-    public static let calorieAmber = calories
-    public static let darkBackground = groupedBackground
-    public static let darkCard = cardBackground
-    public static let darkBorder = separator
-    public static let watchFolderSlate = cardBackground
-    public static let watchCardMint = cardBackground
-    public static let watchCardLime = cardBackground
-    public static let watchCardAmber = cardBackground
-    public static let watchCardCyan = cardBackground
-    public static let watchActionChangeLavender = fill
-    public static let watchActionEditCream = fill
-    public static let watchActionPauseSky = fill
-    public static let watchActionFinishMint = fill
 
     private static func adaptive(
         light: (Double, Double, Double),
@@ -139,9 +126,6 @@ public enum LukiColors {
         )
     }
 
-    public static func watchTemplateCardFill(at index: Int) -> Color {
-        cardBackground
-    }
 }
 
 public enum LukiI18n {

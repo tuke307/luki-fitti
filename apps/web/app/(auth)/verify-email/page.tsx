@@ -38,7 +38,7 @@ export default function VerifyEmailPage() {
               <Dumbbell className="h-5 w-5" />
             </div>
             <div>
-              <span className="text-[17px] font-semibold">LukiFitti</span>
+              <span className="text-[1.0625rem] font-semibold">LukiFitti</span>
               <span className="text-muted-foreground block text-xs">
                 Account Email Confirmation
               </span>

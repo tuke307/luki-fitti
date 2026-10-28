@@ -173,8 +173,8 @@ export function PwaShell() {
             type="button"
             variant="ghost"
             onClick={() => setActiveTab('home')}
-            aria-label="LukiFitti Home"
-            className="h-auto shrink-0 rounded-md px-0 text-[17px] font-semibold tracking-tight hover:bg-transparent"
+            aria-label={t.a11y.homeButton}
+            className="h-auto shrink-0 rounded-md px-0 text-[1.0625rem] font-semibold tracking-tight hover:bg-transparent"
           >
             LukiFitti
           </Button>
@@ -189,7 +189,7 @@ export function PwaShell() {
                   data-testid={`desktop-nav-${item.id}`}
                   aria-current={isCurrent ? 'page' : undefined}
                   onClick={() => setActiveTab(item.id)}
-                  className={`h-9 rounded-full px-4 text-[15px] transition-colors duration-150 ${
+                  className={`h-9 rounded-full px-4 text-[0.9375rem] transition-colors duration-150 ${
                     isCurrent
                       ? 'bg-secondary text-foreground font-semibold'
                       : 'text-muted-foreground hover:text-foreground font-medium'
@@ -212,10 +212,12 @@ export function PwaShell() {
                 data-testid="header-rest-timer-pill"
                 onClick={() => setActiveTab('session')}
                 aria-label={`${t.session.restTimerActive} ${formatClock(restInfo.remainingSeconds)}`}
-                className="bg-primary/12 text-primary font-rounded flex h-8 items-center gap-1.5 rounded-full px-3 text-[15px] font-semibold"
+                className="flex h-11 items-center"
               >
-                <Timer className="h-4 w-4" />
-                {formatClock(restInfo.remainingSeconds)}
+                <span className="bg-primary/12 text-primary font-rounded flex h-8 items-center gap-1.5 rounded-full px-3 text-[0.9375rem] font-semibold">
+                  <Timer className="h-4 w-4" />
+                  {formatClock(restInfo.remainingSeconds)}
+                </span>
               </button>
             )}
 
@@ -226,10 +228,8 @@ export function PwaShell() {
                 onClick={() => (isAuthenticated ? void flushSyncQueue() : setActiveTab('profile'))}
                 title={syncStatusText}
                 aria-label={syncStatusText}
-                className={`flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[13px] font-medium ${
-                  syncState === 'AUTH_EXPIRED'
-                    ? 'bg-warning/15 text-warning'
-                    : 'text-muted-foreground'
+                className={`flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-full px-2.5 text-[0.8125rem] font-medium ${
+                  syncState === 'AUTH_EXPIRED' ? 'text-warning' : 'text-muted-foreground'
                 }`}
               >
                 {isOffline ? (
@@ -259,13 +259,21 @@ export function PwaShell() {
               aria-label={t.nav.profileAria}
               aria-current={activeTab === 'profile' ? 'page' : undefined}
               onClick={() => setActiveTab('profile')}
-              className={`flex size-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold transition-shadow ${
-                isAuthenticated && initials
-                  ? 'bg-primary/12 text-primary'
-                  : 'bg-secondary text-muted-foreground'
-              } ${activeTab === 'profile' ? 'ring-primary ring-2 ring-offset-2 ring-offset-background' : ''}`}
+              className="flex size-11 shrink-0 items-center justify-center rounded-full"
             >
-              {isAuthenticated && initials ? initials : <UserRound className="h-[18px] w-[18px]" />}
+              <span
+                className={`flex size-9 items-center justify-center rounded-full text-[0.8125rem] font-semibold transition-shadow ${
+                  isAuthenticated && initials
+                    ? 'bg-primary/12 text-primary'
+                    : 'bg-secondary text-muted-foreground'
+                } ${activeTab === 'profile' ? 'ring-primary ring-offset-background ring-2 ring-offset-2' : ''}`}
+              >
+                {isAuthenticated && initials ? (
+                  initials
+                ) : (
+                  <UserRound className="h-[18px] w-[18px]" />
+                )}
+              </span>
             </button>
           </div>
         </div>
@@ -310,10 +318,10 @@ export function PwaShell() {
               <span className="bg-primary relative inline-flex size-2.5 rounded-full" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[15px] font-semibold">
+              <span className="block truncate text-[0.9375rem] font-semibold">
                 {activeSession.workoutNameSnapshot}
               </span>
-              <span className="text-muted-foreground font-rounded block text-[13px]">
+              <span className="text-muted-foreground font-rounded block text-[0.8125rem]">
                 {formatClock(sessionElapsedSeconds)}
                 {isRestVisible &&
                   ` · ${t.session.restTimerActive} ${formatClock(restInfo.remainingSeconds)}`}
@@ -341,7 +349,7 @@ export function PwaShell() {
                   data-testid={`mobile-nav-${item.id}`}
                   aria-current={activeTab === item.id ? 'page' : undefined}
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex h-14 flex-col items-center justify-center gap-0.5 rounded-full text-[11px] font-medium transition-colors duration-150 ${
+                  className={`flex h-14 flex-col items-center justify-center gap-0.5 rounded-full text-[0.6875rem] font-medium transition-colors duration-150 ${
                     isCurrent ? 'bg-secondary text-primary' : 'text-muted-foreground'
                   }`}
                 >
@@ -359,7 +367,7 @@ export function PwaShell() {
         <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader className="text-left">
             <AlertDialogTitle>{t.shell.conflictTitle}</AlertDialogTitle>
-            <AlertDialogDescription className="text-[15px]">
+            <AlertDialogDescription className="text-[0.9375rem]">
               {t.shell.conflictDescPrefix}{' '}
               <strong className="text-foreground">
                 {conflictServerSession?.workoutNameSnapshot}
@@ -368,7 +376,7 @@ export function PwaShell() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           {conflictServerSession && (
-            <dl className="grid grid-cols-2 gap-2 text-[13px]">
+            <dl className="grid grid-cols-2 gap-2 text-[0.8125rem]">
               {[
                 { label: t.shell.conflictThisDevice, session: conflictLocalSession },
                 { label: t.shell.conflictServer, session: conflictServerSession },

@@ -65,7 +65,7 @@ public struct ExerciseVectorVisualView: View {
                 )
                 context.fill(
                     Path(ellipseIn: glowRect),
-                    with: .color(LukiColors.neonLime.opacity(isPeakContraction ? 0.85 : 0.45))
+                    with: .color(LukiColors.accent.opacity(isPeakContraction ? 0.85 : 0.45))
                 )
 
                 // Arms (Start vs Contracted angle)
@@ -77,7 +77,7 @@ public struct ExerciseVectorVisualView: View {
                 arms.addLine(to: CGPoint(x: center.x - scale * 0.16, y: shoulderY))
                 arms.addLine(to: CGPoint(x: center.x + scale * 0.16, y: shoulderY))
                 arms.addLine(to: CGPoint(x: center.x + handSpread, y: handY))
-                context.stroke(arms, with: .color(LukiColors.neonLime), lineWidth: 2)
+                context.stroke(arms, with: .color(LukiColors.accent), lineWidth: 2)
 
                 // Barbell / Load indicator
                 var bar = Path()

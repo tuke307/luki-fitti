@@ -27,7 +27,7 @@ const ACTION_WIDTH = 76;
 const AXIS_LOCK_PX = 8;
 
 const toneClass: Record<NonNullable<SwipeAction['tone']>, string> = {
-  neutral: 'bg-[oklch(0.62_0.01_286)] text-white',
+  neutral: 'bg-[oklch(0.5_0.01_286)] text-white',
   accent: 'bg-primary text-primary-foreground',
   destructive: 'bg-destructive text-destructive-foreground',
 };
@@ -157,7 +157,7 @@ export function SwipeRow({
                 action.onSelect();
               }}
               className={cn(
-                'flex h-full flex-col items-center justify-center gap-1 text-[13px] font-medium',
+                'flex h-full flex-col items-center justify-center gap-1 text-[0.8125rem] font-medium',
                 toneClass[action.tone ?? 'neutral'],
               )}
               style={{ width: ACTION_WIDTH }}

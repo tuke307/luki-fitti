@@ -20,6 +20,7 @@ let package = Package(
                 "LukiFittiStore",
                 "LukiFittiHealth",
                 "LukiFittiWatchSync",
+                "LukiFittiLiveActivity",
             ]
         ),
         .library(name: "LukiFittiModels", targets: ["LukiFittiModels"]),
@@ -29,6 +30,7 @@ let package = Package(
         .library(name: "LukiFittiStore", targets: ["LukiFittiStore"]),
         .library(name: "LukiFittiHealth", targets: ["LukiFittiHealth"]),
         .library(name: "LukiFittiWatchSync", targets: ["LukiFittiWatchSync"]),
+        .library(name: "LukiFittiLiveActivity", targets: ["LukiFittiLiveActivity"]),
     ],
     targets: [
         .target(
@@ -70,6 +72,14 @@ let package = Package(
             dependencies: [
                 "LukiFittiModels",
                 "LukiFittiDomain",
+            ]
+        ),
+        .target(
+            name: "LukiFittiLiveActivity",
+            dependencies: [
+                "LukiFittiModels",
+                "LukiFittiDomain",
+                "LukiFittiDesign",
             ]
         ),
         .testTarget(
