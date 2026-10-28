@@ -5,6 +5,7 @@ import {
   localizeExercise,
   resolveExerciseMedia,
 } from '@luki-fitti/common/catalog';
+import { ALL_SYSTEM_EXERCISES } from '@luki-fitti/common/catalog/extended';
 import type {
   CreateExerciseDto,
   ExerciseDto,
@@ -22,8 +23,8 @@ export class ExerciseService {
   private async ensureCatalogSeeded(): Promise<void> {
     if (this.seeded) return;
     const count = await this.prisma.exercise.count({ where: { isSystem: true } });
-    if (count < INITIAL_EXERCISE_CATALOG.length) {
-      for (const item of INITIAL_EXERCISE_CATALOG) {
+    if (count < ALL_SYSTEM_EXERCISES.length) {
+      for (const item of ALL_SYSTEM_EXERCISES) {
         await this.prisma.exercise.upsert({
           where: { slug: item.slug },
           update: {},
@@ -328,7 +329,7 @@ export class ExerciseService {
   }
 
   private mapExerciseDto(record: any, locale: SupportedLocale): ExerciseDto {
-    const catalogFallback = INITIAL_EXERCISE_CATALOG.find((c) => c.id === record.id);
+    const catalogFallback = ALL_SYSTEM_EXERCISES.find((c) => c.id === record.id);
     const secondaryFromDb = (record.muscleGroups ?? [])
       .filter((m: any) => !m.isPrimary && m.muscleGroup !== record.primaryMuscleGroup)
       .map((m: any) => m.muscleGroup as MuscleGroup);

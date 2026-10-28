@@ -1,5 +1,6 @@
 import { EquipmentType, ExerciseCategory, ExerciseType, MuscleGroup, WeightUnit } from '../enums';
 import type { ExerciseDto } from '../schemas';
+import { getRegisteredExercise } from './registry';
 
 export const INITIAL_EXERCISE_CATALOG: ExerciseDto[] = [
   // ── CHEST ──────────────────────────────────────────────────────────────────
@@ -4313,7 +4314,6 @@ const FREE_EXERCISE_DB_BASE =
   'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises';
 
 const EXERCISE_DB_FOLDER_BY_SLUG: Record<string, string | null> = {
-  crunch: 'Crunches',
   'push-up': 'Pushups',
   'dumbbell-bench-press': 'Dumbbell_Bench_Press',
   'dumbbell-fly': 'Dumbbell_Flyes',
@@ -4558,6 +4558,11 @@ export function resolveExerciseMedia(exercise: {
     attribution: 'YouTube Form Guide',
     license: 'External Link',
   };
+
+  const registered = exercise.id ? getRegisteredExercise(exercise.id)?.media : undefined;
+  if (exercise.isSystem !== false && registered && registered.length > 0) {
+    return [...registered, videoLink];
+  }
 
   const folder =
     exercise.isSystem === false

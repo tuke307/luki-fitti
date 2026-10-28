@@ -1,5 +1,6 @@
 import prisma from './client';
 import logger from '@luki-fitti/logger';
+import { ALL_SYSTEM_EXERCISES } from '@luki-fitti/common/catalog/extended';
 import {
   INITIAL_EXERCISE_CATALOG,
   DEFAULT_STARTER_FOLDERS,
@@ -10,7 +11,7 @@ import {
 async function main(): Promise<void> {
   try {
     await prisma.$transaction(async (tx) => {
-      for (const item of INITIAL_EXERCISE_CATALOG) {
+      for (const item of ALL_SYSTEM_EXERCISES) {
         await tx.exercise.upsert({
           where: { slug: item.slug },
           update: {

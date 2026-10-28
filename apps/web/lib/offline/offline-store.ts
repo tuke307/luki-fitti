@@ -4,7 +4,6 @@ import {
   DEFAULT_STARTER_FOLDERS,
   DEFAULT_STARTER_TEMPLATES,
   DEFAULT_STRETCHING_ROUTINES,
-  INITIAL_EXERCISE_CATALOG,
   resolveExerciseMedia,
 } from '@luki-fitti/common/catalog';
 import {
@@ -109,12 +108,22 @@ async function idbSet<T>(key: string, value: T): Promise<void> {
   });
 }
 
+/**
+ * The imported exercise database is a separate chunk: loaded once, it registers its translations and
+ * photos, so it never weighs on the first page load.
+ */
+async function loadSystemExercises(): Promise<ExerciseDto[]> {
+  const { ALL_SYSTEM_EXERCISES } = await import('@luki-fitti/common/catalog/extended');
+  return ALL_SYSTEM_EXERCISES;
+}
+
 export async function getCachedCatalog(): Promise<ExerciseDto[]> {
   const cached = await idbGet<ExerciseDto[]>('exercise_catalog');
+  const systemExercises = await loadSystemExercises();
   if (cached && cached.length > 0) {
     const bySlug = new Map(cached.map((e) => [e.slug, e]));
     let changed = false;
-    for (const sysEx of INITIAL_EXERCISE_CATALOG) {
+    for (const sysEx of systemExercises) {
       if (!bySlug.has(sysEx.slug)) {
         bySlug.set(sysEx.slug, sysEx);
         changed = true;
@@ -135,8 +144,8 @@ export async function getCachedCatalog(): Promise<ExerciseDto[]> {
     }
     return merged;
   }
-  await idbSet('exercise_catalog', INITIAL_EXERCISE_CATALOG);
-  return INITIAL_EXERCISE_CATALOG;
+  await idbSet('exercise_catalog', systemExercises);
+  return systemExercises;
 }
 
 export async function setCachedCatalog(exercises: ExerciseDto[]): Promise<void> {
