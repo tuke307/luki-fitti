@@ -286,6 +286,8 @@ model WorkoutTemplateExercise {
   templateId             String
   exerciseId             String
   orderIndex             Int
+  /// Per-set plan `[{ setType, weight, reps, durationSeconds }]`; summary columns are derived from it.
+  sets                   Json?
   plannedSets            Int        @default(3)
   warmupSets             Int        @default(0)
   targetRepsMin          Int?       @default(8)

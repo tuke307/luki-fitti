@@ -916,22 +916,10 @@ private struct TemplateBuilderSheetView: View {
                                 .buttonStyle(.plain)
                             }
 
-                            // Clean 2×3 Grid of Compact Metric Controls
+                            TemplateSetsEditorView(slot: $slot, weightUnit: defaultWeightUnit)
+
+                            // Rep range goal and rest
                             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 8) {
-                                compactMetricStepper(
-                                    label: "WORKING SETS",
-                                    valueText: "\(slot.plannedSets)",
-                                    onDecrement: { slot.plannedSets = max(1, slot.plannedSets - 1) },
-                                    onIncrement: { slot.plannedSets = min(20, slot.plannedSets + 1) }
-                                )
-
-                                compactMetricStepper(
-                                    label: "WARMUP SETS",
-                                    valueText: "\(slot.warmupSets)",
-                                    onDecrement: { slot.warmupSets = max(0, slot.warmupSets - 1) },
-                                    onIncrement: { slot.warmupSets = min(10, slot.warmupSets + 1) }
-                                )
-
                                 compactMetricStepper(
                                     label: "MIN REPS",
                                     valueText: "\(slot.targetRepsMin ?? 8)",
@@ -944,13 +932,6 @@ private struct TemplateBuilderSheetView: View {
                                     valueText: "\(slot.targetRepsMax ?? 12)",
                                     onDecrement: { slot.targetRepsMax = max(1, (slot.targetRepsMax ?? 12) - 1) },
                                     onIncrement: { slot.targetRepsMax = min(100, (slot.targetRepsMax ?? 12) + 1) }
-                                )
-
-                                compactMetricStepper(
-                                    label: "TARGET (\(defaultWeightUnit.rawValue))",
-                                    valueText: String(format: "%g", slot.targetWeight ?? 40),
-                                    onDecrement: { slot.targetWeight = max(0, (slot.targetWeight ?? 40) - 2.5) },
-                                    onIncrement: { slot.targetWeight = min(500, (slot.targetWeight ?? 40) + 2.5) }
                                 )
 
                                 compactMetricStepper(
@@ -1079,5 +1060,113 @@ private struct TemplateBuilderSheetView: View {
             .padding(.vertical, 2)
             .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
         }
+    }
+}
+
+/// Per-set plan of a template exercise: type, weight and reps for every set (mirrors the web editor).
+private struct TemplateSetsEditorView: View {
+    @Binding var slot: WorkoutTemplateExerciseDto
+    let weightUnit: WeightUnit
+
+    private var sets: [TemplateSetDto] { TemplateSets.resolve(slot) }
+
+    private func commit(_ next: [TemplateSetDto]) {
+        TemplateSets.apply(next, to: &slot)
+    }
+
+    var body: some View {
+        let current = sets
+        let labels = LukiI18n.setBadgeLabels(current.map(\.setType))
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(Array(current.enumerated()), id: \.offset) { idx, set in
+                HStack(spacing: 8) {
+                    Menu {
+                        ForEach(SetType.allCases, id: \.self) { type in
+                            Button(LukiI18n.setTypeLabel(type)) {
+                                var next = current
+                                next[idx].setType = type
+                                commit(TemplateSets.orderWarmupsFirst(next, type: \.setType))
+                            }
+                        }
+                    } label: {
+                        SetTypeBadge(setType: set.setType, label: idx < labels.count ? labels[idx] : "", completed: false)
+                    }
+
+                    stepper(
+                        text: set.weight.map { String(format: "%g", $0) } ?? "–",
+                        unit: weightUnit.rawValue.lowercased(),
+                        onMinus: {
+                            var next = current
+                            next[idx].weight = max(0, (set.weight ?? 0) - 2.5)
+                            commit(next)
+                        },
+                        onPlus: {
+                            var next = current
+                            next[idx].weight = (set.weight ?? 0) + 2.5
+                            commit(next)
+                        }
+                    )
+                    stepper(
+                        text: set.reps.map(String.init) ?? "–",
+                        unit: "reps",
+                        onMinus: {
+                            var next = current
+                            next[idx].reps = max(0, (set.reps ?? 0) - 1)
+                            commit(next)
+                        },
+                        onPlus: {
+                            var next = current
+                            next[idx].reps = (set.reps ?? 0) + 1
+                            commit(next)
+                        }
+                    )
+
+                    Button(role: .destructive) {
+                        var next = current
+                        next.remove(at: idx)
+                        commit(next)
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.footnote)
+                            .foregroundStyle(.red.opacity(0.85))
+                            .frame(width: 26, height: 26)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(current.count <= 1)
+                }
+            }
+
+            Button {
+                let last = current.last
+                commit(current + [TemplateSetDto(setType: .WORKING, weight: last?.weight, reps: last?.reps ?? 10, durationSeconds: last?.durationSeconds)])
+            } label: {
+                Label("Add Set", systemImage: "plus")
+                    .font(.footnote.weight(.semibold))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func stepper(text: String, unit: String, onMinus: @escaping () -> Void, onPlus: @escaping () -> Void) -> some View {
+        HStack(spacing: 2) {
+            Button(action: onMinus) {
+                Image(systemName: "minus").font(.caption.weight(.bold)).frame(width: 26, height: 30)
+            }
+            .buttonStyle(.plain)
+            VStack(spacing: 0) {
+                Text(text).font(.system(size: 14, weight: .semibold).monospacedDigit())
+                Text(unit).font(.system(size: 8, weight: .bold)).foregroundStyle(.secondary)
+            }
+            .frame(minWidth: 34)
+            Button(action: onPlus) {
+                Image(systemName: "plus").font(.caption.weight(.bold)).frame(width: 26, height: 30)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 2)
+        .background(RoundedRectangle(cornerRadius: 9).fill(LukiColors.fill))
     }
 }

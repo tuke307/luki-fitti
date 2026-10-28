@@ -2,7 +2,17 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { WorkoutService } from './workout.service';
 import type { PrismaService } from '../database/prisma.service';
-import { WeightUnit } from '@luki-fitti/common/enums';
+import {
+  ExerciseType,
+  MuscleGroup,
+  SessionExerciseOrigin,
+  SessionExerciseStatus,
+  SessionStatus,
+  SessionType,
+  SetType,
+  WeightUnit,
+} from '@luki-fitti/common/enums';
+import type { WorkoutSessionDto } from '@luki-fitti/common/schemas';
 import { DEFAULT_STARTER_TEMPLATES } from '@luki-fitti/common/catalog';
 
 function createMockWorkoutPrisma(): PrismaService {
@@ -92,6 +102,10 @@ function createMockWorkoutPrisma(): PrismaService {
       delete: async ({ where }: { where: { id: string } }) => {
         templates.delete(where.id);
       },
+    },
+    exercise: {
+      findMany: async ({ where }: { where: { id: { in: string[] } } }) =>
+        where.id.in.map((id) => ({ id })),
     },
     workoutTemplateExercise: {
       create: async ({ data }: { data: Record<string, unknown> }) => {
@@ -255,5 +269,99 @@ describe('WorkoutService — Folders, Templates, Alternatives & User Isolation',
     assert.equal(inEnglish.name, 'Mein Tag');
     assert.equal(inEnglish.description, de.description);
     assert.equal(inEnglish.exercises[0]!.notes, de.exercises[0]!.notes);
+  });
+
+  it('stores per-set plans and writes a finished workout back into its template', async () => {
+    const prisma = createMockWorkoutPrisma();
+    const service = new WorkoutService(prisma);
+    const tpl = await service.createTemplate(
+      'user-a',
+      {
+        name: 'Day 4 - Schultern',
+        exercises: [
+          {
+            exerciseId: 'ex-seated-dumbbell-shoulder-press',
+            orderIndex: 0,
+            plannedSets: 2,
+            warmupSets: 0,
+            targetRepsMin: 8,
+            targetRepsMax: 12,
+            targetWeight: 20,
+            weightUnit: WeightUnit.KG,
+            restSeconds: 90,
+            alternativeExerciseIds: [],
+          },
+        ],
+      },
+      'en',
+    );
+    assert.equal(tpl.exercises[0]!.sets, null);
+
+    const setRow = (setType: SetType, weight: number, reps: number) => ({
+      id: `s-${weight}-${reps}`,
+      clientSetId: `cs-${weight}-${reps}-${setType}`,
+      sessionExerciseId: 'sex-1',
+      setNumber: 1,
+      setType,
+      weight,
+      weightUnit: WeightUnit.KG,
+      reps,
+      durationSeconds: null,
+      distanceMeters: null,
+      rpe: null,
+      completed: true,
+      completedAt: '2026-10-26T10:00:00.000Z',
+      isPersonalRecord: false,
+      notes: null,
+    });
+    const session = {
+      id: 'sess-1',
+      clientSessionId: 'sess-1',
+      userId: 'user-a',
+      templateId: tpl.id,
+      status: SessionStatus.COMPLETED,
+      sessionType: SessionType.STRENGTH,
+      weightUnit: WeightUnit.KG,
+      exercises: [
+        {
+          id: 'sex-1',
+          clientExerciseId: 'sex-1',
+          exerciseId: 'ex-seated-dumbbell-shoulder-press',
+          origin: SessionExerciseOrigin.PLANNED,
+          status: SessionExerciseStatus.COMPLETED,
+          exerciseNameSnapshot: 'Press',
+          primaryMuscleSnapshot: MuscleGroup.SHOULDERS,
+          exerciseTypeSnapshot: ExerciseType.STRENGTH,
+          targetRepsMin: 8,
+          targetRepsMax: 12,
+          restSeconds: 90,
+          alternativeExerciseIds: [],
+          sets: [
+            setRow(SetType.WARMUP, 10, 12),
+            setRow(SetType.WORKING, 22.5, 10),
+            setRow(SetType.WORKING, 22.5, 8),
+            setRow(SetType.DROPSET, 15, 10),
+          ],
+        },
+      ],
+    } as unknown as WorkoutSessionDto;
+
+    await service.applyCompletedSessionToTemplate('user-b', session, 'en');
+    assert.equal((await service.getTemplateById('user-a', tpl.id, 'en')).exercises[0]!.sets, null);
+
+    await service.applyCompletedSessionToTemplate('user-a', session, 'en');
+    const updated = (await service.getTemplateById('user-a', tpl.id, 'en')).exercises[0]!;
+    assert.deepEqual(
+      updated.sets!.map((s) => [s.setType, s.weight, s.reps]),
+      [
+        [SetType.WARMUP, 10, 12],
+        [SetType.WORKING, 22.5, 10],
+        [SetType.WORKING, 22.5, 8],
+        [SetType.DROPSET, 15, 10],
+      ],
+    );
+    assert.equal(updated.plannedSets, 3);
+    assert.equal(updated.warmupSets, 1);
+    assert.equal(updated.targetWeight, 22.5);
   });
 });

@@ -270,6 +270,15 @@ public final class LukiAppViewModel {
         if let rpe { set.rpe = rpe }
         if let setType { set.setType = setType }
         session.exercises[exIdx].sets[setIdx] = set
+        if setType != nil {
+            // Warm-ups always come first, so a set switched to warm-up moves to the top.
+            let ordered = TemplateSets.orderWarmupsFirst(session.exercises[exIdx].sets, type: \.setType)
+            session.exercises[exIdx].sets = ordered.enumerated().map { idx, s in
+                var copy = s
+                copy.setNumber = idx + 1
+                return copy
+            }
+        }
         session.version += 1
 
         let recalculated = SessionCalculator.recalculateSessionTotals(session)
@@ -601,12 +610,47 @@ public final class LukiAppViewModel {
         session.version += 1
 
         let finalized = SessionCalculator.recalculateSessionTotals(session)
+        applyFinishedSessionToTemplate(finalized)
         completedSummarySession = finalized
         store.saveActiveSession(nil)
         store.saveHistorySession(finalized)
         store.enqueueSessionSync(finalized)
         watchSyncCoordinator.transferCompletedStandaloneSession(finalized)
         await store.flushSyncQueue()
+    }
+
+    /// The template follows what was actually done, so the next session starts from it. Signed-in
+    /// users also get this from the server when the completed session syncs.
+    private func applyFinishedSessionToTemplate(_ session: WorkoutSessionDto) {
+        guard let templateId = session.templateId else { return }
+        var folders = store.folders
+        var unfiled = store.unfiledTemplates
+        func update(_ template: inout WorkoutTemplateDto) -> Bool {
+            guard template.id == templateId,
+                  let exercises = TemplateSets.buildTemplateExercises(template: template, session: session)
+            else { return false }
+            template.exercises = exercises.map { ex in
+                var copy = ex
+                if copy.exercise == nil {
+                    copy.exercise = store.catalog.first { $0.id == copy.exerciseId }
+                }
+                return copy
+            }
+            template.updatedAt = ISO8601DateFormatter().string(from: Date())
+            return true
+        }
+        var changed = false
+        for f in folders.indices {
+            for t in folders[f].templates.indices where update(&folders[f].templates[t]) {
+                changed = true
+            }
+        }
+        for t in unfiled.indices where update(&unfiled[t]) {
+            changed = true
+        }
+        if changed {
+            store.saveWorkoutsOverview(folders: folders, unfiledTemplates: unfiled)
+        }
     }
 
     public func abandonActiveSession() {

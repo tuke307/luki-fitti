@@ -66,6 +66,9 @@ import {
   DEFAULT_FOLDER_COLOR,
   FOLDER_COLOR_PALETTE,
   resolveFolderColor,
+  resolveTemplateSets,
+  summarizeTemplateSets,
+  templateExerciseToInput,
 } from '@luki-fitti/common/utils/client';
 import { SessionStatus } from '@luki-fitti/common/enums';
 import { ExercisePicker } from './exercise-picker';
@@ -73,6 +76,7 @@ import { ExerciseVisual } from './exercise-visual';
 import { NumberInput } from './number-input';
 import { RainbowExerciseSuggestionCard } from './rainbow-suggestion-card';
 import { SwipeRow } from './swipe-row';
+import { TemplateSetsEditor } from './template-sets-editor';
 import type {
   TemplateExerciseInputDto,
   WorkoutFolderDto,
@@ -198,20 +202,8 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
     setTplDurationMin(tpl.estimatedDurationMinutes ?? 60);
     setTplExercises(
       tpl.exercises.map((ex, idx) => ({
-        id: ex.id,
-        exerciseId: ex.exerciseId,
-        orderIndex: idx,
-        plannedSets: ex.plannedSets,
-        warmupSets: ex.warmupSets,
-        targetRepsMin: ex.targetRepsMin,
-        targetRepsMax: ex.targetRepsMax,
-        targetWeight: ex.targetWeight,
-        weightUnit: ex.weightUnit,
-        restSeconds: ex.restSeconds,
-        targetDurationSeconds: ex.targetDurationSeconds,
-        targetDistanceMeters: ex.targetDistanceMeters,
+        ...templateExerciseToInput(ex, idx),
         notes: ex.notes ?? '',
-        alternativeExerciseIds: ex.alternativeExerciseIds ?? [],
       })),
     );
     setShowTemplateBuilder(true);
@@ -293,22 +285,9 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
     tpl: WorkoutTemplateDto,
     suggestion: WorkoutExerciseSuggestion,
   ) => {
-    const existingExercises: TemplateExerciseInputDto[] = tpl.exercises.map((ex, idx) => ({
-      id: ex.id,
-      exerciseId: ex.exerciseId,
-      orderIndex: idx,
-      plannedSets: ex.plannedSets,
-      warmupSets: ex.warmupSets,
-      targetRepsMin: ex.targetRepsMin,
-      targetRepsMax: ex.targetRepsMax,
-      targetWeight: ex.targetWeight,
-      weightUnit: ex.weightUnit,
-      restSeconds: ex.restSeconds,
-      targetDurationSeconds: ex.targetDurationSeconds,
-      targetDistanceMeters: ex.targetDistanceMeters,
-      notes: ex.notes ?? '',
-      alternativeExerciseIds: ex.alternativeExerciseIds ?? [],
-    }));
+    const existingExercises: TemplateExerciseInputDto[] = tpl.exercises.map((ex, idx) =>
+      templateExerciseToInput(ex, idx),
+    );
 
     const newSlot: TemplateExerciseInputDto = {
       exerciseId: suggestion.suggestedExercise.id,
@@ -1280,46 +1259,22 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                           </div>
                         </div>
 
-                        {/* Sets, Warmups, Rep Range, Target Weight, Rest — compact 3-col on mobile */}
-                        <div className="grid grid-cols-3 gap-2 sm:grid-cols-6 sm:gap-2.5">
-                          <div>
-                            <Label className="text-muted-foreground mb-1 truncate text-xs font-semibold">
-                              {t.workouts.workingSetsLabel}
-                            </Label>
-                            <NumberInput
-                              min={1}
-                              max={20}
-                              fallbackValue={3}
-                              value={slot.plannedSets}
-                              onValueChange={(val) =>
-                                setTplExercises((prev) =>
-                                  prev.map((item, i) =>
-                                    i === idx ? { ...item, plannedSets: val } : item,
-                                  ),
-                                )
-                              }
-                              className="tabular-nums h-9 text-xs sm:h-8"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-muted-foreground mb-1 truncate text-xs font-semibold">
-                              {t.workouts.warmupSetsLabel}
-                            </Label>
-                            <NumberInput
-                              min={0}
-                              max={10}
-                              fallbackValue={0}
-                              value={slot.warmupSets ?? 0}
-                              onValueChange={(val) =>
-                                setTplExercises((prev) =>
-                                  prev.map((item, i) =>
-                                    i === idx ? { ...item, warmupSets: val } : item,
-                                  ),
-                                )
-                              }
-                              className="tabular-nums h-9 text-xs sm:h-8"
-                            />
-                          </div>
+                        {/* Per-set plan (type, weight, reps) + rep range goal and rest */}
+                        <TemplateSetsEditor
+                          labelPrefix={`Exercise ${idx + 1}`}
+                          weightUnit={slot.weightUnit ?? weightUnit}
+                          sets={slot.sets?.length ? slot.sets : resolveTemplateSets(slot)}
+                          onChange={(sets) =>
+                            setTplExercises((prev) =>
+                              prev.map((item, i) =>
+                                i === idx
+                                  ? { ...item, sets, ...summarizeTemplateSets(sets) }
+                                  : item,
+                              ),
+                            )
+                          }
+                        />
+                        <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
                           <div>
                             <Label className="text-muted-foreground mb-1 truncate text-xs font-semibold">
                               {t.workouts.minRepsLabel}
@@ -1355,26 +1310,6 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                                   ),
                                 )
                               }
-                              className="tabular-nums h-9 text-xs sm:h-8"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-muted-foreground mb-1 truncate text-xs font-semibold">
-                              {format(t.workouts.targetWeightLabel, { unit: weightUnit })}
-                            </Label>
-                            <NumberInput
-                              allowNull
-                              step="0.5"
-                              min={0}
-                              value={slot.targetWeight ?? null}
-                              onValueChange={(val) =>
-                                setTplExercises((prev) =>
-                                  prev.map((item, i) =>
-                                    i === idx ? { ...item, targetWeight: val } : item,
-                                  ),
-                                )
-                              }
-                              placeholder={t.common.optional}
                               className="tabular-nums h-9 text-xs sm:h-8"
                             />
                           </div>

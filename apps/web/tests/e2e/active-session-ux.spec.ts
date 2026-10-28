@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { resetOfflineStore } from './helpers/offline-store.js';
-import { toggleCompleteSetRow } from './helpers/session.js';
+import { finishActiveWorkout, toggleCompleteSetRow } from './helpers/session.js';
 import { gotoWorkoutsTab, startWorkoutByName } from './helpers/workouts.js';
 
 const PUSH = 'Push — Chest, Shoulders & Triceps';
@@ -54,5 +54,34 @@ test.describe('Active Session — set types, supersets & exercise actions', () =
     await header.getByRole('button', { name: /More actions/i }).click();
     await page.getByRole('menuitem', { name: 'Skip' }).click();
     await expect(page.getByTestId('active-exercise-card-1')).toContainText('Skipped');
+  });
+
+  test('writes changes made during the workout back into the template', async ({ page }) => {
+    await startWorkoutByName(page, PUSH);
+    const card = page.getByTestId('active-exercise-card-1');
+    const rows = card.locator('[data-testid^="session-set-row-"]');
+    await expect(rows.first()).toBeVisible();
+    const before = await rows.count();
+
+    await card.getByRole('button', { name: /^Add Set$/ }).click();
+    await expect(rows).toHaveCount(before + 1);
+    await card.getByLabel(`Set ${before + 1} type`).selectOption('WARMUP');
+    // Warm-ups move to the top of the exercise.
+    await expect(rows.first()).toHaveAttribute('data-set-type', 'WARMUP');
+    const weight = rows.first().getByLabel('Set 1 weight');
+    await weight.fill('33');
+    await weight.blur();
+    await rows.first().getByRole('button', { name: 'Complete set' }).click();
+
+    await finishActiveWorkout(page);
+    await gotoWorkoutsTab(page);
+    await startWorkoutByName(page, PUSH);
+
+    const nextRows = page
+      .getByTestId('active-exercise-card-1')
+      .locator('[data-testid^="session-set-row-"]');
+    await expect(nextRows).toHaveCount(before + 1);
+    await expect(nextRows.first()).toHaveAttribute('data-set-type', 'WARMUP');
+    await expect(nextRows.first().getByLabel('Set 1 weight')).toHaveValue('33');
   });
 });

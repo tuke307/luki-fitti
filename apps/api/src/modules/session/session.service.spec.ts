@@ -354,6 +354,42 @@ describe('SessionService — Offline Sync Idempotency, Conflict Detection & Volu
     assert.ok(forced.serverVersion > iphone.serverVersion);
   });
 
+  it('updates the template once, when a session is first synced as completed', async () => {
+    const prisma = createMockSessionPrisma();
+    const calls: Array<{ userId: string; templateId: string | null }> = [];
+    const workoutService = {
+      applyCompletedSessionToTemplate: async (
+        userId: string,
+        session: { templateId: string | null },
+      ) => {
+        calls.push({ userId, templateId: session.templateId });
+      },
+    };
+    const service = new SessionService(prisma, workoutService as never);
+    const base = {
+      clientSessionId: 'client-uuid-writeback',
+      templateId: 'tpl-1',
+      sessionType: SessionType.STRENGTH,
+      workoutNameSnapshot: 'Day 4',
+      status: SessionStatus.IN_PROGRESS,
+      startedAt: new Date().toISOString(),
+      activeDurationSeconds: 0,
+      weightUnit: WeightUnit.KG,
+      deviceId: 'device-iphone',
+      version: 1,
+      exercises: [],
+    };
+
+    await service.syncSession('user-1', base);
+    assert.equal(calls.length, 0);
+    await service.syncSession('user-1', { ...base, status: SessionStatus.COMPLETED, version: 2 });
+    assert.equal(calls.length, 1);
+    // Later corrections of a finished session do not rewrite the template again.
+    await service.syncSession('user-1', { ...base, status: SessionStatus.COMPLETED, version: 3 });
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0]!.userId, 'user-1');
+  });
+
   it('persists Apple Watch HealthKit telemetry, heartRateSamples, and per-set HR metrics and computes fallback HR stats', async () => {
     const prisma = createMockSessionPrisma();
     const service = new SessionService(prisma);

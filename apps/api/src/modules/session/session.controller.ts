@@ -62,8 +62,9 @@ export class SessionController {
   async sync(
     @CurrentUser() user: AuthenticatedUser,
     @Body(new ZodValidationPipe(SyncSessionPayloadSchema)) body: SyncSessionPayloadDto,
+    @RequestLocale() locale: SupportedLocale,
   ) {
-    return this.sessionService.syncSession(user.id, body);
+    return this.sessionService.syncSession(user.id, body, locale);
   }
 
   @Put(':id')
