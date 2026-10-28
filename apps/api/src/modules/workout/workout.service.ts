@@ -595,6 +595,7 @@ export class WorkoutService {
                 primaryMuscleGroup: e.exercise.primaryMuscleGroup as NonNullable<
                   WorkoutTemplateDto['exercises'][number]['exercise']
                 >['primaryMuscleGroup'],
+                isSystem: e.exercise.isSystem,
               }),
             }
           : undefined,

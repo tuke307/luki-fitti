@@ -121,9 +121,12 @@ export async function getCachedCatalog(): Promise<ExerciseDto[]> {
       }
     }
     const merged = Array.from(bySlug.values()).map((ex) => {
-      if (!ex.media || ex.media.length === 0) {
+      // Older builds guessed catalog photos for user-created exercises; drop those.
+      const guessed =
+        !ex.isSystem && ex.media?.some((m) => m.attribution?.startsWith('Free Exercise DB'));
+      if (!ex.media || ex.media.length === 0 || guessed) {
         changed = true;
-        return { ...ex, media: resolveExerciseMedia(ex) };
+        return { ...ex, media: resolveExerciseMedia({ ...ex, media: undefined }) };
       }
       return ex;
     });

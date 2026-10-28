@@ -448,6 +448,8 @@ export const en = {
     executionCuesTitle: 'How to do it',
     recommendedBackupsTitle: 'Alternatives',
     globalHistoryTitle: 'Your history ({count})',
+    similarExercisesTitle: 'Did you mean?',
+    similarExercisesHint: 'Not the right one? Just create it as your own exercise.',
     createCustomTitle: 'New Exercise',
     createCustomDesc: 'Add your own exercise to use in any workout.',
     exerciseNameLabel: 'Name',
