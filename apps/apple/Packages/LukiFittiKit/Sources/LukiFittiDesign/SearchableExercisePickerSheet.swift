@@ -1,8 +1,21 @@
 import SwiftUI
 import LukiFittiModels
+import LukiFittiDomain
 
-/// Searchable Exercise Picker sheet matching `apps/web/components/gym/exercise-picker.tsx`:
-/// supports instant filtering by English/German exercise name, muscle group chips, equipment, or German alias tags.
+extension ExerciseSearchIndex {
+    /// Catalog search index with muscle group and equipment labels in every language.
+    public static func catalogWithLabels(_ exercises: [ExerciseDto]) -> ExerciseSearchIndex {
+        .catalog(exercises) { ex in
+            [SupportedLocale.en, .de].flatMap { locale in
+                [LukiI18n.muscleLabel(ex.primaryMuscleGroup, locale: locale),
+                 LukiI18n.equipmentLabel(ex.equipment, locale: locale)]
+            }
+        }
+    }
+}
+
+/// Searchable Exercise Picker sheet matching `apps/web/components/gym/exercise-picker.tsx`: ranked,
+/// typo-tolerant search by English/German name, alias, muscle group or equipment, plus muscle chips.
 public struct SearchableExercisePickerSheet: View {
     public let title: String
     public let exercises: [ExerciseDto]
@@ -12,6 +25,7 @@ public struct SearchableExercisePickerSheet: View {
 
     @State private var searchText: String = ""
     @State private var selectedMuscle: MuscleGroup?
+    @State private var searchIndex: ExerciseSearchIndex?
 
     public init(
         title: String = "Select Exercise",
@@ -26,21 +40,12 @@ public struct SearchableExercisePickerSheet: View {
     }
 
     private var filteredExercises: [ExerciseDto] {
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return exercises.filter { ex in
-            if let selectedMuscle, ex.primaryMuscleGroup != selectedMuscle {
-                return false
-            }
-            guard !query.isEmpty else { return true }
-            if ex.name.lowercased().contains(query) { return true }
-            if ex.slug.lowercased().contains(query) { return true }
-            if ex.tags.contains(where: { $0.lowercased().contains(query) }) { return true }
-            if LukiI18n.muscleLabel(ex.primaryMuscleGroup, locale: .en).lowercased().contains(query) { return true }
-            if LukiI18n.muscleLabel(ex.primaryMuscleGroup, locale: .de).lowercased().contains(query) { return true }
-            if LukiI18n.equipmentLabel(ex.equipment, locale: .en).lowercased().contains(query) { return true }
-            if LukiI18n.equipmentLabel(ex.equipment, locale: .de).lowercased().contains(query) { return true }
-            return false
-        }
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let matches = query.isEmpty
+            ? exercises
+            : (searchIndex ?? .catalogWithLabels(exercises)).search(query).map(\.exercise)
+        guard let selectedMuscle else { return matches }
+        return matches.filter { $0.primaryMuscleGroup == selectedMuscle }
     }
 
     public var body: some View {
@@ -51,7 +56,7 @@ public struct SearchableExercisePickerSheet: View {
                     HStack(spacing: 8) {
                         Image(systemName: "magnifyingglass")
                             .foregroundStyle(.secondary)
-                        TextField("Search 130+ exercises by name, muscle, or DE alias...", text: $searchText)
+                        TextField("Search exercises by name, muscle or equipment…", text: $searchText)
                             #if !os(macOS)
                             .textInputAutocapitalization(.never)
                             #endif
@@ -171,6 +176,8 @@ public struct SearchableExercisePickerSheet: View {
                     Button("Close") { dismiss() }
                 }
             }
+            // Build the search index once per catalog instead of on every keystroke.
+            .task(id: exercises.count) { searchIndex = .catalogWithLabels(exercises) }
         }
     }
 }

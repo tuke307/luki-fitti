@@ -480,6 +480,21 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
     const cableDeMatches = filterExercisesByQuery(catalog, 'Kabelzug');
     assert.equal(cableDeMatches.length > 0, true);
 
+    // Forgiving search over the full catalog: spacing, umlauts, typos, ranking, muscle filter
+    const full = mergeMissingExercises(catalog, await loadExtendedExercises());
+    assert.ok(filterExercisesByQuery(full, 'situp').some((e) => e.id === 'ex-sit-ups'));
+    assert.equal(filterExercisesByQuery(full, 'kh bankdrucken')[0]!.id, 'ex-dumbbell-bench-press');
+    assert.ok(filterExercisesByQuery(full, 'bizepcurl').some((e) => e.id === 'ex-barbell-curl'));
+    assert.ok(!filterExercisesByQuery(full, 'rdl').some((e) => e.id === 'ex-hurdle-hops'));
+    assert.ok(
+      filterExercisesByQuery(full, 'kniebeuge', MuscleGroup.QUADRICEPS).every(
+        (e) =>
+          e.primaryMuscleGroup === MuscleGroup.QUADRICEPS ||
+          e.secondaryMuscleGroups?.includes(MuscleGroup.QUADRICEPS),
+      ),
+    );
+    assert.equal(filterExercisesByQuery(full, '').length, full.length);
+
     // Locale detection and translation helpers
     assert.equal(matchBrowserTagToLocale('de-DE'), 'de');
     assert.equal(matchBrowserTagToLocale('de-CH'), 'de');

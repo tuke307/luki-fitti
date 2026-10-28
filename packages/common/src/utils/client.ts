@@ -13,6 +13,8 @@ export * from './progression.util';
 // Per-set template plans and session → template write-back (client-safe)
 export * from './template-sets.util';
 export * from './exercise-match.util';
+export * from './exercise-search.util';
+export * from './exercise-search.vocab';
 
 // Folder accent palette (client-safe)
 export * from './folder-color.util';
