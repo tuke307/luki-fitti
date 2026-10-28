@@ -3,9 +3,8 @@ import { PrismaService } from '../database/prisma.service';
 import {
   DEFAULT_STRETCHING_ROUTINES,
   getStarterRoutineText,
-  INITIAL_EXERCISE_CATALOG,
+  CORE_EXERCISE_CATALOG,
   localizeStretchingRoutine,
-  resolveExerciseId,
   resolveExerciseMedia,
 } from '@luki-fitti/common/catalog';
 import { SUPPORTED_LOCALES, type SupportedLocale } from '@luki-fitti/common/enums';
@@ -39,7 +38,7 @@ export class StretchingService {
 
     // Ensure referenced stretching exercises exist in Exercise table
     if (this.prisma.exercise?.upsert) {
-      const stretchCatalog = INITIAL_EXERCISE_CATALOG.filter((e) =>
+      const stretchCatalog = CORE_EXERCISE_CATALOG.filter((e) =>
         missingRoutines.some((r) => r.exercises.some((re) => re.exerciseId === e.id)),
       );
       for (const item of stretchCatalog) {
@@ -161,7 +160,7 @@ export class StretchingService {
         await tx.stretchingRoutineExercise.create({
           data: {
             routineId: routine.id,
-            exerciseId: resolveExerciseId(ex.exerciseId),
+            exerciseId: ex.exerciseId,
             orderIndex: ex.orderIndex ?? idx,
             sets: ex.sets ?? 1,
             durationSeconds: ex.durationSeconds ?? 45,
@@ -247,7 +246,7 @@ export class StretchingService {
           await tx.stretchingRoutineExercise.create({
             data: {
               routineId,
-              exerciseId: resolveExerciseId(ex.exerciseId),
+              exerciseId: ex.exerciseId,
               orderIndex: ex.orderIndex ?? idx,
               sets: ex.sets ?? 1,
               durationSeconds: ex.durationSeconds ?? 45,

@@ -11,7 +11,7 @@ import {
   WeightUnit,
 } from '../enums';
 import type { WorkoutSessionDto } from '../schemas';
-import { INITIAL_EXERCISE_CATALOG } from '../catalog/data';
+import { CORE_EXERCISE_CATALOG } from '../catalog/data';
 import {
   analyzeExerciseTrend,
   computeExerciseProgression,
@@ -26,7 +26,7 @@ const BENCH = 'ex-barbell-bench-press-medium-grip';
 const SHOULDER_PRESS = 'ex-dumbbell-shoulder-press';
 const PUSHDOWN = 'ex-triceps-pushdown-rope-attachment';
 
-const catalog = INITIAL_EXERCISE_CATALOG;
+const catalog = CORE_EXERCISE_CATALOG;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const START = Date.parse('2026-08-01T17:00:00.000Z');
 

@@ -3660,13 +3660,7 @@
         "secondaryMuscleGroups": ["CALVES"],
         "equipment": "SMITH_MACHINE",
         "recommendedDurationSeconds": null,
-        "tags": [
-          "kniebeuge multipresse",
-          "quads",
-          "smith rack squat",
-          "smith machine squat",
-          "kniebeuge an der multipresse"
-        ],
+        "tags": ["kniebeuge multipresse", "quads", "smith rack squat", "smith machine squat"],
         "isSystem": true,
         "alternativeExerciseIds": ["ex-leg-extensions", "ex-leg-press"],
         "media": [
@@ -60610,13 +60604,7 @@
         "secondaryMuscleGroups": ["CALVES"],
         "equipment": "SMITH_MACHINE",
         "recommendedDurationSeconds": null,
-        "tags": [
-          "kniebeuge multipresse",
-          "quads",
-          "smith rack squat",
-          "smith machine squat",
-          "kniebeuge an der multipresse"
-        ],
+        "tags": ["kniebeuge multipresse", "quads", "smith rack squat", "smith machine squat"],
         "isSystem": true,
         "alternativeExerciseIds": ["ex-leg-extensions", "ex-leg-press"],
         "media": [

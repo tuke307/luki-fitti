@@ -4,16 +4,15 @@ import { buildExerciseSearchIndex, searchExercises } from '../../utils/exercise-
 import {
   DEFAULT_STARTER_TEMPLATES,
   DEFAULT_STRETCHING_ROUTINES,
-  INITIAL_EXERCISE_CATALOG,
+  CORE_EXERCISE_CATALOG,
   resolveExerciseMedia,
 } from '../data';
 import { localizeExercise } from '../localize';
 import { EXERCISE_OVERRIDES } from '../overrides';
-import { RETIRED_EXERCISE_IDS, resolveExerciseId } from '../retired';
 import { ALL_SYSTEM_EXERCISES, EXTENDED_EXERCISE_CATALOG } from './index';
 
 describe('extended exercise catalog', () => {
-  it('adds a large catalog without clashing with the curated one', () => {
+  it('adds a large catalog without clashing with the core exercises', () => {
     assert.ok(EXTENDED_EXERCISE_CATALOG.length > 800);
     const ids = new Set<string>();
     const slugs = new Set<string>();
@@ -26,7 +25,7 @@ describe('extended exercise catalog', () => {
     }
     assert.equal(
       ALL_SYSTEM_EXERCISES.length,
-      INITIAL_EXERCISE_CATALOG.length + EXTENDED_EXERCISE_CATALOG.length,
+      CORE_EXERCISE_CATALOG.length + EXTENDED_EXERCISE_CATALOG.length,
     );
   });
 
@@ -48,20 +47,9 @@ describe('extended exercise catalog', () => {
     }
   });
 
-  it('replaces every retired id with an existing exercise', () => {
-    const ids = new Set(ALL_SYSTEM_EXERCISES.map((e) => e.id));
-    for (const [retired, target] of Object.entries(RETIRED_EXERCISE_IDS)) {
-      assert.ok(!ids.has(retired), `retired id ${retired} is still in the catalog`);
-      assert.ok(ids.has(target), `${retired} → ${target} does not exist`);
-    }
-    assert.equal(resolveExerciseId('ex-benchpress-dumbbells'), 'ex-dumbbell-bench-press');
-    assert.equal(resolveExerciseId('ex-barbell-bench-press'), 'ex-barbell-bench-press-medium-grip');
-    assert.equal(resolveExerciseId('ex-dumbbell-bench-press'), 'ex-dumbbell-bench-press');
-  });
-
   it('builds every core exercise on a dataset entry with its hand-written text', () => {
     for (const [id, override] of Object.entries(EXERCISE_OVERRIDES)) {
-      const ex = INITIAL_EXERCISE_CATALOG.find((e) => e.id === id);
+      const ex = CORE_EXERCISE_CATALOG.find((e) => e.id === id);
       assert.ok(ex, `override ${id} has no dataset exercise`);
       assert.equal(ex.name, override.name);
       for (const alt of override.alternativeExerciseIds) {

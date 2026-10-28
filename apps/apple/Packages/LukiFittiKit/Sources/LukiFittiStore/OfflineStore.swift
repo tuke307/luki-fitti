@@ -84,21 +84,18 @@ public final class OfflineStore {
         let starter = StarterCatalogLoader.load(locale: locale)
 
         if let savedCatalog: [ExerciseDto] = readJSON("exercise_catalog.json"), !savedCatalog.isEmpty {
-            // System exercises merged into another one are gone; bundled exercises added since are new.
-            var merged = savedCatalog.filter { !($0.isSystem && isRetiredExerciseId($0.id)) }
-            let known = Set(merged.map(\.id))
-            merged += starter.exercises.filter { !known.contains($0.id) }
-            catalog = merged
-            if merged != savedCatalog { writeJSON(catalog, to: "exercise_catalog.json") }
+            // Exercises bundled with a newer app version are added to the saved catalog.
+            let known = Set(savedCatalog.map(\.id))
+            catalog = savedCatalog + starter.exercises.filter { !known.contains($0.id) }
+            if catalog.count != savedCatalog.count { writeJSON(catalog, to: "exercise_catalog.json") }
         } else {
             catalog = starter.exercises
             writeJSON(catalog, to: "exercise_catalog.json")
         }
 
-        let catalogById = Dictionary(catalog.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         if let savedOverview: WorkoutsOverviewDto = readJSON("workouts_overview.json"), !savedOverview.folders.isEmpty {
-            folders = savedOverview.folders.map { $0.withCurrentExerciseIds(catalogById) }
-            unfiledTemplates = savedOverview.unfiledTemplates.map { $0.withCurrentExerciseIds(catalogById) }
+            folders = savedOverview.folders
+            unfiledTemplates = savedOverview.unfiledTemplates
         } else {
             folders = starter.folders
             unfiledTemplates = []
@@ -106,16 +103,15 @@ public final class OfflineStore {
         }
 
         if let savedRoutines: [StretchingRoutineDto] = readJSON("stretching_routines.json"), !savedRoutines.isEmpty {
-            stretchingRoutines = savedRoutines.map { $0.withCurrentExerciseIds(catalogById) }
+            stretchingRoutines = savedRoutines
         } else {
             stretchingRoutines = starter.stretchingRoutines
             writeJSON(stretchingRoutines, to: "stretching_routines.json")
         }
 
-        activeSession = (readJSON("active_workout_session.json") as WorkoutSessionDto?)?.withCurrentExerciseIds()
+        activeSession = readJSON("active_workout_session.json")
         historySessions = (readJSON("session_history.json") as [WorkoutSessionDto]? ?? [])
             .filter { $0.status == .COMPLETED }
-            .map { $0.withCurrentExerciseIds() }
             .sorted { $0.startedAt > $1.startedAt }
         syncQueue = readJSON("sync_queue.json") ?? []
         currentUser = readJSON("current_user.json")
@@ -407,67 +403,5 @@ public final class OfflineStore {
 
     private func deleteFile(_ name: String) {
         try? FileManager.default.removeItem(at: fileURL(name))
-    }
-}
-
-// MARK: - Exercises merged into another one (see `RETIRED_EXERCISE_IDS` in @luki-fitti/common)
-
-private func currentIds(_ ids: [String]) -> [String] {
-    var seen = Set<String>()
-    return ids.map(resolveExerciseId).filter { seen.insert($0).inserted }
-}
-
-private extension WorkoutFolderDto {
-    func withCurrentExerciseIds(_ catalog: [String: ExerciseDto]) -> WorkoutFolderDto {
-        var copy = self
-        copy.templates = templates.map { $0.withCurrentExerciseIds(catalog) }
-        return copy
-    }
-}
-
-private extension WorkoutTemplateDto {
-    func withCurrentExerciseIds(_ catalog: [String: ExerciseDto]) -> WorkoutTemplateDto {
-        var copy = self
-        copy.exercises = exercises.map { ex in
-            var ex = ex
-            let id = resolveExerciseId(ex.exerciseId)
-            if id != ex.exerciseId {
-                ex.exerciseId = id
-                ex.exercise = catalog[id] ?? ex.exercise
-            }
-            ex.alternativeExerciseIds = currentIds(ex.alternativeExerciseIds)
-            return ex
-        }
-        return copy
-    }
-}
-
-private extension StretchingRoutineDto {
-    func withCurrentExerciseIds(_ catalog: [String: ExerciseDto]) -> StretchingRoutineDto {
-        var copy = self
-        copy.exercises = exercises.map { ex in
-            var ex = ex
-            let id = resolveExerciseId(ex.exerciseId)
-            if id != ex.exerciseId {
-                ex.exerciseId = id
-                ex.exercise = catalog[id] ?? ex.exercise
-            }
-            return ex
-        }
-        return copy
-    }
-}
-
-private extension WorkoutSessionDto {
-    func withCurrentExerciseIds() -> WorkoutSessionDto {
-        var copy = self
-        copy.exercises = exercises.map { ex in
-            var ex = ex
-            ex.exerciseId = ex.exerciseId.map(resolveExerciseId)
-            ex.replacedExerciseId = ex.replacedExerciseId.map(resolveExerciseId)
-            ex.alternativeExerciseIds = currentIds(ex.alternativeExerciseIds)
-            return ex
-        }
-        return copy
     }
 }
