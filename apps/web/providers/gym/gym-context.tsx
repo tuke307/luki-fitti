@@ -48,7 +48,10 @@ import {
 } from '@luki-fitti/common/enums';
 import {
   applyExerciseHistoryToSessionExercise,
+  buildTemplateExercisesFromSession,
   DEFAULT_FOLDER_COLOR,
+  orderWarmupsFirst,
+  summarizeTemplateSets,
 } from '@luki-fitti/common/utils/client';
 import {
   localizeExercise,
@@ -734,17 +737,8 @@ export function GymProvider({ children }: { children: ReactNode }) {
     return newTpl;
   };
 
-  const updateTemplate = async (templateId: string, dto: UpdateTemplateDto) => {
-    if (navigator.onLine && isAuthenticated) {
-      try {
-        await api.workouts.updateTemplate(templateId, dto);
-        await refreshAllData();
-        return;
-      } catch {
-        // Offline fallback
-      }
-    }
-
+  /** Applies a template change to local state and the offline cache only. */
+  const applyTemplateUpdateLocally = async (templateId: string, dto: UpdateTemplateDto) => {
     const catalogById = new Map(catalog.map((e) => [e.id, e]));
     const applyUpdate = (current: WorkoutTemplateDto): WorkoutTemplateDto => {
       if (current.id !== templateId) return current;
@@ -764,24 +758,29 @@ export function GymProvider({ children }: { children: ReactNode }) {
         updatedAt: new Date().toISOString(),
         exercises:
           dto.exercises !== undefined
-            ? dto.exercises.map((ex, idx) => ({
-                id: ex.id ?? `tple-${Date.now()}-${idx}`,
-                templateId,
-                exerciseId: ex.exerciseId,
-                orderIndex: idx,
-                plannedSets: ex.plannedSets,
-                warmupSets: ex.warmupSets ?? 0,
-                targetRepsMin: ex.targetRepsMin ?? 8,
-                targetRepsMax: ex.targetRepsMax ?? 12,
-                targetWeight: ex.targetWeight ?? null,
-                weightUnit: ex.weightUnit ?? weightUnit,
-                restSeconds: ex.restSeconds ?? 90,
-                targetDurationSeconds: ex.targetDurationSeconds ?? null,
-                targetDistanceMeters: ex.targetDistanceMeters ?? null,
-                notes: ex.notes ?? null,
-                alternativeExerciseIds: ex.alternativeExerciseIds ?? [],
-                exercise: catalogById.get(ex.exerciseId),
-              }))
+            ? dto.exercises.map((ex, idx) => {
+                const sets = ex.sets && ex.sets.length > 0 ? ex.sets : null;
+                const summary = sets ? summarizeTemplateSets(sets) : null;
+                return {
+                  id: ex.id ?? `tple-${Date.now()}-${idx}`,
+                  templateId,
+                  exerciseId: ex.exerciseId,
+                  sets,
+                  orderIndex: idx,
+                  plannedSets: summary?.plannedSets ?? ex.plannedSets,
+                  warmupSets: summary?.warmupSets ?? ex.warmupSets ?? 0,
+                  targetRepsMin: ex.targetRepsMin ?? 8,
+                  targetRepsMax: ex.targetRepsMax ?? 12,
+                  targetWeight: (summary ? summary.targetWeight : ex.targetWeight) ?? null,
+                  weightUnit: ex.weightUnit ?? weightUnit,
+                  restSeconds: ex.restSeconds ?? 90,
+                  targetDurationSeconds: ex.targetDurationSeconds ?? null,
+                  targetDistanceMeters: ex.targetDistanceMeters ?? null,
+                  notes: ex.notes ?? null,
+                  alternativeExerciseIds: ex.alternativeExerciseIds ?? [],
+                  exercise: catalogById.get(ex.exerciseId),
+                };
+              })
             : t.exercises,
       };
     };
@@ -794,6 +793,19 @@ export function GymProvider({ children }: { children: ReactNode }) {
     setFolders(nextFolders);
     setUnfiledTemplates(nextUnfiled);
     await setCachedWorkouts({ folders: nextFolders, unfiledTemplates: nextUnfiled });
+  };
+
+  const updateTemplate = async (templateId: string, dto: UpdateTemplateDto) => {
+    if (navigator.onLine && isAuthenticated) {
+      try {
+        await api.workouts.updateTemplate(templateId, dto);
+        await refreshAllData();
+        return;
+      } catch {
+        // Offline fallback
+      }
+    }
+    await applyTemplateUpdateLocally(templateId, dto);
   };
 
   const duplicateTemplate = async (templateId: string): Promise<WorkoutTemplateDto | null> => {
@@ -1073,10 +1085,13 @@ export function GymProvider({ children }: { children: ReactNode }) {
     if (!activeSession) return;
     const nextExercises = activeSession.exercises.map((ex) => {
       if (ex.clientExerciseId !== clientExerciseId) return ex;
-      return {
-        ...ex,
-        sets: ex.sets.map((s) => (s.clientSetId === clientSetId ? { ...s, ...patch } : s)),
-      };
+      const patched = ex.sets.map((s) => (s.clientSetId === clientSetId ? { ...s, ...patch } : s));
+      // Warm-ups always come first, so a set switched to warm-up moves to the top.
+      const sets =
+        patch.setType !== undefined
+          ? orderWarmupsFirst(patched).map((s, idx) => ({ ...s, setNumber: idx + 1 }))
+          : patched;
+      return { ...ex, sets };
     });
     await persistSessionUpdate({ ...activeSession, exercises: nextExercises });
   };
@@ -1429,9 +1444,24 @@ export function GymProvider({ children }: { children: ReactNode }) {
       })),
     });
 
+    // The template follows what was actually done, so the next session starts from it. Locally
+    // right away; signed-in users get the same update from the server when the session syncs.
+    const sourceTemplate = finalized.templateId
+      ? [...folders.flatMap((f) => f.templates), ...unfiledTemplates].find(
+          (tpl) => tpl.id === finalized.templateId,
+        )
+      : undefined;
+    const templateExercises = sourceTemplate
+      ? buildTemplateExercisesFromSession(sourceTemplate, finalized)
+      : null;
+    if (sourceTemplate && templateExercises) {
+      await applyTemplateUpdateLocally(sourceTemplate.id, { exercises: templateExercises });
+    }
+
     await saveLocalHistorySession(finalized);
     await saveLocalActiveSession(null);
     setActiveSession(null);
+
     setHistorySessions((prev) => [
       finalized,
       ...prev.filter((s) => s.clientSessionId !== finalized.clientSessionId),

@@ -6,5 +6,6 @@ export * from './order.util';
 export * from './pagination.util';
 export * from './progression.util';
 export * from './folder-color.util';
+export * from './template-sets.util';
 export * from './search.util';
 export * from './zod-utils';

@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Optional } from '@nestjs/common';
 import crypto from 'crypto';
 import { PrismaService } from '../database/prisma.service';
+import { WorkoutService } from '../workout/workout.service';
 import {
   ExerciseType,
   SessionExerciseOrigin,
@@ -18,6 +19,7 @@ import {
   getStarterRoutineText,
   getStarterTemplateText,
 } from '@luki-fitti/common/catalog';
+import { TemplateSetSchema } from '@luki-fitti/common/schemas';
 import type {
   HeartRateSampleDto,
   StartSessionDto,
@@ -30,7 +32,10 @@ const LBS_TO_KG = 0.45359237;
 
 @Injectable()
 export class SessionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly workoutService?: WorkoutService,
+  ) {}
 
   /**
    * Computes volume and duration metrics consistently:
@@ -153,29 +158,46 @@ export class SessionService {
         const primaryLastWeight = lastEx?.sets[0]?.weight ?? te.targetWeight ?? null;
         const sets: Array<any> = [];
         let setNum = 1;
-        for (let w = 0; w < (te.warmupSets ?? 0); w++) {
-          sets.push({
-            clientSetId: crypto.randomUUID(),
-            setNumber: setNum++,
-            setType: SetType.WARMUP,
-            weight: primaryLastWeight ? Math.round(primaryLastWeight * 0.6 * 2) / 2 : null,
-            weightUnit: te.weightUnit,
-            reps: te.targetRepsMin ?? 10,
-            completed: false,
-          });
-        }
-        for (let s = 0; s < te.plannedSets; s++) {
-          const histSet = lastEx?.sets[s] ?? lastEx?.sets[lastEx.sets.length - 1];
-          sets.push({
-            clientSetId: crypto.randomUUID(),
-            setNumber: setNum++,
-            setType: SetType.WORKING,
-            weight: histSet?.weight ?? te.targetWeight ?? null,
-            weightUnit: te.weightUnit,
-            reps: histSet?.reps ?? te.targetRepsMin ?? 10,
-            durationSeconds: te.targetDurationSeconds ?? null,
-            completed: false,
-          });
+        const explicit = TemplateSetSchema.array().safeParse(te.sets ?? []);
+        if (explicit.success && explicit.data.length > 0) {
+          // An explicit per-set plan already reflects the last workout: copy it one to one.
+          for (const planned of explicit.data) {
+            sets.push({
+              clientSetId: crypto.randomUUID(),
+              setNumber: setNum++,
+              setType: planned.setType,
+              weight: planned.weight,
+              weightUnit: te.weightUnit,
+              reps: planned.reps,
+              durationSeconds: planned.durationSeconds ?? te.targetDurationSeconds ?? null,
+              completed: false,
+            });
+          }
+        } else {
+          for (let w = 0; w < (te.warmupSets ?? 0); w++) {
+            sets.push({
+              clientSetId: crypto.randomUUID(),
+              setNumber: setNum++,
+              setType: SetType.WARMUP,
+              weight: primaryLastWeight ? Math.round(primaryLastWeight * 0.6 * 2) / 2 : null,
+              weightUnit: te.weightUnit,
+              reps: te.targetRepsMin ?? 10,
+              completed: false,
+            });
+          }
+          for (let s = 0; s < te.plannedSets; s++) {
+            const histSet = lastEx?.sets[s] ?? lastEx?.sets[lastEx.sets.length - 1];
+            sets.push({
+              clientSetId: crypto.randomUUID(),
+              setNumber: setNum++,
+              setType: SetType.WORKING,
+              weight: histSet?.weight ?? te.targetWeight ?? null,
+              weightUnit: te.weightUnit,
+              reps: histSet?.reps ?? te.targetRepsMin ?? 10,
+              durationSeconds: te.targetDurationSeconds ?? null,
+              completed: false,
+            });
+          }
         }
 
         exercisesToCreate.push({
@@ -335,6 +357,7 @@ export class SessionService {
   async syncSession(
     userId: string,
     payload: SyncSessionPayloadDto,
+    locale: SupportedLocale = 'en',
   ): Promise<SyncSessionResponseDto> {
     const existing = await this.prisma.workoutSession.findUnique({
       where: { clientSessionId: payload.clientSessionId },
@@ -652,8 +675,15 @@ export class SessionService {
       });
     });
 
+    const syncedDto = this.mapSessionDto(synced);
+    const justCompleted =
+      syncedDto.status === SessionStatus.COMPLETED && existing?.status !== SessionStatus.COMPLETED;
+    if (justCompleted && this.workoutService) {
+      await this.workoutService.applyCompletedSessionToTemplate(userId, syncedDto, locale);
+    }
+
     return {
-      session: this.mapSessionDto(synced),
+      session: syncedDto,
       conflictDetected: false,
       serverVersion: synced.version,
     };

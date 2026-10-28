@@ -17,7 +17,10 @@ import {
   SetType,
   WeightUnit,
 } from '@luki-fitti/common/enums';
-import { applyExerciseHistoryToSessionExercise } from '@luki-fitti/common/utils/client';
+import {
+  applyExerciseHistoryToSessionExercise,
+  resolveTemplateSets,
+} from '@luki-fitti/common/utils/client';
 import type {
   ExerciseDto,
   SessionExerciseDto,
@@ -515,49 +518,24 @@ export function createOfflineSessionFromTemplate(
 
   const exercises: SessionExerciseDto[] = template.exercises.map((te, idx) => {
     const exInfo = te.exercise ?? catalogMap.get(te.exerciseId);
-    const sets: SessionSetDto[] = [];
     const clientExerciseId = generateId('sex');
-    let setNumber = 1;
-
-    for (let w = 0; w < (te.warmupSets ?? 0); w++) {
-      sets.push({
-        id: generateId('set'),
-        clientSetId: generateId('cset'),
-        sessionExerciseId: clientExerciseId,
-        setNumber: setNumber++,
-        setType: SetType.WARMUP,
-        weight: te.targetWeight ? Math.round(te.targetWeight * 0.6 * 2) / 2 : 20,
-        weightUnit: te.weightUnit ?? weightUnit,
-        reps: te.targetRepsMin ?? 10,
-        durationSeconds: null,
-        distanceMeters: null,
-        rpe: null,
-        completed: false,
-        completedAt: null,
-        isPersonalRecord: false,
-        notes: null,
-      });
-    }
-
-    for (let s = 0; s < te.plannedSets; s++) {
-      sets.push({
-        id: generateId('set'),
-        clientSetId: generateId('cset'),
-        sessionExerciseId: clientExerciseId,
-        setNumber: setNumber++,
-        setType: SetType.WORKING,
-        weight: te.targetWeight ?? null,
-        weightUnit: te.weightUnit ?? weightUnit,
-        reps: te.targetRepsMin ?? 10,
-        durationSeconds: te.targetDurationSeconds ?? null,
-        distanceMeters: te.targetDistanceMeters ?? null,
-        rpe: null,
-        completed: false,
-        completedAt: null,
-        isPersonalRecord: false,
-        notes: null,
-      });
-    }
+    const sets: SessionSetDto[] = resolveTemplateSets(te).map((planned, sIdx) => ({
+      id: generateId('set'),
+      clientSetId: generateId('cset'),
+      sessionExerciseId: clientExerciseId,
+      setNumber: sIdx + 1,
+      setType: planned.setType,
+      weight: planned.weight,
+      weightUnit: te.weightUnit ?? weightUnit,
+      reps: planned.reps,
+      durationSeconds: planned.durationSeconds ?? te.targetDurationSeconds ?? null,
+      distanceMeters: planned.setType === SetType.WARMUP ? null : (te.targetDistanceMeters ?? null),
+      rpe: null,
+      completed: false,
+      completedAt: null,
+      isPersonalRecord: false,
+      notes: null,
+    }));
 
     const baseExercise: SessionExerciseDto = {
       id: clientExerciseId,
@@ -587,6 +565,9 @@ export function createOfflineSessionFromTemplate(
       sets,
     };
 
+    // A per-set plan already holds the last workout's values; only summary-only templates are
+    // pre-filled from history.
+    if (te.sets && te.sets.length > 0) return baseExercise;
     return applyExerciseHistoryToSessionExercise(
       baseExercise,
       historySessions,
