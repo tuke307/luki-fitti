@@ -35,7 +35,17 @@ export const EXTENDED_EXERCISE_CATALOG: ExerciseDto[] = EXTENDED_EXERCISE_RECORD
   tags: r.tags,
   isSystem: true,
   alternativeExerciseIds: [],
-  media: r.media,
+  media: [
+    ...r.media,
+    {
+      id: `${r.slug}-video`,
+      mediaType: 'VIDEO_LINK' as const,
+      url: `https://www.youtube.com/results?search_query=${encodeURIComponent(`${r.name} exercise form tutorial`)}`,
+      caption: `Watch ${r.name} Video Form Guide`,
+      attribution: 'YouTube Form Guide',
+      license: 'External Link',
+    },
+  ],
 }));
 
 /** German text; missing German names/steps fall back to the English source. */

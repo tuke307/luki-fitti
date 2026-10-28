@@ -26,6 +26,8 @@ import {
   getLocalActiveSession,
   getLocalHistorySessions,
   getSyncQueue,
+  loadExtendedExercises,
+  mergeMissingExercises,
   recalculateSessionTotals,
   removeFromSyncQueue,
   removeLocalHistorySession,
@@ -206,6 +208,25 @@ export function GymProvider({ children }: { children: ReactNode }) {
     [stretchingRoutines, locale],
   );
 
+  // The imported exercise database loads after start-up so it never delays the first render.
+  // Re-setting the catalog afterwards also re-runs localization with its German names.
+  const extendedExercisesRef = useRef<ExerciseDto[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void loadExtendedExercises().then((extended) => {
+      if (cancelled) return;
+      extendedExercisesRef.current = extended;
+      setCatalog((prev) => {
+        const next = mergeMissingExercises(prev, extended);
+        if (next !== prev) void setCachedCatalog(next);
+        return next === prev ? [...prev] : next;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const activeSessionId = activeSession?.clientSessionId ?? null;
   useEffect(() => {
     let cancelled = false;
@@ -376,7 +397,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
           getSyncQueue(),
         ]);
 
-      setCatalog(localCat);
+      setCatalog(mergeMissingExercises(localCat, extendedExercisesRef.current));
       setFolders(localWorkouts.folders);
       setUnfiledTemplates(localWorkouts.unfiledTemplates);
       setStretchingRoutines(localStretch);
@@ -420,8 +441,9 @@ export function GymProvider({ children }: { children: ReactNode }) {
       ]);
 
       if (catRes.success && catRes.data) {
-        setCatalog(catRes.data);
-        await setCachedCatalog(catRes.data);
+        const serverCatalog = mergeMissingExercises(catRes.data, extendedExercisesRef.current);
+        setCatalog(serverCatalog);
+        await setCachedCatalog(serverCatalog);
       }
       if (wkRes.success && wkRes.data) {
         setFolders(wkRes.data.folders);

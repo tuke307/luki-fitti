@@ -119,7 +119,7 @@ export const de = {
   },
   picker: {
     selectExercise: 'Übung auswählen',
-    searchPlaceholder: '130+ Übungen nach Name, Muskel, Gerät oder Begriff durchsuchen...',
+    searchPlaceholder: '1.200+ Übungen nach Name, Muskel, Gerät oder Begriff durchsuchen...',
     allMuscles: 'Alle Muskeln',
     noResults: 'Keine passenden Übungen gefunden',
     clearSelection: 'Keine ausgewählt',

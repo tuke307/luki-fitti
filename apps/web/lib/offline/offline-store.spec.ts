@@ -51,7 +51,7 @@ import {
   resolveLocale,
 } from '../i18n';
 import { filterExercisesByQuery } from '../../components/gym/exercise-picker';
-import { buildStarterWorkouts } from '@luki-fitti/common/catalog';
+import { buildStarterWorkouts, INITIAL_EXERCISE_CATALOG } from '@luki-fitti/common/catalog';
 import type { WorkoutSessionDto } from '@luki-fitti/common/schemas';
 
 describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substitution', () => {
@@ -366,15 +366,19 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
     const routines = await getCachedStretchingRoutines();
     assert.equal(routines.length >= 6, true);
     // Every exercise links a video guide; exercises without a faithful photo fall back to the
-    // anatomy visual, so at least 95% must also carry start/finish images.
+    // anatomy visual. The curated catalog must carry start/finish images for at least 95%;
+    // imported entries only have photos where their source provides them.
     assert.equal(
       catalog.every((ex) => ex.media?.some((m) => m.mediaType === 'VIDEO_LINK')),
       true,
     );
-    const withImages = catalog.filter(
+    const curatedIds = new Set(INITIAL_EXERCISE_CATALOG.map((e) => e.id));
+    const curated = catalog.filter((ex) => curatedIds.has(ex.id));
+    const withImages = curated.filter(
       (ex) => (ex.media ?? []).filter((m) => m.mediaType === 'IMAGE').length >= 2,
     );
-    assert.equal(withImages.length / catalog.length >= 0.95, true);
+    assert.equal(withImages.length / curated.length >= 0.95, true);
+    assert.ok(catalog.length > INITIAL_EXERCISE_CATALOG.length + 800, 'imported catalog merged');
 
     const { folders } = buildStarterWorkouts({ userId: 'user-1' });
     const baseTemplate = folders[0]!.templates[0]!;

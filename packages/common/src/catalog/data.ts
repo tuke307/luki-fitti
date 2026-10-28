@@ -4561,7 +4561,7 @@ export function resolveExerciseMedia(exercise: {
 
   const registered = exercise.id ? getRegisteredExercise(exercise.id)?.media : undefined;
   if (exercise.isSystem !== false && registered && registered.length > 0) {
-    return [...registered, videoLink];
+    return registered;
   }
 
   const folder =

@@ -2,6 +2,7 @@ import {
   buildStarterStretchingRoutines,
   buildStarterWorkouts,
   DEFAULT_STARTER_FOLDERS,
+  INITIAL_EXERCISE_CATALOG,
   DEFAULT_STARTER_TEMPLATES,
   DEFAULT_STRETCHING_ROUTINES,
   resolveExerciseMedia,
@@ -109,17 +110,27 @@ async function idbSet<T>(key: string, value: T): Promise<void> {
 }
 
 /**
- * The imported exercise database is a separate chunk: loaded once, it registers its translations and
- * photos, so it never weighs on the first page load.
+ * The imported exercise database is a separate chunk, loaded in the background after start-up.
+ * Loading it also registers its translations and photos for localization and media lookup.
  */
-async function loadSystemExercises(): Promise<ExerciseDto[]> {
-  const { ALL_SYSTEM_EXERCISES } = await import('@luki-fitti/common/catalog/extended');
-  return ALL_SYSTEM_EXERCISES;
+export async function loadExtendedExercises(): Promise<ExerciseDto[]> {
+  const { EXTENDED_EXERCISE_CATALOG } = await import('@luki-fitti/common/catalog/extended');
+  return EXTENDED_EXERCISE_CATALOG;
+}
+
+/** Adds exercises missing from `current` (by slug); returns `current` itself when nothing is new. */
+export function mergeMissingExercises(
+  current: ExerciseDto[],
+  additions: ExerciseDto[],
+): ExerciseDto[] {
+  const slugs = new Set(current.map((e) => e.slug));
+  const missing = additions.filter((e) => !slugs.has(e.slug));
+  return missing.length > 0 ? [...current, ...missing] : current;
 }
 
 export async function getCachedCatalog(): Promise<ExerciseDto[]> {
   const cached = await idbGet<ExerciseDto[]>('exercise_catalog');
-  const systemExercises = await loadSystemExercises();
+  const systemExercises = INITIAL_EXERCISE_CATALOG;
   if (cached && cached.length > 0) {
     const bySlug = new Map(cached.map((e) => [e.slug, e]));
     let changed = false;

@@ -78,6 +78,8 @@ function useSheetDrag(close: () => void) {
       const d = drag.current;
       drag.current = null;
       if (!d) return;
+      // Move events can lag behind on heavy sheets; the release position is authoritative.
+      d.dy = Math.max(d.dy, e.clientY - d.startY);
       const height = contentRef.current?.offsetHeight ?? 1;
       const velocity = d.dy / Math.max(1, e.timeStamp - d.startTime);
       const isTap = d.dy < TAP_SLOP_PX;
@@ -141,10 +143,7 @@ function DialogContent({
           {...handlers}
           className="sticky top-0 z-10 -mx-4 flex h-6 shrink-0 cursor-grab touch-none items-center justify-center bg-inherit focus-visible:outline-hidden active:cursor-grabbing sm:hidden"
         >
-          <span
-            aria-hidden="true"
-            className="bg-muted-foreground/25 h-1.5 w-10 rounded-full"
-          />
+          <span aria-hidden="true" className="bg-muted-foreground/25 h-1.5 w-10 rounded-full" />
         </button>
         {children}
         <DialogPrimitive.Close
