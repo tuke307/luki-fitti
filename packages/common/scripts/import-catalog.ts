@@ -7,17 +7,17 @@
  *  - src/catalog/core-records.ts — the dataset entries named by `src/catalog/overrides.ts` (their
  *    hand-written text is applied at runtime)
  *  - src/catalog/extended/records.ts — everything else, loaded on demand
- * Duplicates are skipped, and so are ids listed in `src/catalog/retired.ts` (a retired dataset
- * duplicate lends its German text to the exercise that replaced it).
+ * Duplicates are skipped, and so are ids listed in `./dataset-duplicates.ts` (a skipped dataset
+ * duplicate lends its German text to the exercise that is kept).
  * Re-run with `yarn workspace @luki-fitti/common catalog:import`.
  */
 import { writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EXERCISE_OVERRIDES } from '../src/catalog/overrides';
-import { RETIRED_EXERCISE_IDS } from '../src/catalog/retired';
 import type { ExerciseRecord } from '../src/catalog/types';
 import { EquipmentType, ExerciseCategory, ExerciseType, MuscleGroup } from '../src/enums';
+import { DATASET_DUPLICATES } from './dataset-duplicates';
 import { exerciseTokens } from './exercise-tokens';
 
 const FEDB_URL =
@@ -161,12 +161,11 @@ const MUSCLE_DE: Record<MuscleGroup, string> = {
   [MuscleGroup.FULL_BODY]: 'den ganzen Körper',
 };
 
-/** Hand-written German names for imported exercises the user explicitly asked for. */
+/** Hand-written German names for extended exercises (core exercises use `overrides.ts`). */
 const DE_NAME_OVERRIDES: Record<string, string> = {
   'smith-machine-overhead-shoulder-press': 'Schulterdrücken an der Multipresse',
   'smith-machine-bench-press': 'Bankdrücken an der Multipresse',
   'smith-machine-incline-bench-press': 'Schrägbankdrücken an der Multipresse',
-  'smith-machine-squat': 'Kniebeuge an der Multipresse',
   'smith-machine-calf-raise': 'Wadenheben an der Multipresse',
   'smith-machine-upright-row': 'Aufrechtes Rudern an der Multipresse',
   'smith-machine-shrug': 'Shrugs an der Multipresse',
@@ -311,7 +310,7 @@ async function main() {
     overrides.flatMap(([id, o]) => ('wger' in o.source ? [[o.source.wger, id] as const] : [])),
   );
   const overrideNames = overrides.map(([, o]) => o.name);
-  const isRetired = (slug: string) => `ex-${slug}` in RETIRED_EXERCISE_IDS;
+  const isDuplicate = (slug: string) => `ex-${slug}` in DATASET_DUPLICATES;
 
   // wger entries with both an English and a German name, indexed for matching.
   const wger = wgerPage.results
@@ -327,14 +326,15 @@ async function main() {
   const usedWger = new Set<number>();
 
   const out: ExerciseRecord[] = [];
-  /** Retired duplicates: their German text may fill gaps of the exercise that replaced them. */
-  const retired: ExerciseRecord[] = [];
+  /** Skipped duplicates: their German text may fill gaps of the exercise that is kept. */
+  const duplicates: ExerciseRecord[] = [];
   const seenSlugs = new Set([
     ...overrides.map(([id]) => id.replace(/^ex-/, '')),
-    ...Object.keys(RETIRED_EXERCISE_IDS).map((id) => id.replace(/^ex-/, '')),
+    ...Object.keys(DATASET_DUPLICATES).map((id) => id.replace(/^ex-/, '')),
   ]);
   const seenTokens = new Set(overrideNames.map(tokenKey));
-  const accept = (record: ExerciseRecord) => (isRetired(record.slug) ? retired : out).push(record);
+  const accept = (record: ExerciseRecord) =>
+    (isDuplicate(record.slug) ? duplicates : out).push(record);
 
   for (const e of fedb) {
     const targetId = fedbTargets.get(e.id);
@@ -344,7 +344,8 @@ async function main() {
       throw new Error(`override ${targetId} points at free-exercise-db ${e.id} (ex-${slug})`);
     }
     const tokens = tokenKey(e.name);
-    if (!targetId && !isRetired(slug) && (seenSlugs.has(slug) || seenTokens.has(tokens))) continue;
+    if (!targetId && !isDuplicate(slug) && (seenSlugs.has(slug) || seenTokens.has(tokens)))
+      continue;
     const primary = FEDB_MUSCLE[e.primaryMuscles[0] ?? ''] ?? (targetId && MuscleGroup.FULL_BODY);
     if (!primary) continue;
 
@@ -400,7 +401,7 @@ async function main() {
   const knownTokens = [
     ...overrideNames,
     ...out.filter((e) => !(e.id in EXERCISE_OVERRIDES)).map((e) => e.name),
-    ...retired.map((e) => e.name),
+    ...duplicates.map((e) => e.name),
   ].map((n) => exerciseTokens(n));
   for (const { w, en, de } of wger) {
     const targetId = wgerTargets.get(w.id);
@@ -416,9 +417,10 @@ async function main() {
       if (SIDE_VARIANT.test(enName) || NON_ENGLISH_CHARS.test(enName) || enName === deName)
         continue;
       if (htmlToSteps(en.description).length === 0) continue;
-      if (!isRetired(slug) && isNearDuplicate(enName, knownTokens)) continue;
+      if (!isDuplicate(slug) && isNearDuplicate(enName, knownTokens)) continue;
       const tokens = tokenKey(enName);
-      if (!slug || (!isRetired(slug) && (seenSlugs.has(slug) || seenTokens.has(tokens)))) continue;
+      if (!slug || (!isDuplicate(slug) && (seenSlugs.has(slug) || seenTokens.has(tokens))))
+        continue;
       knownTokens.push(exerciseTokens(enName));
     }
     const primary =
@@ -477,16 +479,18 @@ async function main() {
   }
 
   const byId = new Map(out.map((e) => [e.id, e]));
-  for (const dup of retired) {
-    const target = byId.get(RETIRED_EXERCISE_IDS[dup.id]!);
+  for (const dup of duplicates) {
+    const target = byId.get(DATASET_DUPLICATES[dup.id]!);
     if (!target || target.id in EXERCISE_OVERRIDES) continue;
     if (!target.de.name && dup.de.name) target.de.name = dup.de.name;
     target.de.instructions ??= dup.de.instructions;
     target.tags = Array.from(new Set([...target.tags, ...dup.tags]));
   }
 
-  const missing = overrides.map(([id]) => id).filter((id) => !byId.has(id));
-  if (missing.length > 0) throw new Error(`override targets not found: ${missing.join(', ')}`);
+  const missing = [...overrides.map(([id]) => id), ...Object.values(DATASET_DUPLICATES)].filter(
+    (id) => !byId.has(id),
+  );
+  if (missing.length > 0) throw new Error(`exercises not generated: ${missing.join(', ')}`);
 
   out.sort((a, b) => a.slug.localeCompare(b.slug));
   const core = out.filter((e) => e.id in EXERCISE_OVERRIDES);
