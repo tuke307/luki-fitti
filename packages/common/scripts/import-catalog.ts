@@ -7,7 +7,7 @@
  *  - src/catalog/core-records.ts — the dataset entries named by `src/catalog/overrides.ts` (their
  *    hand-written text is applied at runtime)
  *  - src/catalog/extended/records.ts — everything else, loaded on demand
- * Duplicates are skipped, and so are ids listed in `src/catalog/retired.ts` (a retired dataset
+ * Duplicates are skipped, and so are ids listed in `./dataset-duplicates.ts` (a skipped dataset
  * duplicate lends its German text to the exercise that replaced it).
  * Re-run with `yarn workspace @luki-fitti/common catalog:import`.
  */
@@ -15,9 +15,9 @@ import { writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EXERCISE_OVERRIDES } from '../src/catalog/overrides';
-import { RETIRED_EXERCISE_IDS } from '../src/catalog/retired';
 import type { ExerciseRecord } from '../src/catalog/types';
 import { EquipmentType, ExerciseCategory, ExerciseType, MuscleGroup } from '../src/enums';
+import { DATASET_DUPLICATES } from './dataset-duplicates';
 import { exerciseTokens } from './exercise-tokens';
 
 const FEDB_URL =
@@ -311,7 +311,7 @@ async function main() {
     overrides.flatMap(([id, o]) => ('wger' in o.source ? [[o.source.wger, id] as const] : [])),
   );
   const overrideNames = overrides.map(([, o]) => o.name);
-  const isRetired = (slug: string) => `ex-${slug}` in RETIRED_EXERCISE_IDS;
+  const isRetired = (slug: string) => `ex-${slug}` in DATASET_DUPLICATES;
 
   // wger entries with both an English and a German name, indexed for matching.
   const wger = wgerPage.results
@@ -331,7 +331,7 @@ async function main() {
   const retired: ExerciseRecord[] = [];
   const seenSlugs = new Set([
     ...overrides.map(([id]) => id.replace(/^ex-/, '')),
-    ...Object.keys(RETIRED_EXERCISE_IDS).map((id) => id.replace(/^ex-/, '')),
+    ...Object.keys(DATASET_DUPLICATES).map((id) => id.replace(/^ex-/, '')),
   ]);
   const seenTokens = new Set(overrideNames.map(tokenKey));
   const accept = (record: ExerciseRecord) => (isRetired(record.slug) ? retired : out).push(record);
@@ -478,15 +478,17 @@ async function main() {
 
   const byId = new Map(out.map((e) => [e.id, e]));
   for (const dup of retired) {
-    const target = byId.get(RETIRED_EXERCISE_IDS[dup.id]!);
+    const target = byId.get(DATASET_DUPLICATES[dup.id]!);
     if (!target || target.id in EXERCISE_OVERRIDES) continue;
     if (!target.de.name && dup.de.name) target.de.name = dup.de.name;
     target.de.instructions ??= dup.de.instructions;
     target.tags = Array.from(new Set([...target.tags, ...dup.tags]));
   }
 
-  const missing = overrides.map(([id]) => id).filter((id) => !byId.has(id));
-  if (missing.length > 0) throw new Error(`override targets not found: ${missing.join(', ')}`);
+  const missing = [...overrides.map(([id]) => id), ...Object.values(DATASET_DUPLICATES)].filter(
+    (id) => !byId.has(id),
+  );
+  if (missing.length > 0) throw new Error(`exercises not generated: ${missing.join(', ')}`);
 
   out.sort((a, b) => a.slug.localeCompare(b.slug));
   const core = out.filter((e) => e.id in EXERCISE_OVERRIDES);

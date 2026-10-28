@@ -5,7 +5,6 @@ import {
   getStarterRoutineText,
   INITIAL_EXERCISE_CATALOG,
   localizeStretchingRoutine,
-  resolveExerciseId,
   resolveExerciseMedia,
 } from '@luki-fitti/common/catalog';
 import { SUPPORTED_LOCALES, type SupportedLocale } from '@luki-fitti/common/enums';
@@ -161,7 +160,7 @@ export class StretchingService {
         await tx.stretchingRoutineExercise.create({
           data: {
             routineId: routine.id,
-            exerciseId: resolveExerciseId(ex.exerciseId),
+            exerciseId: ex.exerciseId,
             orderIndex: ex.orderIndex ?? idx,
             sets: ex.sets ?? 1,
             durationSeconds: ex.durationSeconds ?? 45,
@@ -247,7 +246,7 @@ export class StretchingService {
           await tx.stretchingRoutineExercise.create({
             data: {
               routineId,
-              exerciseId: resolveExerciseId(ex.exerciseId),
+              exerciseId: ex.exerciseId,
               orderIndex: ex.orderIndex ?? idx,
               sets: ex.sets ?? 1,
               durationSeconds: ex.durationSeconds ?? 45,
