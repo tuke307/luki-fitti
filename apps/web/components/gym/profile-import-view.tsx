@@ -454,9 +454,9 @@ export function ProfileImportView() {
                 }}
               >
                 <TabsList>
-                  <TabsTrigger value="dark">{t.profile.themeDark}</TabsTrigger>
-                  <TabsTrigger value="light">{t.profile.themeLight}</TabsTrigger>
                   <TabsTrigger value="system">{t.profile.themeSystem}</TabsTrigger>
+                  <TabsTrigger value="light">{t.profile.themeLight}</TabsTrigger>
+                  <TabsTrigger value="dark">{t.profile.themeDark}</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
@@ -483,7 +483,7 @@ export function ProfileImportView() {
                 <p className="text-muted-foreground text-xs">{t.profile.defaultRestSub}</p>
               </div>
               <NativeSelect
-                aria-label="Default rest timer seconds"
+                aria-label={t.a11y.defaultRestSeconds}
                 value={user?.preferences?.defaultRestSeconds ?? 90}
                 onChange={(e) =>
                   void updatePreferences({ defaultRestSeconds: Number(e.target.value) })
@@ -504,7 +504,7 @@ export function ProfileImportView() {
                 <p className="text-muted-foreground text-xs">{t.profile.weeklyGoalSub}</p>
               </div>
               <NativeSelect
-                aria-label="Weekly goal sessions"
+                aria-label={t.a11y.weeklyGoalSessions}
                 value={user?.preferences?.weeklyGoalSessions ?? 4}
                 onChange={(e) =>
                   void updatePreferences({ weeklyGoalSessions: Number(e.target.value) })
@@ -715,9 +715,9 @@ export function ProfileImportView() {
 
       {/* Attribution for the imported exercise database (CC-BY-SA requires it for wger content) */}
       <Card data-testid="exercise-data-sources" className="space-y-2 rounded-[1.25rem] p-5">
-        <h2 className="text-[15px] font-semibold">{t.profile.dataSourcesTitle}</h2>
-        <p className="text-muted-foreground text-[13px]">{t.profile.dataSourcesDesc}</p>
-        <ul className="space-y-1 text-[13px]">
+        <h2 className="text-[0.9375rem] font-semibold">{t.profile.dataSourcesTitle}</h2>
+        <p className="text-muted-foreground text-[0.8125rem]">{t.profile.dataSourcesDesc}</p>
+        <ul className="space-y-1 text-[0.8125rem]">
           <li>
             <a
               href="https://github.com/yuhonas/free-exercise-db"

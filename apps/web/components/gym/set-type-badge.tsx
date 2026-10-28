@@ -62,7 +62,7 @@ export function SetTypeBadge({
       data-set-type={setType}
       className={cn(
         'tabular-nums relative flex shrink-0 items-center justify-center rounded-full font-semibold',
-        size === 'md' ? 'size-9 text-[15px]' : 'size-6 text-[12px]',
+        size === 'md' ? 'size-9 text-[0.9375rem]' : 'size-6 text-[0.75rem]',
         completed ? DONE_CLASS[setType] : PENDING_CLASS[setType],
         className,
       )}

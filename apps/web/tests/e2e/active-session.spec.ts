@@ -36,7 +36,7 @@ test.describe('Active Session Execution & Rest Timer', () => {
     // Update Set 1 weight and reps, then mark complete and verify logged prescription pill
     await updateSetWeightAndReps(page, 1, '82.5', '10');
     await toggleCompleteSetRow(page, 1);
-    await expect(page.getByTestId('logged-set-summary-pill').first()).toContainText('82.5kg × 10');
+    await expect(page.getByTestId('logged-set-summary-pill').first()).toContainText('82.5 kg × 10');
 
     // Completing a set with rest auto-starts the timer; otherwise start it from the dock presets.
     // Either way the header rest timer pill appears.
