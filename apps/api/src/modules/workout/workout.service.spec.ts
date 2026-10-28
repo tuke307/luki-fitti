@@ -152,7 +152,7 @@ describe('WorkoutService — Folders, Templates, Alternatives & User Isolation',
         folderId: folderA.id,
         exercises: [
           {
-            exerciseId: 'ex-barbell-bench-press',
+            exerciseId: 'ex-barbell-bench-press-medium-grip',
             orderIndex: 0,
             plannedSets: 3,
             warmupSets: 2,
@@ -161,7 +161,7 @@ describe('WorkoutService — Folders, Templates, Alternatives & User Isolation',
             targetWeight: 85,
             weightUnit: WeightUnit.KG,
             restSeconds: 120,
-            alternativeExerciseIds: ['ex-machine-chest-press'],
+            alternativeExerciseIds: ['ex-leverage-chest-press'],
           },
         ],
       },
@@ -194,7 +194,7 @@ describe('WorkoutService — Folders, Templates, Alternatives & User Isolation',
         folderId: folder.id,
         exercises: [
           {
-            exerciseId: 'ex-barbell-bench-press',
+            exerciseId: 'ex-barbell-bench-press-medium-grip',
             orderIndex: 0,
             plannedSets: 4,
             warmupSets: 1,
@@ -203,7 +203,7 @@ describe('WorkoutService — Folders, Templates, Alternatives & User Isolation',
             targetWeight: 90,
             weightUnit: WeightUnit.KG,
             restSeconds: 150,
-            alternativeExerciseIds: ['ex-dumbbell-incline-press'],
+            alternativeExerciseIds: ['ex-incline-dumbbell-press'],
           },
         ],
       },
@@ -225,7 +225,7 @@ describe('WorkoutService — Folders, Templates, Alternatives & User Isolation',
     assert.equal(copy.name, 'Push Day (Copy)');
     assert.equal(copy.sortOrder, 1);
     assert.equal(copy.exercises.length, 1);
-    assert.deepEqual(copy.exercises[0]?.alternativeExerciseIds, ['ex-dumbbell-incline-press']);
+    assert.deepEqual(copy.exercises[0]?.alternativeExerciseIds, ['ex-incline-dumbbell-press']);
 
     const afterDupTpl2 = await service.getTemplateById('user-a', tpl2.id, 'en');
     assert.equal(afterDupTpl2.sortOrder, 2);
@@ -280,7 +280,7 @@ describe('WorkoutService — Folders, Templates, Alternatives & User Isolation',
         name: 'Day 4 - Schultern',
         exercises: [
           {
-            exerciseId: 'ex-seated-dumbbell-shoulder-press',
+            exerciseId: 'ex-dumbbell-shoulder-press',
             orderIndex: 0,
             plannedSets: 2,
             warmupSets: 0,
@@ -326,7 +326,7 @@ describe('WorkoutService — Folders, Templates, Alternatives & User Isolation',
         {
           id: 'sex-1',
           clientExerciseId: 'sex-1',
-          exerciseId: 'ex-seated-dumbbell-shoulder-press',
+          exerciseId: 'ex-dumbbell-shoulder-press',
           origin: SessionExerciseOrigin.PLANNED,
           status: SessionExerciseStatus.COMPLETED,
           exerciseNameSnapshot: 'Press',

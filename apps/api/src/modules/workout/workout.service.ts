@@ -5,7 +5,12 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import { localizeFolder, localizeTemplate, resolveExerciseMedia } from '@luki-fitti/common/catalog';
+import {
+  localizeFolder,
+  localizeTemplate,
+  resolveExerciseId,
+  resolveExerciseMedia,
+} from '@luki-fitti/common/catalog';
 import type { SupportedLocale } from '@luki-fitti/common/enums';
 import {
   buildTemplateExercisesFromSession,
@@ -185,7 +190,8 @@ export class WorkoutService {
     const sets = ex.sets && ex.sets.length > 0 ? ex.sets : null;
     const summary = sets ? summarizeTemplateSets(sets) : null;
     return {
-      exerciseId: ex.exerciseId,
+      // Clients may still hold ids of exercises that were merged into another one.
+      exerciseId: resolveExerciseId(ex.exerciseId),
       orderIndex: ex.orderIndex ?? idx,
       // Rows are always re-created on update, so omitting the column stores NULL.
       ...(sets ? { sets } : {}),
@@ -199,7 +205,9 @@ export class WorkoutService {
       targetDurationSeconds: ex.targetDurationSeconds ?? null,
       targetDistanceMeters: ex.targetDistanceMeters ?? null,
       notes: ex.notes ?? null,
-      alternativeExerciseIds: ex.alternativeExerciseIds ?? [],
+      alternativeExerciseIds: [
+        ...new Set((ex.alternativeExerciseIds ?? []).map(resolveExerciseId)),
+      ],
     };
   }
 
@@ -477,7 +485,7 @@ export class WorkoutService {
     const knownIds = new Set(
       (
         await this.prisma.exercise.findMany({
-          where: { id: { in: exercises.map((e) => e.exerciseId) } },
+          where: { id: { in: exercises.map((e) => resolveExerciseId(e.exerciseId)) } },
           select: { id: true },
         })
       ).map((e) => e.id),
@@ -485,7 +493,7 @@ export class WorkoutService {
     await this.updateTemplate(
       userId,
       tpl.id,
-      { exercises: exercises.filter((e) => knownIds.has(e.exerciseId)) },
+      { exercises: exercises.filter((e) => knownIds.has(resolveExerciseId(e.exerciseId))) },
       locale,
     );
   }

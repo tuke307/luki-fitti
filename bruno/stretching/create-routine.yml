@@ -16,7 +16,7 @@ http:
         "estimatedDurationSeconds": 600,
         "exercises": [
           {
-            "exerciseId": "ex-couch-hip-flexor-stretch",
+            "exerciseId": "ex-kneeling-hip-flexor",
             "orderIndex": 0,
             "sets": 2,
             "durationSeconds": 60,
