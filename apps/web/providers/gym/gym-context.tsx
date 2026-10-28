@@ -22,6 +22,7 @@ import {
   getCachedStretchingRoutines,
   getCachedWorkouts,
   getDeviceId,
+  getDismissedSuggestions,
   getLocalActiveSession,
   getLocalHistorySessions,
   getSyncQueue,
@@ -34,6 +35,7 @@ import {
   setCachedCatalog,
   setCachedStretchingRoutines,
   setCachedWorkouts,
+  setDismissedSuggestions,
   substituteExerciseInSession,
   type SyncState,
 } from '@/lib/offline/offline-store';
@@ -52,6 +54,9 @@ import {
   DEFAULT_FOLDER_COLOR,
   orderWarmupsFirst,
   summarizeTemplateSets,
+  toDismissedSuggestion,
+  type DismissedWorkoutSuggestion,
+  type WorkoutExerciseSuggestion,
 } from '@luki-fitti/common/utils/client';
 import {
   localizeExercise,
@@ -145,6 +150,9 @@ interface GymContextValue {
   deleteHistoricalSession: (clientSessionId: string) => Promise<void>;
   flushSyncQueue: (forceOverwrite?: boolean) => Promise<void>;
   resolveConflict: (choice: 'KEEP_LOCAL' | 'USE_SERVER') => Promise<void>;
+  /** Suggestions dismissed or accepted during the active workout. */
+  dismissedSuggestions: DismissedWorkoutSuggestion[];
+  dismissSuggestion: (suggestion: WorkoutExerciseSuggestion) => Promise<void>;
   refreshAllData: () => Promise<void>;
 }
 
@@ -175,6 +183,9 @@ export function GymProvider({ children }: { children: ReactNode }) {
   const [conflictServerSession, setConflictServerSession] = useState<WorkoutSessionDto | null>(
     null,
   );
+  const [dismissedSuggestions, setDismissedSuggestionsState] = useState<
+    DismissedWorkoutSuggestion[]
+  >([]);
 
   // Built-in catalog content is resolved by id / systemKey in the current UI language, so cached and
   // offline data follow language switches. User-authored content passes through unchanged.
@@ -193,6 +204,28 @@ export function GymProvider({ children }: { children: ReactNode }) {
   const localizedStretchingRoutines = useMemo(
     () => stretchingRoutines.map((r) => localizeStretchingRoutine(r, locale)),
     [stretchingRoutines, locale],
+  );
+
+  const activeSessionId = activeSession?.clientSessionId ?? null;
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const stored = activeSessionId ? await getDismissedSuggestions(activeSessionId) : [];
+      if (!cancelled) setDismissedSuggestionsState(stored);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSessionId]);
+
+  const dismissSuggestion = useCallback(
+    async (suggestion: WorkoutExerciseSuggestion) => {
+      if (!activeSessionId) return;
+      const next = [...dismissedSuggestions, toDismissedSuggestion(suggestion)];
+      setDismissedSuggestionsState(next);
+      await setDismissedSuggestions(activeSessionId, next);
+    },
+    [activeSessionId, dismissedSuggestions],
   );
 
   const isFlushingRef = useRef(false);
@@ -1460,6 +1493,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
 
     await saveLocalHistorySession(finalized);
     await saveLocalActiveSession(null);
+    await setDismissedSuggestions(finalized.clientSessionId, null);
     setActiveSession(null);
 
     setHistorySessions((prev) => [
@@ -1498,6 +1532,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
       prev.filter((s) => s.clientSessionId !== clientSessionId && s.id !== id),
     );
     await saveLocalActiveSession(null);
+    await setDismissedSuggestions(clientSessionId, null);
     await removeLocalHistorySession(clientSessionId);
     await removeFromSyncQueue(clientSessionId);
     const remaining = await getSyncQueue();
@@ -1641,6 +1676,8 @@ export function GymProvider({ children }: { children: ReactNode }) {
         deleteHistoricalSession,
         flushSyncQueue,
         resolveConflict,
+        dismissedSuggestions,
+        dismissSuggestion,
         refreshAllData,
       }}
     >

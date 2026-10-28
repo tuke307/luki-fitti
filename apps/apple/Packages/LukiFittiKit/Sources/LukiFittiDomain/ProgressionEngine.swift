@@ -845,6 +845,28 @@ public enum ProgressionEngine {
         return .FULL_BODY
     }
 
+    /// Identifies *why* a suggestion was made (stalling exercise or target muscle).
+    /// Mirrors `workoutSuggestionReasonKey` in progression.util.ts.
+    public static func workoutSuggestionReasonKey(
+        reasonType: ExerciseSuggestionReasonType,
+        stallingExerciseId: String?,
+        targetMuscle: MuscleGroup
+    ) -> String {
+        if let stallingExerciseId { return "\(reasonType.rawValue):\(stallingExerciseId)" }
+        return "\(reasonType.rawValue):\(targetMuscle.rawValue)"
+    }
+
+    public static func toDismissedSuggestion(_ s: WorkoutExerciseSuggestion) -> DismissedWorkoutSuggestion {
+        DismissedWorkoutSuggestion(
+            reasonKey: workoutSuggestionReasonKey(
+                reasonType: s.reasonType,
+                stallingExerciseId: s.stallingExerciseId,
+                targetMuscle: s.targetMuscle
+            ),
+            exerciseId: s.suggestedExercise.id
+        )
+    }
+
     /// Proposes at most ONE smart exercise suggestion for a workout, and only when there is a
     /// concrete reason: an exercise that regressed, grinds at max effort without gains, or
     /// plateaued for weeks, or a key split muscle that is missing or under-trained.
@@ -855,7 +877,8 @@ public enum ProgressionEngine {
         exercises: [WorkoutSuggestionInputExercise],
         catalog: [ExerciseDto],
         historySessions: [WorkoutSessionDto],
-        weightUnit: WeightUnit = .KG
+        weightUnit: WeightUnit = .KG,
+        dismissed: [DismissedWorkoutSuggestion] = []
     ) -> WorkoutExerciseSuggestion? {
         let strengthCatalog = catalog.filter { $0.exerciseType == .STRENGTH }
         guard !strengthCatalog.isEmpty else { return nil }
@@ -892,13 +915,19 @@ public enum ProgressionEngine {
         for r in resolved { setsByMuscle[r.muscle, default: 0] += r.input.plannedSets }
         let setsTotal = resolved.reduce(0) { $0 + $1.input.plannedSets }
 
-        // Find the exercise in the workout that stalls hardest (regression > grinding > plateau)
-        var worst: (
-            exerciseId: String?, exerciseName: String, muscle: MuscleGroup, equipment: EquipmentType?,
-            reasonType: ExerciseSuggestionReasonType, trend: ExerciseTrend, severity: Double
-        )?
+        // Every honest reason, strongest first: stalls by severity, then missing / under-trained muscles.
+        struct Reason {
+            var reasonType: ExerciseSuggestionReasonType
+            var targetMuscle: MuscleGroup
+            var stallingExerciseId: String?
+            var stallingExerciseName: String?
+            var avoidEquipment: EquipmentType?
+            var trend: ExerciseTrend?
+            var severity: Double
+        }
+        var stalls: [(order: Int, reason: Reason)] = []
 
-        for item in resolved {
+        for (order, item) in resolved.enumerated() {
             let exId = item.input.exerciseId ?? item.catalogEx?.id
             let exName = item.input.exerciseName ?? item.catalogEx?.name
             if exId == nil && exName == nil { continue }
@@ -920,74 +949,90 @@ public enum ProgressionEngine {
             case .GRINDING: (50, Double(trend.hardSessionsRecent) * 5)
             default: (10, Double(min(20, trend.sessionsSinceBest)))
             }
-            let severity = base + detail + splitBonus
+            stalls.append((order, Reason(
+                reasonType: stall,
+                targetMuscle: item.muscle,
+                stallingExerciseId: exId,
+                stallingExerciseName: exName ?? "Exercise",
+                avoidEquipment: item.catalogEx?.equipment,
+                trend: trend,
+                severity: base + detail + splitBonus
+            )))
+        }
+        // Stable sort by severity (matches the JS sort used on the web)
+        var reasons = stalls
+            .sorted { $0.reason.severity != $1.reason.severity ? $0.reason.severity > $1.reason.severity : $0.order < $1.order }
+            .map(\.reason)
 
-            if worst == nil || severity > worst!.severity {
-                worst = (exId, exName ?? "Exercise", item.muscle, item.catalogEx?.equipment, stall, trend, severity)
+        // No stall needed: only suggest when a key split muscle is missing or clearly under-trained
+        let maxSets = splitMuscles.map { setsByMuscle[$0] ?? 0 }.max() ?? 0
+        let lowVolumeLimit = Double(maxSets) * SuggestionThresholds.lowVolumeRatio
+        var muscleReasons: [(idx: Int, muscle: MuscleGroup, count: Int)] = []
+        for (idx, muscle) in splitMuscles.enumerated() {
+            let count = setsByMuscle[muscle] ?? 0
+            if count == 0 || Double(count) < lowVolumeLimit {
+                muscleReasons.append((idx, muscle, count))
             }
         }
-
-        let targetMuscle: MuscleGroup
-        let reasonType: ExerciseSuggestionReasonType
-        var stallingExerciseId: String?
-        var stallingExerciseName: String?
-        let avoidEquipment: EquipmentType?
-        var trend: ExerciseTrend?
-
-        if let worst {
-            targetMuscle = worst.muscle
-            reasonType = worst.reasonType
-            stallingExerciseId = worst.exerciseId
-            stallingExerciseName = worst.exerciseName
-            avoidEquipment = worst.equipment
-            trend = worst.trend
-        } else {
-            // No stall: only suggest when a key split muscle is missing or clearly under-trained
-            var minSets = Int.max
-            var maxSets = 0
-            var chosenMuscle = splitMuscles.first ?? .SHOULDERS
-            for m in splitMuscles {
-                let count = setsByMuscle[m] ?? 0
-                maxSets = max(maxSets, count)
-                if count < minSets {
-                    minSets = count
-                    chosenMuscle = m
-                }
-            }
-
-            if minSets == 0 {
-                reasonType = .MISSING_MUSCLE
-            } else if Double(minSets) < Double(maxSets) * SuggestionThresholds.lowVolumeRatio {
-                reasonType = .LOW_VOLUME
-            } else {
-                return nil
-            }
-            targetMuscle = chosenMuscle
-            avoidEquipment = resolved.first { $0.muscle == chosenMuscle }?.catalogEx?.equipment
+        muscleReasons.sort { lhs, rhs in
+            lhs.count != rhs.count ? lhs.count < rhs.count : lhs.idx < rhs.idx
+        }
+        for m in muscleReasons {
+            reasons.append(Reason(
+                reasonType: m.count == 0 ? .MISSING_MUSCLE : .LOW_VOLUME,
+                targetMuscle: m.muscle,
+                stallingExerciseId: nil,
+                stallingExerciseName: nil,
+                avoidEquipment: resolved.first { $0.muscle == m.muscle }?.catalogEx?.equipment,
+                trend: nil,
+                severity: 0
+            ))
         }
 
-        // Pick the best candidate for the target muscle that is not already in the workout.
+        let dismissedReasons = Set(dismissed.map(\.reasonKey))
+        let dismissedExercises = Set(dismissed.map(\.exerciseId))
+
+        // Pick the first reason that is not dismissed and has a candidate not already in the workout.
         // No candidate means no honest suggestion, so the card stays hidden.
-        let pool = strengthCatalog.filter {
-            !existingIds.contains($0.id) &&
-                !existingNames.contains($0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) &&
-                $0.primaryMuscleGroup == targetMuscle
-        }
-        guard !pool.isEmpty else { return nil }
+        var picked: (reason: Reason, chosen: ExerciseDto)?
+        for reason in reasons {
+            let key = workoutSuggestionReasonKey(
+                reasonType: reason.reasonType,
+                stallingExerciseId: reason.stallingExerciseId,
+                targetMuscle: reason.targetMuscle
+            )
+            if dismissedReasons.contains(key) { continue }
+            let pool = strengthCatalog.filter {
+                !existingIds.contains($0.id) &&
+                    !dismissedExercises.contains($0.id) &&
+                    !existingNames.contains($0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) &&
+                    $0.primaryMuscleGroup == reason.targetMuscle
+            }
+            guard !pool.isEmpty else { continue }
 
-        // Score candidates: prefer predefined alternatives of stalling exercise, or fresh equipment
-        let preferredAltIds = Set(
-            stallingExerciseId.flatMap { id in catalog.first { $0.id == id } }?.alternativeExerciseIds ?? []
-        )
-        let scored = pool.map { candidate -> (candidate: ExerciseDto, score: Int) in
-            var score = 0
-            if preferredAltIds.contains(candidate.id) { score += 5 }
-            if let avoidEquipment, candidate.equipment != avoidEquipment { score += 3 }
-            if [.CABLE, .DUMBBELL, .MACHINE].contains(candidate.equipment) { score += 2 }
-            return (candidate, score)
+            // Score candidates: prefer predefined alternatives of stalling exercise, or fresh equipment
+            let preferredAltIds = Set(
+                reason.stallingExerciseId.flatMap { id in catalog.first { $0.id == id } }?.alternativeExerciseIds ?? []
+            )
+            let scored = pool.map { candidate -> (candidate: ExerciseDto, score: Int) in
+                var score = 0
+                if preferredAltIds.contains(candidate.id) { score += 5 }
+                if let avoid = reason.avoidEquipment, candidate.equipment != avoid { score += 3 }
+                if [.CABLE, .DUMBBELL, .MACHINE].contains(candidate.equipment) { score += 2 }
+                return (candidate, score)
+            }
+            // Stable max: first candidate with the highest score, matching the TS sort order
+            picked = (reason, scored.reduce(scored[0]) { $1.score > $0.score ? $1 : $0 }.candidate)
+            break
         }
-        // Stable max: first candidate with the highest score, matching the TS sort order
-        let chosen = scored.reduce(scored[0]) { $1.score > $0.score ? $1 : $0 }.candidate
+
+        guard let picked else { return nil }
+        let chosen = picked.chosen
+        let reasonType = picked.reason.reasonType
+        let targetMuscle = picked.reason.targetMuscle
+        let stallingExerciseId = picked.reason.stallingExerciseId
+        let stallingExerciseName = picked.reason.stallingExerciseName
+        let trend = picked.reason.trend
 
         let chosenInsight = computeExerciseProgression(
             exerciseId: chosen.id,
@@ -1025,6 +1070,17 @@ public enum ProgressionEngine {
             recommendedWeight: defaultWeight,
             recommendedRestSeconds: chosen.category == .COMPOUND ? 90 : 60
         )
+    }
+}
+
+/// A suggestion the user dismissed (or accepted) during a workout.
+public struct DismissedWorkoutSuggestion: Codable, Sendable, Equatable, Hashable {
+    public var reasonKey: String
+    public var exerciseId: String
+
+    public init(reasonKey: String, exerciseId: String) {
+        self.reasonKey = reasonKey
+        self.exerciseId = exerciseId
     }
 }
 

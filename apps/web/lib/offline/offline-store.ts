@@ -20,6 +20,7 @@ import {
 import {
   applyExerciseHistoryToSessionExercise,
   resolveTemplateSets,
+  type DismissedWorkoutSuggestion,
 } from '@luki-fitti/common/utils/client';
 import type {
   ExerciseDto,
@@ -256,6 +257,27 @@ export async function setAcknowledgedServerVersion(
   if (version === null) delete map[clientSessionId];
   else map[clientSessionId] = version;
   await idbSet('server_versions', map);
+}
+
+/** Suggestions dismissed per workout session, so they stay gone across tab switches and reloads. */
+export async function getDismissedSuggestions(
+  clientSessionId: string,
+): Promise<DismissedWorkoutSuggestion[]> {
+  const map = await idbGet<Record<string, DismissedWorkoutSuggestion[]>>('dismissed_suggestions');
+  return map?.[clientSessionId] ?? [];
+}
+
+export async function setDismissedSuggestions(
+  clientSessionId: string,
+  dismissed: DismissedWorkoutSuggestion[] | null,
+): Promise<void> {
+  const map = {
+    ...((await idbGet<Record<string, DismissedWorkoutSuggestion[]>>('dismissed_suggestions')) ??
+      {}),
+  };
+  if (dismissed === null) delete map[clientSessionId];
+  else map[clientSessionId] = dismissed;
+  await idbSet('dismissed_suggestions', map);
 }
 
 export function recalculateSessionTotals(session: WorkoutSessionDto): WorkoutSessionDto {

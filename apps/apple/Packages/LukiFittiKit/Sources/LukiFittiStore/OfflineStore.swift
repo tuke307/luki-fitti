@@ -46,6 +46,8 @@ public final class OfflineStore {
         didSet { applyLocaleToAPIClient() }
     }
     public var conflictItem: QueuedSessionSyncItem?
+    /// Bumped on every dismissal so observing views recompute suggestions.
+    public var dismissedSuggestionsRevision = 0
     public var onOverviewOrAuthChanged: (() -> Void)?
 
     private let storageDirectory: URL
@@ -219,6 +221,19 @@ public final class OfflineStore {
         return id
     }
 
+    /// Suggestions dismissed per workout session, so they stay gone when the session view reloads.
+    public func dismissedSuggestions(clientSessionId: String) -> [DismissedWorkoutSuggestion] {
+        let map: [String: [DismissedWorkoutSuggestion]] = readJSON("dismissed_suggestions.json") ?? [:]
+        return map[clientSessionId] ?? []
+    }
+
+    public func setDismissedSuggestions(_ dismissed: [DismissedWorkoutSuggestion]?, clientSessionId: String) {
+        var map: [String: [DismissedWorkoutSuggestion]] = readJSON("dismissed_suggestions.json") ?? [:]
+        map[clientSessionId] = dismissed
+        writeJSON(map, to: "dismissed_suggestions.json")
+        dismissedSuggestionsRevision += 1
+    }
+
     private func acknowledgedServerVersions() -> [String: Int] {
         readJSON("server_versions.json") ?? [:]
     }
@@ -263,6 +278,7 @@ public final class OfflineStore {
             "session_history.json",
             "sync_queue.json",
             "server_versions.json",
+            "dismissed_suggestions.json",
             "current_user.json",
         ] {
             deleteFile(file)

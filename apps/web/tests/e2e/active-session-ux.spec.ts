@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { resetOfflineStore } from './helpers/offline-store.js';
 import { finishActiveWorkout, toggleCompleteSetRow } from './helpers/session.js';
-import { gotoWorkoutsTab, startWorkoutByName } from './helpers/workouts.js';
+import { navigateToTab } from './helpers/shell.js';
+import { createWorkoutTemplate, gotoWorkoutsTab, startWorkoutByName } from './helpers/workouts.js';
 
 const PUSH = 'Push — Chest, Shoulders & Triceps';
 const ARMS = 'Day 5 — Arm Blaster (Biceps & Triceps)';
@@ -83,5 +84,23 @@ test.describe('Active Session — set types, supersets & exercise actions', () =
     await expect(nextRows).toHaveCount(before + 1);
     await expect(nextRows.first()).toHaveAttribute('data-set-type', 'WARMUP');
     await expect(nextRows.first().getByLabel('Set 1 weight')).toHaveValue('33');
+  });
+
+  test('keeps a dismissed suggestion gone after switching tabs', async ({ page }) => {
+    await createWorkoutTemplate(page, { name: 'E2E Suggestion Workout' });
+    await startWorkoutByName(page, 'E2E Suggestion Workout');
+
+    const card = page.getByTestId('session-rainbow-suggestion');
+    await expect(card).toBeVisible();
+    const firstText = await card.innerText();
+    await card.getByRole('button', { name: /dismiss/i }).click();
+    await expect(card).not.toHaveText(firstText);
+
+    await navigateToTab(page, 'exercises');
+    await navigateToTab(page, 'session');
+    await expect(page.getByTestId('vertical-exercise-stack')).toBeVisible();
+    if (await card.isVisible()) {
+      await expect(card).not.toHaveText(firstText);
+    }
   });
 });
