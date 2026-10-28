@@ -12,6 +12,7 @@ import {
   INITIAL_EXERCISE_CATALOG,
 } from './data';
 import { de } from './locales/de';
+import { EXERCISE_OVERRIDES } from './overrides';
 import { getRegisteredExercise, getRegisteredExerciseText } from './registry';
 import type {
   CatalogTranslation,
@@ -58,8 +59,9 @@ function sourceExercise(exerciseId: string): ExerciseDto | undefined {
 export function getExerciseText(exerciseId: string, locale: SupportedLocale): ExerciseText | null {
   const source = sourceExercise(exerciseId);
   if (!source) return null;
+  const override = locale === SOURCE_LOCALE ? undefined : EXERCISE_OVERRIDES[exerciseId]?.[locale];
   return (
-    getCatalogTranslation(locale)?.exercises[exerciseId] ??
+    override ??
     getRegisteredExerciseText(exerciseId, locale) ?? {
       name: source.name,
       description: source.description,

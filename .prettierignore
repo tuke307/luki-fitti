@@ -15,3 +15,7 @@ apm.yml
 .next
 dist
 coverage
+
+# Generated exercise data (packages/common/scripts/import-catalog.ts)
+packages/common/src/catalog/core-records.ts
+packages/common/src/catalog/extended/records.ts

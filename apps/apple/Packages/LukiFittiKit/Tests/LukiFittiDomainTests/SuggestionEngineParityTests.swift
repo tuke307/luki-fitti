@@ -6,9 +6,9 @@ import XCTest
 /// Mirrors `packages/common/src/utils/progression.util.spec.ts` case by case so the
 /// Swift and TypeScript suggestion engines stay in sync.
 final class SuggestionEngineParityTests: XCTestCase {
-    private let bench = "ex-barbell-bench-press"
-    private let shoulderPress = "ex-seated-dumbbell-shoulder-press"
-    private let pushdown = "ex-cable-tricep-pushdown"
+    private let bench = "ex-barbell-bench-press-medium-grip"
+    private let shoulderPress = "ex-dumbbell-shoulder-press"
+    private let pushdown = "ex-triceps-pushdown-rope-attachment"
     private lazy var catalog = StarterCatalogLoader.load().exercises
 
     private func session(day: Int, exerciseId: String, weight: Double, reps: Int, rpe: Double?) -> WorkoutSessionDto {

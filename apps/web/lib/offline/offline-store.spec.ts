@@ -14,6 +14,8 @@ import {
   getLocalActiveSession,
   getLocalHistorySessions,
   getSyncQueue,
+  loadExtendedExercises,
+  mergeMissingExercises,
   recalculateSessionTotals,
   removeFromSyncQueue,
   removeLocalHistorySession,
@@ -95,12 +97,12 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
 
     const session = createOfflineSessionFromTemplate(template, catalog, 'user-1', WeightUnit.KG);
     const targetClientExId = session.exercises[0]!.clientExerciseId;
-    const backupExercise = catalog.find((c) => c.id === 'ex-machine-chest-press')!;
+    const backupExercise = catalog.find((c) => c.id === 'ex-leverage-chest-press')!;
 
     const afterSub = substituteExerciseInSession(session, targetClientExId, backupExercise);
 
     assert.equal(afterSub.exercises[0]!.origin, SessionExerciseOrigin.SUBSTITUTED);
-    assert.equal(afterSub.exercises[0]!.exerciseId, 'ex-machine-chest-press');
+    assert.equal(afterSub.exercises[0]!.exerciseId, 'ex-leverage-chest-press');
     assert.equal(afterSub.exercises[0]!.replacedExerciseId, originalFirstExerciseId);
     // Original template remains completely unchanged
     assert.equal(template.exercises[0]!.exerciseId, originalFirstExerciseId);
@@ -148,7 +150,7 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
         {
           id: 'sre-1',
           routineId: 'sr-test',
-          exerciseId: 'ex-couch-hip-flexor-stretch',
+          exerciseId: 'ex-kneeling-hip-flexor',
           orderIndex: 0,
           sets: 2,
           durationSeconds: 60,
@@ -168,7 +170,7 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
   it('tracks single-source-of-truth exercise history across different workouts and suggests progressive overload deltas', async () => {
     const catalog = await getCachedCatalog();
     const { folders } = buildStarterWorkouts({ userId: 'user-1' });
-    const templateA = folders[0]!.templates[0]!; // Contains Barbell Bench Press (ex-barbell-bench-press)
+    const templateA = folders[0]!.templates[0]!; // Contains Barbell Bench Press (ex-barbell-bench-press-medium-grip)
 
     // Simulate a completed historical session in a completely different workout ("Full Body Friday")
     const pastSession: WorkoutSessionDto = {
@@ -200,7 +202,7 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
           id: 'sex-hist-1',
           clientExerciseId: 'sex-hist-1',
           sessionId: 'hist-1',
-          exerciseId: 'ex-barbell-bench-press',
+          exerciseId: 'ex-barbell-bench-press-medium-grip',
           replacedExerciseId: null,
           replacedExerciseName: null,
           exerciseNameSnapshot: 'Barbell Bench Press',
@@ -285,7 +287,7 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
     );
 
     const benchInNewSession = newSession.exercises.find(
-      (e) => e.exerciseId === 'ex-barbell-bench-press',
+      (e) => e.exerciseId === 'ex-barbell-bench-press-medium-grip',
     )!;
     const workingSets = benchInNewSession.sets.filter((s) => s.setType === SetType.WORKING);
 
@@ -295,10 +297,10 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
 
     // Since all 3 sets hit the top of the 6-10 rep band at manageable RPE, engine recommends +2.5kg
     const insight = computeExerciseProgression({
-      exerciseId: 'ex-barbell-bench-press',
+      exerciseId: 'ex-barbell-bench-press-medium-grip',
       exerciseName: 'Barbell Bench Press',
       historySessions: [pastSession],
-      catalogExercise: catalog.find((c) => c.id === 'ex-barbell-bench-press'),
+      catalogExercise: catalog.find((c) => c.id === 'ex-barbell-bench-press-medium-grip'),
       plannedSets: 3,
       targetRepsMin: 6,
       targetRepsMax: 10,
@@ -362,7 +364,8 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
   });
 
   it('preserves 0s rest for superset exercises and populates exercise media and expanded stretching routines', async () => {
-    const catalog = await getCachedCatalog();
+    // The app merges the imported exercises once their chunk has loaded.
+    const catalog = mergeMissingExercises(await getCachedCatalog(), await loadExtendedExercises());
     const routines = await getCachedStretchingRoutines();
     assert.equal(routines.length >= 6, true);
     // Every exercise links a video guide; exercises without a faithful photo fall back to the
@@ -464,7 +467,7 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
     // Search by German alias / muscle / equipment
     const benchMatches = filterExercisesByQuery(catalog, 'bankdrücken');
     assert.equal(
-      benchMatches.some((e) => e.id === 'ex-barbell-bench-press'),
+      benchMatches.some((e) => e.id === 'ex-barbell-bench-press-medium-grip'),
       true,
     );
 
@@ -587,6 +590,39 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
       pplPushTemplate.exercises.some((e) => e.exerciseId === suggestion!.suggestedExercise.id),
       false,
     );
+  });
+
+  it('moves cached data off exercises that were merged into another one', async () => {
+    const catalog = await getCachedCatalog();
+    const bench = catalog.find((e) => e.id === 'ex-barbell-bench-press-medium-grip')!;
+    await setCachedCatalog([
+      ...catalog,
+      { ...bench, id: 'ex-barbell-bench-press', slug: 'barbell-bench-press' },
+      { ...bench, id: 'ex-benchpress-dumbbells', slug: 'benchpress-dumbbells' },
+    ]);
+    const cleaned = await getCachedCatalog();
+    assert.equal(cleaned.length, catalog.length);
+    assert.ok(!cleaned.some((e) => e.id === 'ex-benchpress-dumbbells'));
+
+    const template = buildStarterWorkouts({ userId: 'user-1' }).folders[0]!.templates[0]!;
+    const session = createOfflineSessionFromTemplate(template, catalog, 'user-1', WeightUnit.KG);
+    const legacy: WorkoutSessionDto = {
+      ...session,
+      exercises: [
+        {
+          ...session.exercises[0]!,
+          exerciseId: 'ex-barbell-bench-press',
+          replacedExerciseId: 'ex-benchpress-dumbbells',
+          alternativeExerciseIds: ['ex-dumbbell-incline-press', 'ex-incline-dumbbell-press'],
+        },
+      ],
+    };
+    await saveLocalActiveSession(legacy);
+    const restored = (await getLocalActiveSession())!.exercises[0]!;
+    assert.equal(restored.exerciseId, 'ex-barbell-bench-press-medium-grip');
+    assert.equal(restored.replacedExerciseId, 'ex-dumbbell-bench-press');
+    assert.deepEqual(restored.alternativeExerciseIds, ['ex-incline-dumbbell-press']);
+    await saveLocalActiveSession(null);
   });
 
   it('keeps a stable device id and per-session acknowledged server versions for sync', async () => {

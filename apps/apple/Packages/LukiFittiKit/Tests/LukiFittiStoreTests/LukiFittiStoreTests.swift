@@ -7,6 +7,43 @@ import XCTest
 
 final class LukiFittiStoreTests: XCTestCase {
     @MainActor
+    func testOfflineStoreMovesSavedDataOffMergedExercises() throws {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LukiFittiStoreTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let fresh = OfflineStore(storageDirectory: tempDir)
+        var legacyBench = fresh.catalog.first { $0.id == "ex-barbell-bench-press-medium-grip" }!
+        legacyBench.id = "ex-barbell-bench-press"
+        legacyBench.slug = "barbell-bench-press"
+        let savedCatalog = Array(fresh.catalog.dropLast(5)) + [legacyBench]
+        try JSONEncoder().encode(savedCatalog).write(to: tempDir.appendingPathComponent("exercise_catalog.json"))
+
+        var session = SessionCalculator.createOfflineSessionFromTemplate(
+            template: fresh.folders[0].templates[0],
+            catalog: fresh.catalog,
+            userId: "user-1",
+            weightUnit: .KG,
+            sourceDevice: .IPHONE
+        )
+        session.exercises[0].exerciseId = "ex-barbell-bench-press"
+        session.exercises[0].alternativeExerciseIds = ["ex-dumbbell-incline-press", "ex-incline-dumbbell-press"]
+        try JSONEncoder().encode(session).write(to: tempDir.appendingPathComponent("active_workout_session.json"))
+
+        let store = OfflineStore(storageDirectory: tempDir)
+        XCTAssertFalse(store.catalog.contains { $0.id == "ex-barbell-bench-press" })
+        XCTAssertEqual(Set(store.catalog.map(\.id)), Set(fresh.catalog.map(\.id)))
+        XCTAssertEqual(store.activeSession?.exercises[0].exerciseId, "ex-barbell-bench-press-medium-grip")
+        XCTAssertEqual(store.activeSession?.exercises[0].alternativeExerciseIds, ["ex-incline-dumbbell-press"])
+    }
+
+    func testResolvesMergedExerciseIds() {
+        XCTAssertEqual(resolveExerciseId("ex-benchpress-dumbbells"), "ex-dumbbell-bench-press")
+        XCTAssertEqual(resolveExerciseId("ex-barbell-bench-press"), "ex-barbell-bench-press-medium-grip")
+        XCTAssertEqual(resolveExerciseId("ex-dumbbell-bench-press"), "ex-dumbbell-bench-press")
+    }
+
+    @MainActor
     func testOfflineStorePersistsActiveSessionAndSyncQueueAndMergesWatchMutations() throws {
         let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("LukiFittiStoreTests-\(UUID().uuidString)", isDirectory: true)

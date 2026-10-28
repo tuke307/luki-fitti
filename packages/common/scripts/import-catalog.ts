@@ -1,18 +1,24 @@
 /**
- * Builds the extended system exercise catalog from two open datasets:
+ * Builds the system exercise catalog from two open datasets:
  *  - free-exercise-db (yuhonas, public domain / Unlicense): ~870 exercises with start/finish photos
  *  - wger.de (CC-BY-SA 4.0): German names/descriptions and extra machine variants
  *
- * Output: src/catalog/extended/records.ts — curated exercises in data.ts always win, duplicates
- * are skipped. Re-run with `yarn workspace @luki-fitti/common catalog:import`.
+ * Output:
+ *  - src/catalog/core-records.ts — the dataset entries named by `src/catalog/overrides.ts` (their
+ *    hand-written text is applied at runtime)
+ *  - src/catalog/extended/records.ts — everything else, loaded on demand
+ * Duplicates are skipped, and so are ids listed in `src/catalog/retired.ts` (a retired dataset
+ * duplicate lends its German text to the exercise that replaced it).
+ * Re-run with `yarn workspace @luki-fitti/common catalog:import`.
  */
 import { writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { INITIAL_EXERCISE_CATALOG } from '../src/catalog/data';
+import { EXERCISE_OVERRIDES } from '../src/catalog/overrides';
+import { RETIRED_EXERCISE_IDS } from '../src/catalog/retired';
+import type { ExerciseRecord } from '../src/catalog/types';
 import { EquipmentType, ExerciseCategory, ExerciseType, MuscleGroup } from '../src/enums';
 import { exerciseTokens } from '../src/utils/exercise-match.util';
-import type { ExtendedExerciseRecord } from '../src/catalog/extended/types';
 
 const FEDB_URL =
   'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
@@ -297,17 +303,19 @@ async function main() {
     fetch(WGER_URL).then((r) => r.json()),
   ])) as [FedbExercise[], { results: WgerExercise[] }];
 
-  const curatedSlugs = new Set(INITIAL_EXERCISE_CATALOG.map((e) => e.slug));
-  const curatedTokens = new Set(INITIAL_EXERCISE_CATALOG.map((e) => tokenKey(e.name)));
-  const curatedPhotos = new Set(
-    INITIAL_EXERCISE_CATALOG.flatMap((e) => e.media ?? [])
-      .map((m) => /exercises\/([^/]+)\/\d\.jpg$/.exec(m.url)?.[1])
-      .filter(Boolean),
+  const overrides = Object.entries(EXERCISE_OVERRIDES);
+  const fedbTargets = new Map(
+    overrides.flatMap(([id, o]) => ('fedb' in o.source ? [[o.source.fedb, id] as const] : [])),
   );
+  const wgerTargets = new Map(
+    overrides.flatMap(([id, o]) => ('wger' in o.source ? [[o.source.wger, id] as const] : [])),
+  );
+  const overrideNames = overrides.map(([, o]) => o.name);
+  const isRetired = (slug: string) => `ex-${slug}` in RETIRED_EXERCISE_IDS;
 
   // wger entries with both an English and a German name, indexed for matching.
   const wger = wgerPage.results
-    .filter((w) => w.category.name !== 'Cardio')
+    .filter((w) => w.category.name !== 'Cardio' || wgerTargets.has(w.id))
     .map((w) => {
       const en = w.translations.find((t) => t.language === WGER_EN);
       const de = w.translations.find((t) => t.language === WGER_DE);
@@ -318,17 +326,26 @@ async function main() {
   const wgerByTokens = new Map(wger.map((x) => [tokenKey(x.en.name), x]));
   const usedWger = new Set<number>();
 
-  const out: ExtendedExerciseRecord[] = [];
-  const seenSlugs = new Set(curatedSlugs);
-  const seenTokens = new Set(curatedTokens);
+  const out: ExerciseRecord[] = [];
+  /** Retired duplicates: their German text may fill gaps of the exercise that replaced them. */
+  const retired: ExerciseRecord[] = [];
+  const seenSlugs = new Set([
+    ...overrides.map(([id]) => id.replace(/^ex-/, '')),
+    ...Object.keys(RETIRED_EXERCISE_IDS).map((id) => id.replace(/^ex-/, '')),
+  ]);
+  const seenTokens = new Set(overrideNames.map(tokenKey));
+  const accept = (record: ExerciseRecord) => (isRetired(record.slug) ? retired : out).push(record);
 
   for (const e of fedb) {
-    if (e.category === 'cardio' || e.category === 'strongman') continue;
-    if (curatedPhotos.has(e.id)) continue;
+    const targetId = fedbTargets.get(e.id);
+    if (!targetId && (e.category === 'cardio' || e.category === 'strongman')) continue;
     const slug = slugify(e.id.replace(/_/g, '-'));
+    if (targetId && `ex-${slug}` !== targetId) {
+      throw new Error(`override ${targetId} points at free-exercise-db ${e.id} (ex-${slug})`);
+    }
     const tokens = tokenKey(e.name);
-    if (seenSlugs.has(slug) || seenTokens.has(tokens)) continue;
-    const primary = FEDB_MUSCLE[e.primaryMuscles[0] ?? ''];
+    if (!targetId && !isRetired(slug) && (seenSlugs.has(slug) || seenTokens.has(tokens))) continue;
+    const primary = FEDB_MUSCLE[e.primaryMuscles[0] ?? ''] ?? (targetId && MuscleGroup.FULL_BODY);
     if (!primary) continue;
 
     const equipment = fedbEquipment(e);
@@ -337,12 +354,15 @@ async function main() {
       primary,
       e.secondaryMuscles.map((m) => FEDB_MUSCLE[m]),
     );
-    const match = wgerByName.get(e.name.trim().toLowerCase()) ?? wgerByTokens.get(tokens);
+    // Override targets carry their own German text; leave their wger twin to the wger pass.
+    const match = targetId
+      ? undefined
+      : (wgerByName.get(e.name.trim().toLowerCase()) ?? wgerByTokens.get(tokens));
     if (match) usedWger.add(match.w.id);
     const text = describe(equipment, primary, secondary);
     const deSteps = match ? htmlToSteps(match.de.description) : [];
 
-    out.push({
+    accept({
       id: `ex-${slug}`,
       slug,
       name: e.name.trim(),
@@ -372,29 +392,39 @@ async function main() {
       },
     });
     seenSlugs.add(slug);
-    seenTokens.add(tokens);
+    // Override targets are already represented by their hand-written name.
+    if (!targetId) seenTokens.add(tokens);
   }
 
   // wger-only exercises (mostly machine variants), with German text and wger attribution.
   const knownTokens = [
-    ...INITIAL_EXERCISE_CATALOG.map((e) => e.name),
-    ...out.map((e) => e.name),
+    ...overrideNames,
+    ...out.filter((e) => !(e.id in EXERCISE_OVERRIDES)).map((e) => e.name),
+    ...retired.map((e) => e.name),
   ].map((n) => exerciseTokens(n));
   for (const { w, en, de } of wger) {
-    if (usedWger.has(w.id)) continue;
+    const targetId = wgerTargets.get(w.id);
+    if (usedWger.has(w.id) && !targetId) continue;
     const enName = cleanName(en.name);
     const deName = cleanName(de.name);
-    // Skip side-specific duplicates, untranslated entries and near-duplicates of what we have.
-    if (SIDE_VARIANT.test(enName) || NON_ENGLISH_CHARS.test(enName) || enName === deName) continue;
-    if (htmlToSteps(en.description).length === 0) continue;
-    if (isNearDuplicate(enName, knownTokens)) continue;
     const slug = slugify(enName);
-    const tokens = tokenKey(enName);
-    if (!slug || seenSlugs.has(slug) || seenTokens.has(tokens)) continue;
-    knownTokens.push(exerciseTokens(enName));
+    if (targetId && `ex-${slug}` !== targetId) {
+      throw new Error(`override ${targetId} points at wger ${w.id} (ex-${slug})`);
+    }
+    if (!targetId) {
+      // Skip side-specific duplicates, untranslated entries and near-duplicates of what we have.
+      if (SIDE_VARIANT.test(enName) || NON_ENGLISH_CHARS.test(enName) || enName === deName)
+        continue;
+      if (htmlToSteps(en.description).length === 0) continue;
+      if (!isRetired(slug) && isNearDuplicate(enName, knownTokens)) continue;
+      const tokens = tokenKey(enName);
+      if (!slug || (!isRetired(slug) && (seenSlugs.has(slug) || seenTokens.has(tokens)))) continue;
+      knownTokens.push(exerciseTokens(enName));
+    }
     const primary =
       WGER_MUSCLE[w.muscles[0]?.name_en || w.muscles[0]?.name || ''] ??
-      WGER_CATEGORY_MUSCLE[w.category.name];
+      WGER_CATEGORY_MUSCLE[w.category.name] ??
+      (targetId && MuscleGroup.FULL_BODY);
     if (!primary) continue;
     const equipment = wgerEquipment(w, enName, deName);
     const stretch = STRETCH_NAME.test(`${enName} ${deName}`);
@@ -407,7 +437,7 @@ async function main() {
     const deSteps = htmlToSteps(de.description);
     const images = [...w.images].sort((a, b) => Number(b.is_main) - Number(a.is_main));
 
-    out.push({
+    accept({
       id: `ex-${slug}`,
       slug,
       name: enName,
@@ -435,7 +465,7 @@ async function main() {
       },
     });
     seenSlugs.add(slug);
-    seenTokens.add(tokens);
+    seenTokens.add(tokenKey(enName));
   }
 
   for (const e of out) {
@@ -446,30 +476,43 @@ async function main() {
     }
   }
 
+  const byId = new Map(out.map((e) => [e.id, e]));
+  for (const dup of retired) {
+    const target = byId.get(RETIRED_EXERCISE_IDS[dup.id]!);
+    if (!target || target.id in EXERCISE_OVERRIDES) continue;
+    if (!target.de.name && dup.de.name) target.de.name = dup.de.name;
+    target.de.instructions ??= dup.de.instructions;
+    target.tags = Array.from(new Set([...target.tags, ...dup.tags]));
+  }
+
+  const missing = overrides.map(([id]) => id).filter((id) => !byId.has(id));
+  if (missing.length > 0) throw new Error(`override targets not found: ${missing.join(', ')}`);
+
   out.sort((a, b) => a.slug.localeCompare(b.slug));
-  const target = resolve(
-    dirname(fileURLToPath(import.meta.url)),
-    '../src/catalog/extended/records.ts',
-  );
-  writeFileSync(
-    target,
-    [
-      '// Generated by scripts/import-catalog.ts — do not edit by hand.',
-      '// Sources: free-exercise-db (Unlicense) and wger.de (CC-BY-SA 4.0).',
-      "import type { ExtendedExerciseRecord } from './types';",
-      '',
-      `export const EXTENDED_EXERCISE_RECORDS: ExtendedExerciseRecord[] = ${JSON.stringify(out)};`,
-      '',
-    ].join('\n'),
-  );
+  const core = out.filter((e) => e.id in EXERCISE_OVERRIDES);
+  const extended = out.filter((e) => !(e.id in EXERCISE_OVERRIDES));
+  const write = (path: string, name: string, records: ExerciseRecord[]) =>
+    writeFileSync(
+      resolve(dirname(fileURLToPath(import.meta.url)), path),
+      [
+        '// Generated by scripts/import-catalog.ts — do not edit by hand.',
+        '// Sources: free-exercise-db (Unlicense) and wger.de (CC-BY-SA 4.0).',
+        `import type { ExerciseRecord } from '${path.includes('extended') ? '../types' : './types'}';`,
+        '',
+        `export const ${name}: ExerciseRecord[] = ${JSON.stringify(records)};`,
+        '',
+      ].join('\n'),
+    );
+  write('../src/catalog/core-records.ts', 'CORE_EXERCISE_RECORDS', core);
+  write('../src/catalog/extended/records.ts', 'EXTENDED_EXERCISE_RECORDS', extended);
   const bySource = out.reduce<Record<string, number>>((acc, e) => {
     acc[e.source] = (acc[e.source] ?? 0) + 1;
     return acc;
   }, {});
   console.log(
-    `wrote ${out.length} exercises`,
+    `wrote ${core.length} core + ${extended.length} extended exercises`,
     bySource,
-    `German names: ${out.filter((e) => e.de.name).length}`,
+    `German names (extended): ${extended.filter((e) => e.de.name).length}`,
   );
 }
 
