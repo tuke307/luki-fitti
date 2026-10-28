@@ -108,6 +108,8 @@ export function ActiveSessionView({
     resumeSession,
     finishSession,
     abandonSession,
+    dismissedSuggestions,
+    dismissSuggestion,
   } = useGym();
   const { t, format, muscleLabel, equipmentLabel } = useLocale();
 
@@ -121,7 +123,6 @@ export function ActiveSessionView({
   const [sessionNotes, setSessionNotes] = useState('');
   const [completedSummary, setCompletedSummary] = useState<WorkoutSessionDto | null>(null);
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
-  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
 
   const suggestionsEnabled = user?.preferences?.exerciseSuggestionsEnabled ?? true;
 
@@ -256,7 +257,7 @@ export function ActiveSessionView({
   const exerciseBlocks = groupExercisesIntoBlocks(activeSession.exercises);
 
   const sessionSuggestion =
-    suggestionsEnabled && !suggestionDismissed && activeSession.exercises.length > 0
+    suggestionsEnabled && activeSession.exercises.length > 0
       ? computeWorkoutExerciseSuggestion({
           workoutName: activeSession.workoutNameSnapshot,
           exercises: activeSession.exercises.map((ex) => ({
@@ -271,6 +272,7 @@ export function ActiveSessionView({
           catalog,
           historySessions,
           weightUnit: activeSession.weightUnit,
+          dismissed: dismissedSuggestions,
         })
       : null;
 
@@ -831,9 +833,9 @@ export function ActiveSessionView({
               weightUnit={activeSession.weightUnit}
               testId="session-rainbow-suggestion"
               onAdd={async (sug) => {
+                await dismissSuggestion(sug);
                 await addExerciseToSession(sug.suggestedExercise.id);
                 setSelectedExerciseIdx(activeSession.exercises.length);
-                setSuggestionDismissed(true);
               }}
               onSwap={
                 sessionSuggestion.stallingExerciseId
@@ -842,16 +844,16 @@ export function ActiveSessionView({
                         (e) => e.exerciseId === sug.stallingExerciseId,
                       );
                       if (targetEx) {
+                        await dismissSuggestion(sug);
                         await substituteExercise(
                           targetEx.clientExerciseId,
                           sug.suggestedExercise.id,
                         );
-                        setSuggestionDismissed(true);
                       }
                     }
                   : undefined
               }
-              onDismiss={() => setSuggestionDismissed(true)}
+              onDismiss={() => void dismissSuggestion(sessionSuggestion)}
             />
           )}
 

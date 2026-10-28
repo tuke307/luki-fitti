@@ -951,7 +951,8 @@ public struct ActiveSessionView: View {
                },
                catalog: viewModel.store.catalog,
                historySessions: viewModel.store.historySessions,
-               weightUnit: session.weightUnit
+               weightUnit: session.weightUnit,
+               dismissed: dismissedSuggestions(session)
            ) {
             let stallingExercise = session.exercises.first {
                 $0.exerciseId != nil && $0.exerciseId == suggestion.stallingExerciseId
@@ -960,6 +961,7 @@ public struct ActiveSessionView: View {
                 suggestion: suggestion,
                 locale: locale,
                 onAdd: {
+                    dismiss(suggestion, in: session)
                     viewModel.addUnplannedExerciseToSession(suggestion.suggestedExercise)
                     if let count = viewModel.store.activeSession?.exercises.count, count > 0 {
                         selectedExerciseIndex = count - 1
@@ -967,6 +969,7 @@ public struct ActiveSessionView: View {
                 },
                 onReplace: stallingExercise.map { target in
                     {
+                        dismiss(suggestion, in: session)
                         viewModel.substituteExerciseInSession(
                             clientExerciseId: target.clientExerciseId,
                             with: suggestion.suggestedExercise
@@ -975,10 +978,21 @@ public struct ActiveSessionView: View {
                             selectedExerciseIndex = idx
                         }
                     }
-                }
+                },
+                onDismiss: { dismiss(suggestion, in: session) }
             )
             .accessibilityIdentifier("ios.session.rainbowSuggestion")
         }
+    }
+
+    private func dismissedSuggestions(_ session: WorkoutSessionDto) -> [DismissedWorkoutSuggestion] {
+        _ = viewModel.store.dismissedSuggestionsRevision
+        return viewModel.store.dismissedSuggestions(clientSessionId: session.clientSessionId)
+    }
+
+    private func dismiss(_ suggestion: WorkoutExerciseSuggestion, in session: WorkoutSessionDto) {
+        let next = dismissedSuggestions(session) + [ProgressionEngine.toDismissedSuggestion(suggestion)]
+        viewModel.store.setDismissedSuggestions(next, clientSessionId: session.clientSessionId)
     }
 
     private var locale: SupportedLocale {

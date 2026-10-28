@@ -611,6 +611,7 @@ public final class LukiAppViewModel {
 
         let finalized = SessionCalculator.recalculateSessionTotals(session)
         applyFinishedSessionToTemplate(finalized)
+        store.setDismissedSuggestions(nil, clientSessionId: finalized.clientSessionId)
         completedSummarySession = finalized
         store.saveActiveSession(nil)
         store.saveHistorySession(finalized)
@@ -656,6 +657,7 @@ public final class LukiAppViewModel {
     public func abandonActiveSession() {
         guard let session = store.activeSession else { return }
         store.saveActiveSession(nil)
+        store.setDismissedSuggestions(nil, clientSessionId: session.clientSessionId)
         store.removeFromSyncQueue(clientSessionId: session.clientSessionId)
         watchSyncCoordinator.broadcastActiveSessionSnapshot(nil)
         selectedTab = .workouts
