@@ -118,7 +118,7 @@ export const en = {
   },
   picker: {
     selectExercise: 'Select Exercise',
-    searchPlaceholder: 'Search 130+ exercises by name, muscle, equipment, or German alias...',
+    searchPlaceholder: 'Search 1,200+ exercises by name, muscle, equipment, or German alias...',
     allMuscles: 'All Muscles',
     noResults: 'No matching exercises found',
     clearSelection: 'None configured',

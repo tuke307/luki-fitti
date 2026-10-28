@@ -8,6 +8,8 @@ async function openAddExerciseSheet(page: Page) {
   await page.getByRole('button', { name: /^Add Exercise$/ }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
+  // Measure positions only after the slide-in animation has settled.
+  await dialog.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   return dialog;
 }
 
