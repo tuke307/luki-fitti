@@ -84,38 +84,17 @@ public enum SessionCalculator {
         let exercises: [SessionExerciseDto] = template.exercises.enumerated().map { idx, te in
             let exInfo = te.exercise ?? catalogMap[te.exerciseId]
             let clientExerciseId = "sex-\(UUID().uuidString.lowercased())"
-            var sets: [SessionSetDto] = []
-            var setNum = 1
-
-            for _ in 0..<te.warmupSets {
-                let warmupWeight = te.targetWeight.map { (($0 * 0.6) * 2.0).rounded() / 2.0 } ?? 20.0
-                sets.append(
-                    SessionSetDto(
-                        sessionExerciseId: clientExerciseId,
-                        setNumber: setNum,
-                        setType: .WARMUP,
-                        weight: warmupWeight,
-                        weightUnit: te.weightUnit,
-                        reps: te.targetRepsMin ?? 10
-                    )
+            let sets: [SessionSetDto] = TemplateSets.resolve(te).enumerated().map { sIdx, planned in
+                SessionSetDto(
+                    sessionExerciseId: clientExerciseId,
+                    setNumber: sIdx + 1,
+                    setType: planned.setType,
+                    weight: planned.weight,
+                    weightUnit: te.weightUnit,
+                    reps: planned.reps,
+                    durationSeconds: planned.durationSeconds ?? te.targetDurationSeconds,
+                    distanceMeters: planned.setType == .WARMUP ? nil : te.targetDistanceMeters
                 )
-                setNum += 1
-            }
-
-            for _ in 0..<te.plannedSets {
-                sets.append(
-                    SessionSetDto(
-                        sessionExerciseId: clientExerciseId,
-                        setNumber: setNum,
-                        setType: .WORKING,
-                        weight: te.targetWeight,
-                        weightUnit: te.weightUnit,
-                        reps: te.targetRepsMin ?? 10,
-                        durationSeconds: te.targetDurationSeconds,
-                        distanceMeters: te.targetDistanceMeters
-                    )
-                )
-                setNum += 1
             }
 
             let baseEx = SessionExerciseDto(
@@ -143,6 +122,8 @@ public enum SessionCalculator {
                 sets: sets
             )
 
+            // A per-set plan already holds the last workout's values.
+            if let planned = te.sets, !planned.isEmpty { return baseEx }
             return ProgressionEngine.applyExerciseHistoryToSessionExercise(
                 baseEx,
                 historySessions: historySessions,

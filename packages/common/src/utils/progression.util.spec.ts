@@ -17,6 +17,8 @@ import {
   computeExerciseProgression,
   computeWorkoutExerciseSuggestion,
   extractGlobalExerciseHistory,
+  toDismissedSuggestion,
+  type DismissedWorkoutSuggestion,
   type WorkoutSuggestionInputExercise,
 } from './progression.util';
 
@@ -128,6 +130,7 @@ const balancedPush: WorkoutSuggestionInputExercise[] = [
 function suggest(
   exercises: WorkoutSuggestionInputExercise[],
   historySessions: WorkoutSessionDto[] = [],
+  dismissed: DismissedWorkoutSuggestion[] = [],
 ) {
   return computeWorkoutExerciseSuggestion({
     workoutName: 'Push Day',
@@ -135,6 +138,7 @@ function suggest(
     catalog,
     historySessions,
     weightUnit: WeightUnit.KG,
+    dismissed,
   });
 }
 
@@ -231,6 +235,31 @@ describe('computeWorkoutExerciseSuggestion — honest stall detection', () => {
 
   it('returns nothing for a balanced workout without stalls', () => {
     assert.equal(suggest(balancedPush), null);
+  });
+});
+
+describe('computeWorkoutExerciseSuggestion — dismissed suggestions', () => {
+  it('moves on to the next reason instead of repeating a dismissed suggestion', () => {
+    const history = [
+      ...[0, 7, 14].map((d) => buildSession(d, SHOULDER_PRESS, threeSets(28, 6, 9.5))),
+      buildSession(0, PUSHDOWN, threeSets(30, 12, 8)),
+      buildSession(7, PUSHDOWN, threeSets(28, 12, 8)),
+      buildSession(14, PUSHDOWN, threeSets(26, 12, 8)),
+    ];
+    const first = suggest(balancedPush, history)!;
+    assert.equal(first.reasonType, 'REGRESSION');
+    assert.equal(first.stallingExerciseId, PUSHDOWN);
+
+    const second = suggest(balancedPush, history, [toDismissedSuggestion(first)])!;
+    assert.equal(second.reasonType, 'GRINDING');
+    assert.equal(second.stallingExerciseId, SHOULDER_PRESS);
+    assert.notEqual(second.suggestedExercise.id, first.suggestedExercise.id);
+  });
+
+  it('returns nothing once every honest reason was dismissed', () => {
+    const history = [0, 7, 14].map((d) => buildSession(d, SHOULDER_PRESS, threeSets(28, 6, 9.5)));
+    const first = suggest(balancedPush, history)!;
+    assert.equal(suggest(balancedPush, history, [toDismissedSuggestion(first)]), null);
   });
 });
 

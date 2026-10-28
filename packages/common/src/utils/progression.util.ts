@@ -883,6 +883,27 @@ export function classifyExerciseStall(
 
 const STALL_BASE_SEVERITY = { REGRESSION: 100, GRINDING: 50, PLATEAU: 10 } as const;
 
+export interface DismissedWorkoutSuggestion {
+  reasonKey: string;
+  exerciseId: string;
+}
+
+/** Identifies *why* a suggestion was made (stalling exercise or target muscle), independent of the exercise. */
+export function workoutSuggestionReasonKey(s: {
+  reasonType: ExerciseSuggestionReasonType;
+  stallingExerciseId: string | null;
+  targetMuscle: MuscleGroup;
+}): string {
+  return s.stallingExerciseId
+    ? `${s.reasonType}:${s.stallingExerciseId}`
+    : `${s.reasonType}:${s.targetMuscle}`;
+}
+
+/** What to remember when the user dismisses a suggestion. */
+export function toDismissedSuggestion(s: WorkoutExerciseSuggestion): DismissedWorkoutSuggestion {
+  return { reasonKey: workoutSuggestionReasonKey(s), exerciseId: s.suggestedExercise.id };
+}
+
 /**
  * Proposes at most ONE smart exercise suggestion for a workout (template preview,
  * template builder, or live active session), and only when there is a concrete reason:
@@ -896,6 +917,8 @@ export function computeWorkoutExerciseSuggestion(params: {
   catalog: ExerciseDto[];
   historySessions: WorkoutSessionDto[];
   weightUnit?: WeightUnit;
+  /** Suggestions the user dismissed during this workout: their reason and exercise are skipped. */
+  dismissed?: DismissedWorkoutSuggestion[];
 }): WorkoutExerciseSuggestion | null {
   const {
     workoutName,
@@ -904,6 +927,7 @@ export function computeWorkoutExerciseSuggestion(params: {
     catalog,
     historySessions,
     weightUnit = WeightUnit.KG,
+    dismissed = [],
   } = params;
 
   const strengthCatalog = catalog.filter((c) => c.exerciseType === ExerciseType.STRENGTH);
@@ -952,16 +976,17 @@ export function computeWorkoutExerciseSuggestion(params: {
   }
   const setsTotal = resolvedExercises.reduce((sum, r) => sum + (r.input.plannedSets ?? 3), 0);
 
-  // Find the exercise in the workout that stalls hardest (regression > grinding > plateau)
-  let worstStalling: {
-    exerciseId: string | null;
-    exerciseName: string;
-    muscle: MuscleGroup;
-    equipment: EquipmentType | null;
-    reasonType: 'PLATEAU' | 'GRINDING' | 'REGRESSION';
-    trend: ExerciseTrend;
+  // Every honest reason, strongest first: stalls by severity, then missing / under-trained muscles.
+  interface ReasonCandidate {
+    reasonType: ExerciseSuggestionReasonType;
+    targetMuscle: MuscleGroup;
+    stallingExerciseId: string | null;
+    stallingExerciseName: string | null;
+    avoidEquipment: EquipmentType | null;
+    trend: ExerciseTrend | null;
     severityScore: number;
-  } | null = null;
+  }
+  const reasons: ReasonCandidate[] = [];
 
   for (const item of resolvedExercises) {
     const exId = item.input.exerciseId ?? item.catalogEx?.id ?? null;
@@ -982,94 +1007,81 @@ export function computeWorkoutExerciseSuggestion(params: {
         : stall === 'GRINDING'
           ? trend.hardSessionsRecent * 5
           : Math.min(20, trend.sessionsSinceBest);
-    const severityScore = STALL_BASE_SEVERITY[stall] + detail + splitBonus;
+    reasons.push({
+      reasonType: stall,
+      targetMuscle: item.muscle,
+      stallingExerciseId: exId,
+      stallingExerciseName: exName ?? item.catalogEx?.name ?? 'Exercise',
+      avoidEquipment: item.catalogEx?.equipment ?? null,
+      trend,
+      severityScore: STALL_BASE_SEVERITY[stall] + detail + splitBonus,
+    });
+  }
+  reasons.sort((a, b) => b.severityScore - a.severityScore);
 
-    if (!worstStalling || severityScore > worstStalling.severityScore) {
-      worstStalling = {
-        exerciseId: exId,
-        exerciseName: exName ?? item.catalogEx?.name ?? 'Exercise',
-        muscle: item.muscle,
-        equipment: item.catalogEx?.equipment ?? null,
-        reasonType: stall,
-        trend,
-        severityScore,
-      };
-    }
+  // No stall needed: only suggest when a key split muscle is missing or clearly under-trained
+  const maxSets = Math.max(0, ...splitMuscles.map((m) => setsByMuscle.get(m) ?? 0));
+  const muscleReasons = splitMuscles
+    .map((m, idx) => ({ muscle: m, count: setsByMuscle.get(m) ?? 0, idx }))
+    .filter(({ count }) => count === 0 || count < maxSets * SUGGESTION_THRESHOLDS.lowVolumeRatio)
+    .sort((a, b) => a.count - b.count || a.idx - b.idx);
+  for (const { muscle, count } of muscleReasons) {
+    reasons.push({
+      reasonType: count === 0 ? 'MISSING_MUSCLE' : 'LOW_VOLUME',
+      targetMuscle: muscle,
+      stallingExerciseId: null,
+      stallingExerciseName: null,
+      avoidEquipment:
+        resolvedExercises.find((r) => r.muscle === muscle)?.catalogEx?.equipment ?? null,
+      trend: null,
+      severityScore: 0,
+    });
   }
 
-  let targetMuscle: MuscleGroup;
-  let reasonType: ExerciseSuggestionReasonType;
-  let stallingExerciseId: string | null = null;
-  let stallingExerciseName: string | null = null;
-  let avoidEquipment: EquipmentType | null = null;
-  let trend: ExerciseTrend | null = null;
+  const dismissedReasons = new Set(dismissed.map((d) => d.reasonKey));
+  const dismissedExercises = new Set(dismissed.map((d) => d.exerciseId));
 
-  if (worstStalling) {
-    targetMuscle = worstStalling.muscle;
-    reasonType = worstStalling.reasonType;
-    stallingExerciseId = worstStalling.exerciseId;
-    stallingExerciseName = worstStalling.exerciseName;
-    avoidEquipment = worstStalling.equipment;
-    trend = worstStalling.trend;
-  } else {
-    // No stall: only suggest when a key split muscle is missing or clearly under-trained
-    let minSets = Number.POSITIVE_INFINITY;
-    let maxSets = 0;
-    let chosenMuscle = splitMuscles[0] ?? MuscleGroup.SHOULDERS;
-    for (const m of splitMuscles) {
-      const count = setsByMuscle.get(m) ?? 0;
-      maxSets = Math.max(maxSets, count);
-      if (count < minSets) {
-        minSets = count;
-        chosenMuscle = m;
-      }
-    }
-
-    if (minSets === 0) {
-      reasonType = 'MISSING_MUSCLE';
-    } else if (minSets < maxSets * SUGGESTION_THRESHOLDS.lowVolumeRatio) {
-      reasonType = 'LOW_VOLUME';
-    } else {
-      return null;
-    }
-    targetMuscle = chosenMuscle;
-    avoidEquipment =
-      resolvedExercises.find((r) => r.muscle === targetMuscle)?.catalogEx?.equipment ?? null;
-  }
-
-  // Pick the best candidate for the target muscle that is not already in the workout.
+  // Pick the first reason that is not dismissed and has a candidate not already in the workout.
   // No candidate means no honest suggestion, so the card stays hidden.
-  const pool = strengthCatalog.filter(
-    (c) =>
-      !existingIds.has(c.id) &&
-      !existingNames.has(c.name.trim().toLowerCase()) &&
-      c.primaryMuscleGroup === targetMuscle,
-  );
+  let picked: { reason: ReasonCandidate; chosen: ExerciseDto } | null = null;
+  for (const reason of reasons) {
+    if (dismissedReasons.has(workoutSuggestionReasonKey(reason))) continue;
+    const pool = strengthCatalog.filter(
+      (c) =>
+        !existingIds.has(c.id) &&
+        !dismissedExercises.has(c.id) &&
+        !existingNames.has(c.name.trim().toLowerCase()) &&
+        c.primaryMuscleGroup === reason.targetMuscle,
+    );
+    if (pool.length === 0) continue;
 
-  if (pool.length === 0) return null;
+    // Score candidates: prefer predefined alternatives of stalling exercise, or fresh equipment (Cable/Dumbbell/Machine)
+    const stallingCatalogEx = reason.stallingExerciseId
+      ? catalog.find((c) => c.id === reason.stallingExerciseId)
+      : null;
+    const preferredAltIds = new Set(stallingCatalogEx?.alternativeExerciseIds ?? []);
+    const scored = pool.map((candidate) => {
+      let score = 0;
+      if (preferredAltIds.has(candidate.id)) score += 5;
+      if (reason.avoidEquipment && candidate.equipment !== reason.avoidEquipment) score += 3;
+      if (
+        candidate.equipment === EquipmentType.CABLE ||
+        candidate.equipment === EquipmentType.DUMBBELL ||
+        candidate.equipment === EquipmentType.MACHINE
+      ) {
+        score += 2;
+      }
+      return { candidate, score };
+    });
+    scored.sort((a, b) => b.score - a.score);
+    picked = { reason, chosen: scored[0]!.candidate };
+    break;
+  }
 
-  // Score candidates: prefer predefined alternatives of stalling exercise, or fresh equipment (Cable/Dumbbell/Machine)
-  const stallingCatalogEx = stallingExerciseId
-    ? catalog.find((c) => c.id === stallingExerciseId)
-    : null;
-  const preferredAltIds = new Set(stallingCatalogEx?.alternativeExerciseIds ?? []);
-
-  const scored = pool.map((candidate) => {
-    let score = 0;
-    if (preferredAltIds.has(candidate.id)) score += 5;
-    if (avoidEquipment && candidate.equipment !== avoidEquipment) score += 3;
-    if (
-      candidate.equipment === EquipmentType.CABLE ||
-      candidate.equipment === EquipmentType.DUMBBELL ||
-      candidate.equipment === EquipmentType.MACHINE
-    ) {
-      score += 2;
-    }
-    return { candidate, score };
-  });
-
-  scored.sort((a, b) => b.score - a.score);
-  const chosen = scored[0]!.candidate;
+  if (!picked) return null;
+  const { chosen } = picked;
+  const { reasonType, targetMuscle, stallingExerciseId, stallingExerciseName, trend } =
+    picked.reason;
 
   // Compute recommended starting prescription from global history or sensible defaults
   const chosenInsight = computeExerciseProgression({

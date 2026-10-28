@@ -17,20 +17,27 @@ import {
   createOfflineSessionFromStretchingRoutine,
   createOfflineSessionFromTemplate,
   enqueueSessionSync,
+  getAcknowledgedServerVersion,
   getCachedCatalog,
   getCachedStretchingRoutines,
   getCachedWorkouts,
+  getDeviceId,
+  getDismissedSuggestions,
   getLocalActiveSession,
   getLocalHistorySessions,
   getSyncQueue,
+  loadExtendedExercises,
+  mergeMissingExercises,
   recalculateSessionTotals,
   removeFromSyncQueue,
   removeLocalHistorySession,
   saveLocalActiveSession,
   saveLocalHistorySession,
+  setAcknowledgedServerVersion,
   setCachedCatalog,
   setCachedStretchingRoutines,
   setCachedWorkouts,
+  setDismissedSuggestions,
   substituteExerciseInSession,
   type SyncState,
 } from '@/lib/offline/offline-store';
@@ -45,7 +52,13 @@ import {
 } from '@luki-fitti/common/enums';
 import {
   applyExerciseHistoryToSessionExercise,
+  buildTemplateExercisesFromSession,
   DEFAULT_FOLDER_COLOR,
+  orderWarmupsFirst,
+  summarizeTemplateSets,
+  toDismissedSuggestion,
+  type DismissedWorkoutSuggestion,
+  type WorkoutExerciseSuggestion,
 } from '@luki-fitti/common/utils/client';
 import {
   localizeExercise,
@@ -114,7 +127,8 @@ interface GymContextValue {
     >,
   ) => Promise<void>;
   toggleCompleteSet: (clientExerciseId: string, clientSetId: string) => Promise<void>;
-  addSetToExercise: (clientExerciseId: string, setType?: SetType) => Promise<void>;
+  /** Pass several ids to add one set to each in a single update (e.g. a superset round). */
+  addSetToExercise: (clientExerciseIds: string | string[], setType?: SetType) => Promise<void>;
   removeSetFromExercise: (clientExerciseId: string, clientSetId: string) => Promise<void>;
   skipExercise: (clientExerciseId: string) => Promise<void>;
   substituteExercise: (clientExerciseId: string, replacementExerciseId: string) => Promise<void>;
@@ -138,6 +152,9 @@ interface GymContextValue {
   deleteHistoricalSession: (clientSessionId: string) => Promise<void>;
   flushSyncQueue: (forceOverwrite?: boolean) => Promise<void>;
   resolveConflict: (choice: 'KEEP_LOCAL' | 'USE_SERVER') => Promise<void>;
+  /** Suggestions dismissed or accepted during the active workout. */
+  dismissedSuggestions: DismissedWorkoutSuggestion[];
+  dismissSuggestion: (suggestion: WorkoutExerciseSuggestion) => Promise<void>;
   refreshAllData: () => Promise<void>;
 }
 
@@ -168,6 +185,9 @@ export function GymProvider({ children }: { children: ReactNode }) {
   const [conflictServerSession, setConflictServerSession] = useState<WorkoutSessionDto | null>(
     null,
   );
+  const [dismissedSuggestions, setDismissedSuggestionsState] = useState<
+    DismissedWorkoutSuggestion[]
+  >([]);
 
   // Built-in catalog content is resolved by id / systemKey in the current UI language, so cached and
   // offline data follow language switches. User-authored content passes through unchanged.
@@ -186,6 +206,47 @@ export function GymProvider({ children }: { children: ReactNode }) {
   const localizedStretchingRoutines = useMemo(
     () => stretchingRoutines.map((r) => localizeStretchingRoutine(r, locale)),
     [stretchingRoutines, locale],
+  );
+
+  // The imported exercise database loads after start-up so it never delays the first render.
+  // Re-setting the catalog afterwards also re-runs localization with its German names.
+  const extendedExercisesRef = useRef<ExerciseDto[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void loadExtendedExercises().then((extended) => {
+      if (cancelled) return;
+      extendedExercisesRef.current = extended;
+      setCatalog((prev) => {
+        const next = mergeMissingExercises(prev, extended);
+        if (next !== prev) void setCachedCatalog(next);
+        return next === prev ? [...prev] : next;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const activeSessionId = activeSession?.clientSessionId ?? null;
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const stored = activeSessionId ? await getDismissedSuggestions(activeSessionId) : [];
+      if (!cancelled) setDismissedSuggestionsState(stored);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSessionId]);
+
+  const dismissSuggestion = useCallback(
+    async (suggestion: WorkoutExerciseSuggestion) => {
+      if (!activeSessionId) return;
+      const next = [...dismissedSuggestions, toDismissedSuggestion(suggestion)];
+      setDismissedSuggestionsState(next);
+      await setDismissedSuggestions(activeSessionId, next);
+    },
+    [activeSessionId, dismissedSuggestions],
   );
 
   const isFlushingRef = useRef(false);
@@ -225,6 +286,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
       setSyncState('SYNCING');
 
       try {
+        const deviceId = await getDeviceId();
         let pending = queue;
         while (pending.length > 0) {
           let hasNewerLocalEdits = false;
@@ -234,9 +296,13 @@ export function GymProvider({ children }: { children: ReactNode }) {
               continue;
             }
 
-            const payload = forceOverwrite
-              ? { ...item.payload, forceOverwrite: true }
-              : item.payload;
+            const baseVersion = await getAcknowledgedServerVersion(item.clientSessionId);
+            const payload = {
+              ...item.payload,
+              deviceId,
+              ...(baseVersion !== undefined ? { baseVersion } : {}),
+              ...(forceOverwrite ? { forceOverwrite: true } : {}),
+            };
             const res = await api.sessions.sync(payload);
 
             if (deletedSessionIdsRef.current.has(item.clientSessionId)) {
@@ -253,6 +319,11 @@ export function GymProvider({ children }: { children: ReactNode }) {
                 isFlushingRef.current = false;
                 return;
               }
+
+              await setAcknowledgedServerVersion(
+                item.clientSessionId,
+                res.data.session.status === SessionStatus.COMPLETED ? null : res.data.serverVersion,
+              );
 
               // The user may have edited the session while this request was in flight.
               // Applying the (now stale) server echo would revert that edit, and dropping
@@ -326,7 +397,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
           getSyncQueue(),
         ]);
 
-      setCatalog(localCat);
+      setCatalog(mergeMissingExercises(localCat, extendedExercisesRef.current));
       setFolders(localWorkouts.folders);
       setUnfiledTemplates(localWorkouts.unfiledTemplates);
       setStretchingRoutines(localStretch);
@@ -370,8 +441,9 @@ export function GymProvider({ children }: { children: ReactNode }) {
       ]);
 
       if (catRes.success && catRes.data) {
-        setCatalog(catRes.data);
-        await setCachedCatalog(catRes.data);
+        const serverCatalog = mergeMissingExercises(catRes.data, extendedExercisesRef.current);
+        setCatalog(serverCatalog);
+        await setCachedCatalog(serverCatalog);
       }
       if (wkRes.success && wkRes.data) {
         setFolders(wkRes.data.folders);
@@ -427,6 +499,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
           ) {
             setActiveSession(serverActive);
             await saveLocalActiveSession(serverActive);
+            await setAcknowledgedServerVersion(serverActive.clientSessionId, serverActive.version);
           }
         } else if (!serverActive && localActive && !hasPendingLocalActiveSync) {
           // Session was finished or abandoned on another device
@@ -564,6 +637,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
         : resolveExerciseMedia({
             name: dto.name,
             primaryMuscleGroup: dto.primaryMuscleGroup,
+            isSystem: false,
           }),
     };
     const next = [...catalog, custom];
@@ -719,17 +793,8 @@ export function GymProvider({ children }: { children: ReactNode }) {
     return newTpl;
   };
 
-  const updateTemplate = async (templateId: string, dto: UpdateTemplateDto) => {
-    if (navigator.onLine && isAuthenticated) {
-      try {
-        await api.workouts.updateTemplate(templateId, dto);
-        await refreshAllData();
-        return;
-      } catch {
-        // Offline fallback
-      }
-    }
-
+  /** Applies a template change to local state and the offline cache only. */
+  const applyTemplateUpdateLocally = async (templateId: string, dto: UpdateTemplateDto) => {
     const catalogById = new Map(catalog.map((e) => [e.id, e]));
     const applyUpdate = (current: WorkoutTemplateDto): WorkoutTemplateDto => {
       if (current.id !== templateId) return current;
@@ -749,24 +814,29 @@ export function GymProvider({ children }: { children: ReactNode }) {
         updatedAt: new Date().toISOString(),
         exercises:
           dto.exercises !== undefined
-            ? dto.exercises.map((ex, idx) => ({
-                id: ex.id ?? `tple-${Date.now()}-${idx}`,
-                templateId,
-                exerciseId: ex.exerciseId,
-                orderIndex: idx,
-                plannedSets: ex.plannedSets,
-                warmupSets: ex.warmupSets ?? 0,
-                targetRepsMin: ex.targetRepsMin ?? 8,
-                targetRepsMax: ex.targetRepsMax ?? 12,
-                targetWeight: ex.targetWeight ?? null,
-                weightUnit: ex.weightUnit ?? weightUnit,
-                restSeconds: ex.restSeconds ?? 90,
-                targetDurationSeconds: ex.targetDurationSeconds ?? null,
-                targetDistanceMeters: ex.targetDistanceMeters ?? null,
-                notes: ex.notes ?? null,
-                alternativeExerciseIds: ex.alternativeExerciseIds ?? [],
-                exercise: catalogById.get(ex.exerciseId),
-              }))
+            ? dto.exercises.map((ex, idx) => {
+                const sets = ex.sets && ex.sets.length > 0 ? ex.sets : null;
+                const summary = sets ? summarizeTemplateSets(sets) : null;
+                return {
+                  id: ex.id ?? `tple-${Date.now()}-${idx}`,
+                  templateId,
+                  exerciseId: ex.exerciseId,
+                  sets,
+                  orderIndex: idx,
+                  plannedSets: summary?.plannedSets ?? ex.plannedSets,
+                  warmupSets: summary?.warmupSets ?? ex.warmupSets ?? 0,
+                  targetRepsMin: ex.targetRepsMin ?? 8,
+                  targetRepsMax: ex.targetRepsMax ?? 12,
+                  targetWeight: (summary ? summary.targetWeight : ex.targetWeight) ?? null,
+                  weightUnit: ex.weightUnit ?? weightUnit,
+                  restSeconds: ex.restSeconds ?? 90,
+                  targetDurationSeconds: ex.targetDurationSeconds ?? null,
+                  targetDistanceMeters: ex.targetDistanceMeters ?? null,
+                  notes: ex.notes ?? null,
+                  alternativeExerciseIds: ex.alternativeExerciseIds ?? [],
+                  exercise: catalogById.get(ex.exerciseId),
+                };
+              })
             : t.exercises,
       };
     };
@@ -779,6 +849,19 @@ export function GymProvider({ children }: { children: ReactNode }) {
     setFolders(nextFolders);
     setUnfiledTemplates(nextUnfiled);
     await setCachedWorkouts({ folders: nextFolders, unfiledTemplates: nextUnfiled });
+  };
+
+  const updateTemplate = async (templateId: string, dto: UpdateTemplateDto) => {
+    if (navigator.onLine && isAuthenticated) {
+      try {
+        await api.workouts.updateTemplate(templateId, dto);
+        await refreshAllData();
+        return;
+      } catch {
+        // Offline fallback
+      }
+    }
+    await applyTemplateUpdateLocally(templateId, dto);
   };
 
   const duplicateTemplate = async (templateId: string): Promise<WorkoutTemplateDto | null> => {
@@ -1058,10 +1141,13 @@ export function GymProvider({ children }: { children: ReactNode }) {
     if (!activeSession) return;
     const nextExercises = activeSession.exercises.map((ex) => {
       if (ex.clientExerciseId !== clientExerciseId) return ex;
-      return {
-        ...ex,
-        sets: ex.sets.map((s) => (s.clientSetId === clientSetId ? { ...s, ...patch } : s)),
-      };
+      const patched = ex.sets.map((s) => (s.clientSetId === clientSetId ? { ...s, ...patch } : s));
+      // Warm-ups always come first, so a set switched to warm-up moves to the top.
+      const sets =
+        patch.setType !== undefined
+          ? orderWarmupsFirst(patched).map((s, idx) => ({ ...s, setNumber: idx + 1 }))
+          : patched;
+      return { ...ex, sets };
     });
     await persistSessionUpdate({ ...activeSession, exercises: nextExercises });
   };
@@ -1128,10 +1214,16 @@ export function GymProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const addSetToExercise = async (clientExerciseId: string, setType: SetType = SetType.WORKING) => {
+  const addSetToExercise = async (
+    clientExerciseIds: string | string[],
+    setType: SetType = SetType.WORKING,
+  ) => {
     if (!activeSession) return;
+    const targets = new Set(
+      Array.isArray(clientExerciseIds) ? clientExerciseIds : [clientExerciseIds],
+    );
     const nextExercises = activeSession.exercises.map((ex) => {
-      if (ex.clientExerciseId !== clientExerciseId) return ex;
+      if (!targets.has(ex.clientExerciseId)) return ex;
       const lastSet = ex.sets[ex.sets.length - 1];
       const newSet: SessionSetDto = {
         id: `set-${Date.now()}`,
@@ -1408,9 +1500,25 @@ export function GymProvider({ children }: { children: ReactNode }) {
       })),
     });
 
+    // The template follows what was actually done, so the next session starts from it. Locally
+    // right away; signed-in users get the same update from the server when the session syncs.
+    const sourceTemplate = finalized.templateId
+      ? [...folders.flatMap((f) => f.templates), ...unfiledTemplates].find(
+          (tpl) => tpl.id === finalized.templateId,
+        )
+      : undefined;
+    const templateExercises = sourceTemplate
+      ? buildTemplateExercisesFromSession(sourceTemplate, finalized)
+      : null;
+    if (sourceTemplate && templateExercises) {
+      await applyTemplateUpdateLocally(sourceTemplate.id, { exercises: templateExercises });
+    }
+
     await saveLocalHistorySession(finalized);
     await saveLocalActiveSession(null);
+    await setDismissedSuggestions(finalized.clientSessionId, null);
     setActiveSession(null);
+
     setHistorySessions((prev) => [
       finalized,
       ...prev.filter((s) => s.clientSessionId !== finalized.clientSessionId),
@@ -1447,6 +1555,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
       prev.filter((s) => s.clientSessionId !== clientSessionId && s.id !== id),
     );
     await saveLocalActiveSession(null);
+    await setDismissedSuggestions(clientSessionId, null);
     await removeLocalHistorySession(clientSessionId);
     await removeFromSyncQueue(clientSessionId);
     const remaining = await getSyncQueue();
@@ -1529,6 +1638,10 @@ export function GymProvider({ children }: { children: ReactNode }) {
       } else {
         await saveLocalActiveSession(conflictServerSession);
         setActiveSession(conflictServerSession);
+        await setAcknowledgedServerVersion(
+          conflictServerSession.clientSessionId,
+          conflictServerSession.version,
+        );
       }
       setConflictServerSession(null);
       setSyncState('SYNCED');
@@ -1586,6 +1699,8 @@ export function GymProvider({ children }: { children: ReactNode }) {
         deleteHistoricalSession,
         flushSyncQueue,
         resolveConflict,
+        dismissedSuggestions,
+        dismissSuggestion,
         refreshAllData,
       }}
     >

@@ -17,6 +17,8 @@ interface ExerciseVisualProps {
     primaryMuscleGroup: MuscleGroup;
     secondaryMuscleGroups?: MuscleGroup[];
     media?: ExerciseDto['media'];
+    /** User-created exercises never get catalog photos guessed for them. */
+    isSystem?: boolean;
   };
   variant?: 'thumbnail' | 'card' | 'detail';
   className?: string;

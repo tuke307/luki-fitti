@@ -1,5 +1,6 @@
 import { EquipmentType, ExerciseCategory, ExerciseType, MuscleGroup, WeightUnit } from '../enums';
 import type { ExerciseDto } from '../schemas';
+import { getRegisteredExercise } from './registry';
 
 export const INITIAL_EXERCISE_CATALOG: ExerciseDto[] = [
   // ── CHEST ──────────────────────────────────────────────────────────────────
@@ -4529,28 +4530,18 @@ const EXERCISE_DB_FOLDER_BY_SLUG: Record<string, string | null> = {
   'gymlife-94-incline-barbell-bench-press': 'Barbell_Incline_Bench_Press_-_Medium_Grip',
 };
 
-const MUSCLE_FALLBACK_FOLDER: Record<MuscleGroup, string> = {
-  [MuscleGroup.CHEST]: 'Barbell_Bench_Press_-_Medium_Grip',
-  [MuscleGroup.BACK]: 'Wide-Grip_Lat_Pulldown',
-  [MuscleGroup.SHOULDERS]: 'Dumbbell_Shoulder_Press',
-  [MuscleGroup.BICEPS]: 'Barbell_Curl',
-  [MuscleGroup.TRICEPS]: 'Triceps_Pushdown_-_Rope_Attachment',
-  [MuscleGroup.FOREARMS]: 'Palms-Up_Barbell_Wrist_Curl_Over_A_Bench',
-  [MuscleGroup.QUADRICEPS]: 'Barbell_Squat',
-  [MuscleGroup.HAMSTRINGS]: 'Lying_Leg_Curls',
-  [MuscleGroup.GLUTES]: 'Barbell_Hip_Thrust',
-  [MuscleGroup.CALVES]: 'Standing_Calf_Raises',
-  [MuscleGroup.ABS_CORE]: 'Crunches',
-  [MuscleGroup.HIP_FLEXORS]: 'Kneeling_Hip_Flexor',
-  [MuscleGroup.FULL_BODY]: 'Barbell_Deadlift',
-};
-
+/**
+ * Media for an exercise: its own uploads, otherwise the photos explicitly mapped to its catalog slug.
+ * Nothing is guessed from the name — user-created exercises and unmapped ones only get a video
+ * search link, and the UI shows the anatomy visual instead of a possibly wrong photo.
+ */
 export function resolveExerciseMedia(exercise: {
   id?: string | null;
   slug?: string | null;
   name?: string | null;
   primaryMuscleGroup?: MuscleGroup | null;
   media?: ExerciseDto['media'];
+  isSystem?: boolean | null;
 }): NonNullable<ExerciseDto['media']> {
   if (exercise.media && exercise.media.length > 0) {
     return exercise.media;
@@ -4568,63 +4559,18 @@ export function resolveExerciseMedia(exercise: {
     license: 'External Link',
   };
 
-  // Explicit `null`: no faithful photo exists — show the anatomy visual instead of a wrong image.
-  if (EXERCISE_DB_FOLDER_BY_SLUG[rawSlug] === null) {
-    return [videoLink];
+  const registered = exercise.id ? getRegisteredExercise(exercise.id)?.media : undefined;
+  if (exercise.isSystem !== false && registered && registered.length > 0) {
+    return registered;
   }
 
-  let folder =
-    EXERCISE_DB_FOLDER_BY_SLUG[rawSlug] || EXERCISE_DB_FOLDER_BY_SLUG[exercise.slug ?? ''];
-
-  if (!folder && exercise.name) {
-    const q = exercise.name.toLowerCase();
-    if (q.includes('leg extension') || q.includes('beinstrecker')) folder = 'Leg_Extensions';
-    else if (q.includes('leg press') || q.includes('beinpresse') || q.includes('squat press'))
-      folder = 'Leg_Press';
-    else if (q.includes('lying leg curl') || q.includes('beinbeuger liegend'))
-      folder = 'Lying_Leg_Curls';
-    else if (q.includes('leg curl') || q.includes('beinbeuger')) folder = 'Seated_Leg_Curl';
-    else if (q.includes('wadenheben sitzend') || q.includes('seated calf'))
-      folder = 'Seated_Calf_Raise';
-    else if (q.includes('calf') || q.includes('waden')) folder = 'Standing_Calf_Raises';
-    else if (
-      q.includes('addukt') ||
-      q.includes('abdukt') ||
-      q.includes('adduction') ||
-      q.includes('abduction')
-    )
-      folder = 'Thigh_Abductor';
-    else if (q.includes('incline') && q.includes('bench'))
-      folder = 'Barbell_Incline_Bench_Press_-_Medium_Grip';
-    else if (q.includes('bench press') || q.includes('bankdrücken'))
-      folder = 'Barbell_Bench_Press_-_Medium_Grip';
-    else if (q.includes('butterfly') || q.includes('pec dec')) folder = 'Butterfly';
-    else if (q.includes('seitheben') || q.includes('lateral raise')) folder = 'Side_Lateral_Raise';
-    else if (q.includes('face pull')) folder = 'Face_Pull';
-    else if (q.includes('arnold')) folder = 'Arnold_Dumbbell_Press';
-    else if (q.includes('shoulder press') || q.includes('schulterdrücken'))
-      folder = 'Dumbbell_Shoulder_Press';
-    else if (q.includes('pull-up') || q.includes('pullup') || q.includes('klimmz'))
-      folder = 'Pullups';
-    else if (q.includes('lat pull') || q.includes('latzug')) folder = 'Wide-Grip_Lat_Pulldown';
-    else if (q.includes('row') || q.includes('rudern')) folder = 'Seated_Cable_Rows';
-    else if (q.includes('preacher')) folder = 'Preacher_Curl';
-    else if (q.includes('hammer curl')) folder = 'Hammer_Curls';
-    else if (q.includes('curl')) folder = 'Barbell_Curl';
-    else if (q.includes('dip')) folder = 'Dips_-_Triceps_Version';
-    else if (q.includes('tricep') || q.includes('trizeps'))
-      folder = 'Triceps_Pushdown_-_Rope_Attachment';
-    else if (q.includes('squat') || q.includes('kniebeuge')) folder = 'Barbell_Squat';
-    else if (q.includes('deadlift') || q.includes('kreuzheben') || q.includes('rdl'))
-      folder = 'Romanian_Deadlift';
-    else if (q.includes('crunch') || q.includes('sit-up')) folder = 'Crunches';
-  }
-
-  if (!folder) {
-    folder =
-      (exercise.primaryMuscleGroup && MUSCLE_FALLBACK_FOLDER[exercise.primaryMuscleGroup]) ||
-      'Barbell_Bench_Press_-_Medium_Grip';
-  }
+  const folder =
+    exercise.isSystem === false
+      ? null
+      : (EXERCISE_DB_FOLDER_BY_SLUG[rawSlug] ??
+        EXERCISE_DB_FOLDER_BY_SLUG[exercise.slug ?? ''] ??
+        null);
+  if (!folder) return [videoLink];
 
   return [
     {

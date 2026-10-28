@@ -12,6 +12,7 @@ import {
   INITIAL_EXERCISE_CATALOG,
 } from './data';
 import { de } from './locales/de';
+import { getRegisteredExercise, getRegisteredExerciseText } from './registry';
 import type {
   CatalogTranslation,
   ExerciseText,
@@ -50,11 +51,16 @@ export function resolveSupportedLocale(acceptLanguage?: string | null): Supporte
 
 // ── Lookups by id ────────────────────────────────────────────────────────────
 
+function sourceExercise(exerciseId: string): ExerciseDto | undefined {
+  return EXERCISES.get(exerciseId) ?? getRegisteredExercise(exerciseId);
+}
+
 export function getExerciseText(exerciseId: string, locale: SupportedLocale): ExerciseText | null {
-  const source = EXERCISES.get(exerciseId);
+  const source = sourceExercise(exerciseId);
   if (!source) return null;
   return (
-    getCatalogTranslation(locale)?.exercises[exerciseId] ?? {
+    getCatalogTranslation(locale)?.exercises[exerciseId] ??
+    getRegisteredExerciseText(exerciseId, locale) ?? {
       name: source.name,
       description: source.description,
       instructions: source.instructions,
@@ -126,7 +132,7 @@ export function localizeExercise(exercise: ExerciseDto, locale: SupportedLocale)
   const withAlternatives = alternatives ? { ...exercise, alternatives } : exercise;
   if (!text) return withAlternatives;
   // Keep the source (English) name searchable in every language.
-  const sourceName = EXERCISES.get(exercise.id)!.name.toLowerCase();
+  const sourceName = sourceExercise(exercise.id)!.name.toLowerCase();
   const keepTags = locale === SOURCE_LOCALE || exercise.tags.includes(sourceName);
   return {
     ...withAlternatives,

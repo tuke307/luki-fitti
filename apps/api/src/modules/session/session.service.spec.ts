@@ -253,6 +253,143 @@ describe('SessionService — Offline Sync Idempotency, Conflict Detection & Volu
     await assert.rejects(() => service.syncSession('user-2', basePayload), /another user/i);
   });
 
+  it('treats a retried sync from the same device as idempotent, even when the first response was lost', async () => {
+    const prisma = createMockSessionPrisma();
+    const service = new SessionService(prisma);
+    const payload = {
+      clientSessionId: 'client-uuid-lost-response',
+      sessionType: SessionType.STRENGTH,
+      workoutNameSnapshot: 'Day 4 - Schultern',
+      status: SessionStatus.IN_PROGRESS,
+      startedAt: new Date().toISOString(),
+      activeDurationSeconds: 600,
+      weightUnit: WeightUnit.KG,
+      deviceId: 'device-iphone',
+      version: 5,
+      exercises: [],
+    };
+
+    const first = await service.syncSession('user-1', payload);
+    assert.equal(first.conflictDetected, false);
+
+    // The phone was locked before the response arrived, so the same payload is sent again.
+    const retry = await service.syncSession('user-1', payload);
+    assert.equal(retry.conflictDetected, false);
+
+    // Further local edits keep syncing without conflicts.
+    const next = await service.syncSession('user-1', { ...payload, version: 6 });
+    assert.equal(next.conflictDetected, false);
+  });
+
+  it('accepts a same-device sync against a legacy server row that bumped the version by one', async () => {
+    const prisma = createMockSessionPrisma();
+    const service = new SessionService(prisma);
+    const legacy = {
+      clientSessionId: 'client-uuid-legacy',
+      sessionType: SessionType.STRENGTH,
+      workoutNameSnapshot: 'Legacy',
+      status: SessionStatus.IN_PROGRESS,
+      startedAt: new Date().toISOString(),
+      activeDurationSeconds: 0,
+      weightUnit: WeightUnit.KG,
+      version: 1,
+      exercises: [],
+    };
+    await service.syncSession('user-1', legacy);
+    await service.syncSession('user-1', { ...legacy, version: 2 }); // server row is now v3
+
+    const res = await service.syncSession('user-1', {
+      ...legacy,
+      deviceId: 'device-iphone',
+      version: 2,
+    });
+    assert.equal(res.conflictDetected, false);
+  });
+
+  it('still detects a real conflict when another device wrote a newer version', async () => {
+    const prisma = createMockSessionPrisma();
+    const service = new SessionService(prisma);
+    const base = {
+      clientSessionId: 'client-uuid-two-devices',
+      sessionType: SessionType.STRENGTH,
+      workoutNameSnapshot: 'Day 1',
+      status: SessionStatus.IN_PROGRESS,
+      startedAt: new Date().toISOString(),
+      activeDurationSeconds: 0,
+      weightUnit: WeightUnit.KG,
+      version: 3,
+      exercises: [],
+    };
+
+    const created = await service.syncSession('user-1', { ...base, deviceId: 'device-mac' });
+    assert.equal(created.serverVersion, 3);
+
+    // The iPhone picked up server v3 and edits it.
+    const iphone = await service.syncSession('user-1', {
+      ...base,
+      deviceId: 'device-iphone',
+      version: 4,
+      baseVersion: 3,
+    });
+    assert.equal(iphone.conflictDetected, false);
+    assert.ok(iphone.serverVersion > 4);
+
+    // The Mac edits its own copy without having seen the iPhone write.
+    const mac = await service.syncSession('user-1', {
+      ...base,
+      deviceId: 'device-mac',
+      version: 4,
+      baseVersion: 3,
+    });
+    assert.equal(mac.conflictDetected, true);
+
+    const forced = await service.syncSession('user-1', {
+      ...base,
+      deviceId: 'device-mac',
+      version: 4,
+      baseVersion: 3,
+      forceOverwrite: true,
+    });
+    assert.equal(forced.conflictDetected, false);
+    assert.ok(forced.serverVersion > iphone.serverVersion);
+  });
+
+  it('updates the template once, when a session is first synced as completed', async () => {
+    const prisma = createMockSessionPrisma();
+    const calls: Array<{ userId: string; templateId: string | null }> = [];
+    const workoutService = {
+      applyCompletedSessionToTemplate: async (
+        userId: string,
+        session: { templateId: string | null },
+      ) => {
+        calls.push({ userId, templateId: session.templateId });
+      },
+    };
+    const service = new SessionService(prisma, workoutService as never);
+    const base = {
+      clientSessionId: 'client-uuid-writeback',
+      templateId: 'tpl-1',
+      sessionType: SessionType.STRENGTH,
+      workoutNameSnapshot: 'Day 4',
+      status: SessionStatus.IN_PROGRESS,
+      startedAt: new Date().toISOString(),
+      activeDurationSeconds: 0,
+      weightUnit: WeightUnit.KG,
+      deviceId: 'device-iphone',
+      version: 1,
+      exercises: [],
+    };
+
+    await service.syncSession('user-1', base);
+    assert.equal(calls.length, 0);
+    await service.syncSession('user-1', { ...base, status: SessionStatus.COMPLETED, version: 2 });
+    assert.equal(calls.length, 1);
+    // Later corrections of a finished session do not rewrite the template again.
+    await service.syncSession('user-1', { ...base, status: SessionStatus.COMPLETED, version: 3 });
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0]!.userId, 'user-1');
+  });
+
   it('persists Apple Watch HealthKit telemetry, heartRateSamples, and per-set HR metrics and computes fallback HR stats', async () => {
     const prisma = createMockSessionPrisma();
     const service = new SessionService(prisma);

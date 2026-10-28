@@ -15,6 +15,7 @@ import { Input } from '@luki-fitti/ui/components/ui/input';
 import { cn } from '@luki-fitti/ui/lib/utils';
 import { EQUIPMENT_LABELS, MUSCLE_GROUP_LABELS, MuscleGroup } from '@luki-fitti/common/enums';
 import type { ExerciseDto } from '@luki-fitti/common/schemas';
+import { findSimilarExercises } from '@luki-fitti/common/utils/client';
 import { de } from '@/lib/i18n';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { ExerciseVisual } from './exercise-visual';
@@ -25,7 +26,7 @@ export function filterExercisesByQuery(
   muscleFilter: MuscleGroup | 'ALL' = 'ALL',
 ): ExerciseDto[] {
   const q = search.trim().toLowerCase();
-  return exercises.filter((ex) => {
+  const direct = exercises.filter((ex) => {
     if (muscleFilter !== 'ALL') {
       const matchesPrimary = ex.primaryMuscleGroup === muscleFilter;
       const matchesSecondary = ex.secondaryMuscleGroups?.includes(muscleFilter);
@@ -52,6 +53,20 @@ export function filterExercisesByQuery(
       matchDesc
     );
   });
+  // Multi-word or German/English mixed queries ("Schulterdrücken Multipresse") rarely match as a
+  // substring: add token-based matches behind the direct hits.
+  if (!q || direct.length >= 10) return direct;
+  const seen = new Set(direct.map((e) => e.id));
+  const fuzzy = findSimilarExercises(q, exercises, { limit: 20, minScore: 0.6 })
+    .map((m) => m.exercise)
+    .filter((e) => {
+      if (seen.has(e.id)) return false;
+      if (muscleFilter === 'ALL') return true;
+      return (
+        e.primaryMuscleGroup === muscleFilter || e.secondaryMuscleGroups?.includes(muscleFilter)
+      );
+    });
+  return [...direct, ...fuzzy];
 }
 
 interface ExercisePickerProps {

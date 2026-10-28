@@ -30,7 +30,11 @@ import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { Textarea } from '@luki-fitti/ui/components/ui/textarea';
 import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
-import { computeExerciseProgression, formatDateTime } from '@luki-fitti/common/utils/client';
+import {
+  computeExerciseProgression,
+  findSimilarExercises,
+  formatDateTime,
+} from '@luki-fitti/common/utils/client';
 import { ExercisePicker, filterExercisesByQuery } from './exercise-picker';
 import { ExerciseVisual } from './exercise-visual';
 import { NumberInput } from './number-input';
@@ -97,6 +101,18 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
       transitionSeconds: number;
     }>
   >([]);
+
+  // Before creating a custom exercise, point to catalog exercises that probably mean the same.
+  const similarExercises = useMemo(
+    () =>
+      newName.trim().length >= 3
+        ? findSimilarExercises(
+            newName,
+            catalog.filter((c) => c.isSystem),
+          )
+        : [],
+    [catalog, newName],
+  );
 
   const filteredCatalog = useMemo(() => {
     const base = filterExercisesByQuery(catalog, search, selectedMuscle);
@@ -778,6 +794,45 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder={t.exercises.exerciseNamePlaceholder}
                 />
+                {similarExercises.length > 0 && (
+                  <div
+                    data-testid="similar-exercises"
+                    className="bg-secondary/60 space-y-1.5 rounded-xl p-2.5"
+                  >
+                    <p className="text-muted-foreground text-xs font-semibold">
+                      {t.exercises.similarExercisesTitle}
+                    </p>
+                    {similarExercises.map(({ exercise }) => (
+                      <button
+                        key={exercise.id}
+                        type="button"
+                        onClick={() => {
+                          setShowCreateModal(false);
+                          setSelectedExercise(exercise);
+                        }}
+                        className="bg-card hover:bg-secondary flex w-full items-center gap-2.5 rounded-lg p-2 text-left transition-colors"
+                      >
+                        <ExerciseVisual
+                          exercise={exercise}
+                          variant="thumbnail"
+                          className="h-9 w-11"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[13px] font-medium">
+                            {exercise.name}
+                          </span>
+                          <span className="text-muted-foreground block truncate text-xs">
+                            {muscleLabel(exercise.primaryMuscleGroup)} ·{' '}
+                            {equipmentLabel(exercise.equipment)}
+                          </span>
+                        </span>
+                      </button>
+                    ))}
+                    <p className="text-muted-foreground text-xs">
+                      {t.exercises.similarExercisesHint}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">

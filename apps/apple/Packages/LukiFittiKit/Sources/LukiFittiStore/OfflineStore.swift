@@ -46,6 +46,8 @@ public final class OfflineStore {
         didSet { applyLocaleToAPIClient() }
     }
     public var conflictItem: QueuedSessionSyncItem?
+    /// Bumped on every dismissal so observing views recompute suggestions.
+    public var dismissedSuggestionsRevision = 0
     public var onOverviewOrAuthChanged: (() -> Void)?
 
     private let storageDirectory: URL
@@ -172,15 +174,21 @@ public final class OfflineStore {
 
         syncState = .SYNCING
         var remaining: [QueuedSessionSyncItem] = []
+        var serverVersions = acknowledgedServerVersions()
 
         for var item in syncQueue {
             do {
-                let response = try await apiClient.syncSession(item.payload)
+                var payload = item.payload
+                payload.deviceId = deviceId
+                payload.baseVersion = serverVersions[item.clientSessionId]
+                let response = try await apiClient.syncSession(payload)
                 if response.conflictDetected {
                     item.serverConflictSession = response.session
                     item.lastError = "Server conflict v\(response.serverVersion)"
                     remaining.append(item)
                 } else {
+                    serverVersions[item.clientSessionId] =
+                        response.session.status == .COMPLETED ? nil : response.serverVersion
                     if response.session.status == .COMPLETED {
                         saveHistorySession(response.session)
                     } else if activeSession?.clientSessionId == response.session.clientSessionId {
@@ -200,7 +208,40 @@ public final class OfflineStore {
         syncQueue = remaining
         conflictItem = syncQueue.first(where: { $0.serverConflictSession != nil })
         writeJSON(syncQueue, to: "sync_queue.json")
+        writeJSON(serverVersions, to: "server_versions.json")
         updateSyncStateBadge()
+    }
+
+    /// Stable random id of this install. Survives `clearAllLocalData` on purpose so the server can
+    /// keep recognising retried syncs from this device.
+    public var deviceId: String {
+        if let existing: String = readJSON("device_id.json") { return existing }
+        let id = "ios-\(UUID().uuidString.lowercased())"
+        writeJSON(id, to: "device_id.json")
+        return id
+    }
+
+    /// Suggestions dismissed per workout session, so they stay gone when the session view reloads.
+    public func dismissedSuggestions(clientSessionId: String) -> [DismissedWorkoutSuggestion] {
+        let map: [String: [DismissedWorkoutSuggestion]] = readJSON("dismissed_suggestions.json") ?? [:]
+        return map[clientSessionId] ?? []
+    }
+
+    public func setDismissedSuggestions(_ dismissed: [DismissedWorkoutSuggestion]?, clientSessionId: String) {
+        var map: [String: [DismissedWorkoutSuggestion]] = readJSON("dismissed_suggestions.json") ?? [:]
+        map[clientSessionId] = dismissed
+        writeJSON(map, to: "dismissed_suggestions.json")
+        dismissedSuggestionsRevision += 1
+    }
+
+    private func acknowledgedServerVersions() -> [String: Int] {
+        readJSON("server_versions.json") ?? [:]
+    }
+
+    private func acknowledgeServerVersion(_ session: WorkoutSessionDto) {
+        var versions = acknowledgedServerVersions()
+        versions[session.clientSessionId] = session.version
+        writeJSON(versions, to: "server_versions.json")
     }
 
     public func resolveConflict(clientSessionId: String, keepLocal: Bool) async {
@@ -221,6 +262,7 @@ public final class OfflineStore {
                     saveHistorySession(serverSession)
                 } else {
                     saveActiveSession(serverSession)
+                    acknowledgeServerVersion(serverSession)
                 }
             }
             removeFromSyncQueue(clientSessionId: clientSessionId)
@@ -235,6 +277,8 @@ public final class OfflineStore {
             "active_workout_session.json",
             "session_history.json",
             "sync_queue.json",
+            "server_versions.json",
+            "dismissed_suggestions.json",
             "current_user.json",
         ] {
             deleteFile(file)

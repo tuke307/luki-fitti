@@ -713,6 +713,46 @@ export function ProfileImportView() {
         </Card>
       )}
 
+      {/* Attribution for the imported exercise database (CC-BY-SA requires it for wger content) */}
+      <Card data-testid="exercise-data-sources" className="space-y-2 rounded-[1.25rem] p-5">
+        <h2 className="text-[15px] font-semibold">{t.profile.dataSourcesTitle}</h2>
+        <p className="text-muted-foreground text-[13px]">{t.profile.dataSourcesDesc}</p>
+        <ul className="space-y-1 text-[13px]">
+          <li>
+            <a
+              href="https://github.com/yuhonas/free-exercise-db"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary font-medium"
+            >
+              free-exercise-db
+            </a>{' '}
+            <span className="text-muted-foreground">· Unlicense (public domain)</span>
+          </li>
+          <li>
+            <a
+              href="https://wger.de"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary font-medium"
+            >
+              wger Workout Manager
+            </a>{' '}
+            <span className="text-muted-foreground">
+              ·{' '}
+              <a
+                href="https://creativecommons.org/licenses/by-sa/4.0/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                CC-BY-SA 4.0
+              </a>
+            </span>
+          </li>
+        </ul>
+      </Card>
+
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

@@ -2,9 +2,9 @@ import {
   buildStarterStretchingRoutines,
   buildStarterWorkouts,
   DEFAULT_STARTER_FOLDERS,
+  INITIAL_EXERCISE_CATALOG,
   DEFAULT_STARTER_TEMPLATES,
   DEFAULT_STRETCHING_ROUTINES,
-  INITIAL_EXERCISE_CATALOG,
   resolveExerciseMedia,
 } from '@luki-fitti/common/catalog';
 import {
@@ -17,7 +17,11 @@ import {
   SetType,
   WeightUnit,
 } from '@luki-fitti/common/enums';
-import { applyExerciseHistoryToSessionExercise } from '@luki-fitti/common/utils/client';
+import {
+  applyExerciseHistoryToSessionExercise,
+  resolveTemplateSets,
+  type DismissedWorkoutSuggestion,
+} from '@luki-fitti/common/utils/client';
 import type {
   ExerciseDto,
   SessionExerciseDto,
@@ -105,21 +109,44 @@ async function idbSet<T>(key: string, value: T): Promise<void> {
   });
 }
 
+/**
+ * The imported exercise database is a separate chunk, loaded in the background after start-up.
+ * Loading it also registers its translations and photos for localization and media lookup.
+ */
+export async function loadExtendedExercises(): Promise<ExerciseDto[]> {
+  const { EXTENDED_EXERCISE_CATALOG } = await import('@luki-fitti/common/catalog/extended');
+  return EXTENDED_EXERCISE_CATALOG;
+}
+
+/** Adds exercises missing from `current` (by slug); returns `current` itself when nothing is new. */
+export function mergeMissingExercises(
+  current: ExerciseDto[],
+  additions: ExerciseDto[],
+): ExerciseDto[] {
+  const slugs = new Set(current.map((e) => e.slug));
+  const missing = additions.filter((e) => !slugs.has(e.slug));
+  return missing.length > 0 ? [...current, ...missing] : current;
+}
+
 export async function getCachedCatalog(): Promise<ExerciseDto[]> {
   const cached = await idbGet<ExerciseDto[]>('exercise_catalog');
+  const systemExercises = INITIAL_EXERCISE_CATALOG;
   if (cached && cached.length > 0) {
     const bySlug = new Map(cached.map((e) => [e.slug, e]));
     let changed = false;
-    for (const sysEx of INITIAL_EXERCISE_CATALOG) {
+    for (const sysEx of systemExercises) {
       if (!bySlug.has(sysEx.slug)) {
         bySlug.set(sysEx.slug, sysEx);
         changed = true;
       }
     }
     const merged = Array.from(bySlug.values()).map((ex) => {
-      if (!ex.media || ex.media.length === 0) {
+      // Older builds guessed catalog photos for user-created exercises; drop those.
+      const guessed =
+        !ex.isSystem && ex.media?.some((m) => m.attribution?.startsWith('Free Exercise DB'));
+      if (!ex.media || ex.media.length === 0 || guessed) {
         changed = true;
-        return { ...ex, media: resolveExerciseMedia(ex) };
+        return { ...ex, media: resolveExerciseMedia({ ...ex, media: undefined }) };
       }
       return ex;
     });
@@ -128,8 +155,8 @@ export async function getCachedCatalog(): Promise<ExerciseDto[]> {
     }
     return merged;
   }
-  await idbSet('exercise_catalog', INITIAL_EXERCISE_CATALOG);
-  return INITIAL_EXERCISE_CATALOG;
+  await idbSet('exercise_catalog', systemExercises);
+  return systemExercises;
 }
 
 export async function setCachedCatalog(exercises: ExerciseDto[]): Promise<void> {
@@ -225,6 +252,55 @@ export async function getLocalActiveSession(): Promise<WorkoutSessionDto | null>
 
 export async function saveLocalActiveSession(session: WorkoutSessionDto | null): Promise<void> {
   await idbSet('active_workout_session', session);
+}
+
+/** Stable random id of this browser install, sent with every sync so the server can recognise
+ * its own retried writes (e.g. after iOS froze the tab before a sync response arrived). */
+export async function getDeviceId(): Promise<string> {
+  const existing = await idbGet<string>('device_id');
+  if (existing) return existing;
+  const id = generateId('web');
+  await idbSet('device_id', id);
+  return id;
+}
+
+/** Server version this device last acknowledged per session — the base for optimistic concurrency. */
+export async function getAcknowledgedServerVersion(
+  clientSessionId: string,
+): Promise<number | undefined> {
+  const map = await idbGet<Record<string, number>>('server_versions');
+  return map?.[clientSessionId];
+}
+
+export async function setAcknowledgedServerVersion(
+  clientSessionId: string,
+  version: number | null,
+): Promise<void> {
+  const map = { ...((await idbGet<Record<string, number>>('server_versions')) ?? {}) };
+  if (version === null) delete map[clientSessionId];
+  else map[clientSessionId] = version;
+  await idbSet('server_versions', map);
+}
+
+/** Suggestions dismissed per workout session, so they stay gone across tab switches and reloads. */
+export async function getDismissedSuggestions(
+  clientSessionId: string,
+): Promise<DismissedWorkoutSuggestion[]> {
+  const map = await idbGet<Record<string, DismissedWorkoutSuggestion[]>>('dismissed_suggestions');
+  return map?.[clientSessionId] ?? [];
+}
+
+export async function setDismissedSuggestions(
+  clientSessionId: string,
+  dismissed: DismissedWorkoutSuggestion[] | null,
+): Promise<void> {
+  const map = {
+    ...((await idbGet<Record<string, DismissedWorkoutSuggestion[]>>('dismissed_suggestions')) ??
+      {}),
+  };
+  if (dismissed === null) delete map[clientSessionId];
+  else map[clientSessionId] = dismissed;
+  await idbSet('dismissed_suggestions', map);
 }
 
 export function recalculateSessionTotals(session: WorkoutSessionDto): WorkoutSessionDto {
@@ -487,49 +563,24 @@ export function createOfflineSessionFromTemplate(
 
   const exercises: SessionExerciseDto[] = template.exercises.map((te, idx) => {
     const exInfo = te.exercise ?? catalogMap.get(te.exerciseId);
-    const sets: SessionSetDto[] = [];
     const clientExerciseId = generateId('sex');
-    let setNumber = 1;
-
-    for (let w = 0; w < (te.warmupSets ?? 0); w++) {
-      sets.push({
-        id: generateId('set'),
-        clientSetId: generateId('cset'),
-        sessionExerciseId: clientExerciseId,
-        setNumber: setNumber++,
-        setType: SetType.WARMUP,
-        weight: te.targetWeight ? Math.round(te.targetWeight * 0.6 * 2) / 2 : 20,
-        weightUnit: te.weightUnit ?? weightUnit,
-        reps: te.targetRepsMin ?? 10,
-        durationSeconds: null,
-        distanceMeters: null,
-        rpe: null,
-        completed: false,
-        completedAt: null,
-        isPersonalRecord: false,
-        notes: null,
-      });
-    }
-
-    for (let s = 0; s < te.plannedSets; s++) {
-      sets.push({
-        id: generateId('set'),
-        clientSetId: generateId('cset'),
-        sessionExerciseId: clientExerciseId,
-        setNumber: setNumber++,
-        setType: SetType.WORKING,
-        weight: te.targetWeight ?? null,
-        weightUnit: te.weightUnit ?? weightUnit,
-        reps: te.targetRepsMin ?? 10,
-        durationSeconds: te.targetDurationSeconds ?? null,
-        distanceMeters: te.targetDistanceMeters ?? null,
-        rpe: null,
-        completed: false,
-        completedAt: null,
-        isPersonalRecord: false,
-        notes: null,
-      });
-    }
+    const sets: SessionSetDto[] = resolveTemplateSets(te).map((planned, sIdx) => ({
+      id: generateId('set'),
+      clientSetId: generateId('cset'),
+      sessionExerciseId: clientExerciseId,
+      setNumber: sIdx + 1,
+      setType: planned.setType,
+      weight: planned.weight,
+      weightUnit: te.weightUnit ?? weightUnit,
+      reps: planned.reps,
+      durationSeconds: planned.durationSeconds ?? te.targetDurationSeconds ?? null,
+      distanceMeters: planned.setType === SetType.WARMUP ? null : (te.targetDistanceMeters ?? null),
+      rpe: null,
+      completed: false,
+      completedAt: null,
+      isPersonalRecord: false,
+      notes: null,
+    }));
 
     const baseExercise: SessionExerciseDto = {
       id: clientExerciseId,
@@ -559,6 +610,9 @@ export function createOfflineSessionFromTemplate(
       sets,
     };
 
+    // A per-set plan already holds the last workout's values; only summary-only templates are
+    // pre-filled from history.
+    if (te.sets && te.sets.length > 0) return baseExercise;
     return applyExerciseHistoryToSessionExercise(
       baseExercise,
       historySessions,

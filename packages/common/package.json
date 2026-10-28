@@ -23,6 +23,10 @@
       "types": "./dist/catalog/index.d.ts",
       "default": "./dist/catalog/index.js"
     },
+    "./catalog/extended": {
+      "types": "./dist/catalog/extended/index.d.ts",
+      "default": "./dist/catalog/extended/index.js"
+    },
     "./utils": {
       "types": "./dist/utils/index.d.ts",
       "default": "./dist/utils/index.js"
@@ -43,7 +47,8 @@
   "scripts": {
     "build": "tsc --build && tsc-alias -p tsconfig.json -f -fe .js",
     "lint": "eslint . --max-warnings 0",
-    "test": "node --import tsx --test src/**/*.spec.ts"
+    "test": "node --import tsx --test src/**/*.spec.ts",
+    "catalog:import": "tsx scripts/import-catalog.ts"
   },
   "dependencies": {
     "date-fns": "^4.4.0",
