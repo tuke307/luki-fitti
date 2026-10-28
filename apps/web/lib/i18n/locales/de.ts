@@ -502,6 +502,8 @@ export const de = {
     muscleWikiBtn: 'MuscleWiki öffnen',
   },
   profile: {
+    dataSourcesTitle: 'Quellen der Übungsdaten',
+    dataSourcesDesc: 'Übungsnamen, Anleitungen und Fotos stammen teilweise aus diesen offenen Datenbanken.',
     title: 'Profil & Einstellungen',
     subtitle: 'Konto, Einheiten und Einstellungen.',
     accountSectionTitle: 'Konto',

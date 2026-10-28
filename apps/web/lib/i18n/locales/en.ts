@@ -501,6 +501,8 @@ export const en = {
     muscleWikiBtn: 'Open MuscleWiki',
   },
   profile: {
+    dataSourcesTitle: 'Exercise data sources',
+    dataSourcesDesc: 'Exercise names, instructions and photos partly come from these open databases.',
     title: 'Profile & Preferences',
     subtitle: 'Account, units and preferences.',
     accountSectionTitle: 'Account',
