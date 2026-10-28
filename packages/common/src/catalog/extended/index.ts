@@ -1,6 +1,6 @@
 import type { SupportedLocale } from '../../enums';
 import type { ExerciseDto } from '../../schemas';
-import { INITIAL_EXERCISE_CATALOG } from '../data';
+import { CORE_EXERCISE_CATALOG } from '../data';
 import { exerciseRecordGermanText, exerciseRecordToDto } from '../exercise-record';
 import { localizeExercise } from '../localize';
 import { registerExerciseCatalogExtension } from '../registry';
@@ -25,7 +25,7 @@ registerExerciseCatalogExtension(EXTENDED_EXERCISE_CATALOG, { de: GERMAN_TEXT })
 
 /** Every system exercise: the core exercises first, then the rest of the database. */
 export const ALL_SYSTEM_EXERCISES: ExerciseDto[] = [
-  ...INITIAL_EXERCISE_CATALOG,
+  ...CORE_EXERCISE_CATALOG,
   ...EXTENDED_EXERCISE_CATALOG,
 ];
 

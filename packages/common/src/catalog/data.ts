@@ -11,14 +11,14 @@ import { getRegisteredExercise } from './registry';
  * `./extended` and is loaded on demand. Ordered like `EXERCISE_OVERRIDES` (by muscle group).
  */
 const CORE_RECORDS_BY_ID = new Map(CORE_EXERCISE_RECORDS.map((r) => [r.id, r]));
-export const INITIAL_EXERCISE_CATALOG: ExerciseDto[] = Object.entries(EXERCISE_OVERRIDES).flatMap(
+export const CORE_EXERCISE_CATALOG: ExerciseDto[] = Object.entries(EXERCISE_OVERRIDES).flatMap(
   ([id, override]) => {
     const record = CORE_RECORDS_BY_ID.get(id);
     return record ? [exerciseRecordToDto(record, override)] : [];
   },
 );
 
-const CORE_BY_ID = new Map(INITIAL_EXERCISE_CATALOG.map((e) => [e.id, e]));
+const CORE_BY_ID = new Map(CORE_EXERCISE_CATALOG.map((e) => [e.id, e]));
 
 export const DEFAULT_STARTER_FOLDER = {
   id: 'folder-4er-split',

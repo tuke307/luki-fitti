@@ -2,7 +2,7 @@ import prisma from './client';
 import logger from '@luki-fitti/logger';
 import { ALL_SYSTEM_EXERCISES } from '@luki-fitti/common/catalog/extended';
 import {
-  INITIAL_EXERCISE_CATALOG,
+  CORE_EXERCISE_CATALOG,
   DEFAULT_STARTER_FOLDERS,
   DEFAULT_STARTER_TEMPLATES,
   DEFAULT_STRETCHING_ROUTINES,
@@ -64,7 +64,7 @@ async function main(): Promise<void> {
         }
       }
 
-      for (const item of INITIAL_EXERCISE_CATALOG) {
+      for (const item of CORE_EXERCISE_CATALOG) {
         await tx.exerciseAlternative.deleteMany({ where: { exerciseId: item.id } });
         for (const altId of item.alternativeExerciseIds) {
           await tx.exerciseAlternative.create({

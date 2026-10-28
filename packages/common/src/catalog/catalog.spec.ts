@@ -6,7 +6,7 @@ import {
   DEFAULT_STARTER_FOLDERS,
   DEFAULT_STARTER_TEMPLATES,
   DEFAULT_STRETCHING_ROUTINES,
-  INITIAL_EXERCISE_CATALOG,
+  CORE_EXERCISE_CATALOG,
 } from './data';
 import {
   getCatalogTranslation,
@@ -25,7 +25,7 @@ for (const locale of translatedLocales) {
     const tr = getCatalogTranslation(locale)!;
 
     it('translates every core exercise with the same number of steps', () => {
-      for (const ex of INITIAL_EXERCISE_CATALOG) {
+      for (const ex of CORE_EXERCISE_CATALOG) {
         const text = EXERCISE_OVERRIDES[ex.id]?.[locale];
         assert.ok(text, `missing translation for ${ex.id}`);
         assert.ok(text.name.trim() && text.description.trim(), `empty text for ${ex.id}`);
@@ -76,9 +76,7 @@ describe('resolveSupportedLocale', () => {
 });
 
 describe('catalog localization', () => {
-  const bench = INITIAL_EXERCISE_CATALOG.find(
-    (e) => e.id === 'ex-barbell-bench-press-medium-grip',
-  )!;
+  const bench = CORE_EXERCISE_CATALOG.find((e) => e.id === 'ex-barbell-bench-press-medium-grip')!;
 
   it('resolves system exercise text from the catalog and keeps the source name searchable', () => {
     const de = localizeExercise({ ...bench, name: 'stale db text' }, 'de');

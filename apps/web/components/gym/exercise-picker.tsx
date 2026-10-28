@@ -14,7 +14,7 @@ import {
 import { Input } from '@luki-fitti/ui/components/ui/input';
 import { cn } from '@luki-fitti/ui/lib/utils';
 import { EQUIPMENT_LABELS, MUSCLE_GROUP_LABELS, MuscleGroup } from '@luki-fitti/common/enums';
-import { getExerciseSearchNames, INITIAL_EXERCISE_CATALOG } from '@luki-fitti/common/catalog';
+import { getExerciseSearchNames, CORE_EXERCISE_CATALOG } from '@luki-fitti/common/catalog';
 import type { ExerciseDto } from '@luki-fitti/common/schemas';
 import {
   buildExerciseSearchIndex,
@@ -25,7 +25,7 @@ import { de } from '@/lib/i18n';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { ExerciseVisual } from './exercise-visual';
 
-const CORE_EXERCISE_IDS = new Set(INITIAL_EXERCISE_CATALOG.map((e) => e.id));
+const CORE_EXERCISE_IDS = new Set(CORE_EXERCISE_CATALOG.map((e) => e.id));
 const searchIndexes = new WeakMap<ExerciseDto[], ExerciseSearchIndex>();
 
 /** Search index of a catalog array, built once per array (the catalog is replaced, not mutated). */
