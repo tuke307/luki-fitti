@@ -2,7 +2,7 @@ import {
   buildStarterStretchingRoutines,
   buildStarterWorkouts,
   DEFAULT_STARTER_FOLDERS,
-  INITIAL_EXERCISE_CATALOG,
+  CORE_EXERCISE_CATALOG,
   DEFAULT_STARTER_TEMPLATES,
   DEFAULT_STRETCHING_ROUTINES,
   resolveExerciseMedia,
@@ -130,7 +130,7 @@ export function mergeMissingExercises(
 
 export async function getCachedCatalog(): Promise<ExerciseDto[]> {
   const cached = await idbGet<ExerciseDto[]>('exercise_catalog');
-  const systemExercises = INITIAL_EXERCISE_CATALOG;
+  const systemExercises = CORE_EXERCISE_CATALOG;
   if (cached && cached.length > 0) {
     const bySlug = new Map(cached.map((e) => [e.slug, e]));
     let changed = false;

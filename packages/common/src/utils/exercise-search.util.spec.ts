@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { getAllLocalizedExercises } from '../catalog/extended';
-import { INITIAL_EXERCISE_CATALOG } from '../catalog/data';
+import { CORE_EXERCISE_CATALOG } from '../catalog/data';
 import { getExerciseSearchNames } from '../catalog/localize';
 import { EQUIPMENT_LABELS, MUSCLE_GROUP_LABELS, SUPPORTED_LOCALES } from '../enums';
 import {
@@ -26,7 +26,7 @@ const CASES: SearchCase[] = JSON.parse(
   readFileSync(new URL('./__fixtures__/exercise-search-cases.json', import.meta.url), 'utf8'),
 );
 
-const CORE_IDS = new Set(INITIAL_EXERCISE_CATALOG.map((e) => e.id));
+const CORE_IDS = new Set(CORE_EXERCISE_CATALOG.map((e) => e.id));
 
 for (const locale of SUPPORTED_LOCALES) {
   describe(`exercise search (${locale})`, () => {
@@ -57,7 +57,7 @@ for (const locale of SUPPORTED_LOCALES) {
 }
 
 describe('suggestions before creating a custom exercise', () => {
-  const base = INITIAL_EXERCISE_CATALOG[0]!;
+  const base = CORE_EXERCISE_CATALOG[0]!;
   const fake = (id: string, name: string) => ({ ...base, id, slug: id, name, tags: [] });
   const index = buildExerciseSearchIndex([
     fake('dumbbell-shoulder-press', 'Seated Dumbbell Shoulder Press'),

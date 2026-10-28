@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { PrismaService } from '../database/prisma.service';
 import {
   getExerciseSearchNames,
-  INITIAL_EXERCISE_CATALOG,
+  CORE_EXERCISE_CATALOG,
   localizeExercise,
   resolveExerciseMedia,
 } from '@luki-fitti/common/catalog';
@@ -21,7 +21,7 @@ import {
 } from '@luki-fitti/common/enums';
 import { buildExerciseSearchIndex, searchExercises } from '@luki-fitti/common/utils';
 
-const CORE_EXERCISE_IDS = new Set(INITIAL_EXERCISE_CATALOG.map((e) => e.id));
+const CORE_EXERCISE_IDS = new Set(CORE_EXERCISE_CATALOG.map((e) => e.id));
 
 @Injectable()
 export class ExerciseService {
@@ -71,7 +71,7 @@ export class ExerciseService {
         }
       }
 
-      for (const item of INITIAL_EXERCISE_CATALOG) {
+      for (const item of CORE_EXERCISE_CATALOG) {
         for (const altId of item.alternativeExerciseIds) {
           await this.prisma.exerciseAlternative.upsert({
             where: {

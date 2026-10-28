@@ -13,7 +13,7 @@ import {
   buildStarterStretchingRoutines,
   buildStarterWorkouts,
   getExerciseSearchNames,
-  INITIAL_EXERCISE_CATALOG,
+  CORE_EXERCISE_CATALOG,
 } from '@luki-fitti/common/catalog';
 import {
   ALL_SYSTEM_EXERCISES,
@@ -48,7 +48,7 @@ const search = {
   synonyms: EXERCISE_SEARCH_SYNONYMS,
   equipment: EXERCISE_SEARCH_EQUIPMENT,
   /** Ranked first among equal matches: the everyday exercises of the starter workouts. */
-  coreExerciseIds: INITIAL_EXERCISE_CATALOG.map((e) => e.id),
+  coreExerciseIds: CORE_EXERCISE_CATALOG.map((e) => e.id),
   /** Names in every language, for exercises whose name differs between languages. */
   exerciseNames: Object.fromEntries(
     ALL_SYSTEM_EXERCISES.map((e) => [e.id, getExerciseSearchNames(e)]).filter(

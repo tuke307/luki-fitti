@@ -53,7 +53,7 @@ import {
   resolveLocale,
 } from '../i18n';
 import { filterExercisesByQuery } from '../../components/gym/exercise-picker';
-import { buildStarterWorkouts, INITIAL_EXERCISE_CATALOG } from '@luki-fitti/common/catalog';
+import { buildStarterWorkouts, CORE_EXERCISE_CATALOG } from '@luki-fitti/common/catalog';
 import type { WorkoutSessionDto } from '@luki-fitti/common/schemas';
 
 describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substitution', () => {
@@ -369,19 +369,19 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
     const routines = await getCachedStretchingRoutines();
     assert.equal(routines.length >= 6, true);
     // Every exercise links a video guide; exercises without a faithful photo fall back to the
-    // anatomy visual. The curated catalog must carry start/finish images for at least 95%;
+    // anatomy visual. The core exercises must carry start/finish images for at least 95%;
     // imported entries only have photos where their source provides them.
     assert.equal(
       catalog.every((ex) => ex.media?.some((m) => m.mediaType === 'VIDEO_LINK')),
       true,
     );
-    const curatedIds = new Set(INITIAL_EXERCISE_CATALOG.map((e) => e.id));
-    const curated = catalog.filter((ex) => curatedIds.has(ex.id));
-    const withImages = curated.filter(
+    const coreIds = new Set(CORE_EXERCISE_CATALOG.map((e) => e.id));
+    const core = catalog.filter((ex) => coreIds.has(ex.id));
+    const withImages = core.filter(
       (ex) => (ex.media ?? []).filter((m) => m.mediaType === 'IMAGE').length >= 2,
     );
-    assert.equal(withImages.length / curated.length >= 0.95, true);
-    assert.ok(catalog.length > INITIAL_EXERCISE_CATALOG.length + 800, 'imported catalog merged');
+    assert.equal(withImages.length / core.length >= 0.95, true);
+    assert.ok(catalog.length > CORE_EXERCISE_CATALOG.length + 800, 'imported catalog merged');
 
     const { folders } = buildStarterWorkouts({ userId: 'user-1' });
     const baseTemplate = folders[0]!.templates[0]!;

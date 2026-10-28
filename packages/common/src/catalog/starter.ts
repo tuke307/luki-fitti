@@ -4,7 +4,7 @@ import {
   DEFAULT_STARTER_FOLDERS,
   DEFAULT_STARTER_TEMPLATES,
   DEFAULT_STRETCHING_ROUTINES,
-  INITIAL_EXERCISE_CATALOG,
+  CORE_EXERCISE_CATALOG,
 } from './data';
 import { localizeFolder, localizeStretchingRoutine, SOURCE_LOCALE } from './localize';
 
@@ -15,7 +15,7 @@ export interface StarterBuildOptions {
   locale?: SupportedLocale;
 }
 
-const catalogById = new Map(INITIAL_EXERCISE_CATALOG.map((e) => [e.id, e]));
+const catalogById = new Map(CORE_EXERCISE_CATALOG.map((e) => [e.id, e]));
 
 /** Starter folders and templates as offline DTOs, linked to their definition via `systemKey`. */
 export function buildStarterWorkouts({

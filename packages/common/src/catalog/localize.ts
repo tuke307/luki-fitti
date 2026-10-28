@@ -9,7 +9,7 @@ import {
   DEFAULT_STARTER_FOLDERS,
   DEFAULT_STARTER_TEMPLATES,
   DEFAULT_STRETCHING_ROUTINES,
-  INITIAL_EXERCISE_CATALOG,
+  CORE_EXERCISE_CATALOG,
 } from './data';
 import { de } from './locales/de';
 import { EXERCISE_OVERRIDES } from './overrides';
@@ -28,7 +28,7 @@ const TRANSLATIONS: Record<Exclude<SupportedLocale, typeof SOURCE_LOCALE>, Catal
   de,
 };
 
-const EXERCISES = new Map(INITIAL_EXERCISE_CATALOG.map((e) => [e.id, e]));
+const EXERCISES = new Map(CORE_EXERCISE_CATALOG.map((e) => [e.id, e]));
 const FOLDERS = new Map(DEFAULT_STARTER_FOLDERS.map((f) => [f.id, f]));
 const TEMPLATES = new Map(DEFAULT_STARTER_TEMPLATES.map((t) => [t.id, t]));
 const ROUTINES = new Map(DEFAULT_STRETCHING_ROUTINES.map((r) => [r.id, r]));
@@ -153,10 +153,6 @@ export function localizeExercise(exercise: ExerciseDto, locale: SupportedLocale)
     ...text,
     tags: keepTags ? exercise.tags : [...exercise.tags, sourceName],
   };
-}
-
-export function getLocalizedExerciseCatalog(locale: SupportedLocale): ExerciseDto[] {
-  return INITIAL_EXERCISE_CATALOG.map((e) => localizeExercise(e, locale));
 }
 
 export function localizeTemplate(
