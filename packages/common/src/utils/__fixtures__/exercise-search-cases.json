@@ -1,0 +1,116 @@
+[
+  {
+    "query": "situp",
+    "top": 3,
+    "expect": ["ex-sit-ups"]
+  },
+  {
+    "query": "sit up",
+    "top": 3,
+    "expect": ["ex-sit-ups"]
+  },
+  {
+    "query": "Sit-Ups",
+    "top": 1,
+    "expect": ["ex-sit-ups"]
+  },
+  {
+    "query": "pushup",
+    "top": 3,
+    "expect": ["ex-pushups"]
+  },
+  {
+    "query": "liegestütze",
+    "top": 3,
+    "expect": ["ex-pushups"]
+  },
+  {
+    "query": "bankdrucken",
+    "top": 3,
+    "expect": ["ex-barbell-bench-press-medium-grip", "ex-dumbbell-bench-press"]
+  },
+  {
+    "query": "bankdruecken",
+    "top": 3,
+    "expect": ["ex-barbell-bench-press-medium-grip", "ex-dumbbell-bench-press"]
+  },
+  {
+    "query": "bench press",
+    "top": 3,
+    "expect": ["ex-barbell-bench-press-medium-grip"]
+  },
+  {
+    "query": "kh bank",
+    "top": 1,
+    "expect": ["ex-dumbbell-bench-press"]
+  },
+  {
+    "query": "Bankdrücken (Kurzhanteln)",
+    "top": 1,
+    "expect": ["ex-dumbbell-bench-press"]
+  },
+  {
+    "query": "bizepcurl",
+    "top": 3,
+    "expect": ["ex-barbell-curl"]
+  },
+  {
+    "query": "bizeps curl",
+    "top": 5,
+    "expect": ["ex-barbell-curl"]
+  },
+  {
+    "query": "rdl",
+    "top": 3,
+    "expect": ["ex-romanian-deadlift"],
+    "exclude": ["ex-hurdle-hops", "ex-front-cone-hops-or-hurdle-hops"]
+  },
+  {
+    "query": "ohp",
+    "top": 3,
+    "expect": ["ex-barbell-shoulder-press"]
+  },
+  {
+    "query": "klimmzüge",
+    "top": 3,
+    "expect": ["ex-pullups"]
+  },
+  {
+    "query": "pullups",
+    "top": 3,
+    "expect": ["ex-pullups"]
+  },
+  {
+    "query": "schulterdrücken multipresse",
+    "top": 1,
+    "expect": ["ex-smith-machine-overhead-shoulder-press"]
+  },
+  {
+    "query": "kniebuege",
+    "top": 3,
+    "expect": ["ex-barbell-squat"]
+  },
+  {
+    "query": "latzug eng",
+    "top": 1,
+    "expect": ["ex-close-grip-front-lat-pulldown"]
+  },
+  {
+    "query": "Sitzendes Schulterdrücken Multipresse",
+    "top": 1,
+    "expect": ["ex-smith-machine-overhead-shoulder-press"],
+    "matchAllWords": false
+  },
+  {
+    "query": "Bankdrücken Langhantel",
+    "top": 1,
+    "expect": ["ex-barbell-bench-press-medium-grip"],
+    "matchAllWords": false
+  },
+  {
+    "query": "Kurzhantel Schulterdrücken sitzend",
+    "top": 1,
+    "expect": ["ex-dumbbell-shoulder-press"],
+    "matchAllWords": false
+  }
+]

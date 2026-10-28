@@ -1,5 +1,6 @@
 import SwiftUI
 import LukiFittiModels
+import LukiFittiDomain
 import LukiFittiDesign
 
 public struct ExercisesAndStretchingView: View {
@@ -7,6 +8,7 @@ public struct ExercisesAndStretchingView: View {
     @State private var activeSubTab: String = "catalog"
     @State private var searchQuery: String = ""
     @State private var selectedMuscle: MuscleGroup?
+    @State private var searchIndex: ExerciseSearchIndex?
 
     public init(viewModel: LukiAppViewModel) {
         self.viewModel = viewModel
@@ -25,7 +27,7 @@ public struct ExercisesAndStretchingView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "magnifyingglass")
                             .foregroundStyle(.secondary)
-                        TextField("Search 130+ exercises by name, muscle, or German alias...", text: $searchQuery)
+                        TextField("Search exercises by name, muscle or equipment…", text: $searchQuery)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                         if !searchQuery.isEmpty {
@@ -126,16 +128,19 @@ public struct ExercisesAndStretchingView: View {
             .padding(16)
         }
         .background(LukiColors.groupedBackground)
+        // Build the search index once per catalog instead of on every keystroke.
+        .task(id: viewModel.store.catalog.count) {
+            searchIndex = .catalogWithLabels(viewModel.store.catalog)
+        }
     }
 
     private var filteredExercises: [ExerciseDto] {
-        let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return viewModel.store.catalog.filter { ex in
-            if let selectedMuscle, ex.primaryMuscleGroup != selectedMuscle { return false }
-            guard !q.isEmpty else { return true }
-            return ex.name.lowercased().contains(q) ||
-                ex.tags.contains(where: { $0.lowercased().contains(q) }) ||
-                LukiI18n.muscleLabel(ex.primaryMuscleGroup, locale: .de).lowercased().contains(q)
-        }
+        let catalog = viewModel.store.catalog
+        let q = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        let matches = q.isEmpty
+            ? catalog
+            : (searchIndex ?? .catalogWithLabels(catalog)).search(q).map(\.exercise)
+        guard let selectedMuscle else { return matches }
+        return matches.filter { $0.primaryMuscleGroup == selectedMuscle }
     }
 }

@@ -1,7 +1,8 @@
 /**
  * Generates the bundled iOS/watchOS starter catalog from `@luki-fitti/common/catalog`, the single
  * source of the built-in exercises, starter workouts and stretching routines (all languages), plus
- * `retired_exercise_ids.json` (ids of merged exercises).
+ * `retired_exercise_ids.json` (ids of merged exercises) and `exercise_search.json` (the shared
+ * search vocabulary).
  *
  *   yarn workspace @luki-fitti/apple catalog:export   # write the file
  *   yarn workspace @luki-fitti/apple catalog:check    # fail if the file is out of date
@@ -12,10 +13,20 @@ import { format, resolveConfig } from 'prettier';
 import {
   buildStarterStretchingRoutines,
   buildStarterWorkouts,
+  getExerciseSearchNames,
+  INITIAL_EXERCISE_CATALOG,
   RETIRED_EXERCISE_IDS,
 } from '@luki-fitti/common/catalog';
-import { getAllLocalizedExercises } from '@luki-fitti/common/catalog/extended';
+import {
+  ALL_SYSTEM_EXERCISES,
+  getAllLocalizedExercises,
+} from '@luki-fitti/common/catalog/extended';
 import { SUPPORTED_LOCALES } from '@luki-fitti/common/enums';
+import {
+  EXERCISE_SEARCH_EQUIPMENT,
+  EXERCISE_SEARCH_PHRASES,
+  EXERCISE_SEARCH_SYNONYMS,
+} from '@luki-fitti/common/utils/client';
 
 const resource = (name: string) =>
   fileURLToPath(
@@ -34,9 +45,24 @@ const catalog = Object.fromEntries(
     },
   ]),
 );
+const search = {
+  phrases: EXERCISE_SEARCH_PHRASES.map(([pattern, replacement]) => ({ pattern, replacement })),
+  synonyms: EXERCISE_SEARCH_SYNONYMS,
+  equipment: EXERCISE_SEARCH_EQUIPMENT,
+  /** Ranked first among equal matches: the everyday exercises of the starter workouts. */
+  coreExerciseIds: INITIAL_EXERCISE_CATALOG.map((e) => e.id),
+  /** Names in every language, for exercises whose name differs between languages. */
+  exerciseNames: Object.fromEntries(
+    ALL_SYSTEM_EXERCISES.map((e) => [e.id, getExerciseSearchNames(e)]).filter(
+      ([, names]) => names.length > 1,
+    ),
+  ),
+};
+
 const outputs = {
   'starter_catalog.json': catalog,
   'retired_exercise_ids.json': RETIRED_EXERCISE_IDS,
+  'exercise_search.json': search,
 };
 let outdated = false;
 for (const [name, data] of Object.entries(outputs)) {

@@ -14,59 +14,59 @@ import {
 import { Input } from '@luki-fitti/ui/components/ui/input';
 import { cn } from '@luki-fitti/ui/lib/utils';
 import { EQUIPMENT_LABELS, MUSCLE_GROUP_LABELS, MuscleGroup } from '@luki-fitti/common/enums';
+import { getExerciseSearchNames, INITIAL_EXERCISE_CATALOG } from '@luki-fitti/common/catalog';
 import type { ExerciseDto } from '@luki-fitti/common/schemas';
-import { findSimilarExercises } from '@luki-fitti/common/utils/client';
+import {
+  buildExerciseSearchIndex,
+  searchExercises,
+  type ExerciseSearchIndex,
+} from '@luki-fitti/common/utils/client';
 import { de } from '@/lib/i18n';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { ExerciseVisual } from './exercise-visual';
 
+const CORE_EXERCISE_IDS = new Set(INITIAL_EXERCISE_CATALOG.map((e) => e.id));
+const searchIndexes = new WeakMap<ExerciseDto[], ExerciseSearchIndex>();
+
+/** Search index of a catalog array, built once per array (the catalog is replaced, not mutated). */
+export function searchIndexFor(exercises: ExerciseDto[]): ExerciseSearchIndex {
+  let index = searchIndexes.get(exercises);
+  if (!index) {
+    index = buildExerciseSearchIndex(exercises, {
+      // System exercises are searchable by their name in every language.
+      names: getExerciseSearchNames,
+      labels: (ex) => [
+        MUSCLE_GROUP_LABELS[ex.primaryMuscleGroup],
+        de.enums.muscleGroups[ex.primaryMuscleGroup],
+        EQUIPMENT_LABELS[ex.equipment],
+        de.enums.equipment[ex.equipment],
+      ],
+      // Everyday staples (the exercises of the starter workouts) before their variants.
+      boost: (ex) => (CORE_EXERCISE_IDS.has(ex.id) ? 0.1 : 0),
+    });
+    searchIndexes.set(exercises, index);
+  }
+  return index;
+}
+
+/**
+ * Exercises matching a search text (ranked best first) and muscle filter. Forgiving about
+ * spelling, spacing, umlauts, plurals, German/English names and small typos — see
+ * `searchExercises` in `@luki-fitti/common/utils`.
+ */
 export function filterExercisesByQuery(
   exercises: ExerciseDto[],
   search: string,
   muscleFilter: MuscleGroup | 'ALL' = 'ALL',
 ): ExerciseDto[] {
-  const q = search.trim().toLowerCase();
-  const direct = exercises.filter((ex) => {
-    if (muscleFilter !== 'ALL') {
-      const matchesPrimary = ex.primaryMuscleGroup === muscleFilter;
-      const matchesSecondary = ex.secondaryMuscleGroups?.includes(muscleFilter);
-      if (!matchesPrimary && !matchesSecondary) return false;
-    }
-
-    if (!q) return true;
-
-    const matchName = ex.name.toLowerCase().includes(q);
-    const matchTags = ex.tags.some((tag) => tag.toLowerCase().includes(q));
-    const matchMuscleEn = MUSCLE_GROUP_LABELS[ex.primaryMuscleGroup].toLowerCase().includes(q);
-    const matchMuscleDe = de.enums.muscleGroups[ex.primaryMuscleGroup].toLowerCase().includes(q);
-    const matchEquipEn = EQUIPMENT_LABELS[ex.equipment].toLowerCase().includes(q);
-    const matchEquipDe = de.enums.equipment[ex.equipment].toLowerCase().includes(q);
-    const matchDesc = ex.description.toLowerCase().includes(q);
-
-    return (
-      matchName ||
-      matchTags ||
-      matchMuscleEn ||
-      matchMuscleDe ||
-      matchEquipEn ||
-      matchEquipDe ||
-      matchDesc
-    );
-  });
-  // Multi-word or German/English mixed queries ("Schulterdrücken Multipresse") rarely match as a
-  // substring: add token-based matches behind the direct hits.
-  if (!q || direct.length >= 10) return direct;
-  const seen = new Set(direct.map((e) => e.id));
-  const fuzzy = findSimilarExercises(q, exercises, { limit: 20, minScore: 0.6 })
-    .map((m) => m.exercise)
-    .filter((e) => {
-      if (seen.has(e.id)) return false;
-      if (muscleFilter === 'ALL') return true;
-      return (
-        e.primaryMuscleGroup === muscleFilter || e.secondaryMuscleGroups?.includes(muscleFilter)
-      );
-    });
-  return [...direct, ...fuzzy];
+  const matchesMuscle = (ex: ExerciseDto) =>
+    muscleFilter === 'ALL' ||
+    ex.primaryMuscleGroup === muscleFilter ||
+    !!ex.secondaryMuscleGroups?.includes(muscleFilter);
+  if (!search.trim()) return exercises.filter(matchesMuscle);
+  return searchExercises(searchIndexFor(exercises), search)
+    .map((r) => r.exercise)
+    .filter(matchesMuscle);
 }
 
 interface ExercisePickerProps {

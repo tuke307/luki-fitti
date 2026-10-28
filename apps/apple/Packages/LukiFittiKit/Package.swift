@@ -36,6 +36,7 @@ let package = Package(
             resources: [
                 .process("Resources/starter_catalog.json"),
                 .process("Resources/retired_exercise_ids.json"),
+                .process("Resources/exercise_search.json"),
             ]
         ),
         .target(

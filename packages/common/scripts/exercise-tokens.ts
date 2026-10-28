@@ -1,6 +1,8 @@
-import type { ExerciseDto } from '../schemas';
-
 /**
+ * Tokenizer the importer uses to skip duplicate dataset entries. Frozen on purpose: changing it
+ * changes which entries get imported (and so which exercise ids exist). The app's search lives in
+ * `src/utils/exercise-search.util.ts`.
+ *
  * German and English gym words mapped onto shared canonical tokens, so "Sitzendes Schulterdrücken
  * Multipresse" and "Seated Smith Machine Shoulder Press" end up with the same tokens.
  * Compound German words expand to several tokens.
@@ -122,8 +124,6 @@ const SYNONYMS: Record<string, string[]> = {
   twists: ['rotation'],
 };
 
-const EQUIPMENT = new Set(['smith', 'cable', 'dumbbell', 'barbell', 'machine', 'ez', 'band']);
-
 /** Filler words that say nothing about the exercise. */
 const STOP_WORDS = new Set([
   'an',
@@ -169,63 +169,4 @@ export function exerciseTokens(text: string): string[] {
     .filter((w) => w.length > 1 && !STOP_WORDS.has(w));
   const tokens = words.flatMap((w) => SYNONYMS[w] ?? [w]);
   return Array.from(new Set(tokens));
-}
-
-function tokenMatches(query: string, candidate: Set<string>): boolean {
-  if (candidate.has(query)) return true;
-  if (query.length < 4) return false;
-  for (const c of candidate) {
-    if (c.length >= 4 && (c.startsWith(query) || query.startsWith(c))) return true;
-  }
-  return false;
-}
-
-export interface ExerciseMatch {
-  exercise: ExerciseDto;
-  /** Share of the query tokens found in the exercise (0–1). */
-  score: number;
-}
-
-/**
- * Catalog exercises that probably mean the same thing as a typed name, best first. Used before
- * creating a custom exercise ("Meintest du …?") and as a fallback in the exercise search.
- */
-export function findSimilarExercises(
-  query: string,
-  catalog: ExerciseDto[],
-  { limit = 3, minScore = 0.6 }: { limit?: number; minScore?: number } = {},
-): ExerciseMatch[] {
-  const queryTokens = exerciseTokens(query);
-  if (queryTokens.length === 0) return [];
-  const weight = (t: string) => (EQUIPMENT.has(t) ? 2 : 1);
-  const total = queryTokens.reduce((sum, t) => sum + weight(t), 0);
-  const queryEquipment = queryTokens.filter((t) => EQUIPMENT.has(t));
-
-  return catalog
-    .map((exercise) => {
-      const nameTokens = exerciseTokens(exercise.name);
-      const candidate = new Set([
-        ...nameTokens,
-        ...exerciseTokens([exercise.slug, ...exercise.tags].join(' ')),
-      ]);
-      const matchedTokens = queryTokens.filter((t) => tokenMatches(t, candidate));
-      let score = matchedTokens.reduce((sum, t) => sum + weight(t), 0) / total;
-      // A different piece of equipment ("dumbbell" when "Smith" was typed) is a different exercise.
-      const conflicting = nameTokens.some(
-        (t) =>
-          EQUIPMENT.has(t) &&
-          !queryEquipment.includes(t) &&
-          !(t === 'machine' && queryEquipment.includes('smith')),
-      );
-      if (queryEquipment.length > 0 && conflicting) score *= 0.5;
-      // Prefer names that do not add many unrelated words.
-      const precision =
-        nameTokens.filter((t) => tokenMatches(t, new Set(queryTokens))).length /
-        Math.max(nameTokens.length, 1);
-      return { exercise, score, precision };
-    })
-    .filter((m) => m.score >= minScore)
-    .sort((a, b) => b.score - a.score || b.precision - a.precision)
-    .slice(0, limit)
-    .map(({ exercise, score }) => ({ exercise, score }));
 }

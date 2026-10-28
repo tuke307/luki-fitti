@@ -6,7 +6,7 @@ final class IOSExercisesAndStretchingUITests: XCTestCase {
         let app = IOSUITestHelpers.launchApp()
         IOSUITestHelpers.navigateToTab(app, label: "Library")
 
-        let searchField = app.textFields["Search 130+ exercises by name, muscle, or German alias..."]
+        let searchField = app.textFields["Search exercises by name, muscle or equipment…"]
         XCTAssertTrue(searchField.waitForExistence(timeout: 8))
         searchField.tap()
         searchField.typeText("Barbell Bench Press")
