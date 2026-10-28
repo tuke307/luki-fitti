@@ -9,7 +9,6 @@ import {
 } from '../data';
 import { localizeExercise } from '../localize';
 import { EXERCISE_OVERRIDES } from '../overrides';
-import { RETIRED_EXERCISE_IDS, resolveExerciseId } from '../retired';
 import { ALL_SYSTEM_EXERCISES, EXTENDED_EXERCISE_CATALOG } from './index';
 
 describe('extended exercise catalog', () => {
@@ -46,17 +45,6 @@ describe('extended exercise catalog', () => {
         seen.set(key, ex.id);
       }
     }
-  });
-
-  it('replaces every retired id with an existing exercise', () => {
-    const ids = new Set(ALL_SYSTEM_EXERCISES.map((e) => e.id));
-    for (const [retired, target] of Object.entries(RETIRED_EXERCISE_IDS)) {
-      assert.ok(!ids.has(retired), `retired id ${retired} is still in the catalog`);
-      assert.ok(ids.has(target), `${retired} → ${target} does not exist`);
-    }
-    assert.equal(resolveExerciseId('ex-benchpress-dumbbells'), 'ex-dumbbell-bench-press');
-    assert.equal(resolveExerciseId('ex-barbell-bench-press'), 'ex-barbell-bench-press-medium-grip');
-    assert.equal(resolveExerciseId('ex-dumbbell-bench-press'), 'ex-dumbbell-bench-press');
   });
 
   it('builds every core exercise on a dataset entry with its hand-written text', () => {

@@ -1,8 +1,7 @@
 /**
  * Generates the bundled iOS/watchOS starter catalog from `@luki-fitti/common/catalog`, the single
  * source of the built-in exercises, starter workouts and stretching routines (all languages), plus
- * `retired_exercise_ids.json` (ids of merged exercises) and `exercise_search.json` (the shared
- * search vocabulary).
+ * `exercise_search.json` (the shared search vocabulary).
  *
  *   yarn workspace @luki-fitti/apple catalog:export   # write the file
  *   yarn workspace @luki-fitti/apple catalog:check    # fail if the file is out of date
@@ -15,7 +14,6 @@ import {
   buildStarterWorkouts,
   getExerciseSearchNames,
   INITIAL_EXERCISE_CATALOG,
-  RETIRED_EXERCISE_IDS,
 } from '@luki-fitti/common/catalog';
 import {
   ALL_SYSTEM_EXERCISES,
@@ -61,7 +59,6 @@ const search = {
 
 const outputs = {
   'starter_catalog.json': catalog,
-  'retired_exercise_ids.json': RETIRED_EXERCISE_IDS,
   'exercise_search.json': search,
 };
 let outdated = false;

@@ -15,7 +15,6 @@ import {
 } from '@luki-fitti/common/enums';
 import {
   getExerciseText,
-  resolveExerciseId,
   getStarterNote,
   getStarterRoutineText,
   getStarterTemplateText,
@@ -357,21 +356,9 @@ export class SessionService {
    */
   async syncSession(
     userId: string,
-    rawPayload: SyncSessionPayloadDto,
+    payload: SyncSessionPayloadDto,
     locale: SupportedLocale = 'en',
   ): Promise<SyncSessionResponseDto> {
-    // Offline clients may still hold ids of exercises that were merged into another one.
-    const payload: SyncSessionPayloadDto = {
-      ...rawPayload,
-      exercises: rawPayload.exercises.map((ex) => ({
-        ...ex,
-        exerciseId: ex.exerciseId && resolveExerciseId(ex.exerciseId),
-        replacedExerciseId: ex.replacedExerciseId && resolveExerciseId(ex.replacedExerciseId),
-        alternativeExerciseIds: ex.alternativeExerciseIds && [
-          ...new Set(ex.alternativeExerciseIds.map(resolveExerciseId)),
-        ],
-      })),
-    };
     const existing = await this.prisma.workoutSession.findUnique({
       where: { clientSessionId: payload.clientSessionId },
       include: {

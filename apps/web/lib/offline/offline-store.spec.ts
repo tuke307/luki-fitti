@@ -607,39 +607,6 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
     );
   });
 
-  it('moves cached data off exercises that were merged into another one', async () => {
-    const catalog = await getCachedCatalog();
-    const bench = catalog.find((e) => e.id === 'ex-barbell-bench-press-medium-grip')!;
-    await setCachedCatalog([
-      ...catalog,
-      { ...bench, id: 'ex-barbell-bench-press', slug: 'barbell-bench-press' },
-      { ...bench, id: 'ex-benchpress-dumbbells', slug: 'benchpress-dumbbells' },
-    ]);
-    const cleaned = await getCachedCatalog();
-    assert.equal(cleaned.length, catalog.length);
-    assert.ok(!cleaned.some((e) => e.id === 'ex-benchpress-dumbbells'));
-
-    const template = buildStarterWorkouts({ userId: 'user-1' }).folders[0]!.templates[0]!;
-    const session = createOfflineSessionFromTemplate(template, catalog, 'user-1', WeightUnit.KG);
-    const legacy: WorkoutSessionDto = {
-      ...session,
-      exercises: [
-        {
-          ...session.exercises[0]!,
-          exerciseId: 'ex-barbell-bench-press',
-          replacedExerciseId: 'ex-benchpress-dumbbells',
-          alternativeExerciseIds: ['ex-dumbbell-incline-press', 'ex-incline-dumbbell-press'],
-        },
-      ],
-    };
-    await saveLocalActiveSession(legacy);
-    const restored = (await getLocalActiveSession())!.exercises[0]!;
-    assert.equal(restored.exerciseId, 'ex-barbell-bench-press-medium-grip');
-    assert.equal(restored.replacedExerciseId, 'ex-dumbbell-bench-press');
-    assert.deepEqual(restored.alternativeExerciseIds, ['ex-incline-dumbbell-press']);
-    await saveLocalActiveSession(null);
-  });
-
   it('keeps a stable device id and per-session acknowledged server versions for sync', async () => {
     const deviceId = await getDeviceId();
     assert.ok(deviceId.length >= 8);

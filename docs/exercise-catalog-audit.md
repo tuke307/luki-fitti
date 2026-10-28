@@ -11,15 +11,15 @@ _Date: 2026-10-28 · Scope: all system exercises after PR #8 (`e4d2eaa`, `2d0938
   `packages/common/src/catalog/overrides.ts` and are applied at runtime.
 - `scripts/import-catalog.ts` writes `core-records.ts` (the override targets, loaded right away)
   and `extended/records.ts` (everything else, loaded on demand).
-- **165 retired ids** (90 renamed former curated ids + 75 dataset duplicates from §2/§3) are listed
-  in `packages/common/src/catalog/retired.ts`. The importer never generates them; they are
-  resolved by the API (session sync, templates, routines), the web offline store, and the iOS
-  offline store.
+- **Retired ids:** 90 former curated ids were renamed and 75 dataset duplicates removed. The
+  transition layer that resolved old ids at runtime (API, web and iOS offline stores) has been
+  removed again; the importer keeps the duplicates as its skip list
+  (`scripts/dataset-duplicates.ts`).
 - Migration `20261028120000_merge_catalog_into_datasets` renames former curated rows (references
   follow via `ON UPDATE CASCADE`) and merges duplicate rows into their replacement. It was tested
   against Postgres 17 with templates, sessions, alternatives and replaced ids.
-- Regression tests: no two system exercises share an EN or DE name, every retired id points to an
-  existing exercise, and starter content only uses core exercises.
+- Regression tests: no two system exercises share an EN or DE name, the importer fails if a kept
+  exercise is missing, and starter content only uses core exercises.
 - **Search** is implemented as `exercise-search.util.ts` (+ vocabulary) in common, used by web
   and the API (also for "Did you mean …?" before creating a custom exercise), with a 1:1 Swift port
   (`ExerciseSearch.swift`). Both run the shared fixture `__fixtures__/exercise-search-cases.json`.
@@ -220,5 +220,3 @@ The duplicate fixes and the search are implemented (§0). Still open:
 - Search: track zero-result queries (Umami, query text only) and grow
   `exercise-search.vocab.ts` from them; add new cases to the shared fixture
   `packages/common/src/utils/__fixtures__/exercise-search-cases.json` (run by TS and Swift).
-- Retired ids: keep `RETIRED_EXERCISE_IDS` and the client/API remapping until no supported app
-  version can still send them; offline caches can live for months.
