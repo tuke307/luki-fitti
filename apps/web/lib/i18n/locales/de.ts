@@ -449,6 +449,8 @@ export const de = {
     executionCuesTitle: 'Ausführung',
     recommendedBackupsTitle: 'Alternativen',
     globalHistoryTitle: 'Dein Verlauf ({count})',
+    similarExercisesTitle: 'Meintest du?',
+    similarExercisesHint: 'Nicht das Richtige? Dann leg sie einfach als eigene Übung an.',
     createCustomTitle: 'Neue Übung',
     createCustomDesc: 'Füge eine eigene Übung hinzu, die du in jedem Workout nutzen kannst.',
     exerciseNameLabel: 'Name',

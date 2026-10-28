@@ -615,6 +615,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
         : resolveExerciseMedia({
             name: dto.name,
             primaryMuscleGroup: dto.primaryMuscleGroup,
+            isSystem: false,
           }),
     };
     const next = [...catalog, custom];

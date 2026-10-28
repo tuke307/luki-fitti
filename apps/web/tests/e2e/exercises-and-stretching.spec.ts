@@ -47,6 +47,19 @@ test.describe('Exercise Catalog & Stretching Studio', () => {
     await expect(page.getByRole('heading', { name: CUSTOM_EX })).toBeVisible();
   });
 
+  test('suggests a matching catalog exercise before creating a custom one', async ({ page }) => {
+    await page.getByRole('button', { name: /Custom Exercise/i }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.locator('#new-ex-name').fill('Bankdrücken Langhantel');
+
+    const similar = dialog.getByTestId('similar-exercises');
+    await expect(similar).toBeVisible();
+    await similar.getByRole('button', { name: /Barbell Bench Press/ }).first().click();
+    await expect(
+      page.getByRole('dialog').getByRole('heading', { name: 'Barbell Bench Press', exact: true }),
+    ).toBeVisible();
+  });
+
   test('creates a stretching routine and completes a stretching session', async ({ page }) => {
     const ROUTINE_NAME = 'E2E Post-Lift Mobility';
 

@@ -375,6 +375,7 @@ export class ExerciseService {
                 slug: record.slug,
                 name: record.name,
                 primaryMuscleGroup: record.primaryMuscleGroup,
+                isSystem: record.isSystem,
               }),
       },
       locale,
