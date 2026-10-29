@@ -1,0 +1,28 @@
+info:
+  name: update-ai-settings
+  type: http
+  seq: 5
+
+http:
+  method: PUT
+  url: "{{API_URL}}:{{API_PORT}}/api/admin/settings/ai"
+  body:
+    type: json
+    data: |-
+      {
+        "aiWorkoutBuilderEnabled": true,
+        "aiMealPhotoEnabled": true,
+        "workoutBuilderModel": "openai/gpt-6.1-terra",
+        "workoutBuilderFallbacks": ["google/gemini-3.8-flash"],
+        "mealPhotoModel": "google/gemini-3.8-flash",
+        "mealPhotoFallbacks": ["openai/gpt-6.1-terra"],
+        "aiDailyRunLimit": 30,
+        "mealPhotoRetentionDays": null
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Timer,
   UserRound,
+  Utensils,
 } from 'lucide-react';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import {
@@ -36,8 +37,10 @@ import { ActiveSessionView } from './active-session-view';
 import { DiaryAnalyticsView } from './diary-analytics-view';
 import { ExercisesView } from './exercises-view';
 import { ProfileImportView } from './profile-import-view';
+import { NutritionView } from './nutrition/nutrition-view';
 
-export type NavTab = 'home' | 'workouts' | 'session' | 'diary' | 'exercises' | 'profile';
+export type NavTab =
+  'home' | 'workouts' | 'session' | 'nutrition' | 'diary' | 'exercises' | 'profile';
 
 export function PwaShell() {
   const [activeTab, setActiveTab] = useState<NavTab>('home');
@@ -125,6 +128,7 @@ export function PwaShell() {
   }> = [
     { id: 'home', label: t.nav.home, icon: CalendarCheck },
     { id: 'workouts', label: t.nav.workouts, icon: Dumbbell },
+    { id: 'nutrition', label: t.nutrition.navLabel, icon: Utensils },
     { id: 'diary', label: t.nav.diary, icon: HistoryIcon },
     { id: 'exercises', label: t.nav.exercises, icon: LibraryBig },
   ];
@@ -290,6 +294,7 @@ export function PwaShell() {
             onNavigateToWorkouts={() => setActiveTab('workouts')}
           />
         )}
+        {activeTab === 'nutrition' && <NutritionView onNavigate={setActiveTab} />}
         {activeTab === 'diary' && <DiaryAnalyticsView />}
         {activeTab === 'exercises' && (
           <ExercisesView onStartSessionNavigation={() => setActiveTab('session')} />
@@ -333,7 +338,7 @@ export function PwaShell() {
           aria-label={t.nav.mobileNavAria}
           className="material-bar pointer-events-auto w-full max-w-md rounded-full border border-border/60 p-1 shadow-[0_8px_30px_rgb(0_0_0/0.12)] md:hidden"
         >
-          <div className="grid grid-cols-4">
+          <div className="grid grid-cols-5">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isCurrent =

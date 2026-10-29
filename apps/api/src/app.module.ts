@@ -14,6 +14,11 @@ import { WebAnalyticsModule } from './modules/web-analytics/web-analytics.module
 import { BullMQModule } from './modules/bullmq/bullmq.module';
 import { EmailTemplateModule } from './modules/email-template/email-template.module';
 import { EmailModule } from './modules/email/email.module';
+import { AppSettingsModule } from './modules/app-settings/app-settings.module';
+import { AdminModule } from './modules/admin/admin.module';
+import { StorageModule } from './modules/storage/storage.module';
+import { NutritionModule } from './modules/nutrition/nutrition.module';
+import { AiModule } from './modules/ai/ai.module';
 import { NODE_ENV } from './config/env.config';
 
 @Module({
@@ -28,6 +33,8 @@ import { NODE_ENV } from './config/env.config';
       },
     ]),
     DatabaseModule,
+    AppSettingsModule,
+    StorageModule,
     BullMQModule,
     EmailTemplateModule,
     EmailModule,
@@ -39,6 +46,9 @@ import { NODE_ENV } from './config/env.config';
     AnalyticsModule,
     WebAnalyticsModule,
     HealthModule,
+    AdminModule,
+    NutritionModule,
+    AiModule,
   ],
   providers: [
     {

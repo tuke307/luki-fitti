@@ -7,8 +7,10 @@ import {
   SetType,
 } from '@luki-fitti/common/enums';
 import type { TranslationDictionary } from '../types';
+import { deFeatures } from './de.features';
 
 export const de = {
+  ...deFeatures,
   common: {
     cancel: 'Abbrechen',
     save: 'Speichern',

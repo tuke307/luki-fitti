@@ -167,6 +167,10 @@ model User {
   failedLoginAttempts      Int       @default(0)
   lockedUntil              DateTime?
   lastLoginAt              DateTime?
+  /// Admin portal permissions (AdminPermission values). Empty = regular user.
+  permissions              String[]  @default([])
+  /// Individually granted opt-in features (FeatureGrant values), e.g. AI features.
+  featureGrants            String[]  @default([])
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
 
@@ -179,6 +183,9 @@ model User {
   stretchingRoutines StretchingRoutine[]
   importJobs         ImportJob[]
   emails             Email[]
+  mealEntries        MealEntry[]
+  exerciseFeedback   ExerciseFeedback[]
+  aiRuns             AiRun[]
 }
 
 model UserPreferences {
@@ -193,6 +200,15 @@ model UserPreferences {
   notificationsEnabled       Boolean      @default(true)
   exerciseSuggestionsEnabled Boolean      @default(true)
   weeklyGoalSessions         Int          @default(4)
+  bodyWeightKg               Float?
+  heightCm                   Float?
+  birthYear                  Int?
+  /// "female" | "male" | null; only used for energy estimates.
+  sex                        String?
+  dailyKcalGoal              Int?
+  proteinGoalG               Int?
+  carbsGoalG                 Int?
+  fatGoalG                   Int?
   createdAt                  DateTime     @default(now())
   updatedAt                  DateTime     @updatedAt
 
@@ -240,6 +256,7 @@ model Exercise {
   templateExercises          WorkoutTemplateExercise[]
   stretchingRoutineExercises StretchingRoutineExercise[]
   sessionExercises           SessionExercise[]
+  feedback                   ExerciseFeedback[]
 
   @@index([userId])
   @@index([primaryMuscleGroup])
@@ -416,6 +433,8 @@ model WorkoutSession {
   healthKitWorkoutUuid  String?             @unique
   activeCaloriesKcal    Float?
   totalCaloriesKcal     Float?
+  /// Server-side burn estimate (HealthKit value when present, otherwise MET-based).
+  estimatedCaloriesKcal Float?
   avgHeartRateBpm       Int?
   maxHeartRateBpm       Int?
   minHeartRateBpm       Int?
@@ -512,6 +531,153 @@ model ImportJob {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin & AI
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Single-row application settings (id = 1), edited in the admin portal.
+model AppSettings {
+  id                      Int      @id @default(1)
+  /// Global kill switches. A user additionally needs the matching FeatureGrant.
+  aiWorkoutBuilderEnabled Boolean  @default(true)
+  aiMealPhotoEnabled      Boolean  @default(true)
+  /// OpenRouter model ids (e.g. "openai/gpt-6.1-terra"); fallbacks are tried in order.
+  workoutBuilderModel     String   @default("openai/gpt-6.1-terra")
+  workoutBuilderFallbacks String[] @default(["google/gemini-3.8-flash"])
+  mealPhotoModel          String   @default("google/gemini-3.8-flash")
+  mealPhotoFallbacks      String[] @default(["openai/gpt-6.1-terra"])
+  /// Max AI runs per user per UTC day across all AI features.
+  aiDailyRunLimit         Int      @default(30)
+  /// Delete stored meal photos after N days; null keeps them until the meal is deleted.
+  mealPhotoRetentionDays  Int?
+  updatedAt               DateTime @updatedAt
+}
+
+enum AiRunStatus {
+  SUCCESS
+  ERROR
+}
+
+/// One AI harness run (usage + cost accounting). Never stores prompt or photo content.
+model AiRun {
+  id               String      @id @default(uuid())
+  userId           String?
+  skill            String
+  model            String?
+  status           AiRunStatus
+  steps            Int         @default(0)
+  promptTokens     Int         @default(0)
+  completionTokens Int         @default(0)
+  costUsd          Float?
+  durationMs       Int         @default(0)
+  errorCode        String?
+  createdAt        DateTime    @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([skill, createdAt])
+  @@index([createdAt])
+}
+
+enum ExerciseFeedbackVerdict {
+  NOT_WORKING
+  PAIN
+  DISLIKE
+}
+
+/// Explicit "this exercise doesn't work for me" mark, used by the AI workout builder.
+model ExerciseFeedback {
+  id         String                  @id @default(uuid())
+  userId     String
+  exerciseId String
+  verdict    ExerciseFeedbackVerdict
+  note       String?
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, exerciseId])
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Nutrition
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+  COFFEE
+  OTHER
+}
+
+enum FoodItemSource {
+  MANUAL
+  AI
+}
+
+model MealEntry {
+  id            String   @id @default(uuid())
+  /// Client-generated id so offline-created entries sync idempotently.
+  clientEntryId String   @unique
+  userId        String
+  eatenAt       DateTime
+  mealType      MealType @default(OTHER)
+  /// Free-form name ("Post-workout shake"), shown instead of the meal type when set.
+  label         String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items  MealItem[]
+  photos MealPhoto[]
+
+  @@index([userId, eatenAt])
+}
+
+model MealItem {
+  id          String         @id @default(uuid())
+  mealEntryId String
+  orderIndex  Int            @default(0)
+  name        String
+  grams       Float?
+  kcal        Float          @default(0)
+  proteinG    Float          @default(0)
+  carbsG      Float          @default(0)
+  fatG        Float          @default(0)
+  fiberG      Float?
+  sugarG      Float?
+  source      FoodItemSource @default(MANUAL)
+  /// 0..1 model confidence for AI-estimated items.
+  confidence  Float?
+
+  mealEntry MealEntry @relation(fields: [mealEntryId], references: [id], onDelete: Cascade)
+
+  @@index([mealEntryId, orderIndex])
+}
+
+model MealPhoto {
+  id          String   @id @default(uuid())
+  mealEntryId String
+  storageKey  String   @unique
+  mimeType    String
+  sizeBytes   Int
+  width       Int?
+  height      Int?
+  createdAt   DateTime @default(now())
+
+  mealEntry MealEntry @relation(fields: [mealEntryId], references: [id], onDelete: Cascade)
+
+  @@index([mealEntryId])
+  @@index([createdAt])
 }
 
 enum EmailTemplateType {

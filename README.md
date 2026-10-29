@@ -10,6 +10,8 @@ Offline-first gym workout tracker, progressive overload engine, and stretching s
 - **Statistical Progressive Overload:** Blended Epley + Brzycki 1RM estimation, EWMA smoothing, OLS trend slope, and inline set progression suggestions (`+2.5 kg`, `+1 rep`) with Apple Watch Heart Rate Recovery fatigue detection.
 - **Native Apple Watch & HealthKit Telemetry:** Standalone and companion watchOS 11 workout execution (`HKWorkoutSession`), 1 Hz optical heart rate curves, active/total calorie tracking, per-set peak & recovery BPM, and iOS 18 Dynamic Island Live Activities.
 - **Guided Stretching & Mobility Studio:** Timed stretching routines with transition bells and anatomical start/finish posture illustrations.
+- **Calorie & Macro Tracking:** Log meals by hand (offline-capable), daily goals, intake vs. estimated workout burn, 7-day trend.
+- **Admin Portal & Opt-in AI:** `/admin` for user access and AI settings; AI workout planner and meal-photo calorie estimates for users an admin grants them to. See [docs/admin-ai-nutrition.md](docs/admin-ai-nutrition.md).
 - **Bilingual (`EN` / `DE`):** Full English and German interface and exercise search aliases.
 
 ---
@@ -61,6 +63,8 @@ cp apps/web/.env.sample apps/web/.env.local
 | `UMAMI_URL` | `api` | Self-hosted Umami base URL (default `https://umami.tony-luke.de`) |
 | `UMAMI_WEBSITE_ID` | `api` | Umami website ID; pageview forwarding is off when unset or outside production |
 | `UMAMI_ALLOWED_HOSTNAMES` | `api` | Comma-separated hostnames to forward pageviews for (default `luki-fitti.tony-luke.de`) |
+| `OPENROUTER_API_KEY` | `api` | OpenRouter key for the AI features; they stay off when unset |
+| `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_BUCKET` | `api` | Private S3-compatible storage (SeaweedFS) for meal photos; optional |
 
 ### 3. Install, Migrate & Run
 
@@ -86,6 +90,7 @@ yarn dev
 | `yarn lint` | Run TypeScript and ESLint checks |
 | `yarn db:migrate -- <name>` | Create and apply a new Prisma migration |
 | `yarn --cwd apps/api openapi:export` | Export Swagger OpenAPI spec to `apps/apple` |
+| `yarn --cwd packages/database admin:grant <email>` | Give a registered account admin rights and all AI features |
 
 ---
 

@@ -1,7 +1,10 @@
 import { z } from 'zod';
 import { DEFAULT_FOLDER_COLOR } from '../utils/folder-color.util';
 import {
+  AdminPermission,
+  BIOLOGICAL_SEX_VALUES,
   DistanceUnit,
+  FeatureGrant,
   EmailStatus,
   EmailTemplateType,
   EquipmentType,
@@ -121,6 +124,14 @@ export const UpdatePreferencesSchema = z.object({
   notificationsEnabled: z.boolean().optional(),
   exerciseSuggestionsEnabled: z.boolean().optional(),
   weeklyGoalSessions: z.number().int().min(1).max(14).optional(),
+  bodyWeightKg: z.number().min(25).max(400).nullable().optional(),
+  heightCm: z.number().min(100).max(250).nullable().optional(),
+  birthYear: z.number().int().min(1900).max(2030).nullable().optional(),
+  sex: z.enum(BIOLOGICAL_SEX_VALUES).nullable().optional(),
+  dailyKcalGoal: z.number().int().min(800).max(10000).nullable().optional(),
+  proteinGoalG: z.number().int().min(0).max(600).nullable().optional(),
+  carbsGoalG: z.number().int().min(0).max(1500).nullable().optional(),
+  fatGoalG: z.number().int().min(0).max(600).nullable().optional(),
 });
 
 export const UserPreferencesSchema = z.object({
@@ -135,6 +146,14 @@ export const UserPreferencesSchema = z.object({
   notificationsEnabled: z.boolean().default(true).optional(),
   exerciseSuggestionsEnabled: z.boolean().default(true).optional(),
   weeklyGoalSessions: z.number(),
+  bodyWeightKg: z.number().nullable().optional(),
+  heightCm: z.number().nullable().optional(),
+  birthYear: z.number().nullable().optional(),
+  sex: z.enum(BIOLOGICAL_SEX_VALUES).nullable().optional(),
+  dailyKcalGoal: z.number().nullable().optional(),
+  proteinGoalG: z.number().nullable().optional(),
+  carbsGoalG: z.number().nullable().optional(),
+  fatGoalG: z.number().nullable().optional(),
 });
 
 export const UserSchema = z.object({
@@ -145,6 +164,10 @@ export const UserSchema = z.object({
   lastLoginAt: z.string().nullable().optional(),
   createdAt: z.string().optional(),
   preferences: UserPreferencesSchema.nullable().optional(),
+  /** Admin portal permissions; empty for regular users. */
+  permissions: z.array(z.enum(AdminPermission)).optional(),
+  /** Opt-in features this user may use right now (grant AND global switch on). */
+  features: z.array(z.enum(FeatureGrant)).optional(),
 });
 
 export const AuthTokensSchema = z.object({
@@ -616,6 +639,8 @@ export interface WorkoutSessionDto {
   healthKitWorkoutUuid?: string | null;
   activeCaloriesKcal?: number | null;
   totalCaloriesKcal?: number | null;
+  /** Burn estimate: HealthKit active kcal when present, otherwise MET-based. */
+  estimatedCaloriesKcal?: number | null;
   avgHeartRateBpm?: number | null;
   maxHeartRateBpm?: number | null;
   minHeartRateBpm?: number | null;
@@ -754,3 +779,7 @@ export interface AnalyticsSummaryDto {
     estimated1RM: number;
   }>;
 }
+
+export * from './admin.schemas';
+export * from './nutrition.schemas';
+export * from './ai.schemas';

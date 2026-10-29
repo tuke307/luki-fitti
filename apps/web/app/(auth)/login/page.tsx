@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Dumbbell, LogIn, UserPlus, MailCheck } from 'lucide-react';
 import { Button } from '@luki-fitti/ui/components/ui/button';
@@ -12,8 +12,16 @@ import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 
+/** Only same-origin paths are accepted, so `?redirect=` can't send users to another site. */
+function safeRedirect(target: string | null): string {
+  return target && target.startsWith('/') && !target.startsWith('//') && !target.startsWith('/\\')
+    ? target
+    : '/';
+}
+
 export default function LoginPage() {
   const router = useRouter();
+  const redirectTo = safeRedirect(useSearchParams().get('redirect'));
   const { login, register, resendConfirmation, continueOfflineLocal, error, infoMessage, loading } =
     useAuth();
   const { t } = useLocale();
@@ -29,7 +37,7 @@ export default function LoginPage() {
         ? await login(email, password)
         : await register({ email, password, name: name || undefined });
     if (ok) {
-      router.push('/');
+      router.push(redirectTo);
     }
   };
 

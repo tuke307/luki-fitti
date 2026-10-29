@@ -14,6 +14,7 @@ public enum LukiMainTab: String, CaseIterable, Sendable {
     case home
     case workouts
     case session
+    case nutrition
     case diary
     case exercises
     case profile
@@ -23,6 +24,7 @@ public enum LukiMainTab: String, CaseIterable, Sendable {
 @Observable
 public final class LukiAppViewModel {
     public let store: OfflineStore
+    public let nutrition: NutritionStore
     public let healthCoordinator: HealthKitWorkoutCoordinator
     public let watchSyncCoordinator: WatchSyncCoordinator
     private let liveActivity = WorkoutLiveActivityController()
@@ -42,6 +44,7 @@ public final class LukiAppViewModel {
         watchSyncCoordinator: WatchSyncCoordinator = WatchSyncCoordinator()
     ) {
         self.store = store
+        self.nutrition = NutritionStore(apiClient: store.apiClient, storageDirectory: store.storageDirectoryURL)
         self.healthCoordinator = healthCoordinator
         self.watchSyncCoordinator = watchSyncCoordinator
 
@@ -808,6 +811,9 @@ public struct AppShellView: View {
             Tab(tr("Workouts"), systemImage: "dumbbell", value: LukiMainTab.workouts) {
                 tabRoot(title: tr("Workouts")) { WorkoutsView(viewModel: viewModel) }
             }
+            Tab(tr("Food"), systemImage: "fork.knife", value: LukiMainTab.nutrition) {
+                tabRoot(title: tr("Food")) { NutritionView(viewModel: viewModel) }
+            }
             Tab(tr("History"), systemImage: "clock.arrow.circlepath", value: LukiMainTab.diary) {
                 tabRoot(title: tr("History")) { DiaryAnalyticsView(viewModel: viewModel) }
             }
@@ -901,7 +907,7 @@ public struct AppShellView: View {
     }
 
     /// Bridges the view model's single `selectedTab` (still used by feature views) onto the
-    /// iOS 26 structure: four content tabs, the live workout as a full-screen cover and the
+    /// iOS 26 structure: five content tabs, the live workout as a full-screen cover and the
     /// profile as a sheet.
     private func route(to tab: LukiMainTab) {
         switch tab {
@@ -912,7 +918,7 @@ public struct AppShellView: View {
         case .profile:
             isSessionPresented = false
             isProfilePresented = true
-        case .home, .workouts, .diary, .exercises:
+        case .home, .workouts, .nutrition, .diary, .exercises:
             isSessionPresented = false
             isProfilePresented = false
             contentTab = tab

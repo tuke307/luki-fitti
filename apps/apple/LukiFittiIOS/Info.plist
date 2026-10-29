@@ -20,6 +20,8 @@
     <string>LukiFitti reads your live Heart Rate and Active Energy Burned during workouts to track set recovery and training load.</string>
     <key>NSHealthUpdateUsageDescription</key>
     <string>LukiFitti saves your completed strength and stretching workouts to Apple Health to close your Move and Exercise rings.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>LukiFitti uses the camera when you photograph a meal so it can estimate the foods and calories.</string>
     <key>NSSupportsLiveActivities</key>
     <true/>
     <key>LUKIFITTI_API_BASE_URL</key>

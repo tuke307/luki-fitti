@@ -24,6 +24,8 @@ import {
 } from '@luki-fitti/common/utils/client';
 import type {
   ExerciseDto,
+  MealEntryDto,
+  UpsertMealEntryDto,
   SessionExerciseDto,
   SessionSetDto,
   StretchingRoutineDto,
@@ -317,6 +319,35 @@ export async function setFocusedExercise(
   if (clientExerciseId === null) delete map[clientSessionId];
   else map[clientSessionId] = clientExerciseId;
   await idbSet('focused_exercises', map);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Nutrition: cached entries + offline outbox (upserts are idempotent by clientEntryId)
+// ─────────────────────────────────────────────────────────────────────────────
+export type NutritionOutboxItem =
+  | { kind: 'UPSERT'; clientEntryId: string; payload: UpsertMealEntryDto; queuedAt: string }
+  | { kind: 'DELETE'; clientEntryId: string; id: string | null; queuedAt: string };
+
+export async function getCachedMealEntries(): Promise<MealEntryDto[]> {
+  return (await idbGet<MealEntryDto[]>('nutrition_entries')) ?? [];
+}
+
+export async function setCachedMealEntries(entries: MealEntryDto[]): Promise<void> {
+  await idbSet('nutrition_entries', entries);
+}
+
+export async function getNutritionOutbox(): Promise<NutritionOutboxItem[]> {
+  return (await idbGet<NutritionOutboxItem[]>('nutrition_outbox')) ?? [];
+}
+
+/** Keeps only the latest pending change per entry (a delete supersedes earlier upserts). */
+export async function enqueueNutritionChange(item: NutritionOutboxItem): Promise<void> {
+  const outbox = (await getNutritionOutbox()).filter((i) => i.clientEntryId !== item.clientEntryId);
+  await idbSet('nutrition_outbox', [...outbox, item]);
+}
+
+export async function setNutritionOutbox(items: NutritionOutboxItem[]): Promise<void> {
+  await idbSet('nutrition_outbox', items);
 }
 
 export function recalculateSessionTotals(session: WorkoutSessionDto): WorkoutSessionDto {

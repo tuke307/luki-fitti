@@ -20,6 +20,7 @@ import {
   getStarterTemplateText,
 } from '@luki-fitti/common/catalog';
 import { TemplateSetSchema } from '@luki-fitti/common/schemas';
+import { estimateWorkoutEnergy } from '@luki-fitti/common/utils';
 import type {
   HeartRateSampleDto,
   StartSessionDto,
@@ -428,6 +429,23 @@ export class SessionService {
       payload.totalCaloriesKcal !== undefined
         ? payload.totalCaloriesKcal
         : (existing?.totalCaloriesKcal ?? null);
+    const bodyWeightKg = this.prisma.userPreferences?.findUnique
+      ? ((
+          await this.prisma.userPreferences.findUnique({
+            where: { userId },
+            select: { bodyWeightKg: true },
+          })
+        )?.bodyWeightKg ?? null)
+      : null;
+    const estimatedCaloriesKcal = estimateWorkoutEnergy(
+      {
+        sessionType: payload.sessionType,
+        activeDurationSeconds: payload.activeDurationSeconds,
+        activeCaloriesKcal,
+        exercises: payload.exercises,
+      },
+      bodyWeightKg,
+    ).kcal;
     const healthKitWorkoutUuid =
       payload.healthKitWorkoutUuid !== undefined
         ? payload.healthKitWorkoutUuid
@@ -510,6 +528,7 @@ export class SessionService {
           healthKitWorkoutUuid,
           activeCaloriesKcal,
           totalCaloriesKcal,
+          estimatedCaloriesKcal,
           avgHeartRateBpm,
           maxHeartRateBpm,
           minHeartRateBpm,
@@ -543,6 +562,7 @@ export class SessionService {
           healthKitWorkoutUuid,
           activeCaloriesKcal,
           totalCaloriesKcal,
+          estimatedCaloriesKcal,
           avgHeartRateBpm,
           maxHeartRateBpm,
           minHeartRateBpm,
@@ -818,6 +838,7 @@ export class SessionService {
       healthKitWorkoutUuid: session.healthKitWorkoutUuid ?? null,
       activeCaloriesKcal: session.activeCaloriesKcal ?? null,
       totalCaloriesKcal: session.totalCaloriesKcal ?? null,
+      estimatedCaloriesKcal: session.estimatedCaloriesKcal ?? null,
       avgHeartRateBpm: session.avgHeartRateBpm ?? null,
       maxHeartRateBpm: session.maxHeartRateBpm ?? null,
       minHeartRateBpm: session.minHeartRateBpm ?? null,

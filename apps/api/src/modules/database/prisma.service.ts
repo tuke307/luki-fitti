@@ -101,4 +101,28 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get email(): typeof prisma.email {
     return prisma.email;
   }
+
+  get appSettings(): typeof prisma.appSettings {
+    return prisma.appSettings;
+  }
+
+  get aiRun(): typeof prisma.aiRun {
+    return prisma.aiRun;
+  }
+
+  get exerciseFeedback(): typeof prisma.exerciseFeedback {
+    return prisma.exerciseFeedback;
+  }
+
+  get mealEntry(): typeof prisma.mealEntry {
+    return prisma.mealEntry;
+  }
+
+  get mealItem(): typeof prisma.mealItem {
+    return prisma.mealItem;
+  }
+
+  get mealPhoto(): typeof prisma.mealPhoto {
+    return prisma.mealPhoto;
+  }
 }

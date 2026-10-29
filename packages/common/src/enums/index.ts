@@ -235,3 +235,84 @@ export enum EmailStatus {
   SENT = 'SENT',
   FAILED = 'FAILED',
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin portal & opt-in features
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Granular admin-portal permissions stored in `User.permissions` (`String[]`).
+ * Checks are any-of: a route/menu item is granted if the user holds at least one
+ * of the permissions it requires. Adding one needs no migration.
+ */
+export enum AdminPermission {
+  DASHBOARD_VIEW = 'DASHBOARD_VIEW',
+  USERS_MANAGE = 'USERS_MANAGE',
+  AI_SETTINGS_MANAGE = 'AI_SETTINGS_MANAGE',
+}
+
+export const ADMIN_PERMISSIONS: AdminPermission[] = Object.values(AdminPermission);
+
+export const ADMIN_PERMISSION_LABELS: Record<AdminPermission, { en: string; de: string }> = {
+  [AdminPermission.DASHBOARD_VIEW]: { en: 'Dashboard', de: 'Dashboard' },
+  [AdminPermission.USERS_MANAGE]: { en: 'Manage users', de: 'Nutzer verwalten' },
+  [AdminPermission.AI_SETTINGS_MANAGE]: { en: 'AI settings', de: 'KI-Einstellungen' },
+};
+
+/** Opt-in features an admin grants per user (stored in `User.featureGrants`). */
+export enum FeatureGrant {
+  AI_WORKOUT_BUILDER = 'AI_WORKOUT_BUILDER',
+  AI_MEAL_PHOTO = 'AI_MEAL_PHOTO',
+}
+
+export const FEATURE_GRANTS: FeatureGrant[] = Object.values(FeatureGrant);
+
+export const FEATURE_GRANT_LABELS: Record<FeatureGrant, { en: string; de: string }> = {
+  [FeatureGrant.AI_WORKOUT_BUILDER]: { en: 'AI workout builder', de: 'KI-Workout-Planer' },
+  [FeatureGrant.AI_MEAL_PHOTO]: { en: 'AI meal photos', de: 'KI-Mahlzeitenfotos' },
+};
+
+export const isAdminPermission = (value: string): value is AdminPermission =>
+  (ADMIN_PERMISSIONS as string[]).includes(value);
+
+export const isFeatureGrant = (value: string): value is FeatureGrant =>
+  (FEATURE_GRANTS as string[]).includes(value);
+
+export enum AiSkillName {
+  WORKOUT_BUILDER = 'workout-builder',
+  MEAL_ANALYZER = 'meal-analyzer',
+}
+
+export enum AiRunStatus {
+  SUCCESS = 'SUCCESS',
+  ERROR = 'ERROR',
+}
+
+export enum ExerciseFeedbackVerdict {
+  NOT_WORKING = 'NOT_WORKING',
+  PAIN = 'PAIN',
+  DISLIKE = 'DISLIKE',
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Nutrition
+// ─────────────────────────────────────────────────────────────────────────────
+
+export enum MealType {
+  BREAKFAST = 'BREAKFAST',
+  LUNCH = 'LUNCH',
+  DINNER = 'DINNER',
+  SNACK = 'SNACK',
+  COFFEE = 'COFFEE',
+  OTHER = 'OTHER',
+}
+
+export const MEAL_TYPES: MealType[] = Object.values(MealType);
+
+export enum FoodItemSource {
+  MANUAL = 'MANUAL',
+  AI = 'AI',
+}
+
+export const BIOLOGICAL_SEX_VALUES = ['female', 'male'] as const;
+export type BiologicalSex = (typeof BIOLOGICAL_SEX_VALUES)[number];

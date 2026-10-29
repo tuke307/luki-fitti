@@ -36,7 +36,8 @@ const nextConfig = {
                 process.env.NODE_ENV === 'production' ? '' : " 'unsafe-eval'"
               }`,
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https:",
+              // blob: = local previews of meal photos before upload (object URLs created in-page)
+              "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
               "connect-src 'self'",
               "frame-ancestors 'self'",

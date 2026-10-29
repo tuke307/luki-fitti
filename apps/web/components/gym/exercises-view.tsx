@@ -50,6 +50,7 @@ import {
   MuscleGroup,
 } from '@luki-fitti/common/enums';
 import type { ExerciseDto } from '@luki-fitti/common/schemas';
+import { ExerciseFeedbackPanel } from './exercise-feedback-panel';
 
 interface ExercisesViewProps {
   onStartSessionNavigation: () => void;
@@ -684,6 +685,8 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                 </div>
               </div>
             )}
+
+            <ExerciseFeedbackPanel key={selectedExercise.id} exerciseId={selectedExercise.id} />
 
             {/* Global Exercise History (Single Source of Truth across all workouts) */}
             {(() => {
