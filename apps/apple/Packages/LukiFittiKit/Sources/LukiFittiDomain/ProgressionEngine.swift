@@ -991,6 +991,7 @@ public enum ProgressionEngine {
 
         let dismissedReasons = Set(dismissed.map(\.reasonKey))
         let dismissedExercises = Set(dismissed.map(\.exerciseId))
+        let doneIds = ExerciseAlternatives.loggedExerciseIds(historySessions)
 
         // Pick the first reason that is not dismissed and has a candidate not already in the workout.
         // No candidate means no honest suggestion, so the card stays hidden.
@@ -1002,21 +1003,37 @@ public enum ProgressionEngine {
                 targetMuscle: reason.targetMuscle
             )
             if dismissedReasons.contains(key) { continue }
-            let pool = strengthCatalog.filter {
+            let available = strengthCatalog.filter {
                 !existingIds.contains($0.id) &&
                     !dismissedExercises.contains($0.id) &&
-                    !existingNames.contains($0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) &&
-                    $0.primaryMuscleGroup == reason.targetMuscle
+                    !existingNames.contains($0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
             }
+
+            // A stalling exercise is swapped for the same movement (a pullover for a straight-arm
+            // pulldown, not just any back exercise). No honest match means no suggestion for this reason.
+            let stallingCatalogEx = reason.stallingExerciseId.flatMap { id in catalog.first { $0.id == id } }
+            if let stallingCatalogEx, stallingCatalogEx.movementPattern != nil {
+                guard let best = ExerciseAlternatives.rank(
+                    target: stallingCatalogEx,
+                    catalog: available,
+                    historySessions: historySessions,
+                    limit: 1
+                ).first else { continue }
+                picked = (reason, best.exercise)
+                break
+            }
+
+            let pool = available.filter { $0.primaryMuscleGroup == reason.targetMuscle }
             guard !pool.isEmpty else { continue }
 
-            // Score candidates: prefer predefined alternatives of stalling exercise, or fresh equipment
-            let preferredAltIds = Set(
-                reason.stallingExerciseId.flatMap { id in catalog.first { $0.id == id } }?.alternativeExerciseIds ?? []
-            )
+            // Score candidates: prefer predefined alternatives of the stalling exercise, exercises with a
+            // known movement the user has done before, or fresh equipment
+            let preferredAltIds = Set(stallingCatalogEx?.alternativeExerciseIds ?? [])
             let scored = pool.map { candidate -> (candidate: ExerciseDto, score: Int) in
                 var score = 0
                 if preferredAltIds.contains(candidate.id) { score += 5 }
+                if candidate.movementPattern != nil { score += 4 }
+                if doneIds.contains(candidate.id) { score += 3 }
                 if let avoid = reason.avoidEquipment, candidate.equipment != avoid { score += 3 }
                 if [.CABLE, .DUMBBELL, .MACHINE].contains(candidate.equipment) { score += 2 }
                 return (candidate, score)

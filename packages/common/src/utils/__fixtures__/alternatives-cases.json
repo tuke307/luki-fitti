@@ -1,0 +1,133 @@
+[
+  {
+    "target": "ex-straight-arm-pulldown",
+    "pattern": "SHOULDER_EXTENSION",
+    "top": [
+      "ex-rope-straight-arm-pulldown",
+      "ex-cross-bench-dumbbell-pullovers",
+      "ex-high-pulley-pullover"
+    ],
+    "exclude": [
+      "ex-alternative-db-gorilla-rows",
+      "ex-wide-grip-lat-pulldown",
+      "ex-close-grip-front-lat-pulldown",
+      "ex-seated-cable-rows"
+    ]
+  },
+  {
+    "target": "ex-barbell-bench-press-medium-grip",
+    "pattern": "HORIZONTAL_PUSH",
+    "top": [
+      "ex-dumbbell-bench-press",
+      "ex-leverage-chest-press",
+      "ex-close-grip-barbell-bench-press"
+    ],
+    "exclude": ["ex-cable-crossover", "ex-butterfly"]
+  },
+  {
+    "target": "ex-wide-grip-lat-pulldown",
+    "pattern": "VERTICAL_PULL",
+    "top": ["ex-pullups", "ex-close-grip-front-lat-pulldown", "ex-pull-ups-wide-grip"],
+    "exclude": ["ex-seated-cable-rows", "ex-straight-arm-pulldown"]
+  },
+  {
+    "target": "ex-leg-extensions",
+    "pattern": "KNEE_EXTENSION",
+    "top": ["ex-weighted-sissy-squat", "ex-single-leg-leg-extension"],
+    "exclude": ["ex-leg-press", "ex-split-squat-with-dumbbells"]
+  },
+  {
+    "target": "ex-one-arm-dumbbell-row",
+    "pattern": "HORIZONTAL_PULL",
+    "laterality": "UNILATERAL",
+    "top": [
+      "ex-seated-one-arm-cable-pulley-rows",
+      "ex-one-arm-kettlebell-row",
+      "ex-one-arm-long-bar-row"
+    ],
+    "exclude": ["ex-wide-grip-lat-pulldown"]
+  },
+  {
+    "target": "ex-cable-crossover",
+    "pattern": "FLY",
+    "top": ["ex-dumbbell-flyes", "ex-butterfly", "ex-cable-cross-over"],
+    "exclude": ["ex-leverage-chest-press"]
+  },
+  {
+    "target": "ex-barbell-squat",
+    "pattern": "SQUAT",
+    "top": ["ex-smith-machine-squat", "ex-leg-press", "ex-bodyweight-squat"],
+    "exclude": ["ex-leg-extensions"]
+  },
+  {
+    "target": "ex-romanian-deadlift",
+    "pattern": "HINGE",
+    "top": [
+      "ex-dumbbell-romanian-deadlift",
+      "ex-stiff-legged-barbell-deadlift",
+      "ex-romanian-deadlift-from-deficit"
+    ],
+    "exclude": ["ex-seated-leg-curl", "ex-barbell-hip-thrust"]
+  },
+  {
+    "target": "ex-side-lateral-raise",
+    "pattern": "LATERAL_RAISE",
+    "top": [
+      "ex-machine-lateral-raise",
+      "ex-cable-seated-lateral-raise",
+      "ex-seated-side-lateral-raise"
+    ],
+    "exclude": ["ex-face-pull"]
+  },
+  {
+    "target": "ex-face-pull",
+    "pattern": "REAR_DELT",
+    "top": [
+      "ex-reverse-machine-flyes",
+      "ex-cable-rear-delt-fly",
+      "ex-seated-bent-over-rear-delt-raise"
+    ],
+    "exclude": ["ex-side-lateral-raise"]
+  },
+  {
+    "target": "ex-triceps-pushdown-rope-attachment",
+    "pattern": "ELBOW_EXTENSION",
+    "top": [
+      "ex-cable-rope-overhead-triceps-extension",
+      "ex-seated-triceps-press",
+      "ex-lying-dumbbell-tricep-extension"
+    ],
+    "exclude": ["ex-bench-dips"]
+  },
+  {
+    "target": "ex-hammer-curls",
+    "pattern": "ELBOW_FLEXION",
+    "top": ["ex-ez-bar-curl", "ex-incline-dumbbell-curl", "ex-incline-hammer-curls"],
+    "exclude": []
+  },
+  {
+    "target": "ex-seated-leg-curl",
+    "pattern": "KNEE_FLEXION",
+    "top": ["ex-standing-leg-curl", "ex-lying-leg-curls", "ex-ball-leg-curl"],
+    "exclude": ["ex-romanian-deadlift"]
+  },
+  {
+    "target": "ex-barbell-hip-thrust",
+    "pattern": "HIP_THRUST",
+    "top": ["ex-dumbbell-hip-thrust", "ex-barbell-glute-bridge", "ex-butt-lift-bridge"],
+    "exclude": ["ex-romanian-deadlift"]
+  },
+  {
+    "target": "ex-split-squat-with-dumbbells",
+    "pattern": "LUNGE",
+    "laterality": "UNILATERAL",
+    "top": ["ex-barbell-lunge", "ex-dumbbell-lunges", "ex-suspended-split-squat"],
+    "exclude": ["ex-leg-extensions"]
+  },
+  {
+    "target": "ex-cable-crunch",
+    "pattern": "CORE_FLEXION",
+    "top": ["ex-ab-crunch-machine", "ex-crunches", "ex-decline-crunch"],
+    "exclude": ["ex-bird-dog"]
+  }
+]

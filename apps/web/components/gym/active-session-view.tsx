@@ -72,6 +72,7 @@ import { ExerciseGuideSheet } from './exercise-guide-sheet';
 import { RainbowExerciseSuggestionCard } from './rainbow-suggestion-card';
 import { alignSetSuggestions, SessionSetRow } from './session-set-row';
 import { getSetBadgeLabels } from './set-type-badge';
+import { SubstituteExerciseOptions } from './substitute-exercise-options';
 import { SwipeRow } from './swipe-row';
 import { formatVolume, unitLabel } from '@/lib/format/weight';
 import {
@@ -1137,63 +1138,18 @@ export function ActiveSessionView({
               </div>
 
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-                {!substituteSearch.trim() && substituteTarget.alternativeExerciseIds.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-primary text-xs font-bold">
-                      {t.session.predefinedAlternatives}
-                    </p>
-                    {substituteTarget.alternativeExerciseIds.map((altId) => {
-                      const alt = catalog.find((c) => c.id === altId);
-                      if (!alt) return null;
-                      return (
-                        <Button
-                          key={alt.id}
-                          type="button"
-                          variant="outline"
-                          onClick={async () => {
-                            await substituteExercise(substituteTarget.clientExerciseId, alt.id);
-                            setShowSubstituteFor(null);
-                          }}
-                          className="bg-primary/12 border-primary/40 hover:bg-primary/12 flex h-auto w-full items-center justify-between rounded-2xl p-3.5 text-left text-xs font-bold"
-                        >
-                          <span>{alt.name}</span>
-                          <span className="text-primary text-xs">{t.session.useBackupBtn}</span>
-                        </Button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                <div className="space-y-2 pt-1">
-                  <p className="text-muted-foreground text-xs font-bold">
-                    {substituteSearch.trim()
-                      ? t.session.allCatalogExercises
-                      : format(t.session.sameMuscleGroup, {
-                          muscle: muscleLabel(substituteTarget.primaryMuscleSnapshot),
-                        })}
-                  </p>
-                  {filterExercisesByQuery(
-                    catalog.filter((c) => c.id !== substituteTarget.exerciseId),
-                    substituteSearch,
-                    substituteSearch.trim() ? 'ALL' : substituteTarget.primaryMuscleSnapshot,
-                  ).map((alt) => (
-                    <Button
-                      key={alt.id}
-                      type="button"
-                      variant="secondary"
-                      onClick={async () => {
-                        await substituteExercise(substituteTarget.clientExerciseId, alt.id);
-                        setShowSubstituteFor(null);
-                      }}
-                      className="flex h-auto w-full items-center justify-between rounded-xl p-3 text-left text-xs font-medium"
-                    >
-                      <span>{alt.name}</span>
-                      <span className="text-muted-foreground text-xs">
-                        {equipmentLabel(alt.equipment)}
-                      </span>
-                    </Button>
-                  ))}
-                </div>
+                <SubstituteExerciseOptions
+                  key={substituteTarget.clientExerciseId}
+                  target={substituteTarget}
+                  catalog={catalog}
+                  sessionExerciseIds={activeSession.exercises.map((e) => e.exerciseId)}
+                  historySessions={historySessions}
+                  search={substituteSearch}
+                  onSelect={async (exerciseId) => {
+                    await substituteExercise(substituteTarget.clientExerciseId, exerciseId);
+                    setShowSubstituteFor(null);
+                  }}
+                />
               </div>
             </div>
           )}

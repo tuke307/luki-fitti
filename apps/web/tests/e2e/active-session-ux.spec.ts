@@ -170,4 +170,38 @@ test.describe('Active Session — set types, supersets & exercise actions', () =
       await expect(card).not.toHaveText(firstText);
     }
   });
+
+  test('offers the same movement first when replacing a straight-arm pulldown', async ({
+    page,
+  }) => {
+    await createWorkoutTemplate(page, { name: 'E2E Replace Workout' });
+    await startWorkoutByName(page, 'E2E Replace Workout');
+
+    await page
+      .getByRole('button', { name: /^Add Exercise$/ })
+      .first()
+      .click();
+    const addDialog = page.getByRole('dialog');
+    await addDialog.getByRole('searchbox').fill('Straight-Arm Pulldown');
+    await addDialog
+      .getByRole('button', { name: /^Straight-Arm Pulldown/ })
+      .first()
+      .click();
+    await expect(addDialog).toBeHidden();
+
+    await page.getByRole('button', { name: 'More actions for Straight-Arm Pulldown' }).click();
+    await page.getByRole('menuitem', { name: /Replace/i }).click();
+
+    const replaceDialog = page.getByRole('dialog');
+    const bestMatches = replaceDialog.getByTestId('substitute-best-matches');
+    await expect(bestMatches).toBeVisible();
+    await expect(bestMatches).toContainText(/pullover/i);
+    await expect(bestMatches).toContainText('Same movement');
+    await expect(bestMatches).not.toContainText(/gorilla/i);
+    await expect(bestMatches).not.toContainText(/lat pulldown/i);
+
+    // The full same-muscle list stays one tap away.
+    await replaceDialog.getByTestId('substitute-show-all').click();
+    await expect(replaceDialog.getByText(/^Same muscle/)).toBeVisible();
+  });
 });

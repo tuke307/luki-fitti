@@ -4,6 +4,7 @@ import {
   getExerciseSearchNames,
   CORE_EXERCISE_CATALOG,
   localizeExercise,
+  movementMechanic,
   resolveExerciseMedia,
 } from '@luki-fitti/common/catalog';
 import { ALL_SYSTEM_EXERCISES } from '@luki-fitti/common/catalog/extended';
@@ -198,6 +199,8 @@ export class ExerciseService {
           equipment: dto.equipment,
           recommendedDurationSeconds: dto.recommendedDurationSeconds ?? null,
           tags: dto.tags ?? [],
+          movementPattern: dto.movementPattern ?? null,
+          laterality: dto.laterality ?? null,
           isSystem: false,
         },
       });
@@ -287,6 +290,8 @@ export class ExerciseService {
             ? { recommendedDurationSeconds: dto.recommendedDurationSeconds }
             : {}),
           ...(dto.tags !== undefined ? { tags: dto.tags } : {}),
+          ...(dto.movementPattern !== undefined ? { movementPattern: dto.movementPattern } : {}),
+          ...(dto.laterality !== undefined ? { laterality: dto.laterality } : {}),
         },
       });
 
@@ -357,10 +362,28 @@ export class ExerciseService {
       reason: a.reason,
     }));
 
+    // System exercises take their alternatives and movement metadata from the catalog, so fixes
+    // there reach existing databases without a re-seed.
     const alternativeExerciseIds =
-      alternativesFromDb.length > 0
-        ? alternativesFromDb.map((a: any) => a.id)
-        : (catalogFallback?.alternativeExerciseIds ?? []);
+      record.isSystem && catalogFallback
+        ? catalogFallback.alternativeExerciseIds
+        : alternativesFromDb.length > 0
+          ? alternativesFromDb.map((a: any) => a.id)
+          : (catalogFallback?.alternativeExerciseIds ?? []);
+    const movement =
+      record.isSystem && catalogFallback
+        ? {
+            movementPattern: catalogFallback.movementPattern ?? null,
+            laterality: catalogFallback.laterality ?? null,
+            mechanic: catalogFallback.mechanic ?? null,
+            targetRegions: catalogFallback.targetRegions ?? [],
+          }
+        : {
+            movementPattern: record.movementPattern ?? null,
+            laterality: record.laterality ?? null,
+            mechanic: record.movementPattern ? movementMechanic(record.movementPattern) : null,
+            targetRegions: [],
+          };
 
     return localizeExercise(
       {
@@ -379,6 +402,7 @@ export class ExerciseService {
         tags: record.tags ?? [],
         isSystem: record.isSystem,
         alternativeExerciseIds,
+        ...movement,
         alternatives: alternativesFromDb,
         media:
           record.media && record.media.length > 0
