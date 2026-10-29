@@ -200,4 +200,28 @@ final class SuggestionEngineParityTests: XCTestCase {
         XCTAssertEqual(insight.setSuggestions.first?.suggestedWeight, 20)
         XCTAssertEqual(insight.setSuggestions.first?.suggestedReps, 9)
     }
+
+    private func suggestPull(stalling: String) -> WorkoutExerciseSuggestion? {
+        let exercises = ["ex-wide-grip-lat-pulldown", "ex-seated-cable-rows", stalling, "ex-barbell-curl"]
+            .map { WorkoutSuggestionInputExercise(exerciseId: $0, plannedSets: 3) }
+        return ProgressionEngine.computeWorkoutExerciseSuggestion(
+            workoutName: "Pull Day",
+            exercises: exercises,
+            catalog: catalog,
+            historySessions: [0, 7, 14].map { session(day: $0, exerciseId: stalling, weight: 30, reps: 10, rpe: 9.5) }
+        )
+    }
+
+    func testStallingStraightArmPulldownIsSwappedForTheSameMovement() throws {
+        let suggestion = try XCTUnwrap(suggestPull(stalling: "ex-straight-arm-pulldown"))
+        XCTAssertEqual(suggestion.stallingExerciseId, "ex-straight-arm-pulldown")
+        XCTAssertEqual(suggestion.suggestedExercise.movementPattern, .SHOULDER_EXTENSION)
+        XCTAssertFalse(suggestion.suggestedExercise.name.lowercased().contains("gorilla"))
+    }
+
+    func testStallingOneArmRowIsSwappedForAnotherOneArmRow() throws {
+        let suggestion = try XCTUnwrap(suggestPull(stalling: "ex-one-arm-dumbbell-row"))
+        XCTAssertEqual(suggestion.suggestedExercise.movementPattern, .HORIZONTAL_PULL)
+        XCTAssertEqual(suggestion.suggestedExercise.laterality, .UNILATERAL)
+    }
 }

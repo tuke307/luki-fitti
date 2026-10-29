@@ -213,6 +213,11 @@ public struct ExerciseDto: Codable, Sendable, Equatable, Hashable, Identifiable 
     public var tags: [String]
     public var isSystem: Bool
     public var alternativeExerciseIds: [String]
+    /// How the exercise moves; `nil` when unknown (then it is only found by search).
+    public var movementPattern: MovementPattern?
+    public var laterality: Laterality?
+    public var mechanic: ExerciseMechanic?
+    public var targetRegions: [TargetRegion]?
     public var alternatives: [ExerciseAlternativeItemDto]?
     public var media: [ExerciseMediaDto]?
 
@@ -232,6 +237,10 @@ public struct ExerciseDto: Codable, Sendable, Equatable, Hashable, Identifiable 
         tags: [String] = [],
         isSystem: Bool = false,
         alternativeExerciseIds: [String] = [],
+        movementPattern: MovementPattern? = nil,
+        laterality: Laterality? = nil,
+        mechanic: ExerciseMechanic? = nil,
+        targetRegions: [TargetRegion]? = nil,
         alternatives: [ExerciseAlternativeItemDto]? = nil,
         media: [ExerciseMediaDto]? = nil
     ) {
@@ -250,6 +259,10 @@ public struct ExerciseDto: Codable, Sendable, Equatable, Hashable, Identifiable 
         self.tags = tags
         self.isSystem = isSystem
         self.alternativeExerciseIds = alternativeExerciseIds
+        self.movementPattern = movementPattern
+        self.laterality = laterality
+        self.mechanic = mechanic
+        self.targetRegions = targetRegions
         self.alternatives = alternatives
         self.media = media
     }
