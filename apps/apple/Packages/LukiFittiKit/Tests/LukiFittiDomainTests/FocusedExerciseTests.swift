@@ -68,4 +68,13 @@ final class FocusedExerciseTests: XCTestCase {
         ]
         XCTAssertEqual(resolve(exercises), 0)
     }
+
+    func testFinishMarksUntouchedExercisesAsSkipped() {
+        let session = WorkoutSessionDto(workoutNameSnapshot: "Push", exercises: [
+            ex("done", ["2026-10-28T10:00:00Z", nil], status: .IN_PROGRESS),
+            ex("variant", [nil, nil]),
+        ])
+        let statuses = SessionCalculator.finalizeExerciseStatuses(session).exercises.map(\.status)
+        XCTAssertEqual(statuses, [.COMPLETED, .SKIPPED])
+    }
 }

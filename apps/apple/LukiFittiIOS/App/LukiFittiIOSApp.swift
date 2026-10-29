@@ -475,18 +475,6 @@ public final class LukiAppViewModel {
         }
     }
 
-    public func toggleSkipExercise(clientExerciseId: String) {
-        guard var session = store.activeSession,
-              let exIdx = session.exercises.firstIndex(where: { $0.clientExerciseId == clientExerciseId }) else {
-            return
-        }
-        session.exercises[exIdx].status = session.exercises[exIdx].status == .SKIPPED ? .IN_PROGRESS : .SKIPPED
-        session.version += 1
-        store.saveActiveSession(session)
-        store.enqueueSessionSync(session)
-        watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
-    }
-
     public func reorderExerciseInSession(clientExerciseId: String, moveUp: Bool) {
         guard var session = store.activeSession,
               let idx = session.exercises.firstIndex(where: { $0.clientExerciseId == clientExerciseId }) else {
@@ -644,7 +632,7 @@ public final class LukiAppViewModel {
         }
         session.version += 1
 
-        let finalized = SessionCalculator.recalculateSessionTotals(session)
+        let finalized = SessionCalculator.recalculateSessionTotals(SessionCalculator.finalizeExerciseStatuses(session))
         applyFinishedSessionToTemplate(finalized)
         store.setDismissedSuggestions(nil, clientSessionId: finalized.clientSessionId)
         store.setFocusedExerciseId(nil, clientSessionId: finalized.clientSessionId)

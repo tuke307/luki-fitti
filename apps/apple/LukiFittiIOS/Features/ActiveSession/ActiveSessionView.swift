@@ -336,14 +336,6 @@ public struct ActiveSessionView: View {
             LukiSwipeAction(id: "swap", label: tr("Replace"), systemImage: "arrow.triangle.swap") {
                 swapTargetId = exercise.clientExerciseId
             },
-            LukiSwipeAction(
-                id: "skip",
-                label: exercise.status == .SKIPPED ? tr("Unskip") : tr("Skip"),
-                systemImage: "forward.end",
-                tone: .accent
-            ) {
-                viewModel.toggleSkipExercise(clientExerciseId: exercise.clientExerciseId)
-            },
         ]
     }
 
@@ -361,11 +353,6 @@ public struct ActiveSessionView: View {
                 swapTargetId = exercise.clientExerciseId
             } label: {
                 Label(tr("Replace"), systemImage: "arrow.triangle.swap")
-            }
-            Button {
-                viewModel.toggleSkipExercise(clientExerciseId: exercise.clientExerciseId)
-            } label: {
-                Label(exercise.status == .SKIPPED ? tr("Unskip") : tr("Skip"), systemImage: "forward.end")
             }
             Button {
                 viewModel.reorderExerciseInSession(clientExerciseId: exercise.clientExerciseId, moveUp: true)
@@ -430,7 +417,6 @@ public struct ActiveSessionView: View {
                         Text(exercise.exerciseNameSnapshot)
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.primary)
-                            .strikethrough(exercise.status == .SKIPPED)
                             .lineLimit(1)
                         Text("\(LukiI18n.muscleLabel(exercise.primaryMuscleSnapshot, locale: tr)) · \(repsTarget(exercise))")
                             .font(.footnote.monospacedDigit())
@@ -452,7 +438,6 @@ public struct ActiveSessionView: View {
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
                         .fill(LukiColors.cardBackground)
                 )
-                .opacity(exercise.status == .SKIPPED ? 0.6 : 1)
             }
             .buttonStyle(.plain)
             .accessibilityValue(tr("%d of %d sets", doneCount, exercise.sets.count))
@@ -533,7 +518,6 @@ public struct ActiveSessionView: View {
                         Text(exercise.exerciseNameSnapshot)
                             .font(.title3.weight(.semibold))
                             .foregroundStyle(.primary)
-                            .strikethrough(exercise.status == .SKIPPED)
                         Text(goal)
                             .font(.footnote.monospacedDigit())
                             .foregroundStyle(.secondary)
@@ -641,7 +625,6 @@ public struct ActiveSessionView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(member.exercise.exerciseNameSnapshot)
                                         .font(.subheadline.bold())
-                                        .strikethrough(member.exercise.status == .SKIPPED)
                                         .lineLimit(1)
                                     Text("\(LukiI18n.muscleLabel(member.exercise.primaryMuscleSnapshot, locale: tr)) · \(repsTarget(member.exercise))")
                                         .font(.footnote.monospacedDigit())

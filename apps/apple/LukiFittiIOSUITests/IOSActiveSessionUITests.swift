@@ -38,6 +38,25 @@ final class IOSActiveSessionUITests: XCTestCase {
         viewInDiaryBtn.tap()
 
         XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
+
+        // Exercises without a logged set are listed apart as "not done", no Skip needed
+        let detailsBtn = app.buttons["Details"].firstMatch
+        scrollAttempts = 0
+        while !(detailsBtn.exists && detailsBtn.isHittable) && scrollAttempts < 6 {
+            app.swipeUp()
+            scrollAttempts += 1
+        }
+        detailsBtn.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["ios.diary.notDoneExercises"].waitForExistence(timeout: 5))
+    }
+
+    func testNoSkipActionInTheExerciseMenu() {
+        let app = IOSUITestHelpers.launchApp(extraArguments: ["--uitesting-seed-active-session"])
+        let header = app.descendants(matching: .any)["ios.session.exerciseHeader.1"]
+        XCTAssertTrue(header.waitForExistence(timeout: 10))
+        app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'More actions'")).firstMatch.tap()
+        XCTAssertTrue(app.buttons["Replace"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Skip"].exists)
     }
 
     func testReopensTheExerciseTheUserWasOnAfterMinimizing() {

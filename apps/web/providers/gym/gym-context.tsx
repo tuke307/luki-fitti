@@ -132,7 +132,6 @@ interface GymContextValue {
   /** Pass several ids to add one set to each in a single update (e.g. a superset round). */
   addSetToExercise: (clientExerciseIds: string | string[], setType?: SetType) => Promise<void>;
   removeSetFromExercise: (clientExerciseId: string, clientSetId: string) => Promise<void>;
-  skipExercise: (clientExerciseId: string) => Promise<void>;
   substituteExercise: (clientExerciseId: string, replacementExerciseId: string) => Promise<void>;
   addExerciseToSession: (exerciseId: string) => Promise<void>;
   removeExerciseFromSession: (clientExerciseId: string) => Promise<void>;
@@ -1210,14 +1209,9 @@ export function GymProvider({ children }: { children: ReactNode }) {
       });
 
       const allCompleted = updatedSets.length > 0 && updatedSets.every((s) => s.completed);
-      const anyCompleted = updatedSets.some((s) => s.completed);
       const nextStatus = allCompleted
         ? SessionExerciseStatus.COMPLETED
-        : anyCompleted
-          ? SessionExerciseStatus.IN_PROGRESS
-          : ex.status === SessionExerciseStatus.SKIPPED
-            ? SessionExerciseStatus.SKIPPED
-            : SessionExerciseStatus.IN_PROGRESS;
+        : SessionExerciseStatus.IN_PROGRESS;
 
       return {
         ...ex,
@@ -1294,22 +1288,6 @@ export function GymProvider({ children }: { children: ReactNode }) {
         .map((s, idx) => ({ ...s, setNumber: idx + 1 }));
       return { ...ex, sets: filtered };
     });
-    await persistSessionUpdate({ ...activeSession, exercises: nextExercises });
-  };
-
-  const skipExercise = async (clientExerciseId: string) => {
-    if (!activeSession) return;
-    const nextExercises = activeSession.exercises.map((ex) =>
-      ex.clientExerciseId === clientExerciseId
-        ? {
-            ...ex,
-            status:
-              ex.status === SessionExerciseStatus.SKIPPED
-                ? SessionExerciseStatus.PENDING
-                : SessionExerciseStatus.SKIPPED,
-          }
-        : ex,
-    );
     await persistSessionUpdate({ ...activeSession, exercises: nextExercises });
   };
 
@@ -1719,7 +1697,6 @@ export function GymProvider({ children }: { children: ReactNode }) {
         toggleCompleteSet,
         addSetToExercise,
         removeSetFromExercise,
-        skipExercise,
         substituteExercise,
         addExerciseToSession,
         removeExerciseFromSession,
