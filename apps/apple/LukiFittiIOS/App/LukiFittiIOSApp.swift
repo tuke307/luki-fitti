@@ -560,6 +560,34 @@ public final class LukiAppViewModel {
         store.saveActiveSession(session)
         store.enqueueSessionSync(session)
         watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
+        focusExercise(clientExerciseId: clientExId)
+    }
+
+    /// Index of the exercise the active workout shows; survives tab switches and relaunches.
+    public var focusedExerciseIndex: Int {
+        guard let session = store.activeSession else { return 0 }
+        return SessionCalculator.resolveFocusedExerciseIndex(
+            session.exercises,
+            rememberedClientExerciseId: store.focusedExerciseIds[session.clientSessionId]
+        )
+    }
+
+    public func focusExercise(clientExerciseId: String) {
+        guard let session = store.activeSession else { return }
+        store.setFocusedExerciseId(clientExerciseId, clientSessionId: session.clientSessionId)
+    }
+
+    public func focusExercise(at index: Int) {
+        guard let exercises = store.activeSession?.exercises, exercises.indices.contains(index) else { return }
+        focusExercise(clientExerciseId: exercises[index].clientExerciseId)
+    }
+
+    /// Pins the exercise shown on open, so finishing its last set doesn't jump to the next one.
+    public func pinFocusedExercise() {
+        guard let session = store.activeSession, !session.exercises.isEmpty else { return }
+        let remembered = store.focusedExerciseIds[session.clientSessionId]
+        guard !session.exercises.contains(where: { $0.clientExerciseId == remembered }) else { return }
+        focusExercise(at: focusedExerciseIndex)
     }
 
     /// Replaces an exercise in the active session, keeping its slot and pre-filling the
@@ -619,6 +647,7 @@ public final class LukiAppViewModel {
         let finalized = SessionCalculator.recalculateSessionTotals(session)
         applyFinishedSessionToTemplate(finalized)
         store.setDismissedSuggestions(nil, clientSessionId: finalized.clientSessionId)
+        store.setFocusedExerciseId(nil, clientSessionId: finalized.clientSessionId)
         completedSummarySession = finalized
         store.saveActiveSession(nil)
         store.saveHistorySession(finalized)
@@ -665,6 +694,7 @@ public final class LukiAppViewModel {
         guard let session = store.activeSession else { return }
         store.saveActiveSession(nil)
         store.setDismissedSuggestions(nil, clientSessionId: session.clientSessionId)
+        store.setFocusedExerciseId(nil, clientSessionId: session.clientSessionId)
         store.removeFromSyncQueue(clientSessionId: session.clientSessionId)
         watchSyncCoordinator.broadcastActiveSessionSnapshot(nil)
         selectedTab = .workouts
