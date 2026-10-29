@@ -157,9 +157,8 @@ public final class WorkoutLiveActivityController {
         heartRate: Int?,
         locale: SupportedLocale
     ) -> WorkoutActivityAttributes.ContentState {
-        let current = session.exercises.first {
-            $0.status != .COMPLETED && $0.status != .SKIPPED
-        } ?? session.exercises.last
+        let currentIdx = SessionCalculator.resolveFocusedExerciseIndex(session.exercises)
+        let current = session.exercises.indices.contains(currentIdx) ? session.exercises[currentIdx] : nil
         let sets = current?.sets ?? []
         let nextIndex = sets.firstIndex { !$0.completed } ?? max(0, sets.count - 1)
         let nextSet = sets.indices.contains(nextIndex) ? sets[nextIndex] : nil

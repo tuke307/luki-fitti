@@ -16,6 +16,42 @@ public struct RestTimerStatus: Sendable, Equatable {
 }
 
 public enum SessionCalculator {
+    /// Index of the exercise a running workout should show when it is (re)opened: the one the user
+    /// last opened, else the one with the most recently logged set while it still has open sets,
+    /// else the first unfinished one. Returns 0 for an empty or fully finished workout.
+    /// Port of `resolveFocusedExerciseIndex` in `packages/common`.
+    public static func resolveFocusedExerciseIndex(
+        _ exercises: [SessionExerciseDto],
+        rememberedClientExerciseId: String? = nil
+    ) -> Int {
+        if let rememberedClientExerciseId,
+           let remembered = exercises.firstIndex(where: { $0.clientExerciseId == rememberedClientExerciseId }) {
+            return remembered
+        }
+
+        func hasOpenSets(_ ex: SessionExerciseDto) -> Bool { ex.sets.contains { !$0.completed } }
+
+        var latestIdx: Int?
+        var latestDate = Date.distantPast
+        for (idx, ex) in exercises.enumerated() {
+            for set in ex.sets where set.completed {
+                guard let raw = set.completedAt, let date = parseIsoDate(raw), date > latestDate else { continue }
+                latestDate = date
+                latestIdx = idx
+            }
+        }
+        if let latestIdx, hasOpenSets(exercises[latestIdx]) { return latestIdx }
+
+        return exercises.firstIndex {
+            $0.status != .COMPLETED && $0.status != .SKIPPED && hasOpenSets($0)
+        } ?? 0
+    }
+
+    private static func parseIsoDate(_ value: String) -> Date? {
+        (try? Date.ISO8601FormatStyle(includingFractionalSeconds: true).parse(value))
+            ?? (try? Date.ISO8601FormatStyle().parse(value))
+    }
+
     public static func recalculateSessionTotals(_ session: WorkoutSessionDto) -> WorkoutSessionDto {
         var totalVolumeKg: Double = 0
         var totalSetsCompleted = 0

@@ -6,7 +6,6 @@ import LukiFittiDomain
 public struct ActiveSessionView: View {
     @Bindable public var viewModel: LukiAppViewModel
     @Environment(\.lukiLocale) private var tr
-    @State private var selectedExerciseIndex: Int = 0
     @State private var swapTargetId: String?
     @State private var showingAddExerciseSheet = false
     @State private var showingDiscardConfirmation = false
@@ -41,6 +40,10 @@ public struct ActiveSessionView: View {
         .onReceive(Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()) { tick in
             nowTick = tick
         }
+        .onAppear { viewModel.pinFocusedExercise() }
+        .onChange(of: viewModel.store.activeSession?.exercises.map(\.clientExerciseId)) {
+            viewModel.pinFocusedExercise()
+        }
         .sheet(isPresented: Binding(
             get: { swapTargetId != nil },
             set: { if !$0 { swapTargetId = nil } }
@@ -63,9 +66,6 @@ public struct ActiveSessionView: View {
                 selectedExerciseId: nil
             ) { chosen in
                 viewModel.addUnplannedExerciseToSession(chosen)
-                if let count = viewModel.store.activeSession?.exercises.count, count > 0 {
-                    selectedExerciseIndex = count - 1
-                }
                 showingAddExerciseSheet = false
             }
         }
@@ -296,7 +296,7 @@ public struct ActiveSessionView: View {
     // MARK: - Exercise stack
 
     private func verticalExerciseStack(_ session: WorkoutSessionDto) -> some View {
-        let safeIdx = min(max(0, selectedExerciseIndex), max(0, session.exercises.count - 1))
+        let safeIdx = viewModel.focusedExerciseIndex
         let blocks = ProgressionEngine.groupSessionExercisesIntoBlocks(session.exercises)
 
         return VStack(alignment: .leading, spacing: 12) {
@@ -369,14 +369,14 @@ public struct ActiveSessionView: View {
             }
             Button {
                 viewModel.reorderExerciseInSession(clientExerciseId: exercise.clientExerciseId, moveUp: true)
-                selectedExerciseIndex = max(0, exerciseIndex - 1)
+                viewModel.focusExercise(clientExerciseId: exercise.clientExerciseId)
             } label: {
                 Label(tr("Move Earlier"), systemImage: "arrow.up")
             }
             .disabled(exerciseIndex == 0)
             Button {
                 viewModel.reorderExerciseInSession(clientExerciseId: exercise.clientExerciseId, moveUp: false)
-                selectedExerciseIndex = min(session.exercises.count - 1, exerciseIndex + 1)
+                viewModel.focusExercise(clientExerciseId: exercise.clientExerciseId)
             } label: {
                 Label(tr("Move Later"), systemImage: "arrow.down")
             }
@@ -408,7 +408,7 @@ public struct ActiveSessionView: View {
         let isCompleted = exercise.status == .COMPLETED
         return LukiSwipeRow(leading: leadingExerciseActions(exercise), trailing: trailingExerciseActions(exercise)) {
             Button {
-                selectedExerciseIndex = index
+                viewModel.focusExercise(at: index)
             } label: {
                 HStack(spacing: 10) {
                     Group {
@@ -456,6 +456,7 @@ public struct ActiveSessionView: View {
             }
             .buttonStyle(.plain)
             .accessibilityValue(tr("%d of %d sets", doneCount, exercise.sets.count))
+            .accessibilityIdentifier("ios.session.exerciseRow.\(index + 1)")
         }
     }
 
@@ -584,7 +585,7 @@ public struct ActiveSessionView: View {
 
         if exerciseIndex < session.exercises.count - 1 {
             Button {
-                selectedExerciseIndex = exerciseIndex + 1
+                viewModel.focusExercise(at: exerciseIndex + 1)
             } label: {
                 Label(tr("Next: %@", session.exercises[exerciseIndex + 1].exerciseNameSnapshot), systemImage: "arrow.right")
                     .labelStyle(TrailingIconLabelStyle())
@@ -940,9 +941,6 @@ public struct ActiveSessionView: View {
                 onAdd: {
                     dismiss(suggestion, in: session)
                     viewModel.addUnplannedExerciseToSession(suggestion.suggestedExercise)
-                    if let count = viewModel.store.activeSession?.exercises.count, count > 0 {
-                        selectedExerciseIndex = count - 1
-                    }
                 },
                 onReplace: stallingExercise.map { target in
                     {
@@ -951,9 +949,7 @@ public struct ActiveSessionView: View {
                             clientExerciseId: target.clientExerciseId,
                             with: suggestion.suggestedExercise
                         )
-                        if let idx = session.exercises.firstIndex(where: { $0.clientExerciseId == target.clientExerciseId }) {
-                            selectedExerciseIndex = idx
-                        }
+                        viewModel.focusExercise(clientExerciseId: target.clientExerciseId)
                     }
                 },
                 onDismiss: { dismiss(suggestion, in: session) }
