@@ -15,6 +15,7 @@ import {
   Flame,
   Watch,
   Smartphone,
+  ChevronRight,
 } from 'lucide-react';
 import {
   Area,
@@ -59,7 +60,7 @@ import {
   SetType,
   WeightUnit,
 } from '@luki-fitti/common/enums';
-import type { WorkoutSessionDto } from '@luki-fitti/common/schemas';
+import type { SessionExerciseDto, WorkoutSessionDto } from '@luki-fitti/common/schemas';
 import { ExercisePicker } from './exercise-picker';
 import { ConfirmDestructiveDialog } from './confirm-destructive-dialog';
 import { NumberInput } from './number-input';
@@ -67,6 +68,9 @@ import { bigVolume, formatVolume, unitLabel, weightInUnit } from '@/lib/format/w
 import { getSetBadgeLabels, SET_TYPE_TEXT_CLASS, SetTypeBadge } from './set-type-badge';
 
 const LBS_TO_KG = 0.45359237;
+
+/** Exercises without a logged set (unused variants, left out) are listed apart as "not done". */
+const isExerciseDone = (ex: SessionExerciseDto) => ex.sets.some((s) => s.completed);
 
 function toLocalDateIso(dateInput: Date | string | number): string {
   const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
@@ -90,6 +94,10 @@ export function DiaryAnalyticsView() {
   const [pendingDelete, setPendingDelete] = useState<WorkoutSessionDto | null>(null);
   const unit = unitLabel(weightUnit);
   const bigUnit = bigVolume(0, weightUnit).label;
+  const notDoneLabel = (session: WorkoutSessionDto) => {
+    const count = session.exercises.filter((ex) => !isExerciseDone(ex)).length;
+    return count > 0 ? format(t.diary.notDoneCount, { count }) : null;
+  };
 
   const filteredSessions = useMemo(() => {
     const cutoffMs =
@@ -960,7 +968,15 @@ export function DiaryAnalyticsView() {
                     {session.workoutNameSnapshot}
                   </h3>
                   <p className="text-muted-foreground text-xs leading-relaxed">
-                    {session.exercises.map((e) => e.exerciseNameSnapshot).join(' • ')}
+                    {[
+                      session.exercises
+                        .filter(isExerciseDone)
+                        .map((e) => e.exerciseNameSnapshot)
+                        .join(' • '),
+                      notDoneLabel(session),
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </p>
                   {(session.activeCaloriesKcal || session.avgHeartRateBpm) && (
                     <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs">
@@ -1167,7 +1183,7 @@ export function DiaryAnalyticsView() {
                   </div>
                 )}
 
-                {inspectingSession.exercises.map((ex, exIdx) => (
+                {inspectingSession.exercises.filter(isExerciseDone).map((ex, exIdx) => (
                   <div
                     key={ex.clientExerciseId}
                     className="bg-secondary/30 min-w-0 space-y-2 rounded-2xl border p-3.5 sm:p-4"
@@ -1276,6 +1292,25 @@ export function DiaryAnalyticsView() {
                     </div>
                   </div>
                 ))}
+
+                {notDoneLabel(inspectingSession) && (
+                  <details data-testid="diary-not-done-exercises" className="group px-1 text-xs">
+                    <summary className="text-muted-foreground hover:text-foreground flex min-h-11 cursor-pointer list-none items-center gap-1.5 font-medium">
+                      <ChevronRight
+                        aria-hidden="true"
+                        className="h-3.5 w-3.5 transition-transform group-open:rotate-90"
+                      />
+                      {notDoneLabel(inspectingSession)}
+                    </summary>
+                    <ul className="text-muted-foreground space-y-1 pb-1 pl-5">
+                      {inspectingSession.exercises
+                        .filter((ex) => !isExerciseDone(ex))
+                        .map((ex) => (
+                          <li key={ex.clientExerciseId}>{ex.exerciseNameSnapshot}</li>
+                        ))}
+                    </ul>
+                  </details>
+                )}
               </div>
 
               <DialogFooter className="shrink-0 border-t pt-3">
