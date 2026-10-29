@@ -11,7 +11,13 @@ final class IOSExercisesAndStretchingUITests: XCTestCase {
         searchField.tap()
         searchField.typeText("Barbell Bench Press")
 
-        XCTAssertTrue(app.staticTexts["Barbell Bench Press"].waitForExistence(timeout: 5))
+        let benchRow = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Barbell Bench Press'")).firstMatch
+        XCTAssertTrue(benchRow.waitForExistence(timeout: 5))
+
+        // Tapping a row opens its how-to guide
+        benchRow.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["ios.exerciseGuide.sheet"].waitForExistence(timeout: 5))
+        app.buttons["ios.exerciseGuide.doneButton"].tap()
 
         // Switch segmented control to Stretching Studio
         let stretchingSegment = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Stretching'")).firstMatch

@@ -37,6 +37,7 @@ import {
 } from '@luki-fitti/common/utils/client';
 import { ExercisePicker, filterExercisesByQuery, searchIndexFor } from './exercise-picker';
 import { ExerciseVisual } from './exercise-visual';
+import { ExerciseGuideSheet } from './exercise-guide-sheet';
 import { ConfirmDestructiveDialog } from './confirm-destructive-dialog';
 import { NumberInput } from './number-input';
 import { unitLabel } from '@/lib/format/weight';
@@ -637,146 +638,102 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
       )}
 
       {/* Exercise Detail Modal */}
-      <Dialog
+      <ExerciseGuideSheet
+        exercise={selectedExercise}
         open={Boolean(selectedExercise)}
         onOpenChange={(open) => {
           if (!open) setSelectedExercise(null);
         }}
       >
-        <DialogContent className="max-h-[90dvh] overflow-hidden p-4 sm:max-w-xl sm:p-6">
-          {selectedExercise && (
-            <div className="flex max-h-[calc(90dvh-2.5rem)] min-w-0 flex-col gap-3 overflow-hidden">
-              <DialogHeader className="shrink-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="default" className="text-xs">
-                    {muscleLabel(selectedExercise.primaryMuscleGroup)}
-                  </Badge>
-                  <Badge variant="secondary" className="text-muted-foreground text-xs">
-                    {equipmentLabel(selectedExercise.equipment)}
-                  </Badge>
-                  <Badge variant="secondary" className="text-muted-foreground text-xs">
-                    {exerciseTypeLabel(selectedExercise.exerciseType)}
-                  </Badge>
+        {selectedExercise && (
+          <>
+            {selectedExercise.alternativeExerciseIds.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="font-display text-sm font-bold">
+                  {t.exercises.recommendedBackupsTitle}
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {selectedExercise.alternativeExerciseIds.map((altId) => {
+                    const alt = catalog.find((c) => c.id === altId);
+                    if (!alt) return null;
+                    return (
+                      <Button
+                        key={alt.id}
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setSelectedExercise(alt)}
+                      >
+                        <ArrowRightLeft className="text-primary h-3.5 w-3.5" />
+                        <span>{alt.name}</span>
+                      </Button>
+                    );
+                  })}
                 </div>
-                <DialogTitle className="font-display pt-1 text-xl font-bold">
-                  {selectedExercise.name}
-                </DialogTitle>
-                <DialogDescription className="text-xs leading-relaxed sm:text-sm">
-                  {selectedExercise.description}
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-0.5">
-                {/* Animated Visual Demonstration + Anatomical Muscle Map + Video Links */}
-                <ExerciseVisual exercise={selectedExercise} variant="detail" />
-
-                {selectedExercise.instructions.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="font-display text-sm font-bold">
-                      {t.exercises.executionCuesTitle}
-                    </h3>
-                    <ol className="space-y-2 text-xs leading-relaxed">
-                      {selectedExercise.instructions.map((step, idx) => (
-                        <li key={idx} className="bg-secondary/40 flex gap-2.5 rounded-xl p-2.5">
-                          <span className="bg-primary text-primary-foreground flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold">
-                            {idx + 1}
-                          </span>
-                          <span>{step}</span>
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
-
-                {selectedExercise.alternativeExerciseIds.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="font-display text-sm font-bold">
-                      {t.exercises.recommendedBackupsTitle}
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedExercise.alternativeExerciseIds.map((altId) => {
-                        const alt = catalog.find((c) => c.id === altId);
-                        if (!alt) return null;
-                        return (
-                          <Button
-                            key={alt.id}
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => setSelectedExercise(alt)}
-                          >
-                            <ArrowRightLeft className="text-primary h-3.5 w-3.5" />
-                            <span>{alt.name}</span>
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Global Exercise History (Single Source of Truth across all workouts) */}
-                {(() => {
-                  const insight = computeExerciseProgression({
-                    exerciseId: selectedExercise.id,
-                    exerciseName: selectedExercise.name,
-                    historySessions,
-                    catalogExercise: selectedExercise,
-                    weightUnit,
-                  });
-                  if (insight.history.length === 0) return null;
-                  return (
-                    <div className="space-y-2 border-t pt-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-display text-sm font-bold">
-                          {format(t.exercises.globalHistoryTitle, { count: insight.sessionsCount })}
-                        </h3>
-                        {insight.ewma1RM > 0 && (
-                          <Badge variant="default" className="tabular-nums text-xs">
-                            {format(t.exercises.strengthTrendBadge, {
-                              value: insight.ewma1RM,
-                              unit: unitLabel(weightUnit),
-                            })}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="space-y-1.5">
-                        {insight.history
-                          .slice(-4)
-                          .reverse()
-                          .map((entry) => (
-                            <div
-                              key={entry.clientSessionId}
-                              className="bg-secondary/40 flex flex-wrap items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs"
-                            >
-                              <div>
-                                <p className="font-semibold">{entry.workoutName}</p>
-                                <p className="text-muted-foreground tabular-nums text-xs">
-                                  {formatDateTime(entry.startedAt)}
-                                </p>
-                              </div>
-                              <div className="flex flex-wrap gap-1">
-                                {entry.workingSets.map((ws, i) => (
-                                  <Badge
-                                    key={i}
-                                    variant="secondary"
-                                    className="bg-background tabular-nums px-1.5 py-0.5 text-xs font-bold"
-                                  >
-                                    {ws.weightNormalized}
-                                    {weightUnit.toLowerCase()} × {ws.reps}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  );
-                })()}
               </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+            )}
+
+            {/* Global Exercise History (Single Source of Truth across all workouts) */}
+            {(() => {
+              const insight = computeExerciseProgression({
+                exerciseId: selectedExercise.id,
+                exerciseName: selectedExercise.name,
+                historySessions,
+                catalogExercise: selectedExercise,
+                weightUnit,
+              });
+              if (insight.history.length === 0) return null;
+              return (
+                <div className="space-y-2 border-t pt-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-display text-sm font-bold">
+                      {format(t.exercises.globalHistoryTitle, { count: insight.sessionsCount })}
+                    </h3>
+                    {insight.ewma1RM > 0 && (
+                      <Badge variant="default" className="tabular-nums text-xs">
+                        {format(t.exercises.strengthTrendBadge, {
+                          value: insight.ewma1RM,
+                          unit: unitLabel(weightUnit),
+                        })}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    {insight.history
+                      .slice(-4)
+                      .reverse()
+                      .map((entry) => (
+                        <div
+                          key={entry.clientSessionId}
+                          className="bg-secondary/40 flex flex-wrap items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs"
+                        >
+                          <div>
+                            <p className="font-semibold">{entry.workoutName}</p>
+                            <p className="text-muted-foreground tabular-nums text-xs">
+                              {formatDateTime(entry.startedAt)}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {entry.workingSets.map((ws, i) => (
+                              <Badge
+                                key={i}
+                                variant="secondary"
+                                className="bg-background tabular-nums px-1.5 py-0.5 text-xs font-bold"
+                              >
+                                {ws.weightNormalized}
+                                {weightUnit.toLowerCase()} × {ws.reps}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              );
+            })()}
+          </>
+        )}
+      </ExerciseGuideSheet>
 
       {/* Create Custom Exercise Modal */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>

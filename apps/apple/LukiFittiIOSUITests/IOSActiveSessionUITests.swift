@@ -103,6 +103,21 @@ final class IOSActiveSessionUITests: XCTestCase {
         XCTAssertFalse(app.buttons["Skip"].exists)
     }
 
+    func testOpensTheExerciseGuideFromTheRunningWorkout() {
+        let app = IOSUITestHelpers.launchApp(extraArguments: ["--uitesting-seed-active-session"])
+        let guideButton = app.buttons["ios.session.guideButton.1"]
+        XCTAssertTrue(guideButton.waitForExistence(timeout: 10))
+        guideButton.tap()
+        let sheet = app.descendants(matching: .any)["ios.exerciseGuide.sheet"]
+        XCTAssertTrue(sheet.waitForExistence(timeout: 5))
+        app.buttons["ios.exerciseGuide.doneButton"].tap()
+        wait(for: [expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: sheet)], timeout: 5)
+
+        app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'More actions'")).firstMatch.tap()
+        app.buttons["How to do it"].tap()
+        XCTAssertTrue(sheet.waitForExistence(timeout: 5))
+    }
+
     func testReopensTheExerciseTheUserWasOnAfterMinimizing() {
         let app = IOSUITestHelpers.launchApp(extraArguments: ["--uitesting-seed-active-session"])
 
