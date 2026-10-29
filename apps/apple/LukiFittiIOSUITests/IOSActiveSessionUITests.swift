@@ -123,4 +123,27 @@ final class IOSActiveSessionUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["ios.session.exerciseHeader.2"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.descendants(matching: .any)["ios.session.exerciseHeader.1"].exists)
     }
+
+    func testReplaceSheetOffersTheSameMovementFirst() {
+        let app = IOSUITestHelpers.launchApp(extraArguments: ["--uitesting-seed-active-session"])
+        let header = app.descendants(matching: .any)["ios.session.exerciseHeader.1"]
+        XCTAssertTrue(header.waitForExistence(timeout: 10))
+        app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'More actions'")).firstMatch.tap()
+        let replace = app.buttons["Replace"]
+        XCTAssertTrue(replace.waitForExistence(timeout: 5))
+        replace.tap()
+
+        let bestMatches = app.descendants(matching: .any)["ios.picker.section.bestMatches"]
+        XCTAssertTrue(bestMatches.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Best matches"].exists)
+        let sameMovement = bestMatches.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Same movement'"))
+        XCTAssertGreaterThan(sameMovement.count, 0)
+        XCTAssertTrue(app.staticTexts["All exercises"].exists)
+
+        // Searching shows plain results without the suggestions.
+        let search = app.textFields["Search exercises"]
+        search.tap()
+        search.typeText("curl")
+        XCTAssertFalse(bestMatches.waitForExistence(timeout: 2))
+    }
 }

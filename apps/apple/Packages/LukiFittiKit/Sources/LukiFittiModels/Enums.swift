@@ -50,6 +50,82 @@ public enum MuscleGroup: String, Codable, Sendable, CaseIterable, Equatable, Has
     case FULL_BODY
 }
 
+/// How an exercise moves the body (mirrors `MovementPattern` in @luki-fitti/common).
+public enum MovementPattern: String, Codable, Sendable, CaseIterable, Equatable, Hashable {
+    case HORIZONTAL_PULL
+    case VERTICAL_PULL
+    case SHOULDER_EXTENSION
+    case HORIZONTAL_PUSH
+    case INCLINE_PUSH
+    case VERTICAL_PUSH
+    case DIP
+    case FLY
+    case LATERAL_RAISE
+    case FRONT_RAISE
+    case REAR_DELT
+    case UPRIGHT_ROW
+    case SHRUG
+    case SHOULDER_ROTATION
+    case ELBOW_FLEXION
+    case ELBOW_EXTENSION
+    case WRIST
+    case SQUAT
+    case HINGE
+    case LUNGE
+    case KNEE_EXTENSION
+    case KNEE_FLEXION
+    case HIP_THRUST
+    case HIP_EXTENSION
+    case HIP_ABDUCTION
+    case HIP_ADDUCTION
+    case HIP_FLEXION
+    case CALF_RAISE
+    case BACK_EXTENSION
+    case CORE_FLEXION
+    case ANTI_EXTENSION
+    case LATERAL_FLEXION
+    case ROTATION
+    case CARRY
+    case OLYMPIC_LIFT
+}
+
+public enum Laterality: String, Codable, Sendable, CaseIterable, Equatable, Hashable {
+    case BILATERAL
+    case UNILATERAL
+}
+
+public enum ExerciseMechanic: String, Codable, Sendable, CaseIterable, Equatable, Hashable {
+    case COMPOUND
+    case ISOLATION
+}
+
+/// Finer-grained than `MuscleGroup`: the regions an exercise mainly loads.
+public enum TargetRegion: String, Codable, Sendable, CaseIterable, Equatable, Hashable {
+    case LATS
+    case UPPER_BACK
+    case TRAPS
+    case LOWER_BACK
+    case UPPER_CHEST
+    case MID_CHEST
+    case LOWER_CHEST
+    case FRONT_DELT
+    case SIDE_DELT
+    case REAR_DELT
+    case BICEPS
+    case BRACHIALIS
+    case TRICEPS
+    case FOREARMS
+    case QUADS
+    case HAMSTRINGS
+    case GLUTES
+    case ADDUCTORS
+    case ABDUCTORS
+    case CALVES
+    case ABS
+    case OBLIQUES
+    case HIP_FLEXORS
+}
+
 public enum ExerciseCategory: String, Codable, Sendable, CaseIterable, Equatable, Hashable {
     case COMPOUND
     case ISOLATION
