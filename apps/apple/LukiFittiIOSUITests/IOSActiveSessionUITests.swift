@@ -50,6 +50,50 @@ final class IOSActiveSessionUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["ios.diary.notDoneExercises"].waitForExistence(timeout: 5))
     }
 
+    func testChangesTheSetTypeOfAPastWorkout() {
+        let app = IOSUITestHelpers.launchApp(extraArguments: ["--uitesting-seed-active-session"])
+        let completeSet1Button = app.buttons["ios.session.completeSet.1"]
+        XCTAssertTrue(completeSet1Button.waitForExistence(timeout: 10))
+        completeSet1Button.tap()
+
+        let finishBtn = app.buttons["ios.session.finishButton"]
+        var scrollAttempts = 0
+        while !finishBtn.isHittable && scrollAttempts < 6 {
+            app.swipeUp()
+            scrollAttempts += 1
+        }
+        finishBtn.tap()
+        let viewInDiaryBtn = app.buttons["ios.session.viewInDiaryButton"]
+        XCTAssertTrue(viewInDiaryBtn.waitForExistence(timeout: 8))
+        viewInDiaryBtn.tap()
+
+        let detailsBtn = app.buttons["Details"].firstMatch
+        func openDetails() {
+            var attempts = 0
+            while !(detailsBtn.exists && detailsBtn.isHittable) && attempts < 6 {
+                app.swipeUp()
+                attempts += 1
+            }
+            detailsBtn.tap()
+        }
+        let dropsetBadges = app.buttons.matching(NSPredicate(
+            format: "identifier BEGINSWITH 'ios.diary.setType.' AND label CONTAINS 'Dropset'"
+        ))
+
+        openDetails()
+        let firstSetMenu = app.buttons["ios.diary.setType.1.1"]
+        XCTAssertTrue(firstSetMenu.waitForExistence(timeout: 5))
+        XCTAssertEqual(dropsetBadges.count, 0)
+        firstSetMenu.tap()
+        app.buttons["Dropset"].firstMatch.tap()
+        XCTAssertTrue(dropsetBadges.firstMatch.waitForExistence(timeout: 5))
+        app.buttons["ios.diary.saveButton"].tap()
+
+        openDetails()
+        XCTAssertTrue(firstSetMenu.waitForExistence(timeout: 5))
+        XCTAssertEqual(dropsetBadges.count, 1)
+    }
+
     func testNoSkipActionInTheExerciseMenu() {
         let app = IOSUITestHelpers.launchApp(extraArguments: ["--uitesting-seed-active-session"])
         let header = app.descendants(matching: .any)["ios.session.exerciseHeader.1"]
