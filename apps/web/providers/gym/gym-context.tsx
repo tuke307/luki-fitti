@@ -67,6 +67,7 @@ import {
   localizeFolder,
   localizeStretchingRoutine,
   localizeTemplate,
+  movementMechanic,
   resolveExerciseMedia,
 } from '@luki-fitti/common/catalog';
 import type {
@@ -659,6 +660,10 @@ export function GymProvider({ children }: { children: ReactNode }) {
       tags: dto.tags ?? [],
       isSystem: false,
       alternativeExerciseIds: dto.alternativeExerciseIds ?? [],
+      movementPattern: dto.movementPattern ?? null,
+      laterality: dto.laterality ?? null,
+      mechanic: dto.movementPattern ? movementMechanic(dto.movementPattern) : null,
+      targetRegions: [],
       media: dto.mediaUrl?.trim()
         ? [
             {
