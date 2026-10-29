@@ -2,6 +2,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ExerciseType,
+  Laterality,
+  MovementPattern,
   MuscleGroup,
   SessionExerciseOrigin,
   SessionExerciseStatus,
@@ -12,6 +14,7 @@ import {
 } from '../enums';
 import type { WorkoutSessionDto } from '../schemas';
 import { CORE_EXERCISE_CATALOG } from '../catalog/data';
+import { ALL_SYSTEM_EXERCISES } from '../catalog/extended';
 import {
   analyzeExerciseTrend,
   computeExerciseProgression,
@@ -287,5 +290,35 @@ describe('computeExerciseProgression — max effort still progresses', () => {
     assert.equal(insight.phase, 'MAINTAIN');
     assert.equal(insight.setSuggestions[0]!.suggestedWeight, 20);
     assert.equal(insight.setSuggestions[0]!.suggestedReps, 9);
+  });
+});
+
+describe('computeWorkoutExerciseSuggestion — swaps keep the movement', () => {
+  const pullDay = (stalling: string): WorkoutSuggestionInputExercise[] => [
+    { exerciseId: 'ex-wide-grip-lat-pulldown', plannedSets: 3 },
+    { exerciseId: 'ex-seated-cable-rows', plannedSets: 3 },
+    { exerciseId: stalling, plannedSets: 3 },
+    { exerciseId: 'ex-barbell-curl', plannedSets: 3 },
+  ];
+  const suggestPull = (stalling: string) =>
+    computeWorkoutExerciseSuggestion({
+      workoutName: 'Pull Day',
+      exercises: pullDay(stalling),
+      catalog: ALL_SYSTEM_EXERCISES,
+      historySessions: [0, 7, 14].map((d) => buildSession(d, stalling, threeSets(30, 10, 9.5))),
+      weightUnit: WeightUnit.KG,
+    })!;
+
+  it('replaces a stalling straight-arm pulldown with another shoulder-extension exercise', () => {
+    const suggestion = suggestPull('ex-straight-arm-pulldown');
+    assert.equal(suggestion.stallingExerciseId, 'ex-straight-arm-pulldown');
+    assert.equal(suggestion.suggestedExercise.movementPattern, MovementPattern.SHOULDER_EXTENSION);
+    assert.doesNotMatch(suggestion.suggestedExercise.name, /gorilla/i);
+  });
+
+  it('replaces a one-arm row with another one-arm row', () => {
+    const suggestion = suggestPull('ex-one-arm-dumbbell-row');
+    assert.equal(suggestion.suggestedExercise.movementPattern, MovementPattern.HORIZONTAL_PULL);
+    assert.equal(suggestion.suggestedExercise.laterality, Laterality.UNILATERAL);
   });
 });

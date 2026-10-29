@@ -56,6 +56,89 @@ export enum ExerciseCategory {
   CARDIO = 'CARDIO',
 }
 
+/**
+ * How an exercise moves the body. Two exercises with the same pattern train the same motion and
+ * are interchangeable; the coarse `MuscleGroup` is not enough for that (a row and a pullover are
+ * both BACK).
+ */
+export enum MovementPattern {
+  HORIZONTAL_PULL = 'HORIZONTAL_PULL',
+  VERTICAL_PULL = 'VERTICAL_PULL',
+  /** Straight-arm pulldowns and pullovers. */
+  SHOULDER_EXTENSION = 'SHOULDER_EXTENSION',
+  HORIZONTAL_PUSH = 'HORIZONTAL_PUSH',
+  INCLINE_PUSH = 'INCLINE_PUSH',
+  VERTICAL_PUSH = 'VERTICAL_PUSH',
+  DIP = 'DIP',
+  FLY = 'FLY',
+  LATERAL_RAISE = 'LATERAL_RAISE',
+  FRONT_RAISE = 'FRONT_RAISE',
+  REAR_DELT = 'REAR_DELT',
+  UPRIGHT_ROW = 'UPRIGHT_ROW',
+  SHRUG = 'SHRUG',
+  SHOULDER_ROTATION = 'SHOULDER_ROTATION',
+  ELBOW_FLEXION = 'ELBOW_FLEXION',
+  ELBOW_EXTENSION = 'ELBOW_EXTENSION',
+  WRIST = 'WRIST',
+  SQUAT = 'SQUAT',
+  HINGE = 'HINGE',
+  LUNGE = 'LUNGE',
+  KNEE_EXTENSION = 'KNEE_EXTENSION',
+  KNEE_FLEXION = 'KNEE_FLEXION',
+  HIP_THRUST = 'HIP_THRUST',
+  /** Kickbacks and reverse hyperextensions. */
+  HIP_EXTENSION = 'HIP_EXTENSION',
+  HIP_ABDUCTION = 'HIP_ABDUCTION',
+  HIP_ADDUCTION = 'HIP_ADDUCTION',
+  HIP_FLEXION = 'HIP_FLEXION',
+  CALF_RAISE = 'CALF_RAISE',
+  BACK_EXTENSION = 'BACK_EXTENSION',
+  CORE_FLEXION = 'CORE_FLEXION',
+  ANTI_EXTENSION = 'ANTI_EXTENSION',
+  LATERAL_FLEXION = 'LATERAL_FLEXION',
+  ROTATION = 'ROTATION',
+  CARRY = 'CARRY',
+  OLYMPIC_LIFT = 'OLYMPIC_LIFT',
+}
+
+export enum Laterality {
+  BILATERAL = 'BILATERAL',
+  /** One arm or leg at a time (including alternating). */
+  UNILATERAL = 'UNILATERAL',
+}
+
+export enum ExerciseMechanic {
+  COMPOUND = 'COMPOUND',
+  ISOLATION = 'ISOLATION',
+}
+
+/** Finer-grained than `MuscleGroup`: the regions an exercise mainly loads. */
+export enum TargetRegion {
+  LATS = 'LATS',
+  UPPER_BACK = 'UPPER_BACK',
+  TRAPS = 'TRAPS',
+  LOWER_BACK = 'LOWER_BACK',
+  UPPER_CHEST = 'UPPER_CHEST',
+  MID_CHEST = 'MID_CHEST',
+  LOWER_CHEST = 'LOWER_CHEST',
+  FRONT_DELT = 'FRONT_DELT',
+  SIDE_DELT = 'SIDE_DELT',
+  REAR_DELT = 'REAR_DELT',
+  BICEPS = 'BICEPS',
+  BRACHIALIS = 'BRACHIALIS',
+  TRICEPS = 'TRICEPS',
+  FOREARMS = 'FOREARMS',
+  QUADS = 'QUADS',
+  HAMSTRINGS = 'HAMSTRINGS',
+  GLUTES = 'GLUTES',
+  ADDUCTORS = 'ADDUCTORS',
+  ABDUCTORS = 'ABDUCTORS',
+  CALVES = 'CALVES',
+  ABS = 'ABS',
+  OBLIQUES = 'OBLIQUES',
+  HIP_FLEXORS = 'HIP_FLEXORS',
+}
+
 export enum ExerciseType {
   STRENGTH = 'STRENGTH',
   STRETCHING = 'STRETCHING',
