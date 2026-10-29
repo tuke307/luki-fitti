@@ -47,13 +47,31 @@ test.describe('Active Session — set types, supersets & exercise actions', () =
     await expect(block.locator('[data-testid^="superset-round-"]')).toHaveCount(roundsBefore + 1);
   });
 
-  test('skips an exercise from the actions menu on every device', async ({ page }) => {
+  test('needs no Skip: untouched exercises are listed as not done in history', async ({ page }) => {
     await startWorkoutByName(page, PUSH);
 
     const header = page.getByTestId('exercise-header-1');
     await header.getByRole('button', { name: /More actions/i }).click();
-    await page.getByRole('menuitem', { name: 'Skip' }).click();
-    await expect(page.getByTestId('active-exercise-card-1')).toContainText('Skipped');
+    await expect(page.getByRole('menuitem', { name: /Replace/i })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: /^Skip$/ })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('menu')).toHaveCount(0);
+
+    await toggleCompleteSetRow(page, 1);
+    await finishActiveWorkout(page);
+    await page.getByRole('button', { name: /View in History/i }).click();
+
+    const sessionCard = page.getByTestId(`diary-session-card-${PUSH}`);
+    await expect(sessionCard).toContainText(/\d+ not done/);
+    await sessionCard.getByTestId('diary-session-inspect').click();
+
+    const dialog = page.getByRole('dialog');
+    const notDone = dialog.getByTestId('diary-not-done-exercises');
+    await expect(notDone).toBeVisible();
+    await notDone.locator('summary').click();
+    await expect(notDone.getByRole('listitem').first()).toBeVisible();
+    await expect(dialog.getByText(/^1\. /)).toHaveCount(1);
+    await expect(dialog.getByText(/^2\. /)).toHaveCount(0);
   });
 
   test('deletes a set from the set menu without swiping', async ({ page }) => {

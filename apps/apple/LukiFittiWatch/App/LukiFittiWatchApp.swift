@@ -258,7 +258,7 @@ public final class WatchWorkoutViewModel {
         }
         session.version += 1
 
-        let finalized = SessionCalculator.recalculateSessionTotals(session)
+        let finalized = SessionCalculator.recalculateSessionTotals(SessionCalculator.finalizeExerciseStatuses(session))
         completedSummarySession = finalized
         store.saveActiveSession(nil)
         store.saveHistorySession(finalized)
