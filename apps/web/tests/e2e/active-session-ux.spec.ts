@@ -133,6 +133,26 @@ test.describe('Active Session — set types, supersets & exercise actions', () =
     await expect(page.getByTestId('active-exercise-card-2')).toBeVisible();
   });
 
+  test('opens the exercise guide from the photo and from the exercise menu', async ({ page }) => {
+    await startWorkoutByName(page, PUSH);
+
+    await page.getByTestId('exercise-guide-trigger-1').click();
+    const sheet = page.getByTestId('exercise-guide-sheet');
+    await expect(sheet).toBeVisible();
+    await expect(sheet.getByRole('heading', { name: 'How to do it' })).toBeVisible();
+    await expect(sheet.getByRole('listitem').first()).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(sheet).toHaveCount(0);
+
+    const header = page.getByTestId('exercise-header-1');
+    await header.getByRole('button', { name: /More actions/i }).click();
+    await page.getByRole('menuitem', { name: 'How to do it' }).click();
+    await expect(sheet).toBeVisible();
+    await expect(sheet.getByRole('listitem').first()).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(sheet).toHaveCount(0);
+  });
+
   test('keeps a dismissed suggestion gone after switching tabs', async ({ page }) => {
     await createWorkoutTemplate(page, { name: 'E2E Suggestion Workout' });
     await startWorkoutByName(page, 'E2E Suggestion Workout');

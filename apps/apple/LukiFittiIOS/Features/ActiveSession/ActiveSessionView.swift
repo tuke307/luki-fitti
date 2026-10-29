@@ -7,6 +7,7 @@ public struct ActiveSessionView: View {
     @Bindable public var viewModel: LukiAppViewModel
     @Environment(\.lukiLocale) private var tr
     @State private var swapTargetId: String?
+    @State private var guideTargetId: String?
     @State private var showingAddExerciseSheet = false
     @State private var showingDiscardConfirmation = false
     @State private var nowTick: Date = Date()
@@ -57,6 +58,18 @@ public struct ActiveSessionView: View {
                     viewModel.substituteExerciseInSession(clientExerciseId: target.clientExerciseId, with: candidate)
                     swapTargetId = nil
                 }
+            }
+        }
+        .sheet(isPresented: Binding(
+            get: { guideTargetId != nil },
+            set: { if !$0 { guideTargetId = nil } }
+        )) {
+            if let target = viewModel.store.activeSession?.exercises.first(where: { $0.clientExerciseId == guideTargetId }) {
+                ExerciseGuideSheet(
+                    exercise: viewModel.store.catalog.first { $0.id == target.exerciseId },
+                    fallbackName: target.exerciseNameSnapshot,
+                    fallbackMuscle: target.primaryMuscleSnapshot
+                )
             }
         }
         .sheet(isPresented: $showingAddExerciseSheet) {
@@ -350,6 +363,11 @@ public struct ActiveSessionView: View {
     private func exerciseMenu(session: WorkoutSessionDto, exercise: SessionExerciseDto, exerciseIndex: Int) -> some View {
         Menu {
             Button {
+                guideTargetId = exercise.clientExerciseId
+            } label: {
+                Label(tr("How to do it"), systemImage: "book")
+            }
+            Button {
                 swapTargetId = exercise.clientExerciseId
             } label: {
                 Label(tr("Replace"), systemImage: "arrow.triangle.swap")
@@ -384,6 +402,23 @@ public struct ActiveSessionView: View {
         .accessibilityLabel(tr("More actions for %@", exercise.exerciseNameSnapshot))
     }
 
+    /// Small picture that opens the how-to. Always a sibling of the row button, never inside it.
+    private func guideThumbnailButton(_ exercise: SessionExerciseDto) -> some View {
+        Button {
+            guideTargetId = exercise.clientExerciseId
+        } label: {
+            Image(systemName: "figure.strengthtraining.traditional")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(LukiColors.accent)
+                .frame(width: 40, height: 40)
+                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(LukiColors.fill))
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(tr("How to do %@", exercise.exerciseNameSnapshot))
+    }
+
     private func repsTarget(_ exercise: SessionExerciseDto) -> String {
         let minReps = exercise.targetRepsMin ?? 8
         let maxReps = exercise.targetRepsMax ?? 12
@@ -394,54 +429,61 @@ public struct ActiveSessionView: View {
         let doneCount = exercise.sets.filter(\.completed).count
         let isCompleted = exercise.status == .COMPLETED
         return LukiSwipeRow(leading: leadingExerciseActions(exercise), trailing: trailingExerciseActions(exercise)) {
-            Button {
-                viewModel.focusExercise(at: index)
-            } label: {
-                HStack(spacing: 10) {
-                    Group {
-                        if isCompleted {
-                            Image(systemName: "checkmark")
-                                .font(.footnote.bold())
-                                .foregroundStyle(LukiColors.onTint)
-                        } else {
-                            Text("\(index + 1)")
-                                .font(.footnote.bold().monospacedDigit())
-                                .foregroundStyle(.primary)
+            HStack(spacing: 0) {
+                guideThumbnailButton(exercise)
+                    .padding(.leading, 8)
+                Button {
+                    viewModel.focusExercise(at: index)
+                } label: {
+                    HStack(spacing: 10) {
+                        Group {
+                            if isCompleted {
+                                Image(systemName: "checkmark")
+                                    .font(.footnote.bold())
+                                    .foregroundStyle(LukiColors.onTint)
+                            } else {
+                                Text("\(index + 1)")
+                                    .font(.footnote.bold().monospacedDigit())
+                                    .foregroundStyle(.primary)
+                            }
                         }
-                    }
-                    .frame(minWidth: 28, minHeight: 28)
-                    .background(Circle().fill(isCompleted ? LukiColors.success : LukiColors.fill))
-                    .accessibilityHidden(true)
+                        .frame(minWidth: 28, minHeight: 28)
+                        .background(Circle().fill(isCompleted ? LukiColors.success : LukiColors.fill))
+                        .accessibilityHidden(true)
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(exercise.exerciseNameSnapshot)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                        Text("\(LukiI18n.muscleLabel(exercise.primaryMuscleSnapshot, locale: tr)) · \(repsTarget(exercise))")
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(exercise.exerciseNameSnapshot)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                            Text("\(LukiI18n.muscleLabel(exercise.primaryMuscleSnapshot, locale: tr)) · \(repsTarget(exercise))")
+                                .font(.footnote.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        Spacer()
+                        Text("\(doneCount)/\(exercise.sets.count)")
                             .font(.footnote.monospacedDigit())
                             .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                            .accessibilityHidden(true)
                     }
-                    Spacer()
-                    Text("\(doneCount)/\(exercise.sets.count)")
-                        .font(.footnote.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                    Image(systemName: "chevron.right")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                        .accessibilityHidden(true)
+                    .padding(.vertical, 12)
+                    .padding(.leading, 6)
+                    .padding(.trailing, 12)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
                 }
-                .padding(12)
-                .frame(minHeight: 44)
-                .background(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(LukiColors.cardBackground)
-                )
+                .buttonStyle(.plain)
+                .accessibilityValue(tr("%d of %d sets", doneCount, exercise.sets.count))
+                .accessibilityIdentifier("ios.session.exerciseRow.\(index + 1)")
             }
-            .buttonStyle(.plain)
-            .accessibilityValue(tr("%d of %d sets", doneCount, exercise.sets.count))
-            .accessibilityIdentifier("ios.session.exerciseRow.\(index + 1)")
+            .background(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(LukiColors.cardBackground)
+            )
         }
     }
 
@@ -507,17 +549,32 @@ public struct ActiveSessionView: View {
                 cornerRadius: 14
             ) {
                 HStack(alignment: .top, spacing: 10) {
-                    ExerciseVectorVisualView(
-                        exerciseName: exercise.exerciseNameSnapshot,
-                        primaryMuscle: exercise.primaryMuscleSnapshot,
-                        compact: true
-                    )
-                    .accessibilityHidden(true)
+                    Button {
+                        guideTargetId = exercise.clientExerciseId
+                    } label: {
+                        ExerciseVectorVisualView(
+                            exerciseName: exercise.exerciseNameSnapshot,
+                            primaryMuscle: exercise.primaryMuscleSnapshot,
+                            compact: true
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(tr("How to do %@", exercise.exerciseNameSnapshot))
+                    .accessibilityIdentifier("ios.session.guideButton.\(exerciseIndex + 1)")
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(exercise.exerciseNameSnapshot)
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(.primary)
+                        Button {
+                            guideTargetId = exercise.clientExerciseId
+                        } label: {
+                            Text(exercise.exerciseNameSnapshot)
+                                .font(.title3.weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .multilineTextAlignment(.leading)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(.isHeader)
+                        .accessibilityHint(tr("How to do it"))
                         Text(goal)
                             .font(.footnote.monospacedDigit())
                             .foregroundStyle(.secondary)
@@ -527,6 +584,7 @@ public struct ActiveSessionView: View {
                 }
                 .padding(4)
                 .background(LukiColors.cardBackground)
+                .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("ios.session.exerciseHeader.\(exerciseIndex + 1)")
             }
 
@@ -622,10 +680,18 @@ public struct ActiveSessionView: View {
                                     .foregroundStyle(LukiColors.accent)
                                     .frame(minWidth: 28, minHeight: 28)
                                     .background(Circle().fill(LukiColors.accent.opacity(0.12)))
+                                guideThumbnailButton(member.exercise)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(member.exercise.exerciseNameSnapshot)
-                                        .font(.subheadline.bold())
-                                        .lineLimit(1)
+                                    Button {
+                                        guideTargetId = member.exercise.clientExerciseId
+                                    } label: {
+                                        Text(member.exercise.exerciseNameSnapshot)
+                                            .font(.subheadline.bold())
+                                            .foregroundStyle(.primary)
+                                            .lineLimit(1)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityHint(tr("How to do it"))
                                     Text("\(LukiI18n.muscleLabel(member.exercise.primaryMuscleSnapshot, locale: tr)) · \(repsTarget(member.exercise))")
                                         .font(.footnote.monospacedDigit())
                                         .foregroundStyle(.secondary)

@@ -34,6 +34,12 @@ export async function enterEditMode(page: Page): Promise<void> {
 
 /** Expand every folder so template rows are visible. */
 export async function expandAllFolders(page: Page): Promise<void> {
+  // Wait for the folder list, otherwise an empty first render counts as "nothing to expand".
+  await expect(
+    page
+      .locator('button[aria-label^="Expand folder "], button[aria-label^="Collapse folder "]')
+      .first(),
+  ).toBeVisible({ timeout: 10_000 });
   const collapsed = page.locator('button[aria-expanded="false"][aria-label^="Expand folder "]');
   while ((await collapsed.count()) > 0) {
     await collapsed.first().click();

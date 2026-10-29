@@ -21,6 +21,7 @@ import {
   X,
   ChevronRight,
   MoreHorizontal,
+  BookOpen,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -67,6 +68,7 @@ import {
 } from '@luki-fitti/common/utils/client';
 import { filterExercisesByQuery } from './exercise-picker';
 import { ExerciseVisual } from './exercise-visual';
+import { ExerciseGuideSheet } from './exercise-guide-sheet';
 import { RainbowExerciseSuggestionCard } from './rainbow-suggestion-card';
 import { alignSetSuggestions, SessionSetRow } from './session-set-row';
 import { getSetBadgeLabels } from './set-type-badge';
@@ -125,6 +127,7 @@ export function ActiveSessionView({
   const [sessionNotes, setSessionNotes] = useState('');
   const [completedSummary, setCompletedSummary] = useState<WorkoutSessionDto | null>(null);
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
+  const [guideFor, setGuideFor] = useState<string | null>(null);
 
   const suggestionsEnabled = user?.preferences?.exerciseSuggestionsEnabled ?? true;
 
@@ -304,6 +307,44 @@ export function ActiveSessionView({
     setShowSubstituteFor(ex.clientExerciseId);
   };
 
+  const guideTarget = activeSession.exercises.find((e) => e.clientExerciseId === guideFor) ?? null;
+  const guideExercise = guideTarget
+    ? (catalog.find((c) => c.id === guideTarget.exerciseId) ?? null)
+    : null;
+
+  /** Tapping the photo opens the how-to; it sits next to (never inside) other buttons. */
+  const renderGuideThumbnail = (
+    ex: SessionExerciseDto,
+    catEx: (typeof catalog)[number] | null | undefined,
+    {
+      className,
+      visualClassName,
+      testId,
+    }: { className?: string; visualClassName: string; testId?: string },
+  ) => (
+    <button
+      type="button"
+      data-testid={testId}
+      aria-haspopup="dialog"
+      aria-label={format(t.session.showGuideLabel, { name: ex.exerciseNameSnapshot })}
+      onClick={() => setGuideFor(ex.clientExerciseId)}
+      className={`focus-visible:ring-ring/50 flex shrink-0 items-center justify-center rounded-xl outline-hidden transition-opacity focus-visible:ring-[3px] active:opacity-70 ${className ?? ''}`}
+    >
+      <ExerciseVisual
+        exercise={{
+          id: ex.exerciseId ?? ex.clientExerciseId,
+          slug: catEx?.slug,
+          name: ex.exerciseNameSnapshot,
+          primaryMuscleGroup: ex.primaryMuscleSnapshot,
+          media: catEx?.media,
+          isSystem: catEx?.isSystem,
+        }}
+        variant="thumbnail"
+        className={visualClassName}
+      />
+    </button>
+  );
+
   const exerciseSwipeActions = (
     ex: SessionExerciseDto,
   ): Pick<React.ComponentProps<typeof SwipeRow>, 'leadingActions' | 'trailingActions'> => ({
@@ -344,6 +385,9 @@ export function ActiveSessionView({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuItem onSelect={() => setGuideFor(ex.clientExerciseId)}>
+          <BookOpen /> {t.session.showGuideBtn}
+        </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => openSubstitute(ex)}>
           <ArrowRightLeft /> {t.session.swapAlternativeBtn}
         </DropdownMenuItem>
@@ -436,49 +480,47 @@ export function ActiveSessionView({
         className="rounded-[1.25rem]"
         {...exerciseSwipeActions(ex)}
       >
-        <button
-          type="button"
-          data-testid={`vertical-exercise-row-${idx + 1}`}
-          onClick={() => selectExercise(idx)}
-          className="bg-card hover:bg-secondary/40 flex w-full items-center justify-between gap-3 rounded-[1.25rem] p-3 text-left transition-colors"
-        >
-          <div className="flex min-w-0 items-center gap-3">
-            <span
-              className={`tabular-nums flex size-8 shrink-0 items-center justify-center rounded-full text-[0.8125rem] font-semibold ${
-                isCompleted ? 'bg-success text-success-foreground' : 'bg-secondary text-foreground'
-              }`}
-            >
-              {isCompleted ? <Check className="h-4 w-4 stroke-[3]" /> : idx + 1}
-            </span>
+        <div className="relative">
+          <button
+            type="button"
+            data-testid={`vertical-exercise-row-${idx + 1}`}
+            onClick={() => selectExercise(idx)}
+            className="bg-card hover:bg-secondary/40 flex w-full items-center justify-between gap-3 rounded-[1.25rem] p-3 text-left transition-colors"
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <span
+                className={`tabular-nums flex size-8 shrink-0 items-center justify-center rounded-full text-[0.8125rem] font-semibold ${
+                  isCompleted
+                    ? 'bg-success text-success-foreground'
+                    : 'bg-secondary text-foreground'
+                }`}
+              >
+                {isCompleted ? <Check className="h-4 w-4 stroke-[3]" /> : idx + 1}
+              </span>
 
-            <ExerciseVisual
-              exercise={{
-                id: ex.exerciseId ?? ex.clientExerciseId,
-                slug: catEx?.slug,
-                name: ex.exerciseNameSnapshot,
-                primaryMuscleGroup: ex.primaryMuscleSnapshot,
-                media: catEx?.media,
-                isSystem: catEx?.isSystem,
-              }}
-              variant="thumbnail"
-              className="h-10 w-12 shrink-0"
-            />
+              {/* Room for the guide button, which is a sibling so buttons never nest. */}
+              <span aria-hidden="true" className="h-10 w-12 shrink-0" />
 
-            <div className="min-w-0">
-              <p className="truncate text-[0.9375rem] font-medium">{ex.exerciseNameSnapshot}</p>
-              <p className="text-muted-foreground truncate text-[0.8125rem] tabular-nums">
-                {muscleLabel(ex.primaryMuscleSnapshot)} · {formatExercisePillText(ex)}
-              </p>
+              <div className="min-w-0">
+                <p className="truncate text-[0.9375rem] font-medium">{ex.exerciseNameSnapshot}</p>
+                <p className="text-muted-foreground truncate text-[0.8125rem] tabular-nums">
+                  {muscleLabel(ex.primaryMuscleSnapshot)} · {formatExercisePillText(ex)}
+                </p>
+              </div>
             </div>
-          </div>
 
-          <div className="flex shrink-0 items-center gap-2">
-            <span className="text-muted-foreground text-[0.8125rem] tabular-nums">
-              {doneSets}/{ex.sets.length}
-            </span>
-            <ChevronRight className="text-muted-foreground h-4 w-4" />
-          </div>
-        </button>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="text-muted-foreground text-[0.8125rem] tabular-nums">
+                {doneSets}/{ex.sets.length}
+              </span>
+              <ChevronRight className="text-muted-foreground h-4 w-4" />
+            </div>
+          </button>
+          {renderGuideThumbnail(ex, catEx, {
+            className: 'absolute top-1/2 left-14 h-11 w-12 -translate-y-1/2',
+            visualClassName: 'h-10 w-12',
+          })}
+        </div>
       </SwipeRow>
     );
   };
@@ -507,21 +549,20 @@ export function ActiveSessionView({
       >
         <SwipeRow className="-m-1 rounded-xl" {...exerciseSwipeActions(ex)}>
           <div data-testid={`exercise-header-${idx + 1}`} className="flex items-start gap-3 p-1">
-            <ExerciseVisual
-              exercise={{
-                id: ex.exerciseId,
-                slug: catEx?.slug,
-                name: ex.exerciseNameSnapshot,
-                primaryMuscleGroup: ex.primaryMuscleSnapshot,
-                media: catEx?.media,
-                isSystem: catEx?.isSystem,
-              }}
-              variant="thumbnail"
-              className="h-14 w-16"
-            />
+            {renderGuideThumbnail(ex, catEx, {
+              visualClassName: 'h-14 w-16',
+              testId: `exercise-guide-trigger-${idx + 1}`,
+            })}
             <div className="min-w-0 flex-1">
               <h2 className="text-[1.25rem] leading-snug font-semibold">
-                {ex.exerciseNameSnapshot}
+                <button
+                  type="button"
+                  aria-haspopup="dialog"
+                  onClick={() => setGuideFor(ex.clientExerciseId)}
+                  className="focus-visible:ring-ring/50 rounded-md text-left outline-hidden transition-opacity focus-visible:ring-[3px] active:opacity-70"
+                >
+                  {ex.exerciseNameSnapshot}
+                </button>
               </h2>
               <p className="text-muted-foreground text-[0.8125rem] tabular-nums">{goalLine}</p>
               {renderStatusChips(ex)}
@@ -631,22 +672,22 @@ export function ActiveSessionView({
                   <span className="bg-primary/12 text-primary flex size-8 shrink-0 items-center justify-center rounded-full text-[0.8125rem] font-bold">
                     {letter}
                   </span>
-                  <ExerciseVisual
-                    exercise={{
-                      id: ex.exerciseId ?? ex.clientExerciseId,
-                      slug: catEx?.slug,
-                      name: ex.exerciseNameSnapshot,
-                      primaryMuscleGroup: ex.primaryMuscleSnapshot,
-                      media: catEx?.media,
-                      isSystem: catEx?.isSystem,
-                    }}
-                    variant="thumbnail"
-                    className="h-10 w-12 shrink-0"
-                  />
+                  {renderGuideThumbnail(ex, catEx, {
+                    className: '-my-0.5 h-11 w-12',
+                    visualClassName: 'h-10 w-12',
+                  })}
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[0.9375rem] font-semibold">
+                    <button
+                      type="button"
+                      aria-haspopup="dialog"
+                      aria-label={format(t.session.showGuideLabel, {
+                        name: ex.exerciseNameSnapshot,
+                      })}
+                      onClick={() => setGuideFor(ex.clientExerciseId)}
+                      className="focus-visible:ring-ring/50 block max-w-full truncate rounded-md text-left text-[0.9375rem] font-semibold outline-hidden transition-opacity focus-visible:ring-[3px] active:opacity-70"
+                    >
                       {ex.exerciseNameSnapshot}
-                    </p>
+                    </button>
                     <p className="text-muted-foreground truncate text-[0.8125rem] tabular-nums">
                       {muscleLabel(ex.primaryMuscleSnapshot)} · {formatExercisePillText(ex)}
                     </p>
@@ -1034,6 +1075,23 @@ export function ActiveSessionView({
           )}
         </Card>
       </div>
+
+      <ExerciseGuideSheet
+        exercise={guideExercise}
+        fallback={
+          guideTarget
+            ? {
+                name: guideTarget.exerciseNameSnapshot,
+                primaryMuscleGroup: guideTarget.primaryMuscleSnapshot,
+              }
+            : null
+        }
+        open={Boolean(guideTarget)}
+        onOpenChange={(open) => {
+          if (!open) setGuideFor(null);
+        }}
+        showEmptyState
+      />
 
       {/* Substitute / Replace Exercise Modal */}
       <Dialog
