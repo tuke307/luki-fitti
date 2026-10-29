@@ -34,6 +34,9 @@ public struct ProfileAndAuthView: View {
                 }
 
                 preferencesSection
+                if viewModel.store.currentUser != nil {
+                    BodyNutritionSection(viewModel: viewModel)
+                }
                 backupExportSection
             }
             .padding(16)
@@ -90,6 +93,7 @@ public struct ProfileAndAuthView: View {
                         do {
                             try await viewModel.store.apiClient.confirmAccountDeletion(token: token)
                             viewModel.store.clearAllLocalData()
+                            viewModel.nutrition.clear()
                             viewModel.deepLinkTokenType = nil
                             viewModel.deepLinkToken = nil
                             statusMessage = tr("Your account has been deleted.")
@@ -135,6 +139,7 @@ public struct ProfileAndAuthView: View {
                     Task {
                         await viewModel.store.apiClient.logout()
                         viewModel.store.clearAllLocalData()
+                            viewModel.nutrition.clear()
                     }
                 }
                 .font(.subheadline.weight(.semibold))

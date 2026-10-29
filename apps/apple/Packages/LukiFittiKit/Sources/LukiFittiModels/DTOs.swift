@@ -26,6 +26,15 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
     public var notificationsEnabled: Bool
     public var exerciseSuggestionsEnabled: Bool
     public var weeklyGoalSessions: Int
+    public var bodyWeightKg: Double? = nil
+    public var heightCm: Double? = nil
+    public var birthYear: Int? = nil
+    /// "female" | "male" | nil — only used for energy estimates.
+    public var sex: String? = nil
+    public var dailyKcalGoal: Int? = nil
+    public var proteinGoalG: Int? = nil
+    public var carbsGoalG: Int? = nil
+    public var fatGoalG: Int? = nil
 
     public init(
         id: String = "pref-local",
@@ -56,6 +65,7 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
     enum CodingKeys: String, CodingKey {
         case id, userId, weightUnit, distanceUnit, defaultRestSeconds, theme, language
         case restTimerSound, notificationsEnabled, exerciseSuggestionsEnabled, weeklyGoalSessions
+        case bodyWeightKg, heightCm, birthYear, sex, dailyKcalGoal, proteinGoalG, carbsGoalG, fatGoalG
     }
 
     public init(from decoder: Decoder) throws {
@@ -71,6 +81,14 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
         self.notificationsEnabled = try c.decodeIfPresent(Bool.self, forKey: .notificationsEnabled) ?? true
         self.exerciseSuggestionsEnabled = try c.decodeIfPresent(Bool.self, forKey: .exerciseSuggestionsEnabled) ?? true
         self.weeklyGoalSessions = try c.decodeIfPresent(Int.self, forKey: .weeklyGoalSessions) ?? 4
+        self.bodyWeightKg = try c.decodeIfPresent(Double.self, forKey: .bodyWeightKg)
+        self.heightCm = try c.decodeIfPresent(Double.self, forKey: .heightCm)
+        self.birthYear = try c.decodeIfPresent(Int.self, forKey: .birthYear)
+        self.sex = try c.decodeIfPresent(String.self, forKey: .sex)
+        self.dailyKcalGoal = try c.decodeIfPresent(Int.self, forKey: .dailyKcalGoal)
+        self.proteinGoalG = try c.decodeIfPresent(Int.self, forKey: .proteinGoalG)
+        self.carbsGoalG = try c.decodeIfPresent(Int.self, forKey: .carbsGoalG)
+        self.fatGoalG = try c.decodeIfPresent(Int.self, forKey: .fatGoalG)
     }
 }
 
@@ -85,6 +103,14 @@ public struct UserDto: Codable, Sendable, Equatable, Hashable, Identifiable {
     public var tokens: AuthTokensDto?
     public var requiresEmailConfirmation: Bool?
     public var message: String?
+    /// Admin permissions (empty for regular users).
+    public var permissions: [String]? = nil
+    /// Opt-in features active for this user right now (`AI_WORKOUT_BUILDER`, `AI_MEAL_PHOTO`).
+    public var features: [String]? = nil
+
+    public func hasFeature(_ feature: FeatureGrant) -> Bool {
+        features?.contains(feature.rawValue) ?? false
+    }
 
     public init(
         id: String,
@@ -122,6 +148,14 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
     public var notificationsEnabled: Bool?
     public var exerciseSuggestionsEnabled: Bool?
     public var weeklyGoalSessions: Int?
+    public var bodyWeightKg: Double? = nil
+    public var heightCm: Double? = nil
+    public var birthYear: Int? = nil
+    public var sex: String? = nil
+    public var dailyKcalGoal: Int? = nil
+    public var proteinGoalG: Int? = nil
+    public var carbsGoalG: Int? = nil
+    public var fatGoalG: Int? = nil
 
     public init(
         name: String? = nil,
@@ -659,6 +693,8 @@ public struct WorkoutSessionDto: Codable, Sendable, Equatable, Hashable, Identif
     public var healthKitWorkoutUuid: String?
     public var activeCaloriesKcal: Double?
     public var totalCaloriesKcal: Double?
+    /// Server-side burn estimate (HealthKit active energy when present, else MET-based).
+    public var estimatedCaloriesKcal: Double? = nil
     public var avgHeartRateBpm: Int?
     public var maxHeartRateBpm: Int?
     public var minHeartRateBpm: Int?

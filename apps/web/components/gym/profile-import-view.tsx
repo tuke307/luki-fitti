@@ -51,6 +51,7 @@ import {
   subscribeAnalyticsOptOut,
 } from '@/lib/analytics/opt-out';
 import { type LanguagePreference, WeightUnit } from '@luki-fitti/common/enums';
+import { ProfileBodyCard } from './profile-body-card';
 
 function escapeCsvCell(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return '';
@@ -647,6 +648,8 @@ export function ProfileImportView() {
           </div>
         </Card>
       </div>
+
+      <ProfileBodyCard />
 
       {/* Export Gym Data Card (Only when logged in) */}
       {authMode === 'AUTHENTICATED' && (

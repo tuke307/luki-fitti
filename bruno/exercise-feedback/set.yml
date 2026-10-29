@@ -1,0 +1,22 @@
+info:
+  name: set
+  type: http
+  seq: 2
+
+http:
+  method: PUT
+  url: "{{API_URL}}:{{API_PORT}}/api/exercise-feedback/ex-pushups"
+  body:
+    type: json
+    data: |-
+      {
+        "verdict": "PAIN",
+        "note": "Wrist hurts"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

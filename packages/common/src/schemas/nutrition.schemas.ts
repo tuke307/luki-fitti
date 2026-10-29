@@ -1,0 +1,135 @@
+import { z } from 'zod';
+import { FoodItemSource, MealType } from '../enums';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Nutrition: meal entries, items, summaries
+// ─────────────────────────────────────────────────────────────────────────────
+
+const isoDateTime = z.iso.datetime({ offset: true });
+const localDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD');
+
+/** IANA time zone used to bucket entries into the user's local days. */
+export const TimeZoneSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(64)
+  .refine((tz) => {
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone: tz });
+      return true;
+    } catch {
+      return false;
+    }
+  }, 'Unknown time zone');
+
+export const MealItemInputSchema = z.object({
+  name: z.string().trim().min(1, 'Name is required').max(120),
+  grams: z.number().min(0).max(5000).nullable().optional(),
+  kcal: z.number().min(0).max(10000).default(0),
+  proteinG: z.number().min(0).max(1000).default(0),
+  carbsG: z.number().min(0).max(1000).default(0),
+  fatG: z.number().min(0).max(1000).default(0),
+  fiberG: z.number().min(0).max(500).nullable().optional(),
+  sugarG: z.number().min(0).max(1000).nullable().optional(),
+  source: z.enum(FoodItemSource).default(FoodItemSource.MANUAL),
+  confidence: z.number().min(0).max(1).nullable().optional(),
+});
+
+export const UpsertMealEntrySchema = z.object({
+  clientEntryId: z.string().min(8).max(64),
+  eatenAt: isoDateTime,
+  mealType: z.enum(MealType).default(MealType.OTHER),
+  label: z.string().trim().max(80).nullable().optional(),
+  notes: z.string().trim().max(1000).nullable().optional(),
+  items: z.array(MealItemInputSchema).max(50).default([]),
+});
+
+export const MealEntryRangeQuerySchema = z.object({
+  from: isoDateTime,
+  to: isoDateTime,
+});
+
+export const NutritionSummaryQuerySchema = z.object({
+  from: localDate,
+  to: localDate,
+  tz: TimeZoneSchema.default('UTC'),
+});
+
+export type MealItemInputDto = z.infer<typeof MealItemInputSchema>;
+export type UpsertMealEntryDto = z.infer<typeof UpsertMealEntrySchema>;
+export type MealEntryRangeQueryDto = z.infer<typeof MealEntryRangeQuerySchema>;
+export type NutritionSummaryQueryDto = z.infer<typeof NutritionSummaryQuerySchema>;
+
+export interface MealItemDto {
+  id: string;
+  orderIndex: number;
+  name: string;
+  grams: number | null;
+  kcal: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  fiberG: number | null;
+  sugarG: number | null;
+  source: FoodItemSource;
+  confidence: number | null;
+}
+
+export interface MealPhotoDto {
+  id: string;
+  mimeType: string;
+  width: number | null;
+  height: number | null;
+  createdAt: string;
+  /** Same-origin, authenticated path (`/api/nutrition/photos/:id`); only the owner can load it. */
+  url: string | null;
+}
+
+export interface MealEntryDto {
+  id: string;
+  clientEntryId: string;
+  eatenAt: string;
+  mealType: MealType;
+  label: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  items: MealItemDto[];
+  photos: MealPhotoDto[];
+  totals: NutritionTotalsDto;
+}
+
+export interface NutritionTotalsDto {
+  kcal: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+}
+
+export interface NutritionGoalsDto {
+  dailyKcalGoal: number | null;
+  proteinGoalG: number | null;
+  carbsGoalG: number | null;
+  fatGoalG: number | null;
+}
+
+export interface NutritionDaySummaryDto extends NutritionTotalsDto {
+  /** Local date (YYYY-MM-DD) in the requested time zone. */
+  date: string;
+  entries: number;
+  burnedKcal: number;
+  workouts: number;
+}
+
+export interface NutritionSummaryDto {
+  from: string;
+  to: string;
+  tz: string;
+  goals: NutritionGoalsDto;
+  days: NutritionDaySummaryDto[];
+  averages: NutritionTotalsDto & { burnedKcal: number };
+  /** Days in the range with at least one entry (averages are over these days). */
+  loggedDays: number;
+  byMealType: Array<{ mealType: MealType; kcal: number; entries: number }>;
+}

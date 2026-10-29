@@ -1,0 +1,22 @@
+info:
+  name: workout-builder
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/ai/workout-builder"
+  body:
+    type: json
+    data: |-
+      {
+        "prompt": "Chest workout, my upper chest is my weak point",
+        "durationMinutes": 60
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

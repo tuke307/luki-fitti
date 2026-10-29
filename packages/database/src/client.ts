@@ -46,6 +46,12 @@ export type {
   ImportJob,
   EmailTemplate,
   Email,
+  AppSettings,
+  AiRun,
+  ExerciseFeedback,
+  MealEntry,
+  MealItem,
+  MealPhoto,
 } from './generated/prisma/client';
 
 export {
@@ -62,4 +68,8 @@ export {
   SetType,
   EmailTemplateType,
   EmailStatus,
+  AiRunStatus,
+  ExerciseFeedbackVerdict,
+  MealType,
+  FoodItemSource,
 } from './generated/prisma/client';
