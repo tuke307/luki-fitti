@@ -96,7 +96,6 @@ export function ActiveSessionView({
     activeSession,
     historySessions,
     addSetToExercise,
-    skipExercise,
     substituteExercise,
     addExerciseToSession,
     removeExerciseFromSession,
@@ -317,15 +316,6 @@ export function ActiveSessionView({
         testId: `swipe-swap-${ex.clientExerciseId}`,
         onSelect: () => openSubstitute(ex),
       },
-      {
-        id: 'skip',
-        label:
-          ex.status === SessionExerciseStatus.SKIPPED ? t.session.unskipBtn : t.session.skipBtn,
-        icon: SkipForward,
-        tone: 'accent',
-        testId: `swipe-skip-${ex.clientExerciseId}`,
-        onSelect: () => void skipExercise(ex.clientExerciseId),
-      },
     ],
     trailingActions: [
       {
@@ -356,10 +346,6 @@ export function ActiveSessionView({
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuItem onSelect={() => openSubstitute(ex)}>
           <ArrowRightLeft /> {t.session.swapAlternativeBtn}
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => void skipExercise(ex.clientExerciseId)}>
-          <SkipForward />
-          {ex.status === SessionExerciseStatus.SKIPPED ? t.session.unskipBtn : t.session.skipBtn}
         </DropdownMenuItem>
         <DropdownMenuItem
           disabled={idx === 0}
@@ -433,7 +419,6 @@ export function ActiveSessionView({
         ? format(t.session.replacedBadge, { name: ex.replacedExerciseName ?? '' })
         : null,
       ex.origin === SessionExerciseOrigin.ADDED ? t.session.addedUnplannedBadge : null,
-      ex.status === SessionExerciseStatus.SKIPPED ? t.session.skippedBadge : null,
     ].filter((c): c is string => Boolean(c));
     return chips.length > 0 ? (
       <p className="text-warning mt-0.5 text-[0.8125rem] font-medium">{chips.join(' · ')}</p>
@@ -443,7 +428,6 @@ export function ActiveSessionView({
   const renderCollapsedExerciseHeader = (ex: SessionExerciseDto, idx: number) => {
     const doneSets = ex.sets.filter((s) => s.completed).length;
     const isCompleted = ex.status === SessionExerciseStatus.COMPLETED;
-    const isSkipped = ex.status === SessionExerciseStatus.SKIPPED;
     const catEx = catalog.find((c) => c.id === ex.exerciseId);
 
     return (
@@ -456,9 +440,7 @@ export function ActiveSessionView({
           type="button"
           data-testid={`vertical-exercise-row-${idx + 1}`}
           onClick={() => selectExercise(idx)}
-          className={`bg-card flex w-full items-center justify-between gap-3 rounded-[1.25rem] p-3 text-left transition-colors ${
-            isSkipped ? 'opacity-60' : 'hover:bg-secondary/40'
-          }`}
+          className="bg-card hover:bg-secondary/40 flex w-full items-center justify-between gap-3 rounded-[1.25rem] p-3 text-left transition-colors"
         >
           <div className="flex min-w-0 items-center gap-3">
             <span
@@ -483,11 +465,7 @@ export function ActiveSessionView({
             />
 
             <div className="min-w-0">
-              <p
-                className={`truncate text-[0.9375rem] font-medium ${isSkipped ? 'line-through' : ''}`}
-              >
-                {ex.exerciseNameSnapshot}
-              </p>
+              <p className="truncate text-[0.9375rem] font-medium">{ex.exerciseNameSnapshot}</p>
               <p className="text-muted-foreground truncate text-[0.8125rem] tabular-nums">
                 {muscleLabel(ex.primaryMuscleSnapshot)} · {formatExercisePillText(ex)}
               </p>
@@ -647,9 +625,7 @@ export function ActiveSessionView({
             >
               <div
                 data-testid={`superset-exercise-${letter}`}
-                className={`bg-card space-y-1.5 rounded-[1.25rem] p-3 ${
-                  ex.status === SessionExerciseStatus.SKIPPED ? 'opacity-60' : ''
-                }`}
+                className="bg-card space-y-1.5 rounded-[1.25rem] p-3"
               >
                 <div className="flex items-start gap-3">
                   <span className="bg-primary/12 text-primary flex size-8 shrink-0 items-center justify-center rounded-full text-[0.8125rem] font-bold">
@@ -668,11 +644,7 @@ export function ActiveSessionView({
                     className="h-10 w-12 shrink-0"
                   />
                   <div className="min-w-0 flex-1">
-                    <p
-                      className={`truncate text-[0.9375rem] font-semibold ${
-                        ex.status === SessionExerciseStatus.SKIPPED ? 'line-through' : ''
-                      }`}
-                    >
+                    <p className="truncate text-[0.9375rem] font-semibold">
                       {ex.exerciseNameSnapshot}
                     </p>
                     <p className="text-muted-foreground truncate text-[0.8125rem] tabular-nums">

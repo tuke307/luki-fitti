@@ -47,6 +47,16 @@ public enum SessionCalculator {
         } ?? 0
     }
 
+    /// On finish, exercises with a logged set are done and the rest (unused variants, left out)
+    /// are stored as skipped, matching the web app.
+    public static func finalizeExerciseStatuses(_ session: WorkoutSessionDto) -> WorkoutSessionDto {
+        var finalized = session
+        for idx in finalized.exercises.indices {
+            finalized.exercises[idx].status = finalized.exercises[idx].sets.contains(where: \.completed) ? .COMPLETED : .SKIPPED
+        }
+        return finalized
+    }
+
     private static func parseIsoDate(_ value: String) -> Date? {
         (try? Date.ISO8601FormatStyle(includingFractionalSeconds: true).parse(value))
             ?? (try? Date.ISO8601FormatStyle().parse(value))
