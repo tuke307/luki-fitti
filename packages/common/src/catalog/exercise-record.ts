@@ -5,6 +5,7 @@ import {
   type MuscleGroup,
 } from '../enums';
 import type { ExerciseDto } from '../schemas';
+import { inferMovementProfile, movementMechanic, type MovementProfile } from './movement';
 import type { ExerciseOverride, ExerciseRecord, ExerciseText } from './types';
 
 export function exerciseVideoLink(slug: string, name: string) {
@@ -18,11 +19,30 @@ export function exerciseVideoLink(slug: string, name: string) {
   };
 }
 
+/** Hand-tagged movement metadata of a core exercise, or the inferred one of a generated record. */
+function movementProfile(r: ExerciseRecord, override?: ExerciseOverride): MovementProfile {
+  if (override?.movementPattern) {
+    return {
+      movementPattern: override.movementPattern,
+      laterality: override.laterality ?? null,
+      mechanic: override.mechanic ?? movementMechanic(override.movementPattern),
+      targetRegions: override.targetRegions ?? [],
+    };
+  }
+  return inferMovementProfile({
+    name: override?.name ?? r.name,
+    deName: override?.de.name ?? r.de.name,
+    exerciseType: override?.exerciseType ?? r.exerciseType,
+    primaryMuscleGroup: override?.primaryMuscleGroup ?? r.primaryMuscleGroup,
+  });
+}
+
 /** A generated dataset exercise as a DTO, with its hand-written override applied if it has one. */
 export function exerciseRecordToDto(r: ExerciseRecord, override?: ExerciseOverride): ExerciseDto {
   // The generated records hold the enum string values.
   const exerciseType = (override?.exerciseType ?? r.exerciseType) as ExerciseType;
   const name = override?.name ?? r.name;
+  const movement = movementProfile(r, override);
   return {
     id: r.id,
     slug: r.slug,
@@ -44,6 +64,7 @@ export function exerciseRecordToDto(r: ExerciseRecord, override?: ExerciseOverri
     tags: override ? Array.from(new Set([...override.tags, ...r.tags])) : r.tags,
     isSystem: true,
     alternativeExerciseIds: override?.alternativeExerciseIds ?? [],
+    ...movement,
     media: [...r.media, exerciseVideoLink(r.slug, name)],
   };
 }

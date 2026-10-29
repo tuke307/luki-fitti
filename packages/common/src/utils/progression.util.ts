@@ -7,6 +7,7 @@ import {
   WeightUnit,
 } from '../enums';
 import type { ExerciseDto, SessionExerciseDto, SessionSetDto, WorkoutSessionDto } from '../schemas';
+import { loggedExerciseIds, rankAlternatives } from './exercise-alternatives.util';
 
 const LBS_TO_KG = 0.45359237;
 const KG_TO_LBS = 1 / LBS_TO_KG;
@@ -1040,29 +1041,43 @@ export function computeWorkoutExerciseSuggestion(params: {
 
   const dismissedReasons = new Set(dismissed.map((d) => d.reasonKey));
   const dismissedExercises = new Set(dismissed.map((d) => d.exerciseId));
+  const doneIds = loggedExerciseIds(historySessions);
 
   // Pick the first reason that is not dismissed and has a candidate not already in the workout.
   // No candidate means no honest suggestion, so the card stays hidden.
   let picked: { reason: ReasonCandidate; chosen: ExerciseDto } | null = null;
   for (const reason of reasons) {
     if (dismissedReasons.has(workoutSuggestionReasonKey(reason))) continue;
-    const pool = strengthCatalog.filter(
+    const available = strengthCatalog.filter(
       (c) =>
         !existingIds.has(c.id) &&
         !dismissedExercises.has(c.id) &&
-        !existingNames.has(c.name.trim().toLowerCase()) &&
-        c.primaryMuscleGroup === reason.targetMuscle,
+        !existingNames.has(c.name.trim().toLowerCase()),
     );
-    if (pool.length === 0) continue;
 
-    // Score candidates: prefer predefined alternatives of stalling exercise, or fresh equipment (Cable/Dumbbell/Machine)
+    // A stalling exercise is swapped for the same movement (a pullover for a straight-arm
+    // pulldown, not just any back exercise). No honest match means no suggestion for this reason.
     const stallingCatalogEx = reason.stallingExerciseId
       ? catalog.find((c) => c.id === reason.stallingExerciseId)
       : null;
+    if (stallingCatalogEx?.movementPattern) {
+      const best = rankAlternatives(stallingCatalogEx, available, { historySessions, limit: 1 })[0];
+      if (!best) continue;
+      picked = { reason, chosen: best.exercise };
+      break;
+    }
+
+    const pool = available.filter((c) => c.primaryMuscleGroup === reason.targetMuscle);
+    if (pool.length === 0) continue;
+
+    // Score candidates: prefer predefined alternatives of the stalling exercise, exercises with a
+    // known movement the user has done before, or fresh equipment (Cable/Dumbbell/Machine)
     const preferredAltIds = new Set(stallingCatalogEx?.alternativeExerciseIds ?? []);
     const scored = pool.map((candidate) => {
       let score = 0;
       if (preferredAltIds.has(candidate.id)) score += 5;
+      if (candidate.movementPattern) score += 4;
+      if (doneIds.has(candidate.id)) score += 3;
       if (reason.avoidEquipment && candidate.equipment !== reason.avoidEquipment) score += 3;
       if (
         candidate.equipment === EquipmentType.CABLE ||

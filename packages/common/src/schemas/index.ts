@@ -6,8 +6,11 @@ import {
   EmailTemplateType,
   EquipmentType,
   ExerciseCategory,
+  ExerciseMechanic,
   ExerciseType,
   LANGUAGE_PREFERENCES,
+  Laterality,
+  MovementPattern,
   MuscleGroup,
   SessionExerciseOrigin,
   SessionExerciseStatus,
@@ -15,6 +18,7 @@ import {
   SessionStatus,
   SessionType,
   SetType,
+  TargetRegion,
   WeightUnit,
 } from '../enums';
 
@@ -221,6 +225,8 @@ export const CreateExerciseSchema = z.object({
   tags: z.array(z.string().trim()).default([]),
   alternativeExerciseIds: z.array(z.string()).default([]),
   mediaUrl: z.string().trim().optional(),
+  movementPattern: z.enum(MovementPattern).nullable().optional(),
+  laterality: z.enum(Laterality).nullable().optional(),
 });
 
 export const UpdateExerciseSchema = CreateExerciseSchema.partial();
@@ -245,6 +251,11 @@ export interface ExerciseDto {
   tags: string[];
   isSystem: boolean;
   alternativeExerciseIds: string[];
+  /** How the exercise moves; `null`/missing when unknown (then it is only found by search). */
+  movementPattern?: MovementPattern | null;
+  laterality?: Laterality | null;
+  mechanic?: ExerciseMechanic | null;
+  targetRegions?: TargetRegion[];
   alternatives?: Array<{
     id: string;
     name: string;
