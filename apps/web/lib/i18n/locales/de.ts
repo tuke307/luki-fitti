@@ -433,7 +433,7 @@ export const de = {
     volumeSmall: 'Volumen',
     inspectEditBtn: 'Details',
     showMoreSessions: 'Mehr anzeigen ({count})',
-    inspectModalDesc: 'Korrigiere Gewicht oder Wiederholungen und speichere.',
+    inspectModalDesc: 'Korrigiere Satzart, Gewicht oder Wiederholungen und speichere.',
     notDoneCount: '{count} nicht gemacht',
     saveCorrectionsBtn: 'Speichern',
     activeCalories: 'Aktive Kalorien',

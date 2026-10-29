@@ -77,4 +77,19 @@ final class FocusedExerciseTests: XCTestCase {
         let statuses = SessionCalculator.finalizeExerciseStatuses(session).exercises.map(\.status)
         XCTAssertEqual(statuses, [.COMPLETED, .SKIPPED])
     }
+
+    func testChangingSetTypeKeepsWarmupsFirstAndRenumbers() {
+        let sets = [
+            SessionSetDto(clientSetId: "w", sessionExerciseId: "x", setNumber: 1, setType: .WARMUP),
+            SessionSetDto(clientSetId: "a", sessionExerciseId: "x", setNumber: 2, setType: .WORKING),
+            SessionSetDto(clientSetId: "b", sessionExerciseId: "x", setNumber: 3, setType: .WORKING),
+        ]
+        let toWarmup = SessionCalculator.changingSetType(sets, clientSetId: "b", to: .WARMUP)
+        XCTAssertEqual(toWarmup.map(\.clientSetId), ["w", "b", "a"])
+        XCTAssertEqual(toWarmup.map(\.setNumber), [1, 2, 3])
+
+        let toWorking = SessionCalculator.changingSetType(sets, clientSetId: "w", to: .WORKING)
+        XCTAssertEqual(toWorking.map(\.setType), [.WORKING, .WORKING, .WORKING])
+        XCTAssertEqual(toWorking.map(\.clientSetId), ["w", "a", "b"])
+    }
 }

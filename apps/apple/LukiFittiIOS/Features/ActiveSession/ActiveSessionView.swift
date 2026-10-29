@@ -859,40 +859,14 @@ public struct ActiveSessionView: View {
         onMinus: @escaping () -> Void,
         onPlus: @escaping () -> Void
     ) -> some View {
-        HStack(spacing: 0) {
-            Button(action: onMinus) {
-                Image(systemName: "minus")
-                    .font(.footnote.weight(.bold))
-                    .foregroundStyle(.primary)
-                    .frame(minWidth: 36, minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(minusLabel)
-
-            HStack(alignment: .firstTextBaseline, spacing: 2) {
-                Text(value)
-                    .font(.system(.body, design: .rounded).weight(.semibold).monospacedDigit())
-                Text(unit)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
-            .frame(maxWidth: .infinity)
-            .accessibilityElement(children: .combine)
-
-            Button(action: onPlus) {
-                Image(systemName: "plus")
-                    .font(.footnote.weight(.bold))
-                    .foregroundStyle(.primary)
-                    .frame(minWidth: 36, minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(plusLabel)
-        }
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(LukiColors.fill))
+        LukiValueStepper(
+            value: value,
+            unit: unit,
+            minusLabel: minusLabel,
+            plusLabel: plusLabel,
+            onMinus: onMinus,
+            onPlus: onPlus
+        )
     }
 
     // MARK: - Suggestion

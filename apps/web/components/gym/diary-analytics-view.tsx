@@ -50,6 +50,7 @@ import {
   formatLongDateTime,
   formatShortDayMonth,
   isoWeekDays,
+  orderWarmupsFirst,
   startOfIsoWeek,
 } from '@luki-fitti/common/utils/client';
 import {
@@ -66,6 +67,7 @@ import { ConfirmDestructiveDialog } from './confirm-destructive-dialog';
 import { NumberInput } from './number-input';
 import { bigVolume, formatVolume, unitLabel, weightInUnit } from '@/lib/format/weight';
 import { getSetBadgeLabels, SET_TYPE_TEXT_CLASS, SetTypeBadge } from './set-type-badge';
+import { SetTypeMenu, STRENGTH_SET_TYPES } from './set-type-menu';
 
 const LBS_TO_KG = 0.45359237;
 
@@ -94,6 +96,29 @@ export function DiaryAnalyticsView() {
   const [pendingDelete, setPendingDelete] = useState<WorkoutSessionDto | null>(null);
   const unit = unitLabel(weightUnit);
   const bigUnit = bigVolume(0, weightUnit).label;
+  // Warm-ups always come first, so a set switched to warm-up moves to the top, as in a workout.
+  const changeInspectedSetType = (
+    clientExerciseId: string,
+    clientSetId: string,
+    setType: SetType,
+  ) =>
+    setInspectingSession((prev) =>
+      prev
+        ? {
+            ...prev,
+            exercises: prev.exercises.map((ex) =>
+              ex.clientExerciseId === clientExerciseId
+                ? {
+                    ...ex,
+                    sets: orderWarmupsFirst(
+                      ex.sets.map((s) => (s.clientSetId === clientSetId ? { ...s, setType } : s)),
+                    ).map((s, idx) => ({ ...s, setNumber: idx + 1 })),
+                  }
+                : ex,
+            ),
+          }
+        : null,
+    );
   const notDoneLabel = (session: WorkoutSessionDto) => {
     const count = session.exercises.filter((ex) => !isExerciseDone(ex)).length;
     return count > 0 ? format(t.diary.notDoneCount, { count }) : null;
@@ -1201,16 +1226,35 @@ export function DiaryAnalyticsView() {
                       {ex.sets.map((set, sIdx) => (
                         <div
                           key={set.clientSetId}
+                          data-testid={`diary-set-row-${exIdx + 1}-${sIdx + 1}`}
                           data-set-type={set.setType}
                           className="bg-background flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs"
                         >
                           <div className="flex flex-wrap items-center gap-1.5">
-                            <SetTypeBadge
-                              size="sm"
-                              setType={set.setType}
-                              label={getSetBadgeLabels(ex.sets)[sIdx] ?? String(sIdx + 1)}
-                              completed={set.completed}
-                            />
+                            {set.setType === SetType.STRETCH ? (
+                              <SetTypeBadge
+                                size="sm"
+                                setType={set.setType}
+                                label={getSetBadgeLabels(ex.sets)[sIdx] ?? String(sIdx + 1)}
+                                completed={set.completed}
+                              />
+                            ) : (
+                              <SetTypeMenu
+                                size="sm"
+                                types={STRENGTH_SET_TYPES}
+                                setType={set.setType}
+                                onSetTypeChange={(setType) =>
+                                  changeInspectedSetType(
+                                    ex.clientExerciseId,
+                                    set.clientSetId,
+                                    setType,
+                                  )
+                                }
+                                setNumber={sIdx + 1}
+                                badgeLabel={getSetBadgeLabels(ex.sets)[sIdx] ?? String(sIdx + 1)}
+                                completed={set.completed}
+                              />
+                            )}
                             <span
                               className={`tabular-nums shrink-0 font-bold ${SET_TYPE_TEXT_CLASS[set.setType]}`}
                             >

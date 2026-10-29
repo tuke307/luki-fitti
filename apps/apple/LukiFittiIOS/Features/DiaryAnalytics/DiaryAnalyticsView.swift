@@ -68,7 +68,7 @@ public struct DiaryAnalyticsView: View {
         }
         .background(LukiColors.groupedBackground)
         .sheet(item: $inspectingSession) { session in
-            sessionInspectorSheet(session)
+            HistorySessionEditorSheet(session: session) { viewModel.updateHistoricalSession($0) }
         }
         .alert(
             tr("Delete this workout?"),
@@ -449,81 +449,8 @@ public struct DiaryAnalyticsView: View {
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
     }
 
-    private func sessionInspectorSheet(_ session: WorkoutSessionDto) -> some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    if let samples = session.heartRateSamples, samples.count > 1 {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(tr("Heart rate"))
-                                .font(.headline)
-                                .foregroundStyle(LukiColors.heartRate)
-                            Chart(samples, id: \.offsetSec) { pt in
-                                LineMark(
-                                    x: .value("Sec", pt.offsetSec),
-                                    y: .value("BPM", pt.bpm)
-                                )
-                                .foregroundStyle(LukiColors.heartRate)
-                            }
-                            .frame(height: 150)
-                        }
-                        .padding(14)
-                        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
-                    }
-
-                    ForEach(session.exercises.filter(Self.isExerciseDone)) { ex in
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(ex.exerciseNameSnapshot)
-                                .font(.headline)
-                            ForEach(ex.sets) { set in
-                                HStack {
-                                    Text(tr("Set %d", set.setNumber))
-                                        .font(.subheadline.weight(.semibold))
-                                    Spacer()
-                                    Text("\(LukiFormat.weight(set.weight ?? 0)) \(LukiFormat.unitLabel(set.weightUnit)) × \(set.reps ?? 0)")
-                                        .font(.caption.monospacedDigit())
-                                    if let peak = set.peakHeartRateBpm {
-                                        Label("\(peak) bpm", systemImage: "heart.fill")
-                                            .font(.caption2.monospacedDigit())
-                                            .foregroundStyle(LukiColors.heartRate)
-                                    }
-                                }
-                            }
-                        }
-                        .padding(12)
-                        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
-                    }
-
-                    let notDone = notDoneExercises(session)
-                    if !notDone.isEmpty {
-                        DisclosureGroup(tr("%d not done", notDone.count)) {
-                            VStack(alignment: .leading, spacing: 6) {
-                                ForEach(notDone) { ex in
-                                    Text(ex.exerciseNameSnapshot)
-                                }
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.top, 6)
-                        }
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .frame(minHeight: 44)
-                        .padding(.horizontal, 4)
-                        .accessibilityIdentifier("ios.diary.notDoneExercises")
-                    }
-                }
-                .padding(16)
-            }
-            .navigationTitle(session.workoutNameSnapshot)
-        }
-    }
-
     /// Exercises without a logged set (unused variants, left out) are listed apart as "not done".
-    private static func isExerciseDone(_ ex: SessionExerciseDto) -> Bool {
-        ex.sets.contains(where: \.completed)
-    }
-
     private func notDoneExercises(_ session: WorkoutSessionDto) -> [SessionExerciseDto] {
-        session.exercises.filter { !Self.isExerciseDone($0) }
+        session.exercises.filter { !$0.hasLoggedSet }
     }
 }

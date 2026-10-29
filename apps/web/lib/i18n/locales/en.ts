@@ -432,7 +432,7 @@ export const en = {
     volumeSmall: 'Volume',
     inspectEditBtn: 'Details',
     showMoreSessions: 'Show More ({count})',
-    inspectModalDesc: 'Fix any weight or reps, then save.',
+    inspectModalDesc: 'Fix the set type, weight or reps, then save.',
     notDoneCount: '{count} not done',
     saveCorrectionsBtn: 'Save',
     activeCalories: 'Active Calories',
