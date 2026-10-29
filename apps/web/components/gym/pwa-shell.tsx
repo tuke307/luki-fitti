@@ -28,7 +28,8 @@ import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { computeRemainingRestSeconds } from '@/lib/offline/offline-store';
 import { triggerWorkoutNotification } from '@/lib/notifications/notification-manager';
-import { SessionExerciseStatus, SessionStatus } from '@luki-fitti/common/enums';
+import { SessionStatus } from '@luki-fitti/common/enums';
+import { resolveFocusedExerciseIndex } from '@luki-fitti/common/utils/client';
 import { HomeView } from './home-view';
 import { WorkoutsView } from './workouts-view';
 import { ActiveSessionView } from './active-session-view';
@@ -80,12 +81,7 @@ export function PwaShell() {
       notifiedEndsAtRef.current = endsAt;
       const notificationsOn = user?.preferences?.notificationsEnabled ?? true;
       const soundOn = user?.preferences?.restTimerSound ?? true;
-      const nextEx =
-        activeSession?.exercises.find(
-          (e) =>
-            e.status !== SessionExerciseStatus.COMPLETED &&
-            e.status !== SessionExerciseStatus.SKIPPED,
-        ) ?? activeSession?.exercises[0];
+      const nextEx = activeSession?.exercises[resolveFocusedExerciseIndex(activeSession.exercises)];
 
       if (notificationsOn || soundOn) {
         void triggerWorkoutNotification({

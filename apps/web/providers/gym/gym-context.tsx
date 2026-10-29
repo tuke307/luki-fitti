@@ -23,6 +23,7 @@ import {
   getCachedWorkouts,
   getDeviceId,
   getDismissedSuggestions,
+  getFocusedExercise,
   getLocalActiveSession,
   getLocalHistorySessions,
   getSyncQueue,
@@ -38,6 +39,7 @@ import {
   setCachedStretchingRoutines,
   setCachedWorkouts,
   setDismissedSuggestions,
+  setFocusedExercise as storeFocusedExercise,
   substituteExerciseInSession,
   type SyncState,
 } from '@/lib/offline/offline-store';
@@ -155,6 +157,12 @@ interface GymContextValue {
   /** Suggestions dismissed or accepted during the active workout. */
   dismissedSuggestions: DismissedWorkoutSuggestion[];
   dismissSuggestion: (suggestion: WorkoutExerciseSuggestion) => Promise<void>;
+  /**
+   * Exercise the user last opened in the active workout (`undefined` while loading); resolve it
+   * with `resolveFocusedExerciseIndex`.
+   */
+  focusedExerciseId: string | null | undefined;
+  setFocusedExercise: (clientExerciseId: string) => void;
   refreshAllData: () => Promise<void>;
 }
 
@@ -188,6 +196,10 @@ export function GymProvider({ children }: { children: ReactNode }) {
   const [dismissedSuggestions, setDismissedSuggestionsState] = useState<
     DismissedWorkoutSuggestion[]
   >([]);
+  const [focusedExercise, setFocusedExerciseState] = useState<{
+    sessionId: string;
+    exerciseId: string | null;
+  } | null>(null);
 
   // Built-in catalog content is resolved by id / systemKey in the current UI language, so cached and
   // offline data follow language switches. User-authored content passes through unchanged.
@@ -231,13 +243,36 @@ export function GymProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const stored = activeSessionId ? await getDismissedSuggestions(activeSessionId) : [];
-      if (!cancelled) setDismissedSuggestionsState(stored);
+      const [stored, focused] = activeSessionId
+        ? await Promise.all([
+            getDismissedSuggestions(activeSessionId),
+            getFocusedExercise(activeSessionId),
+          ])
+        : [[], null];
+      if (cancelled) return;
+      setDismissedSuggestionsState(stored);
+      if (activeSessionId)
+        setFocusedExerciseState({ sessionId: activeSessionId, exerciseId: focused });
     })();
     return () => {
       cancelled = true;
     };
   }, [activeSessionId]);
+
+  // `undefined` until the stored value for the current session has loaded.
+  const focusedExerciseId =
+    activeSessionId && focusedExercise?.sessionId === activeSessionId
+      ? focusedExercise.exerciseId
+      : undefined;
+
+  const setFocusedExercise = useCallback(
+    (clientExerciseId: string) => {
+      if (!activeSessionId) return;
+      setFocusedExerciseState({ sessionId: activeSessionId, exerciseId: clientExerciseId });
+      void storeFocusedExercise(activeSessionId, clientExerciseId);
+    },
+    [activeSessionId],
+  );
 
   const dismissSuggestion = useCallback(
     async (suggestion: WorkoutExerciseSuggestion) => {
@@ -1354,6 +1389,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
       ...activeSession,
       exercises: [...activeSession.exercises, newSessionEx],
     });
+    setFocusedExercise(clientExerciseId);
   };
 
   const removeExerciseFromSession = async (clientExerciseId: string) => {
@@ -1517,6 +1553,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
     await saveLocalHistorySession(finalized);
     await saveLocalActiveSession(null);
     await setDismissedSuggestions(finalized.clientSessionId, null);
+    await storeFocusedExercise(finalized.clientSessionId, null);
     setActiveSession(null);
 
     setHistorySessions((prev) => [
@@ -1556,6 +1593,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
     );
     await saveLocalActiveSession(null);
     await setDismissedSuggestions(clientSessionId, null);
+    await storeFocusedExercise(clientSessionId, null);
     await removeLocalHistorySession(clientSessionId);
     await removeFromSyncQueue(clientSessionId);
     const remaining = await getSyncQueue();
@@ -1701,6 +1739,8 @@ export function GymProvider({ children }: { children: ReactNode }) {
         resolveConflict,
         dismissedSuggestions,
         dismissSuggestion,
+        focusedExerciseId,
+        setFocusedExercise,
         refreshAllData,
       }}
     >

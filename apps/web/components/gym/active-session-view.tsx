@@ -62,6 +62,7 @@ import {
   computeWorkoutExerciseSuggestion,
   formatRestDurationMinSec,
   groupExercisesIntoBlocks,
+  resolveFocusedExerciseIndex,
   type ExerciseRenderBlock,
 } from '@luki-fitti/common/utils/client';
 import { filterExercisesByQuery } from './exercise-picker';
@@ -111,11 +112,12 @@ export function ActiveSessionView({
     abandonSession,
     dismissedSuggestions,
     dismissSuggestion,
+    focusedExerciseId,
+    setFocusedExercise,
   } = useGym();
   const { t, format, muscleLabel, equipmentLabel } = useLocale();
 
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
-  const [selectedExerciseIdx, setSelectedExerciseIdx] = useState<number>(0);
   const [showSubstituteFor, setShowSubstituteFor] = useState<string | null>(null);
   const [substituteSearch, setSubstituteSearch] = useState('');
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
@@ -131,6 +133,15 @@ export function ActiveSessionView({
     const id = window.setInterval(() => setNowMs(Date.now()), 500);
     return () => window.clearInterval(id);
   }, []);
+
+  // Pin the exercise shown on open, so finishing its last set doesn't jump to the next one.
+  const sessionExercises = activeSession?.exercises;
+  useEffect(() => {
+    if (!sessionExercises?.length || focusedExerciseId === undefined) return;
+    if (sessionExercises.some((e) => e.clientExerciseId === focusedExerciseId)) return;
+    const idx = resolveFocusedExerciseIndex(sessionExercises, focusedExerciseId);
+    setFocusedExercise(sessionExercises[idx]!.clientExerciseId);
+  }, [sessionExercises, focusedExerciseId, setFocusedExercise]);
 
   useEffect(() => {
     if (!activeSession && !completedSummary) {
@@ -231,10 +242,11 @@ export function ActiveSessionView({
       ? Math.min(100, Math.round((activeSession.totalSetsCompleted / totalSetsPlanned) * 100))
       : 0;
 
-  const safeIdx = Math.min(
-    Math.max(0, selectedExerciseIdx),
-    Math.max(0, activeSession.exercises.length - 1),
-  );
+  const safeIdx = resolveFocusedExerciseIndex(activeSession.exercises, focusedExerciseId);
+  const selectExercise = (idx: number) => {
+    const target = activeSession.exercises[idx];
+    if (target) setFocusedExercise(target.clientExerciseId);
+  };
   const substituteTarget =
     activeSession.exercises.find((e) => e.clientExerciseId === showSubstituteFor) ?? null;
   const nextExercise =
@@ -443,7 +455,7 @@ export function ActiveSessionView({
         <button
           type="button"
           data-testid={`vertical-exercise-row-${idx + 1}`}
-          onClick={() => setSelectedExerciseIdx(idx)}
+          onClick={() => selectExercise(idx)}
           className={`bg-card flex w-full items-center justify-between gap-3 rounded-[1.25rem] p-3 text-left transition-colors ${
             isSkipped ? 'opacity-60' : 'hover:bg-secondary/40'
           }`}
@@ -577,7 +589,7 @@ export function ActiveSessionView({
               type="button"
               variant="link"
               size="sm"
-              onClick={() => setSelectedExerciseIdx(idx + 1)}
+              onClick={() => selectExercise(idx + 1)}
               className="h-auto p-0 text-xs font-bold"
             >
               {format(t.session.nextExerciseLink, {
@@ -846,7 +858,6 @@ export function ActiveSessionView({
               onAdd={async (sug) => {
                 await dismissSuggestion(sug);
                 await addExerciseToSession(sug.suggestedExercise.id);
-                setSelectedExerciseIdx(activeSession.exercises.length);
               }}
               onSwap={
                 sessionSuggestion.stallingExerciseId
@@ -1226,7 +1237,6 @@ export function ActiveSessionView({
                   variant="secondary"
                   onClick={async () => {
                     await addExerciseToSession(ex.id);
-                    setSelectedExerciseIdx(activeSession.exercises.length);
                     setShowAddExerciseModal(false);
                   }}
                   className="flex h-auto w-full items-center justify-between rounded-xl p-3 text-left text-xs"

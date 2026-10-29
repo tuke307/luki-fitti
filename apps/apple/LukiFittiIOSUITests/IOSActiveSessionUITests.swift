@@ -39,4 +39,25 @@ final class IOSActiveSessionUITests: XCTestCase {
 
         XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
     }
+
+    func testReopensTheExerciseTheUserWasOnAfterMinimizing() {
+        let app = IOSUITestHelpers.launchApp(extraArguments: ["--uitesting-seed-active-session"])
+
+        let completeSet1Button = app.buttons["ios.session.completeSet.1"]
+        XCTAssertTrue(completeSet1Button.waitForExistence(timeout: 10))
+        completeSet1Button.tap()
+
+        let secondRow = app.buttons["ios.session.exerciseRow.2"]
+        XCTAssertTrue(secondRow.waitForExistence(timeout: 5))
+        secondRow.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["ios.session.exerciseHeader.2"].waitForExistence(timeout: 5))
+
+        app.buttons["ios.session.minimizeButton"].tap()
+        let accessory = app.buttons["ios.shell.sessionAccessory"]
+        XCTAssertTrue(accessory.waitForExistence(timeout: 5))
+        accessory.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["ios.session.exerciseHeader.2"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.descendants(matching: .any)["ios.session.exerciseHeader.1"].exists)
+    }
 }

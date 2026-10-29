@@ -110,6 +110,7 @@ public final class OfflineStore {
         }
 
         activeSession = readJSON("active_workout_session.json")
+        focusedExerciseIds = readJSON("focused_exercises.json") ?? [:]
         historySessions = (readJSON("session_history.json") as [WorkoutSessionDto]? ?? [])
             .filter { $0.status == .COMPLETED }
             .sorted { $0.startedAt > $1.startedAt }
@@ -237,6 +238,16 @@ public final class OfflineStore {
         dismissedSuggestionsRevision += 1
     }
 
+    /// Exercise last opened per workout session, so returning to the workout reopens it. Kept in
+    /// memory so views observe changes; resolve with `SessionCalculator.resolveFocusedExerciseIndex`.
+    public private(set) var focusedExerciseIds: [String: String] = [:]
+
+    public func setFocusedExerciseId(_ clientExerciseId: String?, clientSessionId: String) {
+        guard focusedExerciseIds[clientSessionId] != clientExerciseId else { return }
+        focusedExerciseIds[clientSessionId] = clientExerciseId
+        writeJSON(focusedExerciseIds, to: "focused_exercises.json")
+    }
+
     private func acknowledgedServerVersions() -> [String: Int] {
         readJSON("server_versions.json") ?? [:]
     }
@@ -282,6 +293,7 @@ public final class OfflineStore {
             "sync_queue.json",
             "server_versions.json",
             "dismissed_suggestions.json",
+            "focused_exercises.json",
             "current_user.json",
         ] {
             deleteFile(file)
