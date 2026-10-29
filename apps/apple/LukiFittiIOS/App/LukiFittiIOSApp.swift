@@ -284,16 +284,13 @@ public final class LukiAppViewModel {
         if let reps { set.reps = max(0, reps) }
         if let durationSeconds { set.durationSeconds = max(0, durationSeconds) }
         if let rpe { set.rpe = rpe }
-        if let setType { set.setType = setType }
         session.exercises[exIdx].sets[setIdx] = set
-        if setType != nil {
-            // Warm-ups always come first, so a set switched to warm-up moves to the top.
-            let ordered = TemplateSets.orderWarmupsFirst(session.exercises[exIdx].sets, type: \.setType)
-            session.exercises[exIdx].sets = ordered.enumerated().map { idx, s in
-                var copy = s
-                copy.setNumber = idx + 1
-                return copy
-            }
+        if let setType {
+            session.exercises[exIdx].sets = SessionCalculator.changingSetType(
+                session.exercises[exIdx].sets,
+                clientSetId: clientSetId,
+                to: setType
+            )
         }
         session.version += 1
 
@@ -676,6 +673,17 @@ public final class LukiAppViewModel {
         if changed {
             store.saveWorkoutsOverview(folders: folders, unfiledTemplates: unfiled)
         }
+    }
+
+    /// Saves corrections to a finished workout and syncs them over the server copy, like web.
+    public func updateHistoricalSession(_ session: WorkoutSessionDto) {
+        var updated = session
+        updated.version += 1
+        let recalculated = SessionCalculator.recalculateSessionTotals(updated)
+        store.saveHistorySession(recalculated)
+        store.enqueueSessionSync(recalculated, forceOverwrite: true)
+        pushContextToWatch()
+        Task { await store.flushSyncQueue() }
     }
 
     public func abandonActiveSession() {

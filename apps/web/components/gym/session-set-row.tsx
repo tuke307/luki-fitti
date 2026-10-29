@@ -10,23 +10,16 @@ import {
 } from '@luki-fitti/common/utils/client';
 import type { SessionExerciseDto, SessionSetDto } from '@luki-fitti/common/schemas';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from '@luki-fitti/ui/components/ui/dropdown-menu';
 import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { unitLabel, weightStep } from '@/lib/format/weight';
 import { NumberInput } from './number-input';
-import { SET_TYPE_TEXT_CLASS, SetTypeBadge } from './set-type-badge';
+import { SET_TYPE_TEXT_CLASS } from './set-type-badge';
+import { SetTypeMenu } from './set-type-menu';
 import { SwipeRow } from './swipe-row';
-
-const SET_TYPE_ORDER = [SetType.WARMUP, SetType.WORKING, SetType.DROPSET, SetType.STRETCH] as const;
 
 /** Aligns progression suggestions to sets: only working-type sets get one (warm-ups/stretches don't). */
 export function alignSetSuggestions(
@@ -166,35 +159,18 @@ export function SessionSetRow({
         )}
         <div className="flex items-center gap-2">
           {/* Set badge opens the set menu: type picker plus Delete, so nothing is swipe-only. */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                data-testid="set-menu-trigger"
-                aria-label={format(t.a11y.setTypeMenu, { n, type: setTypeLabel(set.setType) })}
-                className="focus-visible:ring-ring/50 -m-1 flex size-11 shrink-0 items-center justify-center rounded-full outline-hidden focus-visible:ring-[3px]"
-              >
-                <SetTypeBadge setType={set.setType} label={badgeLabel} completed={set.completed} />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-52">
-              <DropdownMenuLabel>{t.session.setTypeHeading}</DropdownMenuLabel>
-              <DropdownMenuRadioGroup
-                value={set.setType}
-                onValueChange={(v) => patch({ setType: v as SetType })}
-              >
-                {SET_TYPE_ORDER.map((type) => (
-                  <DropdownMenuRadioItem key={type} value={type}>
-                    {setTypeLabel(type)}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onSelect={removeSet}>
-                <Trash2 /> {t.session.deleteSetBtn}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <SetTypeMenu
+            setType={set.setType}
+            onSetTypeChange={(setType) => patch({ setType })}
+            setNumber={n}
+            badgeLabel={badgeLabel}
+            completed={set.completed}
+          >
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onSelect={removeSet}>
+              <Trash2 /> {t.session.deleteSetBtn}
+            </DropdownMenuItem>
+          </SetTypeMenu>
 
           {set.completed ? (
             <span
