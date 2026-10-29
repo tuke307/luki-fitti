@@ -18,6 +18,7 @@ import {
   Play,
   Plus,
   PlusCircle,
+  Sparkles,
   Trash2,
   Zap,
 } from 'lucide-react';
@@ -70,13 +71,14 @@ import {
   summarizeTemplateSets,
   templateExerciseToInput,
 } from '@luki-fitti/common/utils/client';
-import { SessionStatus } from '@luki-fitti/common/enums';
+import { FeatureGrant, SessionStatus } from '@luki-fitti/common/enums';
 import { ExercisePicker } from './exercise-picker';
 import { ExerciseVisual } from './exercise-visual';
 import { NumberInput } from './number-input';
 import { RainbowExerciseSuggestionCard } from './rainbow-suggestion-card';
 import { SwipeRow } from './swipe-row';
 import { TemplateSetsEditor } from './template-sets-editor';
+import { AiWorkoutBuilderDialog } from './ai-workout-builder-dialog';
 import type {
   TemplateExerciseInputDto,
   WorkoutFolderDto,
@@ -108,6 +110,8 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
   const { user } = useAuth();
   const { t, format, muscleLabel } = useLocale();
   const suggestionsEnabled = user?.preferences?.exerciseSuggestionsEnabled ?? true;
+  const canPlanWithAi = user?.features?.includes(FeatureGrant.AI_WORKOUT_BUILDER) ?? false;
+  const [aiBuilderOpen, setAiBuilderOpen] = useState(false);
 
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Record<string, boolean>>({});
   const [builderSuggestionDismissed, setBuilderSuggestionDismissed] = useState(false);
@@ -917,10 +921,35 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               <DropdownMenuItem onSelect={() => openFolderModal()}>
                 <FolderPlus /> {t.workouts.newFolder}
               </DropdownMenuItem>
+              {canPlanWithAi && (
+                <DropdownMenuItem onSelect={() => setAiBuilderOpen(true)}>
+                  <Sparkles /> {t.aiBuilder.entryButton}
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </header>
+
+      {canPlanWithAi && (
+        <button
+          type="button"
+          data-testid="workouts-ai-builder"
+          onClick={() => setAiBuilderOpen(true)}
+          className="bg-card hover:bg-secondary/40 flex min-h-14 w-full items-center gap-3 rounded-[1.25rem] px-5 py-3 text-left transition-colors"
+        >
+          <span className="bg-primary/12 text-primary flex size-10 shrink-0 items-center justify-center rounded-full">
+            <Sparkles className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-[0.9375rem] font-semibold">{t.aiBuilder.entryButton}</span>
+            <span className="text-muted-foreground block text-[0.8125rem]">
+              {t.aiBuilder.promptPlaceholder}
+            </span>
+          </span>
+        </button>
+      )}
+      <AiWorkoutBuilderDialog open={aiBuilderOpen} onOpenChange={setAiBuilderOpen} />
 
       <div className="space-y-4">
         {folders.map((folder, index) =>

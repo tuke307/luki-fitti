@@ -1,0 +1,25 @@
+info:
+  name: get-summary
+  type: http
+  seq: 4
+
+http:
+  method: GET
+  url: "{{API_URL}}:{{API_PORT}}/api/nutrition/summary"
+  params:
+    - name: from
+      value: "2026-10-23"
+      type: query
+    - name: to
+      value: "2026-10-29"
+      type: query
+    - name: tz
+      value: "Europe/Berlin"
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

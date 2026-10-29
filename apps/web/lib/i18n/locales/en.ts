@@ -6,8 +6,10 @@ import {
   SessionType,
   SetType,
 } from '@luki-fitti/common/enums';
+import { enFeatures } from './en.features';
 
 export const en = {
+  ...enFeatures,
   common: {
     cancel: 'Cancel',
     save: 'Save',

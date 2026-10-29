@@ -17,13 +17,22 @@ import {
 } from '@/config/env.config';
 import { PrismaService } from '../database/prisma.service';
 import { EmailService } from '../email/email.service';
+import { AppSettingsService } from '../app-settings/app-settings.service';
 import {
   DEFAULT_STARTER_FOLDERS,
   DEFAULT_STARTER_TEMPLATES,
   DEFAULT_STRETCHING_ROUTINES,
 } from '@luki-fitti/common/catalog';
 import { ALL_SYSTEM_EXERCISES } from '@luki-fitti/common/catalog/extended';
-import { DistanceUnit, type LanguagePreference, WeightUnit } from '@luki-fitti/common/enums';
+import {
+  type AdminPermission,
+  type BiologicalSex,
+  DistanceUnit,
+  type FeatureGrant,
+  isAdminPermission,
+  type LanguagePreference,
+  WeightUnit,
+} from '@luki-fitti/common/enums';
 import type {
   RegisterDto,
   RegisterResponseDto,
@@ -39,6 +48,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     @Optional() private readonly emailService?: EmailService,
+    @Optional() private readonly appSettings?: AppSettingsService,
   ) {}
 
   private hashToken(rawToken: string): string {
@@ -199,7 +209,7 @@ export class AuthService {
     }
 
     return {
-      ...this.formatUserDto(created),
+      ...(await this.toUserDto(created)),
       requiresEmailConfirmation: true,
       message:
         'Account created! Please check your email and click the activation link to confirm your account.',
@@ -235,7 +245,7 @@ export class AuthService {
       include: { preferences: true },
     });
 
-    return this.formatUserDto(updated);
+    return this.toUserDto(updated);
   }
 
   async resendConfirmationEmail(email: string): Promise<{ success: boolean; message: string }> {
@@ -386,7 +396,7 @@ export class AuthService {
       include: { preferences: true },
     });
 
-    return this.formatUserDto(updated);
+    return this.toUserDto(updated);
   }
 
   async getUserById(userId: string): Promise<UserDto | null> {
@@ -398,7 +408,7 @@ export class AuthService {
       include: { preferences: true },
     });
     if (!user) return null;
-    return this.formatUserDto(user);
+    return this.toUserDto(user);
   }
 
   async updatePreferences(userId: string, dto: UpdatePreferencesDto): Promise<UserDto> {
@@ -411,6 +421,23 @@ export class AuthService {
     }
 
     const { name, ...prefFields } = dto;
+    // Optional body metrics & nutrition goals: `null` clears, `undefined` leaves unchanged.
+    const nullableFields = Object.fromEntries(
+      (
+        [
+          'bodyWeightKg',
+          'heightCm',
+          'birthYear',
+          'sex',
+          'dailyKcalGoal',
+          'proteinGoalG',
+          'carbsGoalG',
+          'fatGoalG',
+        ] as const
+      )
+        .filter((key) => prefFields[key] !== undefined)
+        .map((key) => [key, prefFields[key]]),
+    );
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -427,8 +454,10 @@ export class AuthService {
               notificationsEnabled: prefFields.notificationsEnabled ?? true,
               exerciseSuggestionsEnabled: prefFields.exerciseSuggestionsEnabled ?? true,
               weeklyGoalSessions: prefFields.weeklyGoalSessions ?? 4,
+              ...nullableFields,
             },
             update: {
+              ...nullableFields,
               ...(prefFields.weightUnit !== undefined ? { weightUnit: prefFields.weightUnit } : {}),
               ...(prefFields.distanceUnit !== undefined
                 ? { distanceUnit: prefFields.distanceUnit }
@@ -457,7 +486,7 @@ export class AuthService {
       include: { preferences: true },
     });
 
-    return this.formatUserDto(updated);
+    return this.toUserDto(updated);
   }
 
   async changePassword(userId: string, currentPassword: string, newPassword: string) {
@@ -564,8 +593,18 @@ export class AuthService {
       notificationsEnabled?: boolean;
       exerciseSuggestionsEnabled?: boolean;
       weeklyGoalSessions: number;
+      bodyWeightKg?: number | null;
+      heightCm?: number | null;
+      birthYear?: number | null;
+      sex?: string | null;
+      dailyKcalGoal?: number | null;
+      proteinGoalG?: number | null;
+      carbsGoalG?: number | null;
+      fatGoalG?: number | null;
     } | null;
-  }): UserDto {
+    permissions?: string[];
+    featureGrants?: string[];
+  }, features: FeatureGrant[] = []): UserDto {
     const rawLang = user.preferences?.language;
     const normalizedLang: LanguagePreference =
       rawLang === 'en' || rawLang === 'de' || rawLang === 'system' ? rawLang : 'system';
@@ -590,8 +629,29 @@ export class AuthService {
             notificationsEnabled: user.preferences.notificationsEnabled ?? true,
             exerciseSuggestionsEnabled: user.preferences.exerciseSuggestionsEnabled ?? true,
             weeklyGoalSessions: user.preferences.weeklyGoalSessions,
+            bodyWeightKg: user.preferences.bodyWeightKg ?? null,
+            heightCm: user.preferences.heightCm ?? null,
+            birthYear: user.preferences.birthYear ?? null,
+            sex:
+              user.preferences.sex === 'female' || user.preferences.sex === 'male'
+                ? (user.preferences.sex as BiologicalSex)
+                : null,
+            dailyKcalGoal: user.preferences.dailyKcalGoal ?? null,
+            proteinGoalG: user.preferences.proteinGoalG ?? null,
+            carbsGoalG: user.preferences.carbsGoalG ?? null,
+            fatGoalG: user.preferences.fatGoalG ?? null,
           }
         : null,
+      permissions: (user.permissions ?? []).filter(isAdminPermission) as AdminPermission[],
+      features,
     };
+  }
+
+  /** Formats a user and resolves which opt-in features are active for them right now. */
+  private async toUserDto(user: Parameters<AuthService['formatUserDto']>[0]): Promise<UserDto> {
+    const features = this.appSettings
+      ? await this.appSettings.resolveActiveFeatures(user.featureGrants ?? [])
+      : [];
+    return this.formatUserDto(user, features);
   }
 }

@@ -101,3 +101,33 @@ export const UMAMI_ALLOWED_HOSTNAMES = (
   .split(',')
   .map((host) => host.trim().toLowerCase())
   .filter(Boolean);
+
+// AI (OpenRouter, OpenAI-compatible). The key is only ever read server-side.
+// TODO: Configure OPENROUTER_API_KEY in your environment / secret store; AI features stay off without it.
+export const OPENROUTER_API_KEY = (process.env.OPENROUTER_API_KEY ?? '').trim();
+export const OPENROUTER_BASE_URL = (() => {
+  const raw = (process.env.OPENROUTER_BASE_URL ?? '').trim() || 'https://openrouter.ai/api/v1';
+  try {
+    const parsed = new URL(raw);
+    // http is only accepted for a local mock outside production (tests); prompts carry user data.
+    const isLocalMock = !isProduction && ['localhost', '127.0.0.1'].includes(parsed.hostname);
+    if (parsed.protocol !== 'https:' && !isLocalMock) {
+      throw new Error('OPENROUTER_BASE_URL must use https');
+    }
+    return parsed.origin + parsed.pathname.replace(/\/+$/, '');
+  } catch (err) {
+    logger.warn(`Invalid OPENROUTER_BASE_URL (${String(err)}) — using the default.`);
+    return 'https://openrouter.ai/api/v1';
+  }
+})();
+export const OPENROUTER_TIMEOUT_MS = Number(process.env.OPENROUTER_TIMEOUT_MS) || 60_000;
+
+// Object storage for meal photos (S3-compatible, e.g. SeaweedFS). Photos are optional:
+// without storage, analysis still works but photos are not kept.
+// TODO: Configure S3_* in your environment / secret store.
+export const S3_ENDPOINT = (process.env.S3_ENDPOINT ?? '').trim();
+export const S3_REGION = (process.env.S3_REGION ?? '').trim() || 'us-east-1';
+export const S3_ACCESS_KEY_ID = (process.env.S3_ACCESS_KEY_ID ?? '').trim();
+export const S3_SECRET_ACCESS_KEY = (process.env.S3_SECRET_ACCESS_KEY ?? '').trim();
+export const S3_BUCKET = (process.env.S3_BUCKET ?? '').trim() || 'luki-fitti-meal-photos';
+export const S3_FORCE_PATH_STYLE = process.env.S3_FORCE_PATH_STYLE !== 'false';

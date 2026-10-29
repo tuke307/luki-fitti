@@ -72,6 +72,12 @@ services:
       - UMAMI_URL=${UMAMI_URL}
       - UMAMI_WEBSITE_ID=${UMAMI_WEBSITE_ID}
       - UMAMI_ALLOWED_HOSTNAMES=${UMAMI_ALLOWED_HOSTNAMES}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - S3_ENDPOINT=http://luki-fitti-storage:8333
+      - S3_REGION=${S3_REGION:-us-east-1}
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
+      - S3_BUCKET=${S3_BUCKET:-luki-fitti-meal-photos}
     depends_on:
       luki-fitti-db-migrate:
         condition: service_completed_successfully
@@ -96,6 +102,21 @@ services:
       - 'caddy_1.0_handle.reverse_proxy={{upstreams 3001}}'
       - 'app.project=luki-fitti'
       - 'app.service=api'
+
+  # Private S3-compatible storage for meal photos. Not exposed to the internet; the API streams
+  # photos to their owner after an ownership check.
+  luki-fitti-storage:
+    image: chrislusf/seaweedfs:4.01
+    restart: always
+    command: 'server -dir=/data -s3 -s3.config=/etc/seaweedfs/s3.json'
+    volumes:
+      - luki_fitti_storage:/data
+      - ./seaweedfs-s3.json:/etc/seaweedfs/s3.json:ro
+    networks:
+      - luki_fitti_network
+    labels:
+      - 'app.project=luki-fitti'
+      - 'app.service=storage'
 
   luki-fitti-email-worker:
     image: ghcr.io/tuke307/luki-fitti-email-worker:latest
@@ -139,3 +160,6 @@ services:
 networks:
   luki_fitti_network:
     driver: bridge
+
+volumes:
+  luki_fitti_storage:

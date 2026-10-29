@@ -220,6 +220,146 @@ public actor APIClient {
         try await request(path: "/api/analytics/summary?period=\(period)", method: "GET")
     }
 
+    // MARK: - Nutrition, AI & Exercise Feedback
+
+    public func fetchMealEntries(from: Date, to: Date) async throws -> [MealEntryDto] {
+        let f = ISO8601DateFormatter()
+        var components = URLComponents()
+        components.queryItems = [
+            URLQueryItem(name: "from", value: f.string(from: from)),
+            URLQueryItem(name: "to", value: f.string(from: to)),
+        ]
+        return try await request(path: "/api/nutrition/entries?\(components.percentEncodedQuery ?? "")", method: "GET")
+    }
+
+    public func upsertMealEntry(_ dto: UpsertMealEntryDto) async throws -> MealEntryDto {
+        try await request(path: "/api/nutrition/entries", method: "PUT", body: dto)
+    }
+
+    public func deleteMealEntry(id: String) async throws {
+        struct Resp: Decodable { let success: Bool? }
+        let _: Resp = try await request(path: "/api/nutrition/entries/\(Self.pathComponent(id))", method: "DELETE")
+    }
+
+    public func fetchRecentMealItems() async throws -> [MealItemDto] {
+        try await request(path: "/api/nutrition/recent-items", method: "GET")
+    }
+
+    public func buildWorkout(_ dto: WorkoutBuilderRequestDto) async throws -> WorkoutBuilderResponseDto {
+        try await request(path: "/api/ai/workout-builder", method: "POST", body: dto)
+    }
+
+    public func fetchExerciseFeedback() async throws -> [ExerciseFeedbackDto] {
+        try await request(path: "/api/exercise-feedback", method: "GET")
+    }
+
+    public func setExerciseFeedback(exerciseId: String, verdict: ExerciseFeedbackVerdict?) async throws {
+        struct Body: Encodable { let verdict: ExerciseFeedbackVerdict }
+        struct Resp: Decodable {}
+        let path = "/api/exercise-feedback/\(Self.pathComponent(exerciseId))"
+        if let verdict {
+            let _: ExerciseFeedbackDto = try await request(path: path, method: "PUT", body: Body(verdict: verdict))
+        } else {
+            let _: Resp = try await request(path: path, method: "DELETE")
+        }
+    }
+
+    /// Uploads JPEG photos of one meal for AI analysis (multipart/form-data).
+    public func analyzeMeal(
+        jpegPhotos: [Data],
+        clientEntryId: String,
+        eatenAt: Date,
+        mealType: MealType?,
+        hint: String?
+    ) async throws -> MealAnalysisResponseDto {
+        let boundary = "LukiFitti-\(UUID().uuidString)"
+        var body = Data()
+        func field(_ name: String, _ value: String) {
+            body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(name)\"\r\n\r\n\(value)\r\n".utf8))
+        }
+        field("clientEntryId", clientEntryId)
+        field("eatenAt", ISO8601DateFormatter().string(from: eatenAt))
+        if let mealType { field("mealType", mealType.rawValue) }
+        if let hint, !hint.isEmpty { field("hint", hint) }
+        for (index, jpeg) in jpegPhotos.enumerated() {
+            body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"photos\"; filename=\"meal-\(index + 1).jpg\"\r\nContent-Type: image/jpeg\r\n\r\n".utf8))
+            body.append(jpeg)
+            body.append(Data("\r\n".utf8))
+        }
+        body.append(Data("--\(boundary)--\r\n".utf8))
+        let data = try await send(
+            path: "/api/ai/meal-analysis",
+            method: "POST",
+            body: body,
+            contentType: "multipart/form-data; boundary=\(boundary)"
+        )
+        return try Self.decodeEnvelope(data)
+    }
+
+    /// Raw bytes of an authenticated API resource (e.g. a meal photo URL path).
+    public func fetchData(path: String) async throws -> Data {
+        try await send(path: path, method: "GET", body: nil, contentType: nil)
+    }
+
+    private static func pathComponent(_ raw: String) -> String {
+        raw.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed.subtracting(CharacterSet(charactersIn: "/"))) ?? raw
+    }
+
+    private static func decodeEnvelope<T: Decodable>(_ data: Data) throws -> T {
+        let decoder = JSONDecoder()
+        if let envelope = try? decoder.decode(APIEnvelope<T>.self, from: data), let unwrapped = envelope.data {
+            return unwrapped
+        }
+        do {
+            return try decoder.decode(T.self, from: data)
+        } catch {
+            throw APIClientError.decodingError(error.localizedDescription)
+        }
+    }
+
+    /// Authenticated request with a raw body and response (multipart uploads, binary downloads).
+    private func send(
+        path: String,
+        method: String,
+        body: Data?,
+        contentType: String?,
+        allowRetryOn401: Bool = true
+    ) async throws -> Data {
+        guard let url = URL(string: path, relativeTo: baseURL) else { throw APIClientError.invalidURL }
+        guard let tokens = tokenStore.loadTokens() else { throw APIClientError.unauthorized }
+        var req = URLRequest(url: url)
+        req.httpMethod = method
+        req.timeoutInterval = 90
+        if let contentType { req.setValue(contentType, forHTTPHeaderField: "Content-Type") }
+        req.setValue("apple", forHTTPHeaderField: "X-Client-Platform")
+        req.setValue(locale.rawValue, forHTTPHeaderField: "Accept-Language")
+        req.setValue("Bearer \(tokens.accessToken)", forHTTPHeaderField: "Authorization")
+        req.httpBody = body
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: req)
+        } catch {
+            throw APIClientError.offline(error.localizedDescription)
+        }
+        guard let http = response as? HTTPURLResponse else { throw APIClientError.offline("Invalid HTTP response") }
+        if http.statusCode == 401 && allowRetryOn401 {
+            guard await tryRefreshSession() else {
+                tokenStore.clearTokens()
+                throw APIClientError.unauthorized
+            }
+            return try await send(path: path, method: method, body: body, contentType: contentType, allowRetryOn401: false)
+        }
+        guard (200...299).contains(http.statusCode) else {
+            let msg = (try? JSONDecoder().decode(APIEnvelope<EmptyObject>.self, from: data))
+                .flatMap { $0.error?.message ?? $0.message } ?? "HTTP \(http.statusCode)"
+            if http.statusCode == 403 { throw APIClientError.forbidden(msg) }
+            throw APIClientError.serverError(http.statusCode, msg)
+        }
+        return data
+    }
+
     // MARK: - Core Request & Single-Flight Token Refresh
 
     public func request<T: Decodable>(

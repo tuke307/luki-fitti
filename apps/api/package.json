@@ -24,13 +24,14 @@
     "clean": "rm -rf dist",
     "dev": "nestgo start --watch --env-file .env.local",
     "lint": "tsc --noEmit && eslint . --max-warnings 0",
-    "test": "node --import tsx --test src/**/*.spec.ts",
+    "test": "node --import tsx --test 'src/**/*.spec.ts'",
     "openapi:export": "tsx src/openapi-export.ts",
     "start:debug": "nestgo start --watch --debug",
     "start": "dotenv -e .env.local -- node dist/src/main.js",
     "start:prod": "node dist/src/main.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1155.0",
     "@luki-fitti/common": "*",
     "@luki-fitti/database": "*",
     "@luki-fitti/logger": "*",
@@ -56,6 +57,7 @@
     "nodemailer": "^10.0.15",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
+    "sharp": "0.35.5",
     "zod": "^4.6.5"
   },
   "devDependencies": {

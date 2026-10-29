@@ -1,5 +1,22 @@
 import { apiFetch } from './client';
 import type {
+  AdminDashboardDto,
+  AdminUserListDto,
+  AdminUserQueryDto,
+  AiSettingsDto,
+  AiUsageSummaryDto,
+  ExerciseFeedbackDto,
+  MealAnalysisResponseDto,
+  MealEntryDto,
+  MealItemDto,
+  NutritionSummaryDto,
+  NutritionSummaryQueryDto,
+  UpdateAiSettingsDto,
+  UpdateUserAccessDto,
+  UpsertExerciseFeedbackDto,
+  UpsertMealEntryDto,
+  WorkoutBuilderRequestDto,
+  WorkoutBuilderResponseDto,
   AnalyticsQueryDto,
   AnalyticsSummaryDto,
   ChangePasswordDto,
@@ -238,6 +255,69 @@ export const analytics = {
   },
 };
 
+export const nutrition = {
+  listEntries: (from: string, to: string) =>
+    apiFetch<MealEntryDto[]>(`/nutrition/entries?${new URLSearchParams({ from, to }).toString()}`),
+  upsertEntry: (data: UpsertMealEntryDto) =>
+    apiFetch<MealEntryDto>('/nutrition/entries', { method: 'PUT', body: JSON.stringify(data) }),
+  deleteEntry: (id: string) =>
+    apiFetch<{ success: boolean }>(`/nutrition/entries/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
+  getSummary: (query: NutritionSummaryQueryDto) =>
+    apiFetch<NutritionSummaryDto>(
+      `/nutrition/summary?${new URLSearchParams({ from: query.from, to: query.to, tz: query.tz }).toString()}`,
+    ),
+  recentItems: () => apiFetch<MealItemDto[]>('/nutrition/recent-items'),
+  deletePhoto: (id: string) =>
+    apiFetch<{ success: boolean }>(`/nutrition/photos/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
+};
+
+export const ai = {
+  buildWorkout: (data: WorkoutBuilderRequestDto) =>
+    apiFetch<WorkoutBuilderResponseDto>('/ai/workout-builder', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  analyzeMeal: (form: FormData) =>
+    apiFetch<MealAnalysisResponseDto>('/ai/meal-analysis', { method: 'POST', body: form }),
+};
+
+export const exerciseFeedback = {
+  list: () => apiFetch<ExerciseFeedbackDto[]>('/exercise-feedback'),
+  set: (exerciseId: string, data: UpsertExerciseFeedbackDto) =>
+    apiFetch<ExerciseFeedbackDto>(`/exercise-feedback/${encodeURIComponent(exerciseId)}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  remove: (exerciseId: string) =>
+    apiFetch<{ success: boolean }>(`/exercise-feedback/${encodeURIComponent(exerciseId)}`, {
+      method: 'DELETE',
+    }),
+};
+
+export const admin = {
+  dashboard: () => apiFetch<AdminDashboardDto>('/admin/dashboard'),
+  listUsers: (query: Partial<AdminUserQueryDto>) => {
+    const qs = new URLSearchParams();
+    if (query.search) qs.set('search', query.search);
+    if (query.page) qs.set('page', String(query.page));
+    if (query.limit) qs.set('limit', String(query.limit));
+    return apiFetch<AdminUserListDto>(`/admin/users?${qs.toString()}`);
+  },
+  updateUserAccess: (userId: string, data: UpdateUserAccessDto) =>
+    apiFetch<Pick<AdminUserListDto['items'][number], 'id' | 'permissions' | 'featureGrants'>>(
+      `/admin/users/${encodeURIComponent(userId)}/access`,
+      { method: 'PATCH', body: JSON.stringify(data) },
+    ),
+  getAiSettings: () => apiFetch<AiSettingsDto>('/admin/settings/ai'),
+  updateAiSettings: (data: UpdateAiSettingsDto) =>
+    apiFetch<AiSettingsDto>('/admin/settings/ai', { method: 'PUT', body: JSON.stringify(data) }),
+  aiUsage: (days: number) => apiFetch<AiUsageSummaryDto>(`/admin/ai-usage?days=${days}`),
+};
+
 export * from './client';
 
 export const api = {
@@ -247,4 +327,8 @@ export const api = {
   stretching,
   sessions,
   analytics,
+  nutrition,
+  ai,
+  exerciseFeedback,
+  admin,
 };

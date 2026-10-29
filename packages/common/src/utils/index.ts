@@ -13,3 +13,5 @@ export * from './exercise-search.util';
 export * from './exercise-search.vocab';
 export * from './search.util';
 export * from './zod-utils';
+export * from './energy.util';
+export * from './nutrition.util';
