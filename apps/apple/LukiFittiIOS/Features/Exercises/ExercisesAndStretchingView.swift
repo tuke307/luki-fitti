@@ -9,6 +9,7 @@ public struct ExercisesAndStretchingView: View {
     @State private var searchQuery: String = ""
     @State private var selectedMuscle: MuscleGroup?
     @State private var searchIndex: ExerciseSearchIndex?
+    @State private var guideExercise: ExerciseDto?
     @Environment(\.lukiLocale) private var tr
 
     public init(viewModel: LukiAppViewModel) {
@@ -78,24 +79,39 @@ public struct ExercisesAndStretchingView: View {
                     }
 
                     ForEach(filteredExercises) { exercise in
-                        HStack(spacing: 12) {
-                            ExerciseVectorVisualView(
-                                exerciseName: exercise.name,
-                                primaryMuscle: exercise.primaryMuscleGroup,
-                                compact: true
-                            )
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(exercise.name)
-                                    .font(.subheadline.bold())
-                                    .foregroundStyle(.primary)
-                                Text("\(LukiI18n.muscleLabel(exercise.primaryMuscleGroup, locale: tr)) · \(LukiI18n.equipmentLabel(exercise.equipment, locale: tr))")
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
+                        Button {
+                            guideExercise = exercise
+                        } label: {
+                            HStack(spacing: 12) {
+                                ExerciseVectorVisualView(
+                                    exerciseName: exercise.name,
+                                    primaryMuscle: exercise.primaryMuscleGroup,
+                                    compact: true
+                                )
+                                .accessibilityHidden(true)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(exercise.name)
+                                        .font(.subheadline.bold())
+                                        .foregroundStyle(.primary)
+                                        .multilineTextAlignment(.leading)
+                                    Text("\(LukiI18n.muscleLabel(exercise.primaryMuscleGroup, locale: tr)) · \(LukiI18n.equipmentLabel(exercise.equipment, locale: tr))")
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                        .multilineTextAlignment(.leading)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
+                                    .accessibilityHidden(true)
                             }
-                            Spacer()
+                            .padding(12)
+                            .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
+                            .contentShape(Rectangle())
                         }
-                        .padding(12)
-                        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
+                        .buttonStyle(.plain)
+                        .accessibilityHint(tr("How to do it"))
+                        .accessibilityIdentifier("ios.library.exerciseRow.\(exercise.id)")
                     }
                 } else {
                     ForEach(viewModel.store.stretchingRoutines) { routine in
@@ -131,6 +147,9 @@ public struct ExercisesAndStretchingView: View {
             .padding(16)
         }
         .background(LukiColors.groupedBackground)
+        .sheet(item: $guideExercise) { exercise in
+            ExerciseGuideSheet(exercise: exercise)
+        }
         // Build the search index once per catalog instead of on every keystroke.
         .task(id: viewModel.store.catalog.count) {
             searchIndex = .catalogWithLabels(viewModel.store.catalog)
