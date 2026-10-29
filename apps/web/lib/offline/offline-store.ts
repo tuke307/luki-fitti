@@ -303,6 +303,22 @@ export async function setDismissedSuggestions(
   await idbSet('dismissed_suggestions', map);
 }
 
+/** Exercise last opened per workout session, so returning to the workout reopens it. */
+export async function getFocusedExercise(clientSessionId: string): Promise<string | null> {
+  const map = await idbGet<Record<string, string>>('focused_exercises');
+  return map?.[clientSessionId] ?? null;
+}
+
+export async function setFocusedExercise(
+  clientSessionId: string,
+  clientExerciseId: string | null,
+): Promise<void> {
+  const map = { ...((await idbGet<Record<string, string>>('focused_exercises')) ?? {}) };
+  if (clientExerciseId === null) delete map[clientSessionId];
+  else map[clientSessionId] = clientExerciseId;
+  await idbSet('focused_exercises', map);
+}
+
 export function recalculateSessionTotals(session: WorkoutSessionDto): WorkoutSessionDto {
   let totalVolumeKg = 0;
   let totalSetsCompleted = 0;

@@ -96,6 +96,25 @@ test.describe('Active Session — set types, supersets & exercise actions', () =
     await expect(nextRows.first().getByLabel('Set 1 weight')).toHaveValue('33');
   });
 
+  test('reopens the exercise the user was on after switching tabs and reloading', async ({
+    page,
+  }) => {
+    await startWorkoutByName(page, PUSH);
+    await toggleCompleteSetRow(page, 1);
+
+    await page.getByTestId('vertical-exercise-row-2').click();
+    await expect(page.getByTestId('active-exercise-card-2')).toBeVisible();
+
+    await navigateToTab(page, 'exercises');
+    await navigateToTab(page, 'session');
+    await expect(page.getByTestId('active-exercise-card-2')).toBeVisible();
+    await expect(page.getByTestId('active-exercise-card-1')).toHaveCount(0);
+
+    await page.reload();
+    await navigateToTab(page, 'session');
+    await expect(page.getByTestId('active-exercise-card-2')).toBeVisible();
+  });
+
   test('keeps a dismissed suggestion gone after switching tabs', async ({ page }) => {
     await createWorkoutTemplate(page, { name: 'E2E Suggestion Workout' });
     await startWorkoutByName(page, 'E2E Suggestion Workout');
