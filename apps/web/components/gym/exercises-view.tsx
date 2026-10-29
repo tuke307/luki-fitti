@@ -45,6 +45,8 @@ import {
   EquipmentType,
   ExerciseCategory,
   ExerciseType,
+  Laterality,
+  MovementPattern,
   MuscleGroup,
 } from '@luki-fitti/common/enums';
 import type { ExerciseDto } from '@luki-fitti/common/schemas';
@@ -88,6 +90,8 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
   const [newPrimaryMuscle, setNewPrimaryMuscle] = useState<MuscleGroup>(MuscleGroup.CHEST);
   const [newSecondaryMuscles, setNewSecondaryMuscles] = useState<MuscleGroup[]>([]);
   const [newEquipment, setNewEquipment] = useState<EquipmentType>(EquipmentType.DUMBBELL);
+  const [newMovement, setNewMovement] = useState<MovementPattern | ''>('');
+  const [newUnilateral, setNewUnilateral] = useState(false);
   const [newType, setNewType] = useState<ExerciseType>(ExerciseType.STRENGTH);
   const [newDurationSec, setNewDurationSec] = useState<number>(45);
   const [newTags, setNewTags] = useState('');
@@ -167,12 +171,20 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
         .filter(Boolean),
       alternativeExerciseIds: [],
       ...(newMediaUrl.trim() ? { mediaUrl: newMediaUrl.trim() } : {}),
+      ...(newType === ExerciseType.STRENGTH && newMovement
+        ? {
+            movementPattern: newMovement,
+            laterality: newUnilateral ? Laterality.UNILATERAL : Laterality.BILATERAL,
+          }
+        : {}),
     });
     setNewName('');
     setNewDesc('');
     setNewInstructions('');
     setNewTags('');
     setNewMediaUrl('');
+    setNewMovement('');
+    setNewUnilateral(false);
     setShowCreateModal(false);
   };
 
@@ -849,6 +861,39 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                   ))}
                 </NativeSelect>
               </div>
+
+              {newType === ExerciseType.STRENGTH && (
+                <div className="grid grid-cols-2 items-end gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="new-ex-movement" className="text-xs font-semibold">
+                      {t.exercises.movementLabel}
+                    </Label>
+                    <NativeSelect
+                      id="new-ex-movement"
+                      value={newMovement}
+                      onChange={(e) => setNewMovement(e.target.value as MovementPattern | '')}
+                      className="w-full"
+                    >
+                      <option value="">{t.exercises.movementUnknown}</option>
+                      {Object.values(MovementPattern).map((mp) => (
+                        <option key={mp} value={mp}>
+                          {t.enums.movementPatterns[mp]}
+                        </option>
+                      ))}
+                    </NativeSelect>
+                  </div>
+                  <label className="flex min-h-9 items-center gap-2 text-xs font-semibold">
+                    <input
+                      type="checkbox"
+                      checked={newUnilateral}
+                      disabled={!newMovement}
+                      onChange={(e) => setNewUnilateral(e.target.checked)}
+                      className="accent-primary h-4 w-4"
+                    />
+                    {t.exercises.oneSideLabel}
+                  </label>
+                </div>
+              )}
 
               {newType === ExerciseType.STRETCHING && (
                 <div className="space-y-1.5">

@@ -31,6 +31,41 @@ so the iOS bundle (`starter_catalog.json`, `exercise_search.json`) matches.
 Tests fail if two exercises share an English or German name, if starter content uses a non-core
 exercise, and the importer fails if an exercise named as kept or as an override is not generated.
 
+## Movement metadata and alternatives
+
+`MuscleGroup` is too coarse to find a replacement (a row and a pullover are both `BACK`), so every
+exercise also carries optional movement metadata on `ExerciseDto`:
+
+| Field             | Values                                                                       |
+| ----------------- | ---------------------------------------------------------------------------- |
+| `movementPattern` | `MovementPattern`, e.g. `HORIZONTAL_PULL`, `SHOULDER_EXTENSION`, `HINGE`     |
+| `laterality`      | `BILATERAL` or `UNILATERAL` (one arm / leg at a time, including alternating) |
+| `mechanic`        | `COMPOUND` or `ISOLATION`, derived from the pattern                          |
+| `targetRegions`   | `TargetRegion[]`, finer than `MuscleGroup` (e.g. `LATS`, `UPPER_CHEST`)      |
+
+- **Core exercises** are hand-tagged in `overrides.ts`; `movement.spec.ts` fails if a core strength
+  exercise has no pattern, or lists an alternative with a different (and not compatible) movement.
+- **Extended exercises** are classified when the DTOs are built, by `inferMovementProfile` in
+  `src/catalog/movement.ts`: deterministic English and German name rules (row/Rudern,
+  pullover/Überzug, one-arm/einarmig, …), so no re-import is needed. Exercises no rule recognises
+  (plyometrics, drills, holds) keep `movementPattern: null` and are only found by search. To fix a
+  classification, adjust the rules and add the exercise to `movement.spec.ts`.
+- **Custom exercises** store `movementPattern` and `laterality` in the database (optional in the
+  create form).
+
+`rankAlternatives` (`src/utils/exercise-alternatives.util.ts`, ported 1:1 to iOS as
+`ExerciseAlternatives.swift`) ranks replacements: only the same or a compatible movement (e.g.
+flat ↔ incline press; never a row for a straight-arm pulldown), then the predefined alternatives,
+target-region overlap, slug similarity, same side, compound/isolation, exercises the user has logged
+and a small bonus for different equipment. Each result carries reasons (`SAME_MOVEMENT`,
+`DONE_BEFORE`, …) that the replace dialog shows as e.g. "Same movement · Cable · Both sides". The
+stall suggestion of `computeWorkoutExerciseSuggestion` uses the same ranking. Shared cases live in
+`src/utils/__fixtures__/alternatives-cases.json`; when the catalog or the weights change, re-check
+the expected top 3 there.
+
+The iOS bundle includes the metadata, so re-run `yarn workspace @luki-fitti/apple catalog:export`
+after changing tags, rules or alternatives.
+
 ## Open data-quality issues
 
 | Issue                                   | Examples                                                                                                                      | Cause                                                                                                    |

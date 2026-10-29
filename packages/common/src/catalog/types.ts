@@ -1,4 +1,13 @@
-import type { EquipmentType, ExerciseCategory, ExerciseType, MuscleGroup } from '../enums';
+import type {
+  EquipmentType,
+  ExerciseCategory,
+  ExerciseMechanic,
+  ExerciseType,
+  Laterality,
+  MovementPattern,
+  MuscleGroup,
+  TargetRegion,
+} from '../enums';
 import type { ExerciseDto } from '../schemas';
 
 export interface ExerciseText {
@@ -52,6 +61,12 @@ export interface ExerciseOverride {
   primaryMuscleGroup: MuscleGroup;
   secondaryMuscleGroups: MuscleGroup[];
   equipment: EquipmentType;
+  /** Hand-tagged movement metadata; required for strength exercises (see `catalog.spec.ts`). */
+  movementPattern?: MovementPattern;
+  laterality?: Laterality;
+  /** Derived from `movementPattern` when omitted. */
+  mechanic?: ExerciseMechanic;
+  targetRegions?: TargetRegion[];
   recommendedDurationSeconds: number | null;
   tags: string[];
   alternativeExerciseIds: string[];

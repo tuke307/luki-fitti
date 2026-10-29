@@ -53,7 +53,8 @@ public struct ActiveSessionView: View {
                 SearchableExercisePickerSheet(
                     title: tr("Replace %@", target.exerciseNameSnapshot),
                     exercises: viewModel.store.catalog,
-                    selectedExerciseId: target.exerciseId
+                    selectedExerciseId: target.exerciseId,
+                    suggestedSections: ReplacementSuggestions.sections(for: target, store: viewModel.store, locale: tr)
                 ) { candidate in
                     viewModel.substituteExerciseInSession(clientExerciseId: target.clientExerciseId, with: candidate)
                     swapTargetId = nil
