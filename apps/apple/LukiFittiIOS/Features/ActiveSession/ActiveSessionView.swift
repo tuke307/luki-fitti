@@ -584,6 +584,7 @@ public struct ActiveSessionView: View {
                 }
                 .padding(4)
                 .background(LukiColors.cardBackground)
+                .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("ios.session.exerciseHeader.\(exerciseIndex + 1)")
             }
 
