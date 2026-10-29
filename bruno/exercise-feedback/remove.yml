@@ -1,0 +1,15 @@
+info:
+  name: remove
+  type: http
+  seq: 3
+
+http:
+  method: DELETE
+  url: "{{API_URL}}:{{API_PORT}}/api/exercise-feedback/ex-pushups"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

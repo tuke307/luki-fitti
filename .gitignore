@@ -96,3 +96,6 @@ mci-app
 **/*.xcworkspace/
 DerivedData/
 
+
+# SeaweedFS S3 credentials (copy from seaweedfs-s3.json.sample)
+seaweedfs-s3.json

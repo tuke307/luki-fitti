@@ -19,6 +19,7 @@ public struct WorkoutsView: View {
 
     // Workout Template Builder Modal State
     @State private var activeBuilderContext: TemplateBuilderContext?
+    @State private var showingAIBuilder = false
 
     fileprivate struct TemplateBuilderContext: Identifiable {
         let id: String
@@ -144,6 +145,14 @@ public struct WorkoutsView: View {
                         Label(tr("New Folder"), systemImage: "folder.badge.plus")
                     }
                     .accessibilityIdentifier("ios.workouts.newFolderButton")
+                    if viewModel.store.currentUser?.hasFeature(.AI_WORKOUT_BUILDER) == true {
+                        Button {
+                            showingAIBuilder = true
+                        } label: {
+                            Label(tr("Plan with AI"), systemImage: "sparkles")
+                        }
+                        .accessibilityIdentifier("ios.workouts.aiBuilderButton")
+                    }
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -153,6 +162,11 @@ public struct WorkoutsView: View {
         }
         .sheet(isPresented: $showingFolderModal) {
             folderEditorSheet
+        }
+        .sheet(isPresented: $showingAIBuilder) {
+            AIWorkoutBuilderSheet(viewModel: viewModel) { _ in
+                expandedFolderIds.insert("__unfiled__")
+            }
         }
         .sheet(item: $activeBuilderContext) { context in
             TemplateBuilderSheetView(

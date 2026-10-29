@@ -382,7 +382,12 @@ describe('AuthService — Registration, Authentication & Brute-Force Protection'
     const canActivateBearer = await authGuard.canActivate(bearerCtx);
     assert.equal(canActivateBearer, true);
     assert.equal(bearerReq.authTransport, 'bearer');
-    assert.deepEqual(bearerReq.user, { id: registered.id, email: registered.email });
+    assert.deepEqual(bearerReq.user, {
+      id: registered.id,
+      email: registered.email,
+      permissions: [],
+      featureGrants: [],
+    });
 
     // CsrfGuard skips cookie CSRF checks when authenticated via Bearer token
     assert.equal(csrfGuard.canActivate(bearerCtx), true);

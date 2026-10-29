@@ -239,3 +239,41 @@ public enum SyncState: String, Codable, Sendable, CaseIterable, Equatable, Hasha
     case AUTH_EXPIRED
     case OFFLINE
 }
+
+/// Opt-in features granted per user by an admin (mirrors `FeatureGrant` in @luki-fitti/common).
+public enum FeatureGrant: String, Codable, Sendable, CaseIterable, Equatable, Hashable {
+    case AI_WORKOUT_BUILDER
+    case AI_MEAL_PHOTO
+}
+
+public enum MealType: String, Codable, Sendable, CaseIterable, Equatable, Hashable {
+    case BREAKFAST
+    case LUNCH
+    case DINNER
+    case SNACK
+    case COFFEE
+    case OTHER
+
+    /// Default meal for a time of day, so a quick add lands in the obvious slot.
+    public static func forTime(_ date: Date, calendar: Calendar = .current) -> MealType {
+        let hour = calendar.component(.hour, from: date)
+        switch hour {
+        case ..<10: return .BREAKFAST
+        case ..<14: return .LUNCH
+        case ..<17: return .SNACK
+        case ..<22: return .DINNER
+        default: return .SNACK
+        }
+    }
+}
+
+public enum FoodItemSource: String, Codable, Sendable, CaseIterable, Equatable, Hashable {
+    case MANUAL
+    case AI
+}
+
+public enum ExerciseFeedbackVerdict: String, Codable, Sendable, CaseIterable, Equatable, Hashable {
+    case NOT_WORKING
+    case PAIN
+    case DISLIKE
+}

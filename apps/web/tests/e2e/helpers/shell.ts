@@ -4,7 +4,14 @@
  */
 import { expect, type Page } from '@playwright/test';
 
-export type ShellTab = 'home' | 'workouts' | 'session' | 'diary' | 'exercises' | 'profile';
+export type ShellTab =
+  | 'home'
+  | 'workouts'
+  | 'session'
+  | 'nutrition'
+  | 'diary'
+  | 'exercises'
+  | 'profile';
 
 /**
  * Navigate to a main PWA tab, automatically picking the desktop horizontal nav

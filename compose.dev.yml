@@ -84,6 +84,15 @@ services:
       - 8025:8025 # Web UI & HTTP API (http://localhost:8025)
     networks:
       - luki_fitti_network
+  storage:
+    image: chrislusf/seaweedfs:4.01
+    restart: always
+    # Local dev only: S3 without auth on localhost. Production uses compose.yml with credentials.
+    command: 'server -dir=/data -s3'
+    ports:
+      - 8333:8333 # S3 API (S3_ENDPOINT=http://localhost:8333)
+    networks:
+      - luki_fitti_network
   redis:
     image: redis:alpine
     restart: always

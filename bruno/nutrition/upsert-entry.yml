@@ -1,0 +1,28 @@
+info:
+  name: upsert-entry
+  type: http
+  seq: 2
+
+http:
+  method: PUT
+  url: "{{API_URL}}:{{API_PORT}}/api/nutrition/entries"
+  body:
+    type: json
+    data: |-
+      {
+        "clientEntryId": "meal-bruno-0001",
+        "eatenAt": "2026-10-29T12:30:00Z",
+        "mealType": "LUNCH",
+        "label": null,
+        "items": [
+          { "name": "Basmati rice, cooked", "grams": 200, "kcal": 260, "proteinG": 5, "carbsG": 56, "fatG": 0.6 },
+          { "name": "Chicken breast, grilled", "grams": 150, "kcal": 248, "proteinG": 46, "carbsG": 0, "fatG": 5.4 }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

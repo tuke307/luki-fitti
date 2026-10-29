@@ -52,6 +52,8 @@ public final class OfflineStore {
 
     private let storageDirectory: URL
     public let apiClient: APIClient
+    /// Where this store persists its files; companion stores (e.g. nutrition) share it.
+    public var storageDirectoryURL: URL { storageDirectory }
 
     public init(
         storageDirectory: URL? = nil,
