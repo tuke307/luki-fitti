@@ -15,6 +15,12 @@ public struct RestTimerStatus: Sendable, Equatable {
     }
 }
 
+extension SessionExerciseDto {
+    /// `false` for exercises left out of a workout (e.g. unused variants); history lists them as
+    /// "not done".
+    public var hasLoggedSet: Bool { sets.contains(where: \.completed) }
+}
+
 public enum SessionCalculator {
     /// Index of the exercise a running workout should show when it is (re)opened: the one the user
     /// last opened, else the one with the most recently logged set while it still has open sets,
@@ -47,12 +53,28 @@ public enum SessionCalculator {
         } ?? 0
     }
 
+    /// Changes one set's type. Warm-ups always come first, so a set switched to warm-up moves to
+    /// the top; set numbers follow the new order.
+    public static func changingSetType(_ sets: [SessionSetDto], clientSetId: String, to setType: SetType) -> [SessionSetDto] {
+        let changed = sets.map { set -> SessionSetDto in
+            guard set.clientSetId == clientSetId else { return set }
+            var copy = set
+            copy.setType = setType
+            return copy
+        }
+        return TemplateSets.orderWarmupsFirst(changed, type: \.setType).enumerated().map { idx, set in
+            var copy = set
+            copy.setNumber = idx + 1
+            return copy
+        }
+    }
+
     /// On finish, exercises with a logged set are done and the rest (unused variants, left out)
     /// are stored as skipped, matching the web app.
     public static func finalizeExerciseStatuses(_ session: WorkoutSessionDto) -> WorkoutSessionDto {
         var finalized = session
         for idx in finalized.exercises.indices {
-            finalized.exercises[idx].status = finalized.exercises[idx].sets.contains(where: \.completed) ? .COMPLETED : .SKIPPED
+            finalized.exercises[idx].status = finalized.exercises[idx].hasLoggedSet ? .COMPLETED : .SKIPPED
         }
         return finalized
     }

@@ -5,7 +5,7 @@ import {
   mockAuthenticatedSession,
   resetOfflineStore,
 } from './helpers/offline-store.js';
-import { finishActiveWorkout, toggleCompleteSetRow } from './helpers/session.js';
+import { chooseFromSetMenu, finishActiveWorkout, toggleCompleteSetRow } from './helpers/session.js';
 import { createWorkoutTemplate, gotoWorkoutsTab, startWorkoutByName } from './helpers/workouts.js';
 
 test.describe('Training Diary Analytics & Backup Exports', () => {
@@ -43,6 +43,42 @@ test.describe('Training Diary Analytics & Backup Exports', () => {
     await expect(confirm).toBeVisible();
     await confirm.getByRole('button', { name: /^(Delete Workout|Training löschen)$/ }).click();
     await expect(sessionCard).not.toBeVisible();
+  });
+
+  test('changes the set type of a past workout and keeps it after saving', async ({ page }) => {
+    await resetOfflineStore(page);
+    const PUSH = 'Push — Chest, Shoulders & Triceps';
+
+    await gotoWorkoutsTab(page);
+    await startWorkoutByName(page, PUSH);
+    // Bench press starts with two warm-ups; log the first two working sets.
+    await toggleCompleteSetRow(page, 3);
+    await toggleCompleteSetRow(page, 4);
+    await finishActiveWorkout(page);
+    await page.getByRole('button', { name: /View in History/i }).click();
+
+    const sessionCard = page.getByTestId(`diary-session-card-${PUSH}`);
+    const before = await sessionCard.innerText();
+    await sessionCard.getByTestId('diary-session-inspect').click();
+    const dialog = page.getByRole('dialog');
+    const row = dialog.getByTestId('diary-set-row-1-3');
+    await expect(row).toHaveAttribute('data-set-type', 'WORKING');
+
+    await chooseFromSetMenu(page, row, 3, 'Warm-up');
+    await expect(row).toHaveAttribute('data-set-type', 'WARMUP');
+    await clickDialogButton(page, /^(Save|Speichern)$/);
+
+    // Warm-ups don't count towards volume.
+    await expect(sessionCard).not.toHaveText(before);
+    await sessionCard.getByTestId('diary-session-inspect').click();
+    await expect(dialog.getByTestId('diary-set-row-1-3')).toHaveAttribute(
+      'data-set-type',
+      'WARMUP',
+    );
+    await expect(dialog.getByTestId('diary-set-row-1-4')).toHaveAttribute(
+      'data-set-type',
+      'WORKING',
+    );
   });
 
   test('exports JSON backup and CSV workout log from Profile', async ({ page }) => {
