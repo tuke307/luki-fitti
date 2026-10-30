@@ -46,7 +46,7 @@ export class AiService {
       ...constraints,
     ].join('\n');
 
-    const { runId, output } = await this.runner.run(WORKOUT_BUILDER_SKILL, { userId, locale, content });
+    const { runId, output, usage } = await this.runner.run(WORKOUT_BUILDER_SKILL, { userId, locale, content });
 
     // Never trust model ids: resolve every id against the catalog visible to this user.
     const ids = new Set<string>();
@@ -110,6 +110,7 @@ export class AiService {
       exercises,
       notes: output.notes,
       droppedExerciseIds: dropped,
+      usage,
     };
   }
 
@@ -156,7 +157,7 @@ export class AiService {
           }),
         ),
       ];
-      const { runId, output } = await this.runner.run(MEAL_ANALYZER_SKILL, { userId, locale, content });
+      const { runId, output, usage } = await this.runner.run(MEAL_ANALYZER_SKILL, { userId, locale, content });
 
       const aiItems: MealItemInputDto[] = (output.containsFood ? output.items : []).map((item) => {
         const reconciled = reconcileKcal({
@@ -203,7 +204,7 @@ export class AiService {
         notes: entry.notes,
         items: [...manualItems, ...aiItems].slice(0, 50),
       });
-      return { runId, entry: saved, analysis: output, photosStored: stored };
+      return { runId, entry: saved, analysis: output, photosStored: stored, usage };
     } catch (err) {
       // Don't leave an empty, photo-only entry behind if this request created it.
       if (!existing) await this.nutrition.deleteEntry(userId, entry.id).catch(() => undefined);
