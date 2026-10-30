@@ -108,3 +108,7 @@ Models, switches, daily limit and photo retention are edited in **Admin → AI**
 For production storage, copy `seaweedfs-s3.json.sample` to `seaweedfs-s3.json` next to
 `compose.yml` and put the same credentials into `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY`.
 `seaweedfs-s3.json` is gitignored.
+
+For local dev (`compose.dev.yml`, same layout as kds/marienmuehle), copy the sample to
+`~/seaweedfs/luki-fitti/config/s3.json`. The S3 API is then at `http://localhost:8335` and the
+SeaweedFS admin UI at `http://localhost:23648`.

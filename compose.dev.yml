@@ -84,13 +84,32 @@ services:
       - 8025:8025 # Web UI & HTTP API (http://localhost:8025)
     networks:
       - luki_fitti_network
-  storage:
+  seaweedfs:
     image: chrislusf/seaweedfs:4.01
-    restart: always
-    # Local dev only: S3 without auth on localhost. Production uses compose.yml with credentials.
-    command: 'server -dir=/data -s3'
+    restart: on-failure
     ports:
-      - 8333:8333 # S3 API (S3_ENDPOINT=http://localhost:8333)
+      - '8335:8333' # S3 API, offset from kds (8333) and marienmuehle (8334)
+    volumes:
+      - ~/seaweedfs/luki-fitti:/data
+      - ~/seaweedfs/luki-fitti/config:/etc/seaweedfs
+    command: >
+      server
+      -dir=/data
+      -filer
+      -filer.port=8888
+      -s3
+      -s3.port=8333
+      -s3.config=/etc/seaweedfs/s3.json
+    networks:
+      - luki_fitti_network
+  seaweedfs-admin:
+    image: chrislusf/seaweedfs:4.01
+    restart: on-failure
+    ports:
+      - '23648:23646' # admin UI, offset from kds (23646) and marienmuehle (23647)
+    command: admin -master=seaweedfs:9333 -port=23646
+    depends_on:
+      - seaweedfs
     networks:
       - luki_fitti_network
   redis:
