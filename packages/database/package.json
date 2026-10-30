@@ -20,7 +20,6 @@
     "db:migrate": "prisma migrate dev --name",
     "db:push": "dotenv -e .env.local -- prisma db push",
     "db:seed": "dotenv -e .env.local -- tsx src/seed.ts",
-    "admin:grant": "dotenv -e .env.local -- tsx src/admin-grant.ts",
     "db:studio": "dotenv -e .env.local -- prisma studio",
     "db:generate": "prisma generate",
     "format": "prisma format",
