@@ -1,4 +1,4 @@
-import { MEAL_TYPES, MealType, SessionStatus } from '@luki-fitti/common/enums';
+import { MEAL_TYPES, MealAmountUnit, MealType, SessionStatus } from '@luki-fitti/common/enums';
 import type {
   MealEntryDto,
   UpsertMealEntryDto,
@@ -117,6 +117,7 @@ export function entryFromPayload(
       orderIndex: index,
       name: item.name,
       grams: item.grams ?? null,
+      amountUnit: item.amountUnit ?? MealAmountUnit.G,
       kcal: item.kcal,
       proteinG: item.proteinG,
       carbsG: item.carbsG,

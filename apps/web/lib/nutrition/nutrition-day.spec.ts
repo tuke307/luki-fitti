@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   FoodItemSource,
+  MealAmountUnit,
   MealType,
   SessionStatus,
   SessionType,
@@ -24,7 +25,17 @@ const entry = (eatenAt: Date, mealType: MealType, kcal: number): MealEntryDto =>
     clientEntryId: `c-${eatenAt.getTime()}`,
     eatenAt: eatenAt.toISOString(),
     mealType,
-    items: [{ name: 'x', kcal, proteinG: 10, carbsG: 10, fatG: 1, source: FoodItemSource.MANUAL }],
+    items: [
+      {
+        name: 'x',
+        kcal,
+        proteinG: 10,
+        carbsG: 10,
+        fatG: 1,
+        source: FoodItemSource.MANUAL,
+        amountUnit: MealAmountUnit.G,
+      },
+    ],
   });
 
 const session = (startedAt: Date, extra: Partial<WorkoutSessionDto> = {}) =>
@@ -134,5 +145,38 @@ describe('nutrition day helpers', () => {
     assert.equal(mealTypeForTime(new Date(2026, 0, 1, 7)), MealType.BREAKFAST);
     assert.equal(mealTypeForTime(new Date(2026, 0, 1, 12)), MealType.LUNCH);
     assert.equal(mealTypeForTime(new Date(2026, 0, 1, 19)), MealType.DINNER);
+  });
+});
+
+describe('entryFromPayload amount units', () => {
+  it('keeps the unit and defaults legacy payloads to grams', () => {
+    const dto = entryFromPayload({
+      clientEntryId: 'c-units',
+      eatenAt: new Date().toISOString(),
+      mealType: MealType.LUNCH,
+      items: [
+        {
+          name: 'Iced tea',
+          grams: 500,
+          amountUnit: MealAmountUnit.ML,
+          kcal: 140,
+          proteinG: 0,
+          carbsG: 34,
+          fatG: 0,
+          source: FoodItemSource.AI,
+        },
+        {
+          name: 'Rice',
+          grams: 150,
+          kcal: 200,
+          proteinG: 4,
+          carbsG: 44,
+          fatG: 1,
+          source: FoodItemSource.MANUAL,
+        } as never,
+      ],
+    });
+    assert.equal(dto.items[0]?.amountUnit, MealAmountUnit.ML);
+    assert.equal(dto.items[1]?.amountUnit, MealAmountUnit.G);
   });
 });
