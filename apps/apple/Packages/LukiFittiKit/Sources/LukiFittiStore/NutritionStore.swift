@@ -129,6 +129,7 @@ public final class NutritionStore {
         outbox = []
         try? FileManager.default.removeItem(at: directory.appendingPathComponent("nutrition_entries.json"))
         try? FileManager.default.removeItem(at: directory.appendingPathComponent("nutrition_outbox.json"))
+        MealPhotoCache.shared.clear()
     }
 
     // MARK: Helpers
@@ -142,6 +143,7 @@ public final class NutritionStore {
                 orderIndex: index,
                 name: item.name,
                 grams: item.grams,
+                amountUnit: item.amountUnit,
                 kcal: item.kcal,
                 proteinG: item.proteinG,
                 carbsG: item.carbsG,
