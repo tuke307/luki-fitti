@@ -79,6 +79,9 @@ public final class HealthKitWorkoutCoordinator: NSObject {
             HKQuantityType(.heartRate),
             HKQuantityType(.activeEnergyBurned),
             HKQuantityType(.basalEnergyBurned),
+            HKQuantityType(.distanceWalkingRunning),
+            HKQuantityType(.distanceCycling),
+            HKQuantityType(.distanceSwimming),
             HKObjectType.workoutType(),
         ]
         do {
@@ -171,9 +174,10 @@ public final class HealthKitWorkoutCoordinator: NSObject {
     public func finishWorkout(clientSessionId: String) async -> FinalizedHealthKitMetrics {
         isWorkoutRunning = false
         isWorkoutPaused = false
-        let hkUuid = UUID().uuidString.lowercased()
+        // The Apple Health workout is saved afterwards by `WorkoutHealthExport` (iPhone), which
+        // sets the real UUID; no workout exists yet at this point.
         return FinalizedHealthKitMetrics(
-            healthKitWorkoutUuid: hkUuid,
+            healthKitWorkoutUuid: nil,
             activeCaloriesKcal: activeCaloriesKcal,
             totalCaloriesKcal: totalCaloriesKcal,
             avgHeartRateBpm: avgHeartRateBpm,
