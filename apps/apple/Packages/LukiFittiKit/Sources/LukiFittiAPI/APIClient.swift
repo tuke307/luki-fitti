@@ -200,7 +200,7 @@ public actor APIClient {
     }
 
     public func fetchStretchingRoutines() async throws -> [StretchingRoutineDto] {
-        try await request(path: "/api/stretching-routines", method: "GET")
+        try await request(path: "/api/stretching/routines", method: "GET")
     }
 
     public func syncSession(_ payload: SyncSessionPayloadDto) async throws -> SyncSessionResponseDto {
