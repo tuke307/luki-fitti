@@ -18,7 +18,8 @@ public struct ExercisesAndStretchingView: View {
 
     public var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            // Lazy so only visible rows (each with two Canvas poses) are built; the catalog has 1000+.
+            LazyVStack(alignment: .leading, spacing: 16) {
                 Picker(tr("Library"), selection: $activeSubTab) {
                     Text(tr("Exercises (%d)", viewModel.store.catalog.count)).tag("catalog")
                     Text(tr("Stretching (%d)", viewModel.store.stretchingRoutines.count)).tag("stretching")
@@ -152,7 +153,10 @@ public struct ExercisesAndStretchingView: View {
         }
         // Build the search index once per catalog instead of on every keystroke.
         .task(id: viewModel.store.catalog.count) {
-            searchIndex = .catalogWithLabels(viewModel.store.catalog)
+            let catalog = viewModel.store.catalog
+            searchIndex = await Task.detached(priority: .userInitiated) {
+                ExerciseSearchIndex.catalogWithLabels(catalog)
+            }.value
         }
     }
 
