@@ -90,10 +90,6 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return prisma.sessionSet;
   }
 
-  get importJob(): typeof prisma.importJob {
-    return prisma.importJob;
-  }
-
   get emailTemplate(): typeof prisma.emailTemplate {
     return prisma.emailTemplate;
   }

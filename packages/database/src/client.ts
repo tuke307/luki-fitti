@@ -43,7 +43,6 @@ export type {
   WorkoutSession,
   SessionExercise,
   SessionSet,
-  ImportJob,
   EmailTemplate,
   Email,
   AppSettings,
