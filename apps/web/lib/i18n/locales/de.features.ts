@@ -107,6 +107,15 @@ export const deFeatures: Widen<typeof enFeatures> = {
     removePhoto: 'Foto {n} entfernen',
     hintLabel: 'Noch etwas dazu? (optional)',
     hintPlaceholder: 'z. B. etwa 200 g Reis, in Olivenöl gebraten',
+    sectionTitle: 'Fotos oder Beschreibung',
+    describeLabel: 'Beschreib deine Mahlzeit',
+    describePlaceholder:
+      'z. B. Müsli zum Frühstück, ca. 100 g, mit 1/4 Scoop Proteinpulver, Hafermilch und Cappuccino',
+    describeHelp:
+      'Ohne Fotos schlägt die KI Lebensmittel aus deiner Beschreibung vor. Du kannst sie vor dem Speichern anpassen.',
+    describeTooShort: 'Beschreib deine Mahlzeit in ein paar Worten.',
+    noFoodText: 'In dieser Beschreibung haben wir kein Essen gefunden.',
+    proposed: 'Prüf die vorgeschlagenen Lebensmittel und pass die Mengen bei Bedarf an.',
     analyze: 'Schätzen',
     analyzing: 'Mahlzeit wird angesehen…',
     review: 'Prüf die Schätzung und pass die Mengen bei Bedarf an.',
@@ -372,6 +381,7 @@ export const deFeatures: Widen<typeof enFeatures> = {
     skills: {
       'workout-builder': 'Workout-Planer',
       'meal-analyzer': 'Mahlzeitenfoto',
+      'meal-text-analyzer': 'Mahlzeitenbeschreibung',
     },
     adminCost: 'KI-Kosten (30 Tage)',
     adminDetailTitle: 'KI-Nutzung · {email}',
