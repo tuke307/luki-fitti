@@ -13,10 +13,15 @@ import {
   buildDay,
   dayKey,
   entryFromPayload,
+  kcalByDay,
   lastDays,
   mealTypeForTime,
+  mergeWindow,
+  ringProgress,
   sessionBurnKcal,
   shiftDay,
+  weekDays,
+  weekStartKey,
 } from './nutrition-day';
 
 const entry = (eatenAt: Date, mealType: MealType, kcal: number): MealEntryDto =>
@@ -134,5 +139,57 @@ describe('nutrition day helpers', () => {
     assert.equal(mealTypeForTime(new Date(2026, 0, 1, 7)), MealType.BREAKFAST);
     assert.equal(mealTypeForTime(new Date(2026, 0, 1, 12)), MealType.LUNCH);
     assert.equal(mealTypeForTime(new Date(2026, 0, 1, 19)), MealType.DINNER);
+  });
+
+  it('finds the Monday-first week of a day', () => {
+    assert.equal(weekStartKey('2026-10-28'), '2026-10-26'); // Wednesday
+    assert.equal(weekStartKey('2026-10-26'), '2026-10-26'); // Monday
+    assert.equal(weekStartKey('2026-11-01'), '2026-10-26'); // Sunday
+    assert.deepEqual(weekDays('2026-10-26'), [
+      '2026-10-26',
+      '2026-10-27',
+      '2026-10-28',
+      '2026-10-29',
+      '2026-10-30',
+      '2026-10-31',
+      '2026-11-01',
+    ]);
+  });
+
+  it('sums kcal per local day and fills rings against the goal', () => {
+    const byDay = kcalByDay([
+      entry(new Date(2026, 9, 29, 8), MealType.BREAKFAST, 300),
+      entry(new Date(2026, 9, 29, 19), MealType.DINNER, 800),
+      entry(new Date(2026, 9, 28, 23, 30), MealType.SNACK, 150),
+    ]);
+    assert.equal(byDay.get('2026-10-29'), 1100);
+    assert.equal(byDay.get('2026-10-28'), 150);
+    assert.equal(byDay.get('2026-10-27'), undefined);
+    assert.equal(ringProgress(1100, 2200), 0.5);
+    assert.equal(ringProgress(3000, 2200), 1);
+    assert.equal(ringProgress(200, null), 1);
+    assert.equal(ringProgress(0, null), 0);
+  });
+
+  it('replaces only the fetched window and keeps pending changes', () => {
+    const older = entry(new Date(2026, 8, 10, 12), MealType.LUNCH, 100);
+    const gone = entry(new Date(2026, 9, 5, 12), MealType.LUNCH, 100);
+    const edited = entry(new Date(2026, 9, 6, 12), MealType.LUNCH, 100);
+    const pendingLocal = entry(new Date(2026, 9, 7, 12), MealType.LUNCH, 900);
+    const merged = mergeWindow(
+      [older, gone, edited, pendingLocal],
+      [
+        { ...edited, totals: { ...edited.totals, kcal: 250 } },
+        { ...pendingLocal, id: 'srv' },
+      ],
+      { from: new Date(2026, 9, 1).toISOString(), to: new Date(2026, 10, 1).toISOString() },
+      { ids: new Set([pendingLocal.clientEntryId]), upserts: [pendingLocal] },
+    );
+    assert.deepEqual(
+      merged.map((e) => e.clientEntryId),
+      [older.clientEntryId, edited.clientEntryId, pendingLocal.clientEntryId],
+    );
+    assert.equal(merged[1]?.totals.kcal, 250);
+    assert.equal(merged[2]?.totals.kcal, 900);
   });
 });
