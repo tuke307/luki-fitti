@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Camera, ChevronLeft, ChevronRight, Flame, Plus } from 'lucide-react';
+import { Camera, ChevronLeft, ChevronRight, Flame, Plus, Target } from 'lucide-react';
 import {
   Bar,
   BarChart,
@@ -26,6 +26,7 @@ import { useBodyWeight } from '@/lib/body-weight/use-body-weight';
 import type { NavTab } from '../pwa-shell';
 import { MealEditorDialog } from './meal-editor-dialog';
 import { MealPhotoDialog } from './meal-photo-dialog';
+import { NutritionGoalsDialog } from './nutrition-goals-form';
 
 const toPayload = (e: MealEntryDto): UpsertMealEntryDto => ({
   clientEntryId: e.clientEntryId,
@@ -48,7 +49,8 @@ const toPayload = (e: MealEntryDto): UpsertMealEntryDto => ({
 });
 
 export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => void }) {
-  const { user } = useAuth();
+  const { user, authMode } = useAuth();
+  const isAuthenticated = authMode === 'AUTHENTICATED';
   const { historySessions, isOnline } = useGym();
   const { t, format, bcp47 } = useLocale();
   const { entries, pending, save, remove, upsertLocal } = useNutrition();
@@ -159,11 +161,46 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
       </header>
 
       <section aria-label={t.nutrition.eaten} className="bg-card space-y-5 rounded-[1.25rem] p-5">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-[1.0625rem] font-semibold tabular-nums">
+            {kcalGoal !== null
+              ? `${t.nutrition.goal}: ${kcalGoal} ${t.nutrition.kcal}`
+              : t.profileBody.goalsTitle}
+          </h2>
+          {isAuthenticated ? (
+            <NutritionGoalsDialog>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                aria-label={t.profileBody.goalsAria}
+                data-testid="nutrition-goals-btn"
+              >
+                <Target className="h-4 w-4" aria-hidden="true" /> {t.profileBody.goalsButton}
+              </Button>
+            </NutritionGoalsDialog>
+          ) : null}
+        </div>
         <div className="flex items-center gap-5">
-          <IntakeRing
-            progress={goalProgress(net, kcalGoal) ?? (day.totals.kcal > 0 ? 1 : 0)}
-            over={remaining !== null && remaining < 0}
-          />
+          {isAuthenticated ? (
+            <NutritionGoalsDialog>
+              <button
+                type="button"
+                aria-label={t.profileBody.goalsAria}
+                className="focus-visible:ring-ring/50 shrink-0 rounded-full outline-none focus-visible:ring-[3px]"
+              >
+                <IntakeRing
+                  progress={goalProgress(net, kcalGoal) ?? (day.totals.kcal > 0 ? 1 : 0)}
+                  over={remaining !== null && remaining < 0}
+                />
+              </button>
+            </NutritionGoalsDialog>
+          ) : (
+            <IntakeRing
+              progress={goalProgress(net, kcalGoal) ?? (day.totals.kcal > 0 ? 1 : 0)}
+              over={remaining !== null && remaining < 0}
+            />
+          )}
           <dl className="grid min-w-0 flex-1 grid-cols-3 gap-2">
             {[
               [t.nutrition.eaten, day.totals.kcal],
@@ -182,20 +219,27 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
             ))}
           </dl>
         </div>
-        {kcalGoal === null && (
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-muted-foreground text-[0.875rem]">{t.nutrition.noGoal}</p>
-            <Button
-              type="button"
-              variant="link"
-              size="sm"
-              className="px-0"
-              onClick={() => onNavigate('profile')}
-            >
-              {t.nutrition.setGoal}
-            </Button>
-          </div>
-        )}
+        {kcalGoal === null &&
+          (isAuthenticated ? (
+            <NutritionGoalsDialog>
+              <Button type="button" variant="link" size="sm" className="px-0">
+                <Plus className="h-4 w-4" aria-hidden="true" /> {t.profileBody.setGoalHint}
+              </Button>
+            </NutritionGoalsDialog>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-muted-foreground text-[0.875rem]">{t.nutrition.noGoal}</p>
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="px-0"
+                onClick={() => onNavigate('profile')}
+              >
+                {t.nutrition.setGoal}
+              </Button>
+            </div>
+          ))}
         <ul className="grid grid-cols-3 gap-3">
           {macros.map((m) => {
             const p = goalProgress(m.value, m.goal);
