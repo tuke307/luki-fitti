@@ -4,10 +4,10 @@ import LukiFittiDesign
 import LukiFittiDomain
 
 /// Body metrics (for burn estimates) and daily nutrition goals. Saved to the server explicitly.
+/// Body weight comes from the weigh-in history (read-only here; edited on the weight screen).
 struct BodyNutritionSection: View {
     @Bindable var viewModel: LukiAppViewModel
     @Environment(\.lukiLocale) private var tr
-    @State private var bodyWeightKg: Double?
     @State private var heightCm: Double?
     @State private var birthYear: Int?
     @State private var sex: String = ""
@@ -21,7 +21,6 @@ struct BodyNutritionSection: View {
     init(viewModel: LukiAppViewModel) {
         self.viewModel = viewModel
         let p = viewModel.store.preferences
-        _bodyWeightKg = State(initialValue: p.bodyWeightKg)
         _heightCm = State(initialValue: p.heightCm)
         _birthYear = State(initialValue: p.birthYear)
         _sex = State(initialValue: p.sex ?? "")
@@ -30,6 +29,9 @@ struct BodyNutritionSection: View {
         _carbsGoal = State(initialValue: p.carbsGoalG)
         _fatGoal = State(initialValue: p.fatGoalG)
     }
+
+    /// Latest weigh-in, else the value saved before weigh-ins existed.
+    private var bodyWeightKg: Double? { viewModel.currentBodyWeightKg }
 
     private var suggestion: Int? {
         NutritionMath.suggestedDailyKcal(
@@ -45,7 +47,7 @@ struct BodyNutritionSection: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
-            row(tr("Body weight (kg)"), value: $bodyWeightKg)
+            currentWeightRow
             row(tr("Height (cm)"), value: $heightCm)
             intRow(tr("Year of birth"), value: $birthYear)
             Picker(tr("Sex (for estimates)"), selection: $sex) {
@@ -82,6 +84,32 @@ struct BodyNutritionSection: View {
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
     }
 
+    private var currentWeightRow: some View {
+        let display = WeightDisplay(unit: viewModel.store.preferences.weightUnit, locale: tr)
+        return NavigationLink {
+            WeightView(viewModel: viewModel)
+        } label: {
+            HStack {
+                Text(tr("Current weight"))
+                    .foregroundStyle(.primary)
+                Spacer()
+                Text(bodyWeightKg.map(display.withUnit) ?? tr("Log weight"))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
+            }
+            .font(.subheadline)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint(tr("Opens your weight history"))
+        .accessibilityIdentifier("ios.profile.currentWeightRow")
+    }
+
     private func row(_ title: String, value: Binding<Double?>) -> some View {
         HStack {
             Text(title)
@@ -109,7 +137,6 @@ struct BodyNutritionSection: View {
         saving = true
         defer { saving = false }
         var dto = UpdatePreferencesDto()
-        dto.bodyWeightKg = bodyWeightKg
         dto.heightCm = heightCm
         dto.birthYear = birthYear
         dto.sex = sex.isEmpty ? nil : sex

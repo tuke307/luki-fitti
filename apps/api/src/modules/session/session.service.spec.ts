@@ -459,4 +459,70 @@ describe('SessionService — Offline Sync Idempotency, Conflict Detection & Volu
     assert.equal(setDto?.peakHeartRateBpm, 168);
     assert.equal(setDto?.restEndHeartRateBpm, 118);
   });
+
+  it('estimates calories with the body weight effective when the session started', async () => {
+    const prisma = createMockSessionPrisma();
+    const history = [
+      { userId: 'user-1', measuredAt: new Date('2026-10-01T07:00:00Z'), weightKg: 60 },
+      { userId: 'user-1', measuredAt: new Date('2026-10-15T07:00:00Z'), weightKg: 120 },
+      { userId: 'user-2', measuredAt: new Date('2026-10-10T07:00:00Z'), weightKg: 200 },
+    ];
+    prisma.bodyWeightEntry = {
+      findFirst: async ({
+        where,
+        orderBy,
+      }: {
+        where: { userId: string; measuredAt?: { lte: Date } };
+        orderBy: { measuredAt: 'asc' | 'desc' };
+      }) => {
+        const rows = history
+          .filter((e) => e.userId === where.userId)
+          .filter((e) => !where.measuredAt || e.measuredAt <= where.measuredAt.lte)
+          .sort((a, b) => a.measuredAt.getTime() - b.measuredAt.getTime());
+        return (orderBy.measuredAt === 'asc' ? rows[0] : rows.at(-1)) ?? null;
+      },
+    };
+    prisma.userPreferences = { findUnique: async () => ({ bodyWeightKg: 999 }) };
+    const service = new SessionService(prisma);
+
+    const sync = async (clientSessionId: string, startedAt: string) =>
+      (
+        await service.syncSession('user-1', {
+          clientSessionId,
+          sessionType: SessionType.STRENGTH,
+          workoutNameSnapshot: 'Day 1',
+          status: SessionStatus.COMPLETED,
+          startedAt,
+          completedAt: startedAt,
+          activeDurationSeconds: 3600,
+          weightUnit: WeightUnit.KG,
+          version: 1,
+          exercises: [],
+        })
+      ).session.estimatedCaloriesKcal ?? 0;
+
+    const early = await sync('client-weight-early', '2026-09-20T17:00:00Z');
+    const mid = await sync('client-weight-mid', '2026-10-05T17:00:00Z');
+    const late = await sync('client-weight-late', '2026-10-20T17:00:00Z');
+    assert.ok(mid > 0);
+    assert.equal(early, mid, 'sessions before the first weigh-in use the earliest one');
+    assert.equal(late, mid * 2, 'later weigh-in (120 kg vs 60 kg) doubles the estimate');
+
+    // Without any weigh-in history the legacy preferences value is used.
+    const noHistory = createMockSessionPrisma();
+    noHistory.bodyWeightEntry = { findFirst: async () => null };
+    noHistory.userPreferences = { findUnique: async () => ({ bodyWeightKg: 60 }) };
+    const legacy = await new SessionService(noHistory).syncSession('user-1', {
+      clientSessionId: 'client-weight-legacy',
+      sessionType: SessionType.STRENGTH,
+      workoutNameSnapshot: 'Day 1',
+      status: SessionStatus.COMPLETED,
+      startedAt: '2026-10-05T17:00:00Z',
+      activeDurationSeconds: 3600,
+      weightUnit: WeightUnit.KG,
+      version: 1,
+      exercises: [],
+    });
+    assert.equal(legacy.session.estimatedCaloriesKcal, mid);
+  });
 });

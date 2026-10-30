@@ -9,11 +9,13 @@ import {
 } from '@luki-fitti/common/enums';
 import type { MealEntryDto, WorkoutSessionDto } from '@luki-fitti/common/schemas';
 import {
+  bodyWeightForSession,
   buildDay,
   dayKey,
   entryFromPayload,
   lastDays,
   mealTypeForTime,
+  sessionBurnKcal,
   shiftDay,
 } from './nutrition-day';
 
@@ -74,6 +76,7 @@ describe('nutrition day helpers', () => {
         session(new Date(2026, 9, 29, 18), { estimatedCaloriesKcal: 280 }),
         session(new Date(2026, 9, 29, 7), { status: SessionStatus.ABANDONED }),
       ],
+      [],
       80,
     );
     assert.equal(day.totals.kcal, 900);
@@ -90,9 +93,41 @@ describe('nutrition day helpers', () => {
       dayKey(new Date(2026, 9, 29, 18)),
       [],
       [session(new Date(2026, 9, 29, 18))],
+      [],
       80,
     );
     assert.equal(day.burnedKcal, 200); // (3.5 − 1) × 80 kg × 1 h
+  });
+
+  it('uses the weigh-in that applied when the workout started', () => {
+    const weighIns = [
+      { measuredAt: new Date(2026, 9, 1, 7).toISOString(), weightKg: 100 },
+      { measuredAt: new Date(2026, 9, 20, 7).toISOString(), weightKg: 60 },
+    ];
+    // Before the first weigh-in → earliest weigh-in (100 kg), not the profile fallback.
+    assert.equal(bodyWeightForSession(session(new Date(2026, 8, 20, 18)), weighIns, 80), 100);
+    // Between weigh-ins → the latest one on or before the workout.
+    const mid = session(new Date(2026, 9, 10, 18));
+    assert.equal(bodyWeightForSession(mid, weighIns, 80), 100);
+    assert.equal(sessionBurnKcal(mid, weighIns, 80).kcal, 250); // (3.5 − 1) × 100 kg × 1 h
+    // After the latest weigh-in.
+    const late = session(new Date(2026, 9, 29, 18));
+    assert.equal(sessionBurnKcal(late, weighIns, 80).kcal, 150); // (3.5 − 1) × 60 kg × 1 h
+    const day = buildDay(dayKey(new Date(2026, 9, 29, 18)), [], [late], weighIns, 80);
+    assert.equal(day.burnedKcal, 150);
+    assert.equal(day.usedDefaultBodyWeight, false);
+  });
+
+  it('falls back to the profile weight, then flags the default weight', () => {
+    const s = session(new Date(2026, 9, 29, 18));
+    assert.equal(bodyWeightForSession(s, [], 80), 80);
+    assert.equal(sessionBurnKcal(s, [], 80).usedDefaultBodyWeight, false);
+    assert.equal(bodyWeightForSession(s, [], null), null);
+    assert.equal(sessionBurnKcal(s).usedDefaultBodyWeight, true);
+    const server = session(new Date(2026, 9, 29, 18), { estimatedCaloriesKcal: 300 });
+    assert.equal(sessionBurnKcal(server).usedDefaultBodyWeight, true);
+    assert.equal(sessionBurnKcal(server, [], 80).usedDefaultBodyWeight, false);
+    assert.equal(sessionBurnKcal(server, [], 80).kcal, 300);
   });
 
   it('suggests a meal type from the time of day', () => {

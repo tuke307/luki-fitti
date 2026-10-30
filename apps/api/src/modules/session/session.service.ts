@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException, Optional } from '@ne
 import crypto from 'crypto';
 import { PrismaService } from '../database/prisma.service';
 import { WorkoutService } from '../workout/workout.service';
+import { resolveBodyWeightAt } from '../body-weight/body-weight.service';
 import {
   ExerciseType,
   SessionExerciseOrigin,
@@ -429,14 +430,12 @@ export class SessionService {
       payload.totalCaloriesKcal !== undefined
         ? payload.totalCaloriesKcal
         : (existing?.totalCaloriesKcal ?? null);
-    const bodyWeightKg = this.prisma.userPreferences?.findUnique
-      ? ((
-          await this.prisma.userPreferences.findUnique({
-            where: { userId },
-            select: { bodyWeightKg: true },
-          })
-        )?.bodyWeightKg ?? null)
-      : null;
+    // Weight effective when the workout started, so later weigh-ins don't rewrite history.
+    const bodyWeightKg = await resolveBodyWeightAt(
+      this.prisma,
+      userId,
+      new Date(payload.startedAt),
+    );
     const estimatedCaloriesKcal = estimateWorkoutEnergy(
       {
         sessionType: payload.sessionType,

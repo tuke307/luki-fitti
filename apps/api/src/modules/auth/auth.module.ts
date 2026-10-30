@@ -3,9 +3,10 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { RefreshTokenService } from './refresh-token.service';
 import { EmailModule } from '../email/email.module';
+import { BodyWeightModule } from '../body-weight/body-weight.module';
 
 @Module({
-  imports: [EmailModule],
+  imports: [EmailModule, BodyWeightModule],
   controllers: [AuthController],
   providers: [AuthService, RefreshTokenService],
   exports: [AuthService, RefreshTokenService],

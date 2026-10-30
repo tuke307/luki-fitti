@@ -125,4 +125,8 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get mealPhoto(): typeof prisma.mealPhoto {
     return prisma.mealPhoto;
   }
+
+  get bodyWeightEntry(): typeof prisma.bodyWeightEntry {
+    return prisma.bodyWeightEntry;
+  }
 }

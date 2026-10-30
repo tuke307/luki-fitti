@@ -132,6 +132,9 @@ export const UpdatePreferencesSchema = z.object({
   proteinGoalG: z.number().int().min(0).max(600).nullable().optional(),
   carbsGoalG: z.number().int().min(0).max(1500).nullable().optional(),
   fatGoalG: z.number().int().min(0).max(600).nullable().optional(),
+  weighInReminderEnabled: z.boolean().optional(),
+  weighInReminderWeekday: z.number().int().min(1).max(7).optional(),
+  weighInReminderMinutes: z.number().int().min(0).max(1439).optional(),
 });
 
 export const UserPreferencesSchema = z.object({
@@ -154,6 +157,9 @@ export const UserPreferencesSchema = z.object({
   proteinGoalG: z.number().nullable().optional(),
   carbsGoalG: z.number().nullable().optional(),
   fatGoalG: z.number().nullable().optional(),
+  weighInReminderEnabled: z.boolean().default(false).optional(),
+  weighInReminderWeekday: z.number().default(2).optional(),
+  weighInReminderMinutes: z.number().default(450).optional(),
 });
 
 export const UserSchema = z.object({
@@ -782,4 +788,5 @@ export interface AnalyticsSummaryDto {
 
 export * from './admin.schemas';
 export * from './nutrition.schemas';
+export * from './body-weight.schemas';
 export * from './ai.schemas';

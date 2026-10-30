@@ -245,6 +245,35 @@ public actor APIClient {
         try await request(path: "/api/nutrition/recent-items", method: "GET")
     }
 
+    // MARK: - Body Weight
+
+    /// Weigh-ins sorted by `measuredAt` ascending. Both bounds are optional (whole history).
+    public func fetchBodyWeightEntries(from: Date? = nil, to: Date? = nil) async throws -> [BodyWeightEntryDto] {
+        let f = ISO8601DateFormatter()
+        var items: [URLQueryItem] = []
+        if let from { items.append(URLQueryItem(name: "from", value: f.string(from: from))) }
+        if let to { items.append(URLQueryItem(name: "to", value: f.string(from: to))) }
+        var components = URLComponents()
+        components.queryItems = items.isEmpty ? nil : items
+        let query = components.percentEncodedQuery.map { "?\($0)" } ?? ""
+        return try await request(path: "/api/body-weight/entries\(query)", method: "GET")
+    }
+
+    /// Idempotent upsert keyed by `clientEntryId`.
+    public func upsertBodyWeightEntry(_ dto: UpsertBodyWeightEntryDto) async throws -> BodyWeightEntryDto {
+        try await request(path: "/api/body-weight/entries", method: "PUT", body: dto)
+    }
+
+    public func deleteBodyWeightEntry(id: String) async throws {
+        struct Resp: Decodable { let success: Bool? }
+        let _: Resp = try await request(path: "/api/body-weight/entries/\(Self.pathComponent(id))", method: "DELETE")
+    }
+
+    /// Uploads Apple Health weigh-ins (≤ 500 samples and ≤ 500 deletions per call).
+    public func importBodyWeight(_ dto: ImportBodyWeightDto) async throws -> ImportBodyWeightResultDto {
+        try await request(path: "/api/body-weight/import", method: "POST", body: dto)
+    }
+
     public func buildWorkout(_ dto: WorkoutBuilderRequestDto) async throws -> WorkoutBuilderResponseDto {
         try await request(path: "/api/ai/workout-builder", method: "POST", body: dto)
     }
