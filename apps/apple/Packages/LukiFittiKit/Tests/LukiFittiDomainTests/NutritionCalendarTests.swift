@@ -41,6 +41,133 @@ final class NutritionCalendarTests: XCTestCase {
         XCTAssertEqual(asked.count, 2)
     }
 
+    // MARK: Burned calories with Apple Health
+
+    private var day27: Date { calendar.startOfDay(for: date("2026-10-27T12:00:00Z")) }
+
+    private func session(_ name: String, _ start: String, _ end: String, kcal: Double) -> WorkoutSessionDto {
+        WorkoutSessionDto(
+            clientSessionId: "sess-\(name)",
+            workoutNameSnapshot: name,
+            status: .COMPLETED,
+            startedAt: start,
+            completedAt: end,
+            activeCaloriesKcal: kcal
+        )
+    }
+
+    private func workout(
+        _ uuid: String, _ start: String, _ end: String, kcal: Double?, own: Bool = false, type: String = "running"
+    ) -> HealthWorkoutDto {
+        HealthWorkoutDto(
+            id: uuid, healthKitUuid: uuid, activityType: type, sourceName: own ? "LukiFitti" : "Strava",
+            isOwn: own, startedAt: start, endedAt: end, activeKcal: kcal
+        )
+    }
+
+    private func burns(
+        _ sessions: [WorkoutSessionDto], days: [HealthDailyEnergyDto] = [], workouts: [HealthWorkoutDto] = []
+    ) -> [Date: NutritionCalendar.DayBurn] {
+        NutritionCalendar.dayBurns(
+            sessions: sessions, healthDays: days, healthWorkouts: workouts, calendar: calendar
+        ) { _ in 80 }
+    }
+
+    func testDayBurnsWithoutHealthDataMatchesSessionEstimates() {
+        let result = burns([
+            session("Push", "2026-10-27T08:00:00Z", "2026-10-27T09:00:00Z", kcal: 300),
+            session("Pull", "2026-10-27T17:00:00Z", "2026-10-27T18:00:00Z", kcal: 200),
+        ])
+        let legacy = NutritionCalendar.burnByDay(
+            [session("Push", "2026-10-27T08:00:00Z", "2026-10-27T09:00:00Z", kcal: 300),
+             session("Pull", "2026-10-27T17:00:00Z", "2026-10-27T18:00:00Z", kcal: 200)],
+            calendar: calendar
+        ) { _ in 80 }
+        XCTAssertEqual(result[day27]?.total, 500)
+        XCTAssertEqual(result[day27]?.total, legacy[day27]?.reduce(0) { $0 + $1.kcal })
+        XCTAssertEqual(result[day27]?.items.map(\.kcal), [300, 200])
+        XCTAssertEqual(result[day27]?.hasHealthDay, false)
+    }
+
+    func testHealthDayPlusUncoveredSession() {
+        let result = burns(
+            [session("Push", "2026-10-27T08:00:00Z", "2026-10-27T09:00:00Z", kcal: 300)],
+            days: [HealthDailyEnergyDto(day: "2026-10-27", activeKcal: 450.4)]
+        )
+        let burn = result[day27]
+        XCTAssertEqual(burn?.total, 750, "Health day total + session Health doesn't know about")
+        XCTAssertEqual(burn?.items.last, .dailyActivity(kcal: 450))
+        XCTAssertEqual(burn?.hasHealthDay, true)
+    }
+
+    func testCoveredSessionUsesExternalWorkoutKcal() {
+        let strava = workout("w1", "2026-10-27T08:05:00Z", "2026-10-27T09:05:00Z", kcal: 420, type: "traditionalStrengthTraining")
+        let result = burns(
+            [session("Push", "2026-10-27T08:00:00Z", "2026-10-27T09:00:00Z", kcal: 300)],
+            days: [HealthDailyEnergyDto(day: "2026-10-27", activeKcal: 900)],
+            workouts: [strava]
+        )
+        let burn = result[day27]
+        XCTAssertEqual(burn?.total, 900, "covered session is already part of Health's total")
+        guard case .session(_, let kcal, let merged)? = burn?.items.first else { return XCTFail("expected session row") }
+        XCTAssertEqual(kcal, 420, "Health wins")
+        XCTAssertEqual(merged?.healthKitUuid, "w1")
+        XCTAssertEqual(burn?.items.count, 2, "external workout merged into the session row")
+        XCTAssertEqual(burn?.items.last, .dailyActivity(kcal: 480))
+    }
+
+    func testOwnHealthWorkoutCoversSessionButIsNeverListed() {
+        let own = workout("own", "2026-10-27T08:00:00Z", "2026-10-27T09:00:00Z", kcal: 300, own: true)
+        let result = burns(
+            [session("Push", "2026-10-27T08:00:00Z", "2026-10-27T09:00:00Z", kcal: 300)],
+            days: [HealthDailyEnergyDto(day: "2026-10-27", activeKcal: 700)],
+            workouts: [own]
+        )
+        let burn = result[day27]
+        XCTAssertEqual(burn?.total, 700)
+        XCTAssertEqual(burn?.items.map(\.kcal), [300, 400])
+        XCTAssertFalse(burn?.items.contains { if case .healthWorkout = $0 { true } else { false } } ?? true)
+
+        let ownOnly = burns([], workouts: [own])
+        XCTAssertNil(ownOnly[day27])
+    }
+
+    func testExternalWorkoutsAreListedOnTheirStartDay() {
+        let run = workout("run", "2026-10-27T05:00:00Z", "2026-10-27T05:45:00Z", kcal: 380)
+        let walk = workout("walk", "2026-10-27T15:00:00Z", "2026-10-27T15:30:00Z", kcal: nil, type: "walking")
+        let result = burns(
+            [session("Push", "2026-10-27T08:00:00Z", "2026-10-27T09:00:00Z", kcal: 300)],
+            workouts: [run, walk]
+        )
+        let burn = result[day27]
+        XCTAssertEqual(burn?.items.map(\.id), ["health-run", "session-sess-Push", "health-walk"])
+        XCTAssertEqual(burn?.total, 680, "without a Health day: sessions + listed workouts")
+        XCTAssertEqual(burns([], workouts: [run])[day27]?.items, [.healthWorkout(run, kcal: 380)])
+    }
+
+    func testDailyActivityRemainderIsClampedAtZero() {
+        let run = workout("run", "2026-10-27T05:00:00Z", "2026-10-27T06:00:00Z", kcal: 600)
+        let result = burns([], days: [HealthDailyEnergyDto(day: "2026-10-27", activeKcal: 500)], workouts: [run])
+        XCTAssertEqual(result[day27]?.total, 500)
+        XCTAssertEqual(result[day27]?.items.last, .dailyActivity(kcal: 0))
+    }
+
+    func testSmallOverlapDoesNotCover() {
+        XCTAssertFalse(NutritionCalendar.overlapsMostly(
+            DateInterval(start: date("2026-10-27T08:00:00Z"), end: date("2026-10-27T09:00:00Z")),
+            DateInterval(start: date("2026-10-27T08:50:00Z"), end: date("2026-10-27T10:00:00Z"))
+        ))
+        XCTAssertTrue(NutritionCalendar.overlapsMostly(
+            DateInterval(start: date("2026-10-27T08:00:00Z"), end: date("2026-10-27T09:00:00Z")),
+            DateInterval(start: date("2026-10-27T08:40:00Z"), end: date("2026-10-27T08:55:00Z"))
+        ))
+    }
+
+    func testDayKeyRoundTrip() {
+        XCTAssertEqual(LukiDayKey.string(date("2026-10-27T23:30:00Z"), timeZone: calendar.timeZone), "2026-10-28")
+        XCTAssertEqual(LukiDayKey.date("2026-10-27", calendar: calendar), day27)
+    }
+
     func testWeekHelpersFollowTheCalendarsFirstWeekday() {
         let wednesday = date("2026-10-28T10:00:00Z")
         let start = NutritionCalendar.weekStart(for: wednesday, calendar: calendar)

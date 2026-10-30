@@ -13,6 +13,7 @@ struct HealthDetailsView: View {
     @State private var birthYear: Int?
     @State private var sex: String
     @State private var autosave = PreferencesAutosaver()
+    @State private var isConnectingHealth = false
 
     static let heightRange = 100.0...250.0
     static let birthYearRange = 1900...2030
@@ -91,6 +92,10 @@ struct HealthDetailsView: View {
                     AutosaveStatusView(status: autosave.status)
                 }
             }
+
+            if viewModel.isAppleHealthAvailable {
+                appleHealthSection
+            }
         }
         .navigationTitle(tr("Health details"))
         .navigationBarTitleDisplayMode(.inline)
@@ -99,6 +104,43 @@ struct HealthDetailsView: View {
             autosave.schedule { await save() }
         }
         .onDisappear { Task { await autosave.flush() } }
+    }
+
+    private var appleHealthSection: some View {
+        Section {
+            Button {
+                isConnectingHealth = true
+                Task {
+                    await viewModel.connectAppleHealthActivity()
+                    isConnectingHealth = false
+                }
+            } label: {
+                HStack {
+                    Label(
+                        viewModel.activitySync.hasRequestedAuthorization ? tr("Sync with Apple Health") : tr("Connect Apple Health"),
+                        systemImage: "heart.text.square"
+                    )
+                    Spacer()
+                    if isConnectingHealth || viewModel.activitySync.isSyncing {
+                        ProgressView()
+                    }
+                }
+                .frame(minHeight: 44)
+            }
+            .disabled(isConnectingHealth)
+            .accessibilityIdentifier("ios.profile.health.connectButton")
+            if let last = viewModel.activitySync.lastSyncAt {
+                LabeledContent(tr("Last synced")) {
+                    Text(last.formatted(.relative(presentation: .named).locale(Locale(identifier: tr.rawValue))))
+                }
+                .accessibilityIdentifier("ios.profile.health.lastSync")
+            }
+        } header: {
+            Text(tr("Apple Health"))
+        } footer: {
+            Text(tr("LukiFitti reads workouts and active energy from other apps such as Strava or Garmin to include them in calories burned, and saves your LukiFitti gym workouts to Apple Health. You choose what to share in the next step."))
+                .accessibilityIdentifier("ios.profile.health.footer")
+        }
     }
 
     private func hint(_ text: String) -> some View {

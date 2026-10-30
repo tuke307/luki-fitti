@@ -27,15 +27,21 @@ public struct NutritionView: View {
 
     private var dayEntries: [MealEntryDto] { nutrition.entries(on: day) }
     private var totals: NutritionTotalsDto { nutrition.totals(on: day) }
-    private var burnByDay: [Date: [NutritionCalendar.BurnedWorkout]] {
+    private var burnByDay: [Date: NutritionCalendar.DayBurn] {
         burnMemo.index(
             sessions: viewModel.store.historySessions,
+            healthDays: viewModel.activity.days,
+            healthWorkouts: viewModel.activity.workouts,
             points: viewModel.bodyWeight.points,
             fallbackKg: prefs.bodyWeightKg
         ) { viewModel.bodyWeightKg(at: $0) }
     }
-    private var workouts: [NutritionCalendar.BurnedWorkout] { burnByDay[day] ?? [] }
-    private var burned: Int { workouts.reduce(0) { $0 + $1.kcal } }
+    private var dayBurn: NutritionCalendar.DayBurn { burnByDay[day] ?? .empty }
+    /// Rows of the burn card; a zero "daily activity" remainder is hidden.
+    private var burnItems: [NutritionCalendar.BurnedItem] {
+        dayBurn.items.filter { if case .dailyActivity(let kcal) = $0 { kcal > 0 } else { true } }
+    }
+    private var burned: Int { dayBurn.total }
 
     public var body: some View {
         ScrollView {
@@ -56,18 +62,25 @@ public struct NutritionView: View {
                         if !list.isEmpty { mealGroup(type, list) }
                     }
                 }
-                if !workouts.isEmpty { burnCard }
+                if !burnItems.isEmpty { burnCard }
                 weekCard
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
         }
         .background(LukiColors.groupedBackground)
-        .refreshable { await nutrition.refresh(isSignedIn: isSignedIn) }
-        .task { await nutrition.refresh(isSignedIn: isSignedIn, force: false) }
+        .refreshable {
+            await nutrition.refresh(isSignedIn: isSignedIn)
+            await viewModel.syncHealthActivity(force: true)
+        }
+        .task {
+            await nutrition.refresh(isSignedIn: isSignedIn, force: false)
+            await viewModel.activity.refresh(isSignedIn: isSignedIn, force: false)
+        }
         .task(id: visibleWeek) {
             guard let visibleWeek else { return }
             await nutrition.ensureLoaded(from: visibleWeek, isSignedIn: isSignedIn)
+            await viewModel.activity.ensureLoaded(from: visibleWeek, isSignedIn: isSignedIn)
         }
         .sheet(item: $editing) { context in
             MealEditorSheet(viewModel: viewModel, context: context) { reachedServer in
@@ -264,17 +277,17 @@ public struct NutritionView: View {
             Label(tr("Burned"), systemImage: "flame.fill")
                 .font(.headline)
                 .foregroundStyle(LukiColors.calories)
-            ForEach(workouts, id: \.session.clientSessionId) { item in
-                HStack {
-                    Text(item.session.workoutNameSnapshot).lineLimit(1)
-                    Spacer()
-                    Text("\(item.kcal) kcal").foregroundStyle(.secondary).monospacedDigit()
-                }
-                .font(.subheadline)
+            ForEach(burnItems) { item in
+                burnRow(item)
             }
             Text(tr("Estimated from duration and intensity. Apple Watch values are used when available."))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+            if dayBurn.hasHealthDay {
+                Text(tr("Includes active energy from Apple Health."))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
             if viewModel.currentBodyWeightKg == nil {
                 Text(tr("Log your weight for a better estimate."))
                     .font(.footnote)
@@ -285,11 +298,65 @@ public struct NutritionView: View {
         .background(cardShape)
     }
 
+    @ViewBuilder
+    private func burnRow(_ item: NutritionCalendar.BurnedItem) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 2) {
+                switch item {
+                case .session(let session, _, let merged):
+                    Text(session.workoutNameSnapshot).lineLimit(1)
+                    if let merged {
+                        Text(tr("%@ · From Apple Health", merged.sourceName))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                case .healthWorkout(let workout, _):
+                    Text(tr(Self.activityLabel(workout.activityType))).lineLimit(1)
+                    Text(workout.sourceName.isEmpty ? tr("From Apple Health") : workout.sourceName)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                case .dailyActivity:
+                    Text(tr("Daily activity")).lineLimit(1)
+                    Text(tr("From Apple Health"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            Spacer()
+            Text("\(item.kcal) kcal").foregroundStyle(.secondary).monospacedDigit()
+        }
+        .font(.subheadline)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("ios.nutrition.burn.\(item.id)")
+    }
+
+    /// English key of a Health workout's activity type (translated through `tr`).
+    static func activityLabel(_ activityType: String) -> String {
+        switch activityType {
+        case "running": "Running"
+        case "cycling": "Cycling"
+        case "walking": "Walking"
+        case "swimming": "Swimming"
+        case "hiking": "Hiking"
+        case "traditionalStrengthTraining": "Strength training"
+        case "functionalStrengthTraining": "Functional strength"
+        case "highIntensityIntervalTraining": "HIIT"
+        case "yoga": "Yoga"
+        case "rowing": "Rowing"
+        case "elliptical": "Elliptical"
+        case "flexibility": "Stretching"
+        default: "Workout"
+        }
+    }
+
     private var weekCard: some View {
         let burnByDay = burnByDay
         let days = (0..<7).reversed().compactMap { Calendar.current.date(byAdding: .day, value: -$0, to: day) }
         let rows = days.map { d -> (date: Date, eaten: Double, burned: Int) in
-            (d, nutrition.totals(on: d).kcal, (burnByDay[d] ?? []).reduce(0) { $0 + $1.kcal })
+            (d, nutrition.totals(on: d).kcal, burnByDay[d]?.total ?? 0)
         }
         return VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
@@ -328,22 +395,37 @@ public struct NutritionView: View {
     }
 }
 
-/// Burned kcal per day, rebuilt only when history or body weight change (array equality
-/// short-circuits on shared storage, so unchanged renders cost one comparison).
+/// Burned kcal per day, rebuilt only when history, Apple Health activity or body weight change
+/// (array equality short-circuits on shared storage, so unchanged renders cost one comparison).
 @MainActor
 private final class BurnMemo {
-    private var key: (sessions: [WorkoutSessionDto], points: [WeighInPoint], fallbackKg: Double?)?
-    private var value: [Date: [NutritionCalendar.BurnedWorkout]] = [:]
+    private struct Key: Equatable {
+        let sessions: [WorkoutSessionDto]
+        let healthDays: [HealthDailyEnergyDto]
+        let healthWorkouts: [HealthWorkoutDto]
+        let points: [WeighInPoint]
+        let fallbackKg: Double?
+    }
+    private var key: Key?
+    private var value: [Date: NutritionCalendar.DayBurn] = [:]
 
     func index(
         sessions: [WorkoutSessionDto],
+        healthDays: [HealthDailyEnergyDto],
+        healthWorkouts: [HealthWorkoutDto],
         points: [WeighInPoint],
         fallbackKg: Double?,
         bodyWeightKg: (Date) -> Double?
-    ) -> [Date: [NutritionCalendar.BurnedWorkout]] {
-        if let key, key.fallbackKg == fallbackKg, key.points == points, key.sessions == sessions { return value }
-        value = NutritionCalendar.burnByDay(sessions, bodyWeightKg: bodyWeightKg)
-        key = (sessions, points, fallbackKg)
+    ) -> [Date: NutritionCalendar.DayBurn] {
+        let next = Key(
+            sessions: sessions, healthDays: healthDays, healthWorkouts: healthWorkouts,
+            points: points, fallbackKg: fallbackKg
+        )
+        if let key, key == next { return value }
+        value = NutritionCalendar.dayBurns(
+            sessions: sessions, healthDays: healthDays, healthWorkouts: healthWorkouts, bodyWeightKg: bodyWeightKg
+        )
+        key = next
         return value
     }
 }

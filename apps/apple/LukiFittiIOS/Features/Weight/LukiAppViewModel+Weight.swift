@@ -112,6 +112,8 @@ extension LukiAppViewModel {
         if isSignedIn {
             await bodyWeight.refresh(isSignedIn: true)
             if requestHealthAccess, !bodyMassSync.hasRequestedAuthorization {
+                // One sheet for everything LukiFitti uses (weight, workouts, active energy).
+                await activitySync.requestAuthorization()
                 await bodyMassSync.requestAuthorization()
             }
             let store = bodyWeight
@@ -127,6 +129,7 @@ extension LukiAppViewModel {
     func clearBodyWeightData() {
         bodyWeight.clear()
         bodyMassSync.resetImportAnchor()
+        clearHealthActivityData()
         rescheduleWeighInReminders()
     }
 
