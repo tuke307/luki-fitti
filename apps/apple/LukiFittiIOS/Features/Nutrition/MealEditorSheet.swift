@@ -31,6 +31,9 @@ struct MealEditorSheet: View {
     @State private var unsavedEstimate = false
     @State private var analyzing = false
     @State private var confirmDiscard = false
+    @State private var pickedPhotos: [MealPhotoSection.LocalPhoto] = []
+    @State private var showsCamera = false
+    @State private var photoViewerStart: MealPhotoSection.ViewerStart?
 
     init(viewModel: LukiAppViewModel, context: MealEditorContext, onSaved: @escaping (Bool) -> Void) {
         self.viewModel = viewModel
@@ -57,6 +60,10 @@ struct MealEditorSheet: View {
     }
 
     private var isSignedIn: Bool { viewModel.store.currentUser != nil }
+    private var mealLabel: String { Self.label(mealType, tr) }
+    private var timeLabel: String {
+        eatenAt.formatted(Date.FormatStyle(date: .omitted, time: .shortened).locale(locale))
+    }
     private var canUsePhotos: Bool { viewModel.store.currentUser?.hasFeature(.AI_MEAL_PHOTO) ?? false }
     private var totals: NutritionTotalsDto { NutritionMath.sum(items) }
     private var locale: Locale { Locale(identifier: tr.rawValue) }
@@ -67,18 +74,48 @@ struct MealEditorSheet: View {
     }
 
     var body: some View {
+        editor
+            .fullScreenCover(isPresented: $showsCamera) {
+                CameraPicker { image in
+                    if pickedPhotos.count < MealPhotoSheet.maxPhotos {
+                        pickedPhotos.append(MealPhotoSection.LocalPhoto(image: image))
+                    }
+                }
+                .ignoresSafeArea()
+            }
+            .fullScreenCover(item: $photoViewerStart) { start in
+                MealPhotoViewer(
+                    items: MealPhotoSection.items(saved: serverEntry?.photos ?? [], picked: pickedPhotos),
+                    startAt: start.id,
+                    mealLabel: mealLabel,
+                    timeLabel: timeLabel,
+                    api: viewModel.store.apiClient,
+                    onDelete: viewerDelete
+                )
+            }
+    }
+
+    private var viewerDelete: ((MealPhotoDto) async -> Bool)? {
+        guard isSignedIn else { return nil }
+        return { await deletePhoto($0) }
+    }
+
+    private var editor: some View {
         NavigationStack {
             Form {
                 if canUsePhotos {
                     MealPhotoSection(
                         savedPhotos: serverEntry?.photos ?? [],
-                        mealLabel: Self.label(mealType, tr),
-                        timeLabel: eatenAt.formatted(Date.FormatStyle(date: .omitted, time: .shortened).locale(locale)),
+                        mealLabel: mealLabel,
+                        timeLabel: timeLabel,
                         isOnline: isSignedIn,
                         busy: analyzing,
                         api: viewModel.store.apiClient,
                         onEstimate: estimate,
-                        onDeleteSaved: deletePhoto
+                        onDeleteSaved: deletePhoto,
+                        picked: $pickedPhotos,
+                        showsCamera: $showsCamera,
+                        viewerStart: $photoViewerStart
                     )
                 }
 
