@@ -22,6 +22,41 @@ final class NutritionMathTests: XCTestCase {
         XCTAssertEqual(scaled.fiberG, 0.8)
     }
 
+    func testScaleWithinUnitAndRelabelAcrossUnits() {
+        let tea = MealItemDto(name: "tea", grams: 500, amountUnit: .ML, kcal: 140, carbsG: 34)
+        let half = NutritionMath.scale(tea, toAmount: 250, unit: .ML)
+        XCTAssertEqual(half.kcal, 70)
+        XCTAssertEqual(half.carbsG, 17)
+        XCTAssertEqual(half.amountUnit, .ML)
+        let relabeled = NutritionMath.scale(tea, toAmount: 500, unit: .G)
+        XCTAssertEqual(relabeled.kcal, 140)
+        XCTAssertEqual(relabeled.amountUnit, .G)
+    }
+
+    func testLitresAreStoredAsMillilitres() {
+        let stored = NutritionMath.storedAmount(1.5, .l)
+        XCTAssertEqual(stored.amount, 1500)
+        XCTAssertEqual(stored.unit, .ML)
+        XCTAssertEqual(NutritionMath.storedAmount(80, .g).unit, .G)
+        XCTAssertEqual(NutritionMath.displayAmount(1500, .ML).unit, .l)
+        XCTAssertEqual(NutritionMath.displayAmount(500, .ML).unit, .ml)
+    }
+
+    func testFormatAmountIsLocaleAware() {
+        XCTAssertEqual(NutritionMath.formatAmount(500, .ML, locale: Locale(identifier: "en_US")), "500 ml")
+        XCTAssertEqual(NutritionMath.formatAmount(1500, .ML, locale: Locale(identifier: "de_DE")), "1,5 l")
+        XCTAssertEqual(NutritionMath.formatAmount(150, .G, locale: Locale(identifier: "en_US")), "150 g")
+        XCTAssertEqual(NutritionMath.formatAmount(nil, .G), "")
+    }
+
+    func testLegacyItemJSONDecodesAsGrams() throws {
+        let json = #"{"id":"i","orderIndex":0,"name":"Rice","grams":150,"kcal":200,"proteinG":4,"carbsG":44,"fatG":1,"fiberG":null,"sugarG":null,"source":"MANUAL","confidence":null}"#
+        let item = try JSONDecoder().decode(MealItemDto.self, from: Data(json.utf8))
+        XCTAssertEqual(item.amountUnit, .G)
+        let input = try JSONDecoder().decode(MealItemInputDto.self, from: Data(#"{"name":"Tea","grams":500,"amountUnit":"ML","kcal":140,"proteinG":0,"carbsG":34,"fatG":0,"source":"AI"}"#.utf8))
+        XCTAssertEqual(input.amountUnit, .ML)
+    }
+
     func testBurnPrefersServerThenHealthKitThenMet() {
         var session = WorkoutSessionDto(workoutNameSnapshot: "Push", status: .COMPLETED, activeDurationSeconds: 3600)
         XCTAssertEqual(NutritionMath.burnedKcal(for: session, bodyWeightKg: 80), 200) // (3.5 − 1) × 80 × 1 h
