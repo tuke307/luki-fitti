@@ -18,6 +18,7 @@ import { AppSettingsModule } from './modules/app-settings/app-settings.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { NutritionModule } from './modules/nutrition/nutrition.module';
+import { BodyWeightModule } from './modules/body-weight/body-weight.module';
 import { AiModule } from './modules/ai/ai.module';
 import { NODE_ENV } from './config/env.config';
 
@@ -48,6 +49,7 @@ import { NODE_ENV } from './config/env.config';
     HealthModule,
     AdminModule,
     NutritionModule,
+    BodyWeightModule,
     AiModule,
   ],
   providers: [
