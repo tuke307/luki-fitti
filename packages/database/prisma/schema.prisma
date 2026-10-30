@@ -629,6 +629,11 @@ enum FoodItemSource {
   AI
 }
 
+enum MealAmountUnit {
+  G
+  ML
+}
+
 model MealEntry {
   id            String   @id @default(uuid())
   /// Client-generated id so offline-created entries sync idempotently.
@@ -654,7 +659,9 @@ model MealItem {
   mealEntryId String
   orderIndex  Int            @default(0)
   name        String
+  /// Amount in `amountUnit` (grams for solids, millilitres for drinks).
   grams       Float?
+  amountUnit  MealAmountUnit @default(G)
   kcal        Float          @default(0)
   proteinG    Float          @default(0)
   carbsG      Float          @default(0)
