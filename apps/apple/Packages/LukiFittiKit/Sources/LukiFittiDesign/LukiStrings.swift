@@ -540,5 +540,14 @@ public enum LukiStrings {
         "The photos and estimated foods of this meal will be deleted.": "Die Fotos und geschätzten Lebensmittel dieser Mahlzeit werden gelöscht.",
         "We couldn’t find food in these photos.": "Auf diesen Fotos haben wir kein Essen gefunden.",
         "Photos weren’t stored on the server.": "Die Fotos wurden nicht auf dem Server gespeichert.",
+        // Meal description → AI food proposals
+        "Photos or description": "Fotos oder Beschreibung",
+        "Describe your meal": "Beschreib deine Mahlzeit",
+        "e.g. muesli for breakfast, about 100 g, with 1/4 scoop protein powder, oat milk and a cappuccino": "z. B. Müsli zum Frühstück, ca. 100 g, mit 1/4 Scoop Proteinpulver, Hafermilch und Cappuccino",
+        "Without photos, AI suggests foods from your description. You can edit them before saving.": "Ohne Fotos schlägt die KI Lebensmittel aus deiner Beschreibung vor. Du kannst sie vor dem Speichern anpassen.",
+        "Describe your meal in a few words.": "Beschreib deine Mahlzeit in ein paar Worten.",
+        "We couldn’t find food in this description.": "In dieser Beschreibung haben wir kein Essen gefunden.",
+        "You need to be online to estimate with AI.": "Zum Schätzen mit KI musst du online sein.",
+        "Meal description": "Mahlzeitenbeschreibung",
     ]
 }

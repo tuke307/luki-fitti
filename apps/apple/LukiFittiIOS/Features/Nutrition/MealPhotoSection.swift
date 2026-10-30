@@ -5,7 +5,8 @@ import LukiFittiModels
 import LukiFittiDesign
 import LukiFittiAPI
 
-/// Photos of the meal inside the editor: saved photos, newly picked ones and the AI estimate.
+/// Photos and a written description of the meal inside the editor, plus the AI estimate.
+/// Without photos the description alone proposes foods; with photos it is sent as a hint.
 struct MealPhotoSection: View {
     let savedPhotos: [MealPhotoDto]
     let mealLabel: String
@@ -13,8 +14,9 @@ struct MealPhotoSection: View {
     let isOnline: Bool
     let busy: Bool
     let api: APIClient
-    /// Uploads the picked photos; returns an optional note/error and whether the estimate succeeded.
-    let onEstimate: (_ images: [UIImage], _ hint: String) async -> (message: String?, success: Bool, usage: AiRunUsageDto?)
+    /// Estimates from the picked photos (or from the text alone when there are none); returns an
+    /// optional error, whether it succeeded, the cost and the model's main assumptions.
+    let onEstimate: (_ images: [UIImage], _ hint: String) async -> EstimateResult
     let onDeleteSaved: (MealPhotoDto) async -> Bool
     @Binding var picked: [LocalPhoto]
     @Binding var showsCamera: Bool
@@ -25,6 +27,14 @@ struct MealPhotoSection: View {
     @State private var hint = ""
     @State private var message: String?
     @State private var lastUsage: AiRunUsageDto?
+    @State private var note: String?
+
+    struct EstimateResult {
+        var message: String?
+        var success: Bool
+        var usage: AiRunUsageDto?
+        var note: String?
+    }
 
     struct LocalPhoto: Identifiable {
         let id = UUID().uuidString
@@ -42,6 +52,11 @@ struct MealPhotoSection: View {
     }
 
     private var isFull: Bool { picked.count >= MealPhotoSheet.maxPhotos }
+    private var textOnly: Bool { picked.isEmpty }
+    private var trimmedHint: String { hint.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var canEstimate: Bool {
+        !busy && isOnline && (!textOnly || trimmedHint.count >= MealTextAnalysisRequestDto.minLength)
+    }
 
     var body: some View {
         Section {
@@ -51,11 +66,24 @@ struct MealPhotoSection: View {
                 VStack(alignment: .leading, spacing: 10) { pickButtons }
             }
             .onChange(of: pickerItems) { _, items in Task { await load(items) } }
-            if !picked.isEmpty {
-                TextField(tr("Anything to add? (optional)"), text: $hint, axis: .vertical)
-                    .lineLimit(1...4)
-                    .disabled(busy)
-                    .accessibilityIdentifier("ios.nutrition.photoHint")
+            TextField(
+                textOnly ? tr("Describe your meal") : tr("Anything to add? (optional)"),
+                text: $hint,
+                prompt: Text(textOnly
+                    ? tr("e.g. muesli for breakfast, about 100 g, with 1/4 scoop protein powder, oat milk and a cappuccino")
+                    : tr("Anything to add? (optional)")),
+                axis: .vertical
+            )
+            .lineLimit(1...4)
+            .disabled(busy || !isOnline)
+            .onChange(of: hint) { _, value in
+                if value.count > MealTextAnalysisRequestDto.maxLength {
+                    hint = String(value.prefix(MealTextAnalysisRequestDto.maxLength))
+                }
+            }
+            .accessibilityLabel(textOnly ? tr("Describe your meal") : tr("Anything to add? (optional)"))
+            .accessibilityIdentifier("ios.nutrition.photoHint")
+            if !textOnly || !trimmedHint.isEmpty {
                 Button {
                     Task { await estimate() }
                 } label: {
@@ -66,15 +94,22 @@ struct MealPhotoSection: View {
                     .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(busy || !isOnline)
+                .disabled(!canEstimate)
                 .accessibilityIdentifier("ios.nutrition.estimateButton")
+            }
+            if let note {
+                Text(note).font(.footnote).foregroundStyle(.secondary)
             }
             if let lastUsage {
                 AICostLabel(usage: lastUsage)
                     .accessibilityIdentifier("ios.nutrition.aiCostLabel")
             }
             if !isOnline {
-                Text(tr("You need to be online to estimate from photos."))
+                Text(tr("You need to be online to estimate with AI."))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else if textOnly && savedPhotos.isEmpty {
+                Text(tr("Without photos, AI suggests foods from your description. You can edit them before saving."))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } else if !savedPhotos.isEmpty && picked.isEmpty {
@@ -86,7 +121,7 @@ struct MealPhotoSection: View {
                 Text(message).font(.footnote).foregroundStyle(LukiColors.destructive)
             }
         } header: {
-            Text(tr("Photos"))
+            Text(tr("Photos or description"))
         }
     }
 
@@ -161,10 +196,11 @@ struct MealPhotoSection: View {
 
     private func estimate() async {
         message = nil
-        let result = await onEstimate(picked.map(\.image), hint.trimmingCharacters(in: .whitespacesAndNewlines))
+        let result = await onEstimate(picked.map(\.image), trimmedHint)
         message = result.message
         if let usage = result.usage { lastUsage = usage }
         if result.success {
+            note = result.note
             picked = []
             hint = ""
         }
