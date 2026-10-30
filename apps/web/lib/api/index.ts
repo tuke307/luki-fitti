@@ -5,6 +5,8 @@ import type {
   AdminUserQueryDto,
   AiSettingsDto,
   AiUsageSummaryDto,
+  BodyWeightEntryDto,
+  BodyWeightRangeQueryDto,
   ExerciseFeedbackDto,
   MealAnalysisResponseDto,
   MealEntryDto,
@@ -13,6 +15,7 @@ import type {
   NutritionSummaryQueryDto,
   UpdateAiSettingsDto,
   UpdateUserAccessDto,
+  UpsertBodyWeightEntryDto,
   UpsertExerciseFeedbackDto,
   UpsertMealEntryDto,
   WorkoutBuilderRequestDto,
@@ -275,6 +278,25 @@ export const nutrition = {
     }),
 };
 
+export const bodyWeight = {
+  listEntries: (range?: BodyWeightRangeQueryDto) => {
+    const qs = new URLSearchParams();
+    if (range?.from) qs.set('from', range.from);
+    if (range?.to) qs.set('to', range.to);
+    const queryStr = qs.toString();
+    return apiFetch<BodyWeightEntryDto[]>(`/body-weight/entries${queryStr ? `?${queryStr}` : ''}`);
+  },
+  upsertEntry: (data: UpsertBodyWeightEntryDto) =>
+    apiFetch<BodyWeightEntryDto>('/body-weight/entries', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deleteEntry: (id: string) =>
+    apiFetch<{ success: boolean }>(`/body-weight/entries/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
+};
+
 export const ai = {
   buildWorkout: (data: WorkoutBuilderRequestDto) =>
     apiFetch<WorkoutBuilderResponseDto>('/ai/workout-builder', {
@@ -328,6 +350,7 @@ export const api = {
   sessions,
   analytics,
   nutrition,
+  bodyWeight,
   ai,
   exerciseFeedback,
   admin,

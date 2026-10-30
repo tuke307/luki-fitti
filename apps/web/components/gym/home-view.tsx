@@ -13,6 +13,8 @@ import type { WorkoutTemplateDto } from '@luki-fitti/common/schemas';
 import { ExerciseType, MuscleGroup, SetType, WeightUnit } from '@luki-fitti/common/enums';
 import type { NavTab } from './pwa-shell';
 import { bigVolume, formatVolume, unitLabel } from '@/lib/format/weight';
+import { WeightHomeCard } from './weight/weight-home-card';
+import { requestWeightFocus } from './weight/weight-focus';
 
 interface HomeViewProps {
   onNavigate: (tab: NavTab) => void;
@@ -261,6 +263,13 @@ export function HomeView({ onNavigate }: HomeViewProps) {
           </p>
         </div>
       </section>
+
+      <WeightHomeCard
+        onLogWeight={() => {
+          requestWeightFocus();
+          onNavigate('profile');
+        }}
+      />
 
       <section
         aria-labelledby="home-weekly"

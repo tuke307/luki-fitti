@@ -7,7 +7,9 @@ import type {
 import {
   estimateWorkoutEnergy,
   sumMacros,
+  weightAt,
   type MacroValues,
+  type WeighIn,
 } from '@luki-fitti/common/utils/client';
 
 /** Local calendar day key (YYYY-MM-DD) in the device time zone. */
@@ -26,12 +28,30 @@ export function lastDays(endKey: string, count: number): string[] {
   return Array.from({ length: count }, (_, i) => shiftDay(endKey, i - (count - 1)));
 }
 
+/**
+ * Body weight that applied to a workout: the latest weigh-in on/before it (or the earliest one for
+ * workouts before the first weigh-in), then the profile weight. `null` = unknown.
+ */
+export function bodyWeightForSession(
+  session: Pick<WorkoutSessionDto, 'startedAt'>,
+  weighIns: readonly WeighIn[] = [],
+  fallbackKg?: number | null,
+): number | null {
+  const kg = weightAt(weighIns, session.startedAt) ?? fallbackKg ?? null;
+  return kg && kg > 0 ? kg : null;
+}
+
 /** Burn for a completed session: server estimate → HealthKit → local MET estimate. */
-export function sessionBurnKcal(session: WorkoutSessionDto, bodyWeightKg?: number | null) {
+export function sessionBurnKcal(
+  session: WorkoutSessionDto,
+  weighIns: readonly WeighIn[] = [],
+  fallbackKg?: number | null,
+) {
+  const bodyWeightKg = bodyWeightForSession(session, weighIns, fallbackKg);
   if (session.estimatedCaloriesKcal != null) {
     return {
       kcal: Math.round(session.estimatedCaloriesKcal),
-      usedDefaultBodyWeight: !bodyWeightKg,
+      usedDefaultBodyWeight: bodyWeightKg === null,
     };
   }
   return estimateWorkoutEnergy(session, bodyWeightKg);
@@ -51,14 +71,18 @@ export function buildDay(
   key: string,
   entries: MealEntryDto[],
   sessions: WorkoutSessionDto[],
-  bodyWeightKg?: number | null,
+  weighIns: readonly WeighIn[] = [],
+  fallbackBodyWeightKg?: number | null,
 ): DayNutrition {
   const dayEntries = entries
     .filter((e) => dayKey(e.eatenAt) === key)
     .sort((a, b) => Date.parse(a.eatenAt) - Date.parse(b.eatenAt));
   const workouts = sessions
     .filter((s) => s.status === SessionStatus.COMPLETED && dayKey(s.startedAt) === key)
-    .map((session) => ({ session, ...sessionBurnKcal(session, bodyWeightKg) }));
+    .map((session) => ({
+      session,
+      ...sessionBurnKcal(session, weighIns, fallbackBodyWeightKg),
+    }));
   return {
     key,
     entries: dayEntries,

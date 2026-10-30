@@ -22,6 +22,7 @@ import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { buildDay, dayKey, lastDays, shiftDay } from '@/lib/nutrition/nutrition-day';
 import { useNutrition } from '@/lib/nutrition/use-nutrition';
+import { useBodyWeight } from '@/lib/body-weight/use-body-weight';
 import type { NavTab } from '../pwa-shell';
 import { MealEditorDialog } from './meal-editor-dialog';
 import { MealPhotoDialog } from './meal-photo-dialog';
@@ -51,6 +52,7 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
   const { historySessions, isOnline } = useGym();
   const { t, format, bcp47 } = useLocale();
   const { entries, pending, save, remove, upsertLocal } = useNutrition();
+  const { entries: weighIns } = useBodyWeight();
 
   const todayKey = dayKey(new Date());
   const [selected, setSelected] = useState(todayKey);
@@ -64,13 +66,13 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
   const canUsePhotos = user?.features?.includes(FeatureGrant.AI_MEAL_PHOTO) ?? false;
 
   const day = useMemo(
-    () => buildDay(selected, entries, historySessions, prefs?.bodyWeightKg),
-    [selected, entries, historySessions, prefs?.bodyWeightKg],
+    () => buildDay(selected, entries, historySessions, weighIns, prefs?.bodyWeightKg),
+    [selected, entries, historySessions, weighIns, prefs?.bodyWeightKg],
   );
   const week = useMemo(
     () =>
       lastDays(selected, 7).map((key) => {
-        const d = buildDay(key, entries, historySessions, prefs?.bodyWeightKg);
+        const d = buildDay(key, entries, historySessions, weighIns, prefs?.bodyWeightKg);
         return {
           key,
           label: new Date(`${key}T12:00:00`).toLocaleDateString(bcp47, { weekday: 'short' }),
@@ -78,7 +80,7 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
           burned: d.burnedKcal,
         };
       }),
-    [selected, entries, historySessions, prefs?.bodyWeightKg, bcp47],
+    [selected, entries, historySessions, weighIns, prefs?.bodyWeightKg, bcp47],
   );
 
   const dayLabel =
