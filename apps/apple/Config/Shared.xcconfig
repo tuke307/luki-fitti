@@ -1,3 +1,6 @@
-APP_GROUP_ID = group.com.lukifitti.app
-KEYCHAIN_ACCESS_GROUP = $(AppIdentifierPrefix)com.lukifitti.shared
+LUKIFITTI_BUNDLE_ID_PREFIX = com.lukifitti
+APP_GROUP_ID = group.$(LUKIFITTI_BUNDLE_ID_PREFIX).app
+KEYCHAIN_ACCESS_GROUP = $(AppIdentifierPrefix)$(LUKIFITTI_BUNDLE_ID_PREFIX).shared
 SWIFT_VERSION = 6.0
+
+#include? "Local.xcconfig"
