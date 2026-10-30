@@ -184,6 +184,8 @@ model User {
   emails             Email[]
   mealEntries        MealEntry[]
   bodyWeightEntries  BodyWeightEntry[]
+  healthDailyEnergy  HealthDailyEnergy[]
+  healthWorkouts     HealthWorkout[]
   exerciseFeedback   ExerciseFeedback[]
   aiRuns             AiRun[]
 }
@@ -744,4 +746,43 @@ model BodyWeightEntry {
 
   @@unique([userId, healthKitUuid])
   @@index([userId, measuredAt])
+}
+
+/// Apple Health active energy per device-local calendar day (imported from the iOS app).
+model HealthDailyEnergy {
+  id         String   @id @default(uuid())
+  userId     String
+  /// Device-local calendar day, "YYYY-MM-DD".
+  day        String
+  activeKcal Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, day])
+}
+
+/// Apple Health workout (own LukiFitti sessions written to Health, or from other apps/devices).
+model HealthWorkout {
+  id             String   @id @default(uuid())
+  userId         String
+  /// HealthKit workout UUID (lowercase); dedupe key on re-import.
+  healthKitUuid  String
+  /// camelCase HKWorkoutActivityType name, e.g. "running", "traditionalStrengthTraining".
+  activityType   String
+  sourceName     String
+  /// True when the workout was written to Health by LukiFitti itself.
+  isOwn          Boolean  @default(false)
+  startedAt      DateTime
+  endedAt        DateTime
+  activeKcal     Float?
+  distanceMeters Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, healthKitUuid])
+  @@index([userId, startedAt])
 }
