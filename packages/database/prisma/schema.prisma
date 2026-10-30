@@ -181,7 +181,6 @@ model User {
   workoutTemplates   WorkoutTemplate[]
   workoutSessions    WorkoutSession[]
   stretchingRoutines StretchingRoutine[]
-  importJobs         ImportJob[]
   emails             Email[]
   mealEntries        MealEntry[]
   bodyWeightEntries  BodyWeightEntry[]
@@ -518,25 +517,6 @@ model SessionSet {
   sessionExercise SessionExercise @relation(fields: [sessionExerciseId], references: [id], onDelete: Cascade)
 
   @@index([sessionExerciseId, setNumber])
-}
-
-model ImportJob {
-  id                String   @id @default(uuid())
-  userId            String
-  sourceFormat      String
-  fileName          String
-  status            String   @default("COMPLETED")
-  totalRecords      Int      @default(0)
-  importedSessions  Int      @default(0)
-  importedTemplates Int      @default(0)
-  skippedDuplicates Int      @default(0)
-  errorsCount       Int      @default(0)
-  summaryJson       Json?
-  createdAt         DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
