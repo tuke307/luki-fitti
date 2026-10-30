@@ -105,10 +105,8 @@ Models, switches, daily limit and photo retention are edited in **Admin → AI**
 `AppSettings`). Defaults: `openai/gpt-6.1-terra` for the workout builder and
 `google/gemini-3.8-flash` for meal photos, each with the other as fallback.
 
-For production storage, set `SEAWEEDFS_ADMIN_PASSWORD`, deploy, and open the SeaweedFS admin UI
-through an SSH tunnel (`ssh -L 23648:127.0.0.1:23648 <server>`, then `http://localhost:23648`).
-Create the `luki-fitti-meal-photos` bucket and an S3 user with access to it, then put that user's
-keys into `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY`.
+For production storage, create the `luki-fitti-meal-photos` bucket and an S3 user with access to
+it in SeaweedFS, then put that user's keys into `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY`.
 
 For local dev (`compose.dev.yml`, same layout as kds/marienmuehle), copy the sample to
 `~/seaweedfs/luki-fitti/config/s3.json`. The S3 API is then at `http://localhost:8335` and the
