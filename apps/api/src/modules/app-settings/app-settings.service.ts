@@ -2,7 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { FeatureGrant, isFeatureGrant } from '@luki-fitti/common/enums';
 import type { AiSettingsDto, UpdateAiSettingsDto } from '@luki-fitti/common/schemas';
 import { PrismaService } from '../database/prisma.service';
-import { OPENROUTER_API_KEY, S3_ACCESS_KEY_ID, S3_ENDPOINT } from '@/config/env.config';
+import {
+  OPENROUTER_API_KEY,
+  SEAWEEDFS_ACCESS_KEY_API,
+  SEAWEEDFS_ENDPOINT,
+} from '@/config/env.config';
 
 const SETTINGS_ID = 1;
 const CACHE_TTL_MS = 10_000;
@@ -47,7 +51,7 @@ export class AppSettingsService {
   }
 
   get storageConfigured(): boolean {
-    return S3_ENDPOINT.length > 0 && S3_ACCESS_KEY_ID.length > 0;
+    return SEAWEEDFS_ENDPOINT.length > 0 && SEAWEEDFS_ACCESS_KEY_API.length > 0;
   }
 
   async get(): Promise<AppSettingsRecord> {

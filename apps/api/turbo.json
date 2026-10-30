@@ -12,6 +12,7 @@
         "SEAWEEDFS_USE_SSL",
         "SEAWEEDFS_ACCESS_KEY_API",
         "SEAWEEDFS_SECRET_KEY_API",
+        "SEAWEEDFS_BUCKET",
         "EMAIL_MAX_ATTEMPTS",
         "EMAIL_RETRY_DELAY_MS",
         "REDIS_URL",
@@ -20,13 +21,7 @@
         "UMAMI_ALLOWED_HOSTNAMES",
         "OPENROUTER_API_KEY",
         "OPENROUTER_BASE_URL",
-        "OPENROUTER_TIMEOUT_MS",
-        "S3_ENDPOINT",
-        "S3_REGION",
-        "S3_ACCESS_KEY_ID",
-        "S3_SECRET_ACCESS_KEY",
-        "S3_BUCKET",
-        "S3_FORCE_PATH_STYLE"
+        "OPENROUTER_TIMEOUT_MS"
       ]
     }
   }

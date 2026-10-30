@@ -95,19 +95,20 @@ optional `mealType`, `hint`):
 
 ## Configuration
 
-| Variable                                                                                                   | Description                                         |
-| :--------------------------------------------------------------------------------------------------------- | :-------------------------------------------------- |
-| `OPENROUTER_API_KEY`                                                                                       | Enables AI features (server-side only)              |
-| `OPENROUTER_BASE_URL` / `OPENROUTER_TIMEOUT_MS`                                                            | Optional overrides (https only outside local tests) |
-| `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_BUCKET`, `S3_FORCE_PATH_STYLE` | Meal photo storage                                  |
+| Variable                                                                                                                                | Description                                         |
+| :-------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------- |
+| `OPENROUTER_API_KEY`                                                                                                                    | Enables AI features (server-side only)              |
+| `OPENROUTER_BASE_URL` / `OPENROUTER_TIMEOUT_MS`                                                                                         | Optional overrides (https only outside local tests) |
+| `SEAWEEDFS_ENDPOINT`, `SEAWEEDFS_PORT`, `SEAWEEDFS_USE_SSL`, `SEAWEEDFS_ACCESS_KEY_API`, `SEAWEEDFS_SECRET_KEY_API`, `SEAWEEDFS_BUCKET` | Meal photo storage (same names as kds/marienmuehle) |
 
 Models, switches, daily limit and photo retention are edited in **Admin → AI** (stored in
 `AppSettings`). Defaults: `openai/gpt-6.1-terra` for the workout builder and
 `google/gemini-3.8-flash` for meal photos, each with the other as fallback.
 
 In production, SeaweedFS runs as its own Coolify resource. Create the `luki-fitti-meal-photos`
-bucket and an S3 user with access to it there, then set `S3_ENDPOINT` to its internal S3 URL and
-put that user's keys into `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY`.
+bucket and an S3 user with access to it there, then set `SEAWEEDFS_ENDPOINT` to its host (e.g.
+`s3.tony-luke.de`; TLS on port 443 is the default) and put that user's keys into
+`SEAWEEDFS_ACCESS_KEY_API` / `SEAWEEDFS_SECRET_KEY_API`.
 
 For local dev (`compose.dev.yml`, same layout as kds/marienmuehle), copy the sample to
 `~/seaweedfs/luki-fitti/config/s3.json`. The S3 API is then at `http://localhost:8335` and the
