@@ -30,8 +30,8 @@ public struct HomeDashboardView: View {
                     startNextCard
                 }
 
-                weekCard
                 WeightHomeCard(viewModel: viewModel)
+                weekCard
                 weeklyVolumeCard
                 musclesCard
             }
@@ -39,6 +39,9 @@ public struct HomeDashboardView: View {
             .padding(.bottom, 24)
         }
         .background(LukiColors.groupedBackground)
+        .navigationDestination(isPresented: $viewModel.isWeightPresented) {
+            WeightView(viewModel: viewModel)
+        }
     }
 
     // MARK: Header & primary action
