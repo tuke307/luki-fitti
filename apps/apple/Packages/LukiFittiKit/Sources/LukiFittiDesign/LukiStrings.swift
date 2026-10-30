@@ -405,6 +405,7 @@ public enum LukiStrings {
         "7-day average": "7-Tage-Schnitt",
         "A test reminder arrives in a few seconds.": "Gleich kommt eine Test-Erinnerung.",
         "Allow notifications for LukiFitti in Settings to get reminders.": "Erlaube Benachrichtigungen für LukiFitti in den Einstellungen, um Erinnerungen zu bekommen.",
+        "Allow notifications for LukiFitti in Settings to get them.": "Erlaube Benachrichtigungen für LukiFitti in den Einstellungen, um sie zu bekommen.",
         "Change over %@": "Veränderung in %@",
         "Current weight": "Aktuelles Gewicht",
         "Dashed line: 7-day average": "Gestrichelte Linie: 7-Tage-Schnitt",

@@ -2,12 +2,14 @@ import Foundation
 import UserNotifications
 import LukiFittiDomain
 
-/// App-wide `UNUserNotificationCenter` delegate. Only weigh-in reminders get custom handling;
-/// every other notification (rest timer, tests) keeps the system default: no banner while the
-/// app is in the foreground, and tapping it just opens the app.
+/// App-wide `UNUserNotificationCenter` delegate. Only weigh-in reminders get custom tap handling;
+/// they and the settings test notification are shown as banners even while the app is in the
+/// foreground. Every other notification (rest timer) keeps the system default: no banner while
+/// the app is in the foreground, and tapping it just opens the app.
 @MainActor
 final class LukiNotificationCenterDelegate: NSObject, UNUserNotificationCenterDelegate {
     static let shared = LukiNotificationCenterDelegate()
+    nonisolated static let testNotificationIdentifier = "lukifitti.test.notification"
 
     private weak var viewModel: LukiAppViewModel?
     /// Responses that arrive before the view model is attached (cold launch from a notification).
@@ -28,6 +30,7 @@ final class LukiNotificationCenterDelegate: NSObject, UNUserNotificationCenterDe
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
         notification.request.content.categoryIdentifier == WeighInReminderScheduler.categoryIdentifier
+            || notification.request.identifier == Self.testNotificationIdentifier
             ? [.banner, .list, .sound]
             : []
     }
