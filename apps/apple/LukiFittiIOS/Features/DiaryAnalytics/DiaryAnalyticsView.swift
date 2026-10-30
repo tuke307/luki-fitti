@@ -6,66 +6,40 @@ import LukiFittiDomain
 
 public struct DiaryAnalyticsView: View {
     @Bindable public var viewModel: LukiAppViewModel
-    @State private var selectedPeriod: String = "month"
+    @State private var selectedPeriod: HistoryPeriod = .month
     @State private var filterMuscle: MuscleGroup?
     @State private var inspectingSession: WorkoutSessionDto?
     @State private var pendingDelete: WorkoutSessionDto?
+    @State private var memo = SnapshotMemo()
+    @State private var visibleCount = Self.pageSize
     @Environment(\.lukiLocale) private var tr
 
     public init(viewModel: LukiAppViewModel) {
         self.viewModel = viewModel
     }
 
-    private static let isoFormatterWithFractional: ISO8601DateFormatter = {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return f
-    }()
-
-    private static let isoFormatterStandard = ISO8601DateFormatter()
-
-    private func parseSessionDate(_ iso: String) -> Date {
-        Self.isoFormatterWithFractional.date(from: iso)
-            ?? Self.isoFormatterStandard.date(from: iso)
-            ?? Date()
-    }
-
-    private var filteredSessions: [WorkoutSessionDto] {
-        let now = Date()
-        let cutoff: Date? = switch selectedPeriod {
-        case "week": now.addingTimeInterval(-7 * 86_400)
-        case "month": now.addingTimeInterval(-30 * 86_400)
-        case "year": now.addingTimeInterval(-365 * 86_400)
-        default: nil
-        }
-
-        return viewModel.store.historySessions.filter { session in
-            if let cutoff {
-                let sessionDate = parseSessionDate(session.startedAt)
-                if sessionDate < cutoff { return false }
-            }
-            if let filterMuscle {
-                if !session.exercises.contains(where: { $0.primaryMuscleSnapshot == filterMuscle }) {
-                    return false
-                }
-            }
-            return true
-        }
-    }
+    private static let pageSize = 20
 
     public var body: some View {
-        ScrollView {
+        let snapshot = memo.snapshot(
+            sessions: viewModel.store.historySessions,
+            period: selectedPeriod,
+            muscle: filterMuscle
+        )
+        return ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 headerAndPeriodPicker
                 muscleFilterStrip
-                kpiSummaryGrid
-                periodActivityCard
-                progressionChartCard
-                muscleAndPrGrid
-                timelineSection
+                kpiSummaryGrid(snapshot)
+                periodActivityCard(snapshot)
+                progressionChartCard(snapshot)
+                muscleAndPrGrid(snapshot)
+                timelineSection(snapshot)
             }
             .padding(16)
         }
+        .onChange(of: selectedPeriod) { visibleCount = Self.pageSize }
+        .onChange(of: filterMuscle) { visibleCount = Self.pageSize }
         .background(LukiColors.groupedBackground)
         .sheet(item: $inspectingSession) { session in
             HistorySessionEditorSheet(session: session) { viewModel.updateHistoricalSession($0) }
@@ -93,10 +67,10 @@ public struct DiaryAnalyticsView: View {
                 .foregroundStyle(.secondary)
 
             Picker(tr("Period"), selection: $selectedPeriod) {
-                Text(tr("This week")).tag("week")
-                Text(tr("This month")).tag("month")
-                Text(tr("This year")).tag("year")
-                Text(tr("All Time")).tag("all")
+                Text(tr("This week")).tag(HistoryPeriod.week)
+                Text(tr("This month")).tag(HistoryPeriod.month)
+                Text(tr("This year")).tag(HistoryPeriod.year)
+                Text(tr("All Time")).tag(HistoryPeriod.all)
             }
             .pickerStyle(.segmented)
         }
@@ -134,34 +108,26 @@ public struct DiaryAnalyticsView: View {
         }
     }
 
-    private var kpiSummaryGrid: some View {
-        let sessions = filteredSessions
-        let strengthCount = sessions.filter { $0.sessionType != .STRETCHING }.count
-        let stretchCount = sessions.filter { $0.sessionType == .STRETCHING }.count
-        let totalVolKg = sessions.reduce(0.0) { $0 + $1.totalVolumeKg }
-        let totalSets = sessions.reduce(0) { $0 + $1.totalSetsCompleted }
-        let totalReps = sessions.reduce(0) { $0 + $1.totalRepsCompleted }
-        let totalStretchMin = sessions.reduce(0) { $0 + $1.totalStretchSeconds } / 60
-
-        return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+    private func kpiSummaryGrid(_ snapshot: WorkoutHistorySnapshot) -> some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
             kpiCard(
                 title: tr("Workouts"),
-                value: "\(sessions.count)",
-                subtitle: tr("%d strength · %d stretching", strengthCount, stretchCount)
+                value: "\(snapshot.count)",
+                subtitle: tr("%d strength · %d stretching", snapshot.strengthCount, snapshot.stretchCount)
             )
             kpiCard(
                 title: tr("Volume"),
-                value: LukiFormat.volume(kg: totalVolKg, unit: unit),
+                value: LukiFormat.volume(kg: snapshot.totalVolumeKg, unit: unit),
                 subtitle: tr("Without warm-ups")
             )
             kpiCard(
                 title: tr("Sets & reps"),
-                value: tr("%d · %d reps", totalSets, totalReps),
+                value: tr("%d · %d reps", snapshot.totalSets, snapshot.totalReps),
                 subtitle: tr("All exercises")
             )
             kpiCard(
                 title: tr("Stretching"),
-                value: tr("%d min", totalStretchMin),
+                value: tr("%d min", snapshot.totalStretchSeconds / 60),
                 subtitle: tr("Time spent")
             )
         }
@@ -179,12 +145,12 @@ public struct DiaryAnalyticsView: View {
         .accessibilityElement(children: .combine)
     }
 
-    private var periodActivityCard: some View {
+    private func periodActivityCard(_ snapshot: WorkoutHistorySnapshot) -> some View {
         let title: String = switch selectedPeriod {
-        case "week": tr("Last 7 days")
-        case "month": tr("Last 30 days")
-        case "year": tr("Last 12 months")
-        default: tr("By year")
+        case .week: tr("Last 7 days")
+        case .month: tr("Last 30 days")
+        case .year: tr("Last 12 months")
+        case .all: tr("By year")
         }
 
         return VStack(alignment: .leading, spacing: 12) {
@@ -193,21 +159,19 @@ public struct DiaryAnalyticsView: View {
                     .font(.headline)
                     .foregroundStyle(.primary)
                 Spacer()
-                Text(tr("%d workouts", filteredSessions.count))
+                Text(tr("%d workouts", snapshot.count))
                     .font(.caption.bold().monospacedDigit())
                     .foregroundStyle(LukiColors.accent)
             }
 
-            if selectedPeriod == "week" || selectedPeriod == "month" {
-                let daysCount = selectedPeriod == "week" ? 7 : 28
+            if selectedPeriod == .week || selectedPeriod == .month {
+                let daysCount = selectedPeriod == .week ? 7 : 28
                 let cal = Calendar.current
                 let today = cal.startOfDay(for: Date())
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 7), spacing: 6) {
                     ForEach(0..<daysCount, id: \.self) { offset in
                         let dayDate = cal.date(byAdding: .day, value: -(daysCount - 1 - offset), to: today) ?? today
-                        let daySessions = filteredSessions.filter {
-                            cal.isDate(parseSessionDate($0.startedAt), inSameDayAs: dayDate)
-                        }
+                        let daySessions = snapshot.sessions(on: dayDate, calendar: cal)
                         let hasWorkout = !daySessions.isEmpty
                         let dayNumber = cal.component(.day, from: dayDate)
 
@@ -238,7 +202,7 @@ public struct DiaryAnalyticsView: View {
                 }
             } else {
                 // Year or All-Time bucket summary
-                let buckets = buildBuckets()
+                let buckets = buildBuckets(snapshot)
                 if buckets.isEmpty {
                     Text(tr("No workouts in this period."))
                         .font(.caption)
@@ -275,66 +239,60 @@ public struct DiaryAnalyticsView: View {
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
     }
 
-    private func buildBuckets() -> [(label: String, count: Int, sets: Int, volumeKg: Int)] {
-        if selectedPeriod == "year" {
+    private func buildBuckets(_ snapshot: WorkoutHistorySnapshot) -> [(label: String, count: Int, sets: Int, volumeKg: Int)] {
+        if selectedPeriod == .year {
             let cal = Calendar.current
             let fmt = DateFormatter()
             fmt.dateFormat = "MMM yy"
             return (0..<12).reversed().map { offset in
                 let d = cal.date(byAdding: .month, value: -offset, to: Date()) ?? Date()
-                let comps = cal.dateComponents([.year, .month], from: d)
-                let matching = filteredSessions.filter {
-                    let sc = cal.dateComponents([.year, .month], from: parseSessionDate($0.startedAt))
-                    return sc.year == comps.year && sc.month == comps.month
-                }
-                return (
-                    label: fmt.string(from: d),
-                    count: matching.count,
-                    sets: matching.reduce(0) { $0 + $1.totalSetsCompleted },
-                    volumeKg: Int(matching.reduce(0.0) { $0 + $1.totalVolumeKg })
-                )
+                let bucket = snapshot.bucket(month: d, calendar: cal)
+                return (label: fmt.string(from: d), count: bucket.count, sets: bucket.sets, volumeKg: Int(bucket.volumeKg))
             }
         } else {
-            let grouped = Dictionary(grouping: filteredSessions) { session in
-                String(session.startedAt.prefix(4))
-            }
-            return grouped.keys.sorted().map { yr in
-                let list = grouped[yr] ?? []
-                return (
-                    label: yr,
-                    count: list.count,
-                    sets: list.reduce(0) { $0 + $1.totalSetsCompleted },
-                    volumeKg: Int(list.reduce(0.0) { $0 + $1.totalVolumeKg })
-                )
+            return snapshot.byYear.keys.sorted().map { year in
+                let bucket = snapshot.byYear[year] ?? .init()
+                return (label: String(year), count: bucket.count, sets: bucket.sets, volumeKg: Int(bucket.volumeKg))
             }
         }
     }
 
-    private var progressionChartCard: some View {
-        let strengthSessions = Array(filteredSessions.filter { $0.sessionType != .STRETCHING && $0.totalVolumeKg > 0 }.reversed().suffix(15))
+    private func progressionChartCard(_ snapshot: WorkoutHistorySnapshot) -> some View {
+        let points = snapshot.progression
         return VStack(alignment: .leading, spacing: 10) {
             Text(tr("Progress"))
                 .font(.headline)
                 .foregroundStyle(.primary)
-            if strengthSessions.isEmpty {
+            if points.isEmpty {
                 Text(tr("No strength workouts in this period."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 12)
             } else {
-                Chart {
-                    ForEach(Array(strengthSessions.enumerated()), id: \.offset) { idx, s in
-                        AreaMark(
-                            x: .value(tr("Workout"), "#\(idx + 1)"),
-                            y: .value(tr("Volume"), LukiFormat.volumeValue(kg: s.totalVolumeKg, unit: unit))
-                        )
-                        .foregroundStyle(LukiColors.accent.opacity(0.3))
+                Chart(points) { point in
+                    AreaMark(
+                        x: .value(tr("Date"), point.date),
+                        y: .value(tr("Volume"), LukiFormat.volumeValue(kg: point.volumeKg, unit: unit))
+                    )
+                    .foregroundStyle(LukiColors.accent.opacity(0.3))
 
-                        LineMark(
-                            x: .value(tr("Workout"), "#\(idx + 1)"),
-                            y: .value(tr("Volume"), LukiFormat.volumeValue(kg: s.totalVolumeKg, unit: unit))
-                        )
-                        .foregroundStyle(LukiColors.accent)
+                    LineMark(
+                        x: .value(tr("Date"), point.date),
+                        y: .value(tr("Volume"), LukiFormat.volumeValue(kg: point.volumeKg, unit: unit))
+                    )
+                    .foregroundStyle(LukiColors.accent)
+
+                    PointMark(
+                        x: .value(tr("Date"), point.date),
+                        y: .value(tr("Volume"), LukiFormat.volumeValue(kg: point.volumeKg, unit: unit))
+                    )
+                    .foregroundStyle(LukiColors.accent)
+                    .symbolSize(24)
+                }
+                .chartXAxis {
+                    AxisMarks(values: .automatic(desiredCount: 4)) { _ in
+                        AxisGridLine()
+                        AxisValueLabel(format: .dateTime.day().month(.abbreviated))
                     }
                 }
                 .chartYAxisLabel(LukiFormat.unitLabel(unit))
@@ -345,17 +303,14 @@ public struct DiaryAnalyticsView: View {
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
     }
 
-    private var muscleAndPrGrid: some View {
+    private func muscleAndPrGrid(_ snapshot: WorkoutHistorySnapshot) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(tr("Muscles trained"))
                 .font(.headline)
                 .foregroundStyle(.primary)
 
             ForEach(MuscleGroup.allCases.prefix(6), id: \.self) { muscle in
-                let sets = filteredSessions.reduce(0) { acc, sess in
-                    acc + sess.exercises.filter { $0.primaryMuscleSnapshot == muscle }
-                        .reduce(0) { $0 + $1.sets.filter(\.completed).count }
-                }
+                let sets = snapshot.setsByMuscle[muscle] ?? 0
                 HStack {
                     Text(LukiI18n.muscleLabel(muscle, locale: tr))
                         .font(.subheadline.weight(.semibold))
@@ -371,27 +326,37 @@ public struct DiaryAnalyticsView: View {
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
     }
 
-    private var timelineSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(tr("Workouts (%d)", filteredSessions.count))
+    private func timelineSection(_ snapshot: WorkoutHistorySnapshot) -> some View {
+        let visible = snapshot.items.prefix(visibleCount)
+        return VStack(alignment: .leading, spacing: 12) {
+            Text(tr("Workouts (%d)", snapshot.count))
                 .font(.headline)
                 .foregroundStyle(.primary)
 
-            if filteredSessions.isEmpty {
+            if snapshot.items.isEmpty {
                 Text(tr("No workouts in this period."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 12)
             } else {
-                ForEach(filteredSessions) { session in
-                    sessionHistoryCard(session)
+                LazyVStack(alignment: .leading, spacing: 12) {
+                    ForEach(visible) { item in
+                        sessionHistoryCard(item)
+                    }
+                    if visible.count < snapshot.count {
+                        ProgressView()
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .onAppear { visibleCount += Self.pageSize }
+                    }
                 }
             }
         }
     }
 
-    private func sessionHistoryCard(_ session: WorkoutSessionDto) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+    private func sessionHistoryCard(_ item: WorkoutHistorySnapshot.Item) -> some View {
+        let session = item.session
+        let notDone = notDoneExercises(session).count
+        return VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(session.workoutNameSnapshot)
                     .font(.headline)
@@ -404,15 +369,15 @@ public struct DiaryAnalyticsView: View {
                 }
             }
 
-            Text(parseSessionDate(session.startedAt).formatted(date: .abbreviated, time: .shortened))
+            Text(item.date.formatted(date: .abbreviated, time: .shortened))
                 .font(.caption2.monospacedDigit())
                 .foregroundStyle(.secondary)
 
             HStack(spacing: 12) {
                 Text(tr("%d sets", session.totalSetsCompleted))
                 Text(LukiFormat.volume(kg: session.totalVolumeKg, unit: session.weightUnit))
-                if !notDoneExercises(session).isEmpty {
-                    Text(tr("%d not done", notDoneExercises(session).count))
+                if notDone > 0 {
+                    Text(tr("%d not done", notDone))
                 }
                 if let kcal = session.activeCaloriesKcal, kcal > 0 {
                     Label("\(Int(kcal)) kcal", systemImage: "flame.fill")
@@ -452,5 +417,23 @@ public struct DiaryAnalyticsView: View {
     /// Exercises without a logged set (unused variants, left out) are listed apart as "not done".
     private func notDoneExercises(_ session: WorkoutSessionDto) -> [SessionExerciseDto] {
         session.exercises.filter { !$0.hasLoggedSet }
+    }
+}
+
+/// Recomputes the history snapshot only when its inputs change; array equality short-circuits on
+/// shared storage, so unchanged renders cost one comparison.
+@MainActor
+private final class SnapshotMemo {
+    private var key: (sessions: [WorkoutSessionDto], period: HistoryPeriod, muscle: MuscleGroup?, day: Date)?
+    private var value = WorkoutHistorySnapshot.empty
+
+    func snapshot(sessions: [WorkoutSessionDto], period: HistoryPeriod, muscle: MuscleGroup?) -> WorkoutHistorySnapshot {
+        let day = Calendar.current.startOfDay(for: Date())
+        if let key, key.period == period, key.muscle == muscle, key.day == day, key.sessions == sessions {
+            return value
+        }
+        value = WorkoutHistorySnapshot(sessions: sessions, period: period, muscle: muscle)
+        key = (sessions, period, muscle, day)
+        return value
     }
 }

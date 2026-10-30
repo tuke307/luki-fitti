@@ -13,6 +13,8 @@ public struct NutritionView: View {
     @State private var editing: MealEditorContext?
     @State private var showsPhotoSheet = false
     @State private var offlineNote = false
+    @State private var visibleWeek: Date? = NutritionCalendar.weekStart(for: Date())
+    @State private var burnMemo = BurnMemo()
 
     public init(viewModel: LukiAppViewModel) {
         self.viewModel = viewModel
@@ -25,12 +27,15 @@ public struct NutritionView: View {
     private var isToday: Bool { Calendar.current.isDateInToday(day) }
 
     private var dayEntries: [MealEntryDto] { nutrition.entries(on: day) }
-    private var totals: NutritionTotalsDto { NutritionMath.sum(dayEntries.map(\.totals)) }
-    private var workouts: [(session: WorkoutSessionDto, kcal: Int)] {
-        viewModel.store.historySessions
-            .filter { LukiISODate.parse($0.startedAt).map { Calendar.current.isDate($0, inSameDayAs: day) } ?? false }
-            .map { ($0, NutritionMath.burnedKcal(for: $0, bodyWeightKg: viewModel.bodyWeightKg(for: $0))) }
+    private var totals: NutritionTotalsDto { nutrition.totals(on: day) }
+    private var burnByDay: [Date: [NutritionCalendar.BurnedWorkout]] {
+        burnMemo.index(
+            sessions: viewModel.store.historySessions,
+            points: viewModel.bodyWeight.points,
+            fallbackKg: prefs.bodyWeightKg
+        ) { viewModel.bodyWeightKg(at: $0) }
     }
+    private var workouts: [NutritionCalendar.BurnedWorkout] { burnByDay[day] ?? [] }
     private var burned: Int { workouts.reduce(0) { $0 + $1.kcal } }
 
     public var body: some View {
@@ -60,7 +65,11 @@ public struct NutritionView: View {
         }
         .background(LukiColors.groupedBackground)
         .refreshable { await nutrition.refresh(isSignedIn: isSignedIn) }
-        .task { await nutrition.refresh(isSignedIn: isSignedIn) }
+        .task { await nutrition.refresh(isSignedIn: isSignedIn, force: false) }
+        .task(id: visibleWeek) {
+            guard let visibleWeek else { return }
+            await nutrition.ensureLoaded(from: visibleWeek, isSignedIn: isSignedIn)
+        }
         .sheet(item: $editing) { context in
             MealEditorSheet(viewModel: viewModel, context: context) { reachedServer in
                 offlineNote = !reachedServer
@@ -77,18 +86,8 @@ public struct NutritionView: View {
     // MARK: Sections
 
     private var dayHeader: some View {
-        HStack {
-            Text(dayTitle)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(.secondary)
-            Spacer()
-            Button { shiftDay(-1) } label: { Image(systemName: "chevron.left") }
-                .buttonStyle(.bordered)
-                .accessibilityLabel(tr("Previous day"))
-            Button { shiftDay(1) } label: { Image(systemName: "chevron.right") }
-                .buttonStyle(.bordered)
-                .disabled(isToday)
-                .accessibilityLabel(tr("Next day"))
+        NutritionDayNavigator(day: $day, visibleWeek: $visibleWeek, title: dayTitle, goal: prefs.dailyKcalGoal) {
+            nutrition.totals(on: $0).kcal
         }
     }
 
@@ -279,12 +278,10 @@ public struct NutritionView: View {
     }
 
     private var weekCard: some View {
+        let burnByDay = burnByDay
         let days = (0..<7).reversed().compactMap { Calendar.current.date(byAdding: .day, value: -$0, to: day) }
         let rows = days.map { d -> (date: Date, eaten: Double, burned: Int) in
-            let burnedOnDay = viewModel.store.historySessions
-                .filter { LukiISODate.parse($0.startedAt).map { Calendar.current.isDate($0, inSameDayAs: d) } ?? false }
-                .reduce(0) { $0 + NutritionMath.burnedKcal(for: $1, bodyWeightKg: viewModel.bodyWeightKg(for: $1)) }
-            return (d, nutrition.totals(on: d).kcal, burnedOnDay)
+            (d, nutrition.totals(on: d).kcal, (burnByDay[d] ?? []).reduce(0) { $0 + $1.kcal })
         }
         return VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
@@ -316,15 +313,30 @@ public struct NutritionView: View {
 
     // MARK: Helpers
 
-    private func shiftDay(_ delta: Int) {
-        guard let next = Calendar.current.date(byAdding: .day, value: delta, to: day) else { return }
-        day = min(Calendar.current.startOfDay(for: Date()), next)
-    }
-
     private func mealTypeLabel(_ type: MealType) -> String { MealEditorSheet.label(type, tr) }
 
     private var cardShape: some View {
         RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground)
+    }
+}
+
+/// Burned kcal per day, rebuilt only when history or body weight change (array equality
+/// short-circuits on shared storage, so unchanged renders cost one comparison).
+@MainActor
+private final class BurnMemo {
+    private var key: (sessions: [WorkoutSessionDto], points: [WeighInPoint], fallbackKg: Double?)?
+    private var value: [Date: [NutritionCalendar.BurnedWorkout]] = [:]
+
+    func index(
+        sessions: [WorkoutSessionDto],
+        points: [WeighInPoint],
+        fallbackKg: Double?,
+        bodyWeightKg: (Date) -> Double?
+    ) -> [Date: [NutritionCalendar.BurnedWorkout]] {
+        if let key, key.fallbackKg == fallbackKg, key.points == points, key.sessions == sessions { return value }
+        value = NutritionCalendar.burnByDay(sessions, bodyWeightKg: bodyWeightKg)
+        key = (sessions, points, fallbackKg)
+        return value
     }
 }
 

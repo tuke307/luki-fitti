@@ -11,7 +11,7 @@ import {
   setCachedMealEntries,
   setNutritionOutbox,
 } from '@/lib/offline/offline-store';
-import { entryFromPayload } from './nutrition-day';
+import { entryFromPayload, mergeWindow } from './nutrition-day';
 
 const HISTORY_DAYS = 35;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -32,6 +32,8 @@ export function useNutrition() {
   const [loaded, setLoaded] = useState(false);
   const entriesRef = useRef<MealEntryDto[]>([]);
   const flushing = useRef(false);
+  const loadedFrom = useRef<string | null>(null);
+  const rangeLoads = useRef(new Set<string>());
   const online = authMode === 'AUTHENTICATED';
 
   const commit = useCallback((next: MealEntryDto[]) => {
@@ -78,28 +80,58 @@ export function useNutrition() {
     }
   }, [commit, online]);
 
+  /** Replaces the entries in [from, to) with the server's, keeping older loaded days and pending changes. */
+  const fetchWindow = useCallback(
+    async (from: string, to: string) => {
+      const res = await api.nutrition.listEntries(from, to);
+      const outbox = await getNutritionOutbox();
+      const pendingUpserts = outbox.flatMap((i) => (i.kind === 'UPSERT' ? [i] : []));
+      commit(
+        mergeWindow(
+          entriesRef.current,
+          res.data ?? [],
+          { from, to },
+          {
+            ids: new Set(outbox.map((i) => i.clientEntryId)),
+            upserts: pendingUpserts.map((p) => entryFromPayload(p.payload)),
+          },
+        ),
+      );
+      if (!loadedFrom.current || from < loadedFrom.current) loadedFrom.current = from;
+    },
+    [commit],
+  );
+
   const refresh = useCallback(async () => {
     if (!online) return;
     const to = new Date(Date.now() + DAY_MS).toISOString();
     const from = new Date(Date.now() - HISTORY_DAYS * DAY_MS).toISOString();
     try {
       await flush();
-      const res = await api.nutrition.listEntries(from, to);
-      const outbox = await getNutritionOutbox();
-      const pendingUpserts = outbox.flatMap((i) => (i.kind === 'UPSERT' ? [i] : []));
-      const pendingDeletes = new Set(
-        outbox.filter((i) => i.kind === 'DELETE').map((i) => i.clientEntryId),
-      );
-      const server = (res.data ?? []).filter(
-        (e) =>
-          !pendingDeletes.has(e.clientEntryId) &&
-          !pendingUpserts.some((p) => p.clientEntryId === e.clientEntryId),
-      );
-      commit([...server, ...pendingUpserts.map((p) => entryFromPayload(p.payload))]);
+      await fetchWindow(from, to);
     } catch (err) {
       if (!isOffline(err)) throw err;
     }
-  }, [commit, flush, online]);
+  }, [fetchWindow, flush, online]);
+
+  /** Loads days from `dayKey` (YYYY-MM-DD, local) up to the loaded window, e.g. for older weeks. */
+  const loadFrom = useCallback(
+    async (dayKey: string) => {
+      const [y, m, d] = dayKey.split('-').map(Number) as [number, number, number];
+      const from = new Date(y, m - 1, d).toISOString();
+      const until = loadedFrom.current;
+      if (!online || !until || from >= until || rangeLoads.current.has(from)) return;
+      rangeLoads.current.add(from);
+      try {
+        await fetchWindow(from, until);
+      } catch {
+        // Older days stay as cached; the next week change retries.
+      } finally {
+        rangeLoads.current.delete(from);
+      }
+    },
+    [fetchWindow, online],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -199,5 +231,5 @@ export function useNutrition() {
     [commit],
   );
 
-  return { entries, pending, loaded, save, remove, upsertLocal, refresh };
+  return { entries, pending, loaded, save, remove, upsertLocal, refresh, loadFrom };
 }
