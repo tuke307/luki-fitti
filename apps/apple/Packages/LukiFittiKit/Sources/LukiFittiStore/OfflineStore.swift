@@ -339,6 +339,12 @@ public final class OfflineStore {
         onOverviewOrAuthChanged?()
     }
 
+    /// Persists preferences changed on this device (e.g. for guests, or before the server answers).
+    public func savePreferences(_ prefs: UserPreferencesDto) {
+        preferences = prefs
+        writeJSON(prefs, to: "user_preferences.json")
+    }
+
     public func saveHistorySessionsList(_ sessions: [WorkoutSessionDto]) {
         historySessions = sessions
             .filter { $0.status == .COMPLETED }

@@ -31,6 +31,7 @@ public struct HomeDashboardView: View {
                 }
 
                 weekCard
+                WeightHomeCard(viewModel: viewModel)
                 weeklyVolumeCard
                 musclesCard
             }

@@ -94,6 +94,7 @@ public struct ProfileAndAuthView: View {
                             try await viewModel.store.apiClient.confirmAccountDeletion(token: token)
                             viewModel.store.clearAllLocalData()
                             viewModel.nutrition.clear()
+                            viewModel.clearBodyWeightData()
                             viewModel.deepLinkTokenType = nil
                             viewModel.deepLinkToken = nil
                             statusMessage = tr("Your account has been deleted.")
@@ -139,7 +140,8 @@ public struct ProfileAndAuthView: View {
                     Task {
                         await viewModel.store.apiClient.logout()
                         viewModel.store.clearAllLocalData()
-                            viewModel.nutrition.clear()
+                        viewModel.nutrition.clear()
+                        viewModel.clearBodyWeightData()
                     }
                 }
                 .font(.subheadline.weight(.semibold))
@@ -246,6 +248,7 @@ public struct ProfileAndAuthView: View {
                             let user = try await viewModel.store.apiClient.login(email: email, password: password)
                             viewModel.store.saveAuthenticatedUser(user)
                             await viewModel.store.refreshFromServerAfterAuth()
+                            await viewModel.syncBodyWeight()
                         } else {
                             let user = try await viewModel.store.apiClient.register(
                                 email: email,
@@ -347,7 +350,13 @@ public struct ProfileAndAuthView: View {
             }
             .buttonStyle(.bordered)
             .accessibilityIdentifier("ios.profile.testNotificationButton")
+
+            Divider()
+
+            WeighInReminderSection(viewModel: viewModel)
         }
+        .onChange(of: store.preferences.notificationsEnabled) { viewModel.rescheduleWeighInReminders() }
+        .onChange(of: store.preferences.weightUnit) { viewModel.rescheduleWeighInReminders() }
         .padding(16)
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
     }
