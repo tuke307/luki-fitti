@@ -122,12 +122,17 @@ export const OPENROUTER_BASE_URL = (() => {
 })();
 export const OPENROUTER_TIMEOUT_MS = Number(process.env.OPENROUTER_TIMEOUT_MS) || 60_000;
 
-// Object storage for meal photos (S3-compatible, e.g. SeaweedFS). Photos are optional:
-// without storage, analysis still works but photos are not kept.
-// TODO: Configure S3_* in your environment / secret store.
-export const S3_ENDPOINT = (process.env.S3_ENDPOINT ?? '').trim();
-export const S3_REGION = (process.env.S3_REGION ?? '').trim() || 'us-east-1';
-export const S3_ACCESS_KEY_ID = (process.env.S3_ACCESS_KEY_ID ?? '').trim();
-export const S3_SECRET_ACCESS_KEY = (process.env.S3_SECRET_ACCESS_KEY ?? '').trim();
-export const S3_BUCKET = (process.env.S3_BUCKET ?? '').trim() || 'luki-fitti-meal-photos';
-export const S3_FORCE_PATH_STYLE = process.env.S3_FORCE_PATH_STYLE !== 'false';
+// Object storage for meal photos (SeaweedFS, S3-compatible; same variables as kds/marienmuehle).
+// Photos are optional: without storage, analysis still works but photos are not kept.
+// TODO: Configure SEAWEEDFS_* in your environment / secret store.
+export const SEAWEEDFS_ENDPOINT = (process.env.SEAWEEDFS_ENDPOINT ?? '')
+  .trim()
+  .replace(/^https?:\/\//, '')
+  .replace(/\/+$/, '');
+export const SEAWEEDFS_USE_SSL = process.env.SEAWEEDFS_USE_SSL !== 'false';
+export const SEAWEEDFS_PORT =
+  Number(process.env.SEAWEEDFS_PORT) || (SEAWEEDFS_USE_SSL ? 443 : 8333);
+export const SEAWEEDFS_ACCESS_KEY_API = (process.env.SEAWEEDFS_ACCESS_KEY_API ?? '').trim();
+export const SEAWEEDFS_SECRET_KEY_API = (process.env.SEAWEEDFS_SECRET_KEY_API ?? '').trim();
+export const SEAWEEDFS_BUCKET =
+  (process.env.SEAWEEDFS_BUCKET ?? '').trim() || 'luki-fitti-meal-photos';

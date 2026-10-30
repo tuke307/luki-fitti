@@ -52,19 +52,19 @@ cp apps/api/.env.sample apps/api/.env.local
 cp apps/web/.env.sample apps/web/.env.local
 ```
 
-| Variable | Workspace | Description |
-| :--- | :--- | :--- |
-| `DATABASE_URL` | `database`, `api` | PostgreSQL connection URL |
-| `REDIS_URL` | `api`, `email-worker` | Redis URL for BullMQ and access-token revocation |
-| `JWT_SECRET` | `api`, `web` | Access token signing secret (`>= 32` chars in production) |
-| `JWT_REFRESH_SECRET` | `api` | Refresh token signing secret (`>= 32` chars in production) |
-| `FRONTEND_URL` | `api` | Allowed CORS origin (default `http://localhost:3000`) |
-| `API_PORT` | `api`, `web` | Backend port (default `3001`) |
-| `UMAMI_URL` | `api` | Self-hosted Umami base URL (default `https://umami.tony-luke.de`) |
-| `UMAMI_WEBSITE_ID` | `api` | Umami website ID; pageview forwarding is off when unset or outside production |
-| `UMAMI_ALLOWED_HOSTNAMES` | `api` | Comma-separated hostnames to forward pageviews for (default `luki-fitti.tony-luke.de`) |
-| `OPENROUTER_API_KEY` | `api` | OpenRouter key for the AI features; they stay off when unset |
-| `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_BUCKET` | `api` | Private S3-compatible storage (SeaweedFS) for meal photos; optional |
+| Variable                                                                                                                                | Workspace             | Description                                                                                                    |
+| :-------------------------------------------------------------------------------------------------------------------------------------- | :-------------------- | :------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                                                                                          | `database`, `api`     | PostgreSQL connection URL                                                                                      |
+| `REDIS_URL`                                                                                                                             | `api`, `email-worker` | Redis URL for BullMQ and access-token revocation                                                               |
+| `JWT_SECRET`                                                                                                                            | `api`, `web`          | Access token signing secret (`>= 32` chars in production)                                                      |
+| `JWT_REFRESH_SECRET`                                                                                                                    | `api`                 | Refresh token signing secret (`>= 32` chars in production)                                                     |
+| `FRONTEND_URL`                                                                                                                          | `api`                 | Allowed CORS origin (default `http://localhost:3000`)                                                          |
+| `API_PORT`                                                                                                                              | `api`, `web`          | Backend port (default `3001`)                                                                                  |
+| `UMAMI_URL`                                                                                                                             | `api`                 | Self-hosted Umami base URL (default `https://umami.tony-luke.de`)                                              |
+| `UMAMI_WEBSITE_ID`                                                                                                                      | `api`                 | Umami website ID; pageview forwarding is off when unset or outside production                                  |
+| `UMAMI_ALLOWED_HOSTNAMES`                                                                                                               | `api`                 | Comma-separated hostnames to forward pageviews for (default `luki-fitti.tony-luke.de`)                         |
+| `OPENROUTER_API_KEY`                                                                                                                    | `api`                 | OpenRouter key for the AI features; they stay off when unset                                                   |
+| `SEAWEEDFS_ENDPOINT`, `SEAWEEDFS_PORT`, `SEAWEEDFS_USE_SSL`, `SEAWEEDFS_ACCESS_KEY_API`, `SEAWEEDFS_SECRET_KEY_API`, `SEAWEEDFS_BUCKET` | `api`                 | Private SeaweedFS storage for meal photos; optional. `SEAWEEDFS_ENDPOINT` is a host; TLS on 443 is the default |
 
 ### 3. Install, Migrate & Run
 
@@ -82,14 +82,14 @@ yarn dev
 
 ## Common Scripts
 
-| Command | Description |
-| :--- | :--- |
-| `yarn dev` | Start development servers across workspaces |
-| `yarn build` | Build all packages and applications |
-| `yarn test` | Run unit and integration tests (`api`, `web`, and Swift `LukiFittiKit`) |
-| `yarn lint` | Run TypeScript and ESLint checks |
-| `yarn db:migrate -- <name>` | Create and apply a new Prisma migration |
-| `yarn --cwd apps/api openapi:export` | Export Swagger OpenAPI spec to `apps/apple` |
+| Command                              | Description                                                             |
+| :----------------------------------- | :---------------------------------------------------------------------- |
+| `yarn dev`                           | Start development servers across workspaces                             |
+| `yarn build`                         | Build all packages and applications                                     |
+| `yarn test`                          | Run unit and integration tests (`api`, `web`, and Swift `LukiFittiKit`) |
+| `yarn lint`                          | Run TypeScript and ESLint checks                                        |
+| `yarn db:migrate -- <name>`          | Create and apply a new Prisma migration                                 |
+| `yarn --cwd apps/api openapi:export` | Export Swagger OpenAPI spec to `apps/apple`                             |
 
 ---
 
@@ -109,4 +109,3 @@ xcrun simctl pair <WATCH_SIM_UDID> <IPHONE_SIM_UDID>
 ```
 
 - **Environment Switching:** `Config/Debug.xcconfig` defaults to `http://localhost:3001` and `Config/Release.xcconfig` defaults to `https://luki-fitti.tony-luke.de`. You can override the API URL in Xcode under **Edit Scheme (`⌘<`) → Run → Environment Variables → `LUKIFITTI_API_BASE_URL`**.
-

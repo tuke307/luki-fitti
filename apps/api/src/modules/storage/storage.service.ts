@@ -9,12 +9,12 @@ import {
 } from '@aws-sdk/client-s3';
 import { logger } from '@luki-fitti/logger';
 import {
-  S3_ACCESS_KEY_ID,
-  S3_BUCKET,
-  S3_ENDPOINT,
-  S3_FORCE_PATH_STYLE,
-  S3_REGION,
-  S3_SECRET_ACCESS_KEY,
+  SEAWEEDFS_ACCESS_KEY_API,
+  SEAWEEDFS_BUCKET,
+  SEAWEEDFS_ENDPOINT,
+  SEAWEEDFS_PORT,
+  SEAWEEDFS_SECRET_KEY_API,
+  SEAWEEDFS_USE_SSL,
 } from '@/config/env.config';
 
 /**
@@ -27,7 +27,7 @@ export class StorageService {
   private bucketReady: Promise<void> | null = null;
 
   get isConfigured(): boolean {
-    return S3_ENDPOINT.length > 0 && S3_ACCESS_KEY_ID.length > 0;
+    return SEAWEEDFS_ENDPOINT.length > 0 && SEAWEEDFS_ACCESS_KEY_API.length > 0;
   }
 
   private getClient(): S3Client {
@@ -35,10 +35,13 @@ export class StorageService {
       throw new ServiceUnavailableException('Photo storage is not configured');
     }
     this.client ??= new S3Client({
-      endpoint: S3_ENDPOINT,
-      region: S3_REGION,
-      forcePathStyle: S3_FORCE_PATH_STYLE,
-      credentials: { accessKeyId: S3_ACCESS_KEY_ID, secretAccessKey: S3_SECRET_ACCESS_KEY },
+      endpoint: `${SEAWEEDFS_USE_SSL ? 'https' : 'http'}://${SEAWEEDFS_ENDPOINT}:${SEAWEEDFS_PORT}`,
+      region: 'us-east-1',
+      forcePathStyle: true,
+      credentials: {
+        accessKeyId: SEAWEEDFS_ACCESS_KEY_API,
+        secretAccessKey: SEAWEEDFS_SECRET_KEY_API,
+      },
     });
     return this.client;
   }
@@ -47,10 +50,10 @@ export class StorageService {
     this.bucketReady ??= (async () => {
       const client = this.getClient();
       try {
-        await client.send(new HeadBucketCommand({ Bucket: S3_BUCKET }));
+        await client.send(new HeadBucketCommand({ Bucket: SEAWEEDFS_BUCKET }));
       } catch {
-        await client.send(new CreateBucketCommand({ Bucket: S3_BUCKET }));
-        logger.info(`Created storage bucket ${S3_BUCKET}`);
+        await client.send(new CreateBucketCommand({ Bucket: SEAWEEDFS_BUCKET }));
+        logger.info(`Created storage bucket ${SEAWEEDFS_BUCKET}`);
       }
     })().catch((err: unknown) => {
       this.bucketReady = null;
@@ -62,12 +65,19 @@ export class StorageService {
   async put(key: string, body: Buffer, contentType: string): Promise<void> {
     await this.ensureBucket();
     await this.getClient().send(
-      new PutObjectCommand({ Bucket: S3_BUCKET, Key: key, Body: body, ContentType: contentType }),
+      new PutObjectCommand({
+        Bucket: SEAWEEDFS_BUCKET,
+        Key: key,
+        Body: body,
+        ContentType: contentType,
+      }),
     );
   }
 
   async get(key: string): Promise<{ body: Buffer; contentType: string }> {
-    const result = await this.getClient().send(new GetObjectCommand({ Bucket: S3_BUCKET, Key: key }));
+    const result = await this.getClient().send(
+      new GetObjectCommand({ Bucket: SEAWEEDFS_BUCKET, Key: key }),
+    );
     const bytes = await result.Body?.transformToByteArray();
     if (!bytes) throw new ServiceUnavailableException('Photo unavailable');
     return { body: Buffer.from(bytes), contentType: result.ContentType ?? 'image/jpeg' };
@@ -80,7 +90,7 @@ export class StorageService {
       for (let i = 0; i < keys.length; i += 1000) {
         await this.getClient().send(
           new DeleteObjectsCommand({
-            Bucket: S3_BUCKET,
+            Bucket: SEAWEEDFS_BUCKET,
             Delete: { Objects: keys.slice(i, i + 1000).map((Key) => ({ Key })), Quiet: true },
           }),
         );
