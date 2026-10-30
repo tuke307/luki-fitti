@@ -57,6 +57,43 @@ final class BodyWeightStoreTests: XCTestCase {
     }
 
     @MainActor
+    func testStagedRemovalCanBeUndoneOrCommitted() async throws {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("BodyWeightStoreTests-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        let api = APIClient(baseURL: URL(string: "http://127.0.0.1:9")!, tokenStore: EmptyTokenStore())
+        let store = BodyWeightStore(apiClient: api, storageDirectory: tempDir)
+        store.merge([
+            BodyWeightEntryDto(id: "1", clientEntryId: "weight-11111111", measuredAt: "2026-10-01T07:00:00Z", weightKg: 82, source: .MANUAL),
+            BodyWeightEntryDto(id: "2", clientEntryId: "hk-22222222", measuredAt: "2026-10-02T07:00:00Z", weightKg: 81.5, source: .HEALTHKIT, healthKitUuid: "uuid-2"),
+        ])
+
+        store.stageRemoval(store.entries[1])
+        XCTAssertEqual(store.entries.map(\.weightKg), [82])
+        XCTAssertEqual(store.points.count, 1)
+        XCTAssertEqual(BodyWeightStore(apiClient: api, storageDirectory: tempDir).entries.count, 2, "kept on disk until committed")
+
+        // A server merge during the undo window doesn't bring it back.
+        store.merge([BodyWeightEntryDto(id: "2", clientEntryId: "hk-22222222", measuredAt: "2026-10-02T07:00:00Z", weightKg: 81.5, source: .HEALTHKIT, healthKitUuid: "uuid-2")])
+        XCTAssertEqual(store.entries.count, 1)
+
+        XCTAssertTrue(store.undoRemoval(clientEntryId: "hk-22222222"))
+        XCTAssertEqual(store.entries.map(\.weightKg), [82, 81.5])
+        XCTAssertEqual(store.entries[1].source, .HEALTHKIT, "restored as it was, not re-created")
+        XCTAssertFalse(store.undoRemoval(clientEntryId: "hk-22222222"))
+
+        store.stageRemoval(store.entries[0])
+        let committed = await store.commitRemoval(clientEntryId: "weight-11111111", isSignedIn: false)
+        XCTAssertEqual(committed?.weightKg, 82)
+        XCTAssertTrue(store.stagedRemovals.isEmpty)
+        XCTAssertEqual(store.entries.map(\.weightKg), [81.5])
+        XCTAssertEqual(store.outbox.map(\.kind), [.delete])
+        XCTAssertEqual(BodyWeightStore(apiClient: api, storageDirectory: tempDir).entries.map(\.weightKg), [81.5])
+        let again = await store.commitRemoval(clientEntryId: "weight-11111111", isSignedIn: false)
+        XCTAssertNil(again)
+    }
+
+    @MainActor
     func testMergeReplacesByClientIdAndDropsDeletedHealthSamples() {
         let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("BodyWeightStoreTests-\(UUID().uuidString)", isDirectory: true)
