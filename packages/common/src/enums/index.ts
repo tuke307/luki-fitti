@@ -269,7 +269,7 @@ export const FEATURE_GRANTS: FeatureGrant[] = Object.values(FeatureGrant);
 
 export const FEATURE_GRANT_LABELS: Record<FeatureGrant, { en: string; de: string }> = {
   [FeatureGrant.AI_WORKOUT_BUILDER]: { en: 'AI workout builder', de: 'KI-Workout-Planer' },
-  [FeatureGrant.AI_MEAL_PHOTO]: { en: 'AI meal photos', de: 'KI-Mahlzeitenfotos' },
+  [FeatureGrant.AI_MEAL_PHOTO]: { en: 'AI meal estimate', de: 'KI-Mahlzeitenschätzung' },
 };
 
 export const isAdminPermission = (value: string): value is AdminPermission =>
@@ -281,6 +281,7 @@ export const isFeatureGrant = (value: string): value is FeatureGrant =>
 export enum AiSkillName {
   WORKOUT_BUILDER = 'workout-builder',
   MEAL_ANALYZER = 'meal-analyzer',
+  MEAL_TEXT_ANALYZER = 'meal-text-analyzer',
 }
 
 export enum AiRunStatus {
