@@ -1,5 +1,7 @@
 import { MEAL_TYPES, MealAmountUnit, MealType, SessionStatus } from '@luki-fitti/common/enums';
 import type {
+  HealthDailyEnergyDto,
+  HealthWorkoutDto,
   MealEntryDto,
   UpsertMealEntryDto,
   WorkoutSessionDto,
@@ -111,32 +113,135 @@ export function sessionBurnKcal(
   return estimateWorkoutEnergy(session, bodyWeightKg);
 }
 
+/** Apple Health activity (from `GET /activity`) used to refine the burned calories of a day. */
+export interface DayActivity {
+  days: readonly HealthDailyEnergyDto[];
+  workouts: readonly HealthWorkoutDto[];
+}
+
+/** Minimum overlap, as a share of the shorter duration, for a session to match a Health workout. */
+export const SESSION_WORKOUT_MIN_OVERLAP = 0.5;
+
+interface TimeRange {
+  start: number;
+  end: number;
+}
+
+/** A completed session's time range; falls back to its active duration without `completedAt`. */
+function sessionRange(session: WorkoutSessionDto): TimeRange {
+  const start = Date.parse(session.startedAt);
+  const completed = session.completedAt ? Date.parse(session.completedAt) : NaN;
+  const end = Number.isFinite(completed)
+    ? completed
+    : start + Math.max(0, session.activeDurationSeconds) * 1000;
+  return { start, end: Math.max(start, end) };
+}
+
+const workoutRange = (w: HealthWorkoutDto): TimeRange => {
+  const start = Date.parse(w.startedAt);
+  return { start, end: Math.max(start, Date.parse(w.endedAt)) };
+};
+
+/**
+ * Overlap of two time ranges in ms when it covers at least half of the shorter one, else 0.
+ * Ranges without any overlap (including zero-length ones) never match.
+ */
+export function matchingOverlapMs(a: TimeRange, b: TimeRange): number {
+  const overlap = Math.min(a.end, b.end) - Math.max(a.start, b.start);
+  if (!(overlap > 0)) return 0;
+  const shorter = Math.min(a.end - a.start, b.end - b.start);
+  return overlap >= SESSION_WORKOUT_MIN_OVERLAP * shorter ? overlap : 0;
+}
+
+const healthKcal = (w: HealthWorkoutDto) => Math.round(Math.max(0, w.activeKcal ?? 0));
+
+export interface DayWorkoutBurn {
+  session: WorkoutSessionDto;
+  kcal: number;
+  /** Matches a workout in Apple Health (own or from another app), so it's in the daily total. */
+  covered?: boolean;
+  /** The external Health workout whose energy is shown for this session, if any. */
+  healthWorkout?: HealthWorkoutDto | null;
+}
+
 export interface DayNutrition {
   key: string;
   entries: MealEntryDto[];
   byMealType: Array<{ mealType: MealType; entries: MealEntryDto[]; kcal: number }>;
   totals: MacroValues;
-  workouts: Array<{ session: WorkoutSessionDto; kcal: number }>;
+  workouts: DayWorkoutBurn[];
+  /** Workouts recorded by other apps/devices that don't match a LukiFitti session. */
+  externalWorkouts: Array<{ workout: HealthWorkoutDto; kcal: number }>;
+  /**
+   * Apple Health active energy not explained by the listed workouts ("Daily activity");
+   * `null` without Health data for the day.
+   */
+  dailyActivityKcal: number | null;
   burnedKcal: number;
   usedDefaultBodyWeight: boolean;
 }
 
+/**
+ * Builds a day's food log and burn. With Apple Health `activity`, the day's active energy is the
+ * base; sessions matching a Health workout are already part of it, and only unmatched sessions
+ * are added on top. Without Health energy for the day, sessions and unmatched external workouts
+ * are summed.
+ */
 export function buildDay(
   key: string,
   entries: MealEntryDto[],
   sessions: WorkoutSessionDto[],
   weighIns: readonly WeighIn[] = [],
   fallbackBodyWeightKg?: number | null,
+  activity?: DayActivity | null,
 ): DayNutrition {
   const dayEntries = entries
     .filter((e) => dayKey(e.eatenAt) === key)
     .sort((a, b) => Date.parse(a.eatenAt) - Date.parse(b.eatenAt));
-  const workouts = sessions
-    .filter((s) => s.status === SessionStatus.COMPLETED && dayKey(s.startedAt) === key)
-    .map((session) => ({
-      session,
-      ...sessionBurnKcal(session, weighIns, fallbackBodyWeightKg),
-    }));
+  const daySessions = sessions.filter(
+    (s) => s.status === SessionStatus.COMPLETED && dayKey(s.startedAt) === key,
+  );
+  const healthWorkouts = (activity?.workouts ?? []).map((w) => ({ w, range: workoutRange(w) }));
+  const matchedExternal = new Set<string>();
+
+  const workouts = daySessions.map((session) => {
+    const estimate = sessionBurnKcal(session, weighIns, fallbackBodyWeightKg);
+    const range = sessionRange(session);
+    let covered = false;
+    let best: { w: HealthWorkoutDto; overlap: number } | null = null;
+    for (const { w, range: wr } of healthWorkouts) {
+      const overlap = matchingOverlapMs(range, wr);
+      if (overlap === 0) continue;
+      covered = true;
+      if (!w.isOwn) {
+        matchedExternal.add(w.id);
+        if (w.activeKcal != null && (!best || overlap > best.overlap)) best = { w, overlap };
+      }
+    }
+    return best
+      ? { session, kcal: healthKcal(best.w), usedDefaultBodyWeight: false, covered, best: best.w }
+      : { session, ...estimate, covered, best: null };
+  });
+
+  const externalWorkouts = (activity?.workouts ?? [])
+    .filter((w) => !w.isOwn && !matchedExternal.has(w.id) && dayKey(w.startedAt) === key)
+    .sort((a, b) => Date.parse(a.startedAt) - Date.parse(b.startedAt))
+    .map((workout) => ({ workout, kcal: healthKcal(workout) }));
+  const externalKcal = externalWorkouts.reduce((acc, w) => acc + w.kcal, 0);
+
+  const healthDay = activity?.days.find((d) => d.day === key);
+  const sessionsKcal = workouts.reduce((acc, w) => acc + w.kcal, 0);
+  let burnedKcal: number;
+  let dailyActivityKcal: number | null = null;
+  if (healthDay) {
+    const activeKcal = Math.round(Math.max(0, healthDay.activeKcal));
+    const coveredKcal = workouts.filter((w) => w.covered).reduce((acc, w) => acc + w.kcal, 0);
+    burnedKcal = activeKcal + (sessionsKcal - coveredKcal);
+    dailyActivityKcal = Math.max(0, activeKcal - externalKcal - coveredKcal);
+  } else {
+    burnedKcal = sessionsKcal + externalKcal;
+  }
+
   return {
     key,
     entries: dayEntries,
@@ -145,8 +250,15 @@ export function buildDay(
       return { mealType, entries: list, kcal: sumMacros(list.map((e) => e.totals)).kcal };
     }).filter((g) => g.entries.length > 0),
     totals: sumMacros(dayEntries.map((e) => e.totals)),
-    workouts: workouts.map(({ session, kcal }) => ({ session, kcal })),
-    burnedKcal: workouts.reduce((acc, w) => acc + w.kcal, 0),
+    workouts: workouts.map(({ session, kcal, covered, best }) => ({
+      session,
+      kcal,
+      covered,
+      healthWorkout: best,
+    })),
+    externalWorkouts,
+    dailyActivityKcal,
+    burnedKcal,
     usedDefaultBodyWeight: workouts.some((w) => w.usedDefaultBodyWeight),
   };
 }

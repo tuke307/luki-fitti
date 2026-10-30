@@ -8,6 +8,8 @@ import type {
   AiUsageSummaryDto,
   BodyWeightEntryDto,
   BodyWeightRangeQueryDto,
+  HealthActivityDto,
+  HealthActivityRangeQueryDto,
   ExerciseFeedbackDto,
   MealAnalysisResponseDto,
   MyAiUsageDto,
@@ -299,6 +301,14 @@ export const bodyWeight = {
     }),
 };
 
+export const activity = {
+  /** Apple Health daily energy and workouts imported by the iOS app (read-only on the web). */
+  list: (range: HealthActivityRangeQueryDto) =>
+    apiFetch<HealthActivityDto>(
+      `/activity?${new URLSearchParams({ from: range.from, to: range.to }).toString()}`,
+    ),
+};
+
 export const ai = {
   buildWorkout: (data: WorkoutBuilderRequestDto) =>
     apiFetch<WorkoutBuilderResponseDto>('/ai/workout-builder', {
@@ -358,6 +368,7 @@ export const api = {
   analytics,
   nutrition,
   bodyWeight,
+  activity,
   ai,
   exerciseFeedback,
   admin,
