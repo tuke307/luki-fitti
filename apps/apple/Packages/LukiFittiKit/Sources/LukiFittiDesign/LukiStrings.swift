@@ -387,6 +387,12 @@ public enum LukiStrings {
         "You’ve reached today’s limit. Try again tomorrow.": "Du hast das heutige Limit erreicht. Versuch es morgen wieder.",
         "e.g. A chest workout. My upper chest is my weak point.": "z. B. Ein Brust-Workout. Meine obere Brust ist meine Schwachstelle.",
         "e.g. about 200 g rice, cooked in olive oil": "z. B. etwa 200 g Reis, in Olivenöl gebraten",
+        // Food day navigation
+        "%@, %@ of %@ kcal": "%@, %@ von %@ kcal",
+        "Choose a day": "Tag auswählen",
+        "Next week": "Nächste Woche",
+        "Opens a calendar to pick a day": "Öffnet einen Kalender zur Tagesauswahl",
+        "Previous week": "Vorherige Woche",
         // Body weight & weigh-in reminder
         "%@ in 7 days": "%@ in 7 Tagen",
         "%d days ago": "vor %d Tagen",

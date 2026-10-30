@@ -18,12 +18,24 @@ public struct NutritionOutboxItem: Codable, Sendable, Equatable {
 @MainActor
 @Observable
 public final class NutritionStore {
-    public private(set) var entries: [MealEntryDto] = []
+    public private(set) var entries: [MealEntryDto] = [] {
+        didSet { reindex() }
+    }
     public private(set) var outbox: [NutritionOutboxItem] = []
+    /// Start of the oldest day fetched from the server in this session.
+    public private(set) var loadedFrom: Date?
 
+    private var byDay: [Date: [MealEntryDto]] = [:]
+    private var totalsByDay: [Date: NutritionTotalsDto] = [:]
+    private let indexCalendar = Calendar.current
     private let api: APIClient
     private let directory: URL
     private var flushing = false
+    @ObservationIgnored private var lastRefreshAt: Date?
+    @ObservationIgnored private var rangeFetches: Set<Date> = []
+
+    public nonisolated static let historyDays = 35
+    public nonisolated static let refreshThrottle: TimeInterval = 60
 
     public init(apiClient: APIClient, storageDirectory: URL? = nil) {
         self.api = apiClient
@@ -33,18 +45,32 @@ public final class NutritionStore {
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         entries = read("nutrition_entries.json") ?? []
         outbox = read("nutrition_outbox.json") ?? []
+        reindex()
     }
 
     // MARK: Queries
 
     public func entries(on day: Date, calendar: Calendar = .current) -> [MealEntryDto] {
-        entries
-            .filter { $0.eatenAtDate.map { calendar.isDate($0, inSameDayAs: day) } ?? false }
-            .sorted { $0.eatenAt < $1.eatenAt }
+        guard Self.sameRules(calendar, indexCalendar) else {
+            return NutritionCalendar.entriesByDay(entries, calendar: calendar)[calendar.startOfDay(for: day)] ?? []
+        }
+        return byDay[indexCalendar.startOfDay(for: day)] ?? []
     }
 
     public func totals(on day: Date, calendar: Calendar = .current) -> NutritionTotalsDto {
-        NutritionMath.sum(entries(on: day, calendar: calendar).map(\.totals))
+        guard Self.sameRules(calendar, indexCalendar) else {
+            return NutritionMath.sum(entries(on: day, calendar: calendar).map(\.totals))
+        }
+        return totalsByDay[indexCalendar.startOfDay(for: day)] ?? NutritionTotalsDto()
+    }
+
+    private func reindex() {
+        byDay = NutritionCalendar.entriesByDay(entries, calendar: indexCalendar)
+        totalsByDay = byDay.mapValues { NutritionMath.sum($0.map(\.totals)) }
+    }
+
+    private static func sameRules(_ a: Calendar, _ b: Calendar) -> Bool {
+        a.identifier == b.identifier && a.timeZone == b.timeZone
     }
 
     // MARK: Mutations
@@ -82,19 +108,63 @@ public final class NutritionStore {
 
     // MARK: Sync
 
-    public func refresh(isSignedIn: Bool) async {
+    /// Loads the recent window. `force: false` skips the call when the last refresh is under a minute old.
+    public func refresh(isSignedIn: Bool, force: Bool = true) async {
         guard isSignedIn else { return }
-        await flush()
         let now = Date()
-        guard let server = try? await api.fetchMealEntries(
-            from: now.addingTimeInterval(-35 * 86_400),
-            to: now.addingTimeInterval(86_400)
-        ) else { return }
-        let pendingIds = Set(outbox.map(\.clientEntryId))
-        let pendingUpserts = outbox.compactMap { $0.kind == .upsert ? $0.payload : nil }
-        entries = server.filter { !pendingIds.contains($0.clientEntryId) }
-            + pendingUpserts.map { Self.optimisticEntry($0, existing: nil) }
+        guard Self.shouldRefresh(lastRefreshAt: lastRefreshAt, now: now, force: force) else { return }
+        await flush()
+        let from = indexCalendar.startOfDay(for: now.addingTimeInterval(-Double(Self.historyDays) * 86_400))
+        guard await fetch(from: from, to: now.addingTimeInterval(86_400)) else { return }
+        lastRefreshAt = now
+    }
+
+    /// Fetches older days (e.g. when the week strip scrolls back) unless they're already loaded.
+    public func ensureLoaded(from day: Date, isSignedIn: Bool) async {
+        let from = indexCalendar.startOfDay(for: day)
+        guard isSignedIn, let loadedFrom, from < loadedFrom, !rangeFetches.contains(from) else { return }
+        rangeFetches.insert(from)
+        defer { rangeFetches.remove(from) }
+        _ = await fetch(from: from, to: loadedFrom)
+    }
+
+    private func fetch(from: Date, to: Date) async -> Bool {
+        guard let server = try? await api.fetchMealEntries(from: from, to: to) else { return false }
+        entries = Self.merge(
+            existing: entries,
+            server: server,
+            window: DateInterval(start: from, end: max(from, to)),
+            pendingUpserts: outbox.compactMap { $0.kind == .upsert ? $0.payload : nil },
+            pendingIds: Set(outbox.map(\.clientEntryId))
+        )
+        loadedFrom = min(loadedFrom ?? from, from)
         persistEntries()
+        return true
+    }
+
+    nonisolated static func shouldRefresh(lastRefreshAt: Date?, now: Date, force: Bool) -> Bool {
+        guard !force, let lastRefreshAt else { return true }
+        return now.timeIntervalSince(lastRefreshAt) >= refreshThrottle || now < lastRefreshAt
+    }
+
+    /// Server rows replace everything inside `window`; entries outside it and pending changes stay.
+    nonisolated static func merge(
+        existing: [MealEntryDto],
+        server: [MealEntryDto],
+        window: DateInterval,
+        pendingUpserts: [UpsertMealEntryDto],
+        pendingIds: Set<String>
+    ) -> [MealEntryDto] {
+        let serverIds = Set(server.map(\.clientEntryId))
+        let outside = existing.filter { entry in
+            guard !pendingIds.contains(entry.clientEntryId), !serverIds.contains(entry.clientEntryId) else { return false }
+            guard let date = entry.eatenAtDate else { return false }
+            return date < window.start || date >= window.end
+        }
+        let pending = pendingUpserts.map { payload in
+            optimisticEntry(payload, existing: existing.first { $0.clientEntryId == payload.clientEntryId })
+        }
+        return outside + server.filter { !pendingIds.contains($0.clientEntryId) } + pending
     }
 
     public func flush() async {
@@ -127,6 +197,8 @@ public final class NutritionStore {
     public func clear() {
         entries = []
         outbox = []
+        loadedFrom = nil
+        lastRefreshAt = nil
         try? FileManager.default.removeItem(at: directory.appendingPathComponent("nutrition_entries.json"))
         try? FileManager.default.removeItem(at: directory.appendingPathComponent("nutrition_outbox.json"))
     }
@@ -135,7 +207,7 @@ public final class NutritionStore {
 
     public static func newClientId() -> String { "meal-\(UUID().uuidString.lowercased())" }
 
-    static func optimisticEntry(_ payload: UpsertMealEntryDto, existing: MealEntryDto?) -> MealEntryDto {
+    nonisolated static func optimisticEntry(_ payload: UpsertMealEntryDto, existing: MealEntryDto?) -> MealEntryDto {
         let items = payload.items.enumerated().map { index, item in
             MealItemDto(
                 id: "local-item-\(index)",
