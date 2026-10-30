@@ -85,7 +85,7 @@ services:
     networks:
       - luki_fitti_network
   seaweedfs:
-    image: chrislusf/seaweedfs:4.01
+    image: chrislusf/seaweedfs:latest
     restart: on-failure
     ports:
       - '8335:8333' # S3 API, offset from kds (8333) and marienmuehle (8334)
@@ -103,11 +103,13 @@ services:
     networks:
       - luki_fitti_network
   seaweedfs-admin:
-    image: chrislusf/seaweedfs:4.01
+    image: chrislusf/seaweedfs:latest
     restart: on-failure
     ports:
-      - '23648:23646' # admin UI, offset from kds (23646) and marienmuehle (23647)
-    command: admin -master=seaweedfs:9333 -port=23646
+      - '127.0.0.1:23648:23646' # admin UI, offset from kds (23646) and marienmuehle (23647)
+    # 4.x binds the unauthenticated admin UI to loopback by default; bind inside the container
+    # so the port mapping works, and publish it on the host's loopback only.
+    command: admin -master=seaweedfs:9333 -port=23646 -ip=0.0.0.0 -allowInsecureBind
     depends_on:
       - seaweedfs
     networks:
