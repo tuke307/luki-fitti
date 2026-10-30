@@ -9,9 +9,12 @@ import {
   MEAL_PHOTO_MAX_COUNT,
   MEAL_PHOTO_MIME_TYPES,
   MealAnalysisRequestSchema,
+  MealTextAnalysisRequestSchema,
   WorkoutBuilderRequestSchema,
   type MealAnalysisRequestDto,
   type MealAnalysisResponseDto,
+  type MealTextAnalysisRequestDto,
+  type MealTextAnalysisResponseDto,
   type WorkoutBuilderRequestDto,
   type WorkoutBuilderResponseDto,
 } from '@luki-fitti/common/schemas';
@@ -65,5 +68,17 @@ export class AiController {
     @UploadedFiles() files: Express.Multer.File[] | undefined,
   ): Promise<MealAnalysisResponseDto> {
     return this.aiService.analyzeMeal(user.id, locale, body, files ?? []);
+  }
+
+  @Post('meal-text-analysis')
+  @RequireFeature(FeatureGrant.AI_MEAL_PHOTO)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Propose foods, portions and nutrients from a written meal description' })
+  describeMeal(
+    @CurrentUser() user: AuthenticatedUser,
+    @RequestLocale() locale: SupportedLocale,
+    @Body(new ZodValidationPipe(MealTextAnalysisRequestSchema)) body: MealTextAnalysisRequestDto,
+  ): Promise<MealTextAnalysisResponseDto> {
+    return this.aiService.describeMeal(user.id, locale, body);
   }
 }

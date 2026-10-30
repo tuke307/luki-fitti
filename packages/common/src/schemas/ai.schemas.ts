@@ -7,7 +7,7 @@ import {
   MuscleGroup,
   EquipmentType,
 } from '../enums';
-import type { MealEntryDto } from './nutrition.schemas';
+import type { MealEntryDto, MealItemDto } from './nutrition.schemas';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AI usage & cost (USD exactly as reported by OpenRouter; null when unknown)
@@ -182,6 +182,34 @@ export interface MealAnalysisResponseDto {
   analysis: MealAnalysisDto;
   /** Whether photos were kept (false when server photo storage is not configured). */
   photosStored: boolean;
+  usage: AiRunUsageDto;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AI meal text analysis ("Müsli, ca. 100 g, mit Hafermilch")
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const MEAL_DESCRIPTION_MIN_LENGTH = 3;
+export const MEAL_DESCRIPTION_MAX_LENGTH = 500;
+
+export const MealTextAnalysisRequestSchema = z.object({
+  description: z
+    .string()
+    .trim()
+    .min(MEAL_DESCRIPTION_MIN_LENGTH, 'Describe your meal')
+    .max(MEAL_DESCRIPTION_MAX_LENGTH),
+  mealType: z.enum(MealType).optional(),
+});
+
+export type MealTextAnalysisRequestDto = z.infer<typeof MealTextAnalysisRequestSchema>;
+
+/** A proposed food (not saved yet): the client adds it to the editor as a draft. */
+export type MealProposalItemDto = Omit<MealItemDto, 'id' | 'orderIndex'>;
+
+export interface MealTextAnalysisResponseDto {
+  runId: string;
+  items: MealProposalItemDto[];
+  analysis: MealAnalysisDto;
   usage: AiRunUsageDto;
 }
 
