@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse as parseJsonc } from 'jsonc-parser';
+import type { EmailTemplate } from './generated/prisma/client';
 import prisma from './client';
 import logger from '@luki-fitti/logger';
 import { ALL_SYSTEM_EXERCISES } from '@luki-fitti/common/catalog/extended';
@@ -19,15 +20,27 @@ interface SeedUser {
   passwordHash: string;
 }
 
+type SeedEmailTemplate = Pick<EmailTemplate, 'type' | 'name' | 'subject' | 'htmlFile'>;
+
+interface SeedExerciseAlternatives {
+  reason: string;
+}
+
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 
-async function loadSeedUsers(): Promise<SeedUser[]> {
-  const filePath = path.join(currentDir, '..', 'data', 'users.jsonc');
-  return parseJsonc(await fs.promises.readFile(filePath, 'utf-8'));
+async function loadJsonFile<T>(filename: string): Promise<T> {
+  const filePath = path.join(currentDir, '..', 'data', filename);
+  const fileContent = await fs.promises.readFile(filePath, 'utf-8');
+  return filename.endsWith('.jsonc') ? parseJsonc(fileContent) : JSON.parse(fileContent);
 }
 
 async function main(): Promise<void> {
-  const seedUsers = await loadSeedUsers();
+  // Load fixtures from disk first (no DB work, safe outside the transaction).
+  const seedUsers = await loadJsonFile<SeedUser[]>('users.jsonc');
+  const emailTemplates = await loadJsonFile<SeedEmailTemplate[]>('email_templates.json');
+  const exerciseAlternatives = await loadJsonFile<SeedExerciseAlternatives>(
+    'exercise_alternatives.json',
+  );
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -108,56 +121,19 @@ async function main(): Promise<void> {
             data: {
               exerciseId: item.id,
               alternativeExerciseId: altId,
-              reason: 'Equipment busy / biomechanical alternative',
+              reason: exerciseAlternatives.reason,
             },
           });
         }
       }
 
-      await tx.emailTemplate.upsert({
-        where: { type: 'ACCOUNT_CONFIRMATION' },
-        update: {
-          name: 'Account Confirmation',
-          subject: 'LukiFitti — Confirm your account ({{ name }})',
-          htmlFile: 'account-confirmation.mjml',
-        },
-        create: {
-          name: 'Account Confirmation',
-          subject: 'LukiFitti — Confirm your account ({{ name }})',
-          htmlFile: 'account-confirmation.mjml',
-          type: 'ACCOUNT_CONFIRMATION',
-        },
-      });
-
-      await tx.emailTemplate.upsert({
-        where: { type: 'PASSWORD_RESET' },
-        update: {
-          name: 'Password Reset',
-          subject: 'LukiFitti — Reset your password',
-          htmlFile: 'password-reset.mjml',
-        },
-        create: {
-          name: 'Password Reset',
-          subject: 'LukiFitti — Reset your password',
-          htmlFile: 'password-reset.mjml',
-          type: 'PASSWORD_RESET',
-        },
-      });
-
-      await tx.emailTemplate.upsert({
-        where: { type: 'ACCOUNT_DELETION' },
-        update: {
-          name: 'Account Deletion',
-          subject: 'LukiFitti — Confirm account deletion',
-          htmlFile: 'account-deletion.mjml',
-        },
-        create: {
-          name: 'Account Deletion',
-          subject: 'LukiFitti — Confirm account deletion',
-          htmlFile: 'account-deletion.mjml',
-          type: 'ACCOUNT_DELETION',
-        },
-      });
+      for (const { type, ...template } of emailTemplates) {
+        await tx.emailTemplate.upsert({
+          where: { type },
+          update: template,
+          create: { type, ...template },
+        });
+      }
 
       const seedEmails =
         process.env.NODE_ENV !== 'production' ? seedUsers.map((u) => u.email.toLowerCase()) : [];

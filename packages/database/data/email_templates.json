@@ -1,0 +1,20 @@
+[
+  {
+    "type": "ACCOUNT_CONFIRMATION",
+    "name": "Account Confirmation",
+    "subject": "LukiFitti — Confirm your account ({{ name }})",
+    "htmlFile": "account-confirmation.mjml"
+  },
+  {
+    "type": "PASSWORD_RESET",
+    "name": "Password Reset",
+    "subject": "LukiFitti — Reset your password",
+    "htmlFile": "password-reset.mjml"
+  },
+  {
+    "type": "ACCOUNT_DELETION",
+    "name": "Account Deletion",
+    "subject": "LukiFitti — Confirm account deletion",
+    "htmlFile": "account-deletion.mjml"
+  }
+]
