@@ -73,7 +73,7 @@ services:
       - UMAMI_WEBSITE_ID=${UMAMI_WEBSITE_ID}
       - UMAMI_ALLOWED_HOSTNAMES=${UMAMI_ALLOWED_HOSTNAMES}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - S3_ENDPOINT=http://luki-fitti-storage:8333
+      - S3_ENDPOINT=${S3_ENDPOINT}
       - S3_REGION=${S3_REGION:-us-east-1}
       - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
       - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
@@ -102,21 +102,6 @@ services:
       - 'caddy_1.0_handle.reverse_proxy={{upstreams 3001}}'
       - 'app.project=luki-fitti'
       - 'app.service=api'
-
-  # Private S3-compatible storage for meal photos. Not exposed to the internet; the API streams
-  # photos to their owner after an ownership check. Buckets and S3 users are configured manually
-  # and stored in the filer (no -s3.config file, which would override them).
-  luki-fitti-storage:
-    image: chrislusf/seaweedfs:4.50
-    restart: always
-    command: 'server -dir=/data -s3'
-    volumes:
-      - luki_fitti_storage:/data
-    networks:
-      - luki_fitti_network
-    labels:
-      - 'app.project=luki-fitti'
-      - 'app.service=storage'
 
   luki-fitti-email-worker:
     image: ghcr.io/tuke307/luki-fitti-email-worker:latest
@@ -160,6 +145,3 @@ services:
 networks:
   luki_fitti_network:
     driver: bridge
-
-volumes:
-  luki_fitti_storage:
