@@ -31,6 +31,8 @@ import type {
   MealAnalysisResponseDto,
   MealEntryDto,
   MealItemDto,
+  MealProposalItemDto,
+  MealTextAnalysisResponseDto,
   UpsertMealEntryDto,
 } from '@luki-fitti/common/schemas';
 import {
@@ -245,21 +247,32 @@ function MealEditorBody({
     return new Date(y, mo - 1, d, h || 0, m || 0).toISOString();
   };
 
-  const applyAnalysis = (res: MealAnalysisResponseDto) => {
-    if (!serverEntry) setUnsavedEstimate(true);
-    setServerEntry(res.entry);
-    onEntryChanged?.(res.entry);
-    // Server AI items replace earlier AI drafts; locally typed manual foods (maybe unsaved) stay.
+  // AI items replace earlier AI drafts; locally typed manual foods (maybe unsaved) stay.
+  const replaceAiDrafts = (aiItems: MealProposalItemDto[]) =>
     setItems((list) => {
       const manual = list.filter(
         (d) =>
           d.source === FoodItemSource.MANUAL &&
           (d.name.trim() || Object.values(d.values).some(Boolean)),
       );
-      const ai = res.entry.items.filter((i) => i.source === FoodItemSource.AI).map(draftFromItem);
+      const ai = aiItems.map(draftFromItem);
       return manual.length + ai.length > 0 ? [...manual, ...ai] : [emptyDraft()];
     });
+
+  const applyAnalysis = (res: MealAnalysisResponseDto) => {
+    if (!serverEntry) setUnsavedEstimate(true);
+    setServerEntry(res.entry);
+    onEntryChanged?.(res.entry);
+    replaceAiDrafts(res.entry.items.filter((i) => i.source === FoodItemSource.AI));
     toast.success(t.mealAi.review);
+  };
+
+  // Text proposals are drafts only: they are saved with the meal, so nothing to discard on cancel.
+  const applyProposals = (res: MealTextAnalysisResponseDto) => {
+    if (res.items.length === 0) return;
+    replaceAiDrafts(res.items);
+    if (res.analysis.mealTypeGuess) setMealType(res.analysis.mealTypeGuess);
+    toast.success(t.mealAi.proposed);
   };
 
   const deleteSavedPhoto = async (photoId: string) => {
@@ -421,6 +434,7 @@ function MealEditorBody({
             busy={analyzing}
             onBusyChange={setAnalyzing}
             onAnalyzed={applyAnalysis}
+            onProposed={applyProposals}
             onDeleteSaved={deleteSavedPhoto}
           />
         )}

@@ -12,6 +12,8 @@ import type {
   HealthActivityRangeQueryDto,
   ExerciseFeedbackDto,
   MealAnalysisResponseDto,
+  MealTextAnalysisRequestDto,
+  MealTextAnalysisResponseDto,
   MyAiUsageDto,
   MealEntryDto,
   MealItemDto,
@@ -317,6 +319,11 @@ export const ai = {
     }),
   analyzeMeal: (form: FormData) =>
     apiFetch<MealAnalysisResponseDto>('/ai/meal-analysis', { method: 'POST', body: form }),
+  describeMeal: (data: MealTextAnalysisRequestDto) =>
+    apiFetch<MealTextAnalysisResponseDto>('/ai/meal-text-analysis', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   myUsage: (days: number) => apiFetch<MyAiUsageDto>(`/ai/usage/me?days=${days}`),
 };
 

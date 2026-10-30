@@ -9,10 +9,13 @@ import { Textarea } from '@luki-fitti/ui/components/ui/textarea';
 import { toast } from '@luki-fitti/ui/components/ui/sonner';
 import type { MealType } from '@luki-fitti/common/enums';
 import {
+  MEAL_DESCRIPTION_MAX_LENGTH,
+  MEAL_DESCRIPTION_MIN_LENGTH,
   MEAL_PHOTO_MAX_BYTES,
   MEAL_PHOTO_MAX_COUNT,
   type MealAnalysisResponseDto,
   type MealPhotoDto,
+  type MealTextAnalysisResponseDto,
 } from '@luki-fitti/common/schemas';
 import { api } from '@/lib/api';
 import { aiErrorMessage } from '@/lib/ai/ai-errors';
@@ -37,10 +40,12 @@ interface MealPhotoSectionProps {
   busy: boolean;
   onBusyChange: (busy: boolean) => void;
   onAnalyzed: (response: MealAnalysisResponseDto) => void;
+  /** Foods proposed from the description alone (no photos); nothing is saved yet. */
+  onProposed: (response: MealTextAnalysisResponseDto) => void;
   onDeleteSaved: (photoId: string) => Promise<void>;
 }
 
-/** Photo strip + AI estimate inside the meal editor. */
+/** Photo strip, meal description and AI estimate inside the meal editor. */
 export function MealPhotoSection({
   savedPhotos,
   isOnline,
@@ -50,6 +55,7 @@ export function MealPhotoSection({
   busy,
   onBusyChange,
   onAnalyzed,
+  onProposed,
   onDeleteSaved,
 }: MealPhotoSectionProps) {
   const { t, format } = useLocale();
@@ -57,6 +63,7 @@ export function MealPhotoSection({
   const [hint, setHint] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [lastUsage, setLastUsage] = useState<MealAnalysisResponseDto['usage'] | null>(null);
+  const [uncertaintyNote, setUncertaintyNote] = useState<string | null>(null);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const galleryInput = useRef<HTMLInputElement>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
@@ -73,6 +80,8 @@ export function MealPhotoSection({
   const savedCount = viewerPhotos.length - picked.length;
   const full = picked.length >= MEAL_PHOTO_MAX_COUNT;
   const disabled = busy || !isOnline;
+  const textOnly = picked.length === 0;
+  const description = hint.trim();
 
   const addFiles = (files: FileList | null) => {
     if (!files) return;
@@ -99,6 +108,20 @@ export function MealPhotoSection({
     setPicked((list) => list.filter((x) => x.id !== photo.id));
   };
 
+  const describe = async () => {
+    if (description.length < MEAL_DESCRIPTION_MIN_LENGTH) {
+      setError(t.mealAi.describeTooShort);
+      return;
+    }
+    const res = await api.ai.describeMeal({ description, mealType: request().mealType });
+    if (!res.data) throw new Error('empty');
+    if (!res.data.analysis.containsFood) toast.info(t.mealAi.noFoodText);
+    setHint('');
+    setLastUsage(res.data.usage ?? null);
+    setUncertaintyNote(res.data.items.length ? res.data.analysis.uncertaintyNote || null : null);
+    onProposed(res.data);
+  };
+
   const analyze = async () => {
     if (!isOnline) {
       setError(t.mealAi.offline);
@@ -107,6 +130,10 @@ export function MealPhotoSection({
     onBusyChange(true);
     setError(null);
     try {
+      if (textOnly) {
+        await describe();
+        return;
+      }
       const blobs = await Promise.all(picked.map((p) => prepareImageForUpload(p.file)));
       if (blobs.some((b) => b.size > MEAL_PHOTO_MAX_BYTES)) {
         setError(format(t.mealAi.tooLarge, { mb: Math.round(MEAL_PHOTO_MAX_BYTES / 1024 / 1024) }));
@@ -131,6 +158,7 @@ export function MealPhotoSection({
       setPicked([]);
       setHint('');
       setLastUsage(res.data.usage ?? null);
+      setUncertaintyNote(null);
       onAnalyzed(res.data);
     } catch (err) {
       setError(aiErrorMessage(err, t));
@@ -142,7 +170,7 @@ export function MealPhotoSection({
   return (
     <section aria-labelledby="meal-photos" className="space-y-3" data-testid="meal-photo-section">
       <h3 id="meal-photos" className="text-[0.8125rem] font-semibold">
-        {t.nutrition.photos}
+        {t.mealAi.sectionTitle}
       </h3>
       <input
         ref={galleryInput}
@@ -229,41 +257,49 @@ export function MealPhotoSection({
         <p className="text-muted-foreground text-[0.8125rem]">{t.mealAi.reestimateHint}</p>
       )}
 
-      {picked.length > 0 && (
-        <>
-          <div className="space-y-1.5">
-            <Label htmlFor="meal-hint" className="text-[0.8125rem] font-semibold">
-              {t.mealAi.hintLabel}
-            </Label>
-            <Textarea
-              id="meal-hint"
-              value={hint}
-              maxLength={500}
-              rows={2}
-              disabled={busy}
-              onChange={(e) => setHint(e.target.value)}
-              placeholder={t.mealAi.hintPlaceholder}
-            />
-          </div>
-          <Button
-            type="button"
-            onClick={() => void analyze()}
-            disabled={disabled}
-            className="w-full sm:w-auto"
-          >
-            {busy ? (
-              <>
-                <Spinner /> {t.mealAi.analyzing}
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" /> {t.mealAi.estimate}
-              </>
-            )}
-          </Button>
-        </>
+      <div className="space-y-1.5">
+        <Label htmlFor="meal-hint" className="text-[0.8125rem] font-semibold">
+          {textOnly ? t.mealAi.describeLabel : t.mealAi.hintLabel}
+        </Label>
+        <Textarea
+          id="meal-hint"
+          value={hint}
+          maxLength={MEAL_DESCRIPTION_MAX_LENGTH}
+          rows={2}
+          disabled={disabled}
+          onChange={(e) => setHint(e.target.value)}
+          placeholder={textOnly ? t.mealAi.describePlaceholder : t.mealAi.hintPlaceholder}
+          aria-describedby={textOnly ? 'meal-hint-help' : undefined}
+        />
+        {textOnly && (
+          <p id="meal-hint-help" className="text-muted-foreground text-[0.8125rem]">
+            {t.mealAi.describeHelp}
+          </p>
+        )}
+      </div>
+
+      {(!textOnly || description.length > 0) && (
+        <Button
+          type="button"
+          onClick={() => void analyze()}
+          disabled={disabled || (textOnly && description.length < MEAL_DESCRIPTION_MIN_LENGTH)}
+          className="w-full sm:w-auto"
+        >
+          {busy ? (
+            <>
+              <Spinner /> {t.mealAi.analyzing}
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-4 w-4" /> {t.mealAi.estimate}
+            </>
+          )}
+        </Button>
       )}
 
+      {uncertaintyNote && (
+        <p className="text-muted-foreground text-[0.8125rem]">{uncertaintyNote}</p>
+      )}
       {lastUsage && <AiCostLabel usage={lastUsage} />}
 
       {error && (

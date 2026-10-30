@@ -175,6 +175,7 @@ struct AIUsageView: View {
         switch skill {
         case "workout-builder": return tr("Workout builder")
         case "meal-analyzer": return tr("Meal photo")
+        case "meal-text-analyzer": return tr("Meal description")
         default: return skill
         }
     }

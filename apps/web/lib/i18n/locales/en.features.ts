@@ -106,6 +106,15 @@ export const enFeatures = {
     removePhoto: 'Remove photo {n}',
     hintLabel: 'Anything to add? (optional)',
     hintPlaceholder: 'e.g. about 200 g rice, cooked in olive oil',
+    sectionTitle: 'Photos or description',
+    describeLabel: 'Describe your meal',
+    describePlaceholder:
+      'e.g. muesli for breakfast, about 100 g, with 1/4 scoop protein powder, oat milk and a cappuccino',
+    describeHelp:
+      'Without photos, AI suggests foods from your description. You can edit them before saving.',
+    describeTooShort: 'Describe your meal in a few words.',
+    noFoodText: 'We couldn’t find food in this description.',
+    proposed: 'Check the suggested foods and adjust amounts if needed.',
     analyze: 'Estimate',
     analyzing: 'Looking at your meal…',
     review: 'Check the estimate and adjust amounts if needed.',
@@ -366,6 +375,7 @@ export const enFeatures = {
     skills: {
       'workout-builder': 'Workout builder',
       'meal-analyzer': 'Meal photo',
+      'meal-text-analyzer': 'Meal description',
     },
     adminCost: 'AI cost (30 days)',
     adminDetailTitle: 'AI usage · {email}',
