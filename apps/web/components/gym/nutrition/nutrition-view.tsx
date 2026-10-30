@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Camera, ChevronLeft, ChevronRight, Flame, Plus } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
+import { Camera, Flame, Plus } from 'lucide-react';
 import {
   Bar,
   BarChart,
@@ -20,10 +20,11 @@ import { goalProgress } from '@luki-fitti/common/utils/client';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
-import { buildDay, dayKey, lastDays, shiftDay } from '@/lib/nutrition/nutrition-day';
+import { buildDay, dayKey, kcalByDay, lastDays, shiftDay } from '@/lib/nutrition/nutrition-day';
 import { useNutrition } from '@/lib/nutrition/use-nutrition';
 import { useBodyWeight } from '@/lib/body-weight/use-body-weight';
 import type { NavTab } from '../pwa-shell';
+import { DayWeekStrip } from './day-week-strip';
 import { MealEditorDialog } from './meal-editor-dialog';
 import { MealPhotoDialog } from './meal-photo-dialog';
 
@@ -51,7 +52,7 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
   const { user } = useAuth();
   const { historySessions, isOnline } = useGym();
   const { t, format, bcp47 } = useLocale();
-  const { entries, pending, save, remove, upsertLocal } = useNutrition();
+  const { entries, pending, save, remove, upsertLocal, loadFrom } = useNutrition();
   const { entries: weighIns } = useBodyWeight();
 
   const todayKey = dayKey(new Date());
@@ -69,6 +70,8 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
     () => buildDay(selected, entries, historySessions, weighIns, prefs?.bodyWeightKg),
     [selected, entries, historySessions, weighIns, prefs?.bodyWeightKg],
   );
+  const kcalPerDay = useMemo(() => kcalByDay(entries), [entries]);
+  const loadWeek = useCallback((weekStart: string) => void loadFrom(weekStart), [loadFrom]);
   const week = useMemo(
     () =>
       lastDays(selected, 7).map((key) => {
@@ -128,34 +131,24 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
 
   return (
     <div className="mx-auto max-w-2xl min-w-0 space-y-6 pb-10">
-      <header className="flex items-end justify-between gap-3">
+      <header className="space-y-3">
         <div className="min-w-0 space-y-1">
-          <p className="text-muted-foreground text-[0.9375rem] font-medium first-letter:uppercase">
+          <p
+            className="text-muted-foreground text-[0.9375rem] font-medium first-letter:uppercase"
+            aria-live="polite"
+          >
             {dayLabel}
           </p>
           <h1 className="text-[2.125rem] leading-tight font-bold">{t.nutrition.title}</h1>
         </div>
-        <div className="flex shrink-0 gap-1">
-          <Button
-            type="button"
-            variant="secondary"
-            size="icon"
-            aria-label={t.nutrition.previousDay}
-            onClick={() => setSelected((k) => shiftDay(k, -1))}
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="icon"
-            aria-label={t.nutrition.nextDay}
-            disabled={selected >= todayKey}
-            onClick={() => setSelected((k) => shiftDay(k, 1))}
-          >
-            <ChevronRight className="h-5 w-5" />
-          </Button>
-        </div>
+        <DayWeekStrip
+          selected={selected}
+          todayKey={todayKey}
+          kcalByDay={kcalPerDay}
+          goal={kcalGoal}
+          onSelect={setSelected}
+          onVisibleWeekChange={loadWeek}
+        />
       </header>
 
       <section aria-label={t.nutrition.eaten} className="bg-card space-y-5 rounded-[1.25rem] p-5">

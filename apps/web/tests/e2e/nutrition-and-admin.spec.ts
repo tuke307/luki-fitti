@@ -30,6 +30,27 @@ test.describe('Food tab — manual meal logging', () => {
     await expect(breakfast).toContainText('95');
   });
 
+  test('navigates days with the week strip, keyboard and today button', async ({ page }) => {
+    await navigateToTab(page, 'nutrition');
+    const strip = page.getByRole('group', { name: /Days of the week|Tage der Woche/ });
+    const today = strip.locator('button[aria-current="date"]');
+    await expect(today).toHaveAttribute('aria-pressed', 'true');
+
+    await today.focus();
+    await page.keyboard.press('ArrowLeft');
+    await expect(page.getByText(/^(Yesterday|Gestern)$/)).toBeVisible();
+
+    await page.getByRole('button', { name: /^(Today|Heute)$/ }).click();
+    await expect(today).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('button', { name: /^(Today|Heute)$/ })).toHaveCount(0);
+
+    await page.getByRole('button', { name: /Previous week|Vorherige Woche/ }).click();
+    await expect(strip.locator('button[aria-current="date"]')).toHaveCount(0);
+    await page.getByRole('button', { name: /Next week|Nächste Woche/ }).click();
+    await expect(today).toBeVisible();
+    await expect(page.getByRole('button', { name: /Next week|Nächste Woche/ })).toBeDisabled();
+  });
+
   test('requires a name for foods with values', async ({ page }) => {
     await navigateToTab(page, 'nutrition');
     await page.getByRole('button', { name: /Add meal|Mahlzeit hinzufügen/ }).click();
