@@ -466,13 +466,22 @@ public final class LukiAppViewModel {
         )
     }
 
-    public func sendTestNotification() {
-        scheduleNotification(
-            identifier: "lukifitti.test.notification",
-            title: locale("Rest is over"),
-            body: locale("This is how rest timer alerts will look."),
-            after: 1
-        )
+    public func sendTestNotification() async -> Bool {
+        let center = UNUserNotificationCenter.current()
+        guard (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) == true else { return false }
+        let content = UNMutableNotificationContent()
+        content.title = locale("Rest is over")
+        content.body = locale("This is how rest timer alerts will look.")
+        if store.preferences.restTimerSound {
+            content.sound = .default
+        }
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        try? await center.add(UNNotificationRequest(
+            identifier: LukiNotificationCenterDelegate.testNotificationIdentifier,
+            content: content,
+            trigger: trigger
+        ))
+        return true
     }
 
     /// Strings and preferences are resolved on the main actor before the authorization callback.
