@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { FoodItemSource, MealType } from '../enums';
+import { FoodItemSource, MealAmountUnit, MealType } from '../enums';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Nutrition: meal entries, items, summaries
@@ -25,7 +25,9 @@ export const TimeZoneSchema = z
 
 export const MealItemInputSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(120),
+  /** Amount in `amountUnit` (g or ml). */
   grams: z.number().min(0).max(5000).nullable().optional(),
+  amountUnit: z.enum(MealAmountUnit).default(MealAmountUnit.G),
   kcal: z.number().min(0).max(10000).default(0),
   proteinG: z.number().min(0).max(1000).default(0),
   carbsG: z.number().min(0).max(1000).default(0),
@@ -65,7 +67,9 @@ export interface MealItemDto {
   id: string;
   orderIndex: number;
   name: string;
+  /** Amount in `amountUnit` (g or ml). */
   grams: number | null;
+  amountUnit: MealAmountUnit;
   kcal: number;
   proteinG: number;
   carbsG: number;

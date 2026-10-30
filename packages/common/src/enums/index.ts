@@ -314,6 +314,12 @@ export enum FoodItemSource {
   AI = 'AI',
 }
 
+/** Unit of a meal item's amount: grams for solids, millilitres for drinks (litres are display-only). */
+export enum MealAmountUnit {
+  G = 'G',
+  ML = 'ML',
+}
+
 export enum BodyWeightSource {
   MANUAL = 'MANUAL',
   HEALTHKIT = 'HEALTHKIT',

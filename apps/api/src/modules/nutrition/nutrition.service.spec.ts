@@ -92,7 +92,7 @@ describe('NutritionService ownership', () => {
           notes: null,
           createdAt: new Date(),
           updatedAt: new Date(),
-          items: [{ id: 'i', orderIndex: 0, name: 'x', grams: null, kcal: 1, proteinG: 0, carbsG: 0, fatG: 0, fiberG: null, sugarG: null, source: FoodItemSource.MANUAL, confidence: null }],
+          items: [{ id: 'i', orderIndex: 0, name: 'x', grams: null, amountUnit: 'G', kcal: 1, proteinG: 0, carbsG: 0, fatG: 0, fiberG: null, sugarG: null, source: FoodItemSource.MANUAL, confidence: null }],
           photos: [],
         }),
       },

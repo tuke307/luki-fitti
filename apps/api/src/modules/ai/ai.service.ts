@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
-import { FoodItemSource, MealType, type SupportedLocale } from '@luki-fitti/common/enums';
+import { FoodItemSource, MealAmountUnit, MealType, type SupportedLocale } from '@luki-fitti/common/enums';
 import {
   MEAL_PHOTO_MAX_COUNT,
   type MealAnalysisRequestDto,
@@ -168,7 +168,8 @@ export class AiService {
         });
         return {
           name: item.name,
-          grams: round1(item.estimatedGrams),
+          grams: round1(item.estimatedAmount),
+          amountUnit: item.unit === 'ml' ? MealAmountUnit.ML : MealAmountUnit.G,
           kcal: Math.round(reconciled.kcal),
           proteinG: round1(item.proteinG),
           carbsG: round1(item.carbsG),
@@ -184,6 +185,7 @@ export class AiService {
         .map((i) => ({
           name: i.name,
           grams: i.grams,
+          amountUnit: i.amountUnit,
           kcal: i.kcal,
           proteinG: i.proteinG,
           carbsG: i.carbsG,
