@@ -15,6 +15,7 @@ import { api } from '@/lib/api';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { AdminState } from './admin-shell';
 import { useAdminResource } from './use-admin-resource';
+import { AdminUserAiUsageDialog } from './admin-user-ai-usage-dialog';
 
 const splitList = (value: string) =>
   value
@@ -250,6 +251,7 @@ function AiSettingsForm({
 function AiUsage() {
   const { t, format, bcp47 } = useLocale();
   const [days, setDays] = useState(30);
+  const [detailUser, setDetailUser] = useState<{ id: string; email: string } | null>(null);
   const { data, error, loading, reload } = useAdminResource(
     () => api.admin.aiUsage(days),
     String(days),
@@ -347,11 +349,18 @@ function AiUsage() {
               </h3>
               <ul className="divide-border/60 divide-y text-[0.9375rem]">
                 {data.topUsers.map((u) => (
-                  <li key={u.userId} className="flex justify-between gap-3 py-2.5">
-                    <span className="truncate">{u.email}</span>
-                    <span className="text-muted-foreground shrink-0 tabular-nums">
-                      {number.format(u.runs)} · {usd.format(u.costUsd)}
-                    </span>
+                  <li key={u.userId}>
+                    <button
+                      type="button"
+                      onClick={() => setDetailUser({ id: u.userId, email: u.email })}
+                      aria-label={format(t.aiUsage.adminShowDetail, { email: u.email })}
+                      className="hover:bg-secondary/60 flex min-h-11 w-full items-center justify-between gap-3 rounded-lg py-2.5 text-left"
+                    >
+                      <span className="truncate">{u.email}</span>
+                      <span className="text-muted-foreground shrink-0 tabular-nums">
+                        {number.format(u.runs)} · {usd.format(u.costUsd)}
+                      </span>
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -363,6 +372,7 @@ function AiUsage() {
           </p>
         </>
       )}
+      <AdminUserAiUsageDialog user={detailUser} onClose={() => setDetailUser(null)} />
     </section>
   );
 }

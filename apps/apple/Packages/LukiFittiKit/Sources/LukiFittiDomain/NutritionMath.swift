@@ -42,6 +42,47 @@ public enum NutritionMath {
         return copy
     }
 
+    /// Units offered in amount inputs; `l` is stored as `.ML` × 1000.
+    public enum AmountDisplayUnit: String, CaseIterable, Sendable, Identifiable {
+        case g, ml, l
+        public var id: String { rawValue }
+        public var stored: MealAmountUnit { self == .g ? .G : .ML }
+    }
+
+    /// Rescales within the same unit; switching g ↔ ml only relabels (no density guess).
+    public static func scale(_ item: MealItemDto, toAmount amount: Double, unit: MealAmountUnit) -> MealItemDto {
+        guard unit == item.amountUnit else {
+            var copy = item
+            copy.grams = amount
+            copy.amountUnit = unit
+            return copy
+        }
+        return scale(item, toGrams: amount)
+    }
+
+    /// Typed value (e.g. 1.5 l) → stored amount and unit (1500 ml).
+    public static func storedAmount(_ value: Double, _ unit: AmountDisplayUnit) -> (amount: Double, unit: MealAmountUnit) {
+        unit == .l ? (round1(value * 1000), .ML) : (value, unit.stored)
+    }
+
+    /// Friendliest display unit: from 1000 ml upward volumes show as litres.
+    public static func displayAmount(_ amount: Double, _ unit: MealAmountUnit) -> (value: Double, unit: AmountDisplayUnit) {
+        switch unit {
+        case .G: (amount, .g)
+        case .ML: amount >= 1000 ? (amount / 1000, .l) : (amount, .ml)
+        }
+    }
+
+    /// "500 g", "500 ml", "1,5 l" (locale-aware decimals); empty without an amount.
+    public static func formatAmount(_ amount: Double?, _ unit: MealAmountUnit, locale: Locale = .current) -> String {
+        guard let amount, amount.isFinite else { return "" }
+        let display = displayAmount(amount, unit)
+        let value = display.value.formatted(
+            .number.precision(.fractionLength(0...(display.unit == .l ? 2 : 1))).locale(locale)
+        )
+        return "\(value) \(display.unit.rawValue)"
+    }
+
     public static func progress(_ value: Double, goal: Int?) -> Double? {
         guard let goal, goal > 0 else { return nil }
         return min(1, max(0, value / Double(goal)))

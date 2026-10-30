@@ -52,6 +52,29 @@ test.describe('Food tab — manual meal logging', () => {
     await expect(page.getByRole('button', { name: /Next week|Nächste Woche/ })).toBeDisabled();
   });
 
+  test('logs drinks in ml and litres with a single add button', async ({ page }) => {
+    await navigateToTab(page, 'nutrition');
+    await expect(page.getByRole('button', { name: /Snap a photo|Foto machen/ })).toHaveCount(0);
+    await page.getByRole('button', { name: /Add meal|Mahlzeit hinzufügen/ }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('radio', { name: /Lunch|Mittagessen/ }).click();
+    await dialog.locator('input[id$="-name"]').fill('Iced tea');
+    await dialog.locator('select[id$="-unit"]').selectOption('ml');
+    await dialog.locator('input[id$="-grams"]').fill('500');
+    await dialog.locator('input[id$="-kcal"]').fill('140');
+    // ml → l keeps the volume; nutrients are not rescaled by a unit switch.
+    await dialog.locator('select[id$="-unit"]').selectOption('l');
+    await expect(dialog.locator('input[id$="-grams"]')).toHaveValue('0.5');
+    await expect(dialog.locator('input[id$="-kcal"]')).toHaveValue('140');
+    await dialog.locator('input[id$="-grams"]').fill('1.5');
+    await expect(dialog.locator('input[id$="-kcal"]')).toHaveValue('420');
+    await dialog.getByRole('button', { name: /Save meal|Mahlzeit speichern/ }).click();
+
+    const lunch = page.getByRole('region', { name: /Lunch|Mittagessen/ });
+    await expect(lunch).toContainText('Iced tea');
+    await expect(lunch).toContainText(/1[.,]5 l/);
+  });
+
   test('requires a name for foods with values', async ({ page }) => {
     await navigateToTab(page, 'nutrition');
     await page.getByRole('button', { name: /Add meal|Mahlzeit hinzufügen/ }).click();

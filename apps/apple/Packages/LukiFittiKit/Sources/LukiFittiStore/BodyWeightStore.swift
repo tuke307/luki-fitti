@@ -27,6 +27,9 @@ public final class BodyWeightStore {
     /// Parsed `entries`, oldest first (cached for chart and calorie lookups).
     public private(set) var points: [WeighInPoint] = []
 
+    /// Deletions that can still be undone: hidden from `entries`, kept on disk, not yet sent.
+    public private(set) var stagedRemovals: [String: BodyWeightEntryDto] = [:]
+
     private let api: APIClient
     private let directory: URL
     private var flushing = false
@@ -101,6 +104,28 @@ public final class BodyWeightStore {
         enqueue(BodyWeightOutboxItem(kind: .delete, clientEntryId: entry.clientEntryId, serverId: entry.id))
     }
 
+    /// Hides a weigh-in so the deletion can be undone; `commitRemoval` deletes it for real.
+    public func stageRemoval(_ entry: BodyWeightEntryDto) {
+        stagedRemovals[entry.clientEntryId] = entry
+        entries.removeAll { $0.clientEntryId == entry.clientEntryId }
+    }
+
+    /// Brings a staged weigh-in back. Returns `false` when it was already committed.
+    @discardableResult
+    public func undoRemoval(clientEntryId: String) -> Bool {
+        guard let entry = stagedRemovals.removeValue(forKey: clientEntryId) else { return false }
+        replace(entry)
+        return true
+    }
+
+    /// Deletes a staged weigh-in. Returns the entry when it was still staged.
+    @discardableResult
+    public func commitRemoval(clientEntryId: String, isSignedIn: Bool) async -> BodyWeightEntryDto? {
+        guard let entry = stagedRemovals.removeValue(forKey: clientEntryId) else { return nil }
+        await remove(entry, isSignedIn: isSignedIn)
+        return entry
+    }
+
     /// Uploads Apple Health changes in chunks of ≤ 500 and merges the server's answer.
     /// Returns `false` when a chunk failed, so the caller keeps its HealthKit anchor and retries.
     public func importHealthKit(samples: [BodyWeightHealthKitSampleDto], deletedUuids: [String]) async -> Bool {
@@ -127,7 +152,7 @@ public final class BodyWeightStore {
         }
         let incomingIds = Set(incoming.map(\.clientEntryId))
         list.removeAll { incomingIds.contains($0.clientEntryId) }
-        list.append(contentsOf: incoming)
+        list.append(contentsOf: incoming.filter { stagedRemovals[$0.clientEntryId] == nil })
         entries = Self.sortedEntries(list)
         persistEntries()
     }
@@ -138,7 +163,7 @@ public final class BodyWeightStore {
         guard isSignedIn else { return }
         await flush()
         guard let server = try? await api.fetchBodyWeightEntries() else { return }
-        let pendingIds = Set(outbox.map(\.clientEntryId))
+        let pendingIds = Set(outbox.map(\.clientEntryId)).union(stagedRemovals.keys)
         let pendingUpserts = outbox.compactMap { $0.kind == .upsert ? $0.payload : nil }
         let local = Dictionary(entries.map { ($0.clientEntryId, $0) }, uniquingKeysWith: { a, _ in a })
         entries = Self.sortedEntries(
@@ -178,6 +203,7 @@ public final class BodyWeightStore {
     }
 
     public func clear() {
+        stagedRemovals = [:]
         entries = []
         outbox = []
         try? FileManager.default.removeItem(at: directory.appendingPathComponent(Self.entriesFile))
@@ -208,6 +234,7 @@ public final class BodyWeightStore {
     }
 
     private func replace(_ entry: BodyWeightEntryDto) {
+        guard stagedRemovals[entry.clientEntryId] == nil else { return }
         var list = entries
         list.removeAll { $0.clientEntryId == entry.clientEntryId }
         list.append(entry)
@@ -221,7 +248,9 @@ public final class BodyWeightStore {
         persistOutbox()
     }
 
-    private func persistEntries() { write(entries, Self.entriesFile) }
+    private func persistEntries() {
+        write(stagedRemovals.isEmpty ? entries : Self.sortedEntries(entries + stagedRemovals.values), Self.entriesFile)
+    }
     private func persistOutbox() { write(outbox, Self.outboxFile) }
 
     private func read<T: Decodable>(_ name: String) -> T? {

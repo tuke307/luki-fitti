@@ -23,7 +23,12 @@ import {
 import { ConfirmDestructiveDialog } from '../confirm-destructive-dialog';
 import { WeightChart } from './weight-chart';
 import { WeightEntryForm } from './weight-entry-form';
-import { consumeWeightFocusRequest, focusWeightInput, WEIGHT_SECTION_ID } from './weight-focus';
+import {
+  consumeWeightFocusRequest,
+  focusWeightInput,
+  scrollToWeightSection,
+  WEIGHT_SECTION_ID,
+} from './weight-focus';
 
 const COLLAPSED_ROWS = 8;
 
@@ -44,7 +49,9 @@ export function WeightView() {
   useEffect(() => {
     // Consumed inside the frame so a StrictMode effect re-run doesn't drop the request.
     const id = window.requestAnimationFrame(() => {
-      if (consumeWeightFocusRequest()) focusWeightInput();
+      const request = consumeWeightFocusRequest();
+      if (request === 'input') focusWeightInput();
+      else if (request === 'section') scrollToWeightSection();
     });
     return () => window.cancelAnimationFrame(id);
   }, []);
@@ -109,7 +116,8 @@ export function WeightView() {
       id={WEIGHT_SECTION_ID}
       aria-labelledby="weight-title"
       role="region"
-      className="min-w-0 scroll-mt-20 space-y-5 rounded-[1.25rem] p-5"
+      tabIndex={-1}
+      className="min-w-0 scroll-mt-20 space-y-5 rounded-[1.25rem] p-5 outline-none"
     >
       <div className="flex items-center gap-2.5">
         <Scale className="text-primary h-5 w-5" aria-hidden="true" />

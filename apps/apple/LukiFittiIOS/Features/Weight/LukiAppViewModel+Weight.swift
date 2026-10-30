@@ -24,6 +24,7 @@ extension LukiAppViewModel {
         bodyWeight.latest?.weightKg ?? store.preferences.bodyWeightKg
     }
 
+    /// Switches to Today and pushes the weight screen onto its navigation stack.
     func openWeight() {
         selectedTab = .home
         isWeightPresented = true
@@ -51,6 +52,26 @@ extension LukiAppViewModel {
 
     func deleteWeighIn(_ entry: BodyWeightEntryDto) async {
         await bodyWeight.remove(entry, isSignedIn: isSignedIn)
+        await didDeleteWeighIn(entry)
+    }
+
+    /// Hides a weigh-in right away; it is deleted by `commitWeighInDeletion` unless undone first.
+    func stageWeighInDeletion(_ entry: BodyWeightEntryDto) {
+        bodyWeight.stageRemoval(entry)
+    }
+
+    func undoWeighInDeletion(_ entry: BodyWeightEntryDto) {
+        bodyWeight.undoRemoval(clientEntryId: entry.clientEntryId)
+    }
+
+    func commitWeighInDeletion(_ entry: BodyWeightEntryDto) async {
+        guard let removed = await bodyWeight.commitRemoval(clientEntryId: entry.clientEntryId, isSignedIn: isSignedIn) else {
+            return
+        }
+        await didDeleteWeighIn(removed)
+    }
+
+    private func didDeleteWeighIn(_ entry: BodyWeightEntryDto) async {
         if entry.source == .MANUAL {
             await bodyMassSync.deleteExported(clientEntryId: entry.clientEntryId)
         }
@@ -75,8 +96,18 @@ extension LukiAppViewModel {
 
     // MARK: Sync
 
+    /// Whether the weight screen should explain Apple Health before asking for access.
+    var canOfferAppleHealth: Bool {
+        isSignedIn && bodyMassSync.isAvailable && !bodyMassSync.hasRequestedAuthorization
+    }
+
+    /// Asks for Apple Health access (after the in-app explainer) and imports right away.
+    func connectAppleHealth() async {
+        await syncBodyWeight(requestHealthAccess: true)
+    }
+
     /// Refreshes weigh-ins from the server, imports Apple Health changes and tops up reminders.
-    /// `requestHealthAccess` is only set when the weight screen opens (asks once).
+    /// `requestHealthAccess` is only set when the person taps "Connect Apple Health".
     func syncBodyWeight(requestHealthAccess: Bool = false) async {
         if isSignedIn {
             await bodyWeight.refresh(isSignedIn: true)

@@ -21,6 +21,8 @@ import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { AdminState } from './admin-shell';
 import { useAdminResource } from './use-admin-resource';
+import { AdminUserAiUsageDialog } from './admin-user-ai-usage-dialog';
+import { formatUsd } from '@/lib/ai/ai-cost';
 
 const PAGE_SIZE = 25;
 
@@ -31,6 +33,7 @@ export function AdminUsers() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [pending, setPending] = useState<string | null>(null);
+  const [usageUser, setUsageUser] = useState<AdminUserDto | null>(null);
 
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -127,13 +130,25 @@ export function AdminUsers() {
                     <dd className="text-foreground text-right">{date(u.lastLoginAt)}</dd>
                   </dl>
                 </div>
-                <p className="text-muted-foreground text-[0.8125rem] tabular-nums">
-                  {format(t.admin.activitySummary, {
-                    sessions: u.completedSessions,
-                    meals: u.mealEntries,
-                    runs: u.aiRunsLast30Days,
-                  })}
-                </p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-muted-foreground text-[0.8125rem] tabular-nums">
+                    {format(t.admin.activitySummary, {
+                      sessions: u.completedSessions,
+                      meals: u.mealEntries,
+                      runs: u.aiRunsLast30Days,
+                    })}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="tabular-nums"
+                    aria-label={format(t.aiUsage.adminShowDetail, { email: u.email })}
+                    onClick={() => setUsageUser(u)}
+                  >
+                    {t.aiUsage.adminCost}: {formatUsd(u.aiCostUsdLast30Days, bcp47)}
+                  </Button>
+                </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <fieldset className="space-y-1">
@@ -194,6 +209,8 @@ export function AdminUsers() {
           })}
         </ul>
       )}
+
+      <AdminUserAiUsageDialog user={usageUser} onClose={() => setUsageUser(null)} />
 
       {data && pages > 1 && (
         <nav

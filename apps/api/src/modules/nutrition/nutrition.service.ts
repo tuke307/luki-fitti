@@ -7,7 +7,7 @@ import {
   type OnModuleInit,
 } from '@nestjs/common';
 import crypto from 'crypto';
-import { FoodItemSource, MEAL_TYPES, MealType } from '@luki-fitti/common/enums';
+import { FoodItemSource, MEAL_TYPES, MealAmountUnit, MealType } from '@luki-fitti/common/enums';
 import type {
   MealEntryDto,
   MealItemDto,
@@ -45,6 +45,7 @@ type EntryRecord = {
     orderIndex: number;
     name: string;
     grams: number | null;
+    amountUnit: string;
     kcal: number;
     proteinG: number;
     carbsG: number;
@@ -375,6 +376,7 @@ export class NutritionService implements OnModuleInit, OnModuleDestroy {
       orderIndex,
       name: item.name.trim(),
       grams: item.grams ?? null,
+      amountUnit: item.amountUnit ?? MealAmountUnit.G,
       kcal: item.kcal,
       proteinG: item.proteinG,
       carbsG: item.carbsG,
@@ -392,6 +394,7 @@ export class NutritionService implements OnModuleInit, OnModuleDestroy {
       orderIndex: item.orderIndex,
       name: item.name,
       grams: item.grams,
+      amountUnit: item.amountUnit as MealAmountUnit,
       kcal: item.kcal,
       proteinG: item.proteinG,
       carbsG: item.carbsG,

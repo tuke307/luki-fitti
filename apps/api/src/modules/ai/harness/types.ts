@@ -48,4 +48,5 @@ export interface SkillRunResult<T> {
   output: T;
   model: string;
   steps: number;
+  usage: { promptTokens: number; completionTokens: number; costUsd: number | null };
 }

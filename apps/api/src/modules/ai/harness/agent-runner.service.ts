@@ -169,7 +169,17 @@ export class AgentRunnerService {
           const parsed = this.parseAnswer(skill, answerCall);
           if (parsed.success) {
             const runId = await finish(AiRunStatus.SUCCESS);
-            return { runId, output: parsed.data, model: usedModel, steps };
+            return {
+              runId,
+              output: parsed.data,
+              model: usedModel,
+              steps,
+              usage: {
+                promptTokens: usage.promptTokens,
+                completionTokens: usage.completionTokens,
+                costUsd: usage.costKnown ? usage.costUsd : null,
+              },
+            };
           }
           messages.push(
             ...calls.map((c) => ({
