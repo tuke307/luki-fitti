@@ -101,6 +101,15 @@ describe('AgentRunnerService', () => {
     assert.equal(runs[0]!.status, 'SUCCESS');
     assert.equal(runs[0]!.promptTokens, 20);
     assert.equal(runs[0]!.costUsd, 0.002);
+    assert.deepEqual(result.usage, { promptTokens: 20, completionTokens: 10, costUsd: 0.002 });
+  });
+
+  it('reports unknown cost as null when the provider omits it', async () => {
+    const noCost = (r: ChatResponse): ChatResponse => ({ ...r, usage: { ...r.usage, costUsd: null } });
+    const { runner, runs } = setup([noCost(reply([toolCall('c1', 'submit', { total: 1 })]))]);
+    const result = await runner.run(skill, input);
+    assert.deepEqual(result.usage, { promptTokens: 10, completionTokens: 5, costUsd: null });
+    assert.equal(runs[0]!.costUsd, null);
   });
 
   it('feeds schema errors back so the model can correct its answer', async () => {

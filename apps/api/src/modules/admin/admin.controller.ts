@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Put, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AdminPermission } from '@luki-fitti/common/enums';
 import {
@@ -75,5 +75,15 @@ export class AdminController {
   @ApiOperation({ summary: 'AI run counts, tokens and cost over the last N days' })
   getAiUsage(@Query(new ZodValidationPipe(AiUsageQuerySchema)) query: AiUsageQueryDto) {
     return this.adminService.getAiUsage(query.days);
+  }
+
+  @Get('ai-usage/users/:userId')
+  @RequirePermissions(AdminPermission.DASHBOARD_VIEW, AdminPermission.AI_SETTINGS_MANAGE)
+  @ApiOperation({ summary: "One user's AI runs, tokens and cost over the last N days" })
+  getUserAiUsage(
+    @Param('userId', new ParseUUIDPipe()) userId: string,
+    @Query(new ZodValidationPipe(AiUsageQuerySchema)) query: AiUsageQueryDto,
+  ) {
+    return this.adminService.getUserAiUsage(userId, query.days);
   }
 }

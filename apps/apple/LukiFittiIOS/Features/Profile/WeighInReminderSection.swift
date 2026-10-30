@@ -2,7 +2,7 @@ import SwiftUI
 import LukiFittiModels
 import LukiFittiDesign
 
-/// Weekly weigh-in reminder settings: on/off, weekday, time and a test notification.
+/// Weekly weigh-in reminder rows for a settings `Form`: on/off, weekday, time and a test notification.
 struct WeighInReminderSection: View {
     @Bindable var viewModel: LukiAppViewModel
     @Environment(\.lukiLocale) private var tr
@@ -41,12 +41,10 @@ struct WeighInReminderSection: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        Group {
             Toggle(isOn: $enabled) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(tr("Weekly weigh-in reminder"))
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.primary)
                     Text(tr("Skipped when you already weighed in that week"))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -54,6 +52,18 @@ struct WeighInReminderSection: View {
             }
             .tint(LukiColors.accent)
             .accessibilityIdentifier("ios.profile.weighInReminderToggle")
+            .onChange(of: enabled) { _, isOn in
+                Task {
+                    if isOn, !(await WeighInReminderScheduler.requestAuthorization()) {
+                        status = tr("Allow notifications for LukiFitti in Settings to get reminders.")
+                        enabled = false
+                        return
+                    }
+                    await persist()
+                }
+            }
+            .onChange(of: weekday) { Task { await persist() } }
+            .onChange(of: minutes) { Task { await persist() } }
 
             if enabled {
                 Picker(tr("Day"), selection: $weekday) {
@@ -61,11 +71,9 @@ struct WeighInReminderSection: View {
                         Text(day.name).tag(day.value)
                     }
                 }
-                .font(.subheadline)
                 .accessibilityIdentifier("ios.profile.weighInWeekdayPicker")
 
                 DatePicker(tr("Time"), selection: $time, displayedComponents: .hourAndMinute)
-                    .font(.subheadline)
                     .accessibilityIdentifier("ios.profile.weighInTimePicker")
 
                 if !viewModel.store.preferences.notificationsEnabled {
@@ -84,7 +92,6 @@ struct WeighInReminderSection: View {
                 } label: {
                     Label(tr("Send test reminder"), systemImage: "bell.badge")
                 }
-                .buttonStyle(.bordered)
                 .accessibilityIdentifier("ios.profile.testWeighInReminderButton")
             }
 
@@ -94,18 +101,6 @@ struct WeighInReminderSection: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .onChange(of: enabled) { _, isOn in
-            Task {
-                if isOn, !(await WeighInReminderScheduler.requestAuthorization()) {
-                    status = tr("Allow notifications for LukiFitti in Settings to get reminders.")
-                    enabled = false
-                    return
-                }
-                await persist()
-            }
-        }
-        .onChange(of: weekday) { Task { await persist() } }
-        .onChange(of: minutes) { Task { await persist() } }
     }
 
     private func persist() async {

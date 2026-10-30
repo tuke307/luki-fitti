@@ -36,7 +36,7 @@ public final class LukiAppViewModel {
     public var showSyncConflictDialog: Bool = false
     public var deepLinkTokenType: String?
     public var deepLinkToken: String?
-    /// Presents the weight screen from anywhere (deep link, reminder tap).
+    /// Pushes the weight screen on the Today tab (card, deep link, reminder tap).
     public var isWeightPresented = false
     /// Serializes weigh-in reminder rescheduling so overlapping calls can't interleave.
     var reminderTask: Task<Void, Never>?
@@ -854,17 +854,6 @@ public struct AppShellView: View {
                             }
                             .accessibilityLabel(tr("Minimize workout"))
                             .accessibilityIdentifier("ios.session.minimizeButton")
-                        }
-                    }
-            }
-            .tint(LukiColors.accent)
-        }
-        .sheet(isPresented: $viewModel.isWeightPresented) {
-            NavigationStack {
-                WeightView(viewModel: viewModel)
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button(tr("Done")) { viewModel.isWeightPresented = false }
                         }
                     }
             }

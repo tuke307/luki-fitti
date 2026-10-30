@@ -1,6 +1,16 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { goalProgress, reconcileKcal, scaleFoodItemToGrams, sumMacros } from './nutrition.util';
+import { MealAmountUnit } from '../enums';
+import {
+  formatMealAmount,
+  fromDisplayAmount,
+  goalProgress,
+  reconcileKcal,
+  scaleFoodItemToAmount,
+  scaleFoodItemToGrams,
+  sumMacros,
+  toDisplayAmount,
+} from './nutrition.util';
 
 describe('sumMacros', () => {
   it('sums and rounds macros', () => {
@@ -68,5 +78,48 @@ describe('goalProgress', () => {
     assert.equal(goalProgress(1000, 2000), 0.5);
     assert.equal(goalProgress(3000, 2000), 1);
     assert.equal(goalProgress(1000, null), null);
+  });
+});
+
+describe('meal amount units', () => {
+  const tea = { grams: 500, amountUnit: MealAmountUnit.ML, kcal: 140, proteinG: 0, carbsG: 34, fatG: 0 };
+
+  it('scales proportionally within the same unit', () => {
+    const scaled = scaleFoodItemToAmount(tea, 250);
+    assert.equal(scaled.kcal, 70);
+    assert.equal(scaled.carbsG, 17);
+    assert.equal(scaled.amountUnit, MealAmountUnit.ML);
+  });
+
+  it('only relabels when the unit changes', () => {
+    const relabeled = scaleFoodItemToAmount(tea, 500, MealAmountUnit.G);
+    assert.equal(relabeled.kcal, 140);
+    assert.equal(relabeled.grams, 500);
+    assert.equal(relabeled.amountUnit, MealAmountUnit.G);
+  });
+
+  it('defaults items without a unit to grams', () => {
+    const scaled = scaleFoodItemToAmount({ grams: 100, kcal: 200, proteinG: 10, carbsG: 0, fatG: 10 }, 50);
+    assert.equal(scaled.kcal, 100);
+    assert.equal(scaled.amountUnit, MealAmountUnit.G);
+  });
+
+  it('stores litres as millilitres', () => {
+    assert.deepEqual(fromDisplayAmount(1.5, 'l'), { amount: 1500, unit: MealAmountUnit.ML });
+    assert.deepEqual(fromDisplayAmount(330, 'ml'), { amount: 330, unit: MealAmountUnit.ML });
+    assert.deepEqual(fromDisplayAmount(80, 'g'), { amount: 80, unit: MealAmountUnit.G });
+  });
+
+  it('picks litres from 1000 ml upward', () => {
+    assert.deepEqual(toDisplayAmount(1500, MealAmountUnit.ML), { value: 1.5, unit: 'l' });
+    assert.deepEqual(toDisplayAmount(500, MealAmountUnit.ML), { value: 500, unit: 'ml' });
+    assert.deepEqual(toDisplayAmount(1500, MealAmountUnit.G), { value: 1500, unit: 'g' });
+  });
+
+  it('formats amounts locale-aware', () => {
+    assert.equal(formatMealAmount(500, MealAmountUnit.ML, 'en'), '500 ml');
+    assert.equal(formatMealAmount(1500, MealAmountUnit.ML, 'de'), '1,5 l');
+    assert.equal(formatMealAmount(150, null, 'en'), '150 g');
+    assert.equal(formatMealAmount(null, MealAmountUnit.G), '');
   });
 });

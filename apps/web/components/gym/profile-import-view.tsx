@@ -50,8 +50,9 @@ import {
   setAnalyticsOptOut,
   subscribeAnalyticsOptOut,
 } from '@/lib/analytics/opt-out';
-import { type LanguagePreference, WeightUnit } from '@luki-fitti/common/enums';
-import { ProfileBodyCard } from './profile-body-card';
+import { type LanguagePreference } from '@luki-fitti/common/enums';
+import { ProfileHealthCard, ProfileNutritionGoalsCard } from './profile-body-card';
+import { AiUsageCard } from './ai-usage/ai-usage-view';
 import { WeightView } from './weight/weight-view';
 
 function escapeCsvCell(value: string | number | null | undefined): string {
@@ -465,22 +466,6 @@ export function ProfileImportView() {
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-semibold">{t.profile.weightUnitLabel}</p>
-                <p className="text-muted-foreground text-xs">{t.profile.weightUnitSub}</p>
-              </div>
-              <Tabs
-                value={user?.preferences?.weightUnit ?? WeightUnit.KG}
-                onValueChange={(val) => void updatePreferences({ weightUnit: val as WeightUnit })}
-              >
-                <TabsList>
-                  <TabsTrigger value={WeightUnit.KG}>KG</TabsTrigger>
-                  <TabsTrigger value={WeightUnit.LBS}>LBS</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
                 <p className="font-semibold">{t.profile.defaultRestLabel}</p>
                 <p className="text-muted-foreground text-xs">{t.profile.defaultRestSub}</p>
               </div>
@@ -650,9 +635,13 @@ export function ProfileImportView() {
         </Card>
       </div>
 
+      <ProfileHealthCard />
+
       {authMode === 'AUTHENTICATED' && <WeightView />}
 
-      <ProfileBodyCard />
+      <ProfileNutritionGoalsCard />
+
+      {authMode === 'AUTHENTICATED' && <AiUsageCard />}
 
       {/* Export Gym Data Card (Only when logged in) */}
       {authMode === 'AUTHENTICATED' && (
