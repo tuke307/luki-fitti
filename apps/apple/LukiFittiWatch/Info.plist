@@ -25,7 +25,7 @@
     <key>WKApplication</key>
     <true/>
     <key>WKCompanionAppBundleIdentifier</key>
-    <string>com.lukifitti.app</string>
+    <string>$(LUKIFITTI_BUNDLE_ID_PREFIX).app</string>
     <key>WKRunsIndependentlyOfCompanionApp</key>
     <true/>
     <key>UIBackgroundModes</key>
