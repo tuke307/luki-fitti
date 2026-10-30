@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AdminPermission, AiSkillName, FeatureGrant } from '../enums';
+import type { MyAiUsageDto } from './ai.schemas';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Admin portal: users, access grants, AI settings & usage
@@ -60,6 +61,8 @@ export interface AdminUserDto {
   completedSessions: number;
   mealEntries: number;
   aiRunsLast30Days: number;
+  /** Sum of known OpenRouter cost (USD) over the last 30 days. */
+  aiCostUsdLast30Days: number;
 }
 
 export interface AdminUserListDto {
@@ -96,6 +99,11 @@ export interface AiUsageSummaryDto {
   bySkill: Array<{ skill: AiSkillName | string; runs: number; failed: number; costUsd: number }>;
   byDay: Array<{ date: string; runs: number; costUsd: number }>;
   topUsers: Array<{ userId: string; email: string; runs: number; costUsd: number }>;
+}
+
+export interface AdminUserAiUsageDto extends MyAiUsageDto {
+  userId: string;
+  email: string;
 }
 
 export interface AdminDashboardDto {

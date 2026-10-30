@@ -10,17 +10,23 @@ import type {
   AdminUserDto,
   AdminUserListDto,
   AdminUserQueryDto,
+  AdminUserAiUsageDto,
   AiUsageSummaryDto,
   UpdateUserAccessDto,
 } from '@luki-fitti/common/schemas';
 import { PrismaService } from '../database/prisma.service';
+import { AiUsageService } from '../ai/ai-usage.service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const round4 = (value: number) => Math.round(value * 10_000) / 10_000;
+const round6 = (value: number) => Math.round(value * 1_000_000) / 1_000_000;
 
 @Injectable()
 export class AdminService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly aiUsage: AiUsageService,
+  ) {}
 
   async getDashboard(): Promise<AdminDashboardDto> {
     const now = Date.now();
@@ -103,9 +109,10 @@ export class AdminService {
             createdAt: { gte: new Date(Date.now() - 30 * DAY_MS) },
           },
           _count: { _all: true },
+          _sum: { costUsd: true },
         })
       : [];
-    const runsByUser = new Map(runs.map((r) => [r.userId, r._count._all]));
+    const runsByUser = new Map(runs.map((r) => [r.userId, r]));
 
     return {
       total,
@@ -123,7 +130,8 @@ export class AdminService {
           featureGrants: u.featureGrants.filter(isFeatureGrant),
           completedSessions: u._count.workoutSessions,
           mealEntries: u._count.mealEntries,
-          aiRunsLast30Days: runsByUser.get(u.id) ?? 0,
+          aiRunsLast30Days: runsByUser.get(u.id)?._count._all ?? 0,
+          aiCostUsdLast30Days: round6(runsByUser.get(u.id)?._sum.costUsd ?? 0),
         }),
       ),
     };
@@ -253,5 +261,14 @@ export class AdminService {
           costUsd: round4(u._sum.costUsd ?? 0),
         })),
     };
+  }
+
+  async getUserAiUsage(userId: string, days: number): Promise<AdminUserAiUsageDto> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    return { ...(await this.aiUsage.getUserUsage(user.id, days)), userId: user.id, email: user.email };
   }
 }
