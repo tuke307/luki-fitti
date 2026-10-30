@@ -228,15 +228,21 @@ public struct ExerciseFeedbackDto: Codable, Sendable, Equatable, Hashable, Ident
 // MARK: - Dates
 
 public enum LukiISODate {
+    // ISO8601DateFormatter is thread-safe; creating one per call dominated list rendering.
+    nonisolated(unsafe) private static let withFraction: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+    nonisolated(unsafe) private static let plain = ISO8601DateFormatter()
+
     /// Parses API timestamps with or without fractional seconds.
     public static func parse(_ iso: String) -> Date? {
-        let withFraction = ISO8601DateFormatter()
-        withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return withFraction.date(from: iso) ?? ISO8601DateFormatter().date(from: iso)
+        withFraction.date(from: iso) ?? plain.date(from: iso)
     }
 
     public static func string(_ date: Date) -> String {
-        ISO8601DateFormatter().string(from: date)
+        plain.string(from: date)
     }
 }
 
