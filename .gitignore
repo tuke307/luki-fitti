@@ -95,6 +95,7 @@ mci-app
 **/*.xcodeproj/
 **/*.xcworkspace/
 DerivedData/
+apps/apple/Config/Local.xcconfig
 
 
 # SeaweedFS S3 credentials (copy from seaweedfs-s3.json.sample)
