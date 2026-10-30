@@ -1,6 +1,7 @@
 import { apiFetch } from './client';
 import type {
   AdminDashboardDto,
+  AdminUserAiUsageDto,
   AdminUserListDto,
   AdminUserQueryDto,
   AiSettingsDto,
@@ -9,6 +10,7 @@ import type {
   BodyWeightRangeQueryDto,
   ExerciseFeedbackDto,
   MealAnalysisResponseDto,
+  MyAiUsageDto,
   MealEntryDto,
   MealItemDto,
   NutritionSummaryDto,
@@ -305,6 +307,7 @@ export const ai = {
     }),
   analyzeMeal: (form: FormData) =>
     apiFetch<MealAnalysisResponseDto>('/ai/meal-analysis', { method: 'POST', body: form }),
+  myUsage: (days: number) => apiFetch<MyAiUsageDto>(`/ai/usage/me?days=${days}`),
 };
 
 export const exerciseFeedback = {
@@ -338,6 +341,10 @@ export const admin = {
   updateAiSettings: (data: UpdateAiSettingsDto) =>
     apiFetch<AiSettingsDto>('/admin/settings/ai', { method: 'PUT', body: JSON.stringify(data) }),
   aiUsage: (days: number) => apiFetch<AiUsageSummaryDto>(`/admin/ai-usage?days=${days}`),
+  userAiUsage: (userId: string, days: number) =>
+    apiFetch<AdminUserAiUsageDto>(
+      `/admin/ai-usage/users/${encodeURIComponent(userId)}?days=${days}`,
+    ),
 };
 
 export * from './client';

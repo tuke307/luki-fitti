@@ -1,6 +1,61 @@
 import { z } from 'zod';
-import { ExerciseFeedbackVerdict, MealType, MuscleGroup, EquipmentType } from '../enums';
+import {
+  AiRunStatus,
+  AiSkillName,
+  ExerciseFeedbackVerdict,
+  MealType,
+  MuscleGroup,
+  EquipmentType,
+} from '../enums';
 import type { MealEntryDto } from './nutrition.schemas';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AI usage & cost (USD exactly as reported by OpenRouter; null when unknown)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface AiRunUsageDto {
+  promptTokens: number;
+  completionTokens: number;
+  costUsd: number | null;
+}
+
+export const AI_USAGE_RANGE_DAYS = [7, 30, 90] as const;
+
+export const MyAiUsageQuerySchema = z.object({
+  days: z.coerce
+    .number()
+    .int()
+    .refine((v) => (AI_USAGE_RANGE_DAYS as readonly number[]).includes(v), 'Use 7, 30 or 90')
+    .default(30),
+});
+
+export type MyAiUsageQueryDto = z.infer<typeof MyAiUsageQuerySchema>;
+
+export interface AiUsageRunDto {
+  id: string;
+  skill: AiSkillName | string;
+  status: AiRunStatus;
+  createdAt: string;
+  promptTokens: number;
+  completionTokens: number;
+  costUsd: number | null;
+  durationMs: number;
+}
+
+export interface MyAiUsageDto {
+  days: number;
+  totalRuns: number;
+  failedRuns: number;
+  promptTokens: number;
+  completionTokens: number;
+  /** Sum of runs with a known cost. */
+  costUsd: number;
+  unknownCostRuns: number;
+  bySkill: Array<{ skill: AiSkillName | string; runs: number; costUsd: number }>;
+  byDay: Array<{ date: string; runs: number; costUsd: number }>;
+  recent: AiUsageRunDto[];
+  today: { used: number; limit: number };
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AI workout builder
@@ -71,6 +126,7 @@ export interface WorkoutBuilderResponseDto {
   notes: string[];
   /** Proposal ids that were not in the catalog and therefore dropped. */
   droppedExerciseIds: string[];
+  usage: AiRunUsageDto;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -124,6 +180,7 @@ export interface MealAnalysisResponseDto {
   analysis: MealAnalysisDto;
   /** Whether photos were kept (false when server photo storage is not configured). */
   photosStored: boolean;
+  usage: AiRunUsageDto;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

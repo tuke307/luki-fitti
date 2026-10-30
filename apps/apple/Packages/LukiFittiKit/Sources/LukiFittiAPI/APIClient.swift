@@ -278,6 +278,12 @@ public actor APIClient {
         try await request(path: "/api/ai/workout-builder", method: "POST", body: dto)
     }
 
+    /// Own AI requests, tokens and cost over the last `days` (7, 30 or 90).
+    public func fetchMyAiUsage(days: Int = 30) async throws -> MyAiUsageDto {
+        let range = [7, 30, 90].contains(days) ? days : 30
+        return try await request(path: "/api/ai/usage/me?days=\(range)", method: "GET")
+    }
+
     public func fetchExerciseFeedback() async throws -> [ExerciseFeedbackDto] {
         try await request(path: "/api/exercise-feedback", method: "GET")
     }
