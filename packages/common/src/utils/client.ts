@@ -23,6 +23,7 @@ export * from './folder-color.util';
 // Nutrition math & workout energy estimates (client-safe)
 export * from './nutrition.util';
 export * from './energy.util';
+export * from './body-weight.util';
 
 // Note: Pipes and decorators are NOT exported here as they contain NestJS server-side code
 // Server-side utilities can still be imported via '@luki-fitti/common/utils' for server components and API routes

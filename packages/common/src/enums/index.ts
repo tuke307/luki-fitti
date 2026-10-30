@@ -314,5 +314,10 @@ export enum FoodItemSource {
   AI = 'AI',
 }
 
+export enum BodyWeightSource {
+  MANUAL = 'MANUAL',
+  HEALTHKIT = 'HEALTHKIT',
+}
+
 export const BIOLOGICAL_SEX_VALUES = ['female', 'male'] as const;
 export type BiologicalSex = (typeof BIOLOGICAL_SEX_VALUES)[number];
