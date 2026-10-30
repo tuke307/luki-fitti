@@ -52,6 +52,7 @@ import {
 } from '@/lib/analytics/opt-out';
 import { type LanguagePreference, WeightUnit } from '@luki-fitti/common/enums';
 import { ProfileBodyCard } from './profile-body-card';
+import { AiUsageCard } from './ai-usage/ai-usage-view';
 import { WeightView } from './weight/weight-view';
 
 function escapeCsvCell(value: string | number | null | undefined): string {
@@ -653,6 +654,8 @@ export function ProfileImportView() {
       {authMode === 'AUTHENTICATED' && <WeightView />}
 
       <ProfileBodyCard />
+
+      {authMode === 'AUTHENTICATED' && <AiUsageCard />}
 
       {/* Export Gym Data Card (Only when logged in) */}
       {authMode === 'AUTHENTICATED' && (

@@ -26,6 +26,7 @@ import { api } from '@/lib/api';
 import { aiErrorMessage } from '@/lib/ai/ai-errors';
 import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
+import { AiCostLabel } from './ai-usage/ai-cost-label';
 
 const DURATIONS = [30, 45, 60, 75, 90] as const;
 
@@ -273,6 +274,7 @@ function AiWorkoutBuilderBody({
             {result.droppedExerciseIds.length > 0 && (
               <p className="text-muted-foreground text-[0.8125rem]">{t.aiBuilder.droppedNote}</p>
             )}
+            <AiCostLabel usage={result.usage} />
           </>
         )}
 
