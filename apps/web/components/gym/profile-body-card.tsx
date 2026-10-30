@@ -1,123 +1,115 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
-import { Salad, ShieldCheck } from 'lucide-react';
+import { HeartPulse, Salad, ShieldCheck } from 'lucide-react';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import { Card } from '@luki-fitti/ui/components/ui/card';
 import { Input } from '@luki-fitti/ui/components/ui/input';
 import { Label } from '@luki-fitti/ui/components/ui/label';
 import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
-import { toast } from '@luki-fitti/ui/components/ui/sonner';
+import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { WeightUnit, type BiologicalSex } from '@luki-fitti/common/enums';
-import { UpdatePreferencesSchema } from '@luki-fitti/common/schemas';
-import { suggestDailyKcal, suggestProteinGoalG } from '@luki-fitti/common/utils/client';
+import { UpdatePreferencesSchema, type UpdatePreferencesDto } from '@luki-fitti/common/schemas';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { useBodyWeight } from '@/lib/body-weight/use-body-weight';
 import { toDisplayWeight } from '@/lib/body-weight/body-weight';
 import { formatWeight } from '@/lib/body-weight/weight-format';
 import { unitLabel } from '@/lib/format/weight';
+import { NutritionGoalsForm } from './nutrition/nutrition-goals-form';
 import { focusWeightInput, WEIGHT_SECTION_ID } from './weight/weight-focus';
 
-// Body weight is not edited here: it comes from the weigh-in history (the server keeps
-// preferences.bodyWeightKg in sync with the newest weigh-in).
-const FIELDS = [
-  'heightCm',
-  'birthYear',
-  'dailyKcalGoal',
-  'proteinGoalG',
-  'carbsGoalG',
-  'fatGoalG',
-] as const;
-type NumericField = (typeof FIELDS)[number];
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
-/** Body metrics (for burn estimates) and daily nutrition goals. */
-export function ProfileBodyCard() {
-  const { user, authMode } = useAuth();
-  if (authMode !== 'AUTHENTICATED') return null;
-  const prefs = user?.preferences;
-  // Remount the form when the saved values change (e.g. after saving or on another device).
-  const key = JSON.stringify([...FIELDS.map((f) => prefs?.[f] ?? null), prefs?.sex ?? null]);
-  return <ProfileBodyForm key={key} />;
-}
+const toNumber = (v: string) => (v.trim() === '' ? null : Number(v.replace(',', '.')));
 
-function ProfileBodyForm() {
-  const { user, updatePreferences } = useAuth();
+/**
+ * Profile → Health details: current weight (from the weigh-in history), weight unit and the body
+ * metrics used for calorie estimates. Each change saves on its own.
+ */
+export function ProfileHealthCard() {
+  const { user, authMode, updatePreferences } = useAuth();
   const { t, bcp47 } = useLocale();
   const { latest } = useBodyWeight();
   const prefs = user?.preferences;
   const unit = prefs?.weightUnit ?? WeightUnit.KG;
+  const signedIn = authMode === 'AUTHENTICATED';
   const bodyWeightKg = latest?.weightKg ?? prefs?.bodyWeightKg ?? null;
-  const [values, setValues] = useState<Record<NumericField, string>>(
-    () =>
-      Object.fromEntries(
-        FIELDS.map((f) => [
-          f,
-          prefs?.[f] === null || prefs?.[f] === undefined ? '' : String(prefs[f]),
-        ]),
-      ) as Record<NumericField, string>,
+  const [height, setHeight] = useState(prefs?.heightCm == null ? '' : String(prefs.heightCm));
+  const [birthYear, setBirthYear] = useState(
+    prefs?.birthYear == null ? '' : String(prefs.birthYear),
   );
   const [sex, setSex] = useState<BiologicalSex | ''>(prefs?.sex ?? '');
+  const [status, setStatus] = useState<SaveStatus>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const saveCount = useRef(0);
 
-  const toNumber = (v: string) => (v.trim() === '' ? null : Number(v.replace(',', '.')));
-
-  const suggestion = suggestDailyKcal({
-    bodyWeightKg,
-    heightCm: toNumber(values.heightCm),
-    birthYear: toNumber(values.birthYear),
-    sex: sex || null,
-  });
-
-  const save = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const payload = {
-      ...Object.fromEntries(FIELDS.map((f) => [f, toNumber(values[f])])),
-      sex: sex || null,
-    };
-    const parsed = UpdatePreferencesSchema.safeParse(payload);
+  const persist = async (patch: UpdatePreferencesDto, label?: string) => {
+    const parsed = UpdatePreferencesSchema.safeParse(patch);
     if (!parsed.success) {
       const issue = parsed.error.issues[0];
-      setError(issue ? `${String(issue.path[0])}: ${issue.message}` : null);
+      setError(
+        issue ? `${label ?? String(issue.path[0])}: ${issue.message}` : t.profileBody.saveError,
+      );
+      setStatus('error');
       return;
     }
     setError(null);
-    setSaving(true);
+    setStatus('saving');
+    const ticket = ++saveCount.current;
     try {
       await updatePreferences(parsed.data);
-      toast.success(t.profileBody.saved);
-    } finally {
-      setSaving(false);
+      if (ticket === saveCount.current) setStatus('saved');
+    } catch {
+      if (ticket === saveCount.current) {
+        setError(t.profileBody.saveError);
+        setStatus('error');
+      }
     }
   };
 
-  const numberField = (field: NumericField, label: string, step = '1') => (
+  const numberField = (
+    id: string,
+    label: string,
+    value: string,
+    setValue: (v: string) => void,
+    saved: number | null | undefined,
+    toPatch: (n: number | null) => UpdatePreferencesDto,
+  ) => (
     <div className="space-y-1.5">
-      <Label htmlFor={`body-${field}`} className="text-[0.8125rem] font-semibold">
+      <Label htmlFor={id} className="text-[0.8125rem] font-semibold">
         {label}
       </Label>
       <Input
-        id={`body-${field}`}
+        id={id}
         type="number"
-        inputMode="decimal"
-        step={step}
-        value={values[field]}
-        onChange={(e) => setValues((v) => ({ ...v, [field]: e.target.value }))}
+        inputMode="numeric"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={() => {
+          const next = toNumber(value);
+          if (next !== (saved ?? null)) void persist(toPatch(next), label);
+        }}
         className="tabular-nums"
       />
     </div>
   );
 
   return (
-    <Card className="space-y-4 rounded-[1.25rem] p-5">
+    <Card
+      className="space-y-4 rounded-[1.25rem] p-5"
+      aria-labelledby="health-details-title"
+      role="region"
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <Salad className="text-primary h-5 w-5" aria-hidden="true" />
+          <HeartPulse className="text-primary h-5 w-5" aria-hidden="true" />
           <div>
-            <h2 className="font-display text-lg font-bold">{t.profileBody.title}</h2>
-            <p className="text-muted-foreground text-xs">{t.profileBody.sub}</p>
+            <h2 id="health-details-title" className="font-display text-lg font-bold">
+              {t.profileBody.healthTitle}
+            </h2>
+            <p className="text-muted-foreground text-xs">{t.profileBody.healthSub}</p>
           </div>
         </div>
         {(user?.permissions?.length ?? 0) > 0 && (
@@ -129,8 +121,8 @@ function ProfileBodyForm() {
         )}
       </div>
 
-      <form onSubmit={save} className="space-y-4">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {signedIn && (
           <div className="space-y-1.5">
             <p className="text-[0.8125rem] font-semibold">{t.profileBody.currentWeight}</p>
             <div className="flex min-h-11 flex-wrap items-center gap-x-2">
@@ -154,64 +146,112 @@ function ProfileBodyForm() {
               </Button>
             </div>
           </div>
-          {numberField('heightCm', t.profileBody.height)}
-          {numberField('birthYear', t.profileBody.birthYear)}
-          <div className="space-y-1.5">
-            <Label htmlFor="body-sex" className="text-[0.8125rem] font-semibold">
-              {t.profileBody.sex}
-            </Label>
-            <NativeSelect
-              id="body-sex"
-              value={sex}
-              onChange={(e) => setSex(e.target.value as BiologicalSex | '')}
-            >
-              <option value="">{t.profileBody.sexUnset}</option>
-              <option value="female">{t.profileBody.sexFemale}</option>
-              <option value="male">{t.profileBody.sexMale}</option>
-            </NativeSelect>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {numberField('dailyKcalGoal', t.profileBody.kcalGoal)}
-          {numberField('proteinGoalG', t.profileBody.proteinGoal)}
-          {numberField('carbsGoalG', t.profileBody.carbsGoal)}
-          {numberField('fatGoalG', t.profileBody.fatGoal)}
-        </div>
-
-        {error && (
-          <p className="text-destructive text-[0.8125rem]" role="alert">
-            {error}
-          </p>
         )}
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="submit" disabled={saving}>
-            {t.profileBody.save}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={!suggestion}
-            onClick={() => {
-              if (!suggestion) return;
-              const protein = suggestProteinGoalG(bodyWeightKg);
-              setValues((v) => ({
-                ...v,
-                dailyKcalGoal: String(suggestion),
-                proteinGoalG: protein ? String(protein) : v.proteinGoalG,
-              }));
-            }}
+        <div className="space-y-1.5">
+          <p id="health-unit-label" className="text-[0.8125rem] font-semibold">
+            {t.profileBody.weightUnit}
+          </p>
+          <Tabs
+            value={unit}
+            onValueChange={(val) => void persist({ weightUnit: val as WeightUnit })}
           >
-            {t.profileBody.suggest}
-          </Button>
-          {!suggestion && (
-            <span className="text-muted-foreground text-[0.8125rem]">
-              {t.profileBody.suggestHint}
-            </span>
-          )}
+            <TabsList aria-labelledby="health-unit-label">
+              <TabsTrigger value={WeightUnit.KG}>KG</TabsTrigger>
+              <TabsTrigger value={WeightUnit.LBS}>LBS</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
-      </form>
+        {signedIn && (
+          <>
+            {numberField(
+              'body-heightCm',
+              t.profileBody.height,
+              height,
+              setHeight,
+              prefs?.heightCm,
+              (n) => ({
+                heightCm: n,
+              }),
+            )}
+            {numberField(
+              'body-birthYear',
+              t.profileBody.birthYear,
+              birthYear,
+              setBirthYear,
+              prefs?.birthYear,
+              (n) => ({ birthYear: n }),
+            )}
+            <div className="space-y-1.5">
+              <Label htmlFor="body-sex" className="text-[0.8125rem] font-semibold">
+                {t.profileBody.sex}
+              </Label>
+              <NativeSelect
+                id="body-sex"
+                value={sex}
+                onChange={(e) => {
+                  const next = e.target.value as BiologicalSex | '';
+                  setSex(next);
+                  void persist({ sex: next || null }, t.profileBody.sex);
+                }}
+              >
+                <option value="">{t.profileBody.sexUnset}</option>
+                <option value="female">{t.profileBody.sexFemale}</option>
+                <option value="male">{t.profileBody.sexMale}</option>
+              </NativeSelect>
+            </div>
+          </>
+        )}
+      </div>
+
+      <p
+        role="status"
+        className={
+          status === 'error'
+            ? 'text-destructive text-[0.8125rem]'
+            : 'text-muted-foreground text-[0.8125rem]'
+        }
+      >
+        {status === 'saving'
+          ? t.profileBody.saving
+          : status === 'saved'
+            ? t.profileBody.autoSaved
+            : status === 'error'
+              ? error
+              : ''}
+      </p>
+    </Card>
+  );
+}
+
+/** Profile → Nutrition goals (signed-in users; goals are stored on the account). */
+export function ProfileNutritionGoalsCard() {
+  const { user, authMode } = useAuth();
+  const { t } = useLocale();
+  if (authMode !== 'AUTHENTICATED') return null;
+  const prefs = user?.preferences;
+  // Remount the form when the saved values change (e.g. after saving or on another device).
+  const key = JSON.stringify([
+    prefs?.dailyKcalGoal ?? null,
+    prefs?.proteinGoalG ?? null,
+    prefs?.carbsGoalG ?? null,
+    prefs?.fatGoalG ?? null,
+  ]);
+  return (
+    <Card
+      className="space-y-4 rounded-[1.25rem] p-5"
+      aria-labelledby="nutrition-goals-title"
+      role="region"
+    >
+      <div className="flex items-center gap-2.5">
+        <Salad className="text-primary h-5 w-5" aria-hidden="true" />
+        <div>
+          <h2 id="nutrition-goals-title" className="font-display text-lg font-bold">
+            {t.profileBody.goalsTitle}
+          </h2>
+          <p className="text-muted-foreground text-xs">{t.profileBody.goalsSub}</p>
+        </div>
+      </div>
+      <NutritionGoalsForm key={key} idPrefix="body" />
     </Card>
   );
 }
