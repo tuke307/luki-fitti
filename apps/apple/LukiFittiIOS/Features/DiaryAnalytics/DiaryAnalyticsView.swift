@@ -50,7 +50,7 @@ public struct DiaryAnalyticsView: View {
             presenting: pendingDelete
         ) { session in
             Button(tr("Delete Workout"), role: .destructive) {
-                viewModel.store.deleteHistorySession(clientSessionId: session.clientSessionId)
+                viewModel.deleteHistorySession(session)
             }
             Button(tr("Cancel"), role: .cancel) {}
         } message: { session in

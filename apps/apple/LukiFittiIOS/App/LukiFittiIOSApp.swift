@@ -27,6 +27,10 @@ public final class LukiAppViewModel {
     public let nutrition: NutritionStore
     public let bodyWeight: BodyWeightStore
     public let bodyMassSync: BodyMassHealthSync
+    /// Apple Health activity (daily active energy + workouts from other apps) for the Food tab.
+    public let activity: HealthActivityStore
+    public let activitySync: ActivityHealthSync
+    public let workoutExport: WorkoutHealthExport
     public let healthCoordinator: HealthKitWorkoutCoordinator
     public let watchSyncCoordinator: WatchSyncCoordinator
     private let liveActivity = WorkoutLiveActivityController()
@@ -48,12 +52,17 @@ public final class LukiAppViewModel {
         store: OfflineStore = OfflineStore(),
         healthCoordinator: HealthKitWorkoutCoordinator = HealthKitWorkoutCoordinator(),
         watchSyncCoordinator: WatchSyncCoordinator = WatchSyncCoordinator(),
-        bodyMassSync: BodyMassHealthSync = BodyMassHealthSync()
+        bodyMassSync: BodyMassHealthSync = BodyMassHealthSync(),
+        activitySync: ActivityHealthSync = ActivityHealthSync(),
+        workoutExport: WorkoutHealthExport = WorkoutHealthExport()
     ) {
         self.store = store
         self.nutrition = NutritionStore(apiClient: store.apiClient, storageDirectory: store.storageDirectoryURL)
         self.bodyWeight = BodyWeightStore(apiClient: store.apiClient, storageDirectory: store.storageDirectoryURL)
         self.bodyMassSync = bodyMassSync
+        self.activity = HealthActivityStore(apiClient: store.apiClient, storageDirectory: store.storageDirectoryURL)
+        self.activitySync = activitySync
+        self.workoutExport = workoutExport
         self.healthCoordinator = healthCoordinator
         self.watchSyncCoordinator = watchSyncCoordinator
 
@@ -107,6 +116,7 @@ public final class LukiAppViewModel {
                 await store.flushSyncQueue()
             }
             await syncBodyWeight()
+            await syncHealthActivity()
         }
     }
 
@@ -122,13 +132,26 @@ public final class LukiAppViewModel {
         Task { await store.flushSyncQueue() }
     }
 
-    private func mergeIncomingWatchCompletedSession(_ completed: WorkoutSessionDto) {
+    private func mergeIncomingWatchCompletedSession(_ incoming: WorkoutSessionDto) {
+        var completed = incoming
+        // The watch doesn't know the Apple Health workout this iPhone saved; keep it.
+        if completed.healthKitWorkoutUuid == nil {
+            completed.healthKitWorkoutUuid = store.historySessions
+                .first { $0.clientSessionId == completed.clientSessionId }?.healthKitWorkoutUuid
+        }
         if store.activeSession?.clientSessionId == completed.clientSessionId {
             store.saveActiveSession(nil)
         }
         store.saveHistorySession(completed)
         store.enqueueSessionSync(completed)
-        Task { await store.flushSyncQueue() }
+        let needsHealthExport = completed.healthKitWorkoutUuid == nil
+        let clientSessionId = completed.clientSessionId
+        Task {
+            await store.flushSyncQueue()
+            if needsHealthExport {
+                await exportWorkoutToHealth(clientSessionId: clientSessionId)
+            }
+        }
     }
 
     public func pushContextToWatch() {
@@ -658,6 +681,7 @@ public final class LukiAppViewModel {
         store.enqueueSessionSync(finalized)
         watchSyncCoordinator.transferCompletedStandaloneSession(finalized)
         await store.flushSyncQueue()
+        await exportWorkoutToHealth(clientSessionId: finalized.clientSessionId)
     }
 
     /// The template follows what was actually done, so the next session starts from it. Signed-in
@@ -702,7 +726,12 @@ public final class LukiAppViewModel {
         store.saveHistorySession(recalculated)
         store.enqueueSessionSync(recalculated, forceOverwrite: true)
         pushContextToWatch()
-        Task { await store.flushSyncQueue() }
+        Task {
+            await store.flushSyncQueue()
+            if recalculated.healthKitWorkoutUuid != nil {
+                await exportWorkoutToHealth(clientSessionId: recalculated.clientSessionId)
+            }
+        }
     }
 
     public func abandonActiveSession() {

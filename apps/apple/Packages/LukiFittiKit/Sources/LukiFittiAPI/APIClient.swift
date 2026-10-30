@@ -274,6 +274,24 @@ public actor APIClient {
         try await request(path: "/api/body-weight/import", method: "POST", body: dto)
     }
 
+    // MARK: - Health Activity
+
+    /// Uploads Apple Health daily active energy and workouts (≤ 400 days, ≤ 2000 workouts per call).
+    public func importHealthActivity(_ dto: ImportHealthActivityDto) async throws -> ImportHealthActivityResultDto {
+        try await request(path: "/api/activity/import", method: "POST", body: dto)
+    }
+
+    /// Daily active energy and workouts imported from Apple Health (range ≤ 400 days).
+    public func fetchHealthActivity(from: Date, to: Date) async throws -> HealthActivityDto {
+        let f = ISO8601DateFormatter()
+        var components = URLComponents()
+        components.queryItems = [
+            URLQueryItem(name: "from", value: f.string(from: from)),
+            URLQueryItem(name: "to", value: f.string(from: to)),
+        ]
+        return try await request(path: "/api/activity?\(components.percentEncodedQuery ?? "")", method: "GET")
+    }
+
     public func buildWorkout(_ dto: WorkoutBuilderRequestDto) async throws -> WorkoutBuilderResponseDto {
         try await request(path: "/api/ai/workout-builder", method: "POST", body: dto)
     }

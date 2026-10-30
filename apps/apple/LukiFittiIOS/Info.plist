@@ -17,7 +17,7 @@
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>NSHealthShareUsageDescription</key>
-    <string>LukiFitti reads your live Heart Rate and Active Energy Burned during workouts to track set recovery and training load, and reads your body weight so weigh-ins from your scale appear in your weight trend and improve calorie estimates.</string>
+    <string>LukiFitti reads your live Heart Rate and Active Energy Burned during workouts to track set recovery and training load, reads your body weight so weigh-ins from your scale appear in your weight trend and improve calorie estimates, and reads workouts and active energy from other apps (e.g. Strava, Garmin) to include them in your calories burned.</string>
     <key>NSHealthUpdateUsageDescription</key>
     <string>LukiFitti saves your completed strength and stretching workouts to Apple Health to close your Move and Exercise rings, and saves the weigh-ins you log in LukiFitti as body weight.</string>
     <key>NSCameraUsageDescription</key>
