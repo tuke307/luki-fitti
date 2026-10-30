@@ -63,7 +63,16 @@ public struct ProfileAndAuthView: View {
                 Text(tr("Used for calorie estimates. Stays private."))
             }
 
-            // Further feature sections (e.g. AI usage) slot in here.
+            if viewModel.store.currentUser != nil {
+                Section {
+                    NavigationLink {
+                        AIUsageView(viewModel: viewModel)
+                    } label: {
+                        Label(tr("AI usage"), systemImage: "sparkles")
+                    }
+                    .accessibilityIdentifier("ios.profile.aiUsageRow")
+                }
+            }
 
             preferencesSection
             notificationsSection

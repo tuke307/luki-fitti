@@ -14,7 +14,7 @@ struct MealPhotoSection: View {
     let busy: Bool
     let api: APIClient
     /// Uploads the picked photos; returns an optional note/error and whether the estimate succeeded.
-    let onEstimate: (_ images: [UIImage], _ hint: String) async -> (message: String?, success: Bool)
+    let onEstimate: (_ images: [UIImage], _ hint: String) async -> (message: String?, success: Bool, usage: AiRunUsageDto?)
     let onDeleteSaved: (MealPhotoDto) async -> Bool
 
     @Environment(\.lukiLocale) private var tr
@@ -22,6 +22,7 @@ struct MealPhotoSection: View {
     @State private var pickerItems: [PhotosPickerItem] = []
     @State private var hint = ""
     @State private var message: String?
+    @State private var lastUsage: AiRunUsageDto?
     @State private var showsCamera = false
     @State private var viewerStart: ViewerStart?
 
@@ -63,7 +64,10 @@ struct MealPhotoSection: View {
                 .disabled(busy || !isOnline)
                 .accessibilityIdentifier("ios.nutrition.estimateButton")
             }
-            // MARK: AI cost label (AICostLabel(usage:)) goes here.
+            if let lastUsage {
+                AICostLabel(usage: lastUsage)
+                    .accessibilityIdentifier("ios.nutrition.aiCostLabel")
+            }
             if !isOnline {
                 Text(tr("You need to be online to estimate from photos."))
                     .font(.footnote)
@@ -171,6 +175,7 @@ struct MealPhotoSection: View {
         message = nil
         let result = await onEstimate(picked.map(\.image), hint.trimmingCharacters(in: .whitespacesAndNewlines))
         message = result.message
+        if let usage = result.usage { lastUsage = usage }
         if result.success {
             picked = []
             hint = ""
