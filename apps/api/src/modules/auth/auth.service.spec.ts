@@ -8,6 +8,7 @@ import { CsrfGuard } from '@/guards/csrf.guard';
 import { generateAccessToken } from '@/utils/jwt.util';
 import type { PrismaService } from '../database/prisma.service';
 import type { EmailService } from '../email/email.service';
+import type { BodyWeightService } from '../body-weight/body-weight.service';
 import { EmailTemplateService } from '../email-template/email-template.service';
 import { DistanceUnit, EmailTemplateType, WeightUnit } from '@luki-fitti/common/enums';
 
@@ -404,5 +405,91 @@ describe('AuthService — Registration, Authentication & Brute-Force Protection'
     assert.equal(await authGuard.canActivate(cookieCtx), true);
     assert.equal(cookieReq.authTransport, 'cookie');
     assert.throws(() => csrfGuard.canActivate(cookieCtx), /CSRF token missing/i);
+  });
+});
+
+describe('AuthService.updatePreferences — weigh-in reminder & legacy body weight', () => {
+  function createPreferencesPrisma() {
+    const calls: Array<{ create: Record<string, unknown>; update: Record<string, unknown> }> = [];
+    const preferences = {
+      id: 'pref-1',
+      userId: 'user-1',
+      weightUnit: WeightUnit.KG,
+      distanceUnit: DistanceUnit.KM,
+      defaultRestSeconds: 90,
+      theme: 'system',
+      restTimerSound: true,
+      weeklyGoalSessions: 4,
+      bodyWeightKg: null as number | null,
+      weighInReminderEnabled: false,
+      weighInReminderWeekday: 2,
+      weighInReminderMinutes: 450,
+    };
+    const user = {
+      id: 'user-1',
+      email: 'weights@lukifitti.de',
+      name: null,
+      lastLoginAt: null,
+      createdAt: new Date(),
+      preferences,
+    };
+    const prisma = {
+      user: {
+        findUnique: async () => user,
+        update: async ({
+          data,
+        }: {
+          data: {
+            preferences: {
+              upsert: { create: Record<string, unknown>; update: Record<string, unknown> };
+            };
+          };
+        }) => {
+          calls.push(data.preferences.upsert);
+          Object.assign(preferences, data.preferences.upsert.update);
+          return user;
+        },
+      },
+    } as unknown as PrismaService;
+    return { prisma, calls };
+  }
+
+  it('persists and returns the weigh-in reminder settings', async () => {
+    const { prisma, calls } = createPreferencesPrisma();
+    const service = new AuthService(prisma);
+    const result = await service.updatePreferences('user-1', {
+      weighInReminderEnabled: true,
+      weighInReminderWeekday: 6,
+      weighInReminderMinutes: 480,
+    });
+    assert.deepEqual(calls[0]!.update, {
+      weighInReminderEnabled: true,
+      weighInReminderWeekday: 6,
+      weighInReminderMinutes: 480,
+    });
+    assert.equal(calls[0]!.create.weighInReminderWeekday, 6);
+    assert.equal(result.preferences?.weighInReminderEnabled, true);
+    assert.equal(result.preferences?.weighInReminderWeekday, 6);
+    assert.equal(result.preferences?.weighInReminderMinutes, 480);
+
+    // Untouched fields stay out of the update.
+    await service.updatePreferences('user-1', { weeklyGoalSessions: 3 });
+    assert.equal('weighInReminderEnabled' in calls[1]!.update, false);
+  });
+
+  it('records a weigh-in when a legacy client sets bodyWeightKg', async () => {
+    const { prisma } = createPreferencesPrisma();
+    const recorded: Array<[string, number]> = [];
+    const bodyWeight = {
+      recordFromPreferences: async (userId: string, kg: number) => {
+        recorded.push([userId, kg]);
+      },
+    } as unknown as BodyWeightService;
+    const service = new AuthService(prisma, undefined, undefined, bodyWeight);
+
+    await service.updatePreferences('user-1', { bodyWeightKg: 81.2 });
+    await service.updatePreferences('user-1', { bodyWeightKg: null });
+    await service.updatePreferences('user-1', { theme: 'dark' });
+    assert.deepEqual(recorded, [['user-1', 81.2]]);
   });
 });
