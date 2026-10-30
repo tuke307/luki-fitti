@@ -16,25 +16,29 @@ struct MealPhotoSection: View {
     /// Uploads the picked photos; returns an optional note/error and whether the estimate succeeded.
     let onEstimate: (_ images: [UIImage], _ hint: String) async -> (message: String?, success: Bool, usage: AiRunUsageDto?)
     let onDeleteSaved: (MealPhotoDto) async -> Bool
+    @Binding var picked: [LocalPhoto]
+    @Binding var showsCamera: Bool
+    @Binding var viewerStart: ViewerStart?
 
     @Environment(\.lukiLocale) private var tr
-    @State private var picked: [LocalPhoto] = []
     @State private var pickerItems: [PhotosPickerItem] = []
     @State private var hint = ""
     @State private var message: String?
     @State private var lastUsage: AiRunUsageDto?
-    @State private var showsCamera = false
-    @State private var viewerStart: ViewerStart?
 
     struct LocalPhoto: Identifiable {
         let id = UUID().uuidString
         let image: UIImage
     }
 
-    private struct ViewerStart: Identifiable { let id: String }
+    struct ViewerStart: Identifiable { let id: String }
+
+    static func items(saved: [MealPhotoDto], picked: [LocalPhoto]) -> [MealPhotoItem] {
+        saved.map { .saved($0) } + picked.map { .local(id: $0.id, image: $0.image) }
+    }
 
     private var items: [MealPhotoItem] {
-        savedPhotos.map { .saved($0) } + picked.map { .local(id: $0.id, image: $0.image) }
+        Self.items(saved: savedPhotos, picked: picked)
     }
 
     private var isFull: Bool { picked.count >= MealPhotoSheet.maxPhotos }
@@ -46,6 +50,7 @@ struct MealPhotoSection: View {
                 HStack(spacing: 10) { pickButtons }
                 VStack(alignment: .leading, spacing: 10) { pickButtons }
             }
+            .onChange(of: pickerItems) { _, items in Task { await load(items) } }
             if !picked.isEmpty {
                 TextField(tr("Anything to add? (optional)"), text: $hint, axis: .vertical)
                     .lineLimit(1...4)
@@ -82,23 +87,6 @@ struct MealPhotoSection: View {
             }
         } header: {
             Text(tr("Photos"))
-        }
-        .onChange(of: pickerItems) { _, items in Task { await load(items) } }
-        .fullScreenCover(isPresented: $showsCamera) {
-            CameraPicker { image in
-                if picked.count < MealPhotoSheet.maxPhotos { picked.append(LocalPhoto(image: image)) }
-            }
-            .ignoresSafeArea()
-        }
-        .fullScreenCover(item: $viewerStart) { start in
-            MealPhotoViewer(
-                items: items,
-                startAt: start.id,
-                mealLabel: mealLabel,
-                timeLabel: timeLabel,
-                api: api,
-                onDelete: isOnline ? onDeleteSaved : nil
-            )
         }
     }
 

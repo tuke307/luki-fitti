@@ -382,8 +382,11 @@ public struct ProfileAndAuthView: View {
                 .accessibilityIdentifier("ios.profile.restTimerSoundToggle")
 
             Button {
-                viewModel.sendTestNotification()
-                notificationStatus = tr("A test notification arrives in a second.")
+                Task {
+                    notificationStatus = await viewModel.sendTestNotification()
+                        ? tr("A test notification arrives in a second.")
+                        : tr("Allow notifications for LukiFitti in Settings to get them.")
+                }
             } label: {
                 Label(tr("Send Test Notification"), systemImage: "bell.badge")
             }
