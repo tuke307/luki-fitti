@@ -281,8 +281,8 @@ struct MealEditorSheet: View {
 
     // MARK: Photos & AI
 
-    private func estimate(_ images: [UIImage], _ hint: String) async -> (message: String?, success: Bool) {
-        guard isSignedIn else { return (tr("You need to be online to estimate from photos."), false) }
+    private func estimate(_ images: [UIImage], _ hint: String) async -> (message: String?, success: Bool, usage: AiRunUsageDto?) {
+        guard isSignedIn else { return (tr("You need to be online to estimate from photos."), false, nil) }
         analyzing = true
         defer { analyzing = false }
         let jpegs = images.compactMap { MealPhotoSheet.uploadJPEG($0) }
@@ -302,11 +302,11 @@ struct MealEditorSheet: View {
             let ai = result.entry.items.filter { $0.source == .AI }
             items = manual + ai
             if items.isEmpty { items = [MealItemDto(name: "")] }
-            if !result.analysis.containsFood { return (tr("We couldn’t find food in these photos."), true) }
-            if !result.photosStored { return (tr("Photos weren’t stored on the server."), true) }
-            return (nil, true)
+            if !result.analysis.containsFood { return (tr("We couldn’t find food in these photos."), true, result.usage) }
+            if !result.photosStored { return (tr("Photos weren’t stored on the server."), true, result.usage) }
+            return (nil, true, result.usage)
         } catch {
-            return (MealPhotoSheet.message(for: error, tr), false)
+            return (MealPhotoSheet.message(for: error, tr), false, nil)
         }
     }
 

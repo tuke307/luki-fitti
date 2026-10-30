@@ -18,6 +18,7 @@ import { api } from '@/lib/api';
 import { aiErrorMessage } from '@/lib/ai/ai-errors';
 import { prepareImageForUpload } from '@/lib/images/prepare-image';
 import { useLocale } from '@/providers/i18n/locale-context';
+import { AiCostLabel } from '@/components/gym/ai-usage/ai-cost-label';
 import { MealPhotoViewer, type ViewerPhoto } from './meal-photo-viewer';
 
 interface PickedPhoto {
@@ -55,6 +56,7 @@ export function MealPhotoSection({
   const [picked, setPicked] = useState<PickedPhoto[]>([]);
   const [hint, setHint] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [lastUsage, setLastUsage] = useState<MealAnalysisResponseDto['usage'] | null>(null);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const galleryInput = useRef<HTMLInputElement>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
@@ -128,6 +130,7 @@ export function MealPhotoSection({
       });
       setPicked([]);
       setHint('');
+      setLastUsage(res.data.usage ?? null);
       onAnalyzed(res.data);
     } catch (err) {
       setError(aiErrorMessage(err, t));
@@ -261,7 +264,7 @@ export function MealPhotoSection({
         </>
       )}
 
-      {/* AI cost label (usage) goes here. */}
+      {lastUsage && <AiCostLabel usage={lastUsage} />}
 
       {error && (
         <p className="text-destructive text-[0.875rem]" role="alert">
