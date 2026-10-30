@@ -104,19 +104,37 @@ services:
       - 'app.service=api'
 
   # Private S3-compatible storage for meal photos. Not exposed to the internet; the API streams
-  # photos to their owner after an ownership check.
+  # photos to their owner after an ownership check. Buckets and S3 users are managed in the
+  # admin UI and stored in the filer (no -s3.config file, which would override them).
   luki-fitti-storage:
-    image: chrislusf/seaweedfs:4.01
+    image: chrislusf/seaweedfs:4.50
     restart: always
-    command: 'server -dir=/data -s3 -s3.config=/etc/seaweedfs/s3.json'
+    command: 'server -dir=/data -s3'
     volumes:
       - luki_fitti_storage:/data
-      - ./seaweedfs-s3.json:/etc/seaweedfs/s3.json:ro
     networks:
       - luki_fitti_network
     labels:
       - 'app.project=luki-fitti'
       - 'app.service=storage'
+
+  # SeaweedFS admin UI. Password-protected and published on the server's loopback only;
+  # reach it through an SSH tunnel: ssh -L 23648:127.0.0.1:23648 <server>
+  luki-fitti-storage-admin:
+    image: chrislusf/seaweedfs:4.50
+    restart: always
+    command: 'admin -master=luki-fitti-storage:9333 -port=23646 -dataDir=/data -adminPassword=${SEAWEEDFS_ADMIN_PASSWORD:?}'
+    ports:
+      - '127.0.0.1:23648:23646'
+    volumes:
+      - luki_fitti_storage_admin:/data
+    depends_on:
+      - luki-fitti-storage
+    networks:
+      - luki_fitti_network
+    labels:
+      - 'app.project=luki-fitti'
+      - 'app.service=storage-admin'
 
   luki-fitti-email-worker:
     image: ghcr.io/tuke307/luki-fitti-email-worker:latest
@@ -163,3 +181,4 @@ networks:
 
 volumes:
   luki_fitti_storage:
+  luki_fitti_storage_admin:
