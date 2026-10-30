@@ -90,7 +90,6 @@ yarn dev
 | `yarn lint` | Run TypeScript and ESLint checks |
 | `yarn db:migrate -- <name>` | Create and apply a new Prisma migration |
 | `yarn --cwd apps/api openapi:export` | Export Swagger OpenAPI spec to `apps/apple` |
-| `yarn --cwd packages/database admin:grant <email>` | Give a registered account admin rights and all AI features |
 
 ---
 

@@ -1,3 +1,7 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { parse as parseJsonc } from 'jsonc-parser';
 import prisma from './client';
 import logger from '@luki-fitti/logger';
 import { ALL_SYSTEM_EXERCISES } from '@luki-fitti/common/catalog/extended';
@@ -7,10 +11,43 @@ import {
   DEFAULT_STARTER_TEMPLATES,
   DEFAULT_STRETCHING_ROUTINES,
 } from '@luki-fitti/common/catalog';
+import { ADMIN_PERMISSIONS, FEATURE_GRANTS } from '@luki-fitti/common/enums';
+
+interface SeedUser {
+  email: string;
+  name: string;
+  passwordHash: string;
+}
+
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+
+async function loadSeedUsers(): Promise<SeedUser[]> {
+  const filePath = path.join(currentDir, '..', 'data', 'users.jsonc');
+  return parseJsonc(await fs.promises.readFile(filePath, 'utf-8'));
+}
 
 async function main(): Promise<void> {
+  const seedUsers = await loadSeedUsers();
+
   try {
     await prisma.$transaction(async (tx) => {
+      // Seeded accounts are the project owners, so they get every permission and feature.
+      // Skipped in production so fixture credentials never reach a live database.
+      if (process.env.NODE_ENV !== 'production') {
+        for (const seedUser of seedUsers) {
+          const email = seedUser.email.toLowerCase();
+          const grants = {
+            permissions: [...ADMIN_PERMISSIONS],
+            featureGrants: [...FEATURE_GRANTS],
+          };
+          await tx.user.upsert({
+            where: { email },
+            update: grants,
+            create: { email, name: seedUser.name, passwordHash: seedUser.passwordHash, ...grants },
+          });
+        }
+      }
+
       for (const item of ALL_SYSTEM_EXERCISES) {
         await tx.exercise.upsert({
           where: { slug: item.slug },
@@ -122,9 +159,10 @@ async function main(): Promise<void> {
         },
       });
 
-      const seedEmail = process.env.SEED_USER_EMAIL;
-      if (seedEmail) {
-        const user = await tx.user.findUnique({ where: { email: seedEmail.toLowerCase() } });
+      const seedEmails =
+        process.env.NODE_ENV !== 'production' ? seedUsers.map((u) => u.email.toLowerCase()) : [];
+      for (const email of seedEmails) {
+        const user = await tx.user.findUnique({ where: { email } });
         if (user) {
           for (const starterFolder of DEFAULT_STARTER_FOLDERS) {
             const folder = await tx.workoutFolder.upsert({
@@ -143,6 +181,10 @@ async function main(): Promise<void> {
               (t) => t.folderId === starterFolder.id,
             );
             for (const tpl of folderTemplates) {
+              const existingTpl = await tx.workoutTemplate.findFirst({
+                where: { userId: user.id, systemKey: tpl.id },
+              });
+              if (existingTpl) continue;
               const createdTpl = await tx.workoutTemplate.create({
                 data: {
                   userId: user.id,
@@ -177,6 +219,10 @@ async function main(): Promise<void> {
           }
 
           for (const routine of DEFAULT_STRETCHING_ROUTINES) {
+            const existingRoutine = await tx.stretchingRoutine.findFirst({
+              where: { userId: user.id, systemKey: routine.id },
+            });
+            if (existingRoutine) continue;
             const createdRoutine = await tx.stretchingRoutine.create({
               data: {
                 userId: user.id,

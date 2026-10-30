@@ -4,10 +4,10 @@
 
 There is no separate staff table: admin rights are fields on `User`.
 
-| Field | Values | Meaning |
-| :--- | :--- | :--- |
-| `User.permissions` | `DASHBOARD_VIEW`, `USERS_MANAGE`, `AI_SETTINGS_MANAGE` | Admin portal access (any-of per page) |
-| `User.featureGrants` | `AI_WORKOUT_BUILDER`, `AI_MEAL_PHOTO` | Opt-in features for this user |
+| Field                | Values                                                 | Meaning                               |
+| :------------------- | :----------------------------------------------------- | :------------------------------------ |
+| `User.permissions`   | `DASHBOARD_VIEW`, `USERS_MANAGE`, `AI_SETTINGS_MANAGE` | Admin portal access (any-of per page) |
+| `User.featureGrants` | `AI_WORKOUT_BUILDER`, `AI_MEAL_PHOTO`                  | Opt-in features for this user         |
 
 - Both are re-read from the database on every request by `AuthGuard`; the JWT never carries them,
   so revoking access is immediate.
@@ -18,13 +18,8 @@ There is no separate staff table: admin rights are fields on `User`.
   `features` list; clients only show AI entry points for features in that list.
 - Admins cannot remove their own `USERS_MANAGE` permission (prevents lock-out).
 
-Make yourself admin (the account must exist):
-
-```bash
-yarn --cwd packages/database admin:grant you@example.com           # all permissions + features
-yarn --cwd packages/database admin:grant you@example.com --revoke  # remove admin permissions
-yarn --cwd packages/database admin:grant you@example.com --permissions=USERS_MANAGE --features=
-```
+Locally, `yarn db:seed` upserts the accounts in `packages/database/data/users.jsonc` with all
+admin permissions, feature grants and the starter templates (skipped when `NODE_ENV=production`).
 
 The portal lives at `/admin` in the web app (Overview, Users, AI). `proxy.ts` bounces visitors
 without a session to `/login?redirect=…`; authorization itself is always enforced by the API.
@@ -71,13 +66,13 @@ without a session to `/login?redirect=…`; authorization itself is always enfor
 
 Tools (`tools/training.tools.ts`):
 
-| Tool | Purpose |
-| :--- | :--- |
-| `get_user_profile` | Units, rest, saved workouts, equipment actually used |
-| `get_exercise_feedback` | Exercises marked as not working / painful / disliked, often skipped, often swapped out |
-| `get_weak_points` | Under-trained muscles and stalled lifts (`classifyExerciseStall`) |
-| `get_training_history` | Sets per muscle, top exercises with trend, recent workouts |
-| `search_exercises` / `get_exercise_details` | Catalog search (EN/DE) and alternatives |
+| Tool                                        | Purpose                                                                                |
+| :------------------------------------------ | :------------------------------------------------------------------------------------- |
+| `get_user_profile`                          | Units, rest, saved workouts, equipment actually used                                   |
+| `get_exercise_feedback`                     | Exercises marked as not working / painful / disliked, often skipped, often swapped out |
+| `get_weak_points`                           | Under-trained muscles and stalled lifts (`classifyExerciseStall`)                      |
+| `get_training_history`                      | Sets per muscle, top exercises with trend, recent workouts                             |
+| `search_exercises` / `get_exercise_details` | Catalog search (EN/DE) and alternatives                                                |
 
 Exercise ids in the proposal are resolved against the catalog. Unknown ids are dropped and
 reported in `droppedExerciseIds`. The proposal is only a preview; the user saves it as a normal
@@ -100,11 +95,11 @@ optional `mealType`, `hint`):
 
 ## Configuration
 
-| Variable | Description |
-| :--- | :--- |
-| `OPENROUTER_API_KEY` | Enables AI features (server-side only) |
-| `OPENROUTER_BASE_URL` / `OPENROUTER_TIMEOUT_MS` | Optional overrides (https only outside local tests) |
-| `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_BUCKET`, `S3_FORCE_PATH_STYLE` | Meal photo storage |
+| Variable                                                                                                   | Description                                         |
+| :--------------------------------------------------------------------------------------------------------- | :-------------------------------------------------- |
+| `OPENROUTER_API_KEY`                                                                                       | Enables AI features (server-side only)              |
+| `OPENROUTER_BASE_URL` / `OPENROUTER_TIMEOUT_MS`                                                            | Optional overrides (https only outside local tests) |
+| `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_BUCKET`, `S3_FORCE_PATH_STYLE` | Meal photo storage                                  |
 
 Models, switches, daily limit and photo retention are edited in **Admin → AI** (stored in
 `AppSettings`). Defaults: `openai/gpt-6.1-terra` for the workout builder and
