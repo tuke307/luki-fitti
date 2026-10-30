@@ -71,17 +71,42 @@ struct WeightEditorContext: Identifiable {
 struct WeightView: View {
     @Bindable var viewModel: LukiAppViewModel
     @Environment(\.lukiLocale) private var tr
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
+    @AppStorage("lukifitti.weight.healthPromptDismissed") private var healthPromptDismissed = false
     @State private var range: WeightChartRange = .month3
     @State private var selectedDate: Date?
     @State private var editing: WeightEditorContext?
     @State private var offlineNote = false
+    @State private var chart = WeightChartData()
+    @State private var trend = WeightTrend()
+    @State private var monthGroups: [MonthGroup] = []
+    @State private var pendingDeletion: BodyWeightEntryDto?
+    @State private var undoTask: Task<Void, Never>?
+    @State private var connectingHealth = false
+    @State private var savedCount = 0
+
+    private struct DerivedKey: Equatable {
+        let entries: [BodyWeightEntryDto]
+        let range: WeightChartRange
+        let unit: WeightUnit
+    }
+
+    struct MonthGroup: Identifiable {
+        let month: Date
+        let entries: [BodyWeightEntryDto]
+        var id: Date { month }
+    }
 
     private var store: BodyWeightStore { viewModel.bodyWeight }
     private var display: WeightDisplay { WeightDisplay(unit: viewModel.store.preferences.weightUnit, locale: tr) }
+    private var showsHealthPrompt: Bool { viewModel.canOfferAppleHealth && !healthPromptDismissed }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                if showsHealthPrompt {
+                    healthCard
+                }
                 if store.entries.isEmpty {
                     emptyCard
                 } else {
@@ -111,20 +136,95 @@ struct WeightView: View {
                 .accessibilityIdentifier("ios.weight.logButton")
             }
         }
-        .task { await viewModel.syncBodyWeight(requestHealthAccess: true) }
+        .safeAreaInset(edge: .bottom) {
+            if let pendingDeletion {
+                undoBanner(pendingDeletion)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.snappy, value: pendingDeletion?.clientEntryId)
+        .onChange(of: DerivedKey(entries: store.entries, range: range, unit: display.unit), initial: true) {
+            recompute()
+        }
+        .task { await viewModel.syncBodyWeight() }
         .refreshable { await viewModel.syncBodyWeight() }
+        .onDisappear { commitPendingDeletion() }
+        .sensoryFeedback(.success, trigger: savedCount)
         .sheet(item: $editing) { context in
             LogWeightSheet(viewModel: viewModel, entry: context.entry) { reachedServer in
                 offlineNote = !reachedServer && viewModel.isSignedIn
+                savedCount += 1
             }
+            .presentationDetents([.medium, .large])
         }
+    }
+
+    private func recompute() {
+        chart = WeightChartData(store.points, from: range.start(), unit: display.unit)
+        trend = store.trend()
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: store.entries.reversed()) { entry -> Date in
+            let date = entry.measuredAtDate ?? .distantPast
+            return calendar.dateInterval(of: .month, for: date)?.start ?? date
+        }
+        monthGroups = grouped.keys.sorted(by: >).map { MonthGroup(month: $0, entries: grouped[$0] ?? []) }
+    }
+
+    // MARK: Apple Health
+
+    private var healthCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "heart.fill")
+                    .font(.title3)
+                    .foregroundStyle(LukiColors.heartRate)
+                    .accessibilityHidden(true)
+                Text(tr("Connect Apple Health"))
+                    .font(.headline)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 0)
+                Button {
+                    healthPromptDismissed = true
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, -12)
+                .padding(.trailing, -12)
+                .accessibilityLabel(tr("Not now"))
+                .accessibilityIdentifier("ios.weight.dismissHealthButton")
+            }
+            Text(tr("Weigh-ins from your smart scale or other apps show up here, and weights you log are saved to Apple Health. You choose what to share on the next screen."))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Button {
+                Task {
+                    connectingHealth = true
+                    await viewModel.connectAppleHealth()
+                    connectingHealth = false
+                }
+            } label: {
+                Text(tr("Connect Apple Health"))
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(connectingHealth)
+            .accessibilityIdentifier("ios.weight.connectHealthButton")
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardShape)
+        .accessibilityElement(children: .contain)
     }
 
     // MARK: Header
 
     private var headerCard: some View {
-        let trend = store.trend()
-        return VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(tr("Current weight"))
                     .font(.footnote.weight(.semibold))
@@ -172,34 +272,27 @@ struct WeightView: View {
 
     // MARK: Chart
 
-    private struct ChartPoint: Identifiable {
-        let date: Date
-        let value: Double
-        let average: Double
-        var id: Date { date }
-    }
-
-    private var chartPoints: [ChartPoint] {
-        let start = range.start()
-        return BodyWeightMath.movingAverage(store.points, windowDays: 7)
-            .filter { start == nil || $0.point.date >= start! }
-            .map { ChartPoint(date: $0.point.date, value: display.number($0.point.weightKg), average: display.number($0.averageKg)) }
+    private func headline(_ selected: WeightChartPoint?) -> String {
+        let locale = Locale(identifier: tr.rawValue)
+        if let selected {
+            let value = selected.value.formatted(.number.precision(.fractionLength(1)).locale(locale))
+            let date = selected.date.formatted(.dateTime.day().month(.abbreviated).year().locale(locale))
+            return "\(value) \(LukiFormat.unitLabel(display.unit)) · \(date)"
+        }
+        return chart.summary(tr, unit: display.unit) ?? tr("Dashed line: 7-day average")
     }
 
     private var chartCard: some View {
-        let points = chartPoints
-        let selected = nearest(to: selectedDate, in: points)
+        let selected = chart.nearest(to: selectedDate)
         return VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(tr("Trend")).font(.headline)
-                    Text(selected.map { "\(display.value(BodyWeightMath.kilograms($0.value, unit: display.unit))) \(LukiFormat.unitLabel(display.unit)) · \($0.date.formatted(.dateTime.day().month(.abbreviated).year().locale(Locale(identifier: tr.rawValue))))" }
-                        ?? tr("Dashed line: 7-day average"))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                }
-                Spacer()
+            VStack(alignment: .leading, spacing: 2) {
+                Text(tr("Trend")).font(.headline)
+                Text(headline(selected))
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(selected == nil ? .secondary : .primary)
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+                    .accessibilityIdentifier("ios.weight.chartHeadline")
             }
             Picker(tr("Range"), selection: $range) {
                 ForEach(WeightChartRange.allCases) { Text($0.label(tr)).tag($0) }
@@ -207,87 +300,46 @@ struct WeightView: View {
             .pickerStyle(.segmented)
             .accessibilityIdentifier("ios.weight.rangePicker")
 
-            if points.isEmpty {
+            if chart.points.isEmpty {
                 Text(tr("No weigh-ins in this period."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, minHeight: 180)
             } else {
-                chart(points, selected: selected)
+                WeightTrendChart(points: chart.points, selected: selected)
+                    .chartXSelection(value: $selectedDate)
+                    .frame(height: 220)
+                    .accessibilityChartDescriptor(WeightChartDescriptor(
+                        title: tr("Weight trend"),
+                        unit: LukiFormat.unitLabel(display.unit),
+                        dateTitle: tr("Date"),
+                        points: chart.points.map { ($0.date, $0.value) },
+                        locale: Locale(identifier: tr.rawValue)
+                    ))
+                    .accessibilityIdentifier("ios.weight.chart")
+                Text(tr("Dashed line: 7-day average"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(18)
         .background(cardShape)
     }
 
-    private func chart(_ points: [ChartPoint], selected: ChartPoint?) -> some View {
-        let values = points.flatMap { [$0.value, $0.average] }
-        let low = (values.min() ?? 0) - 1
-        let high = (values.max() ?? 1) + 1
-        let weightLabel = tr("Weight")
-        let averageLabel = tr("7-day average")
-        return Chart {
-            ForEach(points) { p in
-                LineMark(x: .value(tr("Date"), p.date), y: .value(weightLabel, p.value), series: .value("Series", weightLabel))
-                    .foregroundStyle(LukiColors.accent)
-                    .interpolationMethod(.monotone)
-                PointMark(x: .value(tr("Date"), p.date), y: .value(weightLabel, p.value))
-                    .foregroundStyle(LukiColors.accent)
-                    .symbolSize(points.count > 60 ? 12 : 28)
-            }
-            ForEach(points) { p in
-                LineMark(x: .value(tr("Date"), p.date), y: .value(averageLabel, p.average), series: .value("Series", averageLabel))
-                    .foregroundStyle(Color.secondary)
-                    .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
-                    .interpolationMethod(.monotone)
-            }
-            if let selected {
-                RuleMark(x: .value(tr("Date"), selected.date))
-                    .foregroundStyle(Color.secondary.opacity(0.4))
-                PointMark(x: .value(tr("Date"), selected.date), y: .value(weightLabel, selected.value))
-                    .foregroundStyle(LukiColors.accent)
-                    .symbolSize(90)
-            }
-        }
-        .chartYScale(domain: low...high)
-        .chartXSelection(value: $selectedDate)
-        .frame(height: 220)
-        .accessibilityChartDescriptor(WeightChartDescriptor(
-            title: tr("Weight trend"),
-            unit: LukiFormat.unitLabel(display.unit),
-            dateTitle: tr("Date"),
-            points: points.map { ($0.date, $0.value) },
-            locale: Locale(identifier: tr.rawValue)
-        ))
-        .accessibilityIdentifier("ios.weight.chart")
-    }
-
-    private func nearest(to date: Date?, in points: [ChartPoint]) -> ChartPoint? {
-        guard let date else { return nil }
-        return points.min { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) }
-    }
-
     // MARK: List
 
-    private var monthGroups: [(month: Date, entries: [BodyWeightEntryDto])] {
-        let calendar = Calendar.current
-        let grouped = Dictionary(grouping: store.entries.reversed()) { entry -> Date in
-            let date = entry.measuredAtDate ?? .distantPast
-            return calendar.dateInterval(of: .month, for: date)?.start ?? date
-        }
-        return grouped.keys.sorted(by: >).map { ($0, grouped[$0] ?? []) }
-    }
-
     private var entriesList: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            ForEach(monthGroups, id: \.month) { group in
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(group.month.formatted(.dateTime.month(.wide).year().locale(Locale(identifier: tr.rawValue))))
-                        .font(.headline)
-                        .accessibilityAddTraits(.isHeader)
+        LazyVStack(alignment: .leading, spacing: 8) {
+            ForEach(monthGroups) { group in
+                Section {
                     ForEach(group.entries) { entry in
                         entryRow(entry)
                     }
+                } header: {
+                    Text(group.month.formatted(.dateTime.month(.wide).year().locale(Locale(identifier: tr.rawValue))))
+                        .font(.headline)
+                        .padding(.top, group.id == monthGroups.first?.id ? 0 : 10)
+                        .accessibilityAddTraits(.isHeader)
                 }
             }
         }
@@ -302,7 +354,7 @@ struct WeightView: View {
             ],
             trailing: [
                 LukiSwipeAction(id: "delete", label: tr("Delete"), systemImage: "trash", tone: .destructive) {
-                    Task { await viewModel.deleteWeighIn(entry) }
+                    delete(entry)
                 },
             ],
             cornerRadius: 16
@@ -343,6 +395,55 @@ struct WeightView: View {
             .accessibilityHint(tr("Opens the weigh-in to edit it"))
         }
         .accessibilityIdentifier("ios.weight.entry.\(entry.clientEntryId)")
+    }
+
+    // MARK: Undo
+
+    private func delete(_ entry: BodyWeightEntryDto) {
+        commitPendingDeletion()
+        viewModel.stageWeighInDeletion(entry)
+        pendingDeletion = entry
+        AccessibilityNotification.Announcement(tr("Weigh-in deleted")).post()
+        let seconds = voiceOverEnabled ? 10 : 5
+        undoTask = Task {
+            try? await Task.sleep(for: .seconds(seconds))
+            guard !Task.isCancelled, pendingDeletion?.clientEntryId == entry.clientEntryId else { return }
+            commitPendingDeletion()
+        }
+    }
+
+    private func undo(_ entry: BodyWeightEntryDto) {
+        undoTask?.cancel()
+        undoTask = nil
+        viewModel.undoWeighInDeletion(entry)
+        pendingDeletion = nil
+    }
+
+    private func commitPendingDeletion() {
+        undoTask?.cancel()
+        undoTask = nil
+        guard let entry = pendingDeletion else { return }
+        pendingDeletion = nil
+        Task { await viewModel.commitWeighInDeletion(entry) }
+    }
+
+    private func undoBanner(_ entry: BodyWeightEntryDto) -> some View {
+        HStack(spacing: 12) {
+            Text(tr("Weigh-in deleted"))
+                .font(.subheadline.weight(.medium))
+            Spacer(minLength: 8)
+            Button(tr("Undo")) { undo(entry) }
+                .font(.subheadline.weight(.semibold))
+                .frame(minHeight: 44)
+                .accessibilityIdentifier("ios.weight.undoDeleteButton")
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 4)
+        .glassEffect(.regular, in: .capsule)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("ios.weight.undoBanner")
     }
 
     // MARK: Empty

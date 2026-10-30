@@ -102,13 +102,29 @@ public struct NutritionView: View {
         let net = totals.kcal - Double(burned)
         let remaining = goal.map { Double($0) - net }
         return VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text(goal.map { tr("Goal: %d kcal", $0) } ?? tr("Daily goal"))
+                    .font(.headline)
+                    .monospacedDigit()
+                Spacer()
+                NutritionGoalsButton(viewModel: viewModel) {
+                    Label(tr("Goals"), systemImage: "target")
+                }
+                .buttonStyle(.bordered)
+                .accessibilityLabel(tr("Edit nutrition goals"))
+                .accessibilityIdentifier("ios.nutrition.goalsButton")
+            }
             HStack(spacing: 18) {
-                Gauge(value: NutritionMath.progress(net, goal: goal) ?? (totals.kcal > 0 ? 1 : 0)) { EmptyView() }
-                    .gaugeStyle(.accessoryCircularCapacity)
-                    .tint((remaining ?? 0) < 0 ? LukiColors.warning : LukiColors.accent)
-                    .scaleEffect(1.3)
-                    .frame(width: 72, height: 72)
-                    .accessibilityHidden(true)
+                NutritionGoalsButton(viewModel: viewModel) {
+                    Gauge(value: NutritionMath.progress(net, goal: goal) ?? (totals.kcal > 0 ? 1 : 0)) { EmptyView() }
+                        .gaugeStyle(.accessoryCircularCapacity)
+                        .tint((remaining ?? 0) < 0 ? LukiColors.warning : LukiColors.accent)
+                        .scaleEffect(1.3)
+                        .frame(width: 72, height: 72)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityHidden(true)
                 HStack(alignment: .top) {
                     stat(tr("Eaten"), "\(Int(totals.kcal))")
                     stat(tr("Burned"), "\(burned)")
@@ -116,9 +132,13 @@ public struct NutritionView: View {
                 }
             }
             if goal == nil {
-                Text(tr("Set a daily goal in Profile to see what’s left."))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                NutritionGoalsButton(viewModel: viewModel) {
+                    Label(tr("Set a daily goal to see what’s left"), systemImage: "plus.circle")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(minHeight: 44)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityIdentifier("ios.nutrition.setGoalButton")
             }
             HStack(spacing: 12) {
                 macro(tr("Protein"), totals.proteinG, prefs.proteinGoalG)
