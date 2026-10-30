@@ -6,6 +6,7 @@ import type {
 } from '@luki-fitti/common/schemas';
 import {
   estimateWorkoutEnergy,
+  startOfIsoWeek,
   sumMacros,
   weightAt,
   type MacroValues,
@@ -26,6 +27,59 @@ export function shiftDay(key: string, days: number): string {
 
 export function lastDays(endKey: string, count: number): string[] {
   return Array.from({ length: count }, (_, i) => shiftDay(endKey, i - (count - 1)));
+}
+
+/** Monday of the ISO week containing `key`. */
+export function weekStartKey(key: string): string {
+  const [y, m, d] = key.split('-').map(Number) as [number, number, number];
+  return dayKey(startOfIsoWeek(new Date(y, m - 1, d)));
+}
+
+export function weekDays(startKey: string): string[] {
+  return Array.from({ length: 7 }, (_, i) => shiftDay(startKey, i));
+}
+
+/** Kcal eaten per local day, for cheap week-strip lookups. */
+export function kcalByDay(entries: readonly MealEntryDto[]): Map<string, number> {
+  const byDay = new Map<string, MacroValues[]>();
+  for (const e of entries) {
+    const key = dayKey(e.eatenAt);
+    const list = byDay.get(key);
+    if (list) list.push(e.totals);
+    else byDay.set(key, [e.totals]);
+  }
+  return new Map([...byDay].map(([key, totals]) => [key, sumMacros(totals).kcal]));
+}
+
+/**
+ * Server rows replace every entry inside [from, to); entries outside the window (older weeks
+ * loaded earlier) and pending local changes are kept.
+ */
+export function mergeWindow(
+  existing: readonly MealEntryDto[],
+  server: readonly MealEntryDto[],
+  window: { from: string; to: string },
+  pending: { ids: ReadonlySet<string>; upserts: readonly MealEntryDto[] },
+): MealEntryDto[] {
+  const from = Date.parse(window.from);
+  const to = Date.parse(window.to);
+  const serverIds = new Set(server.map((e) => e.clientEntryId));
+  const outside = existing.filter((e) => {
+    if (pending.ids.has(e.clientEntryId) || serverIds.has(e.clientEntryId)) return false;
+    const t = Date.parse(e.eatenAt);
+    return t < from || t >= to;
+  });
+  return [
+    ...outside,
+    ...server.filter((e) => !pending.ids.has(e.clientEntryId)),
+    ...pending.upserts,
+  ];
+}
+
+/** Ring fill: share of the goal, or full when something is logged without a goal. */
+export function ringProgress(eatenKcal: number, goal: number | null | undefined): number {
+  if (goal && goal > 0) return Math.min(1, Math.max(0, eatenKcal / goal));
+  return eatenKcal > 0 ? 1 : 0;
 }
 
 /**
