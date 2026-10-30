@@ -53,6 +53,14 @@ Personal gym and workout management Progressive Web App (`luki-fitti`), optimize
 - **API Environment Configuration:**
   - `Config/Debug.xcconfig` defaults to `http://localhost:3001`; `Config/Release.xcconfig` defaults to `https://luki-fitti.tony-luke.de`.
   - Override at runtime in Xcode via **Edit Scheme → Run → Environment Variables → `LUKIFITTI_API_BASE_URL`**.
+- **Deploy to a physical iPhone (always use the prod URL):**
+  - A Debug build bakes `http://localhost:3001` into `Info.plist`. On a real device `localhost` is the phone itself, so the app cannot reach the API or S3 storage. Always pass the prod URL when building for a device.
+  - The scheme environment variable only applies when launching from Xcode, not when the app is opened from the home screen. Use the build setting override instead.
+  - Do not use the Release configuration for personal-team device builds: `Release.xcconfig` resets `LUKIFITTI_BUNDLE_ID_PREFIX` to `com.lukifitti`, which overrides `Local.xcconfig` and breaks signing.
+  - Find the device ID: `xcrun devicectl list devices` (use the `physical` entry).
+  - Build: `cd apps/apple && xcodegen generate && xcodebuild -project LukiFitti.xcodeproj -scheme LukiFittiIOS -configuration Debug -destination 'id=<DEVICE_UDID>' -derivedDataPath build/DerivedData -allowProvisioningUpdates 'LUKIFITTI_API_BASE_URL=https:/$()/luki-fitti.tony-luke.de' build`
+  - Verify: `/usr/libexec/PlistBuddy -c 'Print LUKIFITTI_API_BASE_URL' build/DerivedData/Build/Products/Debug-iphoneos/LukiFittiIOS.app/Info.plist` must print `https://luki-fitti.tony-luke.de`.
+  - Install & launch: `xcrun devicectl device install app --device <DEVICE_UDID> build/DerivedData/Build/Products/Debug-iphoneos/LukiFittiIOS.app && xcrun devicectl device process launch --terminate-existing --device <DEVICE_UDID> <BUNDLE_ID>` (the bundle ID is `$(LUKIFITTI_BUNDLE_ID_PREFIX).app` from `Config/Local.xcconfig`).
 
 ## Agent Instructions (APM)
 

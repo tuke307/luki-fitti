@@ -109,3 +109,17 @@ xcrun simctl pair <WATCH_SIM_UDID> <IPHONE_SIM_UDID>
 ```
 
 - **Environment Switching:** `Config/Debug.xcconfig` defaults to `http://localhost:3001` and `Config/Release.xcconfig` defaults to `https://luki-fitti.tony-luke.de`. You can override the API URL in Xcode under **Edit Scheme (`⌘<`) → Run → Environment Variables → `LUKIFITTI_API_BASE_URL`**.
+- **Physical iPhone builds must use the prod URL:** On a real device `localhost` is the phone itself, so a plain Debug build can't reach the API or S3 storage. The scheme environment variable only applies to launches from Xcode, so override the build setting instead. Don't switch to Release for personal-team builds, because it resets the bundle ID prefix from `Local.xcconfig`.
+
+  ```bash
+  cd apps/apple && xcodegen generate
+  xcrun devicectl list devices   # pick the "physical" UDID
+  xcodebuild -project LukiFitti.xcodeproj -scheme LukiFittiIOS -configuration Debug \
+    -destination 'id=<DEVICE_UDID>' -derivedDataPath build/DerivedData -allowProvisioningUpdates \
+    'LUKIFITTI_API_BASE_URL=https:/$()/luki-fitti.tony-luke.de' build
+  APP=build/DerivedData/Build/Products/Debug-iphoneos/LukiFittiIOS.app
+  /usr/libexec/PlistBuddy -c 'Print LUKIFITTI_API_BASE_URL' "$APP/Info.plist"   # expect prod URL
+  xcrun devicectl device install app --device <DEVICE_UDID> "$APP"
+  xcrun devicectl device process launch --terminate-existing --device <DEVICE_UDID> \
+    "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP/Info.plist")"
+  ```
