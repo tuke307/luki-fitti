@@ -97,7 +97,9 @@ export const MealAnalysisSchema = z.object({
     .array(
       z.object({
         name: z.string().min(1).max(120),
-        estimatedGrams: z.number().min(0).max(5000),
+        /** Portion in `unit`: grams for solids, millilitres for drinks and liquids. */
+        estimatedAmount: z.number().min(0).max(5000),
+        unit: z.enum(['g', 'ml']),
         kcal: z.number().min(0).max(10000),
         proteinG: z.number().min(0).max(1000),
         carbsG: z.number().min(0).max(1000),
