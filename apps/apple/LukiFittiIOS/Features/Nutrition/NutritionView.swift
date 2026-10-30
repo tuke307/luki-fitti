@@ -29,7 +29,7 @@ public struct NutritionView: View {
     private var workouts: [(session: WorkoutSessionDto, kcal: Int)] {
         viewModel.store.historySessions
             .filter { LukiISODate.parse($0.startedAt).map { Calendar.current.isDate($0, inSameDayAs: day) } ?? false }
-            .map { ($0, NutritionMath.burnedKcal(for: $0, bodyWeightKg: prefs.bodyWeightKg)) }
+            .map { ($0, NutritionMath.burnedKcal(for: $0, bodyWeightKg: viewModel.bodyWeightKg(for: $0))) }
     }
     private var burned: Int { workouts.reduce(0) { $0 + $1.kcal } }
 
@@ -268,8 +268,8 @@ public struct NutritionView: View {
             Text(tr("Estimated from duration and intensity. Apple Watch values are used when available."))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-            if prefs.bodyWeightKg == nil {
-                Text(tr("Add your body weight in Profile for a better estimate."))
+            if viewModel.currentBodyWeightKg == nil {
+                Text(tr("Log your weight for a better estimate."))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -283,7 +283,7 @@ public struct NutritionView: View {
         let rows = days.map { d -> (date: Date, eaten: Double, burned: Int) in
             let burnedOnDay = viewModel.store.historySessions
                 .filter { LukiISODate.parse($0.startedAt).map { Calendar.current.isDate($0, inSameDayAs: d) } ?? false }
-                .reduce(0) { $0 + NutritionMath.burnedKcal(for: $1, bodyWeightKg: prefs.bodyWeightKg) }
+                .reduce(0) { $0 + NutritionMath.burnedKcal(for: $1, bodyWeightKg: viewModel.bodyWeightKg(for: $1)) }
             return (d, nutrition.totals(on: d).kcal, burnedOnDay)
         }
         return VStack(alignment: .leading, spacing: 12) {

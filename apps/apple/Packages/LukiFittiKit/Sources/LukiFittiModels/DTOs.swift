@@ -35,6 +35,12 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
     public var proteinGoalG: Int? = nil
     public var carbsGoalG: Int? = nil
     public var fatGoalG: Int? = nil
+    /// Weekly weigh-in reminder (local notification on this device).
+    public var weighInReminderEnabled: Bool = false
+    /// `Calendar` weekday: 1 = Sunday … 7 = Saturday.
+    public var weighInReminderWeekday: Int = 2
+    /// Minutes after midnight (450 = 07:30).
+    public var weighInReminderMinutes: Int = 450
 
     public init(
         id: String = "pref-local",
@@ -66,6 +72,7 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
         case id, userId, weightUnit, distanceUnit, defaultRestSeconds, theme, language
         case restTimerSound, notificationsEnabled, exerciseSuggestionsEnabled, weeklyGoalSessions
         case bodyWeightKg, heightCm, birthYear, sex, dailyKcalGoal, proteinGoalG, carbsGoalG, fatGoalG
+        case weighInReminderEnabled, weighInReminderWeekday, weighInReminderMinutes
     }
 
     public init(from decoder: Decoder) throws {
@@ -89,6 +96,9 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
         self.proteinGoalG = try c.decodeIfPresent(Int.self, forKey: .proteinGoalG)
         self.carbsGoalG = try c.decodeIfPresent(Int.self, forKey: .carbsGoalG)
         self.fatGoalG = try c.decodeIfPresent(Int.self, forKey: .fatGoalG)
+        self.weighInReminderEnabled = try c.decodeIfPresent(Bool.self, forKey: .weighInReminderEnabled) ?? false
+        self.weighInReminderWeekday = try c.decodeIfPresent(Int.self, forKey: .weighInReminderWeekday) ?? 2
+        self.weighInReminderMinutes = try c.decodeIfPresent(Int.self, forKey: .weighInReminderMinutes) ?? 450
     }
 }
 
@@ -156,6 +166,9 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
     public var proteinGoalG: Int? = nil
     public var carbsGoalG: Int? = nil
     public var fatGoalG: Int? = nil
+    public var weighInReminderEnabled: Bool? = nil
+    public var weighInReminderWeekday: Int? = nil
+    public var weighInReminderMinutes: Int? = nil
 
     public init(
         name: String? = nil,
