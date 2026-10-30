@@ -19,10 +19,7 @@ export function sortWeighIns<T extends WeighIn>(entries: readonly T[]): T[] {
  * Body weight that applies at `date`: the latest weigh-in on or before it. Dates before the first
  * weigh-in use the earliest one (closer to reality than a population default). `null` = no history.
  */
-export function weightAt(
-  entries: readonly WeighIn[],
-  date: string | Date | number,
-): number | null {
+export function weightAt(entries: readonly WeighIn[], date: string | Date | number): number | null {
   if (entries.length === 0) return null;
   const at = time(date);
   let best: WeighIn | null = null;

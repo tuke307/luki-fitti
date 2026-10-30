@@ -2,11 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { BodyWeightSource, ExerciseType, SessionType, SetType } from '@luki-fitti/common/enums';
-import {
-  BodyWeightService,
-  computeRecalcWindow,
-  resolveBodyWeightAt,
-} from './body-weight.service';
+import { BodyWeightService, computeRecalcWindow, resolveBodyWeightAt } from './body-weight.service';
 import type { PrismaService } from '../database/prisma.service';
 
 type Row = Record<string, unknown>;
@@ -100,8 +96,17 @@ function createMockPrisma(options: { prefsWeight?: number | null } = {}) {
         if (!row) throw new Error('Not found');
         return { ...row };
       },
-      findFirst: async ({ where, orderBy }: { where: Where; orderBy?: Record<string, 'asc' | 'desc'> }) => {
-        const row = sortRows(entries.filter((e) => matches(e, where)), orderBy)[0];
+      findFirst: async ({
+        where,
+        orderBy,
+      }: {
+        where: Where;
+        orderBy?: Record<string, 'asc' | 'desc'>;
+      }) => {
+        const row = sortRows(
+          entries.filter((e) => matches(e, where)),
+          orderBy,
+        )[0];
         return row ? { ...row } : null;
       },
       findMany: async ({
@@ -113,7 +118,10 @@ function createMockPrisma(options: { prefsWeight?: number | null } = {}) {
         orderBy?: Record<string, 'asc' | 'desc'>;
         take?: number;
       }) =>
-        sortRows(entries.filter((e) => matches(e, where)), orderBy)
+        sortRows(
+          entries.filter((e) => matches(e, where)),
+          orderBy,
+        )
           .slice(0, take ?? Infinity)
           .map((e) => ({ ...e })),
       create: async ({ data }: { data: Row }) => createRow(data),
@@ -135,12 +143,19 @@ function createMockPrisma(options: { prefsWeight?: number | null } = {}) {
       },
     },
     userPreferences: {
-      updateMany: async ({ where, data }: { where: { userId: string }; data: { bodyWeightKg: number | null } }) => {
+      updateMany: async ({
+        where,
+        data,
+      }: {
+        where: { userId: string };
+        data: { bodyWeightKg: number | null };
+      }) => {
         const row = prefs.get(where.userId);
         if (row) Object.assign(row, data);
         return { count: row ? 1 : 0 };
       },
-      findUnique: async ({ where }: { where: { userId: string } }) => prefs.get(where.userId) ?? null,
+      findUnique: async ({ where }: { where: { userId: string } }) =>
+        prefs.get(where.userId) ?? null,
     },
     workoutSession: {
       findMany: async ({ where, cursor }: { where: Where; cursor?: { id: string } }) => {
@@ -195,7 +210,12 @@ function strengthSession(id: string, startedAt: string, userId = 'me'): SessionR
   };
 }
 
-const upsert = (clientEntryId: string, measuredAt: string, weightKg: number, note?: string | null) => ({
+const upsert = (
+  clientEntryId: string,
+  measuredAt: string,
+  weightKg: number,
+  note?: string | null,
+) => ({
   clientEntryId,
   measuredAt,
   weightKg,
@@ -207,7 +227,10 @@ describe('BodyWeightService.upsertEntry', () => {
     const { prisma, entries, prefs } = createMockPrisma();
     const service = new BodyWeightService(prisma);
 
-    const created = await service.upsertEntry('me', upsert('client-entry-1', '2026-10-01T07:00:00Z', 82, ' morning '));
+    const created = await service.upsertEntry(
+      'me',
+      upsert('client-entry-1', '2026-10-01T07:00:00Z', 82, ' morning '),
+    );
     assert.equal(created.source, BodyWeightSource.MANUAL);
     assert.equal(created.note, 'morning');
     assert.equal(created.measuredAt, '2026-10-01T07:00:00.000Z');
@@ -215,7 +238,10 @@ describe('BodyWeightService.upsertEntry', () => {
 
     entries[0]!.source = BodyWeightSource.HEALTHKIT;
     entries[0]!.healthKitUuid = 'hk-uuid-0001';
-    const updated = await service.upsertEntry('me', upsert('client-entry-1', '2026-10-02T07:00:00Z', 81.5));
+    const updated = await service.upsertEntry(
+      'me',
+      upsert('client-entry-1', '2026-10-02T07:00:00Z', 81.5),
+    );
     assert.equal(entries.length, 1);
     assert.equal(updated.id, created.id);
     assert.equal(updated.weightKg, 81.5);
@@ -225,7 +251,7 @@ describe('BodyWeightService.upsertEntry', () => {
     assert.equal(prefs.get('me')!.bodyWeightKg, 81.5);
   });
 
-  it("returns 404 and leaves the row untouched when the client id belongs to another user", async () => {
+  it('returns 404 and leaves the row untouched when the client id belongs to another user', async () => {
     const { prisma, entries } = createMockPrisma();
     const service = new BodyWeightService(prisma);
     await service.upsertEntry('other', upsert('client-entry-x', '2026-10-01T07:00:00Z', 70));
@@ -252,9 +278,18 @@ describe('BodyWeightService.deleteEntry', () => {
   it("returns 404 for another user's entry and only deletes owned ones", async () => {
     const { prisma, entries, prefs } = createMockPrisma();
     const service = new BodyWeightService(prisma);
-    const theirs = await service.upsertEntry('other', upsert('client-other-1', '2026-10-01T07:00:00Z', 70));
-    const older = await service.upsertEntry('me', upsert('client-mine-01', '2026-10-01T07:00:00Z', 82));
-    const newer = await service.upsertEntry('me', upsert('client-mine-02', '2026-10-08T07:00:00Z', 81));
+    const theirs = await service.upsertEntry(
+      'other',
+      upsert('client-other-1', '2026-10-01T07:00:00Z', 70),
+    );
+    const older = await service.upsertEntry(
+      'me',
+      upsert('client-mine-01', '2026-10-01T07:00:00Z', 82),
+    );
+    const newer = await service.upsertEntry(
+      'me',
+      upsert('client-mine-02', '2026-10-08T07:00:00Z', 81),
+    );
     assert.equal(prefs.get('me')!.bodyWeightKg, 81);
 
     await assert.rejects(service.deleteEntry('me', theirs.id), NotFoundException);
@@ -280,9 +315,15 @@ describe('BodyWeightService.listEntries', () => {
     await service.upsertEntry('other', upsert('client-list-o', '2026-10-09T07:00:00Z', 60));
 
     const all = await service.listEntries('me');
-    assert.deepEqual(all.map((e) => e.weightKg), [82, 81, 80]);
+    assert.deepEqual(
+      all.map((e) => e.weightKg),
+      [82, 81, 80],
+    );
     const ranged = await service.listEntries('me', '2026-10-02T00:00:00Z', '2026-10-15T07:00:00Z');
-    assert.deepEqual(ranged.map((e) => e.weightKg), [81, 80]);
+    assert.deepEqual(
+      ranged.map((e) => e.weightKg),
+      [81, 80],
+    );
     await assert.rejects(
       service.listEntries('me', '2026-10-15T00:00:00Z', '2026-10-01T00:00:00Z'),
       BadRequestException,
@@ -306,10 +347,13 @@ describe('BodyWeightService.importHealthKit', () => {
     });
     assert.equal(first.imported, 2);
     assert.equal(first.deleted, 0);
-    assert.deepEqual(first.entries.map((e) => [e.clientEntryId, e.weightKg, e.source]), [
-      ['hk-uuid-aaaa-0001', 82, BodyWeightSource.HEALTHKIT],
-      ['hk-uuid-aaaa-0002', 80.8, BodyWeightSource.HEALTHKIT],
-    ]);
+    assert.deepEqual(
+      first.entries.map((e) => [e.clientEntryId, e.weightKg, e.source]),
+      [
+        ['hk-uuid-aaaa-0001', 82, BodyWeightSource.HEALTHKIT],
+        ['hk-uuid-aaaa-0002', 80.8, BodyWeightSource.HEALTHKIT],
+      ],
+    );
     assert.equal(entries.length, 3);
 
     // Re-sync: one unchanged, one corrected in Health, one new, one deleted.
@@ -322,15 +366,21 @@ describe('BodyWeightService.importHealthKit', () => {
     });
     assert.equal(second.imported, 1);
     assert.equal(second.deleted, 1);
-    assert.deepEqual(second.entries.map((e) => e.healthKitUuid), ['uuid-aaaa-0001', 'uuid-aaaa-0003']);
     assert.deepEqual(
-      entries.map((e) => e.clientEntryId).sort(),
-      ['client-manual-1', 'hk-uuid-aaaa-0001', 'hk-uuid-aaaa-0003'],
+      second.entries.map((e) => e.healthKitUuid),
+      ['uuid-aaaa-0001', 'uuid-aaaa-0003'],
     );
+    assert.deepEqual(entries.map((e) => e.clientEntryId).sort(), [
+      'client-manual-1',
+      'hk-uuid-aaaa-0001',
+      'hk-uuid-aaaa-0003',
+    ]);
     assert.equal(prefs.get('me')!.bodyWeightKg, 78.4);
 
     const corrected = await service.importHealthKit('me', {
-      samples: [{ healthKitUuid: 'uuid-aaaa-0003', measuredAt: '2026-10-25T07:00:00Z', weightKg: 78.1 }],
+      samples: [
+        { healthKitUuid: 'uuid-aaaa-0003', measuredAt: '2026-10-25T07:00:00Z', weightKg: 78.1 },
+      ],
       deletedHealthKitUuids: [],
     });
     assert.equal(corrected.imported, 1);
@@ -342,14 +392,21 @@ describe('BodyWeightService.importHealthKit', () => {
     const { prisma, entries } = createMockPrisma();
     const service = new BodyWeightService(prisma);
     await service.importHealthKit('other', {
-      samples: [{ healthKitUuid: 'uuid-shared-0001', measuredAt: '2026-10-01T07:00:00Z', weightKg: 60 }],
+      samples: [
+        { healthKitUuid: 'uuid-shared-0001', measuredAt: '2026-10-01T07:00:00Z', weightKg: 60 },
+      ],
       deletedHealthKitUuids: [],
     });
-    const manual = await service.upsertEntry('me', upsert('client-manual-2', '2026-10-02T07:00:00Z', 80));
+    const manual = await service.upsertEntry(
+      'me',
+      upsert('client-manual-2', '2026-10-02T07:00:00Z', 80),
+    );
     entries.find((e) => e.id === manual.id)!.healthKitUuid = 'uuid-manual-0001';
 
     const result = await service.importHealthKit('me', {
-      samples: [{ healthKitUuid: 'uuid-shared-0001', measuredAt: '2026-10-03T07:00:00Z', weightKg: 81 }],
+      samples: [
+        { healthKitUuid: 'uuid-shared-0001', measuredAt: '2026-10-03T07:00:00Z', weightKg: 81 },
+      ],
       deletedHealthKitUuids: ['uuid-manual-0001'],
     });
     assert.equal(result.imported, 1);
@@ -407,10 +464,13 @@ describe('computeRecalcWindow', () => {
       { measuredAt: '2026-10-12T07:00:00Z', weightKg: 81 },
       { measuredAt: '2026-10-15T07:00:00Z', weightKg: 80 },
     ];
-    assert.deepEqual(computeRecalcWindow(moved, [d('2026-10-08T07:00:00Z'), d('2026-10-12T07:00:00Z')]), {
-      from: d('2026-10-08T07:00:00Z'),
-      to: d('2026-10-15T07:00:00Z'),
-    });
+    assert.deepEqual(
+      computeRecalcWindow(moved, [d('2026-10-08T07:00:00Z'), d('2026-10-12T07:00:00Z')]),
+      {
+        from: d('2026-10-08T07:00:00Z'),
+        to: d('2026-10-15T07:00:00Z'),
+      },
+    );
   });
 
   it('includes everything before the first weigh-in when the earliest one changes', () => {
@@ -424,7 +484,10 @@ describe('computeRecalcWindow', () => {
       to: d('2026-10-08T07:00:00Z'),
     });
     // Deleting the only weigh-in affects every session.
-    assert.deepEqual(computeRecalcWindow([], [d('2026-10-01T07:00:00Z')]), { from: null, to: null });
+    assert.deepEqual(computeRecalcWindow([], [d('2026-10-01T07:00:00Z')]), {
+      from: null,
+      to: null,
+    });
   });
 
   it('returns null when nothing changed', () => {
@@ -443,7 +506,11 @@ describe('BodyWeightService session calorie recompute', () => {
       strengthSession('s-before', '2026-09-20T17:00:00Z'),
       strengthSession('s-mid', '2026-10-05T17:00:00Z'),
       strengthSession('s-after', '2026-10-20T17:00:00Z'),
-      { ...strengthSession('s-watch', '2026-10-05T18:00:00Z'), activeCaloriesKcal: 333, estimatedCaloriesKcal: 333 },
+      {
+        ...strengthSession('s-watch', '2026-10-05T18:00:00Z'),
+        activeCaloriesKcal: 333,
+        estimatedCaloriesKcal: 333,
+      },
       strengthSession('s-other', '2026-10-05T17:00:00Z', 'other'),
     );
     const byId = (id: string) => sessions.find((s) => s.id === id)!;
@@ -463,10 +530,21 @@ describe('BodyWeightService session calorie recompute', () => {
     await service.upsertEntry('me', upsert('client-rc-0001', '2026-10-01T07:00:00Z', 70));
     const mid70 = byId('s-mid').estimatedCaloriesKcal!;
     assert.equal(byId('s-before').estimatedCaloriesKcal, mid70);
-    assert.ok(Math.abs(after90 / mid70 - 90 / 70) < 0.02, 'calories scale with the effective weight');
+    assert.ok(
+      Math.abs(after90 / mid70 - 90 / 70) < 0.02,
+      'calories scale with the effective weight',
+    );
     assert.equal(byId('s-after').estimatedCaloriesKcal, after90, 'later weigh-in still applies');
-    assert.equal(byId('s-watch').estimatedCaloriesKcal, 333, 'HealthKit energy is weight-independent');
-    assert.equal(byId('s-other').estimatedCaloriesKcal, null, "other users' sessions are never touched");
+    assert.equal(
+      byId('s-watch').estimatedCaloriesKcal,
+      333,
+      'HealthKit energy is weight-independent',
+    );
+    assert.equal(
+      byId('s-other').estimatedCaloriesKcal,
+      null,
+      "other users' sessions are never touched",
+    );
   });
 });
 
