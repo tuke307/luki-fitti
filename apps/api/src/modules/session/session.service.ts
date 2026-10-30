@@ -431,7 +431,11 @@ export class SessionService {
         ? payload.totalCaloriesKcal
         : (existing?.totalCaloriesKcal ?? null);
     // Weight effective when the workout started, so later weigh-ins don't rewrite history.
-    const bodyWeightKg = await resolveBodyWeightAt(this.prisma, userId, new Date(payload.startedAt));
+    const bodyWeightKg = await resolveBodyWeightAt(
+      this.prisma,
+      userId,
+      new Date(payload.startedAt),
+    );
     const estimatedCaloriesKcal = estimateWorkoutEnergy(
       {
         sessionType: payload.sessionType,

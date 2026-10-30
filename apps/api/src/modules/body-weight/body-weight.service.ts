@@ -110,12 +110,18 @@ export class BodyWeightService {
   async listEntries(userId: string, from?: string, to?: string): Promise<BodyWeightEntryDto[]> {
     const fromDate = from ? new Date(from) : undefined;
     const toDate = to ? new Date(to) : undefined;
-    if (fromDate && toDate && fromDate > toDate) throw new BadRequestException('Invalid date range');
+    if (fromDate && toDate && fromDate > toDate)
+      throw new BadRequestException('Invalid date range');
     const entries = await this.prisma.bodyWeightEntry.findMany({
       where: {
         userId,
         ...(fromDate || toDate
-          ? { measuredAt: { ...(fromDate ? { gte: fromDate } : {}), ...(toDate ? { lte: toDate } : {}) } }
+          ? {
+              measuredAt: {
+                ...(fromDate ? { gte: fromDate } : {}),
+                ...(toDate ? { lte: toDate } : {}),
+              },
+            }
           : {}),
       },
       orderBy: { measuredAt: 'desc' },
@@ -179,13 +185,18 @@ export class BodyWeightService {
    * Applies a HealthKit delta: samples are upserted by (user, HealthKit UUID), deleted UUIDs
    * remove the matching imported entries. Manual entries are never touched.
    */
-  async importHealthKit(userId: string, dto: ImportBodyWeightDto): Promise<ImportBodyWeightResultDto> {
+  async importHealthKit(
+    userId: string,
+    dto: ImportBodyWeightDto,
+  ): Promise<ImportBodyWeightResultDto> {
     const deletedUuids = [...new Set(dto.deletedHealthKitUuids)];
     const deletedSet = new Set(deletedUuids);
     // Last sample wins for duplicate UUIDs; a sample that is also reported deleted is dropped.
     const samples = [
       ...new Map(
-        dto.samples.filter((s) => !deletedSet.has(s.healthKitUuid)).map((s) => [s.healthKitUuid, s]),
+        dto.samples
+          .filter((s) => !deletedSet.has(s.healthKitUuid))
+          .map((s) => [s.healthKitUuid, s]),
       ).values(),
     ];
     const uuids = samples.map((s) => s.healthKitUuid);
@@ -218,7 +229,10 @@ export class BodyWeightService {
         const current = byUuid.get(sample.healthKitUuid);
         if (!current) continue;
         const measuredAt = new Date(sample.measuredAt);
-        if (current.measuredAt.getTime() === measuredAt.getTime() && current.weightKg === sample.weightKg) {
+        if (
+          current.measuredAt.getTime() === measuredAt.getTime() &&
+          current.weightKg === sample.weightKg
+        ) {
           touched.push(current);
           continue;
         }
@@ -371,7 +385,12 @@ export class BodyWeightService {
             select: {
               exerciseTypeSnapshot: true,
               sets: {
-                select: { setType: true, completed: true, durationSeconds: true, distanceMeters: true },
+                select: {
+                  setType: true,
+                  completed: true,
+                  durationSeconds: true,
+                  distanceMeters: true,
+                },
               },
             },
           },
