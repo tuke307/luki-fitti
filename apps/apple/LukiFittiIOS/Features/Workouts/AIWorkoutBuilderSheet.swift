@@ -116,6 +116,9 @@ struct AIWorkoutBuilderSheet: View {
                 }
             }
         }
+        if let usage = p.usage {
+            Section { AICostLabel(usage: usage) }
+        }
         Section {
             Button(tr("Try again")) { result = nil }
         }
