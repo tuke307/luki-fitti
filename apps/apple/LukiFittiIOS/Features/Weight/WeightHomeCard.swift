@@ -4,57 +4,50 @@ import LukiFittiModels
 import LukiFittiDesign
 import LukiFittiDomain
 
-/// Today card: current weight, 7-day change and a 30-day sparkline. Opens the weight screen.
+/// Today card: current weight, 7-day change, last weigh-in and a 30-day chart with the 7-day
+/// average. Tapping opens the weight screen; "Log weight" opens the sheet directly.
 struct WeightHomeCard: View {
     @Bindable var viewModel: LukiAppViewModel
     @Environment(\.lukiLocale) private var tr
     @State private var isLogging = false
+    @State private var savedCount = 0
+    @State private var chart = WeightChartData()
+    @State private var trend = WeightTrend()
 
     private var display: WeightDisplay { WeightDisplay(unit: viewModel.store.preferences.weightUnit, locale: tr) }
 
+    private struct DerivedKey: Equatable {
+        let points: [WeighInPoint]
+        let unit: WeightUnit
+    }
+
     var body: some View {
-        let points = viewModel.bodyWeight.points
-        let trend = viewModel.bodyWeight.trend()
-        let monthAgo = Date().addingTimeInterval(-30 * 86_400)
-        let recent = points.filter { $0.date >= monthAgo }
-        return HStack(alignment: .center, spacing: 14) {
-            NavigationLink {
-                WeightView(viewModel: viewModel)
+        VStack(alignment: .leading, spacing: 14) {
+            Button {
+                viewModel.isWeightPresented = true
             } label: {
-                HStack(spacing: 14) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(tr("Weight"))
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Label(tr("Weight"), systemImage: "scalemass")
                             .font(.headline)
-                            .foregroundStyle(.primary)
-                        if let latest = trend.latestKg {
-                            Text(display.withUnit(latest))
-                                .font(.system(.title2, design: .rounded).weight(.semibold))
-                                .monospacedDigit()
-                                .foregroundStyle(.primary)
-                            Text(subtitle(trend))
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        } else {
-                            Text(tr("Track your weight to see the trend."))
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                            .accessibilityHidden(true)
                     }
-                    Spacer(minLength: 0)
-                    if recent.count >= 2 {
-                        Chart(recent, id: \.date) { p in
-                            LineMark(x: .value(tr("Date"), p.date), y: .value(tr("Weight"), p.weightKg))
-                                .foregroundStyle(LukiColors.accent)
-                                .interpolationMethod(.monotone)
+                    if let latest = trend.latestKg {
+                        summary(latest)
+                        if chart.points.count >= 2 {
+                            WeightTrendChart(points: chart.points, compact: true)
+                                .frame(height: 120)
+                                .accessibilityHidden(true)
                         }
-                        .chartXAxis(.hidden)
-                        .chartYAxis(.hidden)
-                        .chartYScale(domain: ((recent.map(\.weightKg).min() ?? 0) - 0.5)...((recent.map(\.weightKg).max() ?? 1) + 0.5))
-                        .frame(width: 84, height: 40)
-                        .accessibilityHidden(true)
+                    } else {
+                        emptyState
                     }
                 }
+                .foregroundStyle(.primary)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -64,23 +57,66 @@ struct WeightHomeCard: View {
             Button {
                 isLogging = true
             } label: {
-                Text(tr("Log"))
+                Label(tr("Log weight"), systemImage: "plus")
+                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.bordered)
-            .accessibilityLabel(tr("Log weight"))
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
             .accessibilityIdentifier("ios.home.logWeightButton")
         }
         .padding(18)
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
+        .onChange(of: DerivedKey(points: viewModel.bodyWeight.points, unit: display.unit), initial: true) {
+            let monthAgo = Calendar.current.date(byAdding: .day, value: -30, to: Date())
+            chart = WeightChartData(viewModel.bodyWeight.points, from: monthAgo, unit: display.unit)
+            trend = viewModel.bodyWeight.trend()
+        }
+        .sensoryFeedback(.success, trigger: savedCount)
         .sheet(isPresented: $isLogging) {
-            LogWeightSheet(viewModel: viewModel, entry: nil)
+            LogWeightSheet(viewModel: viewModel, entry: nil) { _ in savedCount += 1 }
+                .presentationDetents([.medium, .large])
         }
     }
 
-    private func subtitle(_ trend: WeightTrend) -> String {
-        var parts: [String] = []
-        if let change = trend.change7dKg { parts.append(tr("%@ in 7 days", display.delta(change))) }
-        if let ago = display.ago(days: trend.daysSinceLast) { parts.append(ago) }
-        return parts.joined(separator: " · ")
+    private func summary(_ latestKg: Double) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline, spacing: 16) { summaryContent(latestKg) }
+            VStack(alignment: .leading, spacing: 6) { summaryContent(latestKg) }
+        }
+    }
+
+    @ViewBuilder
+    private func summaryContent(_ latestKg: Double) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text(display.value(latestKg))
+                .font(.system(.largeTitle, design: .rounded).weight(.semibold))
+                .monospacedDigit()
+            Text(LukiFormat.unitLabel(display.unit))
+                .font(.title3)
+                .foregroundStyle(.secondary)
+        }
+        VStack(alignment: .leading, spacing: 2) {
+            if let change = trend.change7dKg {
+                Text(tr("%@ in 7 days", display.delta(change)))
+                    .font(.subheadline.weight(.medium))
+                    .monospacedDigit()
+            }
+            if let ago = display.ago(days: trend.daysSinceLast) {
+                Text(tr("Last weigh-in: %@", ago))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var emptyState: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(tr("Start tracking your weight"))
+                .font(.title3.weight(.semibold))
+            Text(tr("Log your first weigh-in. After a few, your trend and 7-day average appear here."))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
