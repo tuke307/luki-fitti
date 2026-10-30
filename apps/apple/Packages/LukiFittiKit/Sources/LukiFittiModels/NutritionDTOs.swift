@@ -255,6 +255,47 @@ public struct WorkoutBuilderResponseDto: Codable, Sendable, Equatable, Hashable 
 public struct MealAnalysisSummaryDto: Codable, Sendable, Equatable, Hashable {
     public var containsFood: Bool
     public var uncertaintyNote: String
+    public var mealTypeGuess: MealType?
+}
+
+public struct MealTextAnalysisRequestDto: Codable, Sendable, Equatable {
+    public static let minLength = 3
+    public static let maxLength = 500
+
+    public var description: String
+    public var mealType: MealType?
+
+    public init(description: String, mealType: MealType? = nil) {
+        self.description = description
+        self.mealType = mealType
+    }
+}
+
+/// Foods proposed from a written description; nothing is saved until the meal is saved.
+public struct MealTextAnalysisResponseDto: Codable, Sendable, Equatable, Hashable {
+    public var runId: String
+    public var items: [MealItemInputDto]
+    public var analysis: MealAnalysisSummaryDto
+    public var usage: AiRunUsageDto?
+}
+
+extension MealItemDto {
+    /// Editable draft row for a proposed (unsaved) item.
+    public init(_ input: MealItemInputDto) {
+        self.init(
+            name: input.name,
+            grams: input.grams,
+            amountUnit: input.amountUnit,
+            kcal: input.kcal,
+            proteinG: input.proteinG,
+            carbsG: input.carbsG,
+            fatG: input.fatG,
+            fiberG: input.fiberG,
+            sugarG: input.sugarG,
+            source: input.source,
+            confidence: input.confidence
+        )
+    }
 }
 
 public struct MealAnalysisResponseDto: Codable, Sendable, Equatable, Hashable {

@@ -57,6 +57,25 @@ final class NutritionMathTests: XCTestCase {
         XCTAssertEqual(input.amountUnit, .ML)
     }
 
+    func testMealTextAnalysisResponseDecodesIntoDrafts() throws {
+        let json = #"""
+        {"runId":"r1","items":[{"name":"Müsli","grams":100,"amountUnit":"G","kcal":380,"proteinG":10,"carbsG":62,"fatG":7,"fiberG":8,"sugarG":null,"source":"AI","confidence":0.85},{"name":"Haferdrink","grams":150,"amountUnit":"ML","kcal":70,"proteinG":0.5,"carbsG":10,"fatG":2.2,"fiberG":null,"sugarG":6,"source":"AI","confidence":0.5}],"analysis":{"items":[],"containsFood":true,"mealTypeGuess":"BREAKFAST","uncertaintyNote":"Menge geschätzt."},"usage":{"promptTokens":10,"completionTokens":5,"costUsd":null}}
+        """#
+        let res = try JSONDecoder().decode(MealTextAnalysisResponseDto.self, from: Data(json.utf8))
+        XCTAssertEqual(res.analysis.mealTypeGuess, .BREAKFAST)
+        let drafts = res.items.map { MealItemDto($0) }
+        XCTAssertEqual(drafts.map(\.name), ["Müsli", "Haferdrink"])
+        XCTAssertEqual(drafts[1].amountUnit, .ML)
+        XCTAssertEqual(drafts[1].source, .AI)
+        XCTAssertNotEqual(drafts[0].id, drafts[1].id)
+
+        let noGuess = try JSONDecoder().decode(
+            MealAnalysisSummaryDto.self,
+            from: Data(#"{"containsFood":false,"uncertaintyNote":"","mealTypeGuess":null}"#.utf8)
+        )
+        XCTAssertNil(noGuess.mealTypeGuess)
+    }
+
     func testBurnPrefersServerThenHealthKitThenMet() {
         var session = WorkoutSessionDto(workoutNameSnapshot: "Push", status: .COMPLETED, activeDurationSeconds: 3600)
         XCTAssertEqual(NutritionMath.burnedKcal(for: session, bodyWeightKg: 80), 200) // (3.5 − 1) × 80 × 1 h
