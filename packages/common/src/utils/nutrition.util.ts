@@ -1,3 +1,5 @@
+import { MealAmountUnit } from '../enums';
+
 export interface MacroValues {
   kcal: number;
   proteinG: number;
@@ -55,6 +57,58 @@ export function scaleFoodItemToGrams<T extends ScalableFoodItem>(item: T, grams:
     fiberG: scale(item.fiberG),
     sugarG: scale(item.sugarG),
   };
+}
+
+/** Units offered in amount inputs; `l` is input/display only and stored as `ML` × 1000. */
+export type MealAmountDisplayUnit = 'g' | 'ml' | 'l';
+
+export const MEAL_AMOUNT_DISPLAY_UNITS: MealAmountDisplayUnit[] = ['g', 'ml', 'l'];
+
+/**
+ * Rescales proportionally when the amount changes within the same unit. Switching between
+ * g and ml only relabels the amount (a density guess would be worse than the user's own fix).
+ */
+export function scaleFoodItemToAmount<T extends ScalableFoodItem & { amountUnit?: MealAmountUnit }>(
+  item: T,
+  amount: number,
+  unit: MealAmountUnit = item.amountUnit ?? MealAmountUnit.G,
+): T {
+  if ((item.amountUnit ?? MealAmountUnit.G) !== unit) return { ...item, grams: amount, amountUnit: unit };
+  return { ...scaleFoodItemToGrams(item, amount), amountUnit: unit };
+}
+
+/** Converts a typed amount (e.g. 1.5 l) into the stored amount and unit (1500 ML). */
+export function fromDisplayAmount(
+  value: number,
+  displayUnit: MealAmountDisplayUnit,
+): { amount: number; unit: MealAmountUnit } {
+  if (displayUnit === 'l') return { amount: round1(value * 1000), unit: MealAmountUnit.ML };
+  return { amount: value, unit: displayUnit === 'ml' ? MealAmountUnit.ML : MealAmountUnit.G };
+}
+
+/** Picks the friendliest display unit: millilitres from one litre upward are shown as litres. */
+export function toDisplayAmount(
+  amount: number,
+  unit: MealAmountUnit,
+): { value: number; unit: MealAmountDisplayUnit } {
+  if (unit === MealAmountUnit.ML) {
+    return amount >= 1000 ? { value: amount / 1000, unit: 'l' } : { value: amount, unit: 'ml' };
+  }
+  return { value: amount, unit: 'g' };
+}
+
+/** "500 g", "500 ml", "1,5 l" (locale-aware decimals). */
+export function formatMealAmount(
+  amount: number | null | undefined,
+  unit: MealAmountUnit | null | undefined,
+  locale = 'en',
+): string {
+  if (amount === null || amount === undefined || !Number.isFinite(amount)) return '';
+  const display = toDisplayAmount(amount, unit ?? MealAmountUnit.G);
+  const value = new Intl.NumberFormat(locale, {
+    maximumFractionDigits: display.unit === 'l' ? 2 : 1,
+  }).format(display.value);
+  return `${value} ${display.unit}`;
 }
 
 /** kcal implied by macros (4/4/9). Used to flag implausible AI estimates. */

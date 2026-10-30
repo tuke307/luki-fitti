@@ -11,7 +11,6 @@ public struct NutritionView: View {
     @Environment(\.lukiLocale) private var tr
     @State private var day = Calendar.current.startOfDay(for: Date())
     @State private var editing: MealEditorContext?
-    @State private var showsPhotoSheet = false
     @State private var offlineNote = false
     @State private var visibleWeek: Date? = NutritionCalendar.weekStart(for: Date())
     @State private var burnMemo = BurnMemo()
@@ -73,12 +72,6 @@ public struct NutritionView: View {
         .sheet(item: $editing) { context in
             MealEditorSheet(viewModel: viewModel, context: context) { reachedServer in
                 offlineNote = !reachedServer
-            }
-        }
-        .sheet(isPresented: $showsPhotoSheet) {
-            MealPhotoSheet(viewModel: viewModel, day: day) { entry in
-                nutrition.upsertLocal(entry)
-                editing = MealEditorContext(entry: entry, day: day)
             }
         }
     }
@@ -174,15 +167,8 @@ public struct NutritionView: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// One entry point; photos and the AI estimate live inside the meal editor.
     private var actions: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 10) { actionButtons }
-            VStack(spacing: 10) { actionButtons }
-        }
-    }
-
-    @ViewBuilder
-    private var actionButtons: some View {
         Button {
             editing = MealEditorContext(entry: nil, day: day)
         } label: {
@@ -191,16 +177,6 @@ public struct NutritionView: View {
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
         .accessibilityIdentifier("ios.nutrition.addMealButton")
-        if canUsePhotos {
-            Button {
-                showsPhotoSheet = true
-            } label: {
-                Label(tr("Snap a photo"), systemImage: "camera").frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
-            .accessibilityIdentifier("ios.nutrition.photoButton")
-        }
     }
 
     private var emptyCard: some View {
@@ -231,6 +207,12 @@ public struct NutritionView: View {
                     editing = MealEditorContext(entry: entry, day: day)
                 } label: {
                     HStack(spacing: 12) {
+                        if let photo = entry.photos.first {
+                            MealPhotoImage(item: .saved(photo), api: viewModel.store.apiClient)
+                                .frame(width: 44, height: 44)
+                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                .accessibilityHidden(true)
+                        }
                         VStack(alignment: .leading, spacing: 2) {
                             Text(entry.label ?? entry.items.map(\.name).joined(separator: ", "))
                                 .font(.subheadline.weight(.medium))
@@ -266,7 +248,13 @@ public struct NutritionView: View {
     private func entrySubtitle(_ entry: MealEntryDto) -> String {
         var parts: [String] = []
         if let date = entry.eatenAtDate { parts.append(date.formatted(date: .omitted, time: .shortened)) }
-        if entry.label != nil, !entry.items.isEmpty { parts.append(entry.items.map(\.name).joined(separator: ", ")) }
+        let locale = Locale(identifier: tr.rawValue)
+        let amounts = entry.items.compactMap { item -> String? in
+            let amount = NutritionMath.formatAmount(item.grams, item.amountUnit, locale: locale)
+            let text = [entry.label != nil ? item.name : "", amount].filter { !$0.isEmpty }.joined(separator: " ")
+            return text.isEmpty ? nil : text
+        }
+        if !amounts.isEmpty { parts.append(amounts.joined(separator: ", ")) }
         if entry.items.contains(where: { $0.source == .AI }) { parts.append(tr("Estimated")) }
         return parts.joined(separator: " · ")
     }

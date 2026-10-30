@@ -20,7 +20,9 @@ public struct MealItemDto: Codable, Sendable, Equatable, Hashable, Identifiable 
     public var id: String
     public var orderIndex: Int
     public var name: String
+    /// Amount in `amountUnit` (grams for solids, millilitres for drinks).
     public var grams: Double?
+    public var amountUnit: MealAmountUnit
     public var kcal: Double
     public var proteinG: Double
     public var carbsG: Double
@@ -35,6 +37,7 @@ public struct MealItemDto: Codable, Sendable, Equatable, Hashable, Identifiable 
         orderIndex: Int = 0,
         name: String,
         grams: Double? = nil,
+        amountUnit: MealAmountUnit = .G,
         kcal: Double = 0,
         proteinG: Double = 0,
         carbsG: Double = 0,
@@ -48,6 +51,7 @@ public struct MealItemDto: Codable, Sendable, Equatable, Hashable, Identifiable 
         self.orderIndex = orderIndex
         self.name = name
         self.grams = grams
+        self.amountUnit = amountUnit
         self.kcal = kcal
         self.proteinG = proteinG
         self.carbsG = carbsG
@@ -57,6 +61,31 @@ public struct MealItemDto: Codable, Sendable, Equatable, Hashable, Identifiable 
         self.source = source
         self.confidence = confidence
     }
+
+    /// Payloads from older servers and cached JSON have no `amountUnit`: those amounts are grams.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        orderIndex = try c.decodeIfPresent(Int.self, forKey: .orderIndex) ?? 0
+        name = try c.decode(String.self, forKey: .name)
+        grams = try c.decodeIfPresent(Double.self, forKey: .grams)
+        amountUnit = try c.decodeIfPresent(MealAmountUnit.self, forKey: .amountUnit) ?? .G
+        kcal = try c.decodeIfPresent(Double.self, forKey: .kcal) ?? 0
+        proteinG = try c.decodeIfPresent(Double.self, forKey: .proteinG) ?? 0
+        carbsG = try c.decodeIfPresent(Double.self, forKey: .carbsG) ?? 0
+        fatG = try c.decodeIfPresent(Double.self, forKey: .fatG) ?? 0
+        fiberG = try c.decodeIfPresent(Double.self, forKey: .fiberG)
+        sugarG = try c.decodeIfPresent(Double.self, forKey: .sugarG)
+        source = try c.decodeIfPresent(FoodItemSource.self, forKey: .source) ?? .MANUAL
+        confidence = try c.decodeIfPresent(Double.self, forKey: .confidence)
+    }
+}
+
+/// Unit of a meal item's amount (mirrors `MealAmountUnit` in packages/common). Litres are
+/// input/display only and stored as `.ML` × 1000.
+public enum MealAmountUnit: String, Codable, Sendable, CaseIterable, Equatable, Hashable {
+    case G
+    case ML
 }
 
 public struct MealPhotoDto: Codable, Sendable, Equatable, Hashable, Identifiable {
@@ -112,6 +141,7 @@ public struct MealEntryDto: Codable, Sendable, Equatable, Hashable, Identifiable
 public struct MealItemInputDto: Codable, Sendable, Equatable, Hashable {
     public var name: String
     public var grams: Double?
+    public var amountUnit: MealAmountUnit
     public var kcal: Double
     public var proteinG: Double
     public var carbsG: Double
@@ -124,6 +154,7 @@ public struct MealItemInputDto: Codable, Sendable, Equatable, Hashable {
     public init(_ item: MealItemDto) {
         self.name = item.name
         self.grams = item.grams
+        self.amountUnit = item.amountUnit
         self.kcal = item.kcal
         self.proteinG = item.proteinG
         self.carbsG = item.carbsG
@@ -132,6 +163,22 @@ public struct MealItemInputDto: Codable, Sendable, Equatable, Hashable {
         self.sugarG = item.sugarG
         self.source = item.source
         self.confidence = item.confidence
+    }
+
+    /// Outbox JSON written before units existed has no `amountUnit` (grams).
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        name = try c.decode(String.self, forKey: .name)
+        grams = try c.decodeIfPresent(Double.self, forKey: .grams)
+        amountUnit = try c.decodeIfPresent(MealAmountUnit.self, forKey: .amountUnit) ?? .G
+        kcal = try c.decodeIfPresent(Double.self, forKey: .kcal) ?? 0
+        proteinG = try c.decodeIfPresent(Double.self, forKey: .proteinG) ?? 0
+        carbsG = try c.decodeIfPresent(Double.self, forKey: .carbsG) ?? 0
+        fatG = try c.decodeIfPresent(Double.self, forKey: .fatG) ?? 0
+        fiberG = try c.decodeIfPresent(Double.self, forKey: .fiberG)
+        sugarG = try c.decodeIfPresent(Double.self, forKey: .sugarG)
+        source = try c.decodeIfPresent(FoodItemSource.self, forKey: .source) ?? .MANUAL
+        confidence = try c.decodeIfPresent(Double.self, forKey: .confidence)
     }
 }
 

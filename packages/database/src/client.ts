@@ -72,4 +72,5 @@ export {
   ExerciseFeedbackVerdict,
   MealType,
   FoodItemSource,
+  MealAmountUnit,
 } from './generated/prisma/client';

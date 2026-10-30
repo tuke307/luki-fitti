@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { Camera, Flame, Plus, Target } from 'lucide-react';
+import { Flame, Plus, Target } from 'lucide-react';
 import {
   Bar,
   BarChart,
@@ -14,9 +14,14 @@ import {
 } from 'recharts';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import { toast } from '@luki-fitti/ui/components/ui/sonner';
-import { FeatureGrant, FoodItemSource, type MealType } from '@luki-fitti/common/enums';
+import {
+  FeatureGrant,
+  FoodItemSource,
+  MealAmountUnit,
+  type MealType,
+} from '@luki-fitti/common/enums';
 import type { MealEntryDto, UpsertMealEntryDto } from '@luki-fitti/common/schemas';
-import { goalProgress } from '@luki-fitti/common/utils/client';
+import { formatMealAmount, goalProgress } from '@luki-fitti/common/utils/client';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
@@ -26,7 +31,6 @@ import { useBodyWeight } from '@/lib/body-weight/use-body-weight';
 import type { NavTab } from '../pwa-shell';
 import { DayWeekStrip } from './day-week-strip';
 import { MealEditorDialog } from './meal-editor-dialog';
-import { MealPhotoDialog } from './meal-photo-dialog';
 import { NutritionGoalsDialog } from './nutrition-goals-form';
 
 const toPayload = (e: MealEntryDto): UpsertMealEntryDto => ({
@@ -38,6 +42,7 @@ const toPayload = (e: MealEntryDto): UpsertMealEntryDto => ({
   items: e.items.map((i) => ({
     name: i.name,
     grams: i.grams,
+    amountUnit: i.amountUnit ?? MealAmountUnit.G,
     kcal: i.kcal,
     proteinG: i.proteinG,
     carbsG: i.carbsG,
@@ -48,6 +53,17 @@ const toPayload = (e: MealEntryDto): UpsertMealEntryDto => ({
     confidence: i.confidence,
   })),
 });
+
+/** Row subtitle: item names (when a label is the title) with amounts, e.g. "Iced tea 500 ml". */
+const itemAmounts = (e: MealEntryDto, locale: string) =>
+  e.items
+    .map((i) =>
+      [e.label ? i.name : '', formatMealAmount(i.grams, i.amountUnit, locale)]
+        .filter(Boolean)
+        .join(' '),
+    )
+    .filter(Boolean)
+    .join(', ');
 
 export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => void }) {
   const { user, authMode } = useAuth();
@@ -62,7 +78,6 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<MealEntryDto | null>(null);
   const [defaultMealType, setDefaultMealType] = useState<MealType | undefined>();
-  const [photoOpen, setPhotoOpen] = useState(false);
 
   const prefs = user?.preferences;
   const kcalGoal = prefs?.dailyKcalGoal ?? null;
@@ -257,22 +272,9 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
         </ul>
       </section>
 
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Button type="button" size="lg" className="sm:flex-1" onClick={() => openEditor(null)}>
-          <Plus className="h-4 w-4" /> {t.nutrition.addMeal}
-        </Button>
-        {canUsePhotos && (
-          <Button
-            type="button"
-            size="lg"
-            variant="secondary"
-            className="sm:flex-1"
-            onClick={() => setPhotoOpen(true)}
-          >
-            <Camera className="h-4 w-4" /> {t.mealAi.snapButton}
-          </Button>
-        )}
-      </div>
+      <Button type="button" size="lg" className="w-full" onClick={() => openEditor(null)}>
+        <Plus className="h-4 w-4" /> {t.nutrition.addMeal}
+      </Button>
 
       {pending > 0 && (
         <p className="text-muted-foreground text-[0.8125rem]" role="status">
@@ -324,9 +326,7 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
                       </span>
                       <span className="text-muted-foreground block truncate text-[0.8125rem]">
                         {timeFormat(entry.eatenAt)}
-                        {entry.label &&
-                          entry.items.length > 0 &&
-                          ` · ${entry.items.map((i) => i.name).join(', ')}`}
+                        {itemAmounts(entry, bcp47) && ` · ${itemAmounts(entry, bcp47)}`}
                         {entry.items.some((i) => i.source === FoodItemSource.AI) &&
                           ` · ${t.nutrition.estimatedByAi}`}
                       </span>
@@ -454,20 +454,10 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
         isOnline={isOnline}
         onSave={handleSave}
         onDelete={(entry) => void handleDelete(entry)}
+        canUsePhotos={canUsePhotos}
+        onEntryChanged={upsertLocal}
+        onDiscardEntry={remove}
       />
-      {canUsePhotos && (
-        <MealPhotoDialog
-          open={photoOpen}
-          onOpenChange={setPhotoOpen}
-          dayKey={selected}
-          isOnline={isOnline}
-          onAnalyzed={(entry) => {
-            upsertLocal(entry);
-            toast.success(t.mealAi.review);
-            openEditor(entry);
-          }}
-        />
-      )}
     </div>
   );
 }
