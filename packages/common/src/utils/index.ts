@@ -15,3 +15,4 @@ export * from './search.util';
 export * from './zod-utils';
 export * from './energy.util';
 export * from './nutrition.util';
+export * from './body-weight.util';

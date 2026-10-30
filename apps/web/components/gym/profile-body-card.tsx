@@ -9,14 +9,20 @@ import { Input } from '@luki-fitti/ui/components/ui/input';
 import { Label } from '@luki-fitti/ui/components/ui/label';
 import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
 import { toast } from '@luki-fitti/ui/components/ui/sonner';
-import type { BiologicalSex } from '@luki-fitti/common/enums';
+import { WeightUnit, type BiologicalSex } from '@luki-fitti/common/enums';
 import { UpdatePreferencesSchema } from '@luki-fitti/common/schemas';
 import { suggestDailyKcal, suggestProteinGoalG } from '@luki-fitti/common/utils/client';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
+import { useBodyWeight } from '@/lib/body-weight/use-body-weight';
+import { toDisplayWeight } from '@/lib/body-weight/body-weight';
+import { formatWeight } from '@/lib/body-weight/weight-format';
+import { unitLabel } from '@/lib/format/weight';
+import { focusWeightInput, WEIGHT_SECTION_ID } from './weight/weight-focus';
 
+// Body weight is not edited here: it comes from the weigh-in history (the server keeps
+// preferences.bodyWeightKg in sync with the newest weigh-in).
 const FIELDS = [
-  'bodyWeightKg',
   'heightCm',
   'birthYear',
   'dailyKcalGoal',
@@ -38,8 +44,11 @@ export function ProfileBodyCard() {
 
 function ProfileBodyForm() {
   const { user, updatePreferences } = useAuth();
-  const { t } = useLocale();
+  const { t, bcp47 } = useLocale();
+  const { latest } = useBodyWeight();
   const prefs = user?.preferences;
+  const unit = prefs?.weightUnit ?? WeightUnit.KG;
+  const bodyWeightKg = latest?.weightKg ?? prefs?.bodyWeightKg ?? null;
   const [values, setValues] = useState<Record<NumericField, string>>(
     () =>
       Object.fromEntries(
@@ -56,7 +65,7 @@ function ProfileBodyForm() {
   const toNumber = (v: string) => (v.trim() === '' ? null : Number(v.replace(',', '.')));
 
   const suggestion = suggestDailyKcal({
-    bodyWeightKg: toNumber(values.bodyWeightKg),
+    bodyWeightKg,
     heightCm: toNumber(values.heightCm),
     birthYear: toNumber(values.birthYear),
     sex: sex || null,
@@ -122,7 +131,29 @@ function ProfileBodyForm() {
 
       <form onSubmit={save} className="space-y-4">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {numberField('bodyWeightKg', t.profileBody.bodyWeight, '0.1')}
+          <div className="space-y-1.5">
+            <p className="text-[0.8125rem] font-semibold">{t.profileBody.currentWeight}</p>
+            <div className="flex min-h-11 flex-wrap items-center gap-x-2">
+              <span
+                data-testid="body-current-weight"
+                className="font-rounded text-[1.0625rem] font-semibold tabular-nums"
+              >
+                {bodyWeightKg === null
+                  ? t.profileBody.noWeightYet
+                  : `${formatWeight(toDisplayWeight(bodyWeightKg, unit), bcp47)} ${unitLabel(unit)}`}
+              </span>
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="h-auto px-0"
+                onClick={focusWeightInput}
+                aria-controls={WEIGHT_SECTION_ID}
+              >
+                {t.profileBody.manageWeight}
+              </Button>
+            </div>
+          </div>
           {numberField('heightCm', t.profileBody.height)}
           {numberField('birthYear', t.profileBody.birthYear)}
           <div className="space-y-1.5">
@@ -164,7 +195,7 @@ function ProfileBodyForm() {
             disabled={!suggestion}
             onClick={() => {
               if (!suggestion) return;
-              const protein = suggestProteinGoalG(toNumber(values.bodyWeightKg));
+              const protein = suggestProteinGoalG(bodyWeightKg);
               setValues((v) => ({
                 ...v,
                 dailyKcalGoal: String(suggestion),

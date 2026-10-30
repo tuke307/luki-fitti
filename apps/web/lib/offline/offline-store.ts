@@ -23,8 +23,10 @@ import {
   type DismissedWorkoutSuggestion,
 } from '@luki-fitti/common/utils/client';
 import type {
+  BodyWeightEntryDto,
   ExerciseDto,
   MealEntryDto,
+  UpsertBodyWeightEntryDto,
   UpsertMealEntryDto,
   SessionExerciseDto,
   SessionSetDto,
@@ -348,6 +350,37 @@ export async function enqueueNutritionChange(item: NutritionOutboxItem): Promise
 
 export async function setNutritionOutbox(items: NutritionOutboxItem[]): Promise<void> {
   await idbSet('nutrition_outbox', items);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Body weight: cached weigh-ins + offline outbox (upserts are idempotent by clientEntryId)
+// ─────────────────────────────────────────────────────────────────────────────
+export type BodyWeightOutboxItem =
+  | { kind: 'UPSERT'; clientEntryId: string; payload: UpsertBodyWeightEntryDto; queuedAt: string }
+  | { kind: 'DELETE'; clientEntryId: string; id: string | null; queuedAt: string };
+
+export async function getCachedBodyWeightEntries(): Promise<BodyWeightEntryDto[]> {
+  return (await idbGet<BodyWeightEntryDto[]>('body_weight_entries')) ?? [];
+}
+
+export async function setCachedBodyWeightEntries(entries: BodyWeightEntryDto[]): Promise<void> {
+  await idbSet('body_weight_entries', entries);
+}
+
+export async function getBodyWeightOutbox(): Promise<BodyWeightOutboxItem[]> {
+  return (await idbGet<BodyWeightOutboxItem[]>('body_weight_outbox')) ?? [];
+}
+
+/** Keeps only the latest pending change per weigh-in (a delete supersedes earlier upserts). */
+export async function enqueueBodyWeightChange(item: BodyWeightOutboxItem): Promise<void> {
+  const outbox = (await getBodyWeightOutbox()).filter(
+    (i) => i.clientEntryId !== item.clientEntryId,
+  );
+  await idbSet('body_weight_outbox', [...outbox, item]);
+}
+
+export async function setBodyWeightOutbox(items: BodyWeightOutboxItem[]): Promise<void> {
+  await idbSet('body_weight_outbox', items);
 }
 
 export function recalculateSessionTotals(session: WorkoutSessionDto): WorkoutSessionDto {

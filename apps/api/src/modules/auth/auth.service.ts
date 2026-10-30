@@ -18,6 +18,7 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import { EmailService } from '../email/email.service';
 import { AppSettingsService } from '../app-settings/app-settings.service';
+import { BodyWeightService } from '../body-weight/body-weight.service';
 import {
   DEFAULT_STARTER_FOLDERS,
   DEFAULT_STARTER_TEMPLATES,
@@ -49,6 +50,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     @Optional() private readonly emailService?: EmailService,
     @Optional() private readonly appSettings?: AppSettingsService,
+    @Optional() private readonly bodyWeight?: BodyWeightService,
   ) {}
 
   private hashToken(rawToken: string): string {
@@ -438,6 +440,12 @@ export class AuthService {
         .filter((key) => prefFields[key] !== undefined)
         .map((key) => [key, prefFields[key]]),
     );
+    // Weekly weigh-in reminder: `undefined` leaves unchanged; DB defaults apply on create.
+    const reminderFields = Object.fromEntries(
+      (['weighInReminderEnabled', 'weighInReminderWeekday', 'weighInReminderMinutes'] as const)
+        .filter((key) => prefFields[key] !== undefined)
+        .map((key) => [key, prefFields[key]]),
+    );
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -455,6 +463,7 @@ export class AuthService {
               exerciseSuggestionsEnabled: prefFields.exerciseSuggestionsEnabled ?? true,
               weeklyGoalSessions: prefFields.weeklyGoalSessions ?? 4,
               ...nullableFields,
+              ...reminderFields,
             },
             update: {
               ...nullableFields,
@@ -479,12 +488,18 @@ export class AuthService {
               ...(prefFields.weeklyGoalSessions !== undefined
                 ? { weeklyGoalSessions: prefFields.weeklyGoalSessions }
                 : {}),
+              ...reminderFields,
             },
           },
         },
       },
       include: { preferences: true },
     });
+
+    // Legacy clients still send the weight here; keep the weigh-in history the source of truth.
+    if (typeof prefFields.bodyWeightKg === 'number' && this.bodyWeight) {
+      await this.bodyWeight.recordFromPreferences(userId, prefFields.bodyWeightKg);
+    }
 
     return this.toUserDto(updated);
   }
@@ -601,6 +616,9 @@ export class AuthService {
       proteinGoalG?: number | null;
       carbsGoalG?: number | null;
       fatGoalG?: number | null;
+      weighInReminderEnabled?: boolean;
+      weighInReminderWeekday?: number;
+      weighInReminderMinutes?: number;
     } | null;
     permissions?: string[];
     featureGrants?: string[];
@@ -640,6 +658,9 @@ export class AuthService {
             proteinGoalG: user.preferences.proteinGoalG ?? null,
             carbsGoalG: user.preferences.carbsGoalG ?? null,
             fatGoalG: user.preferences.fatGoalG ?? null,
+            weighInReminderEnabled: user.preferences.weighInReminderEnabled ?? false,
+            weighInReminderWeekday: user.preferences.weighInReminderWeekday ?? 2,
+            weighInReminderMinutes: user.preferences.weighInReminderMinutes ?? 450,
           }
         : null,
       permissions: (user.permissions ?? []).filter(isAdminPermission) as AdminPermission[],

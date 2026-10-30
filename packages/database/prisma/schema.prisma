@@ -184,6 +184,7 @@ model User {
   importJobs         ImportJob[]
   emails             Email[]
   mealEntries        MealEntry[]
+  bodyWeightEntries  BodyWeightEntry[]
   exerciseFeedback   ExerciseFeedback[]
   aiRuns             AiRun[]
 }
@@ -209,6 +210,11 @@ model UserPreferences {
   proteinGoalG               Int?
   carbsGoalG                 Int?
   fatGoalG                   Int?
+  weighInReminderEnabled     Boolean      @default(false)
+  /// Calendar weekday (1 = Sunday … 7 = Saturday) for the weekly weigh-in reminder.
+  weighInReminderWeekday     Int          @default(2)
+  /// Minutes after local midnight for the weekly weigh-in reminder (450 = 07:30).
+  weighInReminderMinutes     Int          @default(450)
   createdAt                  DateTime     @default(now())
   updatedAt                  DateTime     @updatedAt
 
@@ -726,4 +732,29 @@ model Email {
   @@index([emailTemplateId])
   @@index([userId])
   @@index([status, scheduledAt])
+}
+
+enum BodyWeightSource {
+  MANUAL
+  HEALTHKIT
+}
+
+model BodyWeightEntry {
+  id            String           @id @default(uuid())
+  /// Client-generated id so offline-created entries sync idempotently.
+  clientEntryId String           @unique
+  userId        String
+  measuredAt    DateTime
+  weightKg      Float
+  source        BodyWeightSource @default(MANUAL)
+  /// HealthKit sample UUID for imported entries (dedupe on re-import).
+  healthKitUuid String?
+  note          String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, healthKitUuid])
+  @@index([userId, measuredAt])
 }

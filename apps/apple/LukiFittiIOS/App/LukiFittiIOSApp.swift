@@ -25,6 +25,8 @@ public enum LukiMainTab: String, CaseIterable, Sendable {
 public final class LukiAppViewModel {
     public let store: OfflineStore
     public let nutrition: NutritionStore
+    public let bodyWeight: BodyWeightStore
+    public let bodyMassSync: BodyMassHealthSync
     public let healthCoordinator: HealthKitWorkoutCoordinator
     public let watchSyncCoordinator: WatchSyncCoordinator
     private let liveActivity = WorkoutLiveActivityController()
@@ -34,6 +36,10 @@ public final class LukiAppViewModel {
     public var showSyncConflictDialog: Bool = false
     public var deepLinkTokenType: String?
     public var deepLinkToken: String?
+    /// Presents the weight screen from anywhere (deep link, reminder tap).
+    public var isWeightPresented = false
+    /// Serializes weigh-in reminder rescheduling so overlapping calls can't interleave.
+    var reminderTask: Task<Void, Never>?
 
     /// App language from the in-app preference (System / English / Deutsch).
     public var locale: SupportedLocale { SupportedLocale.resolve(store.preferences.language) }
@@ -41,10 +47,13 @@ public final class LukiAppViewModel {
     public init(
         store: OfflineStore = OfflineStore(),
         healthCoordinator: HealthKitWorkoutCoordinator = HealthKitWorkoutCoordinator(),
-        watchSyncCoordinator: WatchSyncCoordinator = WatchSyncCoordinator()
+        watchSyncCoordinator: WatchSyncCoordinator = WatchSyncCoordinator(),
+        bodyMassSync: BodyMassHealthSync = BodyMassHealthSync()
     ) {
         self.store = store
         self.nutrition = NutritionStore(apiClient: store.apiClient, storageDirectory: store.storageDirectoryURL)
+        self.bodyWeight = BodyWeightStore(apiClient: store.apiClient, storageDirectory: store.storageDirectoryURL)
+        self.bodyMassSync = bodyMassSync
         self.healthCoordinator = healthCoordinator
         self.watchSyncCoordinator = watchSyncCoordinator
 
@@ -71,6 +80,7 @@ public final class LukiAppViewModel {
         WorkoutLiveActivityActions.addRest = { [weak self] in self?.adjustRestTimer(deltaSeconds: 15) }
         WorkoutLiveActivityActions.skipRest = { [weak self] in self?.skipRestTimer() }
         pushContextToWatch()
+        LukiNotificationCenterDelegate.shared.attach(self)
         pullFromWatchAndServer()
     }
 
@@ -96,6 +106,7 @@ public final class LukiAppViewModel {
             } else {
                 await store.flushSyncQueue()
             }
+            await syncBodyWeight()
         }
     }
 
@@ -135,6 +146,11 @@ public final class LukiAppViewModel {
     }
 
     public func handleUniversalLink(_ url: URL) {
+        // lukifitti://weight opens the weigh-in screen.
+        if url.scheme?.lowercased() == "lukifitti", url.host?.lowercased() == "weight" {
+            openWeight()
+            return
+        }
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: true),
               let token = components.queryItems?.first(where: { $0.name == "token" })?.value else {
             return
@@ -838,6 +854,17 @@ public struct AppShellView: View {
                             }
                             .accessibilityLabel(tr("Minimize workout"))
                             .accessibilityIdentifier("ios.session.minimizeButton")
+                        }
+                    }
+            }
+            .tint(LukiColors.accent)
+        }
+        .sheet(isPresented: $viewModel.isWeightPresented) {
+            NavigationStack {
+                WeightView(viewModel: viewModel)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button(tr("Done")) { viewModel.isWeightPresented = false }
                         }
                     }
             }
