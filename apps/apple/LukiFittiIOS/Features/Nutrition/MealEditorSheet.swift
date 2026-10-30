@@ -318,10 +318,18 @@ struct MealEditorSheet: View {
 
     // MARK: Photos & AI
 
-    private func estimate(_ images: [UIImage], _ hint: String) async -> (message: String?, success: Bool, usage: AiRunUsageDto?) {
-        guard isSignedIn else { return (tr("You need to be online to estimate from photos."), false, nil) }
+    /// AI items replace earlier AI drafts; locally typed manual foods (maybe unsaved) stay.
+    private func replaceAIItems(with ai: [MealItemDto]) {
+        let manual = items.filter { $0.source == .MANUAL && (!$0.name.isEmpty || $0.kcal > 0 || ($0.grams ?? 0) > 0) }
+        items = manual + ai
+        if items.isEmpty { items = [MealItemDto(name: "")] }
+    }
+
+    private func estimate(_ images: [UIImage], _ hint: String) async -> MealPhotoSection.EstimateResult {
+        guard isSignedIn else { return .init(message: tr("You need to be online to estimate with AI."), success: false) }
         analyzing = true
         defer { analyzing = false }
+        if images.isEmpty { return await describe(hint) }
         let jpegs = images.compactMap { MealPhotoSheet.uploadJPEG($0) }
         do {
             let result = try await viewModel.store.apiClient.analyzeMeal(
@@ -334,16 +342,37 @@ struct MealEditorSheet: View {
             if serverEntry == nil { unsavedEstimate = true }
             serverEntry = result.entry
             viewModel.nutrition.upsertLocal(result.entry)
-            // Server AI items replace earlier AI drafts; locally typed manual foods (maybe unsaved) stay.
-            let manual = items.filter { $0.source == .MANUAL && (!$0.name.isEmpty || $0.kcal > 0 || ($0.grams ?? 0) > 0) }
-            let ai = result.entry.items.filter { $0.source == .AI }
-            items = manual + ai
-            if items.isEmpty { items = [MealItemDto(name: "")] }
-            if !result.analysis.containsFood { return (tr("We couldn’t find food in these photos."), true, result.usage) }
-            if !result.photosStored { return (tr("Photos weren’t stored on the server."), true, result.usage) }
-            return (nil, true, result.usage)
+            replaceAIItems(with: result.entry.items.filter { $0.source == .AI })
+            if !result.analysis.containsFood {
+                return .init(message: tr("We couldn’t find food in these photos."), success: true, usage: result.usage)
+            }
+            if !result.photosStored {
+                return .init(message: tr("Photos weren’t stored on the server."), success: true, usage: result.usage)
+            }
+            return .init(success: true, usage: result.usage)
         } catch {
-            return (MealPhotoSheet.message(for: error, tr), false, nil)
+            return .init(message: MealPhotoSheet.message(for: error, tr), success: false)
+        }
+    }
+
+    /// Text-only estimate: proposals become unsaved drafts, so cancelling leaves nothing behind.
+    private func describe(_ description: String) async -> MealPhotoSection.EstimateResult {
+        guard description.count >= MealTextAnalysisRequestDto.minLength else {
+            return .init(message: tr("Describe your meal in a few words."), success: false)
+        }
+        do {
+            let result = try await viewModel.store.apiClient.describeMeal(
+                MealTextAnalysisRequestDto(description: description, mealType: mealType)
+            )
+            guard result.analysis.containsFood, !result.items.isEmpty else {
+                return .init(message: tr("We couldn’t find food in this description."), success: false, usage: result.usage)
+            }
+            replaceAIItems(with: result.items.map { MealItemDto($0) })
+            if let guess = result.analysis.mealTypeGuess { mealType = guess }
+            let note = result.analysis.uncertaintyNote.trimmingCharacters(in: .whitespacesAndNewlines)
+            return .init(success: true, usage: result.usage, note: note.isEmpty ? nil : note)
+        } catch {
+            return .init(message: MealPhotoSheet.message(for: error, tr), success: false)
         }
     }
 

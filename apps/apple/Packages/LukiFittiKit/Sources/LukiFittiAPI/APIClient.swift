@@ -349,6 +349,11 @@ public actor APIClient {
         return try Self.decodeEnvelope(data)
     }
 
+    /// Proposes foods from a written meal description (stateless; nothing is saved).
+    public func describeMeal(_ dto: MealTextAnalysisRequestDto) async throws -> MealTextAnalysisResponseDto {
+        try await request(path: "/api/ai/meal-text-analysis", method: "POST", body: dto)
+    }
+
     /// Raw bytes of an authenticated API resource (e.g. a meal photo URL path).
     public func fetchData(path: String) async throws -> Data {
         try await send(path: path, method: "GET", body: nil, contentType: nil)
