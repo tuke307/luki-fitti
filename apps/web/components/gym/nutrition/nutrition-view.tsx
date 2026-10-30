@@ -25,9 +25,17 @@ import { formatMealAmount, goalProgress } from '@luki-fitti/common/utils/client'
 import { useAuth } from '@/providers/auth/auth-context';
 import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
-import { buildDay, dayKey, kcalByDay, lastDays, shiftDay } from '@/lib/nutrition/nutrition-day';
+import {
+  buildDay,
+  dayKey,
+  kcalByDay,
+  lastDays,
+  shiftDay,
+  weekStartKey,
+} from '@/lib/nutrition/nutrition-day';
 import { useNutrition } from '@/lib/nutrition/use-nutrition';
 import { useBodyWeight } from '@/lib/body-weight/use-body-weight';
+import { useHealthActivity } from '@/lib/activity/use-health-activity';
 import type { NavTab } from '../pwa-shell';
 import { DayWeekStrip } from './day-week-strip';
 import { MealEditorDialog } from './meal-editor-dialog';
@@ -79,20 +87,25 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
   const [editing, setEditing] = useState<MealEntryDto | null>(null);
   const [defaultMealType, setDefaultMealType] = useState<MealType | undefined>();
 
+  // Week-aligned window (previous week through the selected week) so picking another day in the
+  // same week doesn't refetch; it covers the 7-day chart ending at the selected day.
+  const activityWeek = weekStartKey(selected);
+  const activity = useHealthActivity(shiftDay(activityWeek, -7), shiftDay(activityWeek, 6));
+
   const prefs = user?.preferences;
   const kcalGoal = prefs?.dailyKcalGoal ?? null;
   const canUsePhotos = user?.features?.includes(FeatureGrant.AI_MEAL_PHOTO) ?? false;
 
   const day = useMemo(
-    () => buildDay(selected, entries, historySessions, weighIns, prefs?.bodyWeightKg),
-    [selected, entries, historySessions, weighIns, prefs?.bodyWeightKg],
+    () => buildDay(selected, entries, historySessions, weighIns, prefs?.bodyWeightKg, activity),
+    [selected, entries, historySessions, weighIns, prefs?.bodyWeightKg, activity],
   );
   const kcalPerDay = useMemo(() => kcalByDay(entries), [entries]);
   const loadWeek = useCallback((weekStart: string) => void loadFrom(weekStart), [loadFrom]);
   const week = useMemo(
     () =>
       lastDays(selected, 7).map((key) => {
-        const d = buildDay(key, entries, historySessions, weighIns, prefs?.bodyWeightKg);
+        const d = buildDay(key, entries, historySessions, weighIns, prefs?.bodyWeightKg, activity);
         return {
           key,
           label: new Date(`${key}T12:00:00`).toLocaleDateString(bcp47, { weekday: 'short' }),
@@ -100,7 +113,7 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
           burned: d.burnedKcal,
         };
       }),
-    [selected, entries, historySessions, weighIns, prefs?.bodyWeightKg, bcp47],
+    [selected, entries, historySessions, weighIns, prefs?.bodyWeightKg, activity, bcp47],
   );
 
   const dayLabel =
@@ -118,6 +131,12 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
   const remaining = kcalGoal !== null ? kcalGoal - net : null;
   const timeFormat = (iso: string) =>
     new Date(iso).toLocaleTimeString(bcp47, { hour: '2-digit', minute: '2-digit' });
+
+  const activityTypeLabel = (type: string) =>
+    (t.nutrition.activityTypes as Record<string, string | undefined>)[type] ??
+    t.nutrition.activityTypes.other;
+  const hasBurnRows =
+    day.workouts.length > 0 || day.externalWorkouts.length > 0 || day.dailyActivityKcal !== null;
 
   const openEditor = (entry: MealEntryDto | null, mealType?: MealType) => {
     setEditing(entry);
@@ -342,7 +361,7 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
         ))
       )}
 
-      {day.workouts.length > 0 && (
+      {hasBurnRows && (
         <section aria-labelledby="burn-title" className="bg-card space-y-3 rounded-[1.25rem] p-5">
           <h2 id="burn-title" className="flex items-center gap-2 text-[1.0625rem] font-semibold">
             <Flame className="text-primary h-4 w-4" aria-hidden="true" /> {t.nutrition.burned}
@@ -356,9 +375,37 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
                 </span>
               </li>
             ))}
+            {day.externalWorkouts.map(({ workout, kcal }) => (
+              <li key={workout.id} className="flex justify-between gap-3">
+                <span className="min-w-0">
+                  <span className="block truncate">{activityTypeLabel(workout.activityType)}</span>
+                  <span className="text-muted-foreground block truncate text-[0.8125rem]">
+                    {timeFormat(workout.startedAt)} · {workout.sourceName}
+                  </span>
+                </span>
+                <span className="text-muted-foreground shrink-0 tabular-nums">
+                  {kcal} {t.nutrition.kcal}
+                </span>
+              </li>
+            ))}
+            {day.dailyActivityKcal !== null && (
+              <li className="flex justify-between gap-3">
+                <span className="min-w-0">
+                  <span className="block truncate">{t.nutrition.dailyActivity}</span>
+                  <span className="text-muted-foreground block truncate text-[0.8125rem]">
+                    {t.nutrition.fromAppleHealth}
+                  </span>
+                </span>
+                <span className="text-muted-foreground shrink-0 tabular-nums">
+                  {day.dailyActivityKcal} {t.nutrition.kcal}
+                </span>
+              </li>
+            )}
           </ul>
           <p className="text-muted-foreground text-[0.8125rem]">
-            {t.nutrition.burnEstimateNote}{' '}
+            {day.dailyActivityKcal !== null
+              ? t.nutrition.healthBurnNote
+              : t.nutrition.burnEstimateNote}{' '}
             {day.usedDefaultBodyWeight && t.nutrition.burnDefaultWeightNote}
           </p>
         </section>
