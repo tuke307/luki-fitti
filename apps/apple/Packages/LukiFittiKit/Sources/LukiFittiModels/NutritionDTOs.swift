@@ -202,6 +202,7 @@ public struct WorkoutBuilderResponseDto: Codable, Sendable, Equatable, Hashable 
     public var exercises: [WorkoutProposalExerciseDto]
     public var notes: [String]
     public var droppedExerciseIds: [String]
+    public var usage: AiRunUsageDto?
 }
 
 public struct MealAnalysisSummaryDto: Codable, Sendable, Equatable, Hashable {
@@ -214,6 +215,71 @@ public struct MealAnalysisResponseDto: Codable, Sendable, Equatable, Hashable {
     public var entry: MealEntryDto
     public var analysis: MealAnalysisSummaryDto
     public var photosStored: Bool
+    public var usage: AiRunUsageDto?
+}
+
+/// Tokens and the OpenRouter cost in USD (as reported, no conversion; `nil` when unknown).
+public struct AiRunUsageDto: Codable, Sendable, Equatable, Hashable {
+    public var promptTokens: Int
+    public var completionTokens: Int
+    public var costUsd: Double?
+    public var totalTokens: Int { promptTokens + completionTokens }
+
+    public init(promptTokens: Int, completionTokens: Int, costUsd: Double?) {
+        self.promptTokens = promptTokens
+        self.completionTokens = completionTokens
+        self.costUsd = costUsd
+    }
+}
+
+public struct AiUsageSkillDto: Codable, Sendable, Equatable, Hashable, Identifiable {
+    public var id: String { skill }
+    public var skill: String
+    public var runs: Int
+    public var costUsd: Double
+}
+
+public struct AiUsageDayDto: Codable, Sendable, Equatable, Hashable, Identifiable {
+    public var id: String { date }
+    /// UTC calendar day, `yyyy-MM-dd`.
+    public var date: String
+    public var runs: Int
+    public var costUsd: Double
+}
+
+public struct AiUsageRunDto: Codable, Sendable, Equatable, Hashable, Identifiable {
+    public var id: String
+    public var skill: String
+    public var status: String
+    public var createdAt: String
+    public var promptTokens: Int
+    public var completionTokens: Int
+    public var costUsd: Double?
+    public var durationMs: Int
+    public var failed: Bool { status == "ERROR" }
+    public var usage: AiRunUsageDto {
+        AiRunUsageDto(promptTokens: promptTokens, completionTokens: completionTokens, costUsd: costUsd)
+    }
+}
+
+public struct AiUsageQuotaDto: Codable, Sendable, Equatable, Hashable {
+    public var used: Int
+    public var limit: Int
+}
+
+/// `GET /api/ai/usage/me` (mirrors `MyAiUsageDto` in packages/common/src/schemas/ai.schemas.ts).
+public struct MyAiUsageDto: Codable, Sendable, Equatable, Hashable {
+    public var days: Int
+    public var totalRuns: Int
+    public var failedRuns: Int
+    public var promptTokens: Int
+    public var completionTokens: Int
+    public var costUsd: Double
+    public var unknownCostRuns: Int
+    public var bySkill: [AiUsageSkillDto]
+    public var byDay: [AiUsageDayDto]
+    public var recent: [AiUsageRunDto]
+    public var today: AiUsageQuotaDto
 }
 
 public struct ExerciseFeedbackDto: Codable, Sendable, Equatable, Hashable, Identifiable {
