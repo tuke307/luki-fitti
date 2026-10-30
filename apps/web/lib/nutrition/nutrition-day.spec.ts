@@ -8,7 +8,7 @@ import {
   SessionType,
   WeightUnit,
 } from '@luki-fitti/common/enums';
-import type { MealEntryDto, WorkoutSessionDto } from '@luki-fitti/common/schemas';
+import type { HealthWorkoutDto, MealEntryDto, WorkoutSessionDto } from '@luki-fitti/common/schemas';
 import {
   bodyWeightForSession,
   buildDay,
@@ -235,5 +235,183 @@ describe('entryFromPayload amount units', () => {
     });
     assert.equal(dto.items[0]?.amountUnit, MealAmountUnit.ML);
     assert.equal(dto.items[1]?.amountUnit, MealAmountUnit.G);
+  });
+});
+
+describe('buildDay with Apple Health activity', () => {
+  const at = (h: number, m = 0) => new Date(2026, 9, 29, h, m);
+  const key = dayKey(at(12));
+  let seq = 0;
+  const hw = (
+    start: Date,
+    minutes: number,
+    extra: Partial<HealthWorkoutDto> = {},
+  ): HealthWorkoutDto => ({
+    id: `hw-${++seq}`,
+    healthKitUuid: `00000000-0000-4000-8000-${String(seq).padStart(12, '0')}`,
+    activityType: 'running',
+    sourceName: 'Strava',
+    isOwn: false,
+    startedAt: start.toISOString(),
+    endedAt: new Date(start.getTime() + minutes * 60_000).toISOString(),
+    activeKcal: 300,
+    distanceMeters: 5000,
+    ...extra,
+  });
+  const healthDay = (activeKcal: number, day = key) => ({
+    day,
+    activeKcal,
+    updatedAt: at(23).toISOString(),
+  });
+  /** 60-minute session from `start` with a 280 kcal server estimate. */
+  const gymSession = (start: Date, id = 's1') =>
+    session(start, {
+      id,
+      clientSessionId: id,
+      completedAt: new Date(start.getTime() + 60 * 60_000).toISOString(),
+      estimatedCaloriesKcal: 280,
+    });
+
+  it('keeps the old behaviour without activity', () => {
+    const day = buildDay(key, [], [gymSession(at(18))], [], 80);
+    assert.equal(day.burnedKcal, 280);
+    assert.equal(day.dailyActivityKcal, null);
+    assert.deepEqual(day.externalWorkouts, []);
+    assert.equal(day.workouts[0]?.covered, false);
+  });
+
+  it('uses Health active energy and adds only sessions not in Apple Health', () => {
+    const day = buildDay(
+      key,
+      [],
+      [gymSession(at(7), 'gym-am'), gymSession(at(18), 'gym-pm')],
+      [],
+      80,
+      {
+        days: [healthDay(900.4)],
+        // The evening session was written to Health by LukiFitti (own workout).
+        workouts: [hw(at(18, 2), 55, { isOwn: true, sourceName: 'LukiFitti', activeKcal: 260 })],
+      },
+    );
+    const [am, pm] = day.workouts;
+    assert.equal(am?.covered, false);
+    assert.equal(pm?.covered, true);
+    assert.equal(pm?.kcal, 280, 'own workouts never replace the session estimate');
+    assert.equal(pm?.healthWorkout, null);
+    assert.equal(day.burnedKcal, 900 + 280);
+    assert.equal(day.dailyActivityKcal, 900 - 280);
+    assert.deepEqual(day.externalWorkouts, [], 'own workouts are never listed separately');
+  });
+
+  it('shows the external workout energy for a matching session and does not list it twice', () => {
+    const watch = hw(at(18, 5), 50, {
+      activityType: 'traditionalStrengthTraining',
+      activeKcal: 333.6,
+    });
+    const run = hw(at(7), 30, { activeKcal: 310 });
+    const day = buildDay(key, [], [gymSession(at(18))], [], null, {
+      days: [healthDay(1200)],
+      workouts: [watch, run],
+    });
+    assert.equal(day.workouts[0]?.covered, true);
+    assert.equal(day.workouts[0]?.kcal, 334);
+    assert.equal(day.workouts[0]?.healthWorkout?.id, watch.id);
+    assert.equal(day.usedDefaultBodyWeight, false, 'measured energy needs no body weight');
+    assert.deepEqual(
+      day.externalWorkouts.map((w) => [w.workout.id, w.kcal]),
+      [[run.id, 310]],
+    );
+    assert.equal(day.burnedKcal, 1200);
+    assert.equal(day.dailyActivityKcal, 1200 - 310 - 334);
+  });
+
+  it('falls back to the session estimate when the matching external workout has no energy', () => {
+    const day = buildDay(key, [], [gymSession(at(18))], [], 80, {
+      days: [healthDay(500)],
+      workouts: [hw(at(18), 60, { activeKcal: null })],
+    });
+    assert.equal(day.workouts[0]?.covered, true);
+    assert.equal(day.workouts[0]?.kcal, 280);
+    assert.deepEqual(day.externalWorkouts, []);
+    assert.equal(day.burnedKcal, 500);
+    assert.equal(day.dailyActivityKcal, 500 - 280);
+  });
+
+  it('requires at least 50 % overlap of the shorter duration', () => {
+    const s = gymSession(at(18)); // 18:00–19:00
+    const half = buildDay(key, [], [s], [], 80, {
+      days: [],
+      workouts: [hw(at(18, 30), 60)], // 18:30–19:30: 30 of 60 min → match
+    });
+    assert.equal(half.workouts[0]?.covered, true);
+    const short = buildDay(key, [], [s], [], 80, {
+      days: [],
+      workouts: [hw(at(18, 50), 20)], // 18:50–19:10: 10 of 20 min → match
+    });
+    assert.equal(short.workouts[0]?.covered, true);
+    const less = buildDay(key, [], [s], [], 80, {
+      days: [],
+      workouts: [hw(at(18, 45), 60)], // 18:45–19:45: 15 of 60 min → no match
+    });
+    assert.equal(less.workouts[0]?.covered, false);
+    assert.equal(less.externalWorkouts.length, 1);
+    const apart = buildDay(key, [], [s], [], 80, {
+      days: [],
+      workouts: [hw(at(19), 30)], // touching, no overlap
+    });
+    assert.equal(apart.workouts[0]?.covered, false);
+  });
+
+  it('picks the external workout with the largest overlap', () => {
+    const small = hw(at(17, 30), 60, { activeKcal: 100 }); // 30 min overlap
+    const big = hw(at(18), 60, { activeKcal: 400 }); // 60 min overlap
+    const day = buildDay(key, [], [gymSession(at(18))], [], 80, {
+      days: [],
+      workouts: [small, big],
+    });
+    assert.equal(day.workouts[0]?.kcal, 400);
+    assert.deepEqual(day.externalWorkouts, [], 'both matched the session');
+    assert.equal(day.burnedKcal, 400);
+  });
+
+  it('without Health energy for the day sums sessions and unmatched external workouts', () => {
+    const day = buildDay(key, [], [gymSession(at(18))], [], 80, {
+      days: [healthDay(999, shiftDay(key, -1))],
+      workouts: [
+        hw(at(7), 30, { activeKcal: 250.4 }),
+        hw(at(12), 20, { activeKcal: null, activityType: 'walking' }),
+        hw(at(18), 60, { isOwn: true }),
+        hw(new Date(2026, 9, 30, 7), 30), // next day
+      ],
+    });
+    assert.equal(day.dailyActivityKcal, null);
+    assert.deepEqual(
+      day.externalWorkouts.map((w) => [w.workout.activityType, w.kcal]),
+      [
+        ['running', 250],
+        ['walking', 0],
+      ],
+    );
+    assert.equal(day.workouts[0]?.covered, true);
+    assert.equal(day.burnedKcal, 280 + 250);
+  });
+
+  it('never reports negative daily activity', () => {
+    const day = buildDay(key, [], [], [], 80, {
+      days: [healthDay(200)],
+      workouts: [hw(at(7), 30, { activeKcal: 350 })],
+    });
+    assert.equal(day.dailyActivityKcal, 0);
+    assert.equal(day.burnedKcal, 200);
+  });
+
+  it('uses the active duration when a session has no completion time', () => {
+    const s = session(at(18), {
+      completedAt: null,
+      activeDurationSeconds: 3600,
+      estimatedCaloriesKcal: 280,
+    });
+    const day = buildDay(key, [], [s], [], 80, { days: [], workouts: [hw(at(18, 10), 40)] });
+    assert.equal(day.workouts[0]?.covered, true);
   });
 });

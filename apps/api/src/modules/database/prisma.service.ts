@@ -125,4 +125,12 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get bodyWeightEntry(): typeof prisma.bodyWeightEntry {
     return prisma.bodyWeightEntry;
   }
+
+  get healthDailyEnergy(): typeof prisma.healthDailyEnergy {
+    return prisma.healthDailyEnergy;
+  }
+
+  get healthWorkout(): typeof prisma.healthWorkout {
+    return prisma.healthWorkout;
+  }
 }
