@@ -9,6 +9,7 @@ public struct WorkoutsView: View {
 
     @State private var expandedFolderIds: Set<String> = []
     @State private var expandedTemplateIds: Set<String> = []
+    @State private var dismissedSuggestionTemplateIds: Set<String> = []
     @State private var isEditing = false
 
     // Folder Create / Rename Modal State
@@ -173,6 +174,8 @@ public struct WorkoutsView: View {
                 context: context,
                 folders: viewModel.store.folders,
                 catalog: viewModel.store.catalog,
+                historySessions: viewModel.store.historySessions,
+                suggestionsEnabled: viewModel.store.preferences.exerciseSuggestionsEnabled,
                 defaultWeightUnit: viewModel.store.preferences.weightUnit,
                 onCancel: {
                     activeBuilderContext = nil
@@ -435,8 +438,9 @@ public struct WorkoutsView: View {
                                         .padding(.vertical, 3)
                                         .background(RoundedRectangle(cornerRadius: 6).fill(LukiColors.accent.opacity(0.18)))
                                 }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 7)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 10)
+                                .frame(minHeight: 48)
                             }
                         }
                         .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -472,14 +476,16 @@ public struct WorkoutsView: View {
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 5)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(LukiColors.fill))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .frame(minHeight: 48)
+                        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(LukiColors.fill))
                     }
                 }
 
                 // Rainbow Smart Exercise Suggestion (Max 1 per workout)
                 if viewModel.store.preferences.exerciseSuggestionsEnabled,
+                   !dismissedSuggestionTemplateIds.contains(template.id),
                    let suggestion = ProgressionEngine.computeWorkoutExerciseSuggestion(
                        workoutName: template.name,
                        folderName: viewModel.store.folders.first { $0.id == template.folderId }?.name,
@@ -490,10 +496,25 @@ public struct WorkoutsView: View {
                        historySessions: viewModel.store.historySessions,
                        weightUnit: viewModel.store.preferences.weightUnit
                    ) {
+                    let weightUnit = viewModel.store.preferences.weightUnit
                     SuggestionCardView(
                         suggestion: suggestion,
                         locale: tr,
-                        compact: true
+                        compact: true,
+                        onAdd: {
+                            updateTemplateExercises(template.id) {
+                                $0.append(WorkoutTemplateExerciseDto(
+                                    suggestion: suggestion,
+                                    templateId: template.id,
+                                    orderIndex: $0.count,
+                                    weightUnit: weightUnit
+                                ))
+                            }
+                        },
+                        onReplace: {
+                            updateTemplateExercises(template.id) { $0.replaceStalling(with: suggestion) }
+                        },
+                        onDismiss: { dismissedSuggestionTemplateIds.insert(template.id) }
                     )
                     .accessibilityIdentifier("ios.workouts.rainbowSuggestion.\(template.id)")
                 }
@@ -501,6 +522,23 @@ public struct WorkoutsView: View {
 
         }
         .padding(.top, 4)
+    }
+
+    /// Edits a saved workout's exercises in place, keeping its position in the folder.
+    private func updateTemplateExercises(_ templateId: String, _ transform: (inout [WorkoutTemplateExerciseDto]) -> Void) {
+        var folders = viewModel.store.folders
+        var unfiled = viewModel.store.unfiledTemplates
+        for f in folders.indices {
+            for t in folders[f].templates.indices where folders[f].templates[t].id == templateId {
+                transform(&folders[f].templates[t].exercises)
+                for i in folders[f].templates[t].exercises.indices { folders[f].templates[t].exercises[i].orderIndex = i }
+            }
+        }
+        for t in unfiled.indices where unfiled[t].id == templateId {
+            transform(&unfiled[t].exercises)
+            for i in unfiled[t].exercises.indices { unfiled[t].exercises[i].orderIndex = i }
+        }
+        viewModel.store.saveWorkoutsOverview(folders: folders, unfiledTemplates: unfiled)
     }
 
     // MARK: - Folder Editor Sheet
@@ -776,10 +814,14 @@ private struct TemplateBuilderSheetView: View {
     let context: WorkoutsView.TemplateBuilderContext
     let folders: [WorkoutFolderDto]
     let catalog: [ExerciseDto]
+    let historySessions: [WorkoutSessionDto]
+    let suggestionsEnabled: Bool
     let defaultWeightUnit: WeightUnit
     let onCancel: () -> Void
     let onSave: (String, String, String, Int, [WorkoutTemplateExerciseDto]) -> Void
 
+    @State private var guideExercise: ExerciseDto?
+    @State private var suggestionDismissed = false
     @State private var name: String
     @State private var desc: String
     @State private var folderId: String
@@ -797,6 +839,8 @@ private struct TemplateBuilderSheetView: View {
         context: WorkoutsView.TemplateBuilderContext,
         folders: [WorkoutFolderDto],
         catalog: [ExerciseDto],
+        historySessions: [WorkoutSessionDto],
+        suggestionsEnabled: Bool,
         defaultWeightUnit: WeightUnit,
         onCancel: @escaping () -> Void,
         onSave: @escaping (String, String, String, Int, [WorkoutTemplateExerciseDto]) -> Void
@@ -804,6 +848,8 @@ private struct TemplateBuilderSheetView: View {
         self.context = context
         self.folders = folders
         self.catalog = catalog
+        self.historySessions = historySessions
+        self.suggestionsEnabled = suggestionsEnabled
         self.defaultWeightUnit = defaultWeightUnit
         self.onCancel = onCancel
         self.onSave = onSave
@@ -865,7 +911,7 @@ private struct TemplateBuilderSheetView: View {
                     ForEach($exercises) { $slot in
                         let idx = exercises.firstIndex(where: { $0.id == slot.id }) ?? 0
                         let isSupersetWithNext = slot.restSeconds == 0 && idx < exercises.count - 1
-                        let resolvedEx = slot.exercise ?? catalog.first(where: { $0.id == slot.exerciseId })
+                        let resolvedEx = catalog.first(where: { $0.id == slot.exerciseId }) ?? slot.exercise
 
                         VStack(alignment: .leading, spacing: 12) {
                             // Header: #Badge + full-width exercise picker, then reorder/remove controls
@@ -906,6 +952,22 @@ private struct TemplateBuilderSheetView: View {
                             }
 
                             HStack(spacing: 8) {
+                                if let resolvedEx {
+                                    Button {
+                                        guideExercise = resolvedEx
+                                    } label: {
+                                        Label(tr("How to do it"), systemImage: "book")
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(LukiColors.accent)
+                                            .padding(.horizontal, 12)
+                                            .frame(minHeight: 44)
+                                            .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.fill))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel(tr("How to do %@", resolvedEx.name))
+                                    .accessibilityIdentifier("ios.templateBuilder.guideButton.\(idx + 1)")
+                                }
+
                                 Spacer()
 
                                 Button {
@@ -979,6 +1041,8 @@ private struct TemplateBuilderSheetView: View {
                         .padding(12)
                         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
                     }
+
+                    builderSuggestionCard
                 }
                 .padding(16)
             }
@@ -1014,6 +1078,9 @@ private struct TemplateBuilderSheetView: View {
                     pickingSlotId = nil
                 }
             }
+            .sheet(item: $guideExercise) { exercise in
+                ExerciseGuideSheet(exercise: exercise)
+            }
             .sheet(isPresented: $showingAddPickerSheet) {
                 SearchableExercisePickerSheet(
                     title: tr("Add Exercise"),
@@ -1039,6 +1106,39 @@ private struct TemplateBuilderSheetView: View {
                     showingAddPickerSheet = false
                 }
             }
+        }
+    }
+
+    /// Live suggestion for the workout being edited (mirrors the web builder's suggestion card).
+    @ViewBuilder
+    private var builderSuggestionCard: some View {
+        if suggestionsEnabled,
+           !suggestionDismissed,
+           let suggestion = ProgressionEngine.computeWorkoutExerciseSuggestion(
+               workoutName: name.isEmpty ? "Workout" : name,
+               folderName: folders.first { $0.id == folderId }?.name,
+               exercises: exercises.map {
+                   WorkoutSuggestionInputExercise(exerciseId: $0.exerciseId, plannedSets: $0.plannedSets)
+               },
+               catalog: catalog,
+               historySessions: historySessions,
+               weightUnit: defaultWeightUnit
+           ) {
+            SuggestionCardView(
+                suggestion: suggestion,
+                locale: tr,
+                onAdd: {
+                    exercises.append(WorkoutTemplateExerciseDto(
+                        suggestion: suggestion,
+                        templateId: context.editingTemplateId ?? "new",
+                        orderIndex: exercises.count,
+                        weightUnit: defaultWeightUnit
+                    ))
+                },
+                onReplace: { exercises.replaceStalling(with: suggestion) },
+                onDismiss: { suggestionDismissed = true }
+            )
+            .accessibilityIdentifier("ios.templateBuilder.rainbowSuggestion")
         }
     }
 
@@ -1194,6 +1294,38 @@ private struct TemplateSetsEditorView: View {
             .accessibilityLabel(tr("Increase %@", unit))
         }
         .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.fill))
+    }
+}
+
+private extension WorkoutTemplateExerciseDto {
+    /// New template slot from a smart suggestion (mirrors `onAdd` in the web workout builder).
+    init(suggestion: WorkoutExerciseSuggestion, templateId: String, orderIndex: Int, weightUnit: WeightUnit) {
+        self.init(
+            templateId: templateId,
+            exerciseId: suggestion.suggestedExercise.id,
+            orderIndex: orderIndex,
+            plannedSets: suggestion.recommendedSets,
+            warmupSets: 0,
+            targetRepsMin: suggestion.recommendedRepsMin,
+            targetRepsMax: suggestion.recommendedRepsMax,
+            targetWeight: suggestion.recommendedWeight,
+            weightUnit: weightUnit,
+            restSeconds: suggestion.recommendedRestSeconds,
+            alternativeExerciseIds: Array(suggestion.suggestedExercise.alternativeExerciseIds.prefix(2)),
+            exercise: suggestion.suggestedExercise
+        )
+    }
+}
+
+private extension Array where Element == WorkoutTemplateExerciseDto {
+    /// Swaps the stalling exercise for the suggested one, keeping its sets and rest.
+    mutating func replaceStalling(with suggestion: WorkoutExerciseSuggestion) {
+        guard let stallingId = suggestion.stallingExerciseId else { return }
+        for i in indices where self[i].exerciseId == stallingId {
+            self[i].exerciseId = suggestion.suggestedExercise.id
+            self[i].exercise = suggestion.suggestedExercise
+            self[i].alternativeExerciseIds = [String](suggestion.suggestedExercise.alternativeExerciseIds.prefix(2))
+        }
     }
 }
 
