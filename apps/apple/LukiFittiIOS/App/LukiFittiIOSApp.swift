@@ -79,6 +79,9 @@ public final class LukiAppViewModel {
         self.watchSyncCoordinator.onCounterpartInstalled = { [weak self] in
             self?.pushContextToWatch()
         }
+        self.watchSyncCoordinator.onSessionDiscarded = { [weak self] clientSessionId in
+            self?.discardWatchSession(clientSessionId: clientSessionId)
+        }
         self.watchSyncCoordinator.onMutationReceived = { [weak self] packet in
             guard let self, let active = self.store.activeSession else { return }
             let merged = WatchSyncMerger.applyMutation(
@@ -751,6 +754,20 @@ public final class LukiAppViewModel {
                 await exportWorkoutToHealth(clientSessionId: recalculated.clientSessionId)
             }
         }
+    }
+
+    /// The Watch discarded a workout on its summary screen: drop every copy of it.
+    private func discardWatchSession(clientSessionId: String) {
+        if store.activeSession?.clientSessionId == clientSessionId {
+            abandonActiveSession()
+        }
+        if let session = store.historySessions.first(where: { $0.clientSessionId == clientSessionId }) {
+            deleteHistorySession(session)
+        } else {
+            store.removeFromSyncQueue(clientSessionId: clientSessionId)
+        }
+        guard store.currentUser != nil else { return }
+        Task { try? await store.apiClient.deleteSession(sessionId: clientSessionId) }
     }
 
     public func abandonActiveSession() {
