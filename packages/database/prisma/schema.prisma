@@ -603,6 +603,7 @@ enum MealType {
   DINNER
   SNACK
   COFFEE
+  DRINK
   OTHER
 }
 

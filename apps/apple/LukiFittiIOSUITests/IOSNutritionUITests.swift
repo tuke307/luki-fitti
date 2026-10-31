@@ -13,7 +13,7 @@ final class IOSNutritionUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Nothing logged yet."].waitForExistence(timeout: 8))
         app.buttons["ios.nutrition.addMealButton"].tap()
 
-        let name = app.textFields["Food"].firstMatch
+        let name = app.textFields["Food or drink"].firstMatch
         XCTAssertTrue(name.waitForExistence(timeout: 5))
         name.tap()
         name.typeText("Greek yogurt")
@@ -38,7 +38,7 @@ final class IOSNutritionUITests: XCTestCase {
         XCTAssertFalse(app.buttons["ios.nutrition.photoButton"].exists)
         add.tap()
 
-        let name = app.textFields["Food"].firstMatch
+        let name = app.textFields["Food or drink"].firstMatch
         XCTAssertTrue(name.waitForExistence(timeout: 5))
         name.tap()
         name.typeText("Iced tea")

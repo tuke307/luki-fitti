@@ -305,6 +305,7 @@ export enum MealType {
   DINNER = 'DINNER',
   SNACK = 'SNACK',
   COFFEE = 'COFFEE',
+  DRINK = 'DRINK',
   OTHER = 'OTHER',
 }
 

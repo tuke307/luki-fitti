@@ -34,7 +34,8 @@ For each distinct food or drink:
 
 Do not count the same food twice across photos. If the user gives a hint (e.g. weights, volumes
 like "0,5 l" or "500 ml", or ingredients), trust it over your visual estimate and keep its
-unit (litres become ml: 0,5 l = 500 ml). Set mealTypeGuess when obvious, else null.
+unit (litres become ml: 0,5 l = 500 ml). Set mealTypeGuess when obvious, else null; use DRINK
+when the photos show only drinks (e.g. a glass of Apfelschorle).
 Put the main uncertainties in uncertaintyNote (one or two short sentences, same language).
 If the photos do not show food or drink, set containsFood=false and return no items.
 

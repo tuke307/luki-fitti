@@ -41,7 +41,8 @@ Split it into the distinct foods and drinks that were eaten. For each one:
   had to assume the portion or the exact product.
 
 Set mealTypeGuess only when the description names the meal (e.g. "zum Frühstück" = BREAKFAST,
-"Mittag" = LUNCH, "Abendessen" = DINNER, "Snack" = SNACK), else null.
+"Mittag" = LUNCH, "Abendessen" = DINNER, "Snack" = SNACK) or when it lists only drinks
+(e.g. "0,5 l Apfelschorle" = DRINK), else null.
 Put the main assumptions in uncertaintyNote (one or two short sentences, same language).
 If the text does not describe anything eaten or drunk, set containsFood=false and return no items.
 
