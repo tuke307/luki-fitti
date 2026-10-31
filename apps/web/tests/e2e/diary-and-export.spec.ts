@@ -94,6 +94,7 @@ test.describe('Training Diary Analytics & Backup Exports', () => {
     // Enable authenticated mode and open Profile tab to trigger JSON & CSV exports
     await mockAuthenticatedSession(page);
     await gotoProfileTab(page);
+    await page.getByTestId('settings-row-export').click();
 
     // Export JSON Backup
     const jsonDownloadPromise = page.waitForEvent('download');

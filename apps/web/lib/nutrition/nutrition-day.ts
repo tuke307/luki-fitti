@@ -78,9 +78,19 @@ export function mergeWindow(
   ];
 }
 
-/** Ring fill: share of the goal, or full when something is logged without a goal. */
-export function ringProgress(eatenKcal: number, goal: number | null | undefined): number {
-  if (goal && goal > 0) return Math.min(1, Math.max(0, eatenKcal / goal));
+/**
+ * Ring fill: share of the day's budget (goal + burned) already eaten, or full when something is
+ * logged without a goal.
+ */
+export function ringProgress(
+  eatenKcal: number,
+  goal: number | null | undefined,
+  burnedKcal = 0,
+): number {
+  if (goal && goal > 0) {
+    const budget = goal + Math.max(0, burnedKcal);
+    return Math.min(1, Math.max(0, eatenKcal / budget));
+  }
   return eatenKcal > 0 ? 1 : 0;
 }
 

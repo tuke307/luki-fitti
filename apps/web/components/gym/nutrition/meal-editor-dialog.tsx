@@ -408,6 +408,21 @@ function MealEditorBody({
     carbsG: `${t.nutrition.carbs} (g)`,
     fatG: `${t.nutrition.fat} (g)`,
   };
+  const shortNumberLabels: Record<NumField, string> = {
+    grams: t.nutrition.amount,
+    kcal: t.nutrition.kcal,
+    proteinG: t.nutrition.proteinFieldShort,
+    carbsG: t.nutrition.carbsFieldShort,
+    fatG: t.nutrition.fatFieldShort,
+  };
+  // Mobile: amount + kcal on the first row, macros on the second; one row from `sm` up.
+  const numberCellClass: Record<NumField, string> = {
+    grams: 'col-span-4 sm:col-span-1',
+    kcal: 'col-span-2 sm:col-span-1',
+    proteinG: 'col-span-2 sm:col-span-1',
+    carbsG: 'col-span-2 sm:col-span-1',
+    fatG: 'col-span-2 sm:col-span-1',
+  };
 
   return (
     <DialogContent className="flex max-h-[92dvh] flex-col gap-0 p-0 sm:max-w-xl">
@@ -537,14 +552,18 @@ function MealEditorBody({
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                <div className="grid grid-cols-6 gap-2 sm:grid-cols-[1.6fr_repeat(4,minmax(0,1fr))]">
                   {NUM_FIELDS.map((field) => (
-                    <div key={field} className="space-y-1">
+                    <div
+                      key={field}
+                      className={`flex min-w-0 flex-col justify-end gap-1 ${numberCellClass[field]}`}
+                    >
                       <Label
                         htmlFor={`${d.key}-${field}`}
-                        className="text-muted-foreground text-[0.75rem]"
+                        title={numberLabels[field]}
+                        className="text-muted-foreground block truncate text-[0.75rem]"
                       >
-                        {numberLabels[field]}
+                        {shortNumberLabels[field]}
                       </Label>
                       <div className="flex gap-1">
                         <Input
@@ -553,28 +572,31 @@ function MealEditorBody({
                           inputMode="decimal"
                           min={0}
                           step="any"
+                          aria-label={numberLabels[field]}
                           value={d.values[field]}
                           onChange={(e) => changeValue(d.key, field, e.target.value)}
                           className="min-w-0 tabular-nums"
                         />
                         {field === 'grams' && (
-                          <NativeSelect
-                            id={`${d.key}-unit`}
-                            aria-label={format(t.nutrition.amountUnit, {
-                              name: d.name || t.nutrition.itemName,
-                            })}
-                            value={d.unit}
-                            onChange={(e) =>
-                              changeUnit(d.key, e.target.value as MealAmountDisplayUnit)
-                            }
-                            className="w-[4.25rem] pr-7 pl-2.5"
-                          >
-                            {MEAL_AMOUNT_DISPLAY_UNITS.map((u) => (
-                              <option key={u} value={u}>
-                                {u}
-                              </option>
-                            ))}
-                          </NativeSelect>
+                          <div className="w-[4.75rem] shrink-0">
+                            <NativeSelect
+                              id={`${d.key}-unit`}
+                              aria-label={format(t.nutrition.amountUnit, {
+                                name: d.name || t.nutrition.itemName,
+                              })}
+                              value={d.unit}
+                              onChange={(e) =>
+                                changeUnit(d.key, e.target.value as MealAmountDisplayUnit)
+                              }
+                              className="w-full pr-7 pl-2.5"
+                            >
+                              {MEAL_AMOUNT_DISPLAY_UNITS.map((u) => (
+                                <option key={u} value={u}>
+                                  {u}
+                                </option>
+                              ))}
+                            </NativeSelect>
+                          </div>
                         )}
                       </div>
                     </div>

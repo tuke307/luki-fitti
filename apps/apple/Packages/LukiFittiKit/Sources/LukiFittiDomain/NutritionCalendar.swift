@@ -194,8 +194,11 @@ public enum NutritionCalendar {
         return result
     }
 
-    /// Ring fill for a day: share of the goal, or a full ring when something is logged without a goal.
-    public static func ringProgress(eatenKcal: Double, goal: Int?) -> Double {
-        NutritionMath.progress(eatenKcal, goal: goal) ?? (eatenKcal > 0 ? 1 : 0)
+    /// Ring fill for a day: eaten share of the budget (goal + burned), or a full ring when
+    /// something is logged without a goal.
+    public static func ringProgress(eatenKcal: Double, goal: Int?, burnedKcal: Int = 0) -> Double {
+        guard let goal, goal > 0 else { return eatenKcal > 0 ? 1 : 0 }
+        let budget = Double(goal + max(0, burnedKcal))
+        return min(1, max(0, eatenKcal / budget))
     }
 }

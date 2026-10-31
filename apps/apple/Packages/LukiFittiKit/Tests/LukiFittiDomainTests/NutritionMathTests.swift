@@ -108,4 +108,11 @@ final class NutritionMathTests: XCTestCase {
         XCTAssertEqual(MealType.forTime(at(12), calendar: cal), .LUNCH)
         XCTAssertEqual(MealType.forTime(at(19), calendar: cal), .DINNER)
     }
+
+    func testMealTypeDecodesDrinkAndFallsBackToOther() throws {
+        let decoded = try JSONDecoder().decode([MealType].self, from: Data(#"["DRINK","COFFEE","BRUNCH"]"#.utf8))
+        XCTAssertEqual(decoded, [.DRINK, .COFFEE, .OTHER])
+        XCTAssertTrue(MealType.allCases.contains(.DRINK))
+        XCTAssertEqual(String(decoding: try JSONEncoder().encode(MealType.DRINK), as: UTF8.self), #""DRINK""#)
+    }
 }
