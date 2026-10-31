@@ -46,6 +46,9 @@ public final class WatchWorkoutViewModel {
         self.watchSyncCoordinator.onActiveSessionReceived = { [weak self] incoming in
             self?.mergeIncomingActiveSession(incoming)
         }
+        self.watchSyncCoordinator.onSessionDiscarded = { [weak self] clientSessionId in
+            self?.applyDeletedOnIPhone([clientSessionId])
+        }
         self.watchSyncCoordinator.onMutationReceived = { [weak self] packet in
             guard let self, let active = self.store.activeSession else { return }
             let merged = WatchSyncMerger.applyMutation(
@@ -143,7 +146,7 @@ public final class WatchWorkoutViewModel {
 
     /// Buzzes when the rest is over, unless the rest was changed or skipped in the meantime.
     private func scheduleRestEndHaptic(endsAt: String?) {
-        guard let endsAt, let date = ISO8601DateFormatter().date(from: endsAt) else { return }
+        guard let endsAt, let date = LukiDate.parseISO(endsAt) else { return }
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(max(0, date.timeIntervalSinceNow)))
             guard let self, self.store.activeSession?.restTimerEndsAt == endsAt else { return }
@@ -176,12 +179,22 @@ public final class WatchWorkoutViewModel {
     public func discardCompletedWorkout() {
         guard let session = completedSummarySession else { return }
         let clientSessionId = session.clientSessionId
+        // Queues the server delete, retried on every sync until it goes through.
         store.deleteHistorySession(clientSessionId: clientSessionId)
         watchSyncCoordinator.broadcastDiscardedSession(clientSessionId: clientSessionId)
         completedSummarySession = nil
         WKInterfaceDevice.current().play(.stop)
-        guard store.currentUser != nil else { return }
-        Task { try? await store.apiClient.deleteSession(sessionId: clientSessionId) }
+        Task { await store.flushSyncQueue() }
+    }
+
+    /// The iPhone deleted finished workouts: drop them here too. The iPhone deletes the server copy.
+    private func applyDeletedOnIPhone(_ clientSessionIds: [String]) {
+        let ids = clientSessionIds.filter { !store.isDeleted(clientSessionId: $0) }
+        guard !ids.isEmpty else { return }
+        if let summaryId = completedSummarySession?.clientSessionId, ids.contains(summaryId) {
+            completedSummarySession = nil
+        }
+        store.deleteHistorySessions(clientSessionIds: ids, deleteOnServer: false)
     }
 
     /// "Sync now": asks the iPhone for fresh data and reloads from the server when signed in.
@@ -218,8 +231,11 @@ public final class WatchWorkoutViewModel {
         }
         store.saveWorkoutsOverview(folders: payload.folders, unfiledTemplates: payload.unfiledTemplates)
         store.saveStretchingRoutines(payload.stretchingRoutines)
-        if !payload.historySessions.isEmpty {
-            store.saveHistorySessionsList(payload.historySessions)
+        applyDeletedOnIPhone(payload.deletedSessionIds ?? [])
+        // A signed-in iPhone sends its whole history, so an empty list means its last workout was
+        // deleted. Workouts recorded here that haven't synced yet are kept.
+        if payload.currentUser != nil || !payload.historySessions.isEmpty {
+            store.replaceHistoryKeepingUnsynced(with: payload.historySessions)
         }
         applyAuth(WatchAuthPayload(
             preferences: payload.preferences,

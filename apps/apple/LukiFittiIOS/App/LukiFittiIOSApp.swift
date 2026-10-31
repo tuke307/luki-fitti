@@ -146,6 +146,8 @@ public final class LukiAppViewModel {
     }
 
     private func mergeIncomingWatchCompletedSession(_ incoming: WorkoutSessionDto) {
+        // Deleted here (or discarded on the Watch) already: a late or re-sent copy must not return.
+        guard !store.isDeleted(clientSessionId: incoming.clientSessionId) else { return }
         var completed = incoming
         // The watch doesn't know the Apple Health workout this iPhone saved; keep it.
         if completed.healthKitWorkoutUuid == nil {
@@ -177,7 +179,8 @@ public final class LukiAppViewModel {
             preferences: store.preferences,
             currentUser: store.currentUser,
             authTokens: store.apiClient.tokenStore.loadTokens(),
-            activeSession: store.activeSession
+            activeSession: store.activeSession,
+            deletedSessionIds: store.deletedSessionIds
         )
     }
 
@@ -762,12 +765,13 @@ public final class LukiAppViewModel {
             abandonActiveSession()
         }
         if let session = store.historySessions.first(where: { $0.clientSessionId == clientSessionId }) {
-            deleteHistorySession(session)
+            deleteHistorySession(session, notifyWatch: false)
         } else {
-            store.removeFromSyncQueue(clientSessionId: clientSessionId)
+            // Remembered as deleted so the completed copy can't arrive later; the store deletes
+            // the server copy.
+            store.deleteHistorySession(clientSessionId: clientSessionId)
+            Task { await store.flushSyncQueue() }
         }
-        guard store.currentUser != nil else { return }
-        Task { try? await store.apiClient.deleteSession(sessionId: clientSessionId) }
     }
 
     public func abandonActiveSession() {
@@ -1189,8 +1193,6 @@ private struct SessionAccessoryModifier<Accessory: View>: ViewModifier {
 
 private extension ISO8601DateFormatter {
     static func lukiParse(_ iso: String) -> Date? {
-        let withFraction = ISO8601DateFormatter()
-        withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return withFraction.date(from: iso) ?? ISO8601DateFormatter().date(from: iso)
+        LukiDate.parseISO(iso)
     }
 }

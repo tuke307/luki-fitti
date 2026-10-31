@@ -49,6 +49,16 @@ public final class OfflineStore {
     /// Bumped on every dismissal so observing views recompute suggestions.
     public var dismissedSuggestionsRevision = 0
     public var onOverviewOrAuthChanged: (() -> Void)?
+    /// Workouts deleted on this device or its companion (newest last). Their copies on the server,
+    /// the other device or in an old sync queue must not bring them back.
+    public private(set) var deletedSessionIds: [String] = [] {
+        didSet { deletedSessionIdSet = Set(deletedSessionIds) }
+    }
+    @ObservationIgnored private var deletedSessionIdSet: Set<String> = []
+    /// Deleted workouts whose server copy still has to be deleted (retried on every sync).
+    public private(set) var pendingServerDeletes: [String] = []
+    @ObservationIgnored private var isFlushingDeletes = false
+    private static let maxDeletedSessionIds = 500
 
     private let storageDirectory: URL
     public let apiClient: APIClient
@@ -113,8 +123,10 @@ public final class OfflineStore {
 
         activeSession = readJSON("active_workout_session.json")
         focusedExerciseIds = readJSON("focused_exercises.json") ?? [:]
+        deletedSessionIds = readJSON("deleted_sessions.json") ?? []
+        pendingServerDeletes = readJSON("pending_session_deletes.json") ?? []
         historySessions = (readJSON("session_history.json") as [WorkoutSessionDto]? ?? [])
-            .filter { $0.status == .COMPLETED }
+            .filter { $0.status == .COMPLETED && !isDeleted($0) }
             .sorted { $0.startedAt > $1.startedAt }
         syncQueue = readJSON("sync_queue.json") ?? []
         currentUser = readJSON("current_user.json")
@@ -134,7 +146,7 @@ public final class OfflineStore {
     }
 
     public func saveHistorySession(_ session: WorkoutSessionDto) {
-        guard session.status == .COMPLETED else { return }
+        guard session.status == .COMPLETED, !isDeleted(session) else { return }
         var list = historySessions.filter { $0.clientSessionId != session.clientSessionId }
         list.append(session)
         list.sort { $0.startedAt > $1.startedAt }
@@ -142,18 +154,105 @@ public final class OfflineStore {
         writeJSON(historySessions, to: "session_history.json")
     }
 
-    public func deleteHistorySession(clientSessionId: String) {
-        historySessions.removeAll { $0.clientSessionId == clientSessionId || $0.id == clientSessionId }
-        syncQueue.removeAll { $0.clientSessionId == clientSessionId }
+    /// Whether the workout was deleted here or on the companion device.
+    public func isDeleted(clientSessionId: String) -> Bool {
+        deletedSessionIdSet.contains(clientSessionId)
+    }
+
+    private func isDeleted(_ session: WorkoutSessionDto) -> Bool {
+        deletedSessionIdSet.contains(session.clientSessionId) || deletedSessionIdSet.contains(session.id)
+    }
+
+    /// Deletes a finished workout everywhere: it is remembered as deleted so no copy brings it back,
+    /// and with `deleteOnServer` its server copy is deleted on the next sync (retried until done).
+    /// Pass `deleteOnServer: false` when the companion device already takes care of the server.
+    public func deleteHistorySession(clientSessionId: String, deleteOnServer: Bool = true) {
+        deleteHistorySessions(clientSessionIds: [clientSessionId], deleteOnServer: deleteOnServer)
+    }
+
+    public func deleteHistorySessions(clientSessionIds: [String], deleteOnServer: Bool = true) {
+        let requested = Set(clientSessionIds)
+        guard !requested.isEmpty else { return }
+        let matched = historySessions.filter { requested.contains($0.clientSessionId) || requested.contains($0.id) }
+        var ids = clientSessionIds
+        for session in matched where !requested.contains(session.clientSessionId) {
+            ids.append(session.clientSessionId)
+        }
+        let removed = Set(ids)
+
+        let newIds = ids.filter { !deletedSessionIdSet.contains($0) }
+        if !newIds.isEmpty {
+            var unique: [String] = []
+            for id in newIds where !unique.contains(id) { unique.append(id) }
+            deletedSessionIds = Array((deletedSessionIds + unique).suffix(Self.maxDeletedSessionIds))
+            writeJSON(deletedSessionIds, to: "deleted_sessions.json")
+        }
+        if deleteOnServer {
+            var added = false
+            // The id goes into the request path, so only plain ids (UUIDs, cuids) are sent.
+            for id in ids where Self.isPlainSessionId(id) && !pendingServerDeletes.contains(id) {
+                pendingServerDeletes.append(id)
+                added = true
+            }
+            if added {
+                pendingServerDeletes = Array(pendingServerDeletes.suffix(Self.maxDeletedSessionIds))
+                writeJSON(pendingServerDeletes, to: "pending_session_deletes.json")
+            }
+        }
+
+        historySessions.removeAll { removed.contains($0.clientSessionId) || removed.contains($0.id) }
+        syncQueue.removeAll { removed.contains($0.clientSessionId) }
+        conflictItem = syncQueue.first(where: { $0.serverConflictSession != nil })
         writeJSON(historySessions, to: "session_history.json")
         writeJSON(syncQueue, to: "sync_queue.json")
         updateSyncStateBadge()
+    }
+
+    private static func isPlainSessionId(_ id: String) -> Bool {
+        !id.isEmpty && id.count <= 128 && id.unicodeScalars.allSatisfy {
+            ($0.isASCII && CharacterSet.alphanumerics.contains($0)) || $0 == "-" || $0 == "_"
+        }
+    }
+
+    /// Deletes the server copies of deleted workouts. Ids that fail (offline, server error) stay
+    /// queued for the next sync; "not found" counts as deleted.
+    public func flushPendingDeletes() async {
+        guard !pendingServerDeletes.isEmpty, !isFlushingDeletes, apiClient.isAuthenticated() else { return }
+        isFlushingDeletes = true
+        defer { isFlushingDeletes = false }
+
+        let snapshot = pendingServerDeletes
+        var done: Set<String> = []
+        for id in snapshot {
+            do {
+                try await apiClient.deleteSession(sessionId: id)
+                done.insert(id)
+            } catch APIClientError.decodingError {
+                // 2xx with an unexpected body: the session is gone.
+                done.insert(id)
+            } catch APIClientError.serverError(let status, _) where status == 404 || status == 410 {
+                // Already gone (or never uploaded).
+                done.insert(id)
+            } catch APIClientError.forbidden {
+                // Not this account's workout: retrying can't succeed.
+                done.insert(id)
+            } catch APIClientError.unauthorized {
+                // Signed out: keep the rest for after the next sign-in.
+                break
+            } catch {
+                continue
+            }
+        }
+        // Ids added while this ran are kept as well.
+        pendingServerDeletes.removeAll { done.contains($0) }
+        writeJSON(pendingServerDeletes, to: "pending_session_deletes.json")
     }
 
     @discardableResult
     public func enqueueSessionSync(_ session: WorkoutSessionDto, forceOverwrite: Bool = false) -> QueuedSessionSyncItem {
         let payload = SyncSessionPayloadDto(from: session, forceOverwrite: forceOverwrite)
         let item = QueuedSessionSyncItem(clientSessionId: session.clientSessionId, payload: payload)
+        guard !isDeleted(session) else { return item }
         syncQueue.removeAll { $0.clientSessionId == session.clientSessionId }
         syncQueue.append(item)
         writeJSON(syncQueue, to: "sync_queue.json")
@@ -169,6 +268,7 @@ public final class OfflineStore {
     }
 
     public func flushSyncQueue() async {
+        await flushPendingDeletes()
         guard !syncQueue.isEmpty else {
             updateSyncStateBadge()
             return
@@ -179,16 +279,21 @@ public final class OfflineStore {
         }
 
         syncState = .SYNCING
+        let pendingBeforeUpload = Set(pendingServerDeletes)
         var remaining: [QueuedSessionSyncItem] = []
         var serverVersions = acknowledgedServerVersions()
 
         for var item in syncQueue {
+            if isDeleted(clientSessionId: item.clientSessionId) { continue }
             do {
                 var payload = item.payload
                 payload.deviceId = deviceId
                 payload.baseVersion = serverVersions[item.clientSessionId]
                 let response = try await apiClient.syncSession(payload)
-                if response.conflictDetected {
+                if isDeleted(response.session) || isDeleted(clientSessionId: item.clientSessionId) {
+                    // Deleted while uploading: the queued server delete removes the new copy.
+                    serverVersions[item.clientSessionId] = nil
+                } else if response.conflictDetected {
                     item.serverConflictSession = response.session
                     item.lastError = "Server conflict v\(response.serverVersion)"
                     remaining.append(item)
@@ -211,11 +316,15 @@ public final class OfflineStore {
             }
         }
 
-        syncQueue = remaining
+        syncQueue = remaining.filter { !isDeleted(clientSessionId: $0.clientSessionId) }
         conflictItem = syncQueue.first(where: { $0.serverConflictSession != nil })
         writeJSON(syncQueue, to: "sync_queue.json")
         writeJSON(serverVersions, to: "server_versions.json")
         updateSyncStateBadge()
+        // A workout deleted while the queue was uploading may just have been re-created.
+        if pendingServerDeletes.contains(where: { !pendingBeforeUpload.contains($0) }) {
+            await flushPendingDeletes()
+        }
     }
 
     /// Stable random id of this install. Survives `clearAllLocalData` on purpose so the server can
@@ -297,6 +406,8 @@ public final class OfflineStore {
             "dismissed_suggestions.json",
             "focused_exercises.json",
             "current_user.json",
+            "deleted_sessions.json",
+            "pending_session_deletes.json",
         ] {
             deleteFile(file)
         }
@@ -304,6 +415,8 @@ public final class OfflineStore {
         activeSession = nil
         historySessions = []
         syncQueue = []
+        deletedSessionIds = []
+        pendingServerDeletes = []
         currentUser = nil
         conflictItem = nil
         loadFromDiskOrSeedStarterCatalog()
@@ -347,12 +460,24 @@ public final class OfflineStore {
 
     public func saveHistorySessionsList(_ sessions: [WorkoutSessionDto]) {
         historySessions = sessions
-            .filter { $0.status == .COMPLETED }
+            .filter { $0.status == .COMPLETED && !isDeleted($0) }
             .sorted { $0.startedAt > $1.startedAt }
         writeJSON(historySessions, to: "session_history.json")
     }
 
+    /// Replaces the history with an authoritative list (the server's, or the iPhone's on the
+    /// Watch) – even an empty one, so deletions elsewhere arrive here. Finished workouts that are
+    /// still waiting in this device's sync queue are kept (local copy wins) so nothing recorded
+    /// offline is lost.
+    public func replaceHistoryKeepingUnsynced(with sessions: [WorkoutSessionDto]) {
+        let queuedIds = Set(syncQueue.map(\.clientSessionId))
+        let unsynced = historySessions.filter { queuedIds.contains($0.clientSessionId) }
+        let unsyncedIds = Set(unsynced.map(\.clientSessionId))
+        saveHistorySessionsList(sessions.filter { !unsyncedIds.contains($0.clientSessionId) } + unsynced)
+    }
+
     public func refreshFromServerAfterAuth() async {
+        // Also sends the pending server deletes first, so deleted workouts aren't downloaded again.
         await flushSyncQueue()
         if let serverExercises = try? await apiClient.fetchExercises(), !serverExercises.isEmpty {
             var mergedById = Dictionary(uniqueKeysWithValues: catalog.map { ($0.id, $0) })
@@ -385,11 +510,8 @@ public final class OfflineStore {
             saveStretchingRoutines(routines)
         }
         if let sessions = try? await apiClient.fetchSessions() {
-            let completed = sessions.filter { $0.status == .COMPLETED }.sorted { $0.startedAt > $1.startedAt }
-            if !completed.isEmpty {
-                historySessions = completed
-                writeJSON(historySessions, to: "session_history.json")
-            }
+            // Deleted workouts whose server delete hasn't gone through yet are filtered here.
+            replaceHistoryKeepingUnsynced(with: sessions)
         }
         updateSyncStateBadge()
         onOverviewOrAuthChanged?()
