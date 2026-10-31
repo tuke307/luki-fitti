@@ -63,6 +63,28 @@ export function summarizeTemplateSets(sets: TemplateSetDto[]): {
   };
 }
 
+/**
+ * The progression rep band derived from the planned sets: the lowest working-set reps open
+ * the band, unless they already fall inside the current one (which then stays put).
+ */
+export function deriveRepRange(
+  sets: TemplateSetDto[],
+  current: { targetRepsMin?: number | null; targetRepsMax?: number | null },
+): { targetRepsMin: number | null; targetRepsMax: number | null } {
+  const currentMin = current.targetRepsMin ?? null;
+  const currentMax = current.targetRepsMax ?? null;
+  const reps = sets
+    .filter((s) => s.setType !== SetType.WARMUP && s.setType !== SetType.STRETCH)
+    .map((s) => s.reps)
+    .filter((r): r is number => r !== null && r !== undefined && r > 0);
+  if (reps.length === 0) return { targetRepsMin: currentMin, targetRepsMax: currentMax };
+  const r = Math.min(...reps);
+  if (currentMin !== null && currentMax !== null && currentMin <= r && r <= currentMax) {
+    return { targetRepsMin: currentMin, targetRepsMax: currentMax };
+  }
+  return { targetRepsMin: r, targetRepsMax: Math.min(100, r + 4) };
+}
+
 /** Moves warm-up sets in front of the others while keeping their relative order. */
 export function orderWarmupsFirst<T extends { setType: SetType }>(sets: T[]): T[] {
   return [
