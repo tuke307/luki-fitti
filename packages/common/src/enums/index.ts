@@ -284,6 +284,12 @@ export enum AiSkillName {
   MEAL_TEXT_ANALYZER = 'meal-text-analyzer',
 }
 
+/** Who provided the OpenRouter key: the user themselves (BYOK) or an admin for that user. */
+export enum AiKeySlot {
+  USER = 'USER',
+  ADMIN = 'ADMIN',
+}
+
 export enum AiRunStatus {
   SUCCESS = 'SUCCESS',
   ERROR = 'ERROR',

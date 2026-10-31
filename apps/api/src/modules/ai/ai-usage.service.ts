@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AiRunStatus } from '@luki-fitti/common/enums';
+import { AiKeySlot, AiRunStatus } from '@luki-fitti/common/enums';
 import type { MyAiUsageDto } from '@luki-fitti/common/schemas';
 import { PrismaService } from '../database/prisma.service';
 import { AppSettingsService } from '../app-settings/app-settings.service';
@@ -49,7 +49,14 @@ export class AiUsageService {
           durationMs: true,
         },
       }),
-      this.prisma.aiRun.count({ where: { userId, createdAt: { gte: startOfUtcDay } } }),
+      // Same rule as the quota check: runs on the user's own key don't count against the limit.
+      this.prisma.aiRun.count({
+        where: {
+          userId,
+          createdAt: { gte: startOfUtcDay },
+          OR: [{ keySource: null }, { keySource: AiKeySlot.ADMIN }],
+        },
+      }),
       this.appSettings.get(),
     ]);
 

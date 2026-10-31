@@ -13,9 +13,17 @@ There is no separate staff table: admin rights are fields on `User`.
   so revoking access is immediate.
 - `PermissionsGuard` and `FeatureGuard` are deny-by-default: a route without
   `@RequirePermissions(...)` / `@RequireFeature(...)` metadata is rejected.
-- A feature is active only when **all** hold: the user has the grant, the global switch in
-  `AppSettings` is on, and `OPENROUTER_API_KEY` is configured. `/auth/me` returns the resulting
-  `features` list; clients only show AI entry points for features in that list.
+- There is **no global OpenRouter key**. Each user needs a key: their own (USER slot, set in the
+  profile) or one an admin assigned (ADMIN slot, Admin → Users). The own key wins.
+- With an **own key** every AI feature whose global switch in `AppSettings` is on is active — no
+  grant needed and no daily limit (the user pays OpenRouter directly).
+- With only an **admin-assigned key** a feature needs the grant and the global switch, and the
+  daily run limit applies.
+- `/auth/me` returns the resulting `features` list; clients only show AI entry points for
+  features in that list. `GET /api/ai/key` returns the key status (never the key).
+- Keys are stored AES-256-GCM encrypted (`UserAiKey`, random IV, auth tag, AAD
+  `${userId}:${slot}`) with the master key `AI_KEY_ENCRYPTION_KEY`; only the last 4 characters
+  are shown. Users see whether an admin key is assigned; admins see whether an own key exists.
 - Admins cannot remove their own `USERS_MANAGE` permission (prevents lock-out).
 
 Locally, `yarn db:seed` upserts the accounts in `packages/database/data/users.jsonc` with all
@@ -97,7 +105,8 @@ optional `mealType`, `hint`):
 
 | Variable                                                                                                                                | Description                                         |
 | :-------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------- |
-| `OPENROUTER_API_KEY`                                                                                                                    | Enables AI features (server-side only)              |
+| `AI_KEY_ENCRYPTION_KEY`                                                                                                                 | 32-byte master key for per-user OpenRouter keys (`openssl rand -base64 32`); AI is off without it |
+| `AI_KEY_ENCRYPTION_KEY_PREVIOUS` / `AI_KEY_ENCRYPTION_KEY_VERSION`                                                                      | Rotation: old key + bumped version; keys are re-encrypted lazily |
 | `OPENROUTER_BASE_URL` / `OPENROUTER_TIMEOUT_MS`                                                                                         | Optional overrides (https only outside local tests) |
 | `SEAWEEDFS_ENDPOINT`, `SEAWEEDFS_PORT`, `SEAWEEDFS_USE_SSL`, `SEAWEEDFS_ACCESS_KEY_API`, `SEAWEEDFS_SECRET_KEY_API`, `SEAWEEDFS_BUCKET` | Meal photo storage (same names as kds/marienmuehle) |
 

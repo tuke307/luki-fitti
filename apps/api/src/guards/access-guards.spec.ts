@@ -2,11 +2,12 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { ForbiddenException, type ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { AdminPermission, FeatureGrant } from '@luki-fitti/common/enums';
+import { AdminPermission, AiKeySlot, FeatureGrant } from '@luki-fitti/common/enums';
 import { PermissionsGuard } from './permissions.guard';
 import { FeatureGuard } from './feature.guard';
 import { FEATURE_KEY, PERMISSIONS_KEY } from '@/decorators/permissions.decorator';
 import {
+  effectiveKeySource,
   resolveActiveFeatures,
   type AppSettingsService,
 } from '@/modules/app-settings/app-settings.service';
@@ -73,26 +74,50 @@ describe('FeatureGuard', () => {
 
 describe('resolveActiveFeatures', () => {
   const on = { aiWorkoutBuilderEnabled: true, aiMealPhotoEnabled: true };
+  const { USER, ADMIN } = AiKeySlot;
 
-  it('requires grant, global switch and a configured provider', () => {
-    assert.deepEqual(resolveActiveFeatures([FeatureGrant.AI_WORKOUT_BUILDER], on, true), [
+  it('with an admin-assigned key requires the grant and the global switch', () => {
+    assert.deepEqual(resolveActiveFeatures([FeatureGrant.AI_WORKOUT_BUILDER], on, ADMIN), [
       FeatureGrant.AI_WORKOUT_BUILDER,
     ]);
     assert.deepEqual(
       resolveActiveFeatures(
         [FeatureGrant.AI_WORKOUT_BUILDER],
         { ...on, aiWorkoutBuilderEnabled: false },
-        true,
+        ADMIN,
       ),
       [],
     );
-    assert.deepEqual(resolveActiveFeatures([FeatureGrant.AI_WORKOUT_BUILDER], on, false), []);
+    assert.deepEqual(resolveActiveFeatures([], on, ADMIN), []);
+  });
+
+  it('with an own key enables every globally switched-on feature without grants', () => {
+    assert.deepEqual(resolveActiveFeatures([], on, USER), [
+      FeatureGrant.AI_WORKOUT_BUILDER,
+      FeatureGrant.AI_MEAL_PHOTO,
+    ]);
+    assert.deepEqual(resolveActiveFeatures([], { ...on, aiMealPhotoEnabled: false }, USER), [
+      FeatureGrant.AI_WORKOUT_BUILDER,
+    ]);
+  });
+
+  it('enables nothing without a key (no global provider key)', () => {
+    assert.deepEqual(
+      resolveActiveFeatures([FeatureGrant.AI_WORKOUT_BUILDER, FeatureGrant.AI_MEAL_PHOTO], on, null),
+      [],
+    );
   });
 
   it('drops unknown and duplicate grants', () => {
     assert.deepEqual(
-      resolveActiveFeatures(['BOGUS', FeatureGrant.AI_MEAL_PHOTO, FeatureGrant.AI_MEAL_PHOTO], on, true),
+      resolveActiveFeatures(['BOGUS', FeatureGrant.AI_MEAL_PHOTO, FeatureGrant.AI_MEAL_PHOTO], on, ADMIN),
       [FeatureGrant.AI_MEAL_PHOTO],
     );
+  });
+
+  it('prefers the own key over the admin-assigned key', () => {
+    assert.equal(effectiveKeySource([ADMIN, USER]), USER);
+    assert.equal(effectiveKeySource([ADMIN]), ADMIN);
+    assert.equal(effectiveKeySource([]), null);
   });
 });

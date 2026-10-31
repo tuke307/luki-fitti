@@ -2,6 +2,7 @@ import SwiftUI
 import LukiFittiModels
 import LukiFittiDesign
 import LukiFittiDomain
+import LukiFittiHealth
 
 public struct ActiveSessionView: View {
     @Bindable public var viewModel: LukiAppViewModel
@@ -10,7 +11,6 @@ public struct ActiveSessionView: View {
     @State private var guideTargetId: String?
     @State private var showingAddExerciseSheet = false
     @State private var showingDiscardConfirmation = false
-    @State private var nowTick: Date = Date()
 
     public init(viewModel: LukiAppViewModel) {
         self.viewModel = viewModel
@@ -29,18 +29,30 @@ public struct ActiveSessionView: View {
             }
             .padding(16)
         }
+        .scrollDismissesKeyboard(.interactively)
+        .toolbar {
+            // Number pads have no return key; Done ends typing and commits the value.
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button(tr("Done")) {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+                .fontWeight(.semibold)
+            }
+        }
         .safeAreaInset(edge: .bottom) {
             if viewModel.completedSummarySession == nil,
                let session = viewModel.store.activeSession {
-                restTimerCard(session)
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 6)
+                // Only the rest bar re-renders every second; the exercise list stays still so
+                // scrolling isn't interrupted by full-screen redraws.
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    restTimerCard(session, now: context.date)
+                }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 6)
             }
         }
         .background(LukiColors.groupedBackground)
-        .onReceive(Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()) { tick in
-            nowTick = tick
-        }
         .onAppear { viewModel.pinFocusedExercise() }
         .onChange(of: viewModel.store.activeSession?.exercises.map(\.clientExerciseId)) {
             viewModel.pinFocusedExercise()
@@ -193,20 +205,10 @@ public struct ActiveSessionView: View {
                 .buttonStyle(.bordered)
             }
 
-            HStack(spacing: 14) {
-                Label(
-                    "\(viewModel.healthCoordinator.currentHeartRateBpm.map(String.init) ?? "–") bpm",
-                    systemImage: "heart.fill"
-                )
-                .foregroundStyle(LukiColors.heartRate)
-                Label("\(Int(viewModel.healthCoordinator.activeCaloriesKcal)) kcal", systemImage: "flame.fill")
-                    .foregroundStyle(LukiColors.calories)
-                Spacer()
-                Text(LukiFormat.volume(kg: session.totalVolumeKg, unit: session.weightUnit))
-                    .foregroundStyle(.secondary)
-            }
-            .font(.footnote.weight(.medium).monospacedDigit())
-            .labelStyle(.titleAndIcon)
+            LiveStatsRow(
+                healthCoordinator: viewModel.healthCoordinator,
+                volumeText: LukiFormat.volume(kg: session.totalVolumeKg, unit: session.weightUnit)
+            )
 
             ProgressView(value: pct) {
                 Text(tr("%d of %d sets", doneSets, totalSets))
@@ -221,8 +223,8 @@ public struct ActiveSessionView: View {
 
     // MARK: - Rest timer
 
-    private func restTimerCard(_ session: WorkoutSessionDto) -> some View {
-        let rest = SessionCalculator.computeRemainingRestSeconds(session: session, now: nowTick)
+    private func restTimerCard(_ session: WorkoutSessionDto, now: Date) -> some View {
+        let rest = SessionCalculator.computeRemainingRestSeconds(session: session, now: now)
         let isActive = rest.isRunning || rest.isPaused
 
         return VStack(alignment: .leading, spacing: 8) {
@@ -316,7 +318,12 @@ public struct ActiveSessionView: View {
         return VStack(alignment: .leading, spacing: 12) {
             ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
                 if block.isSuperset {
-                    supersetBlock(session: session, block: block)
+                    // Like single exercises, a superset only opens while one of its members is focused.
+                    if block.items.contains(where: { $0.globalIndex == safeIdx }) {
+                        supersetBlock(session: session, block: block)
+                    } else {
+                        collapsedSupersetRow(block: block)
+                    }
                 } else if let firstItem = block.items.first {
                     if firstItem.globalIndex == safeIdx {
                         activeExerciseCard(
@@ -486,6 +493,66 @@ public struct ActiveSessionView: View {
                     .fill(LukiColors.cardBackground)
             )
         }
+    }
+
+    private func collapsedSupersetRow(block: ExerciseRenderBlock<SessionExerciseDto>) -> some View {
+        let exercises = block.items.map(\.item)
+        let doneCount = exercises.reduce(0) { $0 + $1.sets.filter(\.completed).count }
+        let totalCount = exercises.reduce(0) { $0 + $1.sets.count }
+        let isCompleted = exercises.allSatisfy { $0.status == .COMPLETED }
+        let target = block.items.first { $0.item.status != .COMPLETED } ?? block.items.first
+        let names = block.items.enumerated()
+            .map { offset, item in "\(String(UnicodeScalar(UInt8(65 + offset)))) · \(item.item.exerciseNameSnapshot)" }
+
+        return Button {
+            if let target { viewModel.focusExercise(at: target.globalIndex) }
+        } label: {
+            HStack(spacing: 10) {
+                Group {
+                    if isCompleted {
+                        Image(systemName: "checkmark")
+                            .font(.footnote.bold())
+                            .foregroundStyle(LukiColors.onTint)
+                    } else {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.footnote.bold())
+                            .foregroundStyle(LukiColors.accent)
+                    }
+                }
+                .frame(minWidth: 28, minHeight: 28)
+                .background(Circle().fill(isCompleted ? LukiColors.success : LukiColors.accent.opacity(0.12)))
+                .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(tr("Superset · %d rounds", block.rounds))
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    ForEach(names, id: \.self) { name in
+                        Text(name)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer()
+                Text("\(doneCount)/\(totalCount)")
+                    .font(.footnote.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 14)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
+        .accessibilityElement(children: .combine)
+        .accessibilityValue(tr("%d of %d sets", doneCount, totalCount))
+        .accessibilityIdentifier("ios.session.supersetRow.\((block.items.first?.globalIndex ?? 0) + 1)")
     }
 
     // MARK: - Active exercise card
@@ -748,6 +815,19 @@ public struct ActiveSessionView: View {
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.large)
+
+                if let lastIndex = members.last?.index, lastIndex < session.exercises.count - 1 {
+                    Button {
+                        viewModel.focusExercise(at: lastIndex + 1)
+                    } label: {
+                        Label(tr("Next: %@", session.exercises[lastIndex + 1].exerciseNameSnapshot), systemImage: "arrow.right")
+                            .labelStyle(TrailingIconLabelStyle())
+                            .lineLimit(1)
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
+                }
             }
             .padding(10)
         }
@@ -825,49 +905,54 @@ public struct ActiveSessionView: View {
                     .accessibilityIdentifier("ios.session.setType.\(n)")
 
                     if set.completed {
-                        HStack(spacing: 6) {
+                        VStack(alignment: .leading, spacing: 0) {
                             if set.setType != .WORKING {
                                 Text(LukiI18n.setTypeLabel(set.setType, locale: tr))
-                                    .font(.footnote.weight(.semibold))
+                                    .font(.caption.weight(.semibold))
                                     .foregroundStyle(typeColor ?? .primary)
+                                    .lineLimit(1)
                             }
                             Text("\(LukiFormat.weight(currentWeight)) \(unitText) × \(currentReps)")
-                                .font(.body.monospacedDigit())
-                                .foregroundStyle(.secondary)
+                                .font(.system(.body, design: .rounded).weight(.medium).monospacedDigit())
+                                .foregroundStyle(.primary)
                                 .lineLimit(1)
+                                .minimumScaleFactor(0.75)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.leading, 4)
+                        .accessibilityElement(children: .combine)
 
-                        Button {
-                            viewModel.updateSet(
-                                clientExerciseId: exercise.clientExerciseId,
-                                clientSetId: set.clientSetId,
-                                rpe: .some(nextCycleRpe(set.rpe))
-                            )
-                        } label: {
-                            Label(LukiI18n.effortLabel(rpe: set.rpe, locale: tr), systemImage: "chart.bar.fill")
-                                .font(.footnote)
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.large)
+                        effortButton(exercise: exercise, set: set, setNumber: n)
                     } else {
-                        stepper(
+                        LukiValueStepper(
                             value: LukiFormat.weight(currentWeight),
                             unit: unitText,
                             minusLabel: tr("Decrease weight by %@, set %d", LukiFormat.weight(step), n),
                             plusLabel: tr("Increase weight by %@, set %d", LukiFormat.weight(step), n),
+                            editLabel: tr("Weight, set %d", n),
+                            keyboard: .decimal,
                             onMinus: { update(max(0, currentWeight - step), nil) },
-                            onPlus: { update(currentWeight + step, nil) }
+                            onPlus: { update(currentWeight + step, nil) },
+                            onSubmit: { text in
+                                if let weight = parseDecimal(text) { update(max(0, weight), nil) }
+                            }
                         )
                         .layoutPriority(1)
-                        stepper(
+                        // Fixed share for reps so the weight field can never squeeze the count away.
+                        LukiValueStepper(
                             value: "\(currentReps)",
-                            unit: tr("reps"),
+                            unit: "",
                             minusLabel: tr("Decrease reps, set %d", n),
                             plusLabel: tr("Increase reps, set %d", n),
+                            editLabel: tr("Reps, set %d", n),
+                            keyboard: .integer,
                             onMinus: { update(nil, max(0, currentReps - 1)) },
-                            onPlus: { update(nil, currentReps + 1) }
+                            onPlus: { update(nil, currentReps + 1) },
+                            onSubmit: { text in
+                                if let reps = Int(text.trimmingCharacters(in: .whitespaces)) { update(nil, max(0, reps)) }
+                            }
                         )
+                        .frame(minWidth: 100, maxWidth: 116)
                     }
 
                     Button {
@@ -918,22 +1003,30 @@ public struct ActiveSessionView: View {
         }
     }
 
-    private func stepper(
-        value: String,
-        unit: String,
-        minusLabel: String,
-        plusLabel: String,
-        onMinus: @escaping () -> Void,
-        onPlus: @escaping () -> Void
-    ) -> some View {
-        LukiValueStepper(
-            value: value,
-            unit: unit,
-            minusLabel: minusLabel,
-            plusLabel: plusLabel,
-            onMinus: onMinus,
-            onPlus: onPlus
-        )
+    /// Compact effort control (mirrors web): three bars coloured green / amber / red, tap cycles.
+    private func effortButton(exercise: SessionExerciseDto, set: SessionSetDto, setNumber n: Int) -> some View {
+        let level = LukiColors.effortLevel(rpe: set.rpe)
+        return Button {
+            viewModel.updateSet(
+                clientExerciseId: exercise.clientExerciseId,
+                clientSetId: set.clientSetId,
+                rpe: .some(nextCycleRpe(set.rpe))
+            )
+        } label: {
+            EffortBars(level: level)
+                .frame(width: 44, height: 44)
+                .background(Circle().fill(level == 0 ? LukiColors.fill : LukiColors.effortColor(level: level).opacity(0.14)))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(tr("Effort, set %d: %@", n, LukiI18n.effortLabel(rpe: set.rpe, locale: tr)))
+        .accessibilityHint(tr("Change effort"))
+        .accessibilityIdentifier("ios.session.effort.\(n)")
+    }
+
+    /// Accepts both "22,5" and "22.5" regardless of the keyboard's decimal separator.
+    private func parseDecimal(_ text: String) -> Double? {
+        Double(text.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: "."))
     }
 
     // MARK: - Suggestion
@@ -1024,6 +1117,30 @@ public struct ActiveSessionView: View {
             .controlSize(.large)
             .accessibilityIdentifier("ios.session.abandonButton")
         }
+    }
+}
+
+/// Heart rate and energy update every few seconds; keeping them in their own view means only this
+/// row re-renders, not the whole workout list.
+private struct LiveStatsRow: View {
+    let healthCoordinator: HealthKitWorkoutCoordinator
+    let volumeText: String
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Label(
+                "\(healthCoordinator.currentHeartRateBpm.map(String.init) ?? "–") bpm",
+                systemImage: "heart.fill"
+            )
+            .foregroundStyle(LukiColors.heartRate)
+            Label("\(Int(healthCoordinator.activeCaloriesKcal)) kcal", systemImage: "flame.fill")
+                .foregroundStyle(LukiColors.calories)
+            Spacer()
+            Text(volumeText)
+                .foregroundStyle(.secondary)
+        }
+        .font(.footnote.weight(.medium).monospacedDigit())
+        .labelStyle(.titleAndIcon)
     }
 }
 

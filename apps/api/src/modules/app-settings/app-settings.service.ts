@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { FeatureGrant, isFeatureGrant } from '@luki-fitti/common/enums';
+import { AiKeySlot, FEATURE_GRANTS, FeatureGrant, isFeatureGrant } from '@luki-fitti/common/enums';
 import type { AiSettingsDto, UpdateAiSettingsDto } from '@luki-fitti/common/schemas';
 import { PrismaService } from '../database/prisma.service';
 import {
-  OPENROUTER_API_KEY,
+  getAiKeyEncryptionConfig,
   SEAWEEDFS_ACCESS_KEY_API,
   SEAWEEDFS_ENDPOINT,
 } from '@/config/env.config';
@@ -24,20 +24,32 @@ export interface AppSettingsRecord {
 }
 
 /**
- * Pure feature resolution: a feature is active only if the user holds the grant, the global
- * switch is on and the AI provider is configured. Exported for unit tests.
+ * Pure feature resolution. AI needs a per-user OpenRouter key (there is no global key):
+ *   - own key (USER)   → every feature whose global switch is on (no grant needed),
+ *   - admin key (ADMIN) → granted features whose global switch is on,
+ *   - no key           → nothing.
+ * Exported for unit tests.
  */
 export function resolveActiveFeatures(
   grants: readonly string[],
   settings: Pick<AppSettingsRecord, 'aiWorkoutBuilderEnabled' | 'aiMealPhotoEnabled'>,
-  providerConfigured: boolean,
+  keySource: AiKeySlot | null,
 ): FeatureGrant[] {
-  if (!providerConfigured) return [];
+  if (!keySource) return [];
   const switches: Record<FeatureGrant, boolean> = {
     [FeatureGrant.AI_WORKOUT_BUILDER]: settings.aiWorkoutBuilderEnabled,
     [FeatureGrant.AI_MEAL_PHOTO]: settings.aiMealPhotoEnabled,
   };
-  return [...new Set(grants)].filter(isFeatureGrant).filter((grant) => switches[grant]);
+  const candidates =
+    keySource === AiKeySlot.USER ? FEATURE_GRANTS : [...new Set(grants)].filter(isFeatureGrant);
+  return candidates.filter((grant) => switches[grant]);
+}
+
+/** Which key would pay for a run: the own key wins over the admin-assigned key. */
+export function effectiveKeySource(slots: readonly string[]): AiKeySlot | null {
+  if (slots.includes(AiKeySlot.USER)) return AiKeySlot.USER;
+  if (slots.includes(AiKeySlot.ADMIN)) return AiKeySlot.ADMIN;
+  return null;
 }
 
 @Injectable()
@@ -46,8 +58,9 @@ export class AppSettingsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  get providerConfigured(): boolean {
-    return OPENROUTER_API_KEY.length > 0;
+  /** Whether per-user OpenRouter keys can be stored/decrypted (AI_KEY_ENCRYPTION_KEY set). */
+  get encryptionConfigured(): boolean {
+    return getAiKeyEncryptionConfig().current !== null;
   }
 
   get storageConfigured(): boolean {
@@ -65,9 +78,23 @@ export class AppSettingsService {
     return value;
   }
 
-  async resolveActiveFeatures(grants: readonly string[]): Promise<FeatureGrant[]> {
-    if (grants.length === 0) return [];
-    return resolveActiveFeatures(grants, await this.get(), this.providerConfigured);
+  /** Key source for a user (slot presence only — ciphertext is never selected here). */
+  async keySource(userId: string): Promise<AiKeySlot | null> {
+    if (!this.encryptionConfigured) return null;
+    const rows = await this.prisma.userAiKey.findMany({
+      where: { userId },
+      select: { slot: true },
+    });
+    return effectiveKeySource(rows.map((r) => r.slot));
+  }
+
+  async resolveActiveFeatures(user: {
+    id: string;
+    featureGrants?: readonly string[];
+  }): Promise<FeatureGrant[]> {
+    const source = await this.keySource(user.id);
+    if (!source) return [];
+    return resolveActiveFeatures(user.featureGrants ?? [], await this.get(), source);
   }
 
   async getAiSettings(): Promise<AiSettingsDto> {
@@ -94,7 +121,11 @@ export class AppSettingsService {
     return this.toDto(value);
   }
 
-  private toDto(value: AppSettingsRecord): AiSettingsDto {
+  private async toDto(value: AppSettingsRecord): Promise<AiSettingsDto> {
+    const [usersWithOwnKey, usersWithAdminKey] = await Promise.all([
+      this.prisma.userAiKey.count({ where: { slot: AiKeySlot.USER } }),
+      this.prisma.userAiKey.count({ where: { slot: AiKeySlot.ADMIN } }),
+    ]);
     return {
       aiWorkoutBuilderEnabled: value.aiWorkoutBuilderEnabled,
       aiMealPhotoEnabled: value.aiMealPhotoEnabled,
@@ -104,7 +135,9 @@ export class AppSettingsService {
       mealPhotoFallbacks: value.mealPhotoFallbacks,
       aiDailyRunLimit: value.aiDailyRunLimit,
       mealPhotoRetentionDays: value.mealPhotoRetentionDays,
-      providerConfigured: this.providerConfigured,
+      encryptionConfigured: this.encryptionConfigured,
+      usersWithOwnKey,
+      usersWithAdminKey,
       storageConfigured: this.storageConfigured,
       updatedAt: value.updatedAt.toISOString(),
     };

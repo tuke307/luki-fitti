@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  AiKeySlot,
   AiRunStatus,
   AiSkillName,
   ExerciseFeedbackVerdict,
@@ -8,6 +9,44 @@ import {
   EquipmentType,
 } from '../enums';
 import type { MealEntryDto, MealItemDto } from './nutrition.schemas';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Per-user OpenRouter API key (bring-your-own-key). The key is write-only:
+// clients only ever receive the status below, never the key itself.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** OpenRouter keys look like `sk-or-v1-<64 hex>`; kept a little permissive for future formats. */
+export const OPENROUTER_API_KEY_PATTERN = /^sk-or-[A-Za-z0-9_-]{20,200}$/;
+
+export const OpenRouterApiKeySchema = z
+  .string()
+  .trim()
+  .min(26, 'Invalid OpenRouter API key')
+  .max(206, 'Invalid OpenRouter API key')
+  .regex(OPENROUTER_API_KEY_PATTERN, 'Invalid OpenRouter API key');
+
+export const SetAiKeySchema = z.object({ apiKey: OpenRouterApiKeySchema }).strict();
+
+export type SetAiKeyDto = z.infer<typeof SetAiKeySchema>;
+
+export interface AiKeySlotStatusDto {
+  /** Last 4 characters of the key, e.g. "abcd" (shown as "…abcd"). */
+  last4: string;
+  updatedAt: string;
+}
+
+export interface AiKeyStatusDto {
+  /** Whether the server can store keys at all (AI_KEY_ENCRYPTION_KEY configured). */
+  available: boolean;
+  /** Whether any usable key exists for AI runs. */
+  hasKey: boolean;
+  /** Key used for runs: own key wins over the admin-assigned key; null without a key. */
+  source: AiKeySlot | null;
+  /** The user's own key (USER slot). */
+  own: AiKeySlotStatusDto | null;
+  /** Whether an admin assigned a key (its hint is only shown to admins). */
+  adminAssigned: boolean;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AI usage & cost (USD exactly as reported by OpenRouter; null when unknown)

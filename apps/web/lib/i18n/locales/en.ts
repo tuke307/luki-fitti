@@ -677,7 +677,7 @@ export const en = {
     rowHealthDetails: 'Health details',
     rowNotifications: 'Notifications',
     rowLanguageUnits: 'Language & units',
-    rowAiUsage: 'AI usage',
+    rowAiUsage: 'AI key & usage',
     rowExportBackup: 'Export backup',
     rowUsageStats: 'Usage statistics',
     rowDataSources: 'Data sources',

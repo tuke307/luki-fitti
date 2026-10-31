@@ -106,6 +106,11 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return prisma.aiRun;
   }
 
+  /** Encrypted per-user OpenRouter keys — only AiKeyService may select ciphertext columns. */
+  get userAiKey(): typeof prisma.userAiKey {
+    return prisma.userAiKey;
+  }
+
   get exerciseFeedback(): typeof prisma.exerciseFeedback {
     return prisma.exerciseFeedback;
   }

@@ -72,7 +72,7 @@ function AiSettingsForm({
   initial: AiSettingsDto;
   onSaved: (s: AiSettingsDto) => void;
 }) {
-  const { t, locale } = useLocale();
+  const { t, format, locale } = useLocale();
   const [form, setForm] = useState<FormState>(() => toForm(initial));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -142,15 +142,24 @@ function AiSettingsForm({
 
   return (
     <div className="space-y-6">
-      {!initial.providerConfigured && (
+      {!initial.encryptionConfigured && (
         <p
           className="bg-warning/15 text-warning flex items-start gap-2 rounded-2xl p-4 text-[0.9375rem]"
           role="status"
         >
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          {t.admin.providerMissing}
+          {t.admin.encryptionMissing}
         </p>
       )}
+      <p
+        className="bg-secondary text-muted-foreground rounded-2xl p-4 text-[0.9375rem]"
+        role="status"
+      >
+        {format(t.admin.keysSummary, {
+          own: initial.usersWithOwnKey,
+          admin: initial.usersWithAdminKey,
+        })}
+      </p>
       {!initial.storageConfigured && (
         <p
           className="bg-secondary text-muted-foreground rounded-2xl p-4 text-[0.9375rem]"

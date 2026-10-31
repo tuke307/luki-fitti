@@ -1,8 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { HttpException, ServiceUnavailableException } from '@nestjs/common';
+import { ForbiddenException, HttpException, ServiceUnavailableException } from '@nestjs/common';
 import { z } from 'zod';
-import { AiSkillName } from '@luki-fitti/common/enums';
+import { AiKeySlot, AiSkillName } from '@luki-fitti/common/enums';
 import { AgentRunnerService } from './agent-runner.service';
 import { ToolRegistry } from './tool-registry';
 import type { AiSkill } from './types';
@@ -10,6 +10,7 @@ import type { ChatRequest, ChatResponse, OpenRouterClient } from '../openrouter.
 import { AiProviderError } from '../openrouter.client';
 import type { PrismaService } from '../../database/prisma.service';
 import type { AppSettingsService } from '../../app-settings/app-settings.service';
+import type { AiKeyService, ResolvedAiKey } from '../ai-key.service';
 
 const answerSchema = z.object({ total: z.number().int().min(0) });
 
@@ -38,14 +39,25 @@ const reply = (calls: ReturnType<typeof toolCall>[], content: string | null = nu
   usage: { promptTokens: 10, completionTokens: 5, costUsd: 0.001 },
 });
 
-function setup(script: Array<ChatResponse | Error>, opts: { runsToday?: number; limit?: number } = {}) {
+const ADMIN_KEY: ResolvedAiKey = { apiKey: 'sk-or-v1-FAKE-ADMIN-KEY-FOR-TESTING', source: AiKeySlot.ADMIN };
+const USER_KEY: ResolvedAiKey = { apiKey: 'sk-or-v1-FAKE-USER-KEY-FOR-TESTING', source: AiKeySlot.USER };
+
+function setup(
+  script: Array<ChatResponse | Error>,
+  opts: { runsToday?: number; limit?: number; key?: ResolvedAiKey | null } = {},
+) {
   const requests: ChatRequest[] = [];
+  const apiKeys: string[] = [];
+  const countQueries: unknown[] = [];
   const runs: Array<Record<string, unknown>> = [];
   const toolInputs: Array<{ userId: string; input: unknown }> = [];
 
   const prisma = {
     aiRun: {
-      count: async () => opts.runsToday ?? 0,
+      count: async (query: unknown) => {
+        countQueries.push(query);
+        return opts.runsToday ?? 0;
+      },
       create: async ({ data }: { data: Record<string, unknown> }) => {
         runs.push(data);
         return { id: `run-${runs.length}` };
@@ -56,8 +68,9 @@ function setup(script: Array<ChatResponse | Error>, opts: { runsToday?: number; 
     get: async () => ({ aiDailyRunLimit: opts.limit ?? 30 }),
   } as unknown as AppSettingsService;
   const client = {
-    chat: async (req: ChatRequest) => {
+    chat: async (req: ChatRequest, apiKey: string) => {
       requests.push(structuredClone(req));
+      apiKeys.push(apiKey);
       const next = script.shift();
       if (!next) throw new Error('script exhausted');
       if (next instanceof Error) throw next;
@@ -76,8 +89,12 @@ function setup(script: Array<ChatResponse | Error>, opts: { runsToday?: number; 
     },
   });
 
-  const runner = new AgentRunnerService(prisma, settings, client, registry);
-  return { runner, requests, runs, toolInputs };
+  const aiKeys = {
+    resolveForRun: async () => (opts.key === undefined ? ADMIN_KEY : opts.key),
+  } as unknown as AiKeyService;
+
+  const runner = new AgentRunnerService(prisma, settings, client, registry, aiKeys);
+  return { runner, requests, runs, toolInputs, apiKeys, countQueries };
 }
 
 const input = { userId: 'user-1', locale: 'en' as const, content: 'hello' };
@@ -167,5 +184,54 @@ describe('AgentRunnerService', () => {
       return true;
     });
     assert.equal(requests.length, 0);
+  });
+
+  it('passes the resolved per-user key to the provider and records its source', async () => {
+    const { runner, apiKeys, runs } = setup([reply([toolCall('c1', 'submit', { total: 1 })])]);
+    await runner.run(skill, input);
+    assert.deepEqual(apiKeys, [ADMIN_KEY.apiKey]);
+    assert.equal(runs[0]!.keySource, AiKeySlot.ADMIN);
+  });
+
+  it('only counts admin-key runs against the daily limit', async () => {
+    const { runner, countQueries } = setup([reply([toolCall('c1', 'submit', { total: 1 })])]);
+    await runner.run(skill, input);
+    assert.match(JSON.stringify(countQueries[0]), /"keySource":"ADMIN"/);
+  });
+
+  it('skips the daily limit for runs on the user\'s own key', async () => {
+    const { runner, apiKeys, runs, countQueries } = setup(
+      [reply([toolCall('c1', 'submit', { total: 1 })])],
+      { runsToday: 99, limit: 5, key: USER_KEY },
+    );
+    await runner.run(skill, input);
+    assert.deepEqual(apiKeys, [USER_KEY.apiKey]);
+    assert.equal(runs[0]!.keySource, AiKeySlot.USER);
+    assert.equal(countQueries.length, 0);
+  });
+
+  it('refuses to run without a key (no global fallback)', async () => {
+    const { runner, requests, runs } = setup([], { key: null });
+    await assert.rejects(runner.run(skill, input), (err: unknown) => {
+      assert.ok(err instanceof ForbiddenException);
+      assert.match(JSON.stringify(err.getResponse()), /AI_KEY_MISSING/);
+      return true;
+    });
+    assert.equal(requests.length, 0);
+    assert.equal(runs.length, 0);
+  });
+
+  it('maps a rejected key to AI_KEY_INVALID without echoing the key or upstream text', async () => {
+    const { runner } = setup(
+      [new AiProviderError('boom', 401, 'invalid key sk-or-v1-FAKE-USER-KEY-FOR-TESTING')],
+      { key: USER_KEY },
+    );
+    await assert.rejects(runner.run(skill, input), (err: unknown) => {
+      assert.ok(err instanceof ForbiddenException);
+      const body = JSON.stringify(err.getResponse());
+      assert.match(body, /AI_KEY_INVALID/);
+      assert.doesNotMatch(body, /sk-or-/);
+      return true;
+    });
   });
 });

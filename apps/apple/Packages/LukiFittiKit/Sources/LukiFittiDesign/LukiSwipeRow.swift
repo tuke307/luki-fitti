@@ -1,5 +1,8 @@
 import SwiftUI
 import LukiFittiModels
+#if os(iOS)
+import UIKit
+#endif
 
 public struct LukiSwipeAction: Identifiable {
     public enum Tone { case neutral, accent, destructive }
@@ -45,7 +48,9 @@ public struct LukiSwipeRow<Content: View>: View {
 
     @State private var offset: CGFloat = 0
     @State private var dragBase: CGFloat = 0
+    #if !os(iOS)
     @State private var isHorizontalDrag: Bool?
+    #endif
 
     private let actionWidth: CGFloat = 76
 
@@ -74,11 +79,21 @@ public struct LukiSwipeRow<Content: View>: View {
 
             content
                 .offset(x: offset)
-                .simultaneousGesture(drag)
-                .onTapGesture {
-                    if offset != 0 { close() }
+                .overlay {
+                    // Only while open: a tap anywhere on the row closes it. No tap gesture while
+                    // closed, so it never competes with the scroll view or the row's buttons.
+                    if offset != 0 {
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .offset(x: offset)
+                            .onTapGesture { close() }
+                    }
                 }
-                .allowsHitTesting(true)
+                #if os(iOS)
+                .gesture(HorizontalPanGesture(onBegan: beginDrag, onChanged: updateDrag, onEnded: endDrag))
+                #else
+                .simultaneousGesture(drag)
+                #endif
         }
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .accessibilityActions {
@@ -113,41 +128,94 @@ public struct LukiSwipeRow<Content: View>: View {
         }
     }
 
+    private func beginDrag() {
+        dragBase = offset
+    }
+
+    private func updateDrag(_ translation: CGFloat) {
+        let next = dragBase + translation
+        let maxOffset = leadingWidth
+        let minOffset = -trailingWidth
+        offset = next > maxOffset
+            ? maxOffset + (next - maxOffset) * 0.2
+            : next < minOffset ? minOffset + (next - minOffset) * 0.2 : next
+    }
+
+    private func endDrag(_ translation: CGFloat) {
+        let target = dragBase + translation
+        withAnimation(.snappy(duration: 0.25)) {
+            if target > leadingWidth / 2, leadingWidth > 0 {
+                offset = leadingWidth
+            } else if target < -trailingWidth / 2, trailingWidth > 0 {
+                offset = -trailingWidth
+            } else {
+                offset = 0
+            }
+        }
+    }
+
+    #if !os(iOS)
     private var drag: some Gesture {
         DragGesture(minimumDistance: 12)
             .onChanged { value in
                 if isHorizontalDrag == nil {
                     isHorizontalDrag = abs(value.translation.width) > abs(value.translation.height)
-                    dragBase = offset
+                    beginDrag()
                 }
                 guard isHorizontalDrag == true else { return }
-                let next = dragBase + value.translation.width
-                let maxOffset = leadingWidth
-                let minOffset = -trailingWidth
-                offset = next > maxOffset
-                    ? maxOffset + (next - maxOffset) * 0.2
-                    : next < minOffset ? minOffset + (next - minOffset) * 0.2 : next
+                updateDrag(value.translation.width)
             }
             .onEnded { value in
                 defer { isHorizontalDrag = nil }
                 guard isHorizontalDrag == true else { return }
-                let target = dragBase + value.translation.width
-                withAnimation(.snappy(duration: 0.25)) {
-                    if target > leadingWidth / 2, leadingWidth > 0 {
-                        offset = leadingWidth
-                    } else if target < -trailingWidth / 2, trailingWidth > 0 {
-                        offset = -trailingWidth
-                    } else {
-                        offset = 0
-                    }
-                }
+                endDrag(value.translation.width)
             }
     }
+    #endif
 
     private func close() {
         withAnimation(.snappy(duration: 0.25)) { offset = 0 }
     }
 }
+
+#if os(iOS)
+/// UIKit pan that only begins for clearly horizontal swipes, so vertical drags go straight to the
+/// enclosing `ScrollView` instead of stalling while a SwiftUI `DragGesture` decides its direction.
+private struct HorizontalPanGesture: UIGestureRecognizerRepresentable {
+    let onBegan: () -> Void
+    let onChanged: (CGFloat) -> Void
+    let onEnded: (CGFloat) -> Void
+
+    func makeUIGestureRecognizer(context: Context) -> UIPanGestureRecognizer {
+        let pan = UIPanGestureRecognizer()
+        pan.delegate = context.coordinator
+        return pan
+    }
+
+    func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator {
+        Coordinator()
+    }
+
+    func handleUIGestureRecognizerAction(_ recognizer: UIPanGestureRecognizer, context: Context) {
+        let translation = recognizer.translation(in: recognizer.view).x
+        switch recognizer.state {
+        case .began: onBegan()
+        case .changed: onChanged(translation)
+        case .ended, .cancelled, .failed: onEnded(translation)
+        default: break
+        }
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard let pan = gestureRecognizer as? UIPanGestureRecognizer else { return false }
+            let velocity = pan.velocity(in: pan.view)
+            return abs(velocity.x) > abs(velocity.y) * 1.5
+        }
+    }
+}
+#endif
 
 /// Set badge that keeps its type colour and label after the set is logged (mirrors the web badge).
 public struct SetTypeBadge: View {

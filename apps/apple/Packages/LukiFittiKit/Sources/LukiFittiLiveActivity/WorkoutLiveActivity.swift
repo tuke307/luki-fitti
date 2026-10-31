@@ -184,9 +184,7 @@ public final class WorkoutLiveActivityController {
     }
 
     private static func parse(_ iso: String) -> Date? {
-        let withFraction = ISO8601DateFormatter()
-        withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return withFraction.date(from: iso) ?? ISO8601DateFormatter().date(from: iso)
+        LukiDate.parseISO(iso)
     }
 }
 #endif

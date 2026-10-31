@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   HttpException,
   HttpStatus,
   Injectable,
@@ -7,9 +8,10 @@ import {
 } from '@nestjs/common';
 import crypto from 'crypto';
 import { z } from 'zod';
-import { AiRunStatus } from '@luki-fitti/common/enums';
+import { AiKeySlot, AiRunStatus } from '@luki-fitti/common/enums';
 import { PrismaService } from '../../database/prisma.service';
 import { AppSettingsService } from '../../app-settings/app-settings.service';
+import { AiKeyService, type ResolvedAiKey } from '../ai-key.service';
 import {
   AiProviderError,
   OpenRouterClient,
@@ -29,6 +31,11 @@ class RunAbort extends Error {
     super(code);
   }
 }
+
+export const AI_KEY_MISSING = {
+  message: 'Add your OpenRouter API key in your profile to use AI features.',
+  code: 'AI_KEY_MISSING',
+} as const;
 
 export const AI_UNAVAILABLE = {
   message: 'The assistant is unavailable right now. Please try again in a moment.',
@@ -64,14 +71,28 @@ export class AgentRunnerService {
     private readonly appSettings: AppSettingsService,
     private readonly client: OpenRouterClient,
     private readonly tools: ToolRegistry,
+    private readonly aiKeys: AiKeyService,
   ) {}
 
-  async assertWithinQuota(userId: string): Promise<void> {
+  /**
+   * Resolves the OpenRouter key for this user and enforces the daily limit. Runs paid with the
+   * user's own key (USER slot) are not limited; admin-assigned keys keep the daily limit.
+   */
+  async assertWithinQuota(userId: string): Promise<ResolvedAiKey> {
+    const key = await this.aiKeys.resolveForRun(userId);
+    if (!key) throw new ForbiddenException(AI_KEY_MISSING);
+    if (key.source === AiKeySlot.USER) return key;
+
     const { aiDailyRunLimit } = await this.appSettings.get();
     const startOfUtcDay = new Date();
     startOfUtcDay.setUTCHours(0, 0, 0, 0);
     const used = await this.prisma.aiRun.count({
-      where: { userId, createdAt: { gte: startOfUtcDay } },
+      // Runs on the user's own key don't count against the admin-key limit.
+      where: {
+        userId,
+        createdAt: { gte: startOfUtcDay },
+        OR: [{ keySource: null }, { keySource: AiKeySlot.ADMIN }],
+      },
     });
     if (used >= aiDailyRunLimit) {
       throw new HttpException(
@@ -79,13 +100,14 @@ export class AgentRunnerService {
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
+    return key;
   }
 
   async run<TOutput extends z.ZodType>(
     skill: AiSkill<TOutput>,
     input: SkillRunInput,
   ): Promise<SkillRunResult<z.infer<TOutput>>> {
-    await this.assertWithinQuota(input.userId);
+    const key = await this.assertWithinQuota(input.userId);
     const settings = await this.appSettings.get();
     const { primary, fallbacks } = skill.model(settings);
     const ctx: ToolContext = { userId: input.userId, locale: input.locale };
@@ -122,6 +144,7 @@ export class AgentRunnerService {
           costUsd: usage.costKnown ? usage.costUsd : null,
           durationMs: Date.now() - started,
           errorCode: errorCode ?? null,
+          keySource: key.source,
         },
         select: { id: true },
       });
@@ -144,7 +167,7 @@ export class AgentRunnerService {
           temperature: skill.temperature,
           maxTokens: skill.maxTokens,
           user: userHash,
-        });
+        }, key.apiKey);
         usedModel = response.model;
         usage.promptTokens += response.usage.promptTokens;
         usage.completionTokens += response.usage.completionTokens;
@@ -218,6 +241,19 @@ export class AgentRunnerService {
         this.logger.error(`AI run failed: ${String(err)}`);
       }
       await finish(AiRunStatus.ERROR, code).catch(() => undefined);
+      // Key problems are actionable for the user (fix the key / add credits); never echo upstream text.
+      if (err instanceof AiProviderError && err.status === 401) {
+        throw new ForbiddenException({
+          message: 'OpenRouter rejected the API key. Check or replace it in your profile.',
+          code: 'AI_KEY_INVALID',
+        });
+      }
+      if (err instanceof AiProviderError && err.status === 402) {
+        throw new HttpException(
+          { message: 'The OpenRouter account has insufficient credits.', code: 'AI_KEY_NO_CREDITS' },
+          HttpStatus.PAYMENT_REQUIRED,
+        );
+      }
       throw new ServiceUnavailableException(AI_UNAVAILABLE);
     }
   }

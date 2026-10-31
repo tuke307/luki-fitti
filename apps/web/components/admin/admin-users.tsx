@@ -22,6 +22,7 @@ import { useLocale } from '@/providers/i18n/locale-context';
 import { AdminState } from './admin-shell';
 import { useAdminResource } from './use-admin-resource';
 import { AdminUserAiUsageDialog } from './admin-user-ai-usage-dialog';
+import { AdminUserAiKeyDialog } from './admin-user-ai-key-dialog';
 import { formatUsd } from '@/lib/ai/ai-cost';
 
 const PAGE_SIZE = 25;
@@ -34,6 +35,7 @@ export function AdminUsers() {
   const [page, setPage] = useState(1);
   const [pending, setPending] = useState<string | null>(null);
   const [usageUser, setUsageUser] = useState<AdminUserDto | null>(null);
+  const [keyUserId, setKeyUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -80,6 +82,14 @@ export function AdminUsers() {
     on ? [...new Set([...list, value])] : list.filter((v) => v !== value);
 
   const pages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
+  const keyUser = data?.items.find((u) => u.id === keyUserId) ?? null;
+
+  const keyLabel = (u: AdminUserDto) =>
+    u.aiKey.hasOwnKey
+      ? t.admin.aiKeyOwn
+      : u.aiKey.admin
+        ? format(t.admin.aiKeyAssigned, { last4: u.aiKey.admin.last4 })
+        : t.admin.aiKeyNone;
 
   return (
     <div className="space-y-6">
@@ -149,6 +159,30 @@ export function AdminUsers() {
                     {t.aiUsage.adminCost}: {formatUsd(u.aiCostUsdLast30Days, bcp47)}
                   </Button>
                 </div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-muted-foreground flex flex-wrap items-center gap-2 text-[0.8125rem]">
+                    {t.admin.aiKey}
+                    {u.aiKey.hasOwnKey && <Badge variant="secondary">{t.admin.aiKeyOwn}</Badge>}
+                    {u.aiKey.admin && (
+                      <Badge variant="secondary">
+                        {format(t.admin.aiKeyAssigned, { last4: u.aiKey.admin.last4 })}
+                      </Badge>
+                    )}
+                    {!u.aiKey.hasOwnKey && !u.aiKey.admin && (
+                      <Badge variant="warning">{t.admin.aiKeyNone}</Badge>
+                    )}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    aria-label={format(t.admin.aiKeyManage, { email: u.email })}
+                    title={keyLabel(u)}
+                    onClick={() => setKeyUserId(u.id)}
+                  >
+                    {t.admin.aiKey}
+                  </Button>
+                </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <fieldset className="space-y-1">
@@ -211,6 +245,16 @@ export function AdminUsers() {
       )}
 
       <AdminUserAiUsageDialog user={usageUser} onClose={() => setUsageUser(null)} />
+      <AdminUserAiKeyDialog
+        user={keyUser}
+        onClose={() => setKeyUserId(null)}
+        onChanged={(userId, aiKey) => {
+          setData((d) =>
+            d ? { ...d, items: d.items.map((u) => (u.id === userId ? { ...u, aiKey } : u)) } : d,
+          );
+          if (userId === me?.id) void refreshUser();
+        }}
+      />
 
       {data && pages > 1 && (
         <nav

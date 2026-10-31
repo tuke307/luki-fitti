@@ -71,6 +71,9 @@ public struct WatchContextPayload: Codable, Sendable, Equatable {
     public var authTokens: AuthTokensDto?
     public var activeSession: WorkoutSessionDto?
     public var latestCompletedSession: WorkoutSessionDto?
+    /// Workouts deleted on the iPhone, so a Watch that missed the delete message still drops them.
+    /// Optional so payloads from older app versions still decode.
+    public var deletedSessionIds: [String]?
 
     public init(
         catalog: [ExerciseDto] = [],
@@ -82,7 +85,8 @@ public struct WatchContextPayload: Codable, Sendable, Equatable {
         currentUser: UserDto? = nil,
         authTokens: AuthTokensDto? = nil,
         activeSession: WorkoutSessionDto? = nil,
-        latestCompletedSession: WorkoutSessionDto? = nil
+        latestCompletedSession: WorkoutSessionDto? = nil,
+        deletedSessionIds: [String] = []
     ) {
         self.catalog = catalog
         self.folders = folders
@@ -94,6 +98,7 @@ public struct WatchContextPayload: Codable, Sendable, Equatable {
         self.authTokens = authTokens
         self.activeSession = activeSession
         self.latestCompletedSession = latestCompletedSession
+        self.deletedSessionIds = deletedSessionIds
     }
 }
 
@@ -217,6 +222,7 @@ public final class WatchSyncCoordinator: NSObject {
     /// iPhone: the Watch asked for a fresh copy of the sign-in and workouts.
     public var onContextRequested: (() -> Void)?
     /// iPhone: the Watch discarded a workout it had just finished.
+    /// Watch: the iPhone deleted a finished workout from its history.
     public var onSessionDiscarded: ((String) -> Void)?
     /// iPhone: the Watch app was installed (or reinstalled) while this app was running.
     public var onCounterpartInstalled: (() -> Void)?
@@ -323,7 +329,8 @@ public final class WatchSyncCoordinator: NSObject {
         preferences: UserPreferencesDto,
         currentUser: UserDto? = nil,
         authTokens: AuthTokensDto? = nil,
-        activeSession: WorkoutSessionDto? = nil
+        activeSession: WorkoutSessionDto? = nil,
+        deletedSessionIds: [String] = []
     ) {
         lastSyncedContextAt = Date()
         let payload = WatchContextPayload(
@@ -335,7 +342,8 @@ public final class WatchSyncCoordinator: NSObject {
             preferences: preferences,
             currentUser: currentUser,
             authTokens: authTokens,
-            activeSession: activeSession
+            activeSession: activeSession,
+            deletedSessionIds: deletedSessionIds
         )
 
         if let bridgeURL = Self.simulatorBridgeURL,
@@ -600,9 +608,11 @@ public final class WatchSyncCoordinator: NSObject {
         #endif
     }
 
-    /// Queued behind the completed session, so the iPhone receives both in order.
+    /// Tells the other device a finished workout was deleted (Watch: discarded on its summary,
+    /// iPhone: deleted from the history). Queued behind the completed session, so both arrive in order.
     public func broadcastDiscardedSession(clientSessionId: String) {
-        if let completedBridgeURL = Self.simulatorCompletedSessionBridgeURL {
+        if let completedBridgeURL = Self.simulatorCompletedSessionBridgeURL,
+           pullSharedCompletedSessionIfAvailable()?.clientSessionId == clientSessionId {
             try? FileManager.default.removeItem(at: completedBridgeURL)
         }
         #if canImport(WatchConnectivity)

@@ -59,6 +59,24 @@ public enum LukiColors {
         }
     }
 
+    /// Effort level for a logged RPE: 0 = not rated, 1 = easy, 2 = just right, 3 = max.
+    /// Mirrors `intensityLevel` in the web set row.
+    public static func effortLevel(rpe: Double?) -> Int {
+        guard let rpe else { return 0 }
+        if rpe <= 7.5 { return 1 }
+        return rpe < ProgressionEngine.maxEffortRpe ? 2 : 3
+    }
+
+    /// Green / amber / red effort scale (web: success / warning / destructive).
+    public static func effortColor(level: Int) -> Color {
+        switch level {
+        case 1: return success
+        case 2: return warning
+        case 3: return destructive
+        default: return .secondary
+        }
+    }
+
     private static func adaptive(
         light: (Double, Double, Double),
         dark: (Double, Double, Double)

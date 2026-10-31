@@ -52,10 +52,17 @@ extension LukiAppViewModel {
         await store.flushSyncQueue()
     }
 
-    /// Removes a finished workout from history and the Apple Health workout LukiFitti saved for it.
-    func deleteHistorySession(_ session: WorkoutSessionDto) {
-        store.deleteHistorySession(clientSessionId: session.clientSessionId)
+    /// Removes a finished workout from history, the server, the Watch and the Apple Health workout
+    /// LukiFitti saved for it. `notifyWatch: false` when the Watch itself asked for the delete.
+    func deleteHistorySession(_ session: WorkoutSessionDto, notifyWatch: Bool = true) {
         let clientSessionId = session.clientSessionId
+        store.deleteHistorySession(clientSessionId: clientSessionId)
+        if notifyWatch {
+            watchSyncCoordinator.broadcastDiscardedSession(clientSessionId: clientSessionId)
+        }
+        pushContextToWatch()
+        // Sends the queued server delete (retried on later syncs when offline).
+        Task { await store.flushSyncQueue() }
         Task { await workoutExport.deleteExported(clientSessionId: clientSessionId) }
     }
 

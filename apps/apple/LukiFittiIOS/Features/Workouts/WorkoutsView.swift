@@ -1331,8 +1331,6 @@ private extension Array where Element == WorkoutTemplateExerciseDto {
 
 private extension ISO8601DateFormatter {
     static func workoutsParse(_ iso: String) -> Date? {
-        let withFraction = ISO8601DateFormatter()
-        withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return withFraction.date(from: iso) ?? ISO8601DateFormatter().date(from: iso)
+        LukiDate.parseISO(iso)
     }
 }

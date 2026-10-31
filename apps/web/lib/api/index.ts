@@ -1,7 +1,9 @@
 import { apiFetch } from './client';
 import type {
   AdminDashboardDto,
+  AdminUserAiKeyDto,
   AdminUserAiUsageDto,
+  AiKeyStatusDto,
   AdminUserListDto,
   AdminUserQueryDto,
   AiSettingsDto,
@@ -331,6 +333,11 @@ export const ai = {
       body: JSON.stringify(data),
     }),
   myUsage: (days: number) => apiFetch<MyAiUsageDto>(`/ai/usage/me?days=${days}`),
+  /** Own OpenRouter key: write-only, responses only carry the status. */
+  keyStatus: () => apiFetch<AiKeyStatusDto>('/ai/key'),
+  setKey: (apiKey: string) =>
+    apiFetch<AiKeyStatusDto>('/ai/key', { method: 'PUT', body: JSON.stringify({ apiKey }) }),
+  removeKey: () => apiFetch<AiKeyStatusDto>('/ai/key', { method: 'DELETE' }),
 };
 
 export const exerciseFeedback = {
@@ -360,6 +367,15 @@ export const admin = {
       `/admin/users/${encodeURIComponent(userId)}/access`,
       { method: 'PATCH', body: JSON.stringify(data) },
     ),
+  setUserAiKey: (userId: string, apiKey: string) =>
+    apiFetch<AdminUserAiKeyDto>(`/admin/users/${encodeURIComponent(userId)}/ai-key`, {
+      method: 'PUT',
+      body: JSON.stringify({ apiKey }),
+    }),
+  removeUserAiKey: (userId: string) =>
+    apiFetch<AdminUserAiKeyDto>(`/admin/users/${encodeURIComponent(userId)}/ai-key`, {
+      method: 'DELETE',
+    }),
   getAiSettings: () => apiFetch<AiSettingsDto>('/admin/settings/ai'),
   updateAiSettings: (data: UpdateAiSettingsDto) =>
     apiFetch<AiSettingsDto>('/admin/settings/ai', { method: 'PUT', body: JSON.stringify(data) }),

@@ -1,13 +1,28 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Put, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AdminPermission } from '@luki-fitti/common/enums';
 import {
   AdminUserQuerySchema,
   AiUsageQuerySchema,
+  SetAiKeySchema,
   UpdateAiSettingsSchema,
   UpdateUserAccessSchema,
   type AdminUserQueryDto,
+  type AdminUserAiKeyDto,
   type AiUsageQueryDto,
+  type SetAiKeyDto,
   type UpdateAiSettingsDto,
   type UpdateUserAccessDto,
 } from '@luki-fitti/common/schemas';
@@ -18,6 +33,7 @@ import { RequirePermissions } from '@/decorators/permissions.decorator';
 import { CurrentUser, type AuthenticatedUser } from '@/decorators/current-user.decorator';
 import { ZodValidationPipe } from '@/pipes/zod-validation.pipe';
 import { AppSettingsService } from '../app-settings/app-settings.service';
+import { AiKeyService } from '../ai/ai-key.service';
 import { AdminService } from './admin.service';
 
 @ApiTags('Admin')
@@ -27,6 +43,7 @@ export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly appSettings: AppSettingsService,
+    private readonly aiKeys: AiKeyService,
   ) {}
 
   @Get('dashboard')
@@ -53,6 +70,37 @@ export class AdminController {
     @Body(new ZodValidationPipe(UpdateUserAccessSchema)) body: UpdateUserAccessDto,
   ) {
     return this.adminService.updateUserAccess(actor.id, id, body);
+  }
+
+  @Get('users/:id/ai-key')
+  @RequirePermissions(AdminPermission.USERS_MANAGE)
+  @ApiOperation({ summary: "Status of a user's OpenRouter keys (never the key values)" })
+  getUserAiKey(@Param('id', new ParseUUIDPipe()) id: string): Promise<AdminUserAiKeyDto> {
+    return this.aiKeys.adminStatus(id);
+  }
+
+  @Put('users/:id/ai-key')
+  @UseGuards(CsrfGuard)
+  @RequirePermissions(AdminPermission.USERS_MANAGE)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Assign an OpenRouter key to a user (stored encrypted, ADMIN slot)' })
+  setUserAiKey(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body(new ZodValidationPipe(SetAiKeySchema)) body: SetAiKeyDto,
+  ): Promise<AdminUserAiKeyDto> {
+    return this.aiKeys.setAdminKey(actor.id, id, body.apiKey);
+  }
+
+  @Delete('users/:id/ai-key')
+  @UseGuards(CsrfGuard)
+  @RequirePermissions(AdminPermission.USERS_MANAGE)
+  @ApiOperation({ summary: "Remove the admin-assigned OpenRouter key (the user's own key stays)" })
+  clearUserAiKey(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<AdminUserAiKeyDto> {
+    return this.aiKeys.clearAdminKey(actor.id, id);
   }
 
   @Get('settings/ai')

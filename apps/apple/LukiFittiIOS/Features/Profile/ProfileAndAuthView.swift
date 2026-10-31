@@ -55,6 +55,19 @@ public struct ProfileAndAuthView: View {
             if viewModel.store.currentUser != nil {
                 Section(tr("AI")) {
                     NavigationLink {
+                        AIKeySettingsPage(viewModel: viewModel)
+                    } label: {
+                        SettingsRow(
+                            tr("OpenRouter API key"),
+                            systemImage: "key.fill",
+                            tint: LukiColors.accent,
+                            subtitle: (viewModel.store.currentUser?.features ?? []).isEmpty
+                                ? tr("Add your OpenRouter key")
+                                : nil
+                        )
+                    }
+                    .accessibilityIdentifier("ios.profile.aiKeyRow")
+                    NavigationLink {
                         AIUsageView(viewModel: viewModel)
                     } label: {
                         SettingsRow(tr("AI usage"), systemImage: "sparkles", tint: LukiColors.setDropset)
