@@ -189,4 +189,18 @@ final class NutritionCalendarTests: XCTestCase {
         XCTAssertEqual(NutritionCalendar.ringProgress(eatenKcal: 400, goal: nil), 1)
         XCTAssertEqual(NutritionCalendar.ringProgress(eatenKcal: 0, goal: nil), 0)
     }
+
+    func testRingProgressCountsBurnedIntoTheBudget() {
+        XCTAssertEqual(NutritionCalendar.ringProgress(eatenKcal: 664, goal: 2780, burnedKcal: 1197), 664.0 / 3977, accuracy: 0.0001)
+        XCTAssertEqual(NutritionCalendar.ringProgress(eatenKcal: 664, goal: 2780, burnedKcal: 1197), 0.167, accuracy: 0.001)
+        XCTAssertEqual(NutritionCalendar.ringProgress(eatenKcal: 5000, goal: 2780, burnedKcal: 1197), 1)
+        XCTAssertEqual(NutritionCalendar.ringProgress(eatenKcal: 400, goal: nil, burnedKcal: 300), 1)
+        XCTAssertEqual(NutritionCalendar.ringProgress(eatenKcal: 0, goal: nil, burnedKcal: 300), 0)
+        XCTAssertEqual(NutritionCalendar.ringProgress(eatenKcal: 0, goal: 2000, burnedKcal: 300), 0)
+        XCTAssertEqual(
+            NutritionCalendar.ringProgress(eatenKcal: 1100, goal: 2200, burnedKcal: 0),
+            NutritionCalendar.ringProgress(eatenKcal: 1100, goal: 2200)
+        )
+        XCTAssertEqual(NutritionCalendar.ringProgress(eatenKcal: 1100, goal: 2200, burnedKcal: -500), 0.5)
+    }
 }

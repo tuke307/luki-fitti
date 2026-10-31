@@ -19,6 +19,7 @@ import type {
 } from '../schemas';
 import {
   buildTemplateExercisesFromSession,
+  deriveRepRange,
   resolveTemplateSets,
   summarizeTemplateSets,
 } from './template-sets.util';
@@ -273,5 +274,69 @@ describe('buildTemplateExercisesFromSession', () => {
     );
     assert.equal(result!.length, 1);
     assert.equal(result![0]!.restSeconds, 90);
+  });
+});
+
+describe('deriveRepRange', () => {
+  const set = (setType: SetType, reps: number | null) => ({
+    setType,
+    weight: 50,
+    reps,
+    durationSeconds: null,
+  });
+
+  it('keeps the current range when the planned reps fall inside it', () => {
+    const sets = [set(SetType.WORKING, 10), set(SetType.WORKING, 9)];
+    assert.deepEqual(deriveRepRange(sets, { targetRepsMin: 8, targetRepsMax: 12 }), {
+      targetRepsMin: 8,
+      targetRepsMax: 12,
+    });
+  });
+
+  it('opens a new range when the planned reps are below it', () => {
+    const sets = [set(SetType.WORKING, 6)];
+    assert.deepEqual(deriveRepRange(sets, { targetRepsMin: 8, targetRepsMax: 12 }), {
+      targetRepsMin: 6,
+      targetRepsMax: 10,
+    });
+  });
+
+  it('opens a new range when the planned reps are above it', () => {
+    const sets = [set(SetType.WORKING, 15), set(SetType.DROPSET, 14)];
+    assert.deepEqual(deriveRepRange(sets, { targetRepsMin: 8, targetRepsMax: 12 }), {
+      targetRepsMin: 14,
+      targetRepsMax: 18,
+    });
+  });
+
+  it('derives a range when none exists yet', () => {
+    assert.deepEqual(deriveRepRange([set(SetType.WORKING, 10)], {}), {
+      targetRepsMin: 10,
+      targetRepsMax: 14,
+    });
+  });
+
+  it('ignores warm-up and stretch sets', () => {
+    const sets = [set(SetType.WARMUP, 3), set(SetType.STRETCH, 1), set(SetType.WORKING, 10)];
+    assert.deepEqual(deriveRepRange(sets, { targetRepsMin: null, targetRepsMax: null }), {
+      targetRepsMin: 10,
+      targetRepsMax: 14,
+    });
+  });
+
+  it('leaves the range unchanged without working reps', () => {
+    const sets = [set(SetType.WARMUP, 10), set(SetType.WORKING, null), set(SetType.WORKING, 0)];
+    assert.deepEqual(deriveRepRange(sets, { targetRepsMin: 8, targetRepsMax: 12 }), {
+      targetRepsMin: 8,
+      targetRepsMax: 12,
+    });
+    assert.deepEqual(deriveRepRange(sets, {}), { targetRepsMin: null, targetRepsMax: null });
+  });
+
+  it('caps the range at 100 reps', () => {
+    assert.deepEqual(deriveRepRange([set(SetType.WORKING, 98)], {}), {
+      targetRepsMin: 98,
+      targetRepsMax: 100,
+    });
   });
 });

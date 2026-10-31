@@ -17,6 +17,11 @@ export function requestWeightSection(): void {
   focusRequested = 'section';
 }
 
+/** Lets the profile tab open the page that hosts the weight section before it mounts. */
+export function hasPendingWeightFocusRequest(): boolean {
+  return focusRequested !== null;
+}
+
 export function consumeWeightFocusRequest(): WeightFocusRequest | null {
   const requested = focusRequested;
   focusRequested = null;

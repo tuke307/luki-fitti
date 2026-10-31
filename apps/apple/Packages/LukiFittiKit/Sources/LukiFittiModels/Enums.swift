@@ -252,7 +252,14 @@ public enum MealType: String, Codable, Sendable, CaseIterable, Equatable, Hashab
     case DINNER
     case SNACK
     case COFFEE
+    case DRINK
     case OTHER
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = MealType(rawValue: raw) ?? .OTHER
+    }
 
     /// Default meal for a time of day, so a quick add lands in the obvious slot.
     public static func forTime(_ date: Date, calendar: Calendar = .current) -> MealType {

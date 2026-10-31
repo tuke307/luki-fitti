@@ -60,6 +60,7 @@ import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import {
   computeWorkoutExerciseSuggestion,
+  deriveRepRange,
   formatDate,
   formatRestDurationMinSec,
   groupExercisesIntoBlocks,
@@ -181,8 +182,8 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               orderIndex: 0,
               plannedSets: 3,
               warmupSets: 1,
-              targetRepsMin: 8,
-              targetRepsMax: 12,
+              targetRepsMin: null,
+              targetRepsMax: null,
               targetWeight: 60,
               weightUnit,
               restSeconds: 90,
@@ -234,7 +235,11 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
       description: tplDesc.trim() || null,
       folderId: tplFolderId,
       estimatedDurationMinutes: tplDurationMin,
-      exercises: tplExercises.map((ex, idx) => ({ ...ex, orderIndex: idx })),
+      exercises: tplExercises.map((ex, idx) => ({
+        ...ex,
+        ...deriveRepRange(resolveTemplateSets(ex), ex),
+        orderIndex: idx,
+      })),
     };
 
     if (editingTemplate) {
@@ -1153,8 +1158,8 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                           orderIndex: prev.length,
                           plannedSets: 3,
                           warmupSets: 0,
-                          targetRepsMin: 8,
-                          targetRepsMax: 12,
+                          targetRepsMin: null,
+                          targetRepsMax: null,
                           targetWeight: 40,
                           weightUnit,
                           restSeconds: 90,
@@ -1290,7 +1295,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                           </div>
                         </div>
 
-                        {/* Per-set plan (type, weight, reps) + rep range goal and rest */}
+                        {/* Per-set plan (type, weight, reps) + rest */}
                         <TemplateSetsEditor
                           labelPrefix={`Exercise ${idx + 1}`}
                           weightUnit={slot.weightUnit ?? weightUnit}
@@ -1305,45 +1310,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                             )
                           }
                         />
-                        <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
-                          <div>
-                            <Label className="text-muted-foreground mb-1 truncate text-xs font-semibold">
-                              {t.workouts.minRepsLabel}
-                            </Label>
-                            <NumberInput
-                              min={1}
-                              max={100}
-                              fallbackValue={8}
-                              value={slot.targetRepsMin ?? 8}
-                              onValueChange={(val) =>
-                                setTplExercises((prev) =>
-                                  prev.map((item, i) =>
-                                    i === idx ? { ...item, targetRepsMin: val } : item,
-                                  ),
-                                )
-                              }
-                              className="tabular-nums h-9 text-xs sm:h-8"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-muted-foreground mb-1 truncate text-xs font-semibold">
-                              {t.workouts.maxRepsLabel}
-                            </Label>
-                            <NumberInput
-                              min={1}
-                              max={100}
-                              fallbackValue={12}
-                              value={slot.targetRepsMax ?? 12}
-                              onValueChange={(val) =>
-                                setTplExercises((prev) =>
-                                  prev.map((item, i) =>
-                                    i === idx ? { ...item, targetRepsMax: val } : item,
-                                  ),
-                                )
-                              }
-                              className="tabular-nums h-9 text-xs sm:h-8"
-                            />
-                          </div>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5">
                           <div>
                             <Label className="text-muted-foreground mb-1 truncate text-xs font-semibold">
                               {t.workouts.restSecLabel}

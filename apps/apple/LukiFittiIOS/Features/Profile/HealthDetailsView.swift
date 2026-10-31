@@ -3,7 +3,7 @@ import LukiFittiModels
 import LukiFittiDesign
 import LukiFittiDomain
 
-/// Profile → Health details: current weight (opens the weight screen), weight unit and the body
+/// Profile → Health details: current weight (opens the weight screen) and the body
 /// metrics used for calorie estimates. Changes save automatically.
 struct HealthDetailsView: View {
     @Bindable var viewModel: LukiAppViewModel
@@ -50,10 +50,6 @@ struct HealthDetailsView: View {
                 }
                 .accessibilityHint(tr("Opens your weight history"))
                 .accessibilityIdentifier("ios.profile.currentWeightRow")
-                Picker(tr("Weight unit"), selection: $unit) {
-                    ForEach(WeightUnit.allCases, id: \.self) { Text(LukiFormat.unitLabel($0)).tag($0) }
-                }
-                .accessibilityIdentifier("ios.profile.weightUnitPicker")
             } footer: {
                 Text(tr("Your weight comes from your weigh-ins and Apple Health."))
             }

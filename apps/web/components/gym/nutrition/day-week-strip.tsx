@@ -12,6 +12,8 @@ interface DayWeekStripProps {
   selected: string;
   todayKey: string;
   kcalByDay: ReadonlyMap<string, number>;
+  /** Kcal burned per local day; raises that day's budget (goal + burned). */
+  burnedByDay?: Readonly<Record<string, number>>;
   goal: number | null;
   onSelect: (key: string) => void;
   /** Called with the Monday of the week on screen (e.g. to load older entries). */
@@ -25,6 +27,7 @@ export function DayWeekStrip({
   selected,
   todayKey,
   kcalByDay,
+  burnedByDay = {},
   goal,
   onSelect,
   onVisibleWeekChange,
@@ -110,10 +113,19 @@ export function DayWeekStrip({
           const isSelected = key === selected;
           const isToday = key === todayKey;
           const eaten = isFuture ? 0 : Math.round(kcalByDay.get(key) ?? 0);
+          const burned = isFuture ? 0 : Math.max(0, Math.round(burnedByDay[key] ?? 0));
           const label =
-            goal !== null
-              ? format(t.nutrition.dayKcalOfGoal, { day: longDate(key), kcal: eaten, goal })
-              : format(t.nutrition.dayKcal, { day: longDate(key), kcal: eaten });
+            goal === null
+              ? format(t.nutrition.dayKcal, { day: longDate(key), kcal: eaten })
+              : burned > 0
+                ? format(t.nutrition.dayKcalOfGoalBurned, {
+                    day: longDate(key),
+                    kcal: eaten,
+                    budget: goal + burned,
+                    goal,
+                    burned,
+                  })
+                : format(t.nutrition.dayKcalOfGoal, { day: longDate(key), kcal: eaten, goal });
           return (
             <button
               key={key}
@@ -145,8 +157,8 @@ export function DayWeekStrip({
                 {toDate(key).toLocaleDateString(bcp47, { weekday: 'narrow' })}
               </span>
               <DayRing
-                progress={ringProgress(eaten, goal)}
-                over={goal !== null && eaten > goal}
+                progress={ringProgress(eaten, goal, burned)}
+                over={goal !== null && eaten > goal + burned}
                 emphasized={isSelected || isToday}
                 today={isToday}
                 label={String(toDate(key).getDate())}

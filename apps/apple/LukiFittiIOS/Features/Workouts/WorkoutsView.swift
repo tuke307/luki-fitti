@@ -618,8 +618,8 @@ public struct WorkoutsView: View {
                     orderIndex: 0,
                     plannedSets: 3,
                     warmupSets: 1,
-                    targetRepsMin: 8,
-                    targetRepsMax: 12,
+                    targetRepsMin: nil,
+                    targetRepsMax: nil,
                     targetWeight: 60,
                     weightUnit: viewModel.store.preferences.weightUnit,
                     restSeconds: 90,
@@ -673,6 +673,13 @@ public struct WorkoutsView: View {
             if copy.exercise == nil {
                 copy.exercise = viewModel.store.catalog.first { $0.id == copy.exerciseId }
             }
+            let range = TemplateSets.deriveRepRange(
+                TemplateSets.resolve(copy),
+                currentMin: copy.targetRepsMin,
+                currentMax: copy.targetRepsMax
+            )
+            copy.targetRepsMin = range.min
+            copy.targetRepsMax = range.max
             return copy
         }
 
@@ -861,7 +868,7 @@ private struct TemplateBuilderSheetView: View {
                         let resolvedEx = slot.exercise ?? catalog.first(where: { $0.id == slot.exerciseId })
 
                         VStack(alignment: .leading, spacing: 12) {
-                            // Top Row: #Badge + Searchable Exercise Picker Button + Up/Down/Trash buttons
+                            // Header: #Badge + full-width exercise picker, then reorder/remove controls
                             HStack(spacing: 8) {
                                 Text("#\(idx + 1)")
                                     .font(.caption.bold().monospacedDigit())
@@ -880,19 +887,26 @@ private struct TemplateBuilderSheetView: View {
                                         Text(resolvedEx?.name ?? tr("Select Exercise"))
                                             .font(.subheadline.bold())
                                             .foregroundStyle(LukiColors.accent)
-                                            .lineLimit(1)
-                                            .truncationMode(.tail)
+                                            .lineLimit(2)
+                                            .multilineTextAlignment(.leading)
+                                            .fixedSize(horizontal: false, vertical: true)
                                         Spacer(minLength: 4)
                                         Image(systemName: "chevron.up.chevron.down")
                                             .font(.footnote.weight(.medium))
                                             .foregroundStyle(LukiColors.accent)
                                     }
                                     .padding(.horizontal, 10)
-                                    .frame(minHeight: 44)
+                                    .padding(.vertical, 4)
+                                    .frame(maxWidth: .infinity, minHeight: 44)
                                     .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.fill))
                                 }
                                 .buttonStyle(.plain)
+                                .frame(maxWidth: .infinity)
                                 .accessibilityLabel(tr("Exercise %d: %@. Change exercise", idx + 1, resolvedEx?.name ?? tr("Select Exercise")))
+                            }
+
+                            HStack(spacing: 8) {
+                                Spacer()
 
                                 Button {
                                     guard idx > 0 else { return }
@@ -935,22 +949,8 @@ private struct TemplateBuilderSheetView: View {
 
                             TemplateSetsEditorView(slot: $slot, weightUnit: defaultWeightUnit)
 
-                            // Rep range goal and rest
+                            // Rest
                             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 8) {
-                                compactMetricStepper(
-                                    label: tr("Min reps"),
-                                    valueText: "\(slot.targetRepsMin ?? 8)",
-                                    onDecrement: { slot.targetRepsMin = max(1, (slot.targetRepsMin ?? 8) - 1) },
-                                    onIncrement: { slot.targetRepsMin = min(100, (slot.targetRepsMin ?? 8) + 1) }
-                                )
-
-                                compactMetricStepper(
-                                    label: tr("Max reps"),
-                                    valueText: "\(slot.targetRepsMax ?? 12)",
-                                    onDecrement: { slot.targetRepsMax = max(1, (slot.targetRepsMax ?? 12) - 1) },
-                                    onIncrement: { slot.targetRepsMax = min(100, (slot.targetRepsMax ?? 12) + 1) }
-                                )
-
                                 compactMetricStepper(
                                     label: tr("Rest"),
                                     valueText: "\(slot.restSeconds)s",
@@ -1027,8 +1027,8 @@ private struct TemplateBuilderSheetView: View {
                             orderIndex: exercises.count,
                             plannedSets: 3,
                             warmupSets: 0,
-                            targetRepsMin: 8,
-                            targetRepsMax: 12,
+                            targetRepsMin: nil,
+                            targetRepsMax: nil,
                             targetWeight: 40,
                             weightUnit: defaultWeightUnit,
                             restSeconds: 90,

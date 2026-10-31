@@ -58,4 +58,48 @@ final class TemplateSetsTests: XCTestCase {
         ])
         XCTAssertNil(TemplateSets.buildTemplateExercises(template: tpl, session: unchanged))
     }
+
+    private func planned(_ type: SetType, _ reps: Int?) -> TemplateSetDto {
+        TemplateSetDto(setType: type, weight: 50, reps: reps)
+    }
+
+    func testDeriveRepRangeKeepsRangeContainingPlannedReps() {
+        let range = TemplateSets.deriveRepRange([planned(.WORKING, 10), planned(.WORKING, 9)], currentMin: 8, currentMax: 12)
+        XCTAssertEqual(range.min, 8)
+        XCTAssertEqual(range.max, 12)
+    }
+
+    func testDeriveRepRangeMovesBandBelowAndAbove() {
+        let below = TemplateSets.deriveRepRange([planned(.WORKING, 6)], currentMin: 8, currentMax: 12)
+        XCTAssertEqual(below.min, 6)
+        XCTAssertEqual(below.max, 10)
+        let above = TemplateSets.deriveRepRange([planned(.WORKING, 15), planned(.DROPSET, 14)], currentMin: 8, currentMax: 12)
+        XCTAssertEqual(above.min, 14)
+        XCTAssertEqual(above.max, 18)
+    }
+
+    func testDeriveRepRangeWithoutExistingRange() {
+        let range = TemplateSets.deriveRepRange([planned(.WORKING, 98)], currentMin: nil, currentMax: nil)
+        XCTAssertEqual(range.min, 98)
+        XCTAssertEqual(range.max, 100)
+    }
+
+    func testDeriveRepRangeIgnoresWarmupsAndStretches() {
+        let range = TemplateSets.deriveRepRange(
+            [planned(.WARMUP, 3), planned(.STRETCH, 1), planned(.WORKING, 10)],
+            currentMin: nil, currentMax: nil
+        )
+        XCTAssertEqual(range.min, 10)
+        XCTAssertEqual(range.max, 14)
+    }
+
+    func testDeriveRepRangeUnchangedWithoutWorkingReps() {
+        let sets = [planned(.WARMUP, 10), planned(.WORKING, nil), planned(.WORKING, 0)]
+        let kept = TemplateSets.deriveRepRange(sets, currentMin: 8, currentMax: 12)
+        XCTAssertEqual(kept.min, 8)
+        XCTAssertEqual(kept.max, 12)
+        let empty = TemplateSets.deriveRepRange(sets, currentMin: nil, currentMax: nil)
+        XCTAssertNil(empty.min)
+        XCTAssertNil(empty.max)
+    }
 }

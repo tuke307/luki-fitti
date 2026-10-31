@@ -182,6 +182,17 @@ describe('nutrition day helpers', () => {
     assert.equal(ringProgress(0, null), 0);
   });
 
+  it('fills the ring against goal plus burned calories', () => {
+    const progress = ringProgress(664, 2780, 1197);
+    assert.ok(Math.abs(progress - 664 / 3977) < 1e-9);
+    assert.ok(progress > 0.166 && progress < 0.168);
+    assert.equal(ringProgress(5000, 2780, 1197), 1);
+    assert.equal(ringProgress(1390, 2780, 0), 0.5);
+    assert.equal(ringProgress(1390, 2780, -500), 0.5);
+    assert.equal(ringProgress(300, null, 1197), 1);
+    assert.equal(ringProgress(0, 0, 1197), 0);
+  });
+
   it('replaces only the fetched window and keeps pending changes', () => {
     const older = entry(new Date(2026, 8, 10, 12), MealType.LUNCH, 100);
     const gone = entry(new Date(2026, 9, 5, 12), MealType.LUNCH, 100);
