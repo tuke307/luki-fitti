@@ -46,8 +46,11 @@ final class IOSAuthEmailLifecycleUITests: XCTestCase {
         let verifyURL = try MailpitTestClient.extractDeepLinkURL(from: confirmEmail, route: "verify-email")
         app.open(verifyURL)
 
+        let accountRow = app.buttons["ios.profile.row.account"]
+        XCTAssertTrue(accountRow.waitForExistence(timeout: 12))
+        accountRow.tap()
         let authBadge = app.staticTexts["ios.profile.authenticatedBadge"]
-        XCTAssertTrue(authBadge.waitForExistence(timeout: 12))
+        XCTAssertTrue(authBadge.waitForExistence(timeout: 5))
 
         // 3. Sign out and request password reset email
         try await MailpitTestClient.clearMailbox(for: email)
@@ -86,7 +89,9 @@ final class IOSAuthEmailLifecycleUITests: XCTestCase {
         passwordField.typeText(updatedPassword)
         submitButton.tap()
 
-        XCTAssertTrue(authBadge.waitForExistence(timeout: 10))
+        XCTAssertTrue(accountRow.waitForExistence(timeout: 10))
+        accountRow.tap()
+        XCTAssertTrue(authBadge.waitForExistence(timeout: 5))
 
         // 6. Request Account Deletion & confirm via Mailpit email deep link
         try await MailpitTestClient.clearMailbox(for: email)

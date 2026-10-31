@@ -43,7 +43,10 @@ test.describe('PWA Shell, Navigation & Preferences', () => {
   test('can switch language between English and German across views', async ({ page }) => {
     await gotoProfileTab(page);
 
+    await page.getByTestId('settings-row-language').click();
     await page.getByRole('tab', { name: 'Deutsch' }).click();
+    await expect(page.getByRole('heading', { name: 'Sprache & Einheiten' })).toBeVisible();
+    await page.getByTestId('settings-back-btn').click();
     await expect(
       page.getByRole('heading', { name: /Profil & Einstellungen/i }),
     ).toBeVisible();
@@ -54,13 +57,16 @@ test.describe('PWA Shell, Navigation & Preferences', () => {
 
     // Switch back to English
     await navigateToTab(page, 'profile');
+    await page.getByTestId('settings-row-language').click();
     await page.getByRole('tab', { name: 'English' }).click();
+    await page.goBack();
     await expect(page.getByRole('heading', { name: 'Profile & Preferences' })).toBeVisible();
   });
 
   test('can switch weight unit (KG <-> LBS) and theme in Profile', async ({ page }) => {
     await gotoProfileTab(page);
 
+    await page.getByTestId('settings-row-language').click();
     await page.getByRole('tab', { name: 'LBS' }).click();
     await expect(page.getByRole('tab', { name: 'LBS' })).toHaveAttribute('data-state', 'active');
 
@@ -70,7 +76,9 @@ test.describe('PWA Shell, Navigation & Preferences', () => {
     // Restore KG & Dark
     await page.getByRole('tab', { name: 'KG' }).click();
     await page.getByRole('tab', { name: 'Dark' }).click();
+    await page.getByTestId('settings-back-btn').click();
 
+    await page.getByTestId('settings-row-training').click();
     // Verify Smart Exercise Suggestions toggle (default On) and Test Notification button
     await expect(page.getByTestId('exercise-suggestions-on')).toHaveAttribute(
       'data-state',
@@ -82,7 +90,9 @@ test.describe('PWA Shell, Navigation & Preferences', () => {
       'active',
     );
     await page.getByTestId('exercise-suggestions-on').click();
+    await page.getByTestId('settings-back-btn').click();
 
+    await page.getByTestId('settings-row-notifications').click();
     await page.getByTestId('profile-test-notification-btn').click();
     await expect(page.getByText(/Rest Done — LukiFitti Test/i)).toBeVisible();
   });

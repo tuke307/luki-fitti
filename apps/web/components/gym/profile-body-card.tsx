@@ -8,7 +8,6 @@ import { Card } from '@luki-fitti/ui/components/ui/card';
 import { Input } from '@luki-fitti/ui/components/ui/input';
 import { Label } from '@luki-fitti/ui/components/ui/label';
 import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
-import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { WeightUnit, type BiologicalSex } from '@luki-fitti/common/enums';
 import { UpdatePreferencesSchema, type UpdatePreferencesDto } from '@luki-fitti/common/schemas';
 import { useAuth } from '@/providers/auth/auth-context';
@@ -25,8 +24,8 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 const toNumber = (v: string) => (v.trim() === '' ? null : Number(v.replace(',', '.')));
 
 /**
- * Profile → Health details: current weight (from the weigh-in history), weight unit and the body
- * metrics used for calorie estimates. Each change saves on its own.
+ * Profile → Health details: current weight (from the weigh-in history) and the body metrics
+ * used for calorie estimates. Each change saves on its own.
  */
 export function ProfileHealthCard() {
   const { user, authMode, updatePreferences } = useAuth();
@@ -147,20 +146,6 @@ export function ProfileHealthCard() {
             </div>
           </div>
         )}
-        <div className="space-y-1.5">
-          <p id="health-unit-label" className="text-[0.8125rem] font-semibold">
-            {t.profileBody.weightUnit}
-          </p>
-          <Tabs
-            value={unit}
-            onValueChange={(val) => void persist({ weightUnit: val as WeightUnit })}
-          >
-            <TabsList aria-labelledby="health-unit-label">
-              <TabsTrigger value={WeightUnit.KG}>KG</TabsTrigger>
-              <TabsTrigger value={WeightUnit.LBS}>LBS</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
         {signedIn && (
           <>
             {numberField(

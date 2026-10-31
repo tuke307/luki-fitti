@@ -60,6 +60,7 @@ test.describe('Full Account Lifecycle via Mailpit Emails', () => {
 
     // ── 4. Sign out and request a password reset email (/forgot-password) ──
     await gotoProfileTab(page);
+    await page.getByTestId('settings-row-account').click();
     await expect(page.getByText('Signed in', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: /^Sign Out$/i }).click();
     await expectSyncBadge(page, /Guest/i);
@@ -97,6 +98,7 @@ test.describe('Full Account Lifecycle via Mailpit Emails', () => {
     // ── 7. Request Account Deletion from Profile tab ──
     await clearMailboxForRecipient(email);
     await gotoProfileTab(page);
+    await page.getByTestId('settings-row-account').click();
     await page.getByRole('button', { name: 'Delete Account' }).click();
 
     const deleteModal = page.getByRole('dialog');

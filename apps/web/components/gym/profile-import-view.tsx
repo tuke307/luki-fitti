@@ -1,8 +1,12 @@
 'use client';
 
-import React, { useState, useSyncExternalStore } from 'react';
+import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import {
+  BookOpen,
+  Dumbbell,
+  HeartPulse,
+  Salad,
   User,
   LogOut,
   LogIn,
@@ -50,10 +54,12 @@ import {
   setAnalyticsOptOut,
   subscribeAnalyticsOptOut,
 } from '@/lib/analytics/opt-out';
-import { type LanguagePreference } from '@luki-fitti/common/enums';
+import { type LanguagePreference, WeightUnit } from '@luki-fitti/common/enums';
 import { ProfileHealthCard, ProfileNutritionGoalsCard } from './profile-body-card';
-import { AiUsageCard } from './ai-usage/ai-usage-view';
+import { AiUsageView } from './ai-usage/ai-usage-view';
+import { SettingsRow, SettingsSection, SettingsSubpage } from './settings/settings-row';
 import { WeightView } from './weight/weight-view';
+import { hasPendingWeightFocusRequest } from './weight/weight-focus';
 
 function escapeCsvCell(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return '';
@@ -62,6 +68,41 @@ function escapeCsvCell(value: string | number | null | undefined): string {
     return `"${str.replace(/"/g, '""')}"`;
   }
   return str;
+}
+
+const SETTINGS_PAGES = [
+  'root',
+  'account',
+  'training',
+  'nutrition',
+  'health',
+  'notifications',
+  'language',
+  'ai',
+  'export',
+  'usage',
+  'sources',
+] as const;
+
+type SettingsPage = (typeof SETTINGS_PAGES)[number];
+
+const AUTH_ONLY_PAGES: ReadonlySet<SettingsPage> = new Set([
+  'account',
+  'nutrition',
+  'health',
+  'ai',
+  'export',
+]);
+
+const HISTORY_KEY = 'profilePage';
+
+function isSettingsPage(value: unknown): value is SettingsPage {
+  return typeof value === 'string' && (SETTINGS_PAGES as readonly string[]).includes(value);
+}
+
+function readHistoryPage(): SettingsPage | null {
+  const value = (window.history.state as Record<string, unknown> | null)?.[HISTORY_KEY];
+  return isSettingsPage(value) ? value : null;
 }
 
 export function ProfileImportView() {
@@ -90,6 +131,13 @@ export function ProfileImportView() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [page, setPage] = useState<SettingsPage>(() =>
+    hasPendingWeightFocusRequest() ? 'health' : 'root',
+  );
+  const initialPage = useRef(page);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const lastOpened = useRef<SettingsPage | null>(null);
+  const focusAfterChange = useRef(false);
   const analyticsOptedOut = useSyncExternalStore(
     subscribeAnalyticsOptOut,
     isAnalyticsOptedOut,
@@ -228,242 +276,251 @@ export function ProfileImportView() {
     setExportStatus(format(t.profile.exportedStatus, { fileName }));
   };
 
-  return (
-    <div className="space-y-6 pb-12">
-      <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-          {t.profile.title}
-        </h1>
-        <p className="text-muted-foreground text-sm">{t.profile.subtitle}</p>
+  const isAuthenticated = authMode === 'AUTHENTICATED';
+  const visiblePage: SettingsPage = AUTH_ONLY_PAGES.has(page) && !isAuthenticated ? 'root' : page;
+  const weightUnit = user?.preferences?.weightUnit ?? WeightUnit.KG;
+  const kcalGoal = user?.preferences?.dailyKcalGoal ?? null;
+  const languageName =
+    languagePreference === 'en'
+      ? t.profile.langEn
+      : languagePreference === 'de'
+        ? t.profile.langDe
+        : t.profile.langSystem;
+
+  const pageTitles: Record<Exclude<SettingsPage, 'root'>, string> = {
+    account: t.profile.rowProfileAccount,
+    training: t.profile.rowTraining,
+    nutrition: t.profile.rowNutritionGoals,
+    health: t.profile.rowHealthDetails,
+    notifications: t.profile.rowNotifications,
+    language: t.profile.rowLanguageUnits,
+    ai: t.profile.rowAiUsage,
+    export: t.profile.rowExportBackup,
+    usage: t.profile.rowUsageStats,
+    sources: t.profile.rowDataSources,
+  };
+
+  useEffect(() => {
+    const initial = initialPage.current;
+    if (initial !== 'root' && readHistoryPage() !== initial) {
+      window.history.pushState({ [HISTORY_KEY]: initial }, '');
+    }
+    const onPopState = (event: PopStateEvent) => {
+      const next = (event.state as Record<string, unknown> | null)?.[HISTORY_KEY];
+      focusAfterChange.current = true;
+      setPage(isSettingsPage(next) ? next : 'root');
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  useEffect(() => {
+    if (!focusAfterChange.current) return;
+    focusAfterChange.current = false;
+    if (visiblePage !== 'root') {
+      window.scrollTo({ top: 0 });
+      headingRef.current?.focus();
+    } else if (lastOpened.current) {
+      document
+        .querySelector<HTMLButtonElement>(`[data-testid="settings-row-${lastOpened.current}"]`)
+        ?.focus();
+    }
+  }, [visiblePage]);
+
+  const openPage = (next: Exclude<SettingsPage, 'root'>) => {
+    lastOpened.current = next;
+    focusAfterChange.current = true;
+    window.history.pushState({ [HISTORY_KEY]: next }, '');
+    setPage(next);
+  };
+
+  const goBack = () => {
+    if (readHistoryPage() !== null) {
+      window.history.back();
+      return;
+    }
+    focusAfterChange.current = true;
+    setPage('root');
+  };
+
+  const accountCard = (
+    <Card className="space-y-4 rounded-[1.25rem] p-5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <User className="text-primary h-5 w-5" />
+          <h2 className="font-display text-lg font-bold">{t.profile.accountSectionTitle}</h2>
+        </div>
+        <Badge
+          variant={authMode === 'AUTHENTICATED' ? 'success' : 'warning'}
+          className="rounded-full px-3 py-1 text-xs"
+        >
+          {authMode === 'AUTHENTICATED'
+            ? t.profile.authenticatedBadge
+            : t.profile.offlineLocalBadge}
+        </Badge>
       </div>
 
-      {/* Account & Preferences Grid */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Account & Session Security Card */}
-        <Card className="space-y-4 rounded-[1.25rem] p-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <User className="text-primary h-5 w-5" />
-              <h2 className="font-display text-lg font-bold">{t.profile.accountSectionTitle}</h2>
-            </div>
-            <Badge
-              variant={authMode === 'AUTHENTICATED' ? 'success' : 'warning'}
-              className="rounded-full px-3 py-1 text-xs"
-            >
-              {authMode === 'AUTHENTICATED'
-                ? t.profile.authenticatedBadge
-                : t.profile.offlineLocalBadge}
-            </Badge>
-          </div>
+      {user && (
+        <div className="bg-secondary/40 rounded-2xl p-3.5 text-xs">
+          <p className="text-sm font-bold">{user.name || 'GymBuddy'}</p>
+          <p className="text-muted-foreground">{user.email}</p>
+          <p className="text-muted-foreground mt-1 text-xs">
+            {authMode === 'AUTHENTICATED' ? t.profile.authenticatedDesc : t.profile.guestDesc}
+          </p>
+        </div>
+      )}
 
-          {user && (
-            <div className="bg-secondary/40 rounded-2xl p-3.5 text-xs">
-              <p className="text-sm font-bold">{user.name || 'GymBuddy'}</p>
-              <p className="text-muted-foreground">{user.email}</p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                {authMode === 'AUTHENTICATED' ? t.profile.authenticatedDesc : t.profile.guestDesc}
-              </p>
+      {authMode === 'AUTHENTICATED' ? (
+        <div className="space-y-3">
+          {authInfoMessage && (
+            <div className="border-primary/40 bg-primary/12 text-primary flex items-start gap-2 rounded-2xl border p-3 text-xs">
+              <MailCheck className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{authInfoMessage}</span>
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="secondary" asChild>
+              <Link href="/change-password">
+                <KeyRound className="h-4 w-4" /> {t.profile.changePasswordBtn}
+              </Link>
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void logout()}
+              className="hover:bg-destructive/20 hover:text-destructive w-fit"
+            >
+              <LogOut className="h-4 w-4" /> {t.profile.signOutBtn}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                setDeletePassword('');
+                setDeleteError(null);
+                setDeleteDialogOpen(true);
+              }}
+              className="w-fit"
+            >
+              <Trash2 className="h-4 w-4" /> {t.profile.deleteAccountBtn}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (authTab === 'login') {
+              await login(email, password);
+            } else {
+              await register({ email, password, name: name || undefined });
+            }
+          }}
+          className="space-y-3 border-t pt-3"
+        >
+          <Tabs value={authTab} onValueChange={(val) => setAuthTab(val as 'login' | 'register')}>
+            <TabsList className="w-full">
+              <TabsTrigger value="login">{t.profile.signInTab}</TabsTrigger>
+              <TabsTrigger value="register">{t.profile.registerTab}</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {authTab === 'register' && (
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t.profile.yourNamePlaceholder}
+              className="text-xs"
+            />
+          )}
+          <Input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder={t.profile.emailPlaceholder}
+            className="text-xs"
+          />
+          <Input
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder={t.profile.passwordPlaceholder}
+            className="text-xs"
+          />
+
+          {authTab === 'login' && (
+            <div className="flex justify-end">
+              <Link
+                href="/forgot-password"
+                className="text-primary text-xs font-semibold hover:underline"
+              >
+                {t.profile.forgotPasswordLink}
+              </Link>
             </div>
           )}
 
-          {authMode === 'AUTHENTICATED' ? (
-            <div className="space-y-3">
-              {authInfoMessage && (
-                <div className="border-primary/40 bg-primary/12 text-primary flex items-start gap-2 rounded-2xl border p-3 text-xs">
-                  <MailCheck className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>{authInfoMessage}</span>
-                </div>
-              )}
-              <div className="flex flex-wrap items-center gap-2">
-                <Button type="button" variant="secondary" asChild>
-                  <Link href="/change-password">
-                    <KeyRound className="h-4 w-4" /> {t.profile.changePasswordBtn}
-                  </Link>
-                </Button>
+          {authInfoMessage && (
+            <div className="border-primary/40 bg-primary/12 text-primary space-y-2 rounded-2xl border p-3 text-xs">
+              <div className="flex items-start gap-2">
+                <MailCheck className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{authInfoMessage}</span>
+              </div>
+              {email.trim() && (
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={() => void logout()}
-                  className="hover:bg-destructive/20 hover:text-destructive w-fit"
+                  size="xs"
+                  disabled={authLoading}
+                  onClick={() => void resendConfirmation(email.trim())}
                 >
-                  <LogOut className="h-4 w-4" /> {t.profile.signOutBtn}
+                  {t.profile.resendConfirmationBtn}
                 </Button>
+              )}
+            </div>
+          )}
+
+          {authError && (
+            <div className="space-y-2">
+              <p className="text-destructive text-xs">{authError}</p>
+              {authError.toLowerCase().includes('confirm your email') && email.trim() && (
                 <Button
                   type="button"
-                  variant="destructive"
-                  onClick={() => {
-                    setDeletePassword('');
-                    setDeleteError(null);
-                    setDeleteDialogOpen(true);
-                  }}
-                  className="w-fit"
+                  variant="secondary"
+                  size="xs"
+                  disabled={authLoading}
+                  onClick={() => void resendConfirmation(email.trim())}
                 >
-                  <Trash2 className="h-4 w-4" /> {t.profile.deleteAccountBtn}
+                  <MailCheck className="h-3.5 w-3.5" /> {t.profile.resendConfirmationBtn}
                 </Button>
-              </div>
+              )}
             </div>
-          ) : (
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                if (authTab === 'login') {
-                  await login(email, password);
-                } else {
-                  await register({ email, password, name: name || undefined });
-                }
-              }}
-              className="space-y-3 border-t pt-3"
-            >
-              <Tabs
-                value={authTab}
-                onValueChange={(val) => setAuthTab(val as 'login' | 'register')}
-              >
-                <TabsList className="w-full">
-                  <TabsTrigger value="login">{t.profile.signInTab}</TabsTrigger>
-                  <TabsTrigger value="register">{t.profile.registerTab}</TabsTrigger>
-                </TabsList>
-              </Tabs>
-
-              {authTab === 'register' && (
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={t.profile.yourNamePlaceholder}
-                  className="text-xs"
-                />
-              )}
-              <Input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={t.profile.emailPlaceholder}
-                className="text-xs"
-              />
-              <Input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={t.profile.passwordPlaceholder}
-                className="text-xs"
-              />
-
-              {authTab === 'login' && (
-                <div className="flex justify-end">
-                  <Link
-                    href="/forgot-password"
-                    className="text-primary text-xs font-semibold hover:underline"
-                  >
-                    {t.profile.forgotPasswordLink}
-                  </Link>
-                </div>
-              )}
-
-              {authInfoMessage && (
-                <div className="border-primary/40 bg-primary/12 text-primary space-y-2 rounded-2xl border p-3 text-xs">
-                  <div className="flex items-start gap-2">
-                    <MailCheck className="mt-0.5 h-4 w-4 shrink-0" />
-                    <span>{authInfoMessage}</span>
-                  </div>
-                  {email.trim() && (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="xs"
-                      disabled={authLoading}
-                      onClick={() => void resendConfirmation(email.trim())}
-                    >
-                      {t.profile.resendConfirmationBtn}
-                    </Button>
-                  )}
-                </div>
-              )}
-
-              {authError && (
-                <div className="space-y-2">
-                  <p className="text-destructive text-xs">{authError}</p>
-                  {authError.toLowerCase().includes('confirm your email') && email.trim() && (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="xs"
-                      disabled={authLoading}
-                      onClick={() => void resendConfirmation(email.trim())}
-                    >
-                      <MailCheck className="h-3.5 w-3.5" /> {t.profile.resendConfirmationBtn}
-                    </Button>
-                  )}
-                </div>
-              )}
-
-              <Button type="submit" disabled={authLoading} className="w-full">
-                {authTab === 'login' ? (
-                  <>
-                    <LogIn className="h-4 w-4" /> {t.profile.signInSyncBtn}
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="h-4 w-4" /> {t.profile.createAccountBtn}
-                  </>
-                )}
-              </Button>
-            </form>
           )}
-        </Card>
 
-        {/* Units & Training Preferences Card */}
-        <Card className="space-y-4 rounded-[1.25rem] p-5">
-          <h2 className="font-display text-lg font-bold">{t.profile.preferencesTitle}</h2>
+          <Button type="submit" disabled={authLoading} className="w-full">
+            {authTab === 'login' ? (
+              <>
+                <LogIn className="h-4 w-4" /> {t.profile.signInSyncBtn}
+              </>
+            ) : (
+              <>
+                <UserPlus className="h-4 w-4" /> {t.profile.createAccountBtn}
+              </>
+            )}
+          </Button>
+        </form>
+      )}
+    </Card>
+  );
 
-          <div className="space-y-3 text-xs">
-            {/* Language Switcher */}
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="flex items-center gap-1.5 font-semibold">
-                  <Globe className="text-primary h-3.5 w-3.5" />
-                  {t.profile.languageLabel}
-                </p>
-                <p className="text-muted-foreground text-xs">{t.profile.languageSub}</p>
-              </div>
-              <Tabs
-                value={languagePreference}
-                onValueChange={(val) => {
-                  if (val === 'system' || val === 'en' || val === 'de') {
-                    void setLanguagePreference(val as LanguagePreference);
-                  }
-                }}
-              >
-                <TabsList>
-                  <TabsTrigger value="system">{t.profile.langSystem}</TabsTrigger>
-                  <TabsTrigger value="en">{t.profile.langEn}</TabsTrigger>
-                  <TabsTrigger value="de">{t.profile.langDe}</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="font-semibold">{t.profile.themeLabel}</p>
-                <p className="text-muted-foreground text-xs">{t.profile.themeSub}</p>
-              </div>
-              <Tabs
-                value={theme ?? 'system'}
-                onValueChange={(val) => {
-                  setTheme(val);
-                  if (val === 'dark' || val === 'light' || val === 'system') {
-                    void updatePreferences({ theme: val });
-                  }
-                }}
-              >
-                <TabsList>
-                  <TabsTrigger value="system">{t.profile.themeSystem}</TabsTrigger>
-                  <TabsTrigger value="light">{t.profile.themeLight}</TabsTrigger>
-                  <TabsTrigger value="dark">{t.profile.themeDark}</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-
+  const subpageContent = (): React.ReactNode => {
+    switch (visiblePage) {
+      case 'account':
+        return accountCard;
+      case 'training':
+        return (
+          <Card className="space-y-4 rounded-[1.25rem] p-5 text-xs">
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-semibold">{t.profile.defaultRestLabel}</p>
@@ -507,7 +564,7 @@ export function ProfileImportView() {
             </div>
 
             {/* Smart Rainbow Exercise Suggestions Toggle (Default: On) */}
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="flex items-center gap-1.5 font-semibold">
                   <Sparkles className="h-3.5 w-3.5 text-warning" />
@@ -532,9 +589,22 @@ export function ProfileImportView() {
                 </TabsList>
               </Tabs>
             </div>
-
+          </Card>
+        );
+      case 'nutrition':
+        return <ProfileNutritionGoalsCard />;
+      case 'health':
+        return (
+          <div className="space-y-4">
+            <ProfileHealthCard />
+            {isAuthenticated && <WeightView />}
+          </div>
+        );
+      case 'notifications':
+        return (
+          <Card className="space-y-4 rounded-[1.25rem] p-5 text-xs">
             {/* Workout & Rest Timer Notifications Toggle + Test Notification */}
-            <div className="space-y-2.5 border-t pt-3">
+            <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <p className="flex items-center gap-1.5 font-semibold">
@@ -606,9 +676,156 @@ export function ProfileImportView() {
                 </Tabs>
               </div>
             </div>
+          </Card>
+        );
+      case 'language':
+        return (
+          <Card className="space-y-4 rounded-[1.25rem] p-5 text-xs">
+            {/* Language Switcher */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="flex items-center gap-1.5 font-semibold">
+                  <Globe className="text-primary h-3.5 w-3.5" />
+                  {t.profile.languageLabel}
+                </p>
+                <p className="text-muted-foreground text-xs">{t.profile.languageSub}</p>
+              </div>
+              <Tabs
+                value={languagePreference}
+                onValueChange={(val) => {
+                  if (val === 'system' || val === 'en' || val === 'de') {
+                    void setLanguagePreference(val as LanguagePreference);
+                  }
+                }}
+              >
+                <TabsList>
+                  <TabsTrigger value="system">{t.profile.langSystem}</TabsTrigger>
+                  <TabsTrigger value="en">{t.profile.langEn}</TabsTrigger>
+                  <TabsTrigger value="de">{t.profile.langDe}</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
 
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="font-semibold">{t.profile.themeLabel}</p>
+                <p className="text-muted-foreground text-xs">{t.profile.themeSub}</p>
+              </div>
+              <Tabs
+                value={theme ?? 'system'}
+                onValueChange={(val) => {
+                  setTheme(val);
+                  if (val === 'dark' || val === 'light' || val === 'system') {
+                    void updatePreferences({ theme: val });
+                  }
+                }}
+              >
+                <TabsList>
+                  <TabsTrigger value="system">{t.profile.themeSystem}</TabsTrigger>
+                  <TabsTrigger value="light">{t.profile.themeLight}</TabsTrigger>
+                  <TabsTrigger value="dark">{t.profile.themeDark}</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p id="settings-unit-label" className="font-semibold">
+                {t.profile.weightUnitLabel}
+              </p>
+              <Tabs
+                value={weightUnit}
+                onValueChange={(val) => {
+                  if (val === WeightUnit.KG || val === WeightUnit.LBS) {
+                    void updatePreferences({ weightUnit: val });
+                  }
+                }}
+              >
+                <TabsList aria-labelledby="settings-unit-label">
+                  <TabsTrigger value={WeightUnit.KG}>KG</TabsTrigger>
+                  <TabsTrigger value={WeightUnit.LBS}>LBS</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          </Card>
+        );
+      case 'ai':
+        return (
+          <Card className="space-y-3 rounded-[1.25rem] p-5">
+            <p className="text-muted-foreground text-xs">{t.aiUsage.sub}</p>
+            <AiUsageView />
+          </Card>
+        );
+      case 'export':
+        return (
+          <Card className="space-y-4 rounded-[1.25rem] p-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <Download className="text-primary h-5 w-5" />
+                <div>
+                  <h2 className="font-display text-lg font-bold">{t.profile.exportTitle}</h2>
+                  <p className="text-muted-foreground text-xs">{t.profile.exportSub}</p>
+                </div>
+              </div>
+              {exportStatus && (
+                <Badge variant="success" className="rounded-full px-3 py-1 text-xs">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> {exportStatus}
+                </Badge>
+              )}
+            </div>
+
+            <div className="bg-secondary/40 grid grid-cols-2 gap-3 rounded-2xl border p-3.5 text-xs sm:grid-cols-4">
+              <div>
+                <span className="text-muted-foreground block text-xs">
+                  {t.profile.splitFoldersStat}
+                </span>
+                <strong className="tabular-nums text-base">{folders.length}</strong>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-xs">
+                  {t.profile.workoutTemplatesStat}
+                </span>
+                <strong className="tabular-nums text-base">{allTemplatesCount}</strong>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-xs">
+                  {t.profile.completedSessionsStat}
+                </span>
+                <strong className="tabular-nums text-primary text-base">
+                  {historySessions.length}
+                </strong>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-xs">
+                  {t.profile.completedSetsStat}
+                </span>
+                <strong className="tabular-nums text-base">
+                  {totalLoggedSets.toLocaleString()}
+                </strong>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Button type="button" data-testid="export-json-btn" onClick={handleExportJson}>
+                <FileJson className="h-4 w-4" />
+                {t.profile.exportJsonBtn}
+              </Button>
+              <Button
+                type="button"
+                data-testid="export-csv-btn"
+                variant="secondary"
+                onClick={handleExportCsv}
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                {t.profile.exportCsvBtn}
+              </Button>
+            </div>
+          </Card>
+        );
+      case 'usage':
+        return (
+          <Card className="space-y-4 rounded-[1.25rem] p-5 text-xs">
             {/* Anonymous usage statistics opt-out (device-local, stored in localStorage) */}
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="flex items-center gap-1.5 font-semibold">
                   <ShieldCheck className="text-primary h-3.5 w-3.5" />
@@ -631,122 +848,180 @@ export function ProfileImportView() {
                 </TabsList>
               </Tabs>
             </div>
+          </Card>
+        );
+      case 'sources':
+        return (
+          <Card data-testid="exercise-data-sources" className="space-y-2 rounded-[1.25rem] p-5">
+            <h2 className="text-[0.9375rem] font-semibold">{t.profile.dataSourcesTitle}</h2>
+            <p className="text-muted-foreground text-[0.8125rem]">{t.profile.dataSourcesDesc}</p>
+            <ul className="space-y-1 text-[0.8125rem]">
+              <li>
+                <a
+                  href="https://github.com/yuhonas/free-exercise-db"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary font-medium"
+                >
+                  free-exercise-db
+                </a>{' '}
+                <span className="text-muted-foreground">· Unlicense (public domain)</span>
+              </li>
+              <li>
+                <a
+                  href="https://wger.de"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary font-medium"
+                >
+                  wger Workout Manager
+                </a>{' '}
+                <span className="text-muted-foreground">
+                  ·{' '}
+                  <a
+                    href="https://creativecommons.org/licenses/by-sa/4.0/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    CC-BY-SA 4.0
+                  </a>
+                </span>
+              </li>
+            </ul>
+          </Card>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <>
+      {visiblePage === 'root' ? (
+        <div className="space-y-6 pb-12">
+          <div>
+            <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
+              {t.profile.title}
+            </h1>
+            <p className="text-muted-foreground text-sm">{t.profile.subtitle}</p>
           </div>
-        </Card>
-      </div>
 
-      <ProfileHealthCard />
+          {isAuthenticated ? (
+            <SettingsSection title={t.profile.accountSectionTitle}>
+              <SettingsRow
+                onClick={() => openPage('account')}
+                data-testid="settings-row-account"
+                icon={User}
+                tone="primary"
+                title={t.profile.rowProfileAccount}
+                subtitle={user?.email}
+              />
+            </SettingsSection>
+          ) : (
+            <section aria-label={t.profile.accountSectionTitle}>{accountCard}</section>
+          )}
 
-      {authMode === 'AUTHENTICATED' && <WeightView />}
-
-      <ProfileNutritionGoalsCard />
-
-      {authMode === 'AUTHENTICATED' && <AiUsageCard />}
-
-      {/* Export Gym Data Card (Only when logged in) */}
-      {authMode === 'AUTHENTICATED' && (
-        <Card className="space-y-4 rounded-[1.25rem] p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5">
-              <Download className="text-primary h-5 w-5" />
-              <div>
-                <h2 className="font-display text-lg font-bold">{t.profile.exportTitle}</h2>
-                <p className="text-muted-foreground text-xs">{t.profile.exportSub}</p>
-              </div>
-            </div>
-            {exportStatus && (
-              <Badge variant="success" className="rounded-full px-3 py-1 text-xs">
-                <CheckCircle2 className="h-3.5 w-3.5" /> {exportStatus}
-              </Badge>
+          <SettingsSection title={t.profile.personalizationTitle}>
+            <SettingsRow
+              onClick={() => openPage('training')}
+              data-testid="settings-row-training"
+              icon={Dumbbell}
+              tone="primary"
+              title={t.profile.rowTraining}
+              value={format(t.profile.sessionsPerWeek, {
+                count: user?.preferences?.weeklyGoalSessions ?? 4,
+              })}
+            />
+            {isAuthenticated && (
+              <SettingsRow
+                onClick={() => openPage('nutrition')}
+                data-testid="settings-row-nutrition"
+                icon={Salad}
+                tone="success"
+                title={t.profile.rowNutritionGoals}
+                value={
+                  kcalGoal == null
+                    ? t.profile.notSet
+                    : format(t.profile.kcalValue, { count: kcalGoal })
+                }
+              />
             )}
-          </div>
+            {isAuthenticated && (
+              <SettingsRow
+                onClick={() => openPage('health')}
+                data-testid="settings-row-health"
+                icon={HeartPulse}
+                tone="destructive"
+                title={t.profile.rowHealthDetails}
+              />
+            )}
+            <SettingsRow
+              onClick={() => openPage('notifications')}
+              data-testid="settings-row-notifications"
+              icon={Bell}
+              tone="warning"
+              title={t.profile.rowNotifications}
+            />
+            <SettingsRow
+              onClick={() => openPage('language')}
+              data-testid="settings-row-language"
+              icon={Globe}
+              tone="warmup"
+              title={t.profile.rowLanguageUnits}
+              value={`${languageName} · ${weightUnit}`}
+            />
+          </SettingsSection>
 
-          <div className="bg-secondary/40 grid grid-cols-2 gap-3 rounded-2xl border p-3.5 text-xs sm:grid-cols-4">
-            <div>
-              <span className="text-muted-foreground block text-xs">
-                {t.profile.splitFoldersStat}
-              </span>
-              <strong className="tabular-nums text-base">{folders.length}</strong>
-            </div>
-            <div>
-              <span className="text-muted-foreground block text-xs">
-                {t.profile.workoutTemplatesStat}
-              </span>
-              <strong className="tabular-nums text-base">{allTemplatesCount}</strong>
-            </div>
-            <div>
-              <span className="text-muted-foreground block text-xs">
-                {t.profile.completedSessionsStat}
-              </span>
-              <strong className="tabular-nums text-primary text-base">
-                {historySessions.length}
-              </strong>
-            </div>
-            <div>
-              <span className="text-muted-foreground block text-xs">
-                {t.profile.completedSetsStat}
-              </span>
-              <strong className="tabular-nums text-base">{totalLoggedSets.toLocaleString()}</strong>
-            </div>
-          </div>
+          {isAuthenticated && (
+            <SettingsSection title={t.profile.aiSectionTitle}>
+              <SettingsRow
+                onClick={() => openPage('ai')}
+                data-testid="settings-row-ai"
+                icon={Sparkles}
+                tone="dropset"
+                title={t.profile.rowAiUsage}
+              />
+            </SettingsSection>
+          )}
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Button type="button" data-testid="export-json-btn" onClick={handleExportJson}>
-              <FileJson className="h-4 w-4" />
-              {t.profile.exportJsonBtn}
-            </Button>
-            <Button
-              type="button"
-              data-testid="export-csv-btn"
-              variant="secondary"
-              onClick={handleExportCsv}
-            >
-              <FileSpreadsheet className="h-4 w-4" />
-              {t.profile.exportCsvBtn}
-            </Button>
-          </div>
-        </Card>
+          <SettingsSection title={t.profile.advancedTitle}>
+            {isAuthenticated && (
+              <SettingsRow
+                onClick={() => openPage('export')}
+                data-testid="settings-row-export"
+                icon={Download}
+                tone="stretch"
+                title={t.profile.rowExportBackup}
+              />
+            )}
+            <SettingsRow
+              onClick={() => openPage('usage')}
+              data-testid="settings-row-usage"
+              icon={ShieldCheck}
+              tone="muted"
+              title={t.profile.rowUsageStats}
+              value={analyticsOptedOut ? t.profile.disabledOption : t.profile.enabledOption}
+            />
+            <SettingsRow
+              onClick={() => openPage('sources')}
+              data-testid="settings-row-sources"
+              icon={BookOpen}
+              tone="muted"
+              title={t.profile.rowDataSources}
+            />
+          </SettingsSection>
+        </div>
+      ) : (
+        <SettingsSubpage
+          title={pageTitles[visiblePage]}
+          backLabel={t.profile.backToSettings}
+          onBack={goBack}
+          headingRef={headingRef}
+        >
+          {subpageContent()}
+        </SettingsSubpage>
       )}
-
-      {/* Attribution for the imported exercise database (CC-BY-SA requires it for wger content) */}
-      <Card data-testid="exercise-data-sources" className="space-y-2 rounded-[1.25rem] p-5">
-        <h2 className="text-[0.9375rem] font-semibold">{t.profile.dataSourcesTitle}</h2>
-        <p className="text-muted-foreground text-[0.8125rem]">{t.profile.dataSourcesDesc}</p>
-        <ul className="space-y-1 text-[0.8125rem]">
-          <li>
-            <a
-              href="https://github.com/yuhonas/free-exercise-db"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary font-medium"
-            >
-              free-exercise-db
-            </a>{' '}
-            <span className="text-muted-foreground">· Unlicense (public domain)</span>
-          </li>
-          <li>
-            <a
-              href="https://wger.de"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary font-medium"
-            >
-              wger Workout Manager
-            </a>{' '}
-            <span className="text-muted-foreground">
-              ·{' '}
-              <a
-                href="https://creativecommons.org/licenses/by-sa/4.0/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline"
-              >
-                CC-BY-SA 4.0
-              </a>
-            </span>
-          </li>
-        </ul>
-      </Card>
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="sm:max-w-md">
@@ -810,6 +1085,6 @@ export function ProfileImportView() {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
