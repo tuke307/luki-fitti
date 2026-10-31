@@ -11,10 +11,7 @@ public struct ProfileAndAuthView: View {
     @State private var statusMessage: String?
 
     @State private var newResetPassword: String = ""
-    @State private var deleteAccountPassword: String = ""
-    @State private var showingDeleteRequestField: Bool = false
     @State private var generalAutosave = PreferencesAutosaver()
-    @State private var notificationStatus: String?
     @Environment(\.lukiLocale) private var tr
 
     public init(viewModel: LukiAppViewModel) {
@@ -23,7 +20,7 @@ public struct ProfileAndAuthView: View {
 
     public var body: some View {
         @Bindable var store = viewModel.store
-        return Form {
+        return List {
             if let tokenType = viewModel.deepLinkTokenType,
                let token = viewModel.deepLinkToken {
                 Section {
@@ -33,51 +30,38 @@ public struct ProfileAndAuthView: View {
 
             Section(tr("Account")) {
                 if let user = viewModel.store.currentUser {
-                    authenticatedAccountRows(user)
+                    NavigationLink {
+                        AccountSettingsPage(viewModel: viewModel, statusMessage: $statusMessage)
+                    } label: {
+                        SettingsRow(
+                            tr("Profile & account"),
+                            systemImage: "person.crop.circle.fill",
+                            tint: LukiColors.accent,
+                            subtitle: user.email
+                        )
+                    }
+                    .accessibilityIdentifier("ios.profile.row.account")
                 } else {
                     guestAuthRows
                 }
             }
 
-            Section {
-                NavigationLink {
-                    HealthDetailsView(viewModel: viewModel)
-                } label: {
-                    Label(tr("Health details"), systemImage: "heart.text.square")
-                }
-                .accessibilityIdentifier("ios.profile.healthDetailsRow")
-                NavigationLink {
-                    NutritionGoalsView(viewModel: viewModel)
-                } label: {
-                    LabeledContent {
-                        Text(viewModel.store.preferences.dailyKcalGoal.map { tr("%d kcal", $0) } ?? tr("Not set"))
-                            .monospacedDigit()
-                    } label: {
-                        Label(tr("Nutrition goals"), systemImage: "fork.knife")
-                    }
-                }
-                .accessibilityIdentifier("ios.profile.nutritionGoalsRow")
-            } header: {
-                Text(tr("Health & nutrition"))
-            } footer: {
-                Text(tr("Used for calorie estimates. Stays private."))
-            }
+            personalizationSection
 
             if viewModel.store.currentUser != nil {
-                Section {
+                Section(tr("AI")) {
                     NavigationLink {
                         AIUsageView(viewModel: viewModel)
                     } label: {
-                        Label(tr("AI usage"), systemImage: "sparkles")
+                        SettingsRow(tr("AI usage"), systemImage: "sparkles", tint: LukiColors.setDropset)
                     }
                     .accessibilityIdentifier("ios.profile.aiUsageRow")
                 }
             }
 
-            preferencesSection
-            notificationsSection
-            backupExportSection
+            dataSection
         }
+        .listStyle(.insetGrouped)
         .onChange(of: GeneralPreferences(store.preferences)) { _, values in
             generalAutosave.schedule { await saveGeneral(values) }
         }
@@ -85,9 +69,11 @@ public struct ProfileAndAuthView: View {
         .onChange(of: store.preferences.weightUnit) { viewModel.rescheduleWeighInReminders() }
     }
 
-    /// Settings saved straight from this page (the rest live on their own pages).
+    /// Settings bound straight to the store by the Training, Notifications and Language & units
+    /// pages. Watched here so they save whichever page is open.
     private struct GeneralPreferences: Equatable {
         let language: LanguagePreference?
+        let weightUnit: WeightUnit
         let weeklyGoalSessions: Int
         let exerciseSuggestionsEnabled: Bool
         let notificationsEnabled: Bool
@@ -95,6 +81,7 @@ public struct ProfileAndAuthView: View {
 
         init(_ p: UserPreferencesDto) {
             language = p.language
+            weightUnit = p.weightUnit
             weeklyGoalSessions = p.weeklyGoalSessions
             exerciseSuggestionsEnabled = p.exerciseSuggestionsEnabled
             notificationsEnabled = p.notificationsEnabled
@@ -103,13 +90,14 @@ public struct ProfileAndAuthView: View {
     }
 
     private func saveGeneral(_ values: GeneralPreferences) async -> String? {
-        let dto = UpdatePreferencesDto(
+        var dto = UpdatePreferencesDto(
             language: values.language,
             restTimerSound: values.restTimerSound,
             notificationsEnabled: values.notificationsEnabled,
             exerciseSuggestionsEnabled: values.exerciseSuggestionsEnabled,
             weeklyGoalSessions: values.weeklyGoalSessions
         )
+        dto.weightUnit = values.weightUnit
         return await viewModel.savePreferences(viewModel.store.preferences, server: dto)
     }
 
@@ -187,63 +175,6 @@ public struct ProfileAndAuthView: View {
     }
 
     // MARK: - Account
-
-    @ViewBuilder
-    private func authenticatedAccountRows(_ user: UserDto) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(tr("Signed in"))
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(LukiColors.accent)
-                .accessibilityIdentifier("ios.profile.authenticatedBadge")
-            Text(user.email)
-                .font(.headline)
-            if let statusMessage {
-                Text(statusMessage)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .accessibilityIdentifier("ios.profile.statusMessage")
-            }
-        }
-        .padding(.vertical, 2)
-
-        Button(tr("Sign Out"), role: .destructive) {
-            Task {
-                await viewModel.store.apiClient.logout()
-                viewModel.store.clearAllLocalData()
-                viewModel.nutrition.clear()
-                viewModel.clearBodyWeightData()
-            }
-        }
-        .accessibilityIdentifier("ios.profile.signOutButton")
-
-        Button(tr("Delete Account"), role: .destructive) {
-            showingDeleteRequestField.toggle()
-        }
-        .accessibilityIdentifier("ios.profile.deleteAccountButton")
-
-        if showingDeleteRequestField {
-            SecureField(tr("Current Password"), text: $deleteAccountPassword)
-                .accessibilityIdentifier("ios.profile.deletePasswordField")
-
-            Button(role: .destructive) {
-                Task {
-                    do {
-                        try await viewModel.store.apiClient.requestAccountDeletion(
-                            password: deleteAccountPassword
-                        )
-                        showingDeleteRequestField = false
-                        deleteAccountPassword = ""
-                        statusMessage = tr("Check your email to confirm the deletion.")
-                    } catch {
-                        statusMessage = error.localizedDescription
-                    }
-                }
-            } label: {
-                Text(tr("Email Me a Confirmation Link"))
-            }
-            .accessibilityIdentifier("ios.profile.sendDeleteEmailButton")
-        }
-    }
 
     @ViewBuilder
     private var guestAuthRows: some View {
@@ -328,89 +259,299 @@ public struct ProfileAndAuthView: View {
 
     // MARK: - Settings
 
-    private var preferencesSection: some View {
-        @Bindable var store = viewModel.store
-        return Section {
-            Picker(tr("Language"), selection: Binding(
-                get: { store.preferences.language ?? .system },
-                set: { store.preferences.language = $0 }
-            )) {
-                Text(tr("System")).tag(LanguagePreference.system)
-                Text("English").tag(LanguagePreference.en)
-                Text("Deutsch").tag(LanguagePreference.de)
-            }
-            .accessibilityIdentifier("ios.profile.languagePicker")
-
-            Stepper(value: $store.preferences.weeklyGoalSessions, in: 1...14) {
-                LabeledContent(tr("Weekly goal"), value: tr("%d workouts", store.preferences.weeklyGoalSessions))
-            }
-            .accessibilityIdentifier("ios.profile.weeklyGoalStepper")
-
-            Toggle(isOn: $store.preferences.exerciseSuggestionsEnabled) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(tr("Exercise suggestions"))
-                    Text(tr("Suggests at most one exercise per workout"))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .tint(LukiColors.accent)
-            .accessibilityIdentifier("ios.profile.exerciseSuggestionsToggle")
-        } header: {
-            Text(tr("Preferences"))
-        } footer: {
-            AutosaveStatusView(status: generalAutosave.status)
-        }
-    }
-
-    private var notificationsSection: some View {
-        @Bindable var store = viewModel.store
-        return Section(tr("Notifications")) {
-            Toggle(isOn: $store.preferences.notificationsEnabled) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(tr("Notifications"))
-                    Text(tr("When rest is over or a workout is done"))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .tint(LukiColors.accent)
-            .accessibilityIdentifier("ios.profile.notificationsToggle")
-
-            Toggle(tr("Rest timer sound"), isOn: $store.preferences.restTimerSound)
-                .tint(LukiColors.accent)
-                .accessibilityIdentifier("ios.profile.restTimerSoundToggle")
-
-            Button {
-                Task {
-                    notificationStatus = await viewModel.sendTestNotification()
-                        ? tr("A test notification arrives in a second.")
-                        : tr("Allow notifications for LukiFitti in Settings to get them.")
-                }
+    private var personalizationSection: some View {
+        let prefs = viewModel.store.preferences
+        return Section(tr("Personalization")) {
+            NavigationLink {
+                TrainingSettingsPage(viewModel: viewModel, autosave: generalAutosave)
             } label: {
-                Label(tr("Send Test Notification"), systemImage: "bell.badge")
+                SettingsRow(
+                    tr("Training"),
+                    systemImage: "dumbbell.fill",
+                    tint: LukiColors.accent,
+                    value: tr("%d workouts", prefs.weeklyGoalSessions)
+                )
             }
-            .accessibilityIdentifier("ios.profile.testNotificationButton")
-            if let notificationStatus {
-                Text(notificationStatus)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
+            .accessibilityIdentifier("ios.profile.row.training")
 
-            WeighInReminderSection(viewModel: viewModel)
+            NavigationLink {
+                NutritionGoalsView(viewModel: viewModel)
+            } label: {
+                SettingsRow(
+                    tr("Nutrition goals"),
+                    systemImage: "fork.knife",
+                    tint: LukiColors.success,
+                    value: prefs.dailyKcalGoal.map { tr("%d kcal", $0) } ?? tr("Not set")
+                )
+            }
+            .accessibilityIdentifier("ios.profile.nutritionGoalsRow")
+
+            NavigationLink {
+                HealthDetailsView(viewModel: viewModel)
+            } label: {
+                SettingsRow(tr("Health details"), systemImage: "heart.text.square.fill", tint: LukiColors.destructive)
+            }
+            .accessibilityIdentifier("ios.profile.healthDetailsRow")
+
+            NavigationLink {
+                NotificationSettingsPage(viewModel: viewModel, autosave: generalAutosave)
+            } label: {
+                SettingsRow(tr("Notifications"), systemImage: "bell.badge.fill", tint: LukiColors.warning)
+            }
+            .accessibilityIdentifier("ios.profile.row.notifications")
+
+            NavigationLink {
+                LanguageUnitsSettingsPage(viewModel: viewModel, autosave: generalAutosave)
+            } label: {
+                SettingsRow(
+                    tr("Language & units"),
+                    systemImage: "globe",
+                    tint: LukiColors.setWarmup,
+                    value: "\(LanguageUnitsSettingsPage.languageName(prefs.language, tr: tr)) · \(LukiFormat.unitLabel(prefs.weightUnit))"
+                )
+            }
+            .accessibilityIdentifier("ios.profile.row.languageUnits")
         }
     }
 
-    private var backupExportSection: some View {
+    private var dataSection: some View {
         Section {
             let jsonBackup = (try? String(data: JSONEncoder().encode(viewModel.store.historySessions), encoding: .utf8)) ?? "[]"
             ShareLink(item: jsonBackup, preview: SharePreview("luki-fitti-backup.json")) {
-                Label(tr("Export Backup"), systemImage: "square.and.arrow.up")
+                SettingsRow(tr("Export Backup"), systemImage: "square.and.arrow.up", tint: LukiColors.setStretch)
             }
+            .accessibilityIdentifier("ios.profile.row.exportBackup")
         } header: {
-            Text(tr("Backup"))
+            Text(tr("Data"))
         } footer: {
             Text(tr("Exports your workout history as a JSON file."))
         }
+    }
+}
+
+// MARK: - Sub-pages
+
+/// Pops a settings sub-page when a reset-password / delete-account link arrives, so the action
+/// card at the top of Profile is visible.
+private struct PopOnDeepLink: ViewModifier {
+    let viewModel: LukiAppViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    func body(content: Content) -> some View {
+        content.onChange(of: viewModel.deepLinkTokenType) { _, type in
+            if type != nil { dismiss() }
+        }
+    }
+}
+
+private struct AccountSettingsPage: View {
+    @Bindable var viewModel: LukiAppViewModel
+    @Binding var statusMessage: String?
+    @State private var deleteAccountPassword: String = ""
+    @State private var showingDeleteRequestField: Bool = false
+    @Environment(\.lukiLocale) private var tr
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        List {
+            if let user = viewModel.store.currentUser {
+                Section {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(tr("Signed in"))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(LukiColors.accent)
+                            .accessibilityIdentifier("ios.profile.authenticatedBadge")
+                        Text(user.email)
+                            .font(.headline)
+                        if let statusMessage {
+                            Text(statusMessage)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .accessibilityIdentifier("ios.profile.statusMessage")
+                        }
+                    }
+                    .padding(.vertical, 2)
+
+                    Button(tr("Sign Out"), role: .destructive) {
+                        Task {
+                            await viewModel.store.apiClient.logout()
+                            viewModel.store.clearAllLocalData()
+                            viewModel.nutrition.clear()
+                            viewModel.clearBodyWeightData()
+                        }
+                    }
+                    .accessibilityIdentifier("ios.profile.signOutButton")
+                }
+
+                Section {
+                    Button(tr("Delete Account"), role: .destructive) {
+                        showingDeleteRequestField.toggle()
+                    }
+                    .accessibilityIdentifier("ios.profile.deleteAccountButton")
+
+                    if showingDeleteRequestField {
+                        SecureField(tr("Current Password"), text: $deleteAccountPassword)
+                            .accessibilityIdentifier("ios.profile.deletePasswordField")
+
+                        Button(role: .destructive) {
+                            Task {
+                                do {
+                                    try await viewModel.store.apiClient.requestAccountDeletion(
+                                        password: deleteAccountPassword
+                                    )
+                                    showingDeleteRequestField = false
+                                    deleteAccountPassword = ""
+                                    statusMessage = tr("Check your email to confirm the deletion.")
+                                } catch {
+                                    statusMessage = error.localizedDescription
+                                }
+                            }
+                        } label: {
+                            Text(tr("Email Me a Confirmation Link"))
+                        }
+                        .accessibilityIdentifier("ios.profile.sendDeleteEmailButton")
+                    }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle(tr("Profile & account"))
+        .navigationBarTitleDisplayMode(.inline)
+        .modifier(PopOnDeepLink(viewModel: viewModel))
+        .onChange(of: viewModel.store.currentUser == nil) { _, signedOut in
+            if signedOut { dismiss() }
+        }
+    }
+}
+
+private struct TrainingSettingsPage: View {
+    @Bindable var viewModel: LukiAppViewModel
+    let autosave: PreferencesAutosaver
+    @Environment(\.lukiLocale) private var tr
+
+    var body: some View {
+        @Bindable var store = viewModel.store
+        return List {
+            Section {
+                Stepper(value: $store.preferences.weeklyGoalSessions, in: 1...14) {
+                    LabeledContent(tr("Weekly goal"), value: tr("%d workouts", store.preferences.weeklyGoalSessions))
+                }
+                .accessibilityIdentifier("ios.profile.weeklyGoalStepper")
+
+                Toggle(isOn: $store.preferences.exerciseSuggestionsEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(tr("Exercise suggestions"))
+                        Text(tr("Suggests at most one exercise per workout"))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .tint(LukiColors.accent)
+                .accessibilityIdentifier("ios.profile.exerciseSuggestionsToggle")
+            } footer: {
+                AutosaveStatusView(status: autosave.status)
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle(tr("Training"))
+        .navigationBarTitleDisplayMode(.inline)
+        .modifier(PopOnDeepLink(viewModel: viewModel))
+    }
+}
+
+private struct NotificationSettingsPage: View {
+    @Bindable var viewModel: LukiAppViewModel
+    let autosave: PreferencesAutosaver
+    @State private var notificationStatus: String?
+    @Environment(\.lukiLocale) private var tr
+
+    var body: some View {
+        @Bindable var store = viewModel.store
+        return List {
+            Section {
+                Toggle(isOn: $store.preferences.notificationsEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(tr("Notifications"))
+                        Text(tr("When rest is over or a workout is done"))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .tint(LukiColors.accent)
+                .accessibilityIdentifier("ios.profile.notificationsToggle")
+
+                Toggle(tr("Rest timer sound"), isOn: $store.preferences.restTimerSound)
+                    .tint(LukiColors.accent)
+                    .accessibilityIdentifier("ios.profile.restTimerSoundToggle")
+
+                Button {
+                    Task {
+                        notificationStatus = await viewModel.sendTestNotification()
+                            ? tr("A test notification arrives in a second.")
+                            : tr("Allow notifications for LukiFitti in Settings to get them.")
+                    }
+                } label: {
+                    Label(tr("Send Test Notification"), systemImage: "bell.badge")
+                }
+                .accessibilityIdentifier("ios.profile.testNotificationButton")
+                if let notificationStatus {
+                    Text(notificationStatus)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            } footer: {
+                AutosaveStatusView(status: autosave.status)
+            }
+
+            Section {
+                WeighInReminderSection(viewModel: viewModel)
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle(tr("Notifications"))
+        .navigationBarTitleDisplayMode(.inline)
+        .modifier(PopOnDeepLink(viewModel: viewModel))
+    }
+}
+
+private struct LanguageUnitsSettingsPage: View {
+    @Bindable var viewModel: LukiAppViewModel
+    let autosave: PreferencesAutosaver
+    @Environment(\.lukiLocale) private var tr
+
+    static func languageName(_ language: LanguagePreference?, tr: SupportedLocale) -> String {
+        switch language ?? .system {
+        case .system: return tr("System")
+        case .en: return "English"
+        case .de: return "Deutsch"
+        }
+    }
+
+    var body: some View {
+        @Bindable var store = viewModel.store
+        return List {
+            Section {
+                Picker(tr("Language"), selection: Binding(
+                    get: { store.preferences.language ?? .system },
+                    set: { store.preferences.language = $0 }
+                )) {
+                    ForEach([LanguagePreference.system, .en, .de], id: \.self) { language in
+                        Text(Self.languageName(language, tr: tr)).tag(language)
+                    }
+                }
+                .accessibilityIdentifier("ios.profile.languagePicker")
+
+                Picker(tr("Weight unit"), selection: $store.preferences.weightUnit) {
+                    ForEach(WeightUnit.allCases, id: \.self) { Text(LukiFormat.unitLabel($0)).tag($0) }
+                }
+                .accessibilityIdentifier("ios.profile.weightUnitPicker")
+            } footer: {
+                AutosaveStatusView(status: autosave.status)
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle(tr("Language & units"))
+        .navigationBarTitleDisplayMode(.inline)
+        .modifier(PopOnDeepLink(viewModel: viewModel))
     }
 }
