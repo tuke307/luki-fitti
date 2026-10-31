@@ -351,7 +351,7 @@ public struct WatchActiveWorkoutView: View {
 
     private func restView(_ rest: RestTimerStatus) -> some View {
         let progress = rest.totalSeconds > 0 ? Double(rest.remainingSeconds) / Double(rest.totalSeconds) : 0
-        let endsAt = session?.restTimerEndsAt.flatMap { ISO8601DateFormatter().date(from: $0) }
+        let endsAt = LukiDate.parseISO(session?.restTimerEndsAt)
         return VStack(spacing: 6) {
             Text(tr("Rest"))
                 .font(.headline)

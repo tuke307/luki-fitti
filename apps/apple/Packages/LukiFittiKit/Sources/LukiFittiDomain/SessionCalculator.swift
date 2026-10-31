@@ -332,7 +332,7 @@ public enum SessionCalculator {
         }
 
         if let endsIso = session.restTimerEndsAt,
-           let endsDate = ISO8601DateFormatter().date(from: endsIso) {
+           let endsDate = LukiDate.parseISO(endsIso) {
             let rem = max(0, Int(ceil(endsDate.timeIntervalSince(now))))
             return RestTimerStatus(
                 remainingSeconds: rem,
