@@ -37,6 +37,13 @@ targets:
         product: LukiFittiKit
       - target: LukiFittiWidgets
         embed: true
+      # WatchConnectivity only treats the Watch app as this app's companion (isWatchAppInstalled)
+      # when it ships inside the iOS app under Watch/.
+      - target: LukiFittiWatch
+        embed: true
+        copy:
+          destination: productsDirectory
+          subpath: $(CONTENTS_FOLDER_PATH)/Watch
 
   LukiFittiWatch:
     type: application

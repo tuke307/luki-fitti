@@ -1,6 +1,7 @@
 import SwiftUI
 import LukiFittiModels
 import LukiFittiDesign
+import LukiFittiWatchSync
 
 public struct ProfileAndAuthView: View {
     @Bindable public var viewModel: LukiAppViewModel
@@ -311,6 +312,18 @@ public struct ProfileAndAuthView: View {
                 )
             }
             .accessibilityIdentifier("ios.profile.row.languageUnits")
+
+            NavigationLink {
+                AppleWatchSettingsPage(viewModel: viewModel)
+            } label: {
+                SettingsRow(
+                    tr("Apple Watch"),
+                    systemImage: "applewatch",
+                    tint: LukiColors.setStretch,
+                    value: AppleWatchSettingsPage.summary(viewModel.watchSyncCoordinator.status, tr: tr)
+                )
+            }
+            .accessibilityIdentifier("ios.profile.row.appleWatch")
         }
     }
 
@@ -456,6 +469,74 @@ private struct TrainingSettingsPage: View {
         .navigationTitle(tr("Training"))
         .navigationBarTitleDisplayMode(.inline)
         .modifier(PopOnDeepLink(viewModel: viewModel))
+    }
+}
+
+/// Watch connection status and a manual "send now", so sync problems are visible and fixable.
+private struct AppleWatchSettingsPage: View {
+    @Bindable var viewModel: LukiAppViewModel
+    @Environment(\.lukiLocale) private var tr
+
+    static func summary(_ status: WatchConnectionStatus, tr: SupportedLocale) -> String {
+        status.isPaired ? tr("Paired") : tr("Not paired")
+    }
+
+    private var status: WatchConnectionStatus { viewModel.watchSyncCoordinator.status }
+
+    var body: some View {
+        List {
+            Section {
+                statusRow(tr("Paired"), status.isPaired)
+                LabeledContent(tr("Last sent")) {
+                    Text(status.lastSentAt.map { $0.formatted(date: .omitted, time: .standard) } ?? "–")
+                        .monospacedDigit()
+                }
+                LabeledContent(tr("Last request from Watch")) {
+                    Text(status.lastReceivedAt.map { $0.formatted(date: .abbreviated, time: .shortened) } ?? "–")
+                        .monospacedDigit()
+                }
+                LabeledContent(tr("Signed in as")) {
+                    Text(viewModel.store.currentUser?.email ?? tr("Not signed in"))
+                        .lineLimit(1)
+                }
+            } footer: {
+                Text(tr("The Watch gets your sign-in and workouts from this iPhone. Open LukiFitti on the Watch too, then send."))
+            }
+
+            Section {
+                Button {
+                    viewModel.pushContextToWatch()
+                } label: {
+                    Label(tr("Send to Apple Watch now"), systemImage: "arrow.triangle.2.circlepath")
+                }
+                .disabled(viewModel.store.currentUser == nil)
+                .accessibilityIdentifier("ios.profile.watch.sendButton")
+                if let error = status.lastError {
+                    Text(tr(error))
+                        .font(.footnote)
+                        .foregroundStyle(LukiColors.destructive)
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle(tr("Apple Watch"))
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            // WatchConnectivity has no change callback for every field, so poll while visible.
+            while !Task.isCancelled {
+                viewModel.watchSyncCoordinator.refreshStatus()
+                try? await Task.sleep(for: .seconds(2))
+            }
+        }
+        .modifier(PopOnDeepLink(viewModel: viewModel))
+    }
+
+    private func statusRow(_ title: String, _ ok: Bool) -> some View {
+        LabeledContent(title) {
+            Image(systemName: ok ? "checkmark.circle.fill" : "xmark.circle.fill")
+                .foregroundStyle(ok ? LukiColors.success : LukiColors.destructive)
+                .accessibilityLabel(ok ? tr("Yes") : tr("No"))
+        }
     }
 }
 
