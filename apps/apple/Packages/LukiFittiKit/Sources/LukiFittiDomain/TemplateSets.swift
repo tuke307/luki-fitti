@@ -27,6 +27,20 @@ public enum TemplateSets {
         return (min(30, max(1, sets.count - warmups)), min(10, warmups), workingWeights.max())
     }
 
+    /// The progression rep band derived from the planned sets: the lowest working-set reps open
+    /// the band, unless they already fall inside the current one (which then stays put).
+    public static func deriveRepRange(_ sets: [TemplateSetDto], currentMin: Int?, currentMax: Int?) -> (min: Int?, max: Int?) {
+        let reps = sets
+            .filter { $0.setType != .WARMUP && $0.setType != .STRETCH }
+            .compactMap(\.reps)
+            .filter { $0 > 0 }
+        guard let r = reps.min() else { return (currentMin, currentMax) }
+        if let currentMin, let currentMax, currentMin <= r, r <= currentMax {
+            return (currentMin, currentMax)
+        }
+        return (r, min(100, r + 4))
+    }
+
     public static func orderWarmupsFirst<T>(_ sets: [T], type: (T) -> SetType) -> [T] {
         sets.filter { type($0) == .WARMUP } + sets.filter { type($0) != .WARMUP }
     }
