@@ -32,6 +32,9 @@ import type {
 
 const LBS_TO_KG = 0.45359237;
 
+/** A running workout untouched this long counts as abandoned and may be replaced. */
+export const STALE_ACTIVE_SESSION_MS = 12 * 60 * 60 * 1000;
+
 @Injectable()
 export class SessionService {
   constructor(
@@ -495,11 +498,17 @@ export class SessionService {
         (payload.status === SessionStatus.IN_PROGRESS || payload.status === SessionStatus.PAUSED) &&
         tx.workoutSession.deleteMany
       ) {
+        // Another device's running workout is only replaced when the user chose to
+        // (`replaceActive`) or when it was abandoned; otherwise both stay instead of one
+        // silently losing its sets.
         await tx.workoutSession.deleteMany({
           where: {
             userId,
             status: { in: [SessionStatus.IN_PROGRESS, SessionStatus.PAUSED] },
             clientSessionId: { not: payload.clientSessionId },
+            ...(payload.replaceActive
+              ? {}
+              : { updatedAt: { lt: new Date(Date.now() - STALE_ACTIVE_SESSION_MS) } }),
           },
         });
       }
