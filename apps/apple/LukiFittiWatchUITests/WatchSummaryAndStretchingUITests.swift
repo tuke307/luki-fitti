@@ -16,7 +16,10 @@ final class WatchSummaryAndStretchingUITests: XCTestCase {
         finishTile.tap()
 
         // Ending a workout asks first.
-        let confirmEnd = app.buttons["End Workout"].firstMatch
+        // The round End control is also labelled "End Workout" for VoiceOver; pick the dialog's button.
+        let confirmEnd = app.buttons
+            .matching(NSPredicate(format: "label == 'End Workout' AND identifier != 'watch.action.finish'"))
+            .firstMatch
         XCTAssertTrue(confirmEnd.waitForExistence(timeout: 5))
         confirmEnd.tap()
 

@@ -615,5 +615,17 @@ public enum LukiStrings {
         "Average sets per week": "Durchschnittliche Sätze pro Woche",
         "4 weeks": "4 Wochen",
         "12 weeks": "12 Wochen",
+        // Watch workout screens
+        "Complete Set": "Satz abschließen",
+        "Exercises": "Übungen",
+        "Next: set %d · %@": "Als Nächstes: Satz %d · %@",
+        "Last set": "Letzter Satz",
+        "Continue with": "Weiter mit",
+        "It’s removed from your history on all devices and from Apple Health.": "Es wird aus deinem Verlauf auf allen Geräten und aus Apple Health entfernt.",
+        "Sync": "Synchronisieren",
+        "× %d reps": "× %d Wdh.",
+        "Double-tap, then turn the Digital Crown": "Doppeltippen, dann die Digital Crown drehen",
+        "Change reps": "Wiederholungen ändern",
+        "%d bpm": "%d Schläge/Min.",
     ]
 }
