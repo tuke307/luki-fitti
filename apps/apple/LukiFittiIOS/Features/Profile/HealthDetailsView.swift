@@ -12,11 +12,14 @@ struct HealthDetailsView: View {
     @State private var heightCm: Double?
     @State private var birthYear: Int?
     @State private var sex: String
+    @State private var bodyFatPct: Double?
+    @State private var activityLevel: ActivityLevel?
     @State private var autosave = PreferencesAutosaver()
     @State private var isConnectingHealth = false
 
     static let heightRange = 100.0...250.0
     static let birthYearRange = 1900...2030
+    static let bodyFatRange = NutritionMath.bodyFatPctRange
 
     init(viewModel: LukiAppViewModel) {
         self.viewModel = viewModel
@@ -25,6 +28,8 @@ struct HealthDetailsView: View {
         _heightCm = State(initialValue: p.heightCm)
         _birthYear = State(initialValue: p.birthYear)
         _sex = State(initialValue: p.sex ?? "")
+        _bodyFatPct = State(initialValue: p.bodyFatPct)
+        _activityLevel = State(initialValue: p.activityLevel)
     }
 
     private struct Values: Equatable {
@@ -32,10 +37,23 @@ struct HealthDetailsView: View {
         let heightCm: Double?
         let birthYear: Int?
         let sex: String
+        let bodyFatPct: Double?
+        let activityLevel: ActivityLevel?
     }
 
     private var heightValid: Bool { heightCm.map(Self.heightRange.contains) ?? true }
     private var birthYearValid: Bool { birthYear.map(Self.birthYearRange.contains) ?? true }
+    private var bodyFatValid: Bool { bodyFatPct.map(Self.bodyFatRange.contains) ?? true }
+
+    /// Plain names for the everyday activity levels (no workouts).
+    static func activityLabel(_ level: ActivityLevel, _ tr: SupportedLocale) -> String {
+        switch level {
+        case .SEDENTARY: tr("Mostly sitting")
+        case .LIGHT: tr("Some walking")
+        case .ACTIVE: tr("On my feet a lot")
+        case .VERY_ACTIVE: tr("Physical job")
+        }
+    }
 
     var body: some View {
         Form {
@@ -83,8 +101,30 @@ struct HealthDetailsView: View {
                 }
                 .accessibilityIdentifier("ios.profile.sexPicker")
             } footer: {
+                Text(tr("Used for calorie estimates. Stays private."))
+            }
+
+            Section {
+                LabeledContent(tr("Body fat (%)")) {
+                    LiveNumberField(value: $bodyFatPct)
+                        .frame(maxWidth: 110)
+                        .accessibilityLabel(tr("Body fat (%)"))
+                        .accessibilityIdentifier("ios.profile.bodyFatField")
+                }
+                if !bodyFatValid {
+                    hint(tr("Enter body fat between %d and %d %%.", Int(Self.bodyFatRange.lowerBound), Int(Self.bodyFatRange.upperBound)))
+                }
+                Picker(tr("Everyday activity"), selection: $activityLevel) {
+                    Text(tr("Not set")).tag(ActivityLevel?.none)
+                    ForEach(ActivityLevel.allCases, id: \.self) { level in
+                        Text(Self.activityLabel(level, tr)).tag(Optional(level))
+                    }
+                }
+                .accessibilityIdentifier("ios.profile.activityLevelPicker")
+            } footer: {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(tr("Used for calorie estimates. Stays private."))
+                    Text(tr("Optional. Body fat, for example from a smart scale, makes calorie and protein estimates more accurate."))
+                    Text(tr("Everyday activity means life outside workouts. It’s only used when Apple Health activity isn’t available. Workouts are added separately."))
                     AutosaveStatusView(status: autosave.status)
                 }
             }
@@ -95,8 +135,11 @@ struct HealthDetailsView: View {
         }
         .navigationTitle(tr("Health details"))
         .navigationBarTitleDisplayMode(.inline)
-        .onChange(of: Values(unit: unit, heightCm: heightCm, birthYear: birthYear, sex: sex)) {
-            guard heightValid, birthYearValid else { return }
+        .onChange(of: Values(
+            unit: unit, heightCm: heightCm, birthYear: birthYear, sex: sex,
+            bodyFatPct: bodyFatPct, activityLevel: activityLevel
+        )) {
+            guard heightValid, birthYearValid, bodyFatValid else { return }
             autosave.schedule { await save() }
         }
         .onDisappear { Task { await autosave.flush() } }
@@ -151,11 +194,16 @@ struct HealthDetailsView: View {
         prefs.heightCm = heightCm
         prefs.birthYear = birthYear
         prefs.sex = sex.isEmpty ? nil : sex
+        prefs.bodyFatPct = bodyFatPct
+        prefs.activityLevel = activityLevel
         var dto = UpdatePreferencesDto()
         dto.weightUnit = unit
-        dto.heightCm = heightCm
-        dto.birthYear = birthYear
-        dto.sex = prefs.sex
+        // Empty fields are sent as null so clearing them also clears them on the server.
+        dto.setOrClear(\.heightCm, heightCm, key: .heightCm)
+        dto.setOrClear(\.birthYear, birthYear, key: .birthYear)
+        dto.setOrClear(\.sex, prefs.sex, key: .sex)
+        dto.setOrClear(\.bodyFatPct, bodyFatPct, key: .bodyFatPct)
+        dto.setOrClear(\.activityLevel, activityLevel, key: .activityLevel)
         let error = await viewModel.savePreferences(prefs, server: dto)
         viewModel.rescheduleWeighInReminders()
         return error
