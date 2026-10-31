@@ -281,8 +281,33 @@ export const enFeatures = {
     proteinGoal: 'Protein (g)',
     carbsGoal: 'Carbs (g)',
     fatGoal: 'Fat (g)',
+    bodyFat: 'Body fat (%)',
+    bodyFatHint:
+      'Body fat is optional. From a smart scale or caliper, it makes calorie and protein suggestions more accurate.',
+    activityLevel: 'Everyday activity',
+    activityUnset: 'Not set (some walking)',
+    activityLevels: {
+      SEDENTARY: 'Mostly sitting',
+      LIGHT: 'Some walking',
+      ACTIVE: 'On my feet a lot',
+      VERY_ACTIVE: 'Physical job',
+    },
+    activityHint:
+      'Everyday activity means outside workouts. It’s only used without Apple Health; workouts are always added on top.',
     suggest: 'Suggest from my details',
-    suggestHint: 'Add weight, height, year of birth and sex to get a suggestion.',
+    suggestHint:
+      'Add weight, height, year of birth and sex (or weight and body fat) to get a suggestion.',
+    goalBaseHint:
+      'Your daily calories are the base for a day without workouts. Calories burned in workouts are added each day.',
+    goalBaseHintHealth:
+      'Your daily calories are the base for a day without activity. Workouts and activity from Apple Health are added each day.',
+    maintenanceTitle: 'Measured from your log',
+    maintenanceValue: 'You burn about {total} kcal a day.',
+    maintenanceDetail:
+      'Based on {days} logged days and your weight trend ({change} {unit} a week). Without workouts and activity, that’s a base of {base} kcal.',
+    maintenanceUse: 'Use {base} kcal',
+    maintenancePending:
+      'Log your food on {minDays} of the last {windowDays} days and weigh in {minWeighIns} times to see what you actually burn. So far: {days} of {minDays} days, {weighIns} of {minWeighIns} weigh-ins.',
     save: 'Save',
     saved: 'Saved',
     adminPortal: 'Admin portal',

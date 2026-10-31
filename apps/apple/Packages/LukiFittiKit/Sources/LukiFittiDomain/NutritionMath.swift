@@ -147,15 +147,93 @@ public enum NutritionMath {
         return Int(kcal.rounded())
     }
 
-    /// Mifflin–St Jeor BMR × 1.4, rounded to 10 kcal. `nil` when inputs are missing.
-    public static func suggestedDailyKcal(
-        bodyWeightKg: Double?, heightCm: Double?, birthYear: Int?, sex: String?, now: Date = Date()
-    ) -> Int? {
-        guard let w = bodyWeightKg, let h = heightCm, let year = birthYear,
+    // MARK: Daily goal suggestion
+
+    /// Plausible body fat in %; values outside are ignored.
+    public static let bodyFatPctRange = 3.0...60.0
+
+    /// Multipliers on resting energy for everyday life *without* workouts (includes ~10 % for
+    /// digestion). Workouts are added on top by the food ring, so they must not be in here.
+    public static let activityLevelFactors: [ActivityLevel: Double] = [
+        .SEDENTARY: 1.2,
+        .LIGHT: 1.3,
+        .ACTIVE: 1.45,
+        .VERY_ACTIVE: 1.6,
+    ]
+    public static let defaultActivityLevel = ActivityLevel.LIGHT
+
+    /// With Apple Health, all movement above resting energy is measured and added to the ring, so
+    /// the base only covers resting energy plus digestion.
+    public static let measuredActivityFactor = 1.1
+
+    public enum RestingEnergyMethod: String, Sendable, Equatable {
+        case katchMcArdle = "katch-mcardle"
+        case mifflinStJeor = "mifflin-st-jeor"
+    }
+
+    public struct RestingEnergy: Sendable, Equatable {
+        public let kcal: Double
+        public let method: RestingEnergyMethod
+    }
+
+    /// JavaScript `Math.round` (halves round up, also for negatives) so results match the web.
+    static func jsRound(_ v: Double) -> Double { (v + 0.5).rounded(.down) }
+
+    /// Lean body mass in kg when both weight and a plausible body fat % are known.
+    public static func leanBodyMassKg(bodyWeightKg: Double?, bodyFatPct: Double?) -> Double? {
+        guard let w = bodyWeightKg, w > 0, let pct = bodyFatPct, pct.isFinite, bodyFatPctRange.contains(pct) else {
+            return nil
+        }
+        return w * (1 - pct / 100)
+    }
+
+    /// Resting energy (BMR) in kcal/day. Katch–McArdle (370 + 21.6 × lean mass) when body fat is
+    /// known — more accurate for muscular people — otherwise Mifflin–St Jeor. `nil` when inputs
+    /// are missing.
+    public static func restingEnergy(
+        bodyWeightKg: Double?, heightCm: Double?, birthYear: Int?, sex: String?,
+        bodyFatPct: Double? = nil, now: Date = Date()
+    ) -> RestingEnergy? {
+        if let lean = leanBodyMassKg(bodyWeightKg: bodyWeightKg, bodyFatPct: bodyFatPct) {
+            return RestingEnergy(kcal: 370 + 21.6 * lean, method: .katchMcArdle)
+        }
+        guard let w = bodyWeightKg, w != 0, let h = heightCm, h != 0, let year = birthYear, year != 0,
               let sex, sex == "male" || sex == "female" else { return nil }
-        let age = Calendar(identifier: .gregorian).component(.year, from: now) - year
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC")!
+        let age = utc.component(.year, from: now) - year
         guard (14...110).contains(age) else { return nil }
-        let bmr = 10 * w + 6.25 * h - 5 * Double(age) + (sex == "male" ? 5 : -161)
-        return Int((bmr * 1.4 / 10).rounded()) * 10
+        let kcal = 10 * w + 6.25 * h - 5 * Double(age) + (sex == "male" ? 5 : -161)
+        return RestingEnergy(kcal: kcal, method: .mifflinStJeor)
+    }
+
+    /// Suggested **base** daily goal, rounded to 10 kcal: what the body burns on a day without
+    /// workouts or (with Apple Health) without any measured activity. The food ring adds the day's
+    /// burned calories on top, so activity is never counted twice. `nil` when inputs are missing.
+    ///
+    /// - Parameter measuredActivity: Apple Health active energy is synced for recent days.
+    public static func suggestedDailyKcal(
+        bodyWeightKg: Double?, heightCm: Double?, birthYear: Int?, sex: String?,
+        bodyFatPct: Double? = nil, activityLevel: ActivityLevel? = nil, measuredActivity: Bool = false,
+        now: Date = Date()
+    ) -> Int? {
+        guard let resting = restingEnergy(
+            bodyWeightKg: bodyWeightKg, heightCm: heightCm, birthYear: birthYear, sex: sex,
+            bodyFatPct: bodyFatPct, now: now
+        ) else { return nil }
+        let factor = measuredActivity
+            ? measuredActivityFactor
+            : activityLevelFactors[activityLevel ?? defaultActivityLevel] ?? 1.3
+        return Int(jsRound(resting.kcal * factor / 10)) * 10
+    }
+
+    /// Protein target for people who lift: 2.2 g per kg lean mass when body fat is known (≈ 1.8 g/kg
+    /// at typical body fat, and no overshoot at higher body fat), otherwise 1.8 g per kg body weight.
+    public static func suggestedProteinG(bodyWeightKg: Double?, bodyFatPct: Double? = nil) -> Int? {
+        if let lean = leanBodyMassKg(bodyWeightKg: bodyWeightKg, bodyFatPct: bodyFatPct) {
+            return Int(jsRound(lean * 2.2))
+        }
+        guard let w = bodyWeightKg, w != 0, w.isFinite else { return nil }
+        return Int(jsRound(w * 1.8))
     }
 }

@@ -286,9 +286,33 @@ export const deFeatures: Widen<typeof enFeatures> = {
     proteinGoal: 'Eiweiß (g)',
     carbsGoal: 'Kohlenhydrate (g)',
     fatGoal: 'Fett (g)',
+    bodyFat: 'Körperfett (%)',
+    bodyFatHint:
+      'Körperfett ist optional. Von einer smarten Waage oder Zange macht es Kalorien- und Eiweißvorschläge genauer.',
+    activityLevel: 'Alltagsaktivität',
+    activityUnset: 'Nicht angegeben (etwas zu Fuß)',
+    activityLevels: {
+      SEDENTARY: 'Meist im Sitzen',
+      LIGHT: 'Etwas zu Fuß',
+      ACTIVE: 'Viel auf den Beinen',
+      VERY_ACTIVE: 'Körperliche Arbeit',
+    },
+    activityHint:
+      'Alltagsaktivität heißt außerhalb des Trainings. Sie zählt nur ohne Apple Health; Trainings kommen immer dazu.',
     suggest: 'Aus meinen Angaben vorschlagen',
     suggestHint:
-      'Gib Gewicht, Größe, Geburtsjahr und Geschlecht an, um einen Vorschlag zu bekommen.',
+      'Gib Gewicht, Größe, Geburtsjahr und Geschlecht (oder Gewicht und Körperfett) an, um einen Vorschlag zu bekommen.',
+    goalBaseHint:
+      'Deine Tageskalorien sind die Basis für einen Tag ohne Training. Im Training verbrannte Kalorien kommen jeden Tag dazu.',
+    goalBaseHintHealth:
+      'Deine Tageskalorien sind die Basis für einen Tag ohne Aktivität. Trainings und Aktivität aus Apple Health kommen jeden Tag dazu.',
+    maintenanceTitle: 'Aus deinem Protokoll gemessen',
+    maintenanceValue: 'Du verbrauchst etwa {total} kcal am Tag.',
+    maintenanceDetail:
+      'Aus {days} protokollierten Tagen und deinem Gewichtsverlauf ({change} {unit} pro Woche). Ohne Training und Aktivität ergibt das eine Basis von {base} kcal.',
+    maintenanceUse: '{base} kcal übernehmen',
+    maintenancePending:
+      'Protokolliere dein Essen an {minDays} der letzten {windowDays} Tage und wieg dich {minWeighIns}-mal, um zu sehen, was du wirklich verbrauchst. Bisher: {days} von {minDays} Tagen, {weighIns} von {minWeighIns} Wiegungen.',
     save: 'Speichern',
     saved: 'Gespeichert',
     adminPortal: 'Admin-Bereich',

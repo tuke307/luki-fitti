@@ -16,3 +16,5 @@ export * from './zod-utils';
 export * from './energy.util';
 export * from './nutrition.util';
 export * from './body-weight.util';
+export * from './maintenance.util';
+export * from './muscle-volume.util';

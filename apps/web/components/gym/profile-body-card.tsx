@@ -8,7 +8,12 @@ import { Card } from '@luki-fitti/ui/components/ui/card';
 import { Input } from '@luki-fitti/ui/components/ui/input';
 import { Label } from '@luki-fitti/ui/components/ui/label';
 import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
-import { WeightUnit, type BiologicalSex } from '@luki-fitti/common/enums';
+import {
+  ACTIVITY_LEVELS,
+  WeightUnit,
+  type ActivityLevel,
+  type BiologicalSex,
+} from '@luki-fitti/common/enums';
 import { UpdatePreferencesSchema, type UpdatePreferencesDto } from '@luki-fitti/common/schemas';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
@@ -40,6 +45,10 @@ export function ProfileHealthCard() {
     prefs?.birthYear == null ? '' : String(prefs.birthYear),
   );
   const [sex, setSex] = useState<BiologicalSex | ''>(prefs?.sex ?? '');
+  const [bodyFat, setBodyFat] = useState(prefs?.bodyFatPct == null ? '' : String(prefs.bodyFatPct));
+  const [activityLevel, setActivityLevel] = useState<ActivityLevel | ''>(
+    prefs?.activityLevel ?? '',
+  );
   const [status, setStatus] = useState<SaveStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const saveCount = useRef(0);
@@ -184,9 +193,45 @@ export function ProfileHealthCard() {
                 <option value="male">{t.profileBody.sexMale}</option>
               </NativeSelect>
             </div>
+            {numberField(
+              'body-bodyFatPct',
+              t.profileBody.bodyFat,
+              bodyFat,
+              setBodyFat,
+              prefs?.bodyFatPct,
+              (n) => ({ bodyFatPct: n }),
+            )}
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="body-activityLevel" className="text-[0.8125rem] font-semibold">
+                {t.profileBody.activityLevel}
+              </Label>
+              <NativeSelect
+                id="body-activityLevel"
+                value={activityLevel}
+                onChange={(e) => {
+                  const next = e.target.value as ActivityLevel | '';
+                  setActivityLevel(next);
+                  void persist({ activityLevel: next || null }, t.profileBody.activityLevel);
+                }}
+              >
+                <option value="">{t.profileBody.activityUnset}</option>
+                {ACTIVITY_LEVELS.map((level) => (
+                  <option key={level} value={level}>
+                    {t.profileBody.activityLevels[level]}
+                  </option>
+                ))}
+              </NativeSelect>
+            </div>
           </>
         )}
       </div>
+
+      {signedIn && (
+        <ul className="text-muted-foreground list-none space-y-1 text-[0.8125rem]">
+          <li>{t.profileBody.bodyFatHint}</li>
+          <li>{t.profileBody.activityHint}</li>
+        </ul>
+      )}
 
       <p
         role="status"

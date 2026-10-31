@@ -36,10 +36,127 @@ struct NutritionGoalsView: View {
     private var prefs: UserPreferencesDto { viewModel.store.preferences }
     private var bodyWeightKg: Double? { viewModel.currentBodyWeightKg }
 
+    /// Apple Health reported active energy on one of the last 7 days, so the food ring already
+    /// adds everyday movement and the base goal must not include it.
+    private var hasMeasuredActivity: Bool {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        guard let weekAgo = calendar.date(byAdding: .day, value: -7, to: today) else { return false }
+        return viewModel.activity.days.contains { day in
+            guard day.activeKcal > 0, let date = LukiDayKey.date(day.day, calendar: calendar) else { return false }
+            return date >= weekAgo && date <= today
+        }
+    }
+
     private var suggestion: Int? {
         NutritionMath.suggestedDailyKcal(
-            bodyWeightKg: bodyWeightKg, heightCm: prefs.heightCm, birthYear: prefs.birthYear, sex: prefs.sex
+            bodyWeightKg: bodyWeightKg, heightCm: prefs.heightCm, birthYear: prefs.birthYear, sex: prefs.sex,
+            bodyFatPct: prefs.bodyFatPct, activityLevel: prefs.activityLevel, measuredActivity: hasMeasuredActivity
         )
+    }
+
+    private var proteinSuggestion: Int? {
+        NutritionMath.suggestedProteinG(bodyWeightKg: bodyWeightKg, bodyFatPct: prefs.bodyFatPct)
+    }
+
+    private var suggestionFooter: String {
+        guard let suggestion else {
+            return prefs.bodyFatPct == nil
+                ? tr("Add weight, height, year of birth and sex in Health details to get a suggestion.")
+                : tr("Add your weight in Health details to get a suggestion.")
+        }
+        let kcal = Self.number(suggestion, tr)
+        return hasMeasuredActivity
+            ? tr("About %@ kcal a day before activity. Each day, your workouts and the activity Apple Health measures are added on top.", kcal)
+            : tr("About %@ kcal a day for your everyday activity. Each day, your workouts are added on top.", kcal)
+    }
+
+    static func number(_ value: Int, _ tr: SupportedLocale) -> String {
+        value.formatted(.number.locale(Locale(identifier: tr.rawValue)))
+    }
+
+    // MARK: Learned maintenance
+
+    private struct MaintenanceInput {
+        let days: [MaintenanceMath.DayInput]
+        let weighInsInWindow: Int
+    }
+
+    /// The 28 days ending yesterday with what was eaten and burned, exactly as the Food tab shows them.
+    private var maintenanceInput: MaintenanceInput {
+        let calendar = Calendar.current
+        let keys = MaintenanceMath.windowDayKeys(calendar: calendar)
+        let dates = keys.compactMap { LukiDayKey.date($0, calendar: calendar) }
+        guard let first = dates.first, let last = dates.last,
+              let end = calendar.date(byAdding: .day, value: 1, to: last) else {
+            return MaintenanceInput(days: [], weighInsInWindow: 0)
+        }
+        // Only sessions near the window; the burn math is per day.
+        let sessions = viewModel.store.historySessions.filter { session in
+            guard let start = LukiISODate.parse(session.startedAt) else { return false }
+            return start >= first.addingTimeInterval(-86_400) && start < end
+        }
+        let burns = NutritionCalendar.dayBurns(
+            sessions: sessions,
+            healthDays: viewModel.activity.days,
+            healthWorkouts: viewModel.activity.workouts,
+            calendar: calendar
+        ) { viewModel.bodyWeightKg(at: $0) }
+        let days = zip(keys, dates).map { key, date in
+            MaintenanceMath.DayInput(
+                day: key,
+                intakeKcal: viewModel.nutrition.totals(on: date, calendar: calendar).kcal,
+                burnedKcal: Double(burns[date]?.total ?? 0)
+            )
+        }
+        let weighIns = viewModel.bodyWeight.points.filter { $0.date >= first && $0.date < end }.count
+        return MaintenanceInput(days: days, weighInsInWindow: weighIns)
+    }
+
+    @ViewBuilder
+    private var maintenanceSection: some View {
+        let input = maintenanceInput
+        let estimate = MaintenanceMath.estimate(days: input.days, weighIns: viewModel.bodyWeight.points)
+        Section {
+            if let estimate {
+                let goal = min(Self.kcalRange.upperBound, max(Self.kcalRange.lowerBound, estimate.baseKcal))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(tr("Your measured maintenance ≈ %@ kcal", Self.number(estimate.totalKcal, tr)))
+                        .font(.body.weight(.semibold))
+                    Text(tr("Based on %d logged days and your weight trend.", estimate.loggedDays))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("ios.nutritionGoals.maintenance")
+                Button {
+                    kcalGoal = goal
+                } label: {
+                    Label(tr("Use %@ kcal as goal", Self.number(goal, tr)), systemImage: "checkmark.circle")
+                }
+                .disabled(kcalGoal == goal)
+                .accessibilityIdentifier("ios.nutritionGoals.useMaintenanceButton")
+            } else {
+                let logged = input.days.filter { $0.intakeKcal > 0 }.count
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(tr("Log food on at least %d of the last %d days and weigh in at least %d times over %d days or more. Then LukiFitti can work out what you really burn.",
+                            MaintenanceMath.Rules.minLoggedDays, MaintenanceMath.Rules.windowDays,
+                            MaintenanceMath.Rules.minWeighIns, Int(MaintenanceMath.Rules.minWeighInSpanDays)))
+                    Text(tr("So far: %d days logged, %d weigh-ins.", logged, input.weighInsInWindow))
+                        .monospacedDigit()
+                }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("ios.nutritionGoals.maintenanceMissing")
+            }
+        } header: {
+            Text(tr("From your logs"))
+        } footer: {
+            if let estimate, estimate.baseKcal != estimate.totalKcal {
+                Text(tr("The goal leaves out the %@ kcal you burned on an average day, because burned calories are added on top each day.", Self.number(estimate.avgBurnedKcal, tr)))
+            }
+        }
     }
 
     private var invalidMessage: String? {
@@ -63,7 +180,10 @@ struct NutritionGoalsView: View {
                         .foregroundStyle(LukiColors.destructive)
                 }
             } footer: {
-                AutosaveStatusView(status: autosave.status)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(tr("This is your base for a day without workouts. Calories you burn are added on top each day."))
+                    AutosaveStatusView(status: autosave.status)
+                }
             }
 
             Section(tr("Macros")) {
@@ -75,19 +195,17 @@ struct NutritionGoalsView: View {
             Section {
                 Button {
                     kcalGoal = suggestion
-                    if let w = bodyWeightKg { proteinGoal = Int((w * 1.8).rounded()) }
+                    if let proteinSuggestion { proteinGoal = proteinSuggestion }
                 } label: {
                     Label(tr("Suggest from my details"), systemImage: "wand.and.stars")
                 }
                 .disabled(suggestion == nil)
                 .accessibilityIdentifier("ios.nutritionGoals.suggestButton")
             } footer: {
-                if let suggestion {
-                    Text(tr("About %d kcal a day keeps your weight steady at a light activity level.", suggestion))
-                } else {
-                    Text(tr("Add weight, height, year of birth and sex in Health details to get a suggestion."))
-                }
+                Text(suggestionFooter)
             }
+
+            maintenanceSection
         }
         .navigationTitle(tr("Nutrition goals"))
         .navigationBarTitleDisplayMode(.inline)
@@ -96,6 +214,16 @@ struct NutritionGoalsView: View {
             autosave.schedule { await save() }
         }
         .onDisappear { Task { await autosave.flush() } }
+        .task {
+            // The learned maintenance needs the last 28 days of meals and Apple Health activity.
+            let isSignedIn = viewModel.isSignedIn
+            await viewModel.nutrition.refresh(isSignedIn: isSignedIn, force: false)
+            await viewModel.activity.refresh(isSignedIn: isSignedIn, force: false)
+            if let first = MaintenanceMath.windowDayKeys().first.flatMap({ LukiDayKey.date($0) }) {
+                await viewModel.nutrition.ensureLoaded(from: first, isSignedIn: isSignedIn)
+                await viewModel.activity.ensureLoaded(from: first, isSignedIn: isSignedIn)
+            }
+        }
     }
 
     private func field(_ title: String, _ value: Binding<Int?>, id: String) -> some View {
