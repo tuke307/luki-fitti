@@ -92,9 +92,15 @@ public struct NutritionView: View {
     // MARK: Sections
 
     private var dayHeader: some View {
-        NutritionDayNavigator(day: $day, visibleWeek: $visibleWeek, title: dayTitle, goal: prefs.dailyKcalGoal) {
-            nutrition.totals(on: $0).kcal
-        }
+        let burnByDay = burnByDay
+        return NutritionDayNavigator(
+            day: $day,
+            visibleWeek: $visibleWeek,
+            title: dayTitle,
+            goal: prefs.dailyKcalGoal,
+            kcal: { nutrition.totals(on: $0).kcal },
+            burned: { burnByDay[Calendar.current.startOfDay(for: $0)]?.total ?? 0 }
+        )
     }
 
     private var dayTitle: String {
@@ -122,7 +128,7 @@ public struct NutritionView: View {
             }
             HStack(spacing: 18) {
                 NutritionGoalsButton(viewModel: viewModel) {
-                    Gauge(value: NutritionMath.progress(net, goal: goal) ?? (totals.kcal > 0 ? 1 : 0)) { EmptyView() }
+                    Gauge(value: NutritionCalendar.ringProgress(eatenKcal: totals.kcal, goal: goal, burnedKcal: burned)) { EmptyView() }
                         .gaugeStyle(.accessoryCircularCapacity)
                         .tint((remaining ?? 0) < 0 ? LukiColors.warning : LukiColors.accent)
                         .scaleEffect(1.3)
@@ -185,7 +191,7 @@ public struct NutritionView: View {
         Button {
             editing = MealEditorContext(entry: nil, day: day)
         } label: {
-            Label(tr("Add meal"), systemImage: "plus").frame(maxWidth: .infinity)
+            Label(tr("Add food & drink"), systemImage: "plus").frame(maxWidth: .infinity)
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
@@ -195,7 +201,7 @@ public struct NutritionView: View {
     private var emptyCard: some View {
         VStack(spacing: 4) {
             Text(tr("Nothing logged yet.")).font(.headline)
-            Text(tr("Log a meal by hand, or snap a photo and let LukiFitti estimate it."))
+            Text(tr("Log food or drinks by hand, or snap a photo and let LukiFitti estimate it."))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -248,7 +254,7 @@ public struct NutritionView: View {
                     Button(role: .destructive) {
                         Task { await nutrition.remove(entry, isSignedIn: isSignedIn) }
                     } label: {
-                        Label(tr("Delete meal"), systemImage: "trash")
+                        Label(tr("Delete entry"), systemImage: "trash")
                     }
                 }
                 if entry.id != list.last?.id { Divider() }

@@ -3,13 +3,14 @@ import LukiFittiDesign
 import LukiFittiDomain
 
 /// Food tab day navigation: tappable title with a date picker, a "Today" shortcut and a paged
-/// week strip whose rings show kcal eaten vs. the daily goal.
+/// week strip whose rings show kcal eaten vs. the daily goal plus burned kcal.
 struct NutritionDayNavigator: View {
     @Binding var day: Date
     @Binding var visibleWeek: Date?
     let title: String
     let goal: Int?
     let kcal: (Date) -> Double
+    let burned: (Date) -> Int
     @Environment(\.lukiLocale) private var tr
     @State private var showsPicker = false
 
@@ -38,7 +39,7 @@ struct NutritionDayNavigator: View {
                         .accessibilityIdentifier("ios.nutrition.todayButton")
                 }
             }
-            DayWeekStrip(selection: $day, visibleWeek: $visibleWeek, goal: goal, kcal: kcal)
+            DayWeekStrip(selection: $day, visibleWeek: $visibleWeek, goal: goal, kcal: kcal, burned: burned)
         }
         .sheet(isPresented: $showsPicker) {
             NavigationStack {
@@ -74,6 +75,7 @@ struct DayWeekStrip: View {
     @Binding var visibleWeek: Date?
     let goal: Int?
     let kcal: (Date) -> Double
+    let burned: (Date) -> Int
     @Environment(\.lukiLocale) private var tr
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -123,8 +125,9 @@ struct DayWeekStrip: View {
         let isToday = calendar.isDateInToday(date)
         let isFuture = date > Date()
         let eaten = isFuture ? 0 : kcal(date)
-        let progress = NutritionCalendar.ringProgress(eatenKcal: eaten, goal: goal)
-        let over = goal.map { eaten > Double($0) } ?? false
+        let burnedKcal = isFuture ? 0 : max(0, burned(date))
+        let progress = NutritionCalendar.ringProgress(eatenKcal: eaten, goal: goal, burnedKcal: burnedKcal)
+        let over = goal.map { eaten > Double($0 + burnedKcal) } ?? false
         return Button {
             withAnimation(reduceMotion ? nil : .snappy) { selection = calendar.startOfDay(for: date) }
         } label: {
@@ -154,7 +157,7 @@ struct DayWeekStrip: View {
         .disabled(isFuture)
         .opacity(isFuture ? 0.35 : 1)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityLabel(date, eaten: eaten, isToday: isToday))
+        .accessibilityLabel(accessibilityLabel(date, eaten: eaten, burned: burnedKcal, isToday: isToday))
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
         .accessibilityAction(named: tr("Previous week")) { page(-1, weeks: weeks) }
         .accessibilityAction(named: tr("Next week")) { page(1, weeks: weeks) }
@@ -166,12 +169,12 @@ struct DayWeekStrip: View {
         return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
     }
 
-    private func accessibilityLabel(_ date: Date, eaten: Double, isToday: Bool) -> String {
+    private func accessibilityLabel(_ date: Date, eaten: Double, burned: Int, isToday: Bool) -> String {
         var text = date.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(locale))
         if isToday { text = "\(tr("Today")), \(text)" }
         let eatenText = Int(eaten.rounded()).formatted(.number.locale(locale))
         if let goal {
-            return tr("%@, %@ of %@ kcal", text, eatenText, goal.formatted(.number.locale(locale)))
+            return tr("%@, %@ of %@ kcal", text, eatenText, (goal + burned).formatted(.number.locale(locale)))
         }
         return "\(text), \(eatenText) kcal"
     }

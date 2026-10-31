@@ -30,7 +30,9 @@ import {
   dayKey,
   kcalByDay,
   lastDays,
+  ringProgress,
   shiftDay,
+  weekDays,
   weekStartKey,
 } from '@/lib/nutrition/nutrition-day';
 import { useNutrition } from '@/lib/nutrition/use-nutrition';
@@ -101,7 +103,25 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
     [selected, entries, historySessions, weighIns, prefs?.bodyWeightKg, activity],
   );
   const kcalPerDay = useMemo(() => kcalByDay(entries), [entries]);
-  const loadWeek = useCallback((weekStart: string) => void loadFrom(weekStart), [loadFrom]);
+  const [stripWeek, setStripWeek] = useState(() => weekStartKey(todayKey));
+  const loadWeek = useCallback(
+    (weekStart: string) => {
+      setStripWeek(weekStart);
+      void loadFrom(weekStart);
+    },
+    [loadFrom],
+  );
+  const burnedPerDay = useMemo(
+    () =>
+      Object.fromEntries(
+        weekDays(stripWeek).map((key) => [
+          key,
+          buildDay(key, entries, historySessions, weighIns, prefs?.bodyWeightKg, activity)
+            .burnedKcal,
+        ]),
+      ),
+    [stripWeek, entries, historySessions, weighIns, prefs?.bodyWeightKg, activity],
+  );
   const week = useMemo(
     () =>
       lastDays(selected, 7).map((key) => {
@@ -181,6 +201,7 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
           selected={selected}
           todayKey={todayKey}
           kcalByDay={kcalPerDay}
+          burnedByDay={burnedPerDay}
           goal={kcalGoal}
           onSelect={setSelected}
           onVisibleWeekChange={loadWeek}
@@ -217,14 +238,14 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
                 className="focus-visible:ring-ring/50 shrink-0 rounded-full outline-none focus-visible:ring-[3px]"
               >
                 <IntakeRing
-                  progress={goalProgress(net, kcalGoal) ?? (day.totals.kcal > 0 ? 1 : 0)}
+                  progress={ringProgress(day.totals.kcal, kcalGoal, day.burnedKcal)}
                   over={remaining !== null && remaining < 0}
                 />
               </button>
             </NutritionGoalsDialog>
           ) : (
             <IntakeRing
-              progress={goalProgress(net, kcalGoal) ?? (day.totals.kcal > 0 ? 1 : 0)}
+              progress={ringProgress(day.totals.kcal, kcalGoal, day.burnedKcal)}
               over={remaining !== null && remaining < 0}
             />
           )}
