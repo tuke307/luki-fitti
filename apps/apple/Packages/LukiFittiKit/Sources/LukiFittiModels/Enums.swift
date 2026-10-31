@@ -28,7 +28,9 @@ extension SupportedLocale {
         case .en: return .en
         case .de: return .de
         case .system, nil:
-            let code = Locale.current.language.languageCode?.identifier.lowercased() ?? "en"
+            // The device language, not `Locale.current`: that one falls back to the app's development
+            // language when the bundle has no matching localization.
+            let code = (Locale.preferredLanguages.first ?? Locale.current.identifier).lowercased()
             return code.hasPrefix("de") ? .de : .en
         }
     }

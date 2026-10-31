@@ -6,6 +6,33 @@ import XCTest
 @testable import LukiFittiWatchSync
 
 final class WatchCompanionSyncE2ETests: XCTestCase {
+    /// WatchConnectivity rejects application contexts over ~64 KB. The full payload (catalog,
+    /// workouts, history) is far bigger, so it must go as a file; only sign-in uses the context.
+    @MainActor
+    func testWatchSignInFitsApplicationContextWhileFullPayloadDoesNot() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LukiFittiWatchPayloadSize-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = OfflineStore(storageDirectory: dir)
+        let applicationContextLimit = 64 * 1024
+
+        let full = try JSONEncoder().encode(WatchContextPayload(
+            catalog: store.catalog,
+            folders: store.folders,
+            unfiledTemplates: store.unfiledTemplates,
+            stretchingRoutines: store.stretchingRoutines,
+            preferences: store.preferences
+        ))
+        XCTAssertGreaterThan(full.count, applicationContextLimit)
+
+        let user = UserDto(id: "u1", email: "me@example.com")
+        let tokens = AuthTokensDto(accessToken: "FAKE-ACCESS-TOKEN", refreshToken: "FAKE-REFRESH-TOKEN", expiresAt: "2026-12-01T00:00:00Z")
+        let auth = WatchAuthPayload(preferences: store.preferences, currentUser: user, authTokens: tokens)
+        let encoded = try JSONEncoder().encode(auth)
+        XCTAssertLessThan(encoded.count, applicationContextLimit)
+        XCTAssertEqual(try JSONDecoder().decode(WatchAuthPayload.self, from: encoded), auth)
+    }
+
     @MainActor
     func testIPhoneToWatchContextPushAndLiveSetMutationSync() throws {
         let iPhoneDir = FileManager.default.temporaryDirectory

@@ -19,6 +19,8 @@ public final class WatchWorkoutViewModel {
     public var completedSummarySession: WorkoutSessionDto?
     public var showingChangeExerciseSheet: Bool = false
     public var showingEditSetSheet: Bool = false
+    public var isRefreshingFromServer: Bool = false
+    public var isSyncing: Bool { isRefreshingFromServer || watchSyncCoordinator.status.isWaitingForCompanion }
 
     public init(
         store: OfflineStore = OfflineStore(),
@@ -31,6 +33,14 @@ public final class WatchWorkoutViewModel {
 
         self.watchSyncCoordinator.onContextReceived = { [weak self] payload in
             self?.applyWatchContext(payload)
+        }
+        self.watchSyncCoordinator.onAuthReceived = { [weak self] auth in
+            guard let self else { return }
+            let wasSignedOut = self.store.currentUser == nil
+            self.applyAuth(auth)
+            if wasSignedOut, auth.currentUser != nil {
+                Task { await self.refreshFromServer() }
+            }
         }
         self.watchSyncCoordinator.onActiveSessionReceived = { [weak self] incoming in
             self?.mergeIncomingActiveSession(incoming)
@@ -51,12 +61,33 @@ public final class WatchWorkoutViewModel {
         if let payload = watchSyncCoordinator.pullLatestContextIfAvailable() {
             applyWatchContext(payload)
         }
+        if let auth = watchSyncCoordinator.pullLatestAuthIfAvailable() {
+            applyAuth(auth)
+        }
         if let sharedActive = watchSyncCoordinator.pullSharedActiveSessionIfAvailable() {
             mergeIncomingActiveSession(sharedActive)
         }
         Task {
-            await store.refreshFromServerAfterAuth()
+            await refreshFromServer()
         }
+    }
+
+    /// "Sync now": asks the iPhone for fresh data and reloads from the server when signed in.
+    /// `silent` skips the "no answer" error for the automatic sync when the app opens.
+    public func syncNow(silent: Bool = false) {
+        let tr = SupportedLocale.resolve(store.preferences.language)
+        watchSyncCoordinator.requestContextFromCompanion(
+            silent: silent,
+            notReachableMessage: tr("No answer from the iPhone. Open LukiFitti on the iPhone and try again.")
+        )
+        syncWithCompanionAndServer()
+    }
+
+    private func refreshFromServer() async {
+        guard store.currentUser != nil, !isRefreshingFromServer else { return }
+        isRefreshingFromServer = true
+        defer { isRefreshingFromServer = false }
+        await store.refreshFromServerAfterAuth()
     }
 
     private func mergeIncomingActiveSession(_ incoming: WorkoutSessionDto?) {
@@ -78,12 +109,21 @@ public final class WatchWorkoutViewModel {
         if !payload.historySessions.isEmpty {
             store.saveHistorySessionsList(payload.historySessions)
         }
-        store.preferences = payload.preferences
-        if let user = payload.currentUser {
-            store.saveAuthenticatedUser(user)
+        applyAuth(WatchAuthPayload(
+            preferences: payload.preferences,
+            currentUser: payload.currentUser,
+            authTokens: payload.authTokens
+        ))
+    }
+
+    /// Tokens are saved before the user so the server refresh triggered by sign-in can use them.
+    private func applyAuth(_ auth: WatchAuthPayload) {
+        store.preferences = auth.preferences
+        if let tokens = auth.authTokens {
+            try? store.apiClient.tokenStore.saveTokens(tokens, userId: auth.currentUser?.id)
         }
-        if let tokens = payload.authTokens {
-            try? store.apiClient.tokenStore.saveTokens(tokens, userId: payload.currentUser?.id)
+        if let user = auth.currentUser, user != store.currentUser {
+            store.saveAuthenticatedUser(user)
         }
     }
 
@@ -320,11 +360,11 @@ public struct WatchRootContainerView: View {
             }
         }
         .onAppear {
-            viewModel.syncWithCompanionAndServer()
+            viewModel.syncNow(silent: true)
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
-                viewModel.syncWithCompanionAndServer()
+                viewModel.syncNow(silent: true)
             }
         }
     }
