@@ -531,6 +531,8 @@ export const SessionExerciseSyncSchema = z.object({
 
 export const SyncSessionPayloadSchema = z.object({
   id: z.string().optional(),
+  /** The user chose to end the workout running on another device and start this one. */
+  replaceActive: z.boolean().optional(),
   clientSessionId: z.string().min(1),
   templateId: z.string().nullable().optional(),
   stretchingRoutineId: z.string().nullable().optional(),
