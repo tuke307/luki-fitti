@@ -1,6 +1,7 @@
 import SwiftUI
 import LukiFittiModels
 import LukiFittiDesign
+import LukiFittiWatchSync
 
 public struct WatchHomeView: View {
     @Bindable public var viewModel: WatchWorkoutViewModel
@@ -32,6 +33,26 @@ public struct WatchHomeView: View {
                         }
                     }
                     .listItemTint(LukiColors.accent.opacity(0.35))
+                } else if let next = viewModel.nextUpTemplate {
+                    Button {
+                        viewModel.startWorkout(from: next)
+                    } label: {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(tr("Continue with"))
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                                Text(next.name)
+                                    .font(.headline)
+                                    .lineLimit(2)
+                            }
+                        } icon: {
+                            Image(systemName: "play.fill")
+                                .foregroundStyle(LukiColors.accent)
+                        }
+                    }
+                    .listItemTint(LukiColors.accent.opacity(0.35))
+                    .accessibilityIdentifier("watch.home.nextUp")
                 }
 
                 Section(tr("Workouts")) {
@@ -75,35 +96,22 @@ public struct WatchHomeView: View {
         }
     }
 
-    /// One status line: syncing, error, last sync with the iPhone, or never synced.
+    /// Compact sync row: an icon whose shape matches the state, one status line, then the account.
     private var syncSection: some View {
         let status = viewModel.watchSyncCoordinator.status
         return Section {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    syncIcon(status)
+                    Text(syncText(status))
+                        .font(.footnote)
+                        .foregroundStyle(status.lastError != nil && !viewModel.isSyncing ? LukiColors.destructive : .primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 Text(viewModel.store.currentUser?.email ?? tr("Not signed in"))
-                    .font(.footnote.weight(.semibold))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                if viewModel.isSyncing {
-                    HStack(spacing: 6) {
-                        ProgressView().controlSize(.mini)
-                        Text(tr("Syncing"))
-                    }
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                } else if let error = status.lastError {
-                    Text(tr(error))
-                        .font(.footnote)
-                        .foregroundStyle(LukiColors.destructive)
-                } else if let last = status.lastReceivedAt {
-                    Text(tr("Synced with iPhone %@", last.formatted(.relative(presentation: .named))))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text(tr("Not synced with iPhone yet"))
-                        .font(.footnote)
-                        .foregroundStyle(LukiColors.warning)
-                }
+                    .lineLimit(2)
             }
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("watch.home.syncStatus")
@@ -111,13 +119,39 @@ public struct WatchHomeView: View {
             Button {
                 viewModel.syncNow()
             } label: {
-                Label(tr("Sync now"), systemImage: "arrow.triangle.2.circlepath")
+                Label(tr("Sync"), systemImage: "arrow.triangle.2.circlepath")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
             .disabled(viewModel.isSyncing)
             .accessibilityIdentifier("watch.home.syncNowButton")
         } header: {
             Text(tr("iPhone"))
         }
+    }
+
+    @ViewBuilder
+    private func syncIcon(_ status: WatchConnectionStatus) -> some View {
+        if viewModel.isSyncing {
+            ProgressView()
+                .progressViewStyle(.circular)
+                .frame(width: 14, height: 14)
+        } else if status.lastError != nil {
+            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(LukiColors.destructive)
+        } else if status.lastReceivedAt != nil {
+            Image(systemName: "checkmark.circle.fill").foregroundStyle(LukiColors.success)
+        } else {
+            Image(systemName: "exclamationmark.circle").foregroundStyle(LukiColors.warning)
+        }
+    }
+
+    private func syncText(_ status: WatchConnectionStatus) -> String {
+        if viewModel.isSyncing { return tr("Syncing") }
+        if let error = status.lastError { return tr(error) }
+        if let last = status.lastReceivedAt {
+            return tr("Synced with iPhone %@", last.formatted(.relative(presentation: .named)))
+        }
+        return tr("Not synced with iPhone yet")
     }
 
     private func folderLabel(name: String, count: Int, color: Color) -> some View {

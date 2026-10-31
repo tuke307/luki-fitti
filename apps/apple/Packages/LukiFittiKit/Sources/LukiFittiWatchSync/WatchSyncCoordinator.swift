@@ -216,6 +216,8 @@ public final class WatchSyncCoordinator: NSObject {
     public var onActivated: (() -> Void)?
     /// iPhone: the Watch asked for a fresh copy of the sign-in and workouts.
     public var onContextRequested: (() -> Void)?
+    /// iPhone: the Watch discarded a workout it had just finished.
+    public var onSessionDiscarded: ((String) -> Void)?
     /// iPhone: the Watch app was installed (or reinstalled) while this app was running.
     public var onCounterpartInstalled: (() -> Void)?
     public private(set) var status = WatchConnectionStatus()
@@ -553,6 +555,9 @@ public final class WatchSyncCoordinator: NSObject {
         if dict["active_session_cleared"] != nil {
             onActiveSessionReceived?(nil)
         }
+        if let discarded = dict["discarded_session"] as? String {
+            onSessionDiscarded?(discarded)
+        }
         if let data = dict["completed_session"] as? Data,
            let session = try? JSONDecoder().decode(WorkoutSessionDto.self, from: data) {
             onCompletedSessionReceived?(session)
@@ -592,6 +597,17 @@ public final class WatchSyncCoordinator: NSObject {
               WCSession.default.isReachable,
               let data = try? JSONEncoder().encode(packet) else { return }
         WCSession.default.sendMessageData(data, replyHandler: nil, errorHandler: nil)
+        #endif
+    }
+
+    /// Queued behind the completed session, so the iPhone receives both in order.
+    public func broadcastDiscardedSession(clientSessionId: String) {
+        if let completedBridgeURL = Self.simulatorCompletedSessionBridgeURL {
+            try? FileManager.default.removeItem(at: completedBridgeURL)
+        }
+        #if canImport(WatchConnectivity)
+        guard WCSession.isSupported(), WCSession.default.activationState == .activated else { return }
+        WCSession.default.transferUserInfo(["discarded_session": clientSessionId])
         #endif
     }
 

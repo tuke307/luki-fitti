@@ -1,5 +1,6 @@
 import SwiftUI
 import Observation
+import WatchKit
 import LukiFittiModels
 import LukiFittiDesign
 import LukiFittiDomain
@@ -70,6 +71,117 @@ public final class WatchWorkoutViewModel {
         Task {
             await refreshFromServer()
         }
+    }
+
+    // MARK: - Set editing & rest
+
+    /// Changes the next open set of the current exercise (weight via the Digital Crown, reps via
+    /// buttons) and syncs it to the iPhone like a completed set.
+    public func updateNextSet(weight: Double? = nil, repsDelta: Int = 0) {
+        guard var session = store.activeSession, !session.exercises.isEmpty else { return }
+        let exIdx = min(max(0, currentExerciseIndex), session.exercises.count - 1)
+        guard let setIdx = session.exercises[exIdx].sets.firstIndex(where: { !$0.completed }) else { return }
+        var set = session.exercises[exIdx].sets[setIdx]
+        if let weight { set.weight = max(0, weight) }
+        if repsDelta != 0 { set.reps = max(1, (set.reps ?? 10) + repsDelta) }
+        guard set != session.exercises[exIdx].sets[setIdx] else { return }
+        session.exercises[exIdx].sets[setIdx] = set
+        session.version += 1
+
+        let recalculated = SessionCalculator.recalculateSessionTotals(session)
+        store.saveActiveSession(recalculated)
+        store.enqueueSessionSync(recalculated)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(recalculated)
+        let saved = recalculated.exercises[exIdx].sets[setIdx]
+        watchSyncCoordinator.broadcastSetMutation(
+            SessionMutationPacket(
+                clientSessionId: recalculated.clientSessionId,
+                clientExerciseId: recalculated.exercises[exIdx].clientExerciseId,
+                clientSetId: saved.clientSetId,
+                weight: saved.weight,
+                reps: saved.reps,
+                rpe: saved.rpe,
+                completed: saved.completed,
+                avgHeartRateBpm: saved.avgHeartRateBpm,
+                peakHeartRateBpm: saved.peakHeartRateBpm,
+                restEndHeartRateBpm: saved.restEndHeartRateBpm,
+                restTimerEndsAt: recalculated.restTimerEndsAt,
+                restTimerDurationSec: recalculated.restTimerDurationSec,
+                newVersion: recalculated.version
+            )
+        )
+        Task { await store.flushSyncQueue() }
+    }
+
+    /// Adds or removes rest time; at zero the rest ends.
+    public func adjustRest(by deltaSeconds: Int) {
+        guard var session = store.activeSession else { return }
+        let current = SessionCalculator.computeRemainingRestSeconds(session: session)
+        let remaining = max(0, current.remainingSeconds + deltaSeconds)
+        guard remaining > 0 else { return skipRest() }
+        session.restTimerDurationSec = max(current.totalSeconds, remaining)
+        if current.isPaused {
+            session.restTimerPausedRemSec = remaining
+            session.restTimerEndsAt = nil
+        } else {
+            let endsAt = Date().addingTimeInterval(TimeInterval(remaining))
+            session.restTimerEndsAt = ISO8601DateFormatter().string(from: endsAt)
+            session.restTimerPausedRemSec = nil
+            scheduleRestEndHaptic(endsAt: session.restTimerEndsAt)
+        }
+        session.version += 1
+        store.saveActiveSession(session)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
+        WKInterfaceDevice.current().play(.click)
+    }
+
+    public func skipRest() {
+        guard SessionCalculator.computeRemainingRestSeconds(session: store.activeSession).isRunning
+            || SessionCalculator.computeRemainingRestSeconds(session: store.activeSession).isPaused else { return }
+        tapCompleteCurrentSetOrSkipRest()
+    }
+
+    /// Buzzes when the rest is over, unless the rest was changed or skipped in the meantime.
+    private func scheduleRestEndHaptic(endsAt: String?) {
+        guard let endsAt, let date = ISO8601DateFormatter().date(from: endsAt) else { return }
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(max(0, date.timeIntervalSinceNow)))
+            guard let self, self.store.activeSession?.restTimerEndsAt == endsAt else { return }
+            WKInterfaceDevice.current().play(.notification)
+        }
+    }
+
+    // MARK: - Home
+
+    /// The workout to suggest on the home screen: the one after the last completed workout in its
+    /// folder (wrapping around), otherwise the first workout.
+    public var nextUpTemplate: WorkoutTemplateDto? {
+        let groups = store.folders.map(\.templates).filter { !$0.isEmpty }
+            + (store.unfiledTemplates.isEmpty ? [] : [store.unfiledTemplates])
+        guard let first = groups.first?.first else { return nil }
+        let last = store.historySessions.first { $0.status == .COMPLETED && $0.templateId != nil }
+        guard let lastId = last?.templateId else { return first }
+        for group in groups {
+            if let idx = group.firstIndex(where: { $0.id == lastId }) {
+                return group[(idx + 1) % group.count]
+            }
+        }
+        return first
+    }
+
+    // MARK: - Summary
+
+    /// Removes the workout that was just finished: locally, on the server and on the iPhone
+    /// (including its Apple Health workout there).
+    public func discardCompletedWorkout() {
+        guard let session = completedSummarySession else { return }
+        let clientSessionId = session.clientSessionId
+        store.deleteHistorySession(clientSessionId: clientSessionId)
+        watchSyncCoordinator.broadcastDiscardedSession(clientSessionId: clientSessionId)
+        completedSummarySession = nil
+        WKInterfaceDevice.current().play(.stop)
+        guard store.currentUser != nil else { return }
+        Task { try? await store.apiClient.deleteSession(sessionId: clientSessionId) }
     }
 
     /// "Sync now": asks the iPhone for fresh data and reloads from the server when signed in.
@@ -187,6 +299,8 @@ public final class WatchWorkoutViewModel {
             session.restTimerPausedRemSec = nil
             session.version += 1
             store.saveActiveSession(session)
+            watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
+            WKInterfaceDevice.current().play(.click)
             return
         }
 
@@ -212,10 +326,12 @@ public final class WatchWorkoutViewModel {
         session.exercises[exIdx].status = allDone ? .COMPLETED : .IN_PROGRESS
 
         let restSec = session.exercises[exIdx].restSeconds
+        WKInterfaceDevice.current().play(.success)
         if restSec > 0 {
             session.restTimerDurationSec = restSec
             session.restTimerEndsAt = ISO8601DateFormatter().string(from: Date().addingTimeInterval(TimeInterval(restSec)))
             session.restTimerPausedRemSec = nil
+            scheduleRestEndHaptic(endsAt: session.restTimerEndsAt)
         } else {
             // Superset (0s rest): immediately advance to paired superset exercise
             session.restTimerEndsAt = nil
@@ -262,10 +378,12 @@ public final class WatchWorkoutViewModel {
             session.status = .IN_PROGRESS
             session.pausedAt = nil
             healthCoordinator.resumeWorkout()
+            WKInterfaceDevice.current().play(.start)
         } else {
             session.status = .PAUSED
             session.pausedAt = ISO8601DateFormatter().string(from: Date())
             healthCoordinator.pauseWorkout()
+            WKInterfaceDevice.current().play(.stop)
         }
         session.version += 1
         store.saveActiveSession(session)
@@ -350,9 +468,11 @@ public struct WatchRootContainerView: View {
     public var body: some View {
         Group {
             if let summary = viewModel.completedSummarySession {
-                WatchWorkoutSummaryView(session: summary) {
-                    viewModel.completedSummarySession = nil
-                }
+                WatchWorkoutSummaryView(
+                    session: summary,
+                    onDismiss: { viewModel.completedSummarySession = nil },
+                    onDiscard: { viewModel.discardCompletedWorkout() }
+                )
             } else if viewModel.store.activeSession != nil {
                 WatchActiveWorkoutView(viewModel: viewModel)
             } else {
