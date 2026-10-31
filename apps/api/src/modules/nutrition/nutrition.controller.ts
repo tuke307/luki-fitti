@@ -14,9 +14,11 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import {
   MealEntryRangeQuerySchema,
+  NutritionHistoryQuerySchema,
   NutritionSummaryQuerySchema,
   UpsertMealEntrySchema,
   type MealEntryRangeQueryDto,
+  type NutritionHistoryQueryDto,
   type NutritionSummaryQueryDto,
   type UpsertMealEntryDto,
 } from '@luki-fitti/common/schemas';
@@ -78,6 +80,17 @@ export class NutritionController {
   @ApiOperation({ summary: 'Recently logged foods for quick re-logging' })
   getRecentItems(@CurrentUser() user: AuthenticatedUser) {
     return this.nutritionService.getRecentItems(user.id);
+  }
+
+  @Get('history-picks')
+  @ApiOperation({
+    summary: 'Past entries and foods for re-logging, ranked by frequency and recency',
+  })
+  getHistoryPicks(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query(new ZodValidationPipe(NutritionHistoryQuerySchema)) query: NutritionHistoryQueryDto,
+  ) {
+    return this.nutritionService.getHistoryPicks(user.id, query.q || undefined);
   }
 
   @Get('photos/:id')

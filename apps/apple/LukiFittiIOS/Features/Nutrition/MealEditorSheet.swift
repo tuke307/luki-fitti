@@ -21,7 +21,7 @@ struct MealEditorSheet: View {
     @State private var items: [MealItemDto]
     /// Chosen input unit per item id (`l` is display-only; stored as ml).
     @State private var displayUnits: [String: NutritionMath.AmountDisplayUnit] = [:]
-    @State private var recent: [MealItemDto] = []
+    @State private var showsHistory = false
     @State private var error: String?
     @State private var saving = false
     @State private var confirmDelete = false
@@ -76,6 +76,9 @@ struct MealEditorSheet: View {
 
     var body: some View {
         editor
+            .sheet(isPresented: $showsHistory) {
+                HistoryPickerSheet(api: viewModel.store.apiClient, onAdd: addFromHistory)
+            }
             .fullScreenCover(isPresented: $showsCamera) {
                 CameraPicker { image in
                     if pickedPhotos.count < MealPhotoSheet.maxPhotos {
@@ -167,25 +170,14 @@ struct MealEditorSheet: View {
                     } label: {
                         Label(tr("Add another"), systemImage: "plus")
                     }
-                    if !recent.isEmpty {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack {
-                                ForEach(recent.prefix(12)) { r in
-                                    Button(recentTitle(r)) {
-                                        items.removeAll { $0.name.isEmpty && $0.kcal == 0 }
-                                        var copy = r
-                                        copy.id = UUID().uuidString
-                                        copy.source = .MANUAL
-                                        copy.confidence = nil
-                                        items.append(copy)
-                                    }
-                                    .buttonStyle(.bordered)
-                                }
-                            }
+                    if isSignedIn {
+                        Button {
+                            showsHistory = true
+                        } label: {
+                            Label(tr("Add from history"), systemImage: "clock.arrow.circlepath")
                         }
+                        .accessibilityIdentifier("ios.nutrition.historyButton")
                     }
-                } header: {
-                    if !recent.isEmpty { Text(tr("Recent")) }
                 }
                 .disabled(analyzing)
 
@@ -241,10 +233,6 @@ struct MealEditorSheet: View {
             } message: {
                 Text(tr("The photos and estimated foods of this meal will be deleted."))
             }
-            .task {
-                guard isSignedIn else { return }
-                recent = (try? await viewModel.store.apiClient.fetchRecentMealItems()) ?? []
-            }
         }
     }
 
@@ -297,9 +285,15 @@ struct MealEditorSheet: View {
         }
     }
 
-    private func recentTitle(_ item: MealItemDto) -> String {
-        let amount = NutritionMath.formatAmount(item.grams, item.amountUnit, locale: locale)
-        return ([item.name] + (amount.isEmpty ? [] : [amount]) + ["\(Int(item.kcal)) kcal"]).joined(separator: " · ")
+    private func addFromHistory(_ picked: [MealItemDto]) {
+        items.removeAll { $0.name.isEmpty && $0.kcal == 0 && ($0.grams ?? 0) == 0 }
+        items.append(contentsOf: picked.map {
+            var copy = $0
+            copy.id = UUID().uuidString
+            copy.source = .MANUAL
+            copy.confidence = nil
+            return copy
+        })
     }
 
     private func numberRow(_ title: String, id: String, value: Binding<Double?>) -> some View {
