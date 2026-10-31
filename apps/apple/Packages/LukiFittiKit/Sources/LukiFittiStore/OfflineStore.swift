@@ -173,8 +173,8 @@ public final class OfflineStore {
             updateSyncStateBadge()
             return
         }
-        guard await apiClient.isAuthenticated() else {
-            syncState = .SAVED_LOCALLY
+        guard apiClient.isAuthenticated() else {
+            updateSyncStateBadge()
             return
         }
 
@@ -395,8 +395,16 @@ public final class OfflineStore {
         onOverviewOrAuthChanged?()
     }
 
+    /// Signed in on this device, but the server rejected the session and the tokens are gone:
+    /// nothing can sync until the user signs in again (local data is kept).
+    public var needsReauthentication: Bool {
+        currentUser != nil && !apiClient.isAuthenticated()
+    }
+
     private func updateSyncStateBadge() {
-        if conflictItem != nil {
+        if needsReauthentication {
+            syncState = .AUTH_EXPIRED
+        } else if conflictItem != nil {
             syncState = .CONFLICT
         } else if !syncQueue.isEmpty {
             syncState = .SAVED_LOCALLY

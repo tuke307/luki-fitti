@@ -627,5 +627,7 @@ public enum LukiStrings {
         "Double-tap, then turn the Digital Crown": "Doppeltippen, dann die Digital Crown drehen",
         "Change reps": "Wiederholungen ändern",
         "%d bpm": "%d Schläge/Min.",
+        "Sign in again to sync": "Zum Synchronisieren erneut anmelden",
+        "Your session ended. Everything on this iPhone is kept and uploads after you sign in.": "Deine Sitzung ist abgelaufen. Alles auf diesem iPhone bleibt erhalten und wird nach der Anmeldung hochgeladen.",
     ]
 }

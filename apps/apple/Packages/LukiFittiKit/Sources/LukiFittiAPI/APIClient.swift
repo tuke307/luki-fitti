@@ -77,7 +77,7 @@ public actor APIClient {
         #endif
     }
 
-    public func isAuthenticated() -> Bool {
+    public nonisolated func isAuthenticated() -> Bool {
         tokenStore.loadTokens() != nil
     }
 
