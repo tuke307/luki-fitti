@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { DEFAULT_FOLDER_COLOR } from '../utils/folder-color.util';
 import {
+  ACTIVITY_LEVELS,
   AdminPermission,
   BIOLOGICAL_SEX_VALUES,
   DistanceUnit,
@@ -128,6 +129,8 @@ export const UpdatePreferencesSchema = z.object({
   heightCm: z.number().min(100).max(250).nullable().optional(),
   birthYear: z.number().int().min(1900).max(2030).nullable().optional(),
   sex: z.enum(BIOLOGICAL_SEX_VALUES).nullable().optional(),
+  bodyFatPct: z.number().min(3).max(60).nullable().optional(),
+  activityLevel: z.enum(ACTIVITY_LEVELS).nullable().optional(),
   dailyKcalGoal: z.number().int().min(800).max(10000).nullable().optional(),
   proteinGoalG: z.number().int().min(0).max(600).nullable().optional(),
   carbsGoalG: z.number().int().min(0).max(1500).nullable().optional(),
@@ -153,6 +156,8 @@ export const UserPreferencesSchema = z.object({
   heightCm: z.number().nullable().optional(),
   birthYear: z.number().nullable().optional(),
   sex: z.enum(BIOLOGICAL_SEX_VALUES).nullable().optional(),
+  bodyFatPct: z.number().nullable().optional(),
+  activityLevel: z.enum(ACTIVITY_LEVELS).nullable().optional(),
   dailyKcalGoal: z.number().nullable().optional(),
   proteinGoalG: z.number().nullable().optional(),
   carbsGoalG: z.number().nullable().optional(),

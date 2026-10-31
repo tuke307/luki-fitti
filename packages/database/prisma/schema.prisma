@@ -207,6 +207,10 @@ model UserPreferences {
   birthYear                  Int?
   /// "female" | "male" | null; only used for energy estimates.
   sex                        String?
+  /// Body fat %; when set, energy and protein estimates use lean mass (Katch–McArdle).
+  bodyFatPct                 Float?
+  /// ActivityLevel value; everyday movement outside workouts, used without Apple Health.
+  activityLevel              String?
   dailyKcalGoal              Int?
   proteinGoalG               Int?
   carbsGoalG                 Int?

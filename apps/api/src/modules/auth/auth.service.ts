@@ -26,6 +26,8 @@ import {
 } from '@luki-fitti/common/catalog';
 import { ALL_SYSTEM_EXERCISES } from '@luki-fitti/common/catalog/extended';
 import {
+  ACTIVITY_LEVELS,
+  type ActivityLevel,
   type AdminPermission,
   type BiologicalSex,
   DistanceUnit,
@@ -431,6 +433,8 @@ export class AuthService {
           'heightCm',
           'birthYear',
           'sex',
+          'bodyFatPct',
+          'activityLevel',
           'dailyKcalGoal',
           'proteinGoalG',
           'carbsGoalG',
@@ -612,6 +616,8 @@ export class AuthService {
       heightCm?: number | null;
       birthYear?: number | null;
       sex?: string | null;
+      bodyFatPct?: number | null;
+      activityLevel?: string | null;
       dailyKcalGoal?: number | null;
       proteinGoalG?: number | null;
       carbsGoalG?: number | null;
@@ -654,6 +660,12 @@ export class AuthService {
               user.preferences.sex === 'female' || user.preferences.sex === 'male'
                 ? (user.preferences.sex as BiologicalSex)
                 : null,
+            bodyFatPct: user.preferences.bodyFatPct ?? null,
+            activityLevel: (ACTIVITY_LEVELS as readonly string[]).includes(
+              user.preferences.activityLevel ?? '',
+            )
+              ? (user.preferences.activityLevel as ActivityLevel)
+              : null,
             dailyKcalGoal: user.preferences.dailyKcalGoal ?? null,
             proteinGoalG: user.preferences.proteinGoalG ?? null,
             carbsGoalG: user.preferences.carbsGoalG ?? null,
