@@ -1,4 +1,10 @@
-import { ExerciseType, SessionType, SetType, type BiologicalSex } from '../enums';
+import {
+  ExerciseType,
+  SessionType,
+  SetType,
+  type ActivityLevel,
+  type BiologicalSex,
+} from '../enums';
 
 /**
  * Workout energy estimates.
@@ -58,7 +64,8 @@ export function strengthMetForDensity(setsPerMinute: number): number {
 
 /** Running/cycling-agnostic cardio MET from average speed; falls back to a moderate default. */
 export function cardioMetForSpeed(kmPerHour: number | null): number {
-  if (kmPerHour === null || !Number.isFinite(kmPerHour) || kmPerHour <= 0) return DEFAULT_CARDIO_MET;
+  if (kmPerHour === null || !Number.isFinite(kmPerHour) || kmPerHour <= 0)
+    return DEFAULT_CARDIO_MET;
   if (kmPerHour < 5) return 3.5; // walking
   if (kmPerHour < 7) return 5.0; // brisk walking
   if (kmPerHour < 9) return 8.3; // jogging
@@ -93,7 +100,10 @@ export function estimateWorkoutEnergy(
     for (const set of exercise.sets) {
       if (!set.completed) continue;
       const duration = Math.max(0, set.durationSeconds ?? 0);
-      if (exercise.exerciseTypeSnapshot === ExerciseType.STRETCHING || set.setType === SetType.STRETCH) {
+      if (
+        exercise.exerciseTypeSnapshot === ExerciseType.STRETCHING ||
+        set.setType === SetType.STRETCH
+      ) {
         stretchSeconds += duration;
       } else if (exercise.exerciseTypeSnapshot === ExerciseType.CARDIO) {
         cardioSeconds += duration;
@@ -121,8 +131,11 @@ export function estimateWorkoutEnergy(
 
   const strengthMinutes = strengthSeconds / 60;
   const strengthMet =
-    strengthMinutes > 0 ? strengthMetForDensity(workingSets / strengthMinutes) : STRENGTH_MET_RANGE.light;
-  const cardioSpeed = cardioSeconds > 0 && cardioMeters > 0 ? cardioMeters / 1000 / (cardioSeconds / 3600) : null;
+    strengthMinutes > 0
+      ? strengthMetForDensity(workingSets / strengthMinutes)
+      : STRENGTH_MET_RANGE.light;
+  const cardioSpeed =
+    cardioSeconds > 0 && cardioMeters > 0 ? cardioMeters / 1000 / (cardioSeconds / 3600) : null;
 
   const kcal =
     (strengthMet - 1) * weightKg * (strengthSeconds / 3600) +
@@ -132,26 +145,98 @@ export function estimateWorkoutEnergy(
   return { kcal: Math.round(kcal), source: 'estimate', usedDefaultBodyWeight };
 }
 
-/**
- * Suggested maintenance intake (Mifflin–St Jeor BMR × 1.4 for "lightly active + training").
- * Returns null when inputs are missing; the UI then asks the user to set a goal manually.
- */
-export function suggestDailyKcal(input: {
+export interface BodyMetricsInput {
   bodyWeightKg?: number | null;
   heightCm?: number | null;
   birthYear?: number | null;
   sex?: BiologicalSex | null;
+  bodyFatPct?: number | null;
   now?: Date;
-}): number | null {
+}
+
+export const BODY_FAT_PCT_RANGE = { min: 3, max: 60 } as const;
+
+const validBodyFat = (pct?: number | null): pct is number =>
+  typeof pct === 'number' &&
+  Number.isFinite(pct) &&
+  pct >= BODY_FAT_PCT_RANGE.min &&
+  pct <= BODY_FAT_PCT_RANGE.max;
+
+/** Lean body mass in kg when both weight and a plausible body fat % are known. */
+export function leanBodyMassKg(
+  bodyWeightKg?: number | null,
+  bodyFatPct?: number | null,
+): number | null {
+  if (!bodyWeightKg || bodyWeightKg <= 0 || !validBodyFat(bodyFatPct)) return null;
+  return bodyWeightKg * (1 - bodyFatPct / 100);
+}
+
+/**
+ * Resting energy (BMR) in kcal/day. Katch–McArdle (370 + 21.6 × lean mass) when body fat is known —
+ * more accurate for muscular people — otherwise Mifflin–St Jeor. `null` when inputs are missing.
+ */
+export function restingEnergyKcal(
+  input: BodyMetricsInput,
+): { kcal: number; method: 'katch-mcardle' | 'mifflin-st-jeor' } | null {
+  const lean = leanBodyMassKg(input.bodyWeightKg, input.bodyFatPct);
+  if (lean !== null) return { kcal: 370 + 21.6 * lean, method: 'katch-mcardle' };
   const { bodyWeightKg, heightCm, birthYear, sex } = input;
   if (!bodyWeightKg || !heightCm || !birthYear || !sex) return null;
   const age = (input.now ?? new Date()).getUTCFullYear() - birthYear;
   if (age < 14 || age > 110) return null;
-  const bmr = 10 * bodyWeightKg + 6.25 * heightCm - 5 * age + (sex === 'male' ? 5 : -161);
-  return Math.round((bmr * 1.4) / 10) * 10;
+  return {
+    kcal: 10 * bodyWeightKg + 6.25 * heightCm - 5 * age + (sex === 'male' ? 5 : -161),
+    method: 'mifflin-st-jeor',
+  };
 }
 
-/** 1.8 g protein per kg body weight, a common target for people who lift. */
-export function suggestProteinGoalG(bodyWeightKg?: number | null): number | null {
+/**
+ * Multipliers on resting energy for everyday life *without* workouts (includes ~10 % for
+ * digestion). Workouts are added on top by the food ring, so they must not be in here.
+ */
+export const ACTIVITY_LEVEL_FACTORS: Record<ActivityLevel, number> = {
+  SEDENTARY: 1.2,
+  LIGHT: 1.3,
+  ACTIVE: 1.45,
+  VERY_ACTIVE: 1.6,
+};
+export const DEFAULT_ACTIVITY_LEVEL: ActivityLevel = 'LIGHT';
+
+/**
+ * With Apple Health, all movement above resting energy is measured and added to the ring, so the
+ * base only covers resting energy plus digestion.
+ */
+export const MEASURED_ACTIVITY_FACTOR = 1.1;
+
+/**
+ * Suggested **base** daily goal: what the body burns on a day without workouts or (with Apple
+ * Health) without any measured activity. The food ring adds the day's burned calories on top, so
+ * activity is never counted twice. Returns null when inputs are missing.
+ */
+export function suggestDailyKcal(
+  input: BodyMetricsInput & {
+    activityLevel?: ActivityLevel | null;
+    /** True when Apple Health active energy is synced for recent days. */
+    measuredActivity?: boolean;
+  },
+): number | null {
+  const resting = restingEnergyKcal(input);
+  if (!resting) return null;
+  const factor = input.measuredActivity
+    ? MEASURED_ACTIVITY_FACTOR
+    : ACTIVITY_LEVEL_FACTORS[input.activityLevel ?? DEFAULT_ACTIVITY_LEVEL];
+  return Math.round((resting.kcal * factor) / 10) * 10;
+}
+
+/**
+ * Protein target for people who lift: 2.2 g per kg lean mass when body fat is known (≈ 1.8 g/kg
+ * at typical body fat, and no overshoot at higher body fat), otherwise 1.8 g per kg body weight.
+ */
+export function suggestProteinGoalG(
+  bodyWeightKg?: number | null,
+  bodyFatPct?: number | null,
+): number | null {
+  const lean = leanBodyMassKg(bodyWeightKg, bodyFatPct);
+  if (lean !== null) return Math.round(lean * 2.2);
   return bodyWeightKg ? Math.round(bodyWeightKg * 1.8) : null;
 }

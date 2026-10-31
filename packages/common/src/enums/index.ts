@@ -329,3 +329,7 @@ export enum BodyWeightSource {
 
 export const BIOLOGICAL_SEX_VALUES = ['female', 'male'] as const;
 export type BiologicalSex = (typeof BIOLOGICAL_SEX_VALUES)[number];
+
+/** Everyday movement outside workouts; only used when no Apple Health activity is synced. */
+export const ACTIVITY_LEVELS = ['SEDENTARY', 'LIGHT', 'ACTIVE', 'VERY_ACTIVE'] as const;
+export type ActivityLevel = (typeof ACTIVITY_LEVELS)[number];

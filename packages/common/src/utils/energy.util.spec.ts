@@ -7,6 +7,8 @@ import {
   cardioMetForSpeed,
   estimateWorkoutEnergy,
   strengthMetForDensity,
+  leanBodyMassKg,
+  restingEnergyKcal,
   suggestDailyKcal,
   suggestProteinGoalG,
 } from './energy.util';
@@ -47,7 +49,10 @@ describe('estimateWorkoutEnergy', () => {
       activeDurationSeconds: 1800,
     } as const;
     const sparse = estimateWorkoutEnergy(
-      { ...base, exercises: [{ exerciseTypeSnapshot: ExerciseType.STRENGTH, sets: strengthSets(4) }] },
+      {
+        ...base,
+        exercises: [{ exerciseTypeSnapshot: ExerciseType.STRENGTH, sets: strengthSets(4) }],
+      },
       70,
     );
     const dense = estimateWorkoutEnergy(
@@ -104,7 +109,14 @@ describe('estimateWorkoutEnergy', () => {
         exercises: [
           {
             exerciseTypeSnapshot: ExerciseType.CARDIO,
-            sets: [{ setType: SetType.WORKING, completed: true, durationSeconds: 1800, distanceMeters: 5000 }],
+            sets: [
+              {
+                setType: SetType.WORKING,
+                completed: true,
+                durationSeconds: 1800,
+                distanceMeters: 5000,
+              },
+            ],
           },
         ],
       },
@@ -128,21 +140,47 @@ describe('energy helpers', () => {
     assert.equal(strengthMetForDensity(5), STRENGTH_MET_RANGE.vigorous);
   });
 
-  it('suggests maintenance kcal with Mifflin–St Jeor × 1.4', () => {
-    const kcal = suggestDailyKcal({
-      bodyWeightKg: 80,
-      heightCm: 180,
-      birthYear: 1996,
-      sex: 'male',
-      now: new Date('2026-06-01T00:00:00Z'),
-    });
-    // BMR = 800 + 1125 − 150 + 5 = 1780 → × 1.4 = 2492 → rounded to 10
-    assert.equal(kcal, 2490);
+  const metrics = {
+    bodyWeightKg: 80,
+    heightCm: 180,
+    birthYear: 1996,
+    sex: 'male' as const,
+    now: new Date('2026-06-01T00:00:00Z'),
+  };
+
+  it('suggests a base goal from Mifflin–St Jeor × the everyday activity factor', () => {
+    // BMR = 800 + 1125 − 150 + 5 = 1780 → × 1.3 (default LIGHT) = 2314 → rounded to 10
+    assert.equal(suggestDailyKcal(metrics), 2310);
+    assert.equal(suggestDailyKcal({ ...metrics, activityLevel: 'SEDENTARY' }), 2140);
+    assert.equal(suggestDailyKcal({ ...metrics, activityLevel: 'VERY_ACTIVE' }), 2850);
     assert.equal(suggestDailyKcal({ bodyWeightKg: 80 }), null);
   });
 
-  it('suggests 1.8 g/kg protein', () => {
+  it('only adds digestion when activity is measured by Apple Health (no double counting)', () => {
+    // 1780 × 1.1 = 1958 → 1960, regardless of the chosen activity level
+    assert.equal(suggestDailyKcal({ ...metrics, measuredActivity: true }), 1960);
+    assert.equal(
+      suggestDailyKcal({ ...metrics, activityLevel: 'VERY_ACTIVE', measuredActivity: true }),
+      1960,
+    );
+  });
+
+  it('uses Katch–McArdle when body fat is known, even without height/age/sex', () => {
+    // lean = 80 × 0.85 = 68 → 370 + 21.6 × 68 = 1838.8
+    assert.deepEqual(restingEnergyKcal({ bodyWeightKg: 80, bodyFatPct: 15 }), {
+      kcal: 370 + 21.6 * 68,
+      method: 'katch-mcardle',
+    });
+    assert.equal(suggestDailyKcal({ bodyWeightKg: 80, bodyFatPct: 15 }), 2390);
+    // Implausible body fat falls back to Mifflin–St Jeor.
+    assert.equal(restingEnergyKcal({ ...metrics, bodyFatPct: 80 })?.method, 'mifflin-st-jeor');
+  });
+
+  it('suggests protein from lean mass when body fat is known', () => {
     assert.equal(suggestProteinGoalG(80), 144);
     assert.equal(suggestProteinGoalG(null), null);
+    // 100 kg at 30 % → 70 kg lean × 2.2 = 154 (instead of 180 from total weight)
+    assert.equal(suggestProteinGoalG(100, 30), 154);
+    assert.equal(leanBodyMassKg(100, null), null);
   });
 });
