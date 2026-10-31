@@ -138,6 +138,64 @@ public struct MealEntryDto: Codable, Sendable, Equatable, Hashable, Identifiable
     }
 }
 
+/// A previously logged food, ranked by the server (`GET /api/nutrition/history-picks`).
+public struct HistoryItemPickDto: Codable, Sendable, Equatable, Hashable, Identifiable {
+    public var id: String { item.name.lowercased() + "|" + item.id }
+    public var item: MealItemDto
+    public var timesLogged: Int
+    public var lastLoggedAt: String
+    public var lastLoggedDate: Date? { LukiISODate.parse(lastLoggedAt) }
+
+    public init(item: MealItemDto, timesLogged: Int, lastLoggedAt: String) {
+        self.item = item
+        self.timesLogged = timesLogged
+        self.lastLoggedAt = lastLoggedAt
+    }
+}
+
+/// A previously logged meal (all its foods), ranked by the server.
+public struct HistoryEntryPickDto: Codable, Sendable, Equatable, Hashable, Identifiable {
+    public var id: String { key }
+    public var key: String
+    public var label: String?
+    public var mealType: MealType
+    public var items: [MealItemDto]
+    public var totals: NutritionTotalsDto
+    public var timesLogged: Int
+    public var lastLoggedAt: String
+    public var lastLoggedDate: Date? { LukiISODate.parse(lastLoggedAt) }
+
+    public init(
+        key: String,
+        label: String? = nil,
+        mealType: MealType,
+        items: [MealItemDto],
+        totals: NutritionTotalsDto,
+        timesLogged: Int,
+        lastLoggedAt: String
+    ) {
+        self.key = key
+        self.label = label
+        self.mealType = mealType
+        self.items = items
+        self.totals = totals
+        self.timesLogged = timesLogged
+        self.lastLoggedAt = lastLoggedAt
+    }
+}
+
+public struct NutritionHistoryPicksDto: Codable, Sendable, Equatable, Hashable {
+    public static let maxQueryLength = 80
+
+    public var entries: [HistoryEntryPickDto]
+    public var items: [HistoryItemPickDto]
+
+    public init(entries: [HistoryEntryPickDto] = [], items: [HistoryItemPickDto] = []) {
+        self.entries = entries
+        self.items = items
+    }
+}
+
 public struct MealItemInputDto: Codable, Sendable, Equatable, Hashable {
     public var name: String
     public var grams: Double?
