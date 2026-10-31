@@ -17,6 +17,7 @@ import type {
   MyAiUsageDto,
   MealEntryDto,
   MealItemDto,
+  NutritionHistoryPicksDto,
   NutritionSummaryDto,
   NutritionSummaryQueryDto,
   UpdateAiSettingsDto,
@@ -278,6 +279,11 @@ export const nutrition = {
       `/nutrition/summary?${new URLSearchParams({ from: query.from, to: query.to, tz: query.tz }).toString()}`,
     ),
   recentItems: () => apiFetch<MealItemDto[]>('/nutrition/recent-items'),
+  historyPicks: (q?: string, init?: RequestInit) =>
+    apiFetch<NutritionHistoryPicksDto>(
+      `/nutrition/history-picks${q ? `?${new URLSearchParams({ q }).toString()}` : ''}`,
+      init,
+    ),
   deletePhoto: (id: string) =>
     apiFetch<{ success: boolean }>(`/nutrition/photos/${encodeURIComponent(id)}`, {
       method: 'DELETE',

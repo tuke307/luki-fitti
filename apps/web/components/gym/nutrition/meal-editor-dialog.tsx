@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, Sparkles, Trash2, X } from 'lucide-react';
+import { History, Plus, Sparkles, Trash2, X } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,7 +36,6 @@ import type {
   UpsertMealEntryDto,
 } from '@luki-fitti/common/schemas';
 import {
-  formatMealAmount,
   fromDisplayAmount,
   MEAL_AMOUNT_DISPLAY_UNITS,
   scaleFoodItemToGrams,
@@ -47,6 +46,7 @@ import {
 import { api } from '@/lib/api';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { mealTypeForTime, newClientId } from '@/lib/nutrition/nutrition-day';
+import { HistoryPickerDialog } from './history-picker-dialog';
 import { MealPhotoSection } from './meal-photo-section';
 
 const NUM_FIELDS = ['grams', 'kcal', 'proteinG', 'carbsG', 'fatG'] as const;
@@ -217,7 +217,7 @@ function MealEditorBody({
   const [items, setItems] = useState<DraftItem[]>(() =>
     entry?.items.length ? entry.items.map(draftFromItem) : [emptyDraft()],
   );
-  const [recent, setRecent] = useState<MealItemDto[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [clientEntryId] = useState(() => entry?.clientEntryId ?? newClientId());
@@ -283,17 +283,13 @@ function MealEditorBody({
     onEntryChanged?.(updated);
   };
 
-  useEffect(() => {
-    if (!isOnline) return;
-    let cancelled = false;
-    api.nutrition
-      .recentItems()
-      .then((res) => !cancelled && setRecent(res.data ?? []))
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [isOnline]);
+  const addFromHistory = (picked: MealItemDto[]) =>
+    setItems((list) => [
+      ...list.filter((x) => x.name.trim() || Object.values(x.values).some(Boolean)),
+      ...picked.map((i) =>
+        draftFromItem({ ...i, source: FoodItemSource.MANUAL, confidence: null }),
+      ),
+    ]);
 
   const parsedItems = useMemo(
     () =>
@@ -609,46 +605,20 @@ function MealEditorBody({
             ))}
           </ul>
 
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => setItems((list) => [...list, emptyDraft()])}
-          >
-            <Plus className="h-4 w-4" /> {t.nutrition.addItem}
-          </Button>
-
-          {recent.length > 0 && (
-            <section aria-labelledby="meal-recent" className="space-y-2">
-              <h3 id="meal-recent" className="text-[0.8125rem] font-semibold">
-                {t.nutrition.recent}
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {recent.slice(0, 12).map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() =>
-                      setItems((list) => [
-                        ...list.filter(
-                          (x) => x.name.trim() || Object.values(x.values).some(Boolean),
-                        ),
-                        draftFromItem({ ...item, source: FoodItemSource.MANUAL, confidence: null }),
-                      ])
-                    }
-                    className="bg-secondary hover:bg-secondary/70 h-11 rounded-full px-4 text-[0.875rem]"
-                  >
-                    {item.name}
-                    <span className="text-muted-foreground ml-1.5 tabular-nums">
-                      {item.grams
-                        ? `${formatMealAmount(item.grams, item.amountUnit, bcp47)} · `
-                        : ''}
-                      {Math.round(item.kcal)}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setItems((list) => [...list, emptyDraft()])}
+            >
+              <Plus className="h-4 w-4" /> {t.nutrition.addItem}
+            </Button>
+            {isOnline && (
+              <Button type="button" variant="secondary" onClick={() => setHistoryOpen(true)}>
+                <History className="h-4 w-4" /> {t.nutrition.historyButton}
+              </Button>
+            )}
+          </div>
         </fieldset>
 
         {error && (
@@ -694,6 +664,12 @@ function MealEditorBody({
           </Button>
         </div>
       </DialogFooter>
+
+      <HistoryPickerDialog
+        open={historyOpen && isOnline}
+        onOpenChange={setHistoryOpen}
+        onAdd={addFromHistory}
+      />
 
       <AlertDialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
         <AlertDialogContent data-testid="meal-discard-estimate">
