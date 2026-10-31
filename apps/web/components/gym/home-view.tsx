@@ -8,9 +8,15 @@ import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useGym } from '@/providers/gym/gym-context';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
-import { formatShortDayMonth, startOfIsoWeek } from '@luki-fitti/common/utils/client';
+import {
+  formatShortDayMonth,
+  startOfIsoWeek,
+  WEEKLY_SETS_TARGET,
+  weeklySetsByMuscle,
+  type WeeklySetsStatus,
+} from '@luki-fitti/common/utils/client';
 import type { WorkoutTemplateDto } from '@luki-fitti/common/schemas';
-import { ExerciseType, MuscleGroup, SetType, WeightUnit } from '@luki-fitti/common/enums';
+import { WeightUnit } from '@luki-fitti/common/enums';
 import type { NavTab } from './pwa-shell';
 import { bigVolume, formatVolume, unitLabel } from '@/lib/format/weight';
 import { WeightHomeCard } from './weight/weight-home-card';
@@ -20,16 +26,22 @@ interface HomeViewProps {
   onNavigate: (tab: NavTab) => void;
 }
 
-const LBS_TO_KG = 0.45359237;
+const MUSCLE_WEEK_OPTIONS = [4, 12] as const;
 
 export function HomeView({ onNavigate }: HomeViewProps) {
   const { user } = useAuth();
-  const { activeSession, historySessions, folders, unfiledTemplates, startWorkoutFromTemplate } =
-    useGym();
-  const { t, format, muscleLabel, locale } = useLocale();
+  const {
+    activeSession,
+    historySessions,
+    catalog,
+    folders,
+    unfiledTemplates,
+    startWorkoutFromTemplate,
+  } = useGym();
+  const { t, format, muscleLabel, locale, bcp47 } = useLocale();
 
   const [nowMs] = useState<number>(() => Date.now());
-  const [muscleRange, setMuscleRange] = useState<'30d' | '90d' | 'all'>('90d');
+  const [muscleWeeks, setMuscleWeeks] = useState<number>(MUSCLE_WEEK_OPTIONS[0]);
   const weeklyGoal = user?.preferences?.weeklyGoalSessions ?? 4;
   const weightUnit = user?.preferences?.weightUnit ?? WeightUnit.KG;
   const firstName = user?.name?.split(' ')[0];
@@ -107,51 +119,14 @@ export function HomeView({ onNavigate }: HomeViewProps) {
     return weeks;
   }, [historySessions, nowMs, weightUnit]);
 
-  // Chart 2: Muscle Group Working Sets & Volume Balance
+  // Chart 2: weekly hard sets per muscle (secondary muscles count half) against the 10–20 target
   const muscleChartData = useMemo(() => {
-    const cutoffMs =
-      muscleRange === '30d'
-        ? nowMs - 30 * 86400000
-        : muscleRange === '90d'
-          ? nowMs - 90 * 86400000
-          : 0;
-
-    const counts = new Map<MuscleGroup, { sets: number; volumeKg: number }>();
-
-    for (const s of historySessions) {
-      if (cutoffMs > 0 && Date.parse(s.startedAt) < cutoffMs) continue;
-      for (const ex of s.exercises) {
-        const isStretch = ex.exerciseTypeSnapshot === ExerciseType.STRETCHING;
-        if (isStretch) continue;
-
-        const cur = counts.get(ex.primaryMuscleSnapshot) ?? { sets: 0, volumeKg: 0 };
-        for (const set of ex.sets) {
-          if (!set.completed || set.setType === SetType.WARMUP || set.setType === SetType.STRETCH) {
-            continue;
-          }
-          cur.sets += 1;
-          if (set.weight && set.weight > 0 && set.reps && set.reps > 0) {
-            const wKg = set.weightUnit === WeightUnit.LBS ? set.weight * LBS_TO_KG : set.weight;
-            cur.volumeKg += wKg * set.reps;
-          }
-        }
-        if (cur.sets > 0) {
-          counts.set(ex.primaryMuscleSnapshot, cur);
-        }
-      }
-    }
-
-    return Array.from(counts.entries())
-      .map(([muscle, val]) => ({
-        muscle,
-        name: muscleLabel(muscle),
-        sets: val.sets,
-        volumeTons: Math.round((val.volumeKg / 1000) * 10) / 10,
-        volumeKg: Math.round(val.volumeKg),
-      }))
-      .sort((a, b) => b.sets - a.sets)
-      .slice(0, 8);
-  }, [historySessions, muscleRange, nowMs, muscleLabel]);
+    const secondaryById = new Map(catalog.map((e) => [e.id, e.secondaryMuscleGroups]));
+    return weeklySetsByMuscle(historySessions, (id) => secondaryById.get(id), {
+      weeks: muscleWeeks,
+      now: new Date(nowMs),
+    }).slice(0, 10);
+  }, [historySessions, catalog, muscleWeeks, nowMs]);
 
   const goalProgress = Math.min(1, weeklyGoal > 0 ? summaryMetrics.sessions7d / weeklyGoal : 0);
   const remainingToGoal = Math.max(0, weeklyGoal - summaryMetrics.sessions7d);
@@ -160,7 +135,13 @@ export function HomeView({ onNavigate }: HomeViewProps) {
     day: 'numeric',
     month: 'long',
   }).format(new Date(nowMs));
-  const maxMuscleSets = muscleChartData[0]?.sets ?? 0;
+  // Scale leaves room past the target so "above range" stays visible.
+  const muscleScale = Math.max(WEEKLY_SETS_TARGET.max * 1.25, muscleChartData[0]?.setsPerWeek ?? 0);
+  const statusLabel: Record<WeeklySetsStatus, string> = {
+    below: t.home.statusBelow,
+    within: t.home.statusWithin,
+    above: t.home.statusAbove,
+  };
 
   return (
     <div className="mx-auto max-w-2xl min-w-0 space-y-8 pb-10">
@@ -342,14 +323,17 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             </h2>
             <p className="text-muted-foreground text-[0.8125rem]">{t.home.muscleChartSub}</p>
           </div>
-          <Tabs
-            value={muscleRange}
-            onValueChange={(v) => setMuscleRange(v as '30d' | '90d' | 'all')}
-          >
+          <Tabs value={String(muscleWeeks)} onValueChange={(v) => setMuscleWeeks(Number(v))}>
             <TabsList>
-              <TabsTrigger value="30d">30d</TabsTrigger>
-              <TabsTrigger value="90d">90d</TabsTrigger>
-              <TabsTrigger value="all">{t.home.rangeAll}</TabsTrigger>
+              {MUSCLE_WEEK_OPTIONS.map((weeks) => (
+                <TabsTrigger
+                  key={weeks}
+                  value={String(weeks)}
+                  aria-label={format(t.home.rangeWeeksAria, { weeks })}
+                >
+                  {format(t.home.rangeWeeks, { weeks })}
+                </TabsTrigger>
+              ))}
             </TabsList>
           </Tabs>
         </div>
@@ -359,25 +343,54 @@ export function HomeView({ onNavigate }: HomeViewProps) {
             {t.home.noLoggedWorkingSets}
           </p>
         ) : (
-          <ul className="space-y-3">
+          <ul className="space-y-3.5">
             {muscleChartData.map((entry) => (
               <li key={entry.muscle} className="space-y-1.5">
                 <div className="flex items-baseline justify-between gap-3 text-[0.9375rem]">
-                  <span>{entry.name}</span>
-                  <span className="text-muted-foreground tabular-nums">
-                    {entry.sets} {entry.sets === 1 ? t.common.set : t.common.sets}
+                  <span>{muscleLabel(entry.muscle)}</span>
+                  <span className="text-muted-foreground text-right tabular-nums">
+                    {format(t.home.setsPerWeek, {
+                      sets: entry.setsPerWeek.toLocaleString(bcp47),
+                    })}
+                    <span className="sr-only">, </span>
+                    <span
+                      className={
+                        entry.status === 'within'
+                          ? 'text-foreground ml-2 font-medium'
+                          : 'ml-2 font-medium'
+                      }
+                    >
+                      {statusLabel[entry.status]}
+                    </span>
                   </span>
                 </div>
-                <div className="bg-secondary h-1.5 overflow-hidden rounded-full">
+                <div
+                  className="bg-secondary relative h-2 overflow-hidden rounded-full"
+                  aria-hidden="true"
+                >
                   <div
-                    className="bg-primary h-full rounded-full transition-[width] duration-500 ease-(--ease-out-quart)"
+                    className="bg-primary/15 absolute inset-y-0"
                     style={{
-                      width: `${maxMuscleSets > 0 ? (entry.sets / maxMuscleSets) * 100 : 0}%`,
+                      left: `${(WEEKLY_SETS_TARGET.min / muscleScale) * 100}%`,
+                      width: `${((WEEKLY_SETS_TARGET.max - WEEKLY_SETS_TARGET.min) / muscleScale) * 100}%`,
                     }}
+                  />
+                  <div
+                    className={`relative h-full rounded-full transition-[width] duration-500 ease-(--ease-out-quart) ${
+                      entry.status === 'within' ? 'bg-primary' : 'bg-primary/60'
+                    }`}
+                    style={{ width: `${Math.min(100, (entry.setsPerWeek / muscleScale) * 100)}%` }}
                   />
                 </div>
               </li>
             ))}
+            <li className="text-muted-foreground flex items-center gap-2 pt-1 text-[0.8125rem]">
+              <span
+                className="bg-primary/15 inline-block h-2 w-5 rounded-full"
+                aria-hidden="true"
+              />
+              {t.home.targetBand}
+            </li>
           </ul>
         )}
       </section>

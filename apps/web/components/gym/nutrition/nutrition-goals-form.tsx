@@ -14,10 +14,19 @@ import { Input } from '@luki-fitti/ui/components/ui/input';
 import { Label } from '@luki-fitti/ui/components/ui/label';
 import { toast } from '@luki-fitti/ui/components/ui/sonner';
 import { UpdatePreferencesSchema } from '@luki-fitti/common/schemas';
-import { suggestDailyKcal, suggestProteinGoalG } from '@luki-fitti/common/utils/client';
+import { WeightUnit } from '@luki-fitti/common/enums';
+import {
+  MAINTENANCE_RULES,
+  suggestDailyKcal,
+  suggestProteinGoalG,
+} from '@luki-fitti/common/utils/client';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { useBodyWeight } from '@/lib/body-weight/use-body-weight';
+import { toDisplayWeight } from '@/lib/body-weight/body-weight';
+import { formatWeightDelta } from '@/lib/body-weight/weight-format';
+import { unitLabel } from '@/lib/format/weight';
+import { useMaintenance, type MaintenanceState } from '@/lib/nutrition/use-maintenance';
 
 const GOAL_FIELDS = ['dailyKcalGoal', 'proteinGoalG', 'carbsGoalG', 'fatGoalG'] as const;
 type GoalField = (typeof GOAL_FIELDS)[number];
@@ -58,12 +67,19 @@ export function NutritionGoalsForm({
     fatGoalG: t.profileBody.fatGoal,
   };
 
+  const maintenance = useMaintenance();
   const suggestion = suggestDailyKcal({
     bodyWeightKg,
     heightCm: prefs?.heightCm ?? null,
     birthYear: prefs?.birthYear ?? null,
     sex: prefs?.sex ?? null,
+    bodyFatPct: prefs?.bodyFatPct ?? null,
+    activityLevel: prefs?.activityLevel ?? null,
+    measuredActivity: maintenance.measuredActivity,
   });
+  const learnedBase = maintenance.estimate
+    ? Math.min(10000, Math.max(800, maintenance.estimate.baseKcal))
+    : null;
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,11 +125,23 @@ export function NutritionGoalsForm({
         ))}
       </div>
 
+      <p className="text-muted-foreground text-[0.8125rem]">
+        {maintenance.measuredActivity
+          ? t.profileBody.goalBaseHintHealth
+          : t.profileBody.goalBaseHint}
+      </p>
+
       {error && (
         <p className="text-destructive text-[0.8125rem]" role="alert">
           {error}
         </p>
       )}
+
+      <MaintenanceSummary
+        state={maintenance}
+        learnedBase={learnedBase}
+        onUse={(kcal) => setValues((v) => ({ ...v, dailyKcalGoal: String(kcal) }))}
+      />
 
       <div className="flex flex-wrap items-center gap-2">
         <Button type="submit" disabled={saving}>
@@ -125,7 +153,7 @@ export function NutritionGoalsForm({
           disabled={!suggestion}
           onClick={() => {
             if (!suggestion) return;
-            const protein = suggestProteinGoalG(bodyWeightKg);
+            const protein = suggestProteinGoalG(bodyWeightKg, prefs?.bodyFatPct ?? null);
             setValues((v) => ({
               ...v,
               dailyKcalGoal: String(suggestion),
@@ -145,6 +173,67 @@ export function NutritionGoalsForm({
         <p className="text-muted-foreground text-[0.8125rem]">{t.profileBody.suggestHint}</p>
       )}
     </form>
+  );
+}
+
+/** What the user actually burns, learned from the food log and weight trend. */
+function MaintenanceSummary({
+  state,
+  learnedBase,
+  onUse,
+}: {
+  state: MaintenanceState;
+  learnedBase: number | null;
+  onUse: (kcal: number) => void;
+}) {
+  const { user } = useAuth();
+  const { t, format, bcp47 } = useLocale();
+  if (!state.loaded) return null;
+  const unit = user?.preferences?.weightUnit ?? WeightUnit.KG;
+  const { estimate } = state;
+  const number = (n: number) => n.toLocaleString(bcp47);
+
+  return (
+    <section
+      aria-labelledby="maintenance-title"
+      className="bg-secondary/50 space-y-2 rounded-xl p-4"
+      data-testid="maintenance-summary"
+    >
+      <h3 id="maintenance-title" className="text-[0.9375rem] font-semibold">
+        {t.profileBody.maintenanceTitle}
+      </h3>
+      {estimate && learnedBase !== null ? (
+        <>
+          <p className="text-[0.9375rem]">
+            {format(t.profileBody.maintenanceValue, { total: number(estimate.totalKcal) })}
+          </p>
+          <p className="text-muted-foreground text-[0.8125rem]">
+            {format(t.profileBody.maintenanceDetail, {
+              days: estimate.loggedDays,
+              change: formatWeightDelta(
+                toDisplayWeight(estimate.weightChangeKgPerWeek, unit),
+                bcp47,
+              ),
+              unit: unitLabel(unit),
+              base: number(learnedBase),
+            })}
+          </p>
+          <Button type="button" variant="secondary" size="sm" onClick={() => onUse(learnedBase)}>
+            {format(t.profileBody.maintenanceUse, { base: number(learnedBase) })}
+          </Button>
+        </>
+      ) : (
+        <p className="text-muted-foreground text-[0.8125rem]">
+          {format(t.profileBody.maintenancePending, {
+            days: Math.min(state.loggedDays, MAINTENANCE_RULES.minLoggedDays),
+            minDays: MAINTENANCE_RULES.minLoggedDays,
+            windowDays: MAINTENANCE_RULES.windowDays,
+            weighIns: Math.min(state.weighIns, MAINTENANCE_RULES.minWeighIns),
+            minWeighIns: MAINTENANCE_RULES.minWeighIns,
+          })}
+        </p>
+      )}
+    </section>
   );
 }
 
