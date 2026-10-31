@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import os
 import LukiFittiModels
 import LukiFittiDomain
 
@@ -96,6 +97,65 @@ public struct WatchContextPayload: Codable, Sendable, Equatable {
     }
 }
 
+/// Sign-in and preferences for the watch. Small enough for the WatchConnectivity application
+/// context (about 64 KB); the full workout data goes as a file transfer instead.
+public struct WatchAuthPayload: Codable, Sendable, Equatable {
+    public var preferences: UserPreferencesDto
+    public var currentUser: UserDto?
+    public var authTokens: AuthTokensDto?
+
+    public init(preferences: UserPreferencesDto, currentUser: UserDto? = nil, authTokens: AuthTokensDto? = nil) {
+        self.preferences = preferences
+        self.currentUser = currentUser
+        self.authTokens = authTokens
+    }
+}
+
+private let watchSyncLog = Logger(subsystem: "LukiFitti", category: "WatchSync")
+
+/// What WatchConnectivity reports right now; shown in the iPhone and Watch settings to explain sync.
+public struct WatchConnectionStatus: Equatable, Sendable {
+    public var isSupported = false
+    public var isActivated = false
+    /// iPhone: a Watch is paired. Watch: always true.
+    public var isPaired = false
+    /// iPhone: the Watch app is installed. Watch: the iPhone app is installed.
+    public var isCounterpartInstalled = false
+    public var isReachable = false
+    public var lastSentAt: Date?
+    public var lastReceivedAt: Date?
+    public var lastError: String?
+    /// Watch: a sync request went to the iPhone and its answer hasn't arrived yet.
+    public var isWaitingForCompanion = false
+
+    public init() {}
+}
+
+/// English keys (translated by the UI via `tr`) for the WatchConnectivity errors a user can act on.
+let watchAppNotInstalledMessage = "The Watch app isn’t installed as this app’s companion."
+
+func watchSyncMessage(for error: any Error) -> String {
+    #if canImport(WatchConnectivity)
+    if let wcError = error as? WCError {
+        switch wcError.code {
+        case .watchAppNotInstalled: return watchAppNotInstalledMessage
+        case .companionAppNotInstalled: return "LukiFitti isn’t installed on the iPhone."
+        case .notReachable: return "No answer from the iPhone. Open LukiFitti on the iPhone and try again."
+        case .deviceNotPaired: return "No Apple Watch is paired with this iPhone."
+        case .sessionNotActivated, .sessionInactive: return "WatchConnectivity is not activated yet."
+        case .payloadTooLarge: return "The data is too large to send to the Watch."
+        default: break
+        }
+    }
+    #endif
+    return error.localizedDescription
+}
+
+/// Asks the other device to send its data again (e.g. the Watch's "Sync with iPhone" button).
+struct WatchSyncRequest: Codable {
+    var watchSyncRequest: String
+}
+
 public enum WatchSyncMerger {
     /// Deterministic set-level merge strategy preventing iPhone vs Apple Watch self-conflicts
     /// during a companion workout where both screens are open simultaneously.
@@ -151,6 +211,18 @@ public final class WatchSyncCoordinator: NSObject {
     public var onActiveSessionReceived: ((WorkoutSessionDto?) -> Void)?
     public var onCompletedSessionReceived: ((WorkoutSessionDto) -> Void)?
     public var onContextReceived: ((WatchContextPayload) -> Void)?
+    public var onAuthReceived: ((WatchAuthPayload) -> Void)?
+    /// Called once WatchConnectivity is activated, so the iPhone can push what it skipped before.
+    public var onActivated: (() -> Void)?
+    /// iPhone: the Watch asked for a fresh copy of the sign-in and workouts.
+    public var onContextRequested: (() -> Void)?
+    /// iPhone: the Watch app was installed (or reinstalled) while this app was running.
+    public var onCounterpartInstalled: (() -> Void)?
+    public private(set) var status = WatchConnectionStatus()
+    private static let lastReceivedKey = "watchSync.lastReceivedAt"
+
+    static let authContextKey = "watch_auth_payload"
+    static let contextFileKind = "watch_context_payload"
 
     #if canImport(WatchConnectivity)
     private var sessionDelegateProxy: WCSessionDelegateProxy?
@@ -190,6 +262,8 @@ public final class WatchSyncCoordinator: NSObject {
 
     public override init() {
         super.init()
+        let saved = UserDefaults.standard.double(forKey: Self.lastReceivedKey)
+        if saved > 0 { status.lastReceivedAt = Date(timeIntervalSince1970: saved) }
         activateWatchConnectivityIfNeeded()
     }
 
@@ -206,13 +280,30 @@ public final class WatchSyncCoordinator: NSObject {
                     Task { @MainActor in
                         self?.handleIncomingData(data)
                     }
+                },
+                onReceiveFile: { [weak self] data, metadata in
+                    Task { @MainActor in
+                        self?.handleIncomingFile(data, metadata: metadata)
+                    }
+                },
+                onActivated: { [weak self] error in
+                    Task { @MainActor in
+                        self?.refreshStatus()
+                        if let error { self?.status.lastError = error }
+                        self?.onActivated?()
+                    }
+                },
+                onStateChanged: { [weak self] in
+                    Task { @MainActor in
+                        self?.refreshStatus()
+                    }
                 }
             )
             self.sessionDelegateProxy = proxy
             let session = WCSession.default
             session.delegate = proxy
             session.activate()
-            isCompanionReachable = session.isReachable
+            refreshStatus()
             let existingCtx = session.receivedApplicationContext
             if !existingCtx.isEmpty {
                 handleIncomingDictionary(existingCtx)
@@ -251,12 +342,129 @@ public final class WatchSyncCoordinator: NSObject {
         }
 
         #if canImport(WatchConnectivity)
-        guard WCSession.isSupported(), WCSession.default.activationState == .activated else { return }
+        refreshStatus()
+        guard WCSession.isSupported(), WCSession.default.activationState == .activated else {
+            status.lastError = "WatchConnectivity is not activated yet."
+            return
+        }
+        #if os(iOS)
+        guard WCSession.default.isPaired else {
+            status.lastError = "No Apple Watch is paired with this iPhone."
+            return
+        }
+        #endif
+        let auth = WatchAuthPayload(preferences: preferences, currentUser: currentUser, authTokens: authTokens)
+        if let authData = try? JSONEncoder().encode(auth) {
+            do {
+                try WCSession.default.updateApplicationContext([
+                    Self.authContextKey: authData,
+                    "sentAt": Date().timeIntervalSince1970,
+                ])
+                status.lastSentAt = Date()
+                status.lastError = nil
+            } catch {
+                status.lastError = watchSyncMessage(for: error)
+                watchSyncLog.error("Application context update failed: \(error.localizedDescription, privacy: .public)")
+            }
+            if WCSession.default.isReachable {
+                WCSession.default.sendMessage([Self.authContextKey: authData], replyHandler: nil) { error in
+                    watchSyncLog.error("Live sign-in message failed: \(error.localizedDescription, privacy: .public)")
+                }
+            }
+        }
         if let payloadData = try? JSONEncoder().encode(payload) {
-            try? WCSession.default.updateApplicationContext(["watch_context_payload": payloadData])
+            transferContextFile(payloadData)
         }
         #endif
     }
+
+    /// Watch: asks the iPhone to send its sign-in and workouts again. With `silent`, an unreachable
+    /// iPhone is not reported as an error (used for the automatic request when the app opens).
+    /// Returns false when the iPhone app isn't reachable (it has to be open or in the background).
+    @discardableResult
+    public func requestContextFromCompanion(silent: Bool = false, notReachableMessage: String) -> Bool {
+        #if canImport(WatchConnectivity)
+        refreshStatus()
+        guard WCSession.isSupported(), WCSession.default.activationState == .activated,
+              WCSession.default.isReachable,
+              let data = try? JSONEncoder().encode(WatchSyncRequest(watchSyncRequest: "context")) else {
+            if !silent { status.lastError = notReachableMessage }
+            return false
+        }
+        status.isWaitingForCompanion = true
+        status.lastSentAt = Date()
+        status.lastError = nil
+        WCSession.default.sendMessageData(data, replyHandler: nil) { error in
+            Task { @MainActor in
+                self.status.isWaitingForCompanion = false
+                self.status.lastError = watchSyncMessage(for: error)
+            }
+        }
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(15))
+            guard let self, self.status.isWaitingForCompanion else { return }
+            self.status.isWaitingForCompanion = false
+            if !silent { self.status.lastError = notReachableMessage }
+        }
+        return true
+        #else
+        return false
+        #endif
+    }
+
+    /// Persisted so "last synced" survives app restarts.
+    private func markReceived() {
+        let now = Date()
+        status.lastReceivedAt = now
+        status.isWaitingForCompanion = false
+        status.lastError = nil
+        UserDefaults.standard.set(now.timeIntervalSince1970, forKey: Self.lastReceivedKey)
+    }
+
+    public func refreshStatus() {
+        #if canImport(WatchConnectivity)
+        guard WCSession.isSupported() else { return }
+        let session = WCSession.default
+        let wasActivated = status.isActivated
+        let wasInstalled = status.isCounterpartInstalled
+        status.isSupported = true
+        status.isActivated = session.activationState == .activated
+        status.isReachable = session.isReachable
+        #if os(iOS)
+        status.isPaired = session.isPaired
+        status.isCounterpartInstalled = session.isWatchAppInstalled
+        #else
+        status.isPaired = true
+        status.isCounterpartInstalled = session.isCompanionAppInstalled
+        #endif
+        isCompanionReachable = session.isReachable
+        if status.isCounterpartInstalled, status.lastError == watchAppNotInstalledMessage {
+            status.lastError = nil
+        }
+        if wasActivated, !wasInstalled, status.isCounterpartInstalled {
+            onCounterpartInstalled?()
+        }
+        #endif
+    }
+
+    #if canImport(WatchConnectivity)
+    /// Sends the full payload as a file (no size limit, delivered even when the watch app is closed);
+    /// older queued payload files are cancelled so only the newest is delivered.
+    private func transferContextFile(_ data: Data) {
+        for transfer in WCSession.default.outstandingFileTransfers
+        where transfer.file.metadata?["kind"] as? String == Self.contextFileKind {
+            transfer.cancel()
+        }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("lukifitti-watch-context-\(UUID().uuidString).json")
+        do {
+            try data.write(to: url, options: .atomic)
+            WCSession.default.transferFile(url, metadata: ["kind": Self.contextFileKind])
+        } catch {
+            watchSyncLog.error("Context file write failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+    #endif
 
     /// Broadcasts the current active workout session (`IN_PROGRESS` or `PAUSED` or `nil`)
     /// bi-directionally between Apple Watch and iPhone so both devices stay in lockstep.
@@ -300,6 +508,16 @@ public final class WatchSyncCoordinator: NSObject {
         return nil
     }
 
+    public func pullLatestAuthIfAvailable() -> WatchAuthPayload? {
+        #if canImport(WatchConnectivity)
+        if WCSession.isSupported(),
+           let data = WCSession.default.receivedApplicationContext[Self.authContextKey] as? Data {
+            return try? JSONDecoder().decode(WatchAuthPayload.self, from: data)
+        }
+        #endif
+        return nil
+    }
+
     public func pullSharedActiveSessionIfAvailable() -> WorkoutSessionDto? {
         if let activeBridgeURL = Self.simulatorActiveSessionBridgeURL,
            let data = try? Data(contentsOf: activeBridgeURL),
@@ -319,6 +537,11 @@ public final class WatchSyncCoordinator: NSObject {
     }
 
     private func handleIncomingDictionary(_ dict: [String: Any]) {
+        if let data = dict[Self.authContextKey] as? Data,
+           let auth = try? JSONDecoder().decode(WatchAuthPayload.self, from: data) {
+            markReceived()
+            onAuthReceived?(auth)
+        }
         if let data = dict["watch_context_payload"] as? Data,
            let decoded = try? JSONDecoder().decode(WatchContextPayload.self, from: data) {
             onContextReceived?(decoded)
@@ -336,7 +559,20 @@ public final class WatchSyncCoordinator: NSObject {
         }
     }
 
+    private func handleIncomingFile(_ data: Data, metadata: [String: Any]?) {
+        guard metadata?["kind"] as? String == Self.contextFileKind,
+              let decoded = try? JSONDecoder().decode(WatchContextPayload.self, from: data) else { return }
+        markReceived()
+        onContextReceived?(decoded)
+    }
+
     private func handleIncomingData(_ data: Data) {
+        if let request = try? JSONDecoder().decode(WatchSyncRequest.self, from: data),
+           request.watchSyncRequest == "context" {
+            markReceived()
+            onContextRequested?()
+            return
+        }
         if let packet = try? JSONDecoder().decode(SessionMutationPacket.self, from: data) {
             onMutationReceived?(packet)
             return
@@ -381,13 +617,22 @@ public final class WatchSyncCoordinator: NSObject {
 private final class WCSessionDelegateProxy: NSObject, WCSessionDelegate, @unchecked Sendable {
     let onReceiveContext: ([String: Any]) -> Void
     let onReceiveMessageData: (Data) -> Void
+    let onReceiveFile: (Data, [String: Any]?) -> Void
+    let onActivated: (String?) -> Void
+    let onStateChanged: () -> Void
 
     init(
         onReceiveContext: @escaping ([String: Any]) -> Void,
-        onReceiveMessageData: @escaping (Data) -> Void
+        onReceiveMessageData: @escaping (Data) -> Void,
+        onReceiveFile: @escaping (Data, [String: Any]?) -> Void,
+        onActivated: @escaping (String?) -> Void,
+        onStateChanged: @escaping () -> Void
     ) {
         self.onReceiveContext = onReceiveContext
         self.onReceiveMessageData = onReceiveMessageData
+        self.onReceiveFile = onReceiveFile
+        self.onActivated = onActivated
+        self.onStateChanged = onStateChanged
     }
 
     func session(
@@ -401,6 +646,18 @@ private final class WCSessionDelegateProxy: NSObject, WCSessionDelegate, @unchec
                 onReceiveContext(received)
             }
         }
+        if let error {
+            watchSyncLog.error("Activation failed: \(error.localizedDescription, privacy: .public)")
+        }
+        onActivated(error.map(watchSyncMessage(for:)))
+    }
+
+    func sessionReachabilityDidChange(_ session: WCSession) {
+        onStateChanged()
+    }
+
+    func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
+        onReceiveContext(message)
     }
 
     func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
@@ -415,7 +672,21 @@ private final class WCSessionDelegateProxy: NSObject, WCSessionDelegate, @unchec
         onReceiveMessageData(messageData)
     }
 
+    /// The system deletes the file when this returns, so read it synchronously.
+    func session(_ session: WCSession, didReceive file: WCSessionFile) {
+        guard let data = try? Data(contentsOf: file.fileURL) else { return }
+        onReceiveFile(data, file.metadata)
+    }
+
+    func session(_ session: WCSession, didFinish fileTransfer: WCSessionFileTransfer, error: (any Error)?) {
+        try? FileManager.default.removeItem(at: fileTransfer.file.fileURL)
+    }
+
     #if os(iOS)
+    func sessionWatchStateDidChange(_ session: WCSession) {
+        onStateChanged()
+    }
+
     func sessionDidBecomeInactive(_ session: WCSession) {}
     func sessionDidDeactivate(_ session: WCSession) {
         session.activate()

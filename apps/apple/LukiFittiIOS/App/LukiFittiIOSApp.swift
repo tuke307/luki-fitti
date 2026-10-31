@@ -69,6 +69,16 @@ public final class LukiAppViewModel {
         self.store.onOverviewOrAuthChanged = { [weak self] in
             self?.pushContextToWatch()
         }
+        // Pushes before WatchConnectivity finishes activating are dropped; resend once it's ready.
+        self.watchSyncCoordinator.onActivated = { [weak self] in
+            self?.pushContextToWatch()
+        }
+        self.watchSyncCoordinator.onContextRequested = { [weak self] in
+            self?.pushContextToWatch()
+        }
+        self.watchSyncCoordinator.onCounterpartInstalled = { [weak self] in
+            self?.pushContextToWatch()
+        }
         self.watchSyncCoordinator.onMutationReceived = { [weak self] packet in
             guard let self, let active = self.store.activeSession else { return }
             let merged = WatchSyncMerger.applyMutation(
