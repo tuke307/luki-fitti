@@ -68,8 +68,55 @@ public struct WatchHomeView: View {
                     }
                     .accessibilityIdentifier("watch.home.stretchingLink")
                 }
+
+                syncSection
             }
             .navigationTitle("LukiFitti")
+        }
+    }
+
+    /// One status line: syncing, error, last sync with the iPhone, or never synced.
+    private var syncSection: some View {
+        let status = viewModel.watchSyncCoordinator.status
+        return Section {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(viewModel.store.currentUser?.email ?? tr("Not signed in"))
+                    .font(.footnote.weight(.semibold))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                if viewModel.isSyncing {
+                    HStack(spacing: 6) {
+                        ProgressView().controlSize(.mini)
+                        Text(tr("Syncing"))
+                    }
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                } else if let error = status.lastError {
+                    Text(tr(error))
+                        .font(.footnote)
+                        .foregroundStyle(LukiColors.destructive)
+                } else if let last = status.lastReceivedAt {
+                    Text(tr("Synced with iPhone %@", last.formatted(.relative(presentation: .named))))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(tr("Not synced with iPhone yet"))
+                        .font(.footnote)
+                        .foregroundStyle(LukiColors.warning)
+                }
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("watch.home.syncStatus")
+
+            Button {
+                viewModel.syncNow()
+            } label: {
+                Label(tr("Sync now"), systemImage: "arrow.triangle.2.circlepath")
+            }
+            .disabled(viewModel.isSyncing)
+            .accessibilityIdentifier("watch.home.syncNowButton")
+        } header: {
+            Text(tr("iPhone"))
         }
     }
 
