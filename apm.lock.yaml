@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-10-31T13:28:55.362855+00:00'
+generated_at: '2026-10-31T14:03:03.847860+00:00'
 dependencies: []
 deployments:
 - kind: project-relative
@@ -10,7 +10,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:b4160743ae9c4ef2d8db46996cdb5800533e28e0853df293b5ba9e4afde8e772
+  content_hash: sha256:be13980c1aac516deb33908341a613221a31ae45be271fd3c54a6ab72375c2cc
 - kind: project-relative
   target: claude
   value: .claude/rules/nestjs.md
@@ -352,7 +352,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:8f4fceec7b340f300c229275ad1653948379400f1e94babc6f346f9106f3f1fc
+  content_hash: sha256:42d00b68a198e543836307de0ced1ba9c8c419fd67993bd0d83e1e48afb37a5f
 - kind: project-relative
   target: copilot
   value: .github/instructions/nestjs.instructions.md
@@ -802,7 +802,7 @@ local_deployed_file_hashes:
   .agents/skills/ui-ux-pro-max/scripts/core.py: sha256:5459d1f04eea03dfb913742d0c03edc5065ac67f6227e4807fa87699662588cb
   .agents/skills/ui-ux-pro-max/scripts/design_system.py: sha256:4da1d341f3c7749df51b51db4a543a48a427c3c746eb0e9882a1ab86acf3bb54
   .agents/skills/ui-ux-pro-max/scripts/search.py: sha256:e924de555714fe612398d36f30c1d2514339a881d68a018fdbdc0b5589330de3
-  .claude/rules/git.md: sha256:b4160743ae9c4ef2d8db46996cdb5800533e28e0853df293b5ba9e4afde8e772
+  .claude/rules/git.md: sha256:be13980c1aac516deb33908341a613221a31ae45be271fd3c54a6ab72375c2cc
   .claude/rules/nestjs.md: sha256:a3b8e1e322128e42c4df55405ffa9215ec4393cc0623770648f48b70c8382e96
   .claude/rules/nextjs-tailwind.md: sha256:3c141570a0895c9844d5c45fdbb6afce9b550c2d04b70f9818e6f8b1da45bf6a
   .claude/rules/nextjs.md: sha256:77dc7629c26081f27bba0bef3ee2c4667e852578403208215a0b40244f24c1d2
@@ -839,7 +839,7 @@ local_deployed_file_hashes:
   .claude/skills/ui-ux-pro-max/scripts/core.py: sha256:5459d1f04eea03dfb913742d0c03edc5065ac67f6227e4807fa87699662588cb
   .claude/skills/ui-ux-pro-max/scripts/design_system.py: sha256:4da1d341f3c7749df51b51db4a543a48a427c3c746eb0e9882a1ab86acf3bb54
   .claude/skills/ui-ux-pro-max/scripts/search.py: sha256:e924de555714fe612398d36f30c1d2514339a881d68a018fdbdc0b5589330de3
-  .github/instructions/git.instructions.md: sha256:8f4fceec7b340f300c229275ad1653948379400f1e94babc6f346f9106f3f1fc
+  .github/instructions/git.instructions.md: sha256:42d00b68a198e543836307de0ced1ba9c8c419fd67993bd0d83e1e48afb37a5f
   .github/instructions/nestjs.instructions.md: sha256:8920c88accf66d889e955271e1cfb2faa5b4cf0cadd926521959758c7eac407d
   .github/instructions/nextjs-tailwind.instructions.md: sha256:f664aed1749ff7f5c220c3222dc9766c16903d02a7a4c07f152095b88c6f89b2
   .github/instructions/nextjs.instructions.md: sha256:3f4ae9da04edb5467de9d2ac18dac4440dc608de2a492f44c115b1ee3915cfba
