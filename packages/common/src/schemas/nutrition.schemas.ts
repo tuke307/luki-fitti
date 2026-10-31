@@ -58,7 +58,14 @@ export const NutritionSummaryQuerySchema = z.object({
   tz: TimeZoneSchema.default('UTC'),
 });
 
+export const NUTRITION_HISTORY_QUERY_MAX_LENGTH = 80;
+
+export const NutritionHistoryQuerySchema = z.object({
+  q: z.string().trim().max(NUTRITION_HISTORY_QUERY_MAX_LENGTH).optional(),
+});
+
 export type MealItemInputDto = z.infer<typeof MealItemInputSchema>;
+export type NutritionHistoryQueryDto = z.infer<typeof NutritionHistoryQuerySchema>;
 export type UpsertMealEntryDto = z.infer<typeof UpsertMealEntrySchema>;
 export type MealEntryRangeQueryDto = z.infer<typeof MealEntryRangeQuerySchema>;
 export type NutritionSummaryQueryDto = z.infer<typeof NutritionSummaryQuerySchema>;
@@ -136,4 +143,29 @@ export interface NutritionSummaryDto {
   /** Days in the range with at least one entry (averages are over these days). */
   loggedDays: number;
   byMealType: Array<{ mealType: MealType; kcal: number; entries: number }>;
+}
+
+/** A food from the user's history; `item` is the most recently logged version. */
+export interface HistoryItemPickDto {
+  item: MealItemDto;
+  timesLogged: number;
+  lastLoggedAt: string;
+}
+
+/** A combination of foods logged together before; `items` are from the latest time. */
+export interface HistoryEntryPickDto {
+  /** Stable key of the food combination (normalized, sorted item names). */
+  key: string;
+  label: string | null;
+  mealType: MealType;
+  items: MealItemDto[];
+  totals: NutritionTotalsDto;
+  timesLogged: number;
+  lastLoggedAt: string;
+}
+
+/** `GET /nutrition/history-picks`: ranked by frequency weighted to recent weeks. */
+export interface NutritionHistoryPicksDto {
+  entries: HistoryEntryPickDto[];
+  items: HistoryItemPickDto[];
 }

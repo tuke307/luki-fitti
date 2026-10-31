@@ -76,6 +76,28 @@ final class NutritionMathTests: XCTestCase {
         XCTAssertNil(noGuess.mealTypeGuess)
     }
 
+    func testHistoryPicksDecodeInServerOrder() throws {
+        let json = #"""
+        {"entries":[{"key":"e1","label":null,"mealType":"BREAKFAST","items":[{"id":"i1","orderIndex":0,"name":"Oats","grams":60,"amountUnit":"G","kcal":228,"proteinG":8,"carbsG":40,"fatG":4,"source":"MANUAL"},{"id":"i2","orderIndex":1,"name":"Milk","grams":200,"amountUnit":"ML","kcal":130,"proteinG":7,"carbsG":10,"fatG":7,"source":"AI","confidence":0.7}],"totals":{"kcal":358,"proteinG":15,"carbsG":50,"fatG":11},"timesLogged":5,"lastLoggedAt":"2025-06-01T07:30:00.000Z"},{"key":"e2","label":"Pasta night","mealType":"DINNER","items":[],"totals":{"kcal":0,"proteinG":0,"carbsG":0,"fatG":0},"timesLogged":1,"lastLoggedAt":"2025-05-20T19:00:00Z"}],
+         "items":[{"item":{"id":"i3","name":"Banana","grams":120,"kcal":107,"proteinG":1.3,"carbsG":27,"fatG":0.4,"source":"MANUAL"},"timesLogged":9,"lastLoggedAt":"2025-06-02T10:00:00Z"}]}
+        """#
+        let picks = try JSONDecoder().decode(NutritionHistoryPicksDto.self, from: Data(json.utf8))
+        XCTAssertEqual(picks.entries.map(\.id), ["e1", "e2"])
+        XCTAssertNil(picks.entries[0].label)
+        XCTAssertEqual(picks.entries[1].label, "Pasta night")
+        XCTAssertEqual(picks.entries[0].items.map(\.name), ["Oats", "Milk"])
+        XCTAssertEqual(picks.entries[0].items[1].amountUnit, .ML)
+        XCTAssertEqual(picks.entries[0].totals.kcal, 358)
+        XCTAssertEqual(picks.entries[0].timesLogged, 5)
+        XCTAssertEqual(picks.entries[0].lastLoggedDate, LukiISODate.parse("2025-06-01T07:30:00Z"))
+        XCTAssertNotNil(picks.entries[1].lastLoggedDate)
+        XCTAssertEqual(picks.items.count, 1)
+        XCTAssertEqual(picks.items[0].item.name, "Banana")
+        XCTAssertEqual(picks.items[0].item.amountUnit, .G)
+        XCTAssertEqual(picks.items[0].timesLogged, 9)
+        XCTAssertNotNil(picks.items[0].lastLoggedDate)
+    }
+
     func testBurnPrefersServerThenHealthKitThenMet() {
         var session = WorkoutSessionDto(workoutNameSnapshot: "Push", status: .COMPLETED, activeDurationSeconds: 3600)
         XCTAssertEqual(NutritionMath.burnedKcal(for: session, bodyWeightKg: 80), 200) // (3.5 − 1) × 80 × 1 h

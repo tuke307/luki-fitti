@@ -9,9 +9,12 @@ import {
 import crypto from 'crypto';
 import { FoodItemSource, MEAL_TYPES, MealAmountUnit, MealType } from '@luki-fitti/common/enums';
 import type {
+  HistoryEntryPickDto,
+  HistoryItemPickDto,
   MealEntryDto,
   MealItemDto,
   MealItemInputDto,
+  NutritionHistoryPicksDto,
   NutritionSummaryDto,
   UpsertMealEntryDto,
 } from '@luki-fitti/common/schemas';
@@ -24,6 +27,11 @@ import { normalizeImage } from '@/utils/image.util';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_SUMMARY_DAYS = 366;
+const HISTORY_WINDOW_DAYS = 180;
+const HISTORY_MAX_ENTRIES = 600;
+const HISTORY_HALF_LIFE_DAYS = 14;
+const HISTORY_ENTRY_LIMIT = 20;
+const HISTORY_ITEM_LIMIT = 50;
 const RETENTION_SWEEP_MS = 6 * 60 * 60 * 1000;
 
 const ENTRY_INCLUDE = {
@@ -81,6 +89,96 @@ export function enumerateDateKeys(from: string, to: string): string[] {
   const end = Date.parse(`${to}T00:00:00Z`);
   for (let ms = start; ms <= end; ms += DAY_MS) keys.push(new Date(ms).toISOString().slice(0, 10));
   return keys;
+}
+
+export interface HistorySourceEntry {
+  label: string | null;
+  mealType: MealType;
+  eatenAt: Date;
+  createdAt: Date;
+  items: MealItemDto[];
+}
+
+const normalizeName = (name: string) => name.trim().toLowerCase().replace(/\s+/g, ' ');
+
+/**
+ * Groups past entries by food combination and items by name. Each occurrence adds
+ * 0.5^(age / 14 days), so frequent and recent picks rank first; ties go to the most
+ * recently added. The returned item(s) are the latest logged version (newest amounts).
+ */
+export function rankHistoryPicks(
+  entries: HistorySourceEntry[],
+  q?: string,
+  now = new Date(),
+): NutritionHistoryPicksDto {
+  const weight = (eatenAt: Date) =>
+    0.5 ** (Math.max(0, now.getTime() - eatenAt.getTime()) / DAY_MS / HISTORY_HALF_LIFE_DAYS);
+  type Bucket<T> = { pick: T; score: number; times: number; last: Date; added: Date };
+  const bump = <T>(
+    map: Map<string, Bucket<T>>,
+    key: string,
+    e: HistorySourceEntry,
+    pick: () => T,
+  ) => {
+    const w = weight(e.eatenAt);
+    const b = map.get(key);
+    if (!b) {
+      map.set(key, { pick: pick(), score: w, times: 1, last: e.eatenAt, added: e.createdAt });
+      return;
+    }
+    b.score += w;
+    b.times += 1;
+    if (e.eatenAt > b.last) b.last = e.eatenAt;
+    if (e.createdAt > b.added) {
+      b.added = e.createdAt;
+      b.pick = pick();
+    }
+  };
+
+  const entryBuckets = new Map<
+    string,
+    Bucket<{ label: string | null; mealType: MealType; items: MealItemDto[] }>
+  >();
+  const itemBuckets = new Map<string, Bucket<MealItemDto>>();
+  for (const e of entries) {
+    const named = e.items.filter((i) => i.name.trim());
+    for (const item of named) bump(itemBuckets, normalizeName(item.name), e, () => item);
+    if (named.length < 2) continue;
+    const key = named
+      .map((i) => normalizeName(i.name))
+      .sort()
+      .join('|');
+    bump(entryBuckets, key, e, () => ({ label: e.label, mealType: e.mealType, items: named }));
+  }
+
+  const needle = q ? normalizeName(q) : '';
+  const byRank = <T>(a: Bucket<T>, b: Bucket<T>) =>
+    b.score - a.score || b.added.getTime() - a.added.getTime();
+
+  const entryPicks: HistoryEntryPickDto[] = [...entryBuckets.entries()]
+    .filter(
+      ([key, b]) =>
+        !needle ||
+        key.includes(needle) ||
+        (b.pick.label !== null && normalizeName(b.pick.label).includes(needle)),
+    )
+    .sort(([, a], [, b]) => byRank(a, b))
+    .slice(0, HISTORY_ENTRY_LIMIT)
+    .map(([key, b]) => ({
+      key,
+      label: b.pick.label,
+      mealType: b.pick.mealType,
+      items: b.pick.items,
+      totals: sumMacros(b.pick.items),
+      timesLogged: b.times,
+      lastLoggedAt: b.last.toISOString(),
+    }));
+  const itemPicks: HistoryItemPickDto[] = [...itemBuckets.entries()]
+    .filter(([key]) => !needle || key.includes(needle))
+    .sort(([, a], [, b]) => byRank(a, b))
+    .slice(0, HISTORY_ITEM_LIMIT)
+    .map(([, b]) => ({ item: b.pick, timesLogged: b.times, lastLoggedAt: b.last.toISOString() }));
+  return { entries: entryPicks, items: itemPicks };
 }
 
 @Injectable()
@@ -225,7 +323,9 @@ export class NutritionService implements OnModuleInit, OnModuleDestroy {
     for (const session of sessions) {
       const day = days.get(localDateKey(session.startedAt, timeZone));
       if (!day) continue;
-      day.burnedKcal += Math.round(session.estimatedCaloriesKcal ?? session.activeCaloriesKcal ?? 0);
+      day.burnedKcal += Math.round(
+        session.estimatedCaloriesKcal ?? session.activeCaloriesKcal ?? 0,
+      );
       day.workouts += 1;
     }
 
@@ -235,7 +335,9 @@ export class NutritionService implements OnModuleInit, OnModuleDestroy {
     }));
     const logged = list.filter((d) => d.entries > 0);
     const avg = (pick: (d: (typeof list)[number]) => number, over = logged) =>
-      over.length ? Math.round((over.reduce((acc, d) => acc + pick(d), 0) / over.length) * 10) / 10 : 0;
+      over.length
+        ? Math.round((over.reduce((acc, d) => acc + pick(d), 0) / over.length) * 10) / 10
+        : 0;
 
     return {
       from,
@@ -279,6 +381,31 @@ export class NutritionService implements OnModuleInit, OnModuleDestroy {
       if (unique.length >= 30) break;
     }
     return unique;
+  }
+
+  /** Past entries and foods for re-logging, ranked by recency-weighted frequency. */
+  async getHistoryPicks(
+    userId: string,
+    q?: string,
+    now = new Date(),
+  ): Promise<NutritionHistoryPicksDto> {
+    const entries = await this.prisma.mealEntry.findMany({
+      where: { userId, eatenAt: { gte: new Date(now.getTime() - HISTORY_WINDOW_DAYS * DAY_MS) } },
+      include: { items: { orderBy: { orderIndex: 'asc' } } },
+      orderBy: { createdAt: 'desc' },
+      take: HISTORY_MAX_ENTRIES,
+    });
+    return rankHistoryPicks(
+      entries.map((e) => ({
+        label: e.label,
+        mealType: e.mealType as MealType,
+        eatenAt: e.eatenAt,
+        createdAt: e.createdAt,
+        items: e.items.map((i) => this.toItemDto(i)),
+      })),
+      q,
+      now,
+    );
   }
 
   // ── Photos ────────────────────────────────────────────────────────────────

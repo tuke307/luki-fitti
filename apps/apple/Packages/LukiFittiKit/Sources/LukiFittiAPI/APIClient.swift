@@ -245,6 +245,17 @@ public actor APIClient {
         try await request(path: "/api/nutrition/recent-items", method: "GET")
     }
 
+    /// Ranked past entries and foods; `query` searches food and entry names.
+    public func fetchHistoryPicks(query: String?) async throws -> NutritionHistoryPicksDto {
+        let q = query?.trimmingCharacters(in: .whitespacesAndNewlines).prefix(NutritionHistoryPicksDto.maxQueryLength) ?? ""
+        var components = URLComponents()
+        components.queryItems = q.isEmpty ? nil : [URLQueryItem(name: "q", value: String(q))]
+        // URLComponents leaves "+" unescaped, which form decoders read as a space.
+        let encoded = components.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B")
+        let suffix = encoded.map { "?\($0)" } ?? ""
+        return try await request(path: "/api/nutrition/history-picks\(suffix)", method: "GET")
+    }
+
     // MARK: - Body Weight
 
     /// Weigh-ins sorted by `measuredAt` ascending. Both bounds are optional (whole history).
