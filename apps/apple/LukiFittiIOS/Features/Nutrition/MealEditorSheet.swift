@@ -55,6 +55,7 @@ struct MealEditorSheet: View {
         case .DINNER: return tr("Dinner")
         case .SNACK: return tr("Snack")
         case .COFFEE: return tr("Coffee")
+        case .DRINK: return tr("Drink")
         case .OTHER: return tr("Other")
         }
     }
@@ -131,7 +132,7 @@ struct MealEditorSheet: View {
                 ForEach($items) { $item in
                     Section {
                         HStack {
-                            TextField(tr("Food"), text: $item.name)
+                            TextField(tr("Food or drink"), text: $item.name)
                                 .font(.body.weight(.medium))
                             if item.source == .AI {
                                 Label(tr("Estimated"), systemImage: "sparkles")
@@ -164,7 +165,7 @@ struct MealEditorSheet: View {
                     Button {
                         items.append(MealItemDto(name: ""))
                     } label: {
-                        Label(tr("Add another food"), systemImage: "plus")
+                        Label(tr("Add another"), systemImage: "plus")
                     }
                     if !recent.isEmpty {
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -198,12 +199,12 @@ struct MealEditorSheet: View {
                         Text(error).foregroundStyle(LukiColors.destructive).font(.footnote)
                     }
                     if serverEntry != nil {
-                        Button(tr("Delete meal"), role: .destructive) { confirmDelete = true }
+                        Button(tr("Delete entry"), role: .destructive) { confirmDelete = true }
                             .disabled(analyzing)
                     }
                 }
             }
-            .navigationTitle(context.entry == nil ? tr("New meal") : tr("Edit meal"))
+            .navigationTitle(context.entry == nil ? tr("New entry") : tr("Edit entry"))
             .navigationBarTitleDisplayMode(.inline)
             .interactiveDismissDisabled(analyzing || unsavedEstimate)
             .toolbar {
@@ -219,8 +220,8 @@ struct MealEditorSheet: View {
                         .accessibilityIdentifier("ios.nutrition.saveMealButton")
                 }
             }
-            .confirmationDialog(tr("Delete this meal and its photos?"), isPresented: $confirmDelete, titleVisibility: .visible) {
-                Button(tr("Delete meal"), role: .destructive) {
+            .confirmationDialog(tr("Delete this entry and its photos?"), isPresented: $confirmDelete, titleVisibility: .visible) {
+                Button(tr("Delete entry"), role: .destructive) {
                     guard let entry = serverEntry else { return }
                     Task {
                         await viewModel.nutrition.remove(entry, isSignedIn: isSignedIn)
@@ -236,7 +237,7 @@ struct MealEditorSheet: View {
                         dismiss()
                     }
                 }
-                Button(tr("Keep meal")) { dismiss() }
+                Button(tr("Keep entry")) { dismiss() }
             } message: {
                 Text(tr("The photos and estimated foods of this meal will be deleted."))
             }
