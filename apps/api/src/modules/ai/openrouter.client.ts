@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { FRONTEND_URL, OPENROUTER_API_KEY, OPENROUTER_BASE_URL, OPENROUTER_TIMEOUT_MS } from '@/config/env.config';
+import { FRONTEND_URL, OPENROUTER_BASE_URL, OPENROUTER_TIMEOUT_MS } from '@/config/env.config';
+
+const KEY_VERIFY_TIMEOUT_MS = 5_000;
 
 /* OpenAI-compatible chat types (the subset OpenRouter needs). */
 
@@ -69,14 +71,42 @@ interface OpenRouterRawResponse {
   error?: { message?: string; code?: number };
 }
 
+/** Removes anything that looks like an OpenRouter key from upstream text before it is logged. */
+export function redactKeys(text: string): string {
+  return text.replace(/sk-or-[A-Za-z0-9_-]+/g, 'sk-or-[redacted]');
+}
+
+export type KeyVerification = 'valid' | 'invalid' | 'unknown';
+
+/**
+ * Stateless OpenRouter client. The API key is passed per call (per-user keys); it is only
+ * ever placed in the Authorization header and never logged or echoed.
+ */
 @Injectable()
 export class OpenRouterClient {
-  get isConfigured(): boolean {
-    return OPENROUTER_API_KEY.length > 0;
+  /**
+   * Checks a key against OpenRouter's key-info endpoint. `unknown` = could not verify
+   * (network/timeout/5xx) — callers may accept the key and let the first run decide.
+   */
+  async verifyKey(apiKey: string): Promise<KeyVerification> {
+    try {
+      const response = await fetch(`${OPENROUTER_BASE_URL}/key`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(KEY_VERIFY_TIMEOUT_MS),
+      });
+      // Drain the body without keeping it (it may describe the key's account).
+      await response.arrayBuffer().catch(() => undefined);
+      if (response.ok) return 'valid';
+      if (response.status === 401 || response.status === 403) return 'invalid';
+      return 'unknown';
+    } catch {
+      return 'unknown';
+    }
   }
 
-  async chat(request: ChatRequest): Promise<ChatResponse> {
-    if (!this.isConfigured) throw new AiProviderError('AI provider is not configured');
+  async chat(request: ChatRequest, apiKey: string): Promise<ChatResponse> {
+    if (!apiKey) throw new AiProviderError('AI provider key missing');
 
     const models = [request.model, ...(request.fallbackModels ?? [])].filter(
       (m, i, all) => all.indexOf(m) === i,
@@ -96,7 +126,7 @@ export class OpenRouterClient {
       response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+          Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': FRONTEND_URL,
           'X-Title': 'LukiFitti',
@@ -105,7 +135,7 @@ export class OpenRouterClient {
         signal: AbortSignal.timeout(OPENROUTER_TIMEOUT_MS),
       });
     } catch (err) {
-      throw new AiProviderError('AI provider request failed', undefined, String(err));
+      throw new AiProviderError('AI provider request failed', undefined, redactKeys(String(err)));
     }
 
     const text = await response.text();
@@ -113,13 +143,17 @@ export class OpenRouterClient {
     try {
       json = JSON.parse(text) as OpenRouterRawResponse;
     } catch {
-      throw new AiProviderError('AI provider returned an invalid response', response.status, text.slice(0, 500));
+      throw new AiProviderError(
+        'AI provider returned an invalid response',
+        response.status,
+        redactKeys(text.slice(0, 500)),
+      );
     }
     if (!response.ok || json.error) {
       throw new AiProviderError(
         'AI provider returned an error',
         json.error?.code ?? response.status,
-        json.error?.message ?? text.slice(0, 500),
+        redactKeys(json.error?.message ?? text.slice(0, 500)),
       );
     }
 

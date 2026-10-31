@@ -63,7 +63,7 @@ cp apps/web/.env.sample apps/web/.env.local
 | `UMAMI_URL`                                                                                                                             | `api`                 | Self-hosted Umami base URL (default `https://umami.tony-luke.de`)                                              |
 | `UMAMI_WEBSITE_ID`                                                                                                                      | `api`                 | Umami website ID; pageview forwarding is off when unset or outside production                                  |
 | `UMAMI_ALLOWED_HOSTNAMES`                                                                                                               | `api`                 | Comma-separated hostnames to forward pageviews for (default `luki-fitti.tony-luke.de`)                         |
-| `OPENROUTER_API_KEY`                                                                                                                    | `api`                 | OpenRouter key for the AI features; they stay off when unset                                                   |
+| `AI_KEY_ENCRYPTION_KEY`                                                                                                                 | `api`                 | 32-byte master key (`openssl rand -base64 32`) encrypting per-user OpenRouter keys; AI stays off when unset    |
 | `SEAWEEDFS_ENDPOINT`, `SEAWEEDFS_PORT`, `SEAWEEDFS_USE_SSL`, `SEAWEEDFS_ACCESS_KEY_API`, `SEAWEEDFS_SECRET_KEY_API`, `SEAWEEDFS_BUCKET` | `api`                 | Private SeaweedFS storage for meal photos; optional. `SEAWEEDFS_ENDPOINT` is a host; TLS on 443 is the default |
 
 ### 3. Install, Migrate & Run

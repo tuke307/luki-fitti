@@ -188,6 +188,8 @@ model User {
   healthWorkouts     HealthWorkout[]
   exerciseFeedback   ExerciseFeedback[]
   aiRuns             AiRun[]
+  /// Encrypted OpenRouter keys (never select with the user; see UserAiKey).
+  aiKeys             UserAiKey[]
 }
 
 model UserPreferences {
@@ -547,6 +549,37 @@ model AppSettings {
   updatedAt               DateTime @updatedAt
 }
 
+/// Who provided the OpenRouter key used for AI runs.
+enum AiKeySlot {
+  /// Set by the user themselves (bring-your-own-key; no grant or daily limit needed).
+  USER
+  /// Assigned to the user by an admin (feature grants + daily limit still apply).
+  ADMIN
+}
+
+/// Per-user OpenRouter API key, AES-256-GCM encrypted with AI_KEY_ENCRYPTION_KEY.
+/// AAD binds each ciphertext to `${userId}:${slot}`. The plaintext is never returned to clients.
+model UserAiKey {
+  id          String    @id @default(uuid())
+  userId      String
+  slot        AiKeySlot
+  ciphertext  String
+  iv          String
+  authTag     String
+  /// Master key version used for encryption (rotation support).
+  keyVersion  Int       @default(1)
+  /// Last 4 characters of the key, shown as a hint ("…abcd").
+  last4       String
+  /// Admin who set an ADMIN-slot key (null for USER keys).
+  setByUserId String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, slot])
+}
+
 enum AiRunStatus {
   SUCCESS
   ERROR
@@ -565,6 +598,8 @@ model AiRun {
   costUsd          Float?
   durationMs       Int         @default(0)
   errorCode        String?
+  /// Which key slot paid for the run (null for runs before per-user keys).
+  keySource        AiKeySlot?
   createdAt        DateTime    @default(now())
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)

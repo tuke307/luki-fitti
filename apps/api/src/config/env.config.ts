@@ -102,9 +102,62 @@ export const UMAMI_ALLOWED_HOSTNAMES = (
   .map((host) => host.trim().toLowerCase())
   .filter(Boolean);
 
-// AI (OpenRouter, OpenAI-compatible). The key is only ever read server-side.
-// TODO: Configure OPENROUTER_API_KEY in your environment / secret store; AI features stay off without it.
-export const OPENROUTER_API_KEY = (process.env.OPENROUTER_API_KEY ?? '').trim();
+// AI (OpenRouter, OpenAI-compatible). There is no global provider key: every user brings their
+// own key (or gets one assigned by an admin). Keys are stored AES-256-GCM encrypted with this
+// 32-byte master key (base64 or hex; generate with `openssl rand -base64 32`).
+// TODO: Configure AI_KEY_ENCRYPTION_KEY (and optionally AI_KEY_ENCRYPTION_KEY_PREVIOUS during a
+// rotation) in your secret store. Without it, keys can't be stored and AI features stay off.
+function parseEncryptionKey(envValue: string | undefined, name: string): Buffer | null {
+  const raw = (envValue ?? '').trim();
+  if (!raw) return null;
+  const decoded = /^[0-9a-f]{64}$/i.test(raw)
+    ? Buffer.from(raw, 'hex')
+    : Buffer.from(raw, 'base64');
+  if (decoded.length !== 32) {
+    // Never log the value itself.
+    const message = `${name} must be 32 bytes (base64 or hex encoded).`;
+    if (isProduction) throw new Error(`${message} Refusing to start.`);
+    logger.warn(`${message} Per-user AI keys are disabled.`);
+    return null;
+  }
+  return decoded;
+}
+
+export interface AiKeyEncryptionConfig {
+  /** Current master key (encrypts new keys) with its version. */
+  current: { version: number; key: Buffer } | null;
+  /** Previous master key, only used to decrypt keys not yet re-encrypted. */
+  previous: { version: number; key: Buffer } | null;
+}
+
+let _aiKeyEncryption: AiKeyEncryptionConfig | undefined;
+export function getAiKeyEncryptionConfig(): AiKeyEncryptionConfig {
+  if (_aiKeyEncryption === undefined) {
+    const current = parseEncryptionKey(process.env.AI_KEY_ENCRYPTION_KEY, 'AI_KEY_ENCRYPTION_KEY');
+    const previous = parseEncryptionKey(
+      process.env.AI_KEY_ENCRYPTION_KEY_PREVIOUS,
+      'AI_KEY_ENCRYPTION_KEY_PREVIOUS',
+    );
+    // Bump AI_KEY_ENCRYPTION_KEY_VERSION when rotating (old key → AI_KEY_ENCRYPTION_KEY_PREVIOUS).
+    const version = Math.max(1, Math.trunc(Number(process.env.AI_KEY_ENCRYPTION_KEY_VERSION) || 1));
+    if (!current) {
+      logger.warn(
+        'AI_KEY_ENCRYPTION_KEY is not set — per-user AI keys and AI features are disabled.',
+      );
+    }
+    _aiKeyEncryption = {
+      current: current ? { version, key: current } : null,
+      previous: previous && current ? { version: version - 1, key: previous } : null,
+    };
+  }
+  return _aiKeyEncryption;
+}
+
+/** Test hook: forget the cached encryption config so env changes take effect. */
+export function resetAiKeyEncryptionConfigForTests(): void {
+  _aiKeyEncryption = undefined;
+}
+
 export const OPENROUTER_BASE_URL = (() => {
   const raw = (process.env.OPENROUTER_BASE_URL ?? '').trim() || 'https://openrouter.ai/api/v1';
   try {

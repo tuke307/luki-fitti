@@ -57,6 +57,7 @@ import {
 import { type LanguagePreference, WeightUnit } from '@luki-fitti/common/enums';
 import { ProfileHealthCard, ProfileNutritionGoalsCard } from './profile-body-card';
 import { AiUsageView } from './ai-usage/ai-usage-view';
+import { AiKeyCard } from './ai-key-card';
 import { SettingsRow, SettingsSection, SettingsSubpage } from './settings/settings-row';
 import { WeightView } from './weight/weight-view';
 import { hasPendingWeightFocusRequest } from './weight/weight-focus';
@@ -750,10 +751,13 @@ export function ProfileImportView() {
         );
       case 'ai':
         return (
-          <Card className="space-y-3 rounded-[1.25rem] p-5">
-            <p className="text-muted-foreground text-xs">{t.aiUsage.sub}</p>
-            <AiUsageView />
-          </Card>
+          <div className="space-y-4">
+            <AiKeyCard />
+            <Card className="space-y-3 rounded-[1.25rem] p-5">
+              <p className="text-muted-foreground text-xs">{t.aiUsage.sub}</p>
+              <AiUsageView />
+            </Card>
+          </div>
         );
       case 'export':
         return (

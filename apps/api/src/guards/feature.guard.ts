@@ -6,7 +6,7 @@ import { FEATURE_KEY } from '@/decorators/permissions.decorator';
 import type { AuthenticatedUser } from '@/decorators/current-user.decorator';
 import { AppSettingsService } from '@/modules/app-settings/app-settings.service';
 
-/** Deny-by-default gate for opt-in features (global switch AND per-user grant). */
+/** Deny-by-default gate for opt-in features (global switch AND per-user key/grant). */
 @Injectable()
 export class FeatureGuard implements CanActivate {
   constructor(
@@ -24,7 +24,10 @@ export class FeatureGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<Request & { user?: AuthenticatedUser }>();
-    const active = await this.appSettings.resolveActiveFeatures(request.user?.featureGrants ?? []);
+    if (!request.user?.id) {
+      throw new ForbiddenException({ message: 'Feature not available', code: 'FEATURE_DISABLED' });
+    }
+    const active = await this.appSettings.resolveActiveFeatures(request.user);
     if (!active.includes(feature)) {
       throw new ForbiddenException({ message: 'Feature not available', code: 'FEATURE_DISABLED' });
     }

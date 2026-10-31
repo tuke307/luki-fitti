@@ -683,7 +683,7 @@ export class AuthService {
   /** Formats a user and resolves which opt-in features are active for them right now. */
   private async toUserDto(user: Parameters<AuthService['formatUserDto']>[0]): Promise<UserDto> {
     const features = this.appSettings
-      ? await this.appSettings.resolveActiveFeatures(user.featureGrants ?? [])
+      ? await this.appSettings.resolveActiveFeatures(user)
       : [];
     return this.formatUserDto(user, features);
   }

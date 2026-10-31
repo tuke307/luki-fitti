@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { AdminPermission, AiSkillName, FeatureGrant } from '../enums';
-import type { MyAiUsageDto } from './ai.schemas';
+import type { AiKeySlotStatusDto, MyAiUsageDto } from './ai.schemas';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Admin portal: users, access grants, AI settings & usage
@@ -63,6 +63,15 @@ export interface AdminUserDto {
   aiRunsLast30Days: number;
   /** Sum of known OpenRouter cost (USD) over the last 30 days. */
   aiCostUsdLast30Days: number;
+  /** OpenRouter key status (never the key itself). */
+  aiKey: AdminUserAiKeyDto;
+}
+
+export interface AdminUserAiKeyDto {
+  /** The user set their own key (value and hint are never shown to admins). */
+  hasOwnKey: boolean;
+  /** Key an admin assigned to this user. */
+  admin: AiKeySlotStatusDto | null;
 }
 
 export interface AdminUserListDto {
@@ -81,8 +90,15 @@ export interface AiSettingsDto {
   mealPhotoFallbacks: string[];
   aiDailyRunLimit: number;
   mealPhotoRetentionDays: number | null;
-  /** Whether OPENROUTER_API_KEY is configured on the server (the key itself is never exposed). */
-  providerConfigured: boolean;
+  /**
+   * Whether AI_KEY_ENCRYPTION_KEY is configured, i.e. per-user OpenRouter keys can be stored.
+   * There is no global provider key: AI only works for users with an own or admin-assigned key.
+   */
+  encryptionConfigured: boolean;
+  /** Number of users with an own (USER) key. */
+  usersWithOwnKey: number;
+  /** Number of users with an admin-assigned key. */
+  usersWithAdminKey: number;
   /** Whether photo storage (S3/SeaweedFS) is configured on the server. */
   storageConfigured: boolean;
   updatedAt: string;

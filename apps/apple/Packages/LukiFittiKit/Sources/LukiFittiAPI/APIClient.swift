@@ -313,6 +313,22 @@ public actor APIClient {
         return try await request(path: "/api/ai/usage/me?days=\(range)", method: "GET")
     }
 
+    /// Status of the own / admin-assigned OpenRouter key (never the key itself).
+    public func fetchAiKeyStatus() async throws -> AiKeyStatusDto {
+        try await request(path: "/api/ai/key", method: "GET")
+    }
+
+    /// Saves the user's own OpenRouter key. It's sent once over HTTPS and stored encrypted by the
+    /// API; callers must not keep or persist it afterwards.
+    public func setAiKey(_ apiKey: String) async throws -> AiKeyStatusDto {
+        let trimmed = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        return try await request(path: "/api/ai/key", method: "PUT", body: SetAiKeyDto(apiKey: trimmed))
+    }
+
+    public func removeAiKey() async throws -> AiKeyStatusDto {
+        try await request(path: "/api/ai/key", method: "DELETE")
+    }
+
     public func fetchExerciseFeedback() async throws -> [ExerciseFeedbackDto] {
         try await request(path: "/api/exercise-feedback", method: "GET")
     }

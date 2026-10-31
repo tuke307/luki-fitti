@@ -16,6 +16,7 @@ import type {
 } from '@luki-fitti/common/schemas';
 import { PrismaService } from '../database/prisma.service';
 import { AiUsageService } from '../ai/ai-usage.service';
+import { AiKeyService } from '../ai/ai-key.service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const round4 = (value: number) => Math.round(value * 10_000) / 10_000;
@@ -26,6 +27,7 @@ export class AdminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly aiUsage: AiUsageService,
+    private readonly aiKeys: AiKeyService,
   ) {}
 
   async getDashboard(): Promise<AdminDashboardDto> {
@@ -113,6 +115,8 @@ export class AdminService {
         })
       : [];
     const runsByUser = new Map(runs.map((r) => [r.userId, r]));
+    // Key status only (slot, last4, updatedAt) — never ciphertext.
+    const keysByUser = await this.aiKeys.adminStatusMany(users.map((u) => u.id));
 
     return {
       total,
@@ -132,6 +136,7 @@ export class AdminService {
           mealEntries: u._count.mealEntries,
           aiRunsLast30Days: runsByUser.get(u.id)?._count._all ?? 0,
           aiCostUsdLast30Days: round6(runsByUser.get(u.id)?._sum.costUsd ?? 0),
+          aiKey: keysByUser.get(u.id) ?? { hasOwnKey: false, admin: null },
         }),
       ),
     };

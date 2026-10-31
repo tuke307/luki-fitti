@@ -679,7 +679,7 @@ export const de = {
     rowHealthDetails: 'Körperdaten',
     rowNotifications: 'Benachrichtigungen',
     rowLanguageUnits: 'Sprache & Einheiten',
-    rowAiUsage: 'KI-Nutzung',
+    rowAiUsage: 'KI-Schlüssel & Nutzung',
     rowExportBackup: 'Backup exportieren',
     rowUsageStats: 'Nutzungsstatistik',
     rowDataSources: 'Datenquellen',
