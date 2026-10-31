@@ -31,6 +31,9 @@ public struct ProfileAndAuthView: View {
 
             Section(tr("Account")) {
                 if let user = viewModel.store.currentUser {
+                    if viewModel.store.syncState == .AUTH_EXPIRED {
+                        ReauthenticateRows(viewModel: viewModel, email: user.email)
+                    }
                     NavigationLink {
                         AccountSettingsPage(viewModel: viewModel, statusMessage: $statusMessage)
                     } label: {
@@ -469,6 +472,69 @@ private struct TrainingSettingsPage: View {
         .navigationTitle(tr("Training"))
         .navigationBarTitleDisplayMode(.inline)
         .modifier(PopOnDeepLink(viewModel: viewModel))
+    }
+}
+
+/// Shown when the server rejected the session: signs in again with the same account without
+/// clearing anything stored on this iPhone, then uploads what's waiting.
+private struct ReauthenticateRows: View {
+    @Bindable var viewModel: LukiAppViewModel
+    let email: String
+    @State private var password = ""
+    @State private var signingIn = false
+    @State private var message: String?
+    @Environment(\.lukiLocale) private var tr
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(tr("Sign in again to sync"), systemImage: "person.crop.circle.badge.exclamationmark")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(LukiColors.warning)
+            Text(tr("Your session ended. Everything on this iPhone is kept and uploads after you sign in."))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("ios.profile.reauthBanner")
+
+        SecureField(tr("Password"), text: $password)
+            .textContentType(.password)
+            .submitLabel(.go)
+            .onSubmit { Task { await signIn() } }
+            .accessibilityIdentifier("ios.profile.reauthPasswordField")
+
+        Button {
+            Task { await signIn() }
+        } label: {
+            HStack {
+                if signingIn { ProgressView() }
+                Text(tr("Sign In"))
+            }
+        }
+        .disabled(password.isEmpty || signingIn)
+        .accessibilityIdentifier("ios.profile.reauthButton")
+
+        if let message {
+            Text(message)
+                .font(.footnote)
+                .foregroundStyle(LukiColors.destructive)
+        }
+    }
+
+    private func signIn() async {
+        guard !password.isEmpty else { return }
+        signingIn = true
+        defer { signingIn = false }
+        do {
+            let user = try await viewModel.store.apiClient.login(email: email, password: password)
+            password = ""
+            message = nil
+            viewModel.store.saveAuthenticatedUser(user)
+            await viewModel.store.refreshFromServerAfterAuth()
+            await viewModel.syncBodyWeight()
+        } catch {
+            message = error.localizedDescription
+        }
     }
 }
 

@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { SessionService } from './session.service';
+import type { SyncSessionPayloadDto } from '@luki-fitti/common/schemas';
+import { SessionService, STALE_ACTIVE_SESSION_MS } from './session.service';
 import {
   ExerciseType,
   MuscleGroup,
@@ -524,5 +525,48 @@ describe('SessionService — Offline Sync Idempotency, Conflict Detection & Volu
       exercises: [],
     });
     assert.equal(legacy.session.estimatedCaloriesKcal, mid);
+  });
+});
+
+describe('SessionService — running workouts on other devices', () => {
+  function capture() {
+    const calls: Array<Record<string, unknown> & { updatedAt?: { lt: Date } }> = [];
+    const prisma = createMockSessionPrisma();
+    (prisma.workoutSession as Record<string, unknown>).deleteMany = async (args: {
+      where: (typeof calls)[number];
+    }) => {
+      calls.push(args.where);
+      return { count: 0 };
+    };
+    return { service: new SessionService(prisma), calls };
+  }
+  const payload = (extra: Record<string, unknown> = {}) =>
+    ({
+      clientSessionId: 'sess-new',
+      workoutNameSnapshot: 'Push A',
+      sessionType: 'STRENGTH',
+      status: SessionStatus.IN_PROGRESS,
+      startedAt: '2026-10-31T10:00:00.000Z',
+      activeDurationSeconds: 0,
+      weightUnit: WeightUnit.KG,
+      version: 1,
+      exercises: [],
+      ...extra,
+    }) as unknown as SyncSessionPayloadDto;
+
+  it('only clears abandoned running workouts unless the user chose to replace them', async () => {
+    const { service, calls } = capture();
+    await service.syncSession('u1', payload());
+    const where = calls[0];
+    assert.ok(where?.updatedAt?.lt instanceof Date);
+    const ageMs = Date.now() - where.updatedAt.lt.getTime();
+    assert.ok(Math.abs(ageMs - STALE_ACTIVE_SESSION_MS) < 5000);
+    assert.deepEqual(where.clientSessionId, { not: 'sess-new' });
+  });
+
+  it('clears every other running workout when replaceActive is set', async () => {
+    const { service, calls } = capture();
+    await service.syncSession('u1', payload({ replaceActive: true }));
+    assert.equal(calls[0]?.updatedAt, undefined);
   });
 });

@@ -1070,7 +1070,7 @@ public struct AppShellView: View {
 
     private var syncIndicator: some View {
         Button {
-            if viewModel.store.currentUser == nil {
+            if viewModel.store.currentUser == nil || viewModel.store.needsReauthentication {
                 viewModel.selectedTab = .profile
             } else {
                 Task { await viewModel.store.flushSyncQueue() }
