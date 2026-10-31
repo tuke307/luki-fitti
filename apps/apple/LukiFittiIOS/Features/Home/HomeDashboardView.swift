@@ -7,7 +7,8 @@ import LukiFittiDomain
 public struct HomeDashboardView: View {
     @Bindable public var viewModel: LukiAppViewModel
     @Environment(\.lukiLocale) private var tr
-    @State private var muscleRange: String = "90d"
+    /// Weeks averaged in the muscles card.
+    @State private var muscleWeeks = 4
 
     public init(viewModel: LukiAppViewModel) {
         self.viewModel = viewModel
@@ -237,22 +238,23 @@ public struct HomeDashboardView: View {
         .background(cardShape)
     }
 
+    /// Average weekly sets per muscle; secondary muscles from the catalog count as half a set.
+    private var weeklyMuscleSets: [MuscleVolume.WeeklySets] {
+        let secondary = Dictionary(
+            viewModel.store.catalog.map { ($0.id, $0.secondaryMuscleGroups) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        return MuscleVolume.weeklySetsByMuscle(
+            viewModel.store.historySessions,
+            secondaryMuscles: { secondary[$0] },
+            weeks: muscleWeeks
+        )
+    }
+
     private var musclesCard: some View {
-        let cutoff: Date? = switch muscleRange {
-        case "30d": Date().addingTimeInterval(-30 * 86_400)
-        case "90d": Date().addingTimeInterval(-90 * 86_400)
-        default: nil
-        }
-        let sessions = viewModel.store.historySessions.filter { cutoff == nil || parseDate($0.startedAt) >= cutoff! }
-        let counts: [(MuscleGroup, Int)] = MuscleGroup.allCases.compactMap { muscle in
-            let sets = sessions.reduce(0) { acc, sess in
-                acc + sess.exercises.filter { $0.primaryMuscleSnapshot == muscle }
-                    .reduce(0) { $0 + $1.sets.filter(\.completed).count }
-            }
-            return sets > 0 ? (muscle, sets) : nil
-        }
-        .sorted { $0.1 > $1.1 }
-        let maxSets = counts.first?.1 ?? 1
+        let rows = weeklyMuscleSets
+        // The scale always shows the whole 10–20 target band.
+        let scaleMax = max(MuscleVolume.weeklySetsTarget.upperBound + 5, rows.first?.setsPerWeek ?? 0)
 
         return VStack(alignment: .leading, spacing: 14) {
             ViewThatFits(in: .horizontal) {
@@ -266,54 +268,82 @@ public struct HomeDashboardView: View {
                     musclesRangePicker
                 }
             }
-            if counts.isEmpty {
+            if rows.isEmpty {
                 Text(tr("No sets logged in this period yet."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, minHeight: 80)
             } else {
-                ForEach(counts.prefix(8), id: \.0) { muscle, sets in
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Text(LukiI18n.muscleLabel(muscle, locale: tr))
-                            Spacer()
-                            Text(tr("%d sets", sets))
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
-                        }
-                        .font(.subheadline)
-                        GeometryReader { geo in
-                            Capsule()
-                                .fill(LukiColors.fill)
-                                .overlay(alignment: .leading) {
-                                    Capsule()
-                                        .fill(LukiColors.accent)
-                                        .frame(width: geo.size.width * CGFloat(sets) / CGFloat(maxSets))
-                                }
-                        }
-                        .frame(height: 6)
-                        .accessibilityHidden(true)
-                    }
-                    .accessibilityElement(children: .combine)
+                ForEach(rows.prefix(8), id: \.muscle) { row in
+                    muscleRow(row, scaleMax: scaleMax)
                 }
+                Text(tr("Aim for %d–%d sets per muscle each week. Muscles that help in an exercise count as half a set.",
+                        Int(MuscleVolume.weeklySetsTarget.lowerBound), Int(MuscleVolume.weeklySetsTarget.upperBound)))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("ios.home.muscles.targetNote")
             }
         }
         .padding(18)
         .background(cardShape)
     }
 
+    private func muscleRow(_ row: MuscleVolume.WeeklySets, scaleMax: Double) -> some View {
+        let target = MuscleVolume.weeklySetsTarget
+        let sets = row.setsPerWeek.formatted(.number.precision(.fractionLength(0...1)).locale(Locale(identifier: tr.rawValue)))
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(LukiI18n.muscleLabel(row.muscle, locale: tr))
+                Spacer()
+                Text(tr("%@ sets/week", sets))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+            .font(.subheadline)
+            GeometryReader { geo in
+                let width = geo.size.width
+                ZStack(alignment: .leading) {
+                    Capsule().fill(LukiColors.fill)
+                    // Target band (10–20 sets), outlined so it doesn't rely on color alone.
+                    RoundedRectangle(cornerRadius: 3)
+                        .strokeBorder(Color.secondary.opacity(0.6), lineWidth: 1)
+                        .background(RoundedRectangle(cornerRadius: 3).fill(LukiColors.accent.opacity(0.12)))
+                        .frame(width: width * (target.upperBound - target.lowerBound) / scaleMax)
+                        .offset(x: width * target.lowerBound / scaleMax)
+                    Capsule()
+                        .fill(LukiColors.accent)
+                        .frame(width: width * min(1, row.setsPerWeek / scaleMax), height: 6)
+                }
+            }
+            .frame(height: 10)
+            .accessibilityHidden(true)
+            Text(statusLabel(row.status))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("ios.home.muscles.\(row.muscle.rawValue)")
+    }
+
+    private func statusLabel(_ status: MuscleVolume.Status) -> String {
+        switch status {
+        case .below: tr("Below range")
+        case .within: tr("In range")
+        case .above: tr("Above range")
+        }
+    }
+
     private var musclesTitle: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(tr("Muscles trained")).font(.headline)
-            Text(tr("Working sets per muscle group")).font(.footnote).foregroundStyle(.secondary)
+            Text(tr("Average sets per week")).font(.footnote).foregroundStyle(.secondary)
         }
     }
 
     private var musclesRangePicker: some View {
-        Picker(tr("Range"), selection: $muscleRange) {
-            Text("30d").tag("30d")
-            Text("90d").tag("90d")
-            Text(tr("All")).tag("all")
+        Picker(tr("Range"), selection: $muscleWeeks) {
+            Text(tr("4 weeks")).tag(4)
+            Text(tr("12 weeks")).tag(12)
         }
         .pickerStyle(.segmented)
     }

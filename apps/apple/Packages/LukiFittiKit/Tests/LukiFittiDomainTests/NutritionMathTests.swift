@@ -113,13 +113,75 @@ final class NutritionMathTests: XCTestCase {
         XCTAssertEqual(NutritionMath.strengthMet(setsPerMinute: 5), 6.0)
     }
 
-    func testSuggestedDailyKcal() {
-        let now = ISO8601DateFormatter().date(from: "2026-06-01T00:00:00Z")!
-        XCTAssertEqual(
-            NutritionMath.suggestedDailyKcal(bodyWeightKg: 80, heightCm: 180, birthYear: 1996, sex: "male", now: now),
-            2490
+    private static let june2026 = ISO8601DateFormatter().date(from: "2026-06-01T00:00:00Z")!
+
+    private func suggest(
+        weight: Double? = 80, height: Double? = 180, birthYear: Int? = 1996, sex: String? = "male",
+        bodyFat: Double? = nil, level: ActivityLevel? = nil, measured: Bool = false
+    ) -> Int? {
+        NutritionMath.suggestedDailyKcal(
+            bodyWeightKg: weight, heightCm: height, birthYear: birthYear, sex: sex,
+            bodyFatPct: bodyFat, activityLevel: level, measuredActivity: measured, now: Self.june2026
         )
-        XCTAssertNil(NutritionMath.suggestedDailyKcal(bodyWeightKg: 80, heightCm: nil, birthYear: 1996, sex: "male"))
+    }
+
+    func testSuggestsABaseGoalFromTheEverydayActivityFactor() {
+        // BMR = 800 + 1125 − 150 + 5 = 1780 → × 1.3 (default LIGHT) = 2314 → rounded to 10
+        XCTAssertEqual(suggest(), 2310)
+        XCTAssertEqual(suggest(level: .SEDENTARY), 2140)
+        XCTAssertEqual(suggest(level: .VERY_ACTIVE), 2850)
+        XCTAssertNil(suggest(height: nil, birthYear: nil, sex: nil))
+    }
+
+    func testMeasuredActivityOnlyAddsDigestion() {
+        // 1780 × 1.1 = 1958 → 1960, regardless of the chosen activity level
+        XCTAssertEqual(suggest(measured: true), 1960)
+        XCTAssertEqual(suggest(level: .VERY_ACTIVE, measured: true), 1960)
+    }
+
+    func testKatchMcArdleWhenBodyFatIsKnown() {
+        // lean = 80 × 0.85 = 68 → 370 + 21.6 × 68 = 1838.8
+        let resting = NutritionMath.restingEnergy(bodyWeightKg: 80, heightCm: nil, birthYear: nil, sex: nil, bodyFatPct: 15)
+        XCTAssertEqual(resting?.method, .katchMcArdle)
+        XCTAssertEqual(resting?.kcal ?? 0, 370 + 21.6 * 68, accuracy: 1e-9)
+        XCTAssertEqual(suggest(height: nil, birthYear: nil, sex: nil, bodyFat: 15), 2390)
+        // Implausible body fat falls back to Mifflin–St Jeor.
+        XCTAssertEqual(
+            NutritionMath.restingEnergy(bodyWeightKg: 80, heightCm: 180, birthYear: 1996, sex: "male", bodyFatPct: 80, now: Self.june2026)?.method,
+            .mifflinStJeor
+        )
+    }
+
+    func testProteinFromLeanMassWhenBodyFatIsKnown() {
+        XCTAssertEqual(NutritionMath.suggestedProteinG(bodyWeightKg: 80), 144)
+        XCTAssertNil(NutritionMath.suggestedProteinG(bodyWeightKg: nil))
+        // 100 kg at 30 % → 70 kg lean × 2.2 = 154 (instead of 180 from total weight)
+        XCTAssertEqual(NutritionMath.suggestedProteinG(bodyWeightKg: 100, bodyFatPct: 30), 154)
+        XCTAssertNil(NutritionMath.leanBodyMassKg(bodyWeightKg: 100, bodyFatPct: nil))
+    }
+
+    func testPreferencesDecodeBodyFatAndActivityLevel() throws {
+        let prefs = try JSONDecoder().decode(
+            UserPreferencesDto.self, from: Data(#"{"bodyFatPct":18.5,"activityLevel":"ACTIVE"}"#.utf8)
+        )
+        XCTAssertEqual(prefs.bodyFatPct, 18.5)
+        XCTAssertEqual(prefs.activityLevel, .ACTIVE)
+        let unknown = try JSONDecoder().decode(
+            UserPreferencesDto.self, from: Data(#"{"activityLevel":"ATHLETE","bodyFatPct":null}"#.utf8)
+        )
+        XCTAssertNil(unknown.activityLevel)
+        XCTAssertNil(unknown.bodyFatPct)
+    }
+
+    func testUpdatePreferencesSendsNullOnlyForClearedFields() throws {
+        var dto = UpdatePreferencesDto()
+        dto.dailyKcalGoal = 2400
+        dto.setOrClear(\.bodyFatPct, nil, key: .bodyFatPct)
+        dto.setOrClear(\.activityLevel, .LIGHT, key: .activityLevel)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        let json = String(decoding: try encoder.encode(dto), as: UTF8.self)
+        XCTAssertEqual(json, #"{"activityLevel":"LIGHT","bodyFatPct":null,"dailyKcalGoal":2400}"#)
     }
 
     func testMealTypeForTime() {

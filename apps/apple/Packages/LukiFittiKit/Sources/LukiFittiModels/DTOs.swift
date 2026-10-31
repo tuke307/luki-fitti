@@ -31,6 +31,10 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
     public var birthYear: Int? = nil
     /// "female" | "male" | nil — only used for energy estimates.
     public var sex: String? = nil
+    /// Body fat in % (3–60), e.g. from a smart scale — makes calorie and protein estimates more accurate.
+    public var bodyFatPct: Double? = nil
+    /// Everyday activity outside workouts; only used when Apple Health activity isn't available.
+    public var activityLevel: ActivityLevel? = nil
     public var dailyKcalGoal: Int? = nil
     public var proteinGoalG: Int? = nil
     public var carbsGoalG: Int? = nil
@@ -71,7 +75,8 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
     enum CodingKeys: String, CodingKey {
         case id, userId, weightUnit, distanceUnit, defaultRestSeconds, theme, language
         case restTimerSound, notificationsEnabled, exerciseSuggestionsEnabled, weeklyGoalSessions
-        case bodyWeightKg, heightCm, birthYear, sex, dailyKcalGoal, proteinGoalG, carbsGoalG, fatGoalG
+        case bodyWeightKg, heightCm, birthYear, sex, bodyFatPct, activityLevel
+        case dailyKcalGoal, proteinGoalG, carbsGoalG, fatGoalG
         case weighInReminderEnabled, weighInReminderWeekday, weighInReminderMinutes
     }
 
@@ -92,6 +97,9 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
         self.heightCm = try c.decodeIfPresent(Double.self, forKey: .heightCm)
         self.birthYear = try c.decodeIfPresent(Int.self, forKey: .birthYear)
         self.sex = try c.decodeIfPresent(String.self, forKey: .sex)
+        self.bodyFatPct = try c.decodeIfPresent(Double.self, forKey: .bodyFatPct)
+        // Unknown values from a newer server read as "not set" instead of failing the whole object.
+        self.activityLevel = (try? c.decodeIfPresent(String.self, forKey: .activityLevel)).flatMap { $0 }.flatMap(ActivityLevel.init(rawValue:))
         self.dailyKcalGoal = try c.decodeIfPresent(Int.self, forKey: .dailyKcalGoal)
         self.proteinGoalG = try c.decodeIfPresent(Int.self, forKey: .proteinGoalG)
         self.carbsGoalG = try c.decodeIfPresent(Int.self, forKey: .carbsGoalG)
@@ -162,6 +170,8 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
     public var heightCm: Double? = nil
     public var birthYear: Int? = nil
     public var sex: String? = nil
+    public var bodyFatPct: Double? = nil
+    public var activityLevel: ActivityLevel? = nil
     public var dailyKcalGoal: Int? = nil
     public var proteinGoalG: Int? = nil
     public var carbsGoalG: Int? = nil
@@ -169,6 +179,9 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
     public var weighInReminderEnabled: Bool? = nil
     public var weighInReminderWeekday: Int? = nil
     public var weighInReminderMinutes: Int? = nil
+    /// Fields sent as JSON `null` so the server clears them. A `nil` property is otherwise left
+    /// out of the request, which leaves the server value unchanged.
+    public var clearedFields: Set<CodingKeys> = []
 
     public init(
         name: String? = nil,
@@ -192,6 +205,84 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
         self.notificationsEnabled = notificationsEnabled
         self.exerciseSuggestionsEnabled = exerciseSuggestionsEnabled
         self.weeklyGoalSessions = weeklyGoalSessions
+    }
+
+    public enum CodingKeys: String, CodingKey, Sendable, Hashable {
+        case name, weightUnit, distanceUnit, defaultRestSeconds, theme, language
+        case restTimerSound, notificationsEnabled, exerciseSuggestionsEnabled, weeklyGoalSessions
+        case bodyWeightKg, heightCm, birthYear, sex, bodyFatPct, activityLevel
+        case dailyKcalGoal, proteinGoalG, carbsGoalG, fatGoalG
+        case weighInReminderEnabled, weighInReminderWeekday, weighInReminderMinutes
+    }
+
+    /// Sets `value` for the request, or marks the field to be cleared on the server when `nil`.
+    public mutating func setOrClear<T>(_ keyPath: WritableKeyPath<UpdatePreferencesDto, T?>, _ value: T?, key: CodingKeys) {
+        self[keyPath: keyPath] = value
+        if value == nil { clearedFields.insert(key) } else { clearedFields.remove(key) }
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        name = try c.decodeIfPresent(String.self, forKey: .name)
+        weightUnit = try c.decodeIfPresent(WeightUnit.self, forKey: .weightUnit)
+        distanceUnit = try c.decodeIfPresent(DistanceUnit.self, forKey: .distanceUnit)
+        defaultRestSeconds = try c.decodeIfPresent(Int.self, forKey: .defaultRestSeconds)
+        theme = try c.decodeIfPresent(String.self, forKey: .theme)
+        language = try c.decodeIfPresent(LanguagePreference.self, forKey: .language)
+        restTimerSound = try c.decodeIfPresent(Bool.self, forKey: .restTimerSound)
+        notificationsEnabled = try c.decodeIfPresent(Bool.self, forKey: .notificationsEnabled)
+        exerciseSuggestionsEnabled = try c.decodeIfPresent(Bool.self, forKey: .exerciseSuggestionsEnabled)
+        weeklyGoalSessions = try c.decodeIfPresent(Int.self, forKey: .weeklyGoalSessions)
+        bodyWeightKg = try c.decodeIfPresent(Double.self, forKey: .bodyWeightKg)
+        heightCm = try c.decodeIfPresent(Double.self, forKey: .heightCm)
+        birthYear = try c.decodeIfPresent(Int.self, forKey: .birthYear)
+        sex = try c.decodeIfPresent(String.self, forKey: .sex)
+        bodyFatPct = try c.decodeIfPresent(Double.self, forKey: .bodyFatPct)
+        activityLevel = (try? c.decodeIfPresent(String.self, forKey: .activityLevel)).flatMap { $0 }.flatMap(ActivityLevel.init(rawValue:))
+        dailyKcalGoal = try c.decodeIfPresent(Int.self, forKey: .dailyKcalGoal)
+        proteinGoalG = try c.decodeIfPresent(Int.self, forKey: .proteinGoalG)
+        carbsGoalG = try c.decodeIfPresent(Int.self, forKey: .carbsGoalG)
+        fatGoalG = try c.decodeIfPresent(Int.self, forKey: .fatGoalG)
+        weighInReminderEnabled = try c.decodeIfPresent(Bool.self, forKey: .weighInReminderEnabled)
+        weighInReminderWeekday = try c.decodeIfPresent(Int.self, forKey: .weighInReminderWeekday)
+        weighInReminderMinutes = try c.decodeIfPresent(Int.self, forKey: .weighInReminderMinutes)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        var sent = Set<CodingKeys>()
+        func put<T: Encodable>(_ value: T?, forKey key: CodingKeys) throws {
+            guard let value else { return }
+            try c.encode(value, forKey: key)
+            sent.insert(key)
+        }
+        try put(name, forKey: .name)
+        try put(weightUnit, forKey: .weightUnit)
+        try put(distanceUnit, forKey: .distanceUnit)
+        try put(defaultRestSeconds, forKey: .defaultRestSeconds)
+        try put(theme, forKey: .theme)
+        try put(language, forKey: .language)
+        try put(restTimerSound, forKey: .restTimerSound)
+        try put(notificationsEnabled, forKey: .notificationsEnabled)
+        try put(exerciseSuggestionsEnabled, forKey: .exerciseSuggestionsEnabled)
+        try put(weeklyGoalSessions, forKey: .weeklyGoalSessions)
+        try put(bodyWeightKg, forKey: .bodyWeightKg)
+        try put(heightCm, forKey: .heightCm)
+        try put(birthYear, forKey: .birthYear)
+        try put(sex, forKey: .sex)
+        try put(bodyFatPct, forKey: .bodyFatPct)
+        try put(activityLevel, forKey: .activityLevel)
+        try put(dailyKcalGoal, forKey: .dailyKcalGoal)
+        try put(proteinGoalG, forKey: .proteinGoalG)
+        try put(carbsGoalG, forKey: .carbsGoalG)
+        try put(fatGoalG, forKey: .fatGoalG)
+        try put(weighInReminderEnabled, forKey: .weighInReminderEnabled)
+        try put(weighInReminderWeekday, forKey: .weighInReminderWeekday)
+        try put(weighInReminderMinutes, forKey: .weighInReminderMinutes)
+        // Sorted so the request body is stable (Set order isn't).
+        for key in clearedFields.sorted(by: { $0.rawValue < $1.rawValue }) where !sent.contains(key) {
+            try c.encodeNil(forKey: key)
+        }
     }
 }
 
