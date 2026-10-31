@@ -36,6 +36,15 @@ extension SupportedLocale {
     }
 }
 
+/// Everyday activity outside workouts (mirrors `ACTIVITY_LEVELS` in @luki-fitti/common).
+/// Only used for calorie suggestions when Apple Health activity isn't available.
+public enum ActivityLevel: String, Codable, Sendable, CaseIterable, Equatable, Hashable {
+    case SEDENTARY
+    case LIGHT
+    case ACTIVE
+    case VERY_ACTIVE
+}
+
 public enum MuscleGroup: String, Codable, Sendable, CaseIterable, Equatable, Hashable {
     case CHEST
     case BACK
