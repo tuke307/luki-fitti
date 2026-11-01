@@ -5,7 +5,11 @@ import {
   TEST_USER_PASSWORD,
   TEST_USER_NAME,
 } from './helpers/auth.js';
-import { gotoProfileTab, mockAuthenticatedSession, resetOfflineStore } from './helpers/offline-store.js';
+import {
+  gotoProfileTab,
+  mockAuthenticatedSession,
+  resetOfflineStore,
+} from './helpers/offline-store.js';
 import { expectSyncBadge } from './helpers/shell.js';
 
 test.describe('Authentication & Guest Flows', () => {
@@ -97,5 +101,68 @@ test.describe('Authentication & Guest Flows', () => {
 
     await page.getByRole('button', { name: /^(Sign Out|Abmelden)$/i }).click();
     await expectSyncBadge(page, /Guest/i);
+  });
+
+  test('authenticated user can sign out of all devices after confirming', async ({ page }) => {
+    await mockAuthenticatedSession(page, {
+      email: TEST_USER_EMAIL,
+      name: TEST_USER_NAME,
+    });
+
+    let logoutAllCalls = 0;
+    await page.route('**/api/auth/logout-all', async (route) => {
+      logoutAllCalls += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: { success: true } }),
+      });
+    });
+
+    await gotoProfileTab(page);
+    await page.getByTestId('settings-row-account').click();
+
+    await page
+      .getByRole('button', { name: /^(Sign out of all devices|Auf allen Geräten abmelden)$/i })
+      .click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByText(/iPhone/)).toBeVisible();
+    await dialog
+      .getByRole('button', { name: /^(Sign out of all devices|Auf allen Geräten abmelden)$/i })
+      .click();
+
+    await expectSyncBadge(page, /Guest/i);
+    expect(logoutAllCalls).toBe(1);
+  });
+
+  test('failed sign out of all devices shows an error and keeps the user signed in', async ({
+    page,
+  }) => {
+    await mockAuthenticatedSession(page, {
+      email: TEST_USER_EMAIL,
+      name: TEST_USER_NAME,
+    });
+
+    await page.route('**/api/auth/logout-all', async (route) => {
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: false, error: 'Internal server error' }),
+      });
+    });
+
+    await gotoProfileTab(page);
+    await page.getByTestId('settings-row-account').click();
+
+    const signOutAll = /^(Sign out of all devices|Auf allen Geräten abmelden)$/i;
+    await page.getByRole('button', { name: signOutAll }).click();
+    await page.getByRole('dialog').getByRole('button', { name: signOutAll }).click();
+
+    await expect(
+      page.getByText(
+        /Could not sign out of all devices|Abmelden auf allen Geräten fehlgeschlagen/i,
+      ),
+    ).toBeVisible();
+    await expect(page.getByText('Signed in', { exact: true })).toBeVisible();
   });
 });

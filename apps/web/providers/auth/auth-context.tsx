@@ -20,6 +20,7 @@ interface AuthContextProps {
   requestAccountDeletion: (password: string) => Promise<boolean>;
   confirmAccountDeletion: (token: string) => Promise<boolean>;
   logout: () => Promise<void>;
+  logoutAll: () => Promise<boolean>;
   updatePreferences: (data: UpdatePreferencesDto) => Promise<void>;
   continueOfflineLocal: () => void;
   refreshUser: () => Promise<void>;
@@ -60,6 +61,7 @@ export const AuthContext = createContext<AuthContextProps>({
   requestAccountDeletion: async () => false,
   confirmAccountDeletion: async () => false,
   logout: async () => {},
+  logoutAll: async () => false,
   updatePreferences: async () => {},
   continueOfflineLocal: () => {},
   refreshUser: async () => {},
@@ -232,6 +234,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const clearSignedInState = async () => {
+    await clearAllLocalData().catch(() => undefined);
+    localStorage.removeItem('luki_cached_user_profile');
+    setUser(DEFAULT_LOCAL_USER);
+    setAuthMode('OFFLINE_LOCAL');
+  };
+
   const logout = async () => {
     setLoading(true);
     setError(null);
@@ -240,10 +249,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch {
       // Clear local profile regardless of network availability
     } finally {
-      await clearAllLocalData().catch(() => undefined);
-      localStorage.removeItem('luki_cached_user_profile');
-      setUser(DEFAULT_LOCAL_USER);
-      setAuthMode('OFFLINE_LOCAL');
+      await clearSignedInState();
+      setLoading(false);
+    }
+  };
+
+  const logoutAll = async (): Promise<boolean> => {
+    setLoading(true);
+    setError(null);
+    try {
+      await api.auth.logoutAll();
+      await clearSignedInState();
+      return true;
+    } catch {
+      return false;
+    } finally {
       setLoading(false);
     }
   };
@@ -370,6 +390,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         requestAccountDeletion,
         confirmAccountDeletion,
         logout,
+        logoutAll,
         updatePreferences,
         continueOfflineLocal,
         refreshUser,

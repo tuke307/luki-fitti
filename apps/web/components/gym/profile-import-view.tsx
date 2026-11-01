@@ -40,6 +40,7 @@ import {
 import { Input } from '@luki-fitti/ui/components/ui/input';
 import { Label } from '@luki-fitti/ui/components/ui/label';
 import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
+import { toast } from '@luki-fitti/ui/components/ui/sonner';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useAuth } from '@/providers/auth/auth-context';
 import { trackEvent } from '@/lib/analytics/track';
@@ -115,6 +116,7 @@ export function ProfileImportView() {
     resendConfirmation,
     requestAccountDeletion,
     logout,
+    logoutAll,
     updatePreferences,
     error: authError,
     infoMessage: authInfoMessage,
@@ -132,6 +134,7 @@ export function ProfileImportView() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [logoutAllDialogOpen, setLogoutAllDialogOpen] = useState(false);
   const [page, setPage] = useState<SettingsPage>(() =>
     hasPendingWeightFocusRequest() ? 'health' : 'root',
   );
@@ -392,6 +395,14 @@ export function ProfileImportView() {
               className="hover:bg-destructive/20 hover:text-destructive w-fit"
             >
               <LogOut className="h-4 w-4" /> {t.profile.signOutBtn}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setLogoutAllDialogOpen(true)}
+              className="hover:bg-destructive/20 hover:text-destructive w-fit"
+            >
+              <LogOut className="h-4 w-4" /> {t.profile.signOutAllBtn}
             </Button>
             <Button
               type="button"
@@ -1087,6 +1098,43 @@ export function ProfileImportView() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={logoutAllDialogOpen} onOpenChange={setLogoutAllDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 shrink-0" />
+              {t.profile.signOutAllDialogTitle}
+            </DialogTitle>
+            <DialogDescription>{t.profile.signOutAllDialogDesc}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setLogoutAllDialogOpen(false)}
+              disabled={authLoading}
+            >
+              {t.common.cancel}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={authLoading}
+              onClick={async () => {
+                const ok = await logoutAll();
+                if (ok) {
+                  setLogoutAllDialogOpen(false);
+                } else {
+                  toast.error(t.profile.signOutAllError);
+                }
+              }}
+            >
+              <LogOut className="h-4 w-4" /> {t.profile.signOutAllBtn}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
