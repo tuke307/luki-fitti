@@ -1,0 +1,21 @@
+info:
+  name: device-session
+  type: http
+  seq: 14
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/auth/device-session"
+  body:
+    type: json
+    data: |-
+      {
+        "deviceLabel": "watchos"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

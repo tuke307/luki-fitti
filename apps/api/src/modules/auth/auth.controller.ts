@@ -14,6 +14,7 @@ import {
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
+import { randomUUID } from 'crypto';
 import { AuthService } from './auth.service';
 import { RefreshTokenService } from './refresh-token.service';
 import { CsrfGuard } from '@/guards/csrf.guard';
@@ -41,6 +42,7 @@ import {
   ConfirmAccountDeletionSchema,
   UpdatePreferencesSchema,
   RefreshTokenBodySchema,
+  DeviceSessionSchema,
   type LoginDto,
   type RegisterDto,
   type RegisterResponseDto,
@@ -53,6 +55,7 @@ import {
   type ConfirmAccountDeletionDto,
   type UpdatePreferencesDto,
   type RefreshTokenBodyDto,
+  type DeviceSessionDto,
   type AuthTokensDto,
   type UserDto,
 } from '@luki-fitti/common/schemas';
@@ -71,29 +74,62 @@ export class AuthController {
     private readonly refreshTokenService: RefreshTokenService,
   ) {}
 
+  /** Overridable in tests (avoids a Redis connection). */
+  public denylistJti = async (jti: string, ttlSec: number): Promise<void> => {
+    await getRedis().set(`access_denylist:${jti}`, '1', 'EX', ttlSec);
+  };
+
   private async issueSessionCookies(
     user: { id: string; email: string },
     res: Response,
+    opts: { familyId?: string; deviceLabel?: string | null; setCookies?: boolean } = {},
   ): Promise<AuthTokensDto> {
-    const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
-    const csrfToken = generateCsrfToken();
+    const familyId = opts.familyId ?? randomUUID();
+    const accessToken = generateAccessToken(user, familyId);
+    const refreshToken = generateRefreshToken(user, familyId);
 
     await this.refreshTokenService.create({
       token: refreshToken,
       userId: user.id,
       expiresAt: new Date(Date.now() + REFRESH_TOKEN_EXPIRY_MS),
+      familyId,
+      deviceLabel: opts.deviceLabel ?? null,
     });
 
-    setCookie(res, 'accessToken', accessToken, accessTokenCookieOptions);
-    setCookie(res, 'refreshToken', refreshToken, refreshTokenCookieOptions);
-    setCookie(res, 'csrfToken', csrfToken, csrfCookieOptions);
+    if (opts.setCookies ?? true) {
+      setCookie(res, 'accessToken', accessToken, accessTokenCookieOptions);
+      setCookie(res, 'refreshToken', refreshToken, refreshTokenCookieOptions);
+      setCookie(res, 'csrfToken', generateCsrfToken(), csrfCookieOptions);
+    }
 
     return {
       accessToken,
       refreshToken,
       expiresAt: new Date(Date.now() + ACCESS_TOKEN_EXPIRY_MS).toISOString(),
     };
+  }
+
+  private resolveDeviceLabel(req: Request): string {
+    const raw = (req.header('x-device-label') ?? req.header('x-client-platform') ?? 'web')
+      .trim()
+      .toLowerCase();
+    return /^[a-z0-9-]{1,32}$/.test(raw) ? raw : 'unknown';
+  }
+
+  private async denylistAccessToken(req: Request): Promise<{ sid?: string }> {
+    const accessToken = extractBearerToken(req) ?? (req.cookies?.accessToken as string | undefined);
+    if (!accessToken) return {};
+    try {
+      const decoded = verifyAccessToken(accessToken);
+      if (decoded.jti && decoded.exp) {
+        const remainingSec = decoded.exp - Math.floor(Date.now() / 1000);
+        if (remainingSec > 0) await this.denylistJti(decoded.jti, remainingSec);
+      }
+      return { sid: typeof decoded.sid === 'string' && decoded.sid ? decoded.sid : undefined };
+    } catch {
+      // Ignore already expired token
+      return {};
+    }
   }
 
   private clearSessionCookies(res: Response) {
@@ -105,15 +141,19 @@ export class AuthController {
   @Post('register')
   @Throttle({ default: { limit: 10, ttl: 600_000 } })
   @ApiOperation({
-    summary: 'Register a new user account, initialize starter templates, and send confirmation email',
+    summary:
+      'Register a new user account, initialize starter templates, and send confirmation email',
   })
   async register(
     @Body(new ZodValidationPipe(RegisterSchema)) body: RegisterDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<RegisterResponseDto> {
     const result = await this.authService.registerUser(body);
     if (!result.requiresEmailConfirmation) {
-      const tokens = await this.issueSessionCookies(result, res);
+      const tokens = await this.issueSessionCookies(result, res, {
+        deviceLabel: this.resolveDeviceLabel(req),
+      });
       return { ...result, tokens };
     }
     return result;
@@ -124,10 +164,13 @@ export class AuthController {
   @ApiOperation({ summary: 'Confirm user email address via token and sign in' })
   async verifyEmail(
     @Body(new ZodValidationPipe(VerifyEmailSchema)) body: VerifyEmailDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<UserDto> {
     const user = await this.authService.verifyEmail(body.token);
-    const tokens = await this.issueSessionCookies(user, res);
+    const tokens = await this.issueSessionCookies(user, res, {
+      deviceLabel: this.resolveDeviceLabel(req),
+    });
     return { ...user, tokens };
   }
 
@@ -143,18 +186,14 @@ export class AuthController {
   @Post('forgot-password')
   @Throttle({ default: { limit: 5, ttl: 600_000 } })
   @ApiOperation({ summary: 'Request a password reset email link' })
-  async forgotPassword(
-    @Body(new ZodValidationPipe(ForgotPasswordSchema)) body: ForgotPasswordDto,
-  ) {
+  async forgotPassword(@Body(new ZodValidationPipe(ForgotPasswordSchema)) body: ForgotPasswordDto) {
     return this.authService.requestPasswordReset(body.email);
   }
 
   @Post('reset-password')
   @Throttle({ default: { limit: 10, ttl: 600_000 } })
   @ApiOperation({ summary: 'Reset account password using a valid reset token' })
-  async resetPassword(
-    @Body(new ZodValidationPipe(ResetPasswordSchema)) body: ResetPasswordDto,
-  ) {
+  async resetPassword(@Body(new ZodValidationPipe(ResetPasswordSchema)) body: ResetPasswordDto) {
     return this.authService.resetPassword(body.token, body.newPassword);
   }
 
@@ -163,10 +202,13 @@ export class AuthController {
   @ApiOperation({ summary: 'Authenticate user with email & password' })
   async login(
     @Body(new ZodValidationPipe(LoginSchema)) body: LoginDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<UserDto> {
     const user = await this.authService.authenticateUser(body.email, body.password);
-    const tokens = await this.issueSessionCookies(user, res);
+    const tokens = await this.issueSessionCookies(user, res, {
+      deviceLabel: this.resolveDeviceLabel(req),
+    });
     return { ...user, tokens };
   }
 
@@ -225,21 +267,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const result = await this.authService.confirmAccountDeletion(body.token);
-
-    const accessToken = extractBearerToken(req) ?? (req.cookies?.accessToken as string | undefined);
-    if (accessToken) {
-      try {
-        const decoded = verifyAccessToken(accessToken);
-        if (decoded.jti && decoded.exp) {
-          const remainingSec = decoded.exp - Math.floor(Date.now() / 1000);
-          if (remainingSec > 0) {
-            await getRedis().set(`access_denylist:${decoded.jti}`, '1', 'EX', remainingSec);
-          }
-        }
-      } catch {
-        // Ignore already expired token
-      }
-    }
+    await this.denylistAccessToken(req);
 
     this.clearSessionCookies(res);
     return {
@@ -250,31 +278,57 @@ export class AuthController {
 
   @Post('logout')
   @UseGuards(AuthGuard, CsrfGuard)
-  @ApiOperation({ summary: 'Log out and invalidate current session tokens' })
+  @ApiOperation({ summary: 'Log out this device and revoke only its session' })
   async logout(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @Body(new ZodValidationPipe(RefreshTokenBodySchema.optional())) body?: RefreshTokenBodyDto,
+  ) {
+    const { sid } = await this.denylistAccessToken(req);
+    const refreshToken =
+      body?.refreshToken?.trim() || (req.cookies?.refreshToken as string | undefined);
+    if (sid) {
+      await this.refreshTokenService.deleteByFamilyId(sid);
+    } else if (refreshToken) {
+      await this.refreshTokenService.deleteByHashedTokenOf(refreshToken);
+    }
+    this.clearSessionCookies(res);
+
+    return { success: true };
+  }
+
+  @Post('logout-all')
+  @UseGuards(AuthGuard, CsrfGuard)
+  @ApiOperation({ summary: 'Log out all devices and revoke every refresh token of the user' })
+  async logoutAll(
     @CurrentUser() currentUser: AuthenticatedUser,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const accessToken = extractBearerToken(req) ?? (req.cookies?.accessToken as string | undefined);
-    if (accessToken) {
-      try {
-        const decoded = verifyAccessToken(accessToken);
-        if (decoded.jti && decoded.exp) {
-          const remainingSec = decoded.exp - Math.floor(Date.now() / 1000);
-          if (remainingSec > 0) {
-            await getRedis().set(`access_denylist:${decoded.jti}`, '1', 'EX', remainingSec);
-          }
-        }
-      } catch {
-        // Ignore already expired token
-      }
-    }
-
+    // Other devices' access tokens stay valid until they expire (ACCESS_TOKEN_EXPIRY_MS).
+    await this.denylistAccessToken(req);
     await this.refreshTokenService.deleteByUserId(currentUser.id);
     this.clearSessionCookies(res);
 
     return { success: true };
+  }
+
+  @Post('device-session')
+  @UseGuards(AuthGuard, CsrfGuard)
+  @Throttle({ default: { limit: 10, ttl: 600_000 } })
+  @ApiOperation({
+    summary: 'Issue an independent session for a companion device (e.g. Apple Watch)',
+  })
+  async createDeviceSession(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Body(new ZodValidationPipe(DeviceSessionSchema)) body: DeviceSessionDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const tokens = await this.issueSessionCookies(currentUser, res, {
+      deviceLabel: body.deviceLabel,
+      setCookies: false,
+    });
+    return { success: true, tokens };
   }
 
   @Post('refresh-token')
@@ -285,7 +339,7 @@ export class AuthController {
     @Body(new ZodValidationPipe(RefreshTokenBodySchema)) body?: RefreshTokenBodyDto,
   ) {
     const refreshToken =
-      (req.cookies?.refreshToken as string | undefined) ?? body?.refreshToken?.trim();
+      body?.refreshToken?.trim() || (req.cookies?.refreshToken as string | undefined);
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token not provided');
     }
@@ -309,14 +363,16 @@ export class AuthController {
       throw new NotFoundException('User not found');
     }
 
-    const claimed = await this.refreshTokenService.claimToken(refreshToken);
-    if (!claimed) {
-      await this.refreshTokenService.deleteByUserId(payload.id);
+    const rotation = await this.refreshTokenService.rotate(refreshToken);
+    if (rotation.status !== 'ok') {
       this.clearSessionCookies(res);
       throw new ForbiddenException('Refresh token not found or already used');
     }
 
-    const tokens = await this.issueSessionCookies(user, res);
+    const tokens = await this.issueSessionCookies(user, res, {
+      familyId: rotation.familyId,
+      deviceLabel: rotation.deviceLabel,
+    });
     return { success: true, tokens };
   }
 }
