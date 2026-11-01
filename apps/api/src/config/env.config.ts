@@ -45,7 +45,10 @@ export function getJwtRefreshSecret(): string {
   return _jwtRefreshSecret;
 }
 
-export const REFRESH_TOKEN_EXPIRY_MS = Number(process.env.REFRESH_TOKEN_EXPIRY_MS) || 604800000;
+export const REFRESH_TOKEN_EXPIRY_MS = Number(process.env.REFRESH_TOKEN_EXPIRY_MS) || 7776000000;
+// Window in which an already-rotated refresh token is still accepted (lost responses, tabs).
+export const REFRESH_TOKEN_REUSE_GRACE_MS =
+  Number(process.env.REFRESH_TOKEN_REUSE_GRACE_MS) || 30000;
 
 export const DATABASE_URL =
   process.env.DATABASE_URL || `postgresql://postgres:postgres@localhost:5432/luki_fitti`;

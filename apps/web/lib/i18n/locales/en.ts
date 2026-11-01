@@ -610,6 +610,11 @@ export const en = {
       'Your workouts are saved on this device only. Sign in to back them up and use them on your other devices.',
     changePasswordBtn: 'Change Password',
     signOutBtn: 'Sign Out',
+    signOutAllBtn: 'Sign out of all devices',
+    signOutAllDialogTitle: 'Sign out of all devices',
+    signOutAllDialogDesc:
+      'You’ll be signed out on all devices, including the iPhone and Apple Watch app.',
+    signOutAllError: 'Could not sign out of all devices. Please try again.',
     deleteAccountBtn: 'Delete Account',
     signInTab: 'Sign In',
     registerTab: 'Create Account',

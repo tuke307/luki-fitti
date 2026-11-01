@@ -126,6 +126,10 @@ export const auth = {
     apiFetch<{ success: boolean }>('/auth/logout', {
       method: 'POST',
     }),
+  logoutAll: () =>
+    apiFetch<{ success: boolean }>('/auth/logout-all', {
+      method: 'POST',
+    }),
   refreshToken: () =>
     apiFetch<{ success: boolean }>('/auth/refresh-token', {
       method: 'POST',

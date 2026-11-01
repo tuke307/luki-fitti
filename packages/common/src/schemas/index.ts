@@ -191,9 +191,19 @@ export const RefreshTokenBodySchema = z.object({
   refreshToken: z.string().min(1).optional(),
 });
 
+export const DeviceSessionSchema = z.object({
+  deviceLabel: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9-]{1,32}$/),
+});
+
 export const UserPayloadSchema = z.object({
   id: z.string(),
   email: z.string(),
+  /** Session (refresh token family) id. */
+  sid: z.string().optional(),
 });
 
 export type RegisterDto = z.infer<typeof RegisterSchema>;
@@ -213,6 +223,7 @@ export type UpdatePreferencesDto = z.infer<typeof UpdatePreferencesSchema>;
 export type UserPreferencesDto = z.infer<typeof UserPreferencesSchema>;
 export type AuthTokensDto = z.infer<typeof AuthTokensSchema>;
 export type RefreshTokenBodyDto = z.infer<typeof RefreshTokenBodySchema>;
+export type DeviceSessionDto = z.infer<typeof DeviceSessionSchema>;
 export type UserDto = z.infer<typeof UserSchema> & {
   tokens?: AuthTokensDto;
 };

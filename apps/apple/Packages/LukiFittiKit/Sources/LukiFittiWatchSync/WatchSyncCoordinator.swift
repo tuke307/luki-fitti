@@ -69,6 +69,9 @@ public struct WatchContextPayload: Codable, Sendable, Equatable {
     public var preferences: UserPreferencesDto
     public var currentUser: UserDto?
     public var authTokens: AuthTokensDto?
+    /// Identifies the Watch session in `authTokens`; re-sends with the same id must not overwrite
+    /// tokens the Watch has rotated since. Optional so payloads from older app versions decode.
+    public var authHandoffId: String?
     public var activeSession: WorkoutSessionDto?
     public var latestCompletedSession: WorkoutSessionDto?
     /// Workouts deleted on the iPhone, so a Watch that missed the delete message still drops them.
@@ -84,6 +87,7 @@ public struct WatchContextPayload: Codable, Sendable, Equatable {
         preferences: UserPreferencesDto,
         currentUser: UserDto? = nil,
         authTokens: AuthTokensDto? = nil,
+        authHandoffId: String? = nil,
         activeSession: WorkoutSessionDto? = nil,
         latestCompletedSession: WorkoutSessionDto? = nil,
         deletedSessionIds: [String] = []
@@ -96,6 +100,7 @@ public struct WatchContextPayload: Codable, Sendable, Equatable {
         self.preferences = preferences
         self.currentUser = currentUser
         self.authTokens = authTokens
+        self.authHandoffId = authHandoffId
         self.activeSession = activeSession
         self.latestCompletedSession = latestCompletedSession
         self.deletedSessionIds = deletedSessionIds
@@ -108,11 +113,18 @@ public struct WatchAuthPayload: Codable, Sendable, Equatable {
     public var preferences: UserPreferencesDto
     public var currentUser: UserDto?
     public var authTokens: AuthTokensDto?
+    public var authHandoffId: String?
 
-    public init(preferences: UserPreferencesDto, currentUser: UserDto? = nil, authTokens: AuthTokensDto? = nil) {
+    public init(
+        preferences: UserPreferencesDto,
+        currentUser: UserDto? = nil,
+        authTokens: AuthTokensDto? = nil,
+        authHandoffId: String? = nil
+    ) {
         self.preferences = preferences
         self.currentUser = currentUser
         self.authTokens = authTokens
+        self.authHandoffId = authHandoffId
     }
 }
 
@@ -159,6 +171,8 @@ func watchSyncMessage(for error: any Error) -> String {
 /// Asks the other device to send its data again (e.g. the Watch's "Sync with iPhone" button).
 struct WatchSyncRequest: Codable {
     var watchSyncRequest: String
+    /// Lets the iPhone drop the second copy of a request sent both live and queued.
+    var requestId: String?
 }
 
 public enum WatchSyncMerger {
@@ -221,6 +235,8 @@ public final class WatchSyncCoordinator: NSObject {
     public var onActivated: (() -> Void)?
     /// iPhone: the Watch asked for a fresh copy of the sign-in and workouts.
     public var onContextRequested: (() -> Void)?
+    /// iPhone: the Watch's session was rejected and it needs a newly minted one.
+    public var onAuthRequested: (() -> Void)?
     /// iPhone: the Watch discarded a workout it had just finished.
     /// Watch: the iPhone deleted a finished workout from its history.
     public var onSessionDiscarded: ((String) -> Void)?
@@ -230,6 +246,8 @@ public final class WatchSyncCoordinator: NSObject {
     private static let lastReceivedKey = "watchSync.lastReceivedAt"
 
     static let authContextKey = "watch_auth_payload"
+    static let authRequestKey = "watch_auth_request"
+    private var handledAuthRequestIds: [String] = []
     static let contextFileKind = "watch_context_payload"
 
     #if canImport(WatchConnectivity)
@@ -329,6 +347,7 @@ public final class WatchSyncCoordinator: NSObject {
         preferences: UserPreferencesDto,
         currentUser: UserDto? = nil,
         authTokens: AuthTokensDto? = nil,
+        authHandoffId: String? = nil,
         activeSession: WorkoutSessionDto? = nil,
         deletedSessionIds: [String] = []
     ) {
@@ -342,6 +361,7 @@ public final class WatchSyncCoordinator: NSObject {
             preferences: preferences,
             currentUser: currentUser,
             authTokens: authTokens,
+            authHandoffId: authHandoffId,
             activeSession: activeSession,
             deletedSessionIds: deletedSessionIds
         )
@@ -363,7 +383,12 @@ public final class WatchSyncCoordinator: NSObject {
             return
         }
         #endif
-        let auth = WatchAuthPayload(preferences: preferences, currentUser: currentUser, authTokens: authTokens)
+        let auth = WatchAuthPayload(
+            preferences: preferences,
+            currentUser: currentUser,
+            authTokens: authTokens,
+            authHandoffId: authHandoffId
+        )
         if let authData = try? JSONEncoder().encode(auth) {
             do {
                 try WCSession.default.updateApplicationContext([
@@ -420,6 +445,44 @@ public final class WatchSyncCoordinator: NSObject {
         #else
         return false
         #endif
+    }
+
+    /// iPhone: whether a Watch app can receive what is pushed (paired and installed, or the
+    /// simulator bridge). Used to avoid minting Watch sessions for users without a Watch.
+    public var canDeliverToWatch: Bool {
+        if Self.simulatorBridgeURL != nil { return true }
+        return status.isPaired && status.isCounterpartInstalled
+    }
+
+    /// Watch: asks the iPhone to mint a new Watch session because this one was rejected. Sent live
+    /// when the iPhone is reachable, otherwise queued until it is.
+    public func requestAuthFromCompanion() {
+        #if canImport(WatchConnectivity)
+        guard WCSession.isSupported(), WCSession.default.activationState == .activated else { return }
+        let requestId = UUID().uuidString
+        let key = Self.authRequestKey
+        let queue: @Sendable () -> Void = {
+            WCSession.default.transferUserInfo([key: requestId])
+        }
+        guard WCSession.default.isReachable,
+              let data = try? JSONEncoder().encode(WatchSyncRequest(watchSyncRequest: "auth", requestId: requestId)) else {
+            queue()
+            return
+        }
+        WCSession.default.sendMessageData(data, replyHandler: nil) { error in
+            watchSyncLog.error("Sign-in request failed: \(error.localizedDescription, privacy: .public)")
+            queue()
+        }
+        #endif
+    }
+
+    private func handleAuthRequest(id: String?) {
+        if let id {
+            guard !handledAuthRequestIds.contains(id) else { return }
+            handledAuthRequestIds = Array((handledAuthRequestIds + [id]).suffix(20))
+        }
+        markReceived()
+        onAuthRequested?()
     }
 
     /// Persisted so "last synced" survives app restarts.
@@ -556,6 +619,9 @@ public final class WatchSyncCoordinator: NSObject {
            let decoded = try? JSONDecoder().decode(WatchContextPayload.self, from: data) {
             onContextReceived?(decoded)
         }
+        if let requestId = dict[Self.authRequestKey] as? String {
+            handleAuthRequest(id: requestId)
+        }
         if let data = dict["active_session"] as? Data,
            let session = try? JSONDecoder().decode(WorkoutSessionDto.self, from: data) {
             onActiveSessionReceived?(session)
@@ -584,6 +650,11 @@ public final class WatchSyncCoordinator: NSObject {
            request.watchSyncRequest == "context" {
             markReceived()
             onContextRequested?()
+            return
+        }
+        if let request = try? JSONDecoder().decode(WatchSyncRequest.self, from: data),
+           request.watchSyncRequest == "auth" {
+            handleAuthRequest(id: request.requestId)
             return
         }
         if let packet = try? JSONDecoder().decode(SessionMutationPacket.self, from: data) {

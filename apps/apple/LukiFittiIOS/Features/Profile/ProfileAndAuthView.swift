@@ -378,8 +378,15 @@ private struct AccountSettingsPage: View {
     @Binding var statusMessage: String?
     @State private var deleteAccountPassword: String = ""
     @State private var showingDeleteRequestField: Bool = false
+    @State private var showingSignOutAllConfirmation = false
     @Environment(\.lukiLocale) private var tr
     @Environment(\.dismiss) private var dismiss
+
+    private func signOutLocally() {
+        viewModel.store.clearAllLocalData()
+        viewModel.nutrition.clear()
+        viewModel.clearBodyWeightData()
+    }
 
     var body: some View {
         List {
@@ -404,12 +411,31 @@ private struct AccountSettingsPage: View {
                     Button(tr("Sign Out"), role: .destructive) {
                         Task {
                             await viewModel.store.apiClient.logout()
-                            viewModel.store.clearAllLocalData()
-                            viewModel.nutrition.clear()
-                            viewModel.clearBodyWeightData()
+                            signOutLocally()
                         }
                     }
                     .accessibilityIdentifier("ios.profile.signOutButton")
+
+                    Button(tr("Sign out of all devices"), role: .destructive) {
+                        showingSignOutAllConfirmation = true
+                    }
+                    .accessibilityIdentifier("ios.profile.signOutAllButton")
+                    .confirmationDialog(
+                        tr("Sign out of all devices?"),
+                        isPresented: $showingSignOutAllConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button(tr("Sign out of all devices"), role: .destructive) {
+                            Task {
+                                await viewModel.store.apiClient.logoutAllDevices()
+                                signOutLocally()
+                            }
+                        }
+                        .accessibilityIdentifier("ios.profile.confirmSignOutAllButton")
+                        Button(tr("Cancel"), role: .cancel) {}
+                    } message: {
+                        Text(tr("You’ll be signed out on all devices, including the web and Apple Watch."))
+                    }
                 }
 
                 Section {

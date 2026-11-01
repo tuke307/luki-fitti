@@ -10,10 +10,11 @@ import type { UserPayloadDto } from '@luki-fitti/common/schemas';
 
 export const JWT_ALGORITHM = 'HS512';
 
-export const generateAccessToken = (user: { id: string; email: string }): string => {
+export const generateAccessToken = (user: { id: string; email: string }, sid?: string): string => {
   const payload = {
     id: user.id,
     email: user.email,
+    ...(sid ? { sid } : {}),
     jti: crypto.randomBytes(16).toString('hex'),
   };
 
@@ -23,9 +24,13 @@ export const generateAccessToken = (user: { id: string; email: string }): string
   });
 };
 
-export const generateRefreshToken = (user: { id: string; email?: string }): string => {
+export const generateRefreshToken = (
+  user: { id: string; email?: string },
+  sid?: string,
+): string => {
   const payload = {
     id: user.id,
+    ...(sid ? { sid } : {}),
     jti: crypto.randomBytes(16).toString('hex'),
   };
 

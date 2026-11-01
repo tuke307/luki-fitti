@@ -612,6 +612,11 @@ export const de = {
       'Deine Trainings sind nur auf diesem Gerät gespeichert. Melde dich an, um sie zu sichern und auf deinen anderen Geräten zu nutzen.',
     changePasswordBtn: 'Passwort ändern',
     signOutBtn: 'Abmelden',
+    signOutAllBtn: 'Auf allen Geräten abmelden',
+    signOutAllDialogTitle: 'Auf allen Geräten abmelden',
+    signOutAllDialogDesc:
+      'Du wirst auf allen Geräten abgemeldet, auch in der iPhone- und Apple-Watch-App.',
+    signOutAllError: 'Abmelden auf allen Geräten fehlgeschlagen. Bitte versuche es erneut.',
     deleteAccountBtn: 'Konto löschen',
     signInTab: 'Anmelden',
     registerTab: 'Konto erstellen',
