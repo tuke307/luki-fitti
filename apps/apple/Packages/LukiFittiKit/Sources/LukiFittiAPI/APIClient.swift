@@ -33,22 +33,49 @@ private struct APIEnvelope<T: Decodable>: Decodable {
 }
 
 private struct RefreshResponseDto: Decodable {
-    let success: Bool
+    let success: Bool?
     let tokens: AuthTokensDto?
+}
+
+/// Result of a refresh-token call. Only `.rejected` means the session is gone; `.transient`
+/// (offline, timeout, 5xx, 429) keeps the tokens so the user stays signed in.
+public enum RefreshOutcome: Sendable, Equatable {
+    case refreshed
+    case rejected
+    case transient
 }
 
 public actor APIClient {
     public nonisolated let baseURL: URL
     public nonisolated let tokenStore: any TokenStoring
     private let session: URLSession
-    private var inFlightRefreshTask: Task<Bool, Never>?
+    private var inFlightRefreshTask: Task<RefreshOutcome, Never>?
     /// Language of catalog content (exercise names, steps, starter workouts) returned by the API.
     private var locale: SupportedLocale = .resolve(nil)
+
+    /// Cookie-free session: tokens travel only in the body / `Authorization` header, so a stored
+    /// `refreshToken` cookie can never override the token this device sends.
+    public static let apiSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.httpCookieStorage = nil
+        config.httpShouldSetCookies = false
+        config.httpCookieAcceptPolicy = .never
+        return URLSession(configuration: config)
+    }()
+
+    /// Labels this device's session on the server (`X-Device-Label`).
+    public static var deviceLabel: String {
+        #if os(watchOS)
+        return "watch"
+        #else
+        return "iphone"
+        #endif
+    }
 
     public init(
         baseURL: URL = APIClient.defaultBaseURL,
         tokenStore: any TokenStoring = KeychainTokenStore(),
-        session: URLSession = .shared
+        session: URLSession = APIClient.apiSession
     ) {
         self.baseURL = baseURL
         self.tokenStore = tokenStore
@@ -187,6 +214,29 @@ public actor APIClient {
         struct EmptyResp: Decodable {}
         _ = try? await request(path: "/api/auth/logout", method: "POST", body: EmptyBody()) as EmptyResp
         tokenStore.clearTokens()
+    }
+
+    /// Ends every session of the user (web, iPhone, Apple Watch) and signs out here.
+    public func logoutAllDevices() async {
+        struct EmptyBody: Encodable {}
+        struct EmptyResp: Decodable {}
+        _ = try? await request(path: "/api/auth/logout-all", method: "POST", body: EmptyBody()) as EmptyResp
+        tokenStore.clearTokens()
+    }
+
+    /// Mints a separate session for a companion device (e.g. the Apple Watch), so it never shares
+    /// this device's single-use refresh token.
+    public func createDeviceSession(deviceLabel: String) async throws -> AuthTokensDto {
+        struct Body: Encodable { let deviceLabel: String }
+        let response: RefreshResponseDto = try await request(
+            path: "/api/auth/device-session",
+            method: "POST",
+            body: Body(deviceLabel: deviceLabel)
+        )
+        guard let tokens = response.tokens else {
+            throw APIClientError.decodingError("Missing tokens in device session response")
+        }
+        return tokens
     }
 
     // MARK: - Workouts, Exercises & Sessions Endpoints
@@ -416,8 +466,7 @@ public actor APIClient {
         req.httpMethod = method
         req.timeoutInterval = 90
         if let contentType { req.setValue(contentType, forHTTPHeaderField: "Content-Type") }
-        req.setValue("apple", forHTTPHeaderField: "X-Client-Platform")
-        req.setValue(locale.rawValue, forHTTPHeaderField: "Accept-Language")
+        setCommonHeaders(&req)
         req.setValue("Bearer \(tokens.accessToken)", forHTTPHeaderField: "Authorization")
         req.httpBody = body
 
@@ -430,10 +479,7 @@ public actor APIClient {
         }
         guard let http = response as? HTTPURLResponse else { throw APIClientError.offline("Invalid HTTP response") }
         if http.statusCode == 401 && allowRetryOn401 {
-            guard await tryRefreshSession() else {
-                tokenStore.clearTokens()
-                throw APIClientError.unauthorized
-            }
+            try await recoverFromUnauthorized(sentAccessToken: tokens.accessToken)
             return try await send(path: path, method: method, body: body, contentType: contentType, allowRetryOn401: false)
         }
         guard (200...299).contains(http.statusCode) else {
@@ -461,11 +507,11 @@ public actor APIClient {
         var req = URLRequest(url: url)
         req.httpMethod = method
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue("apple", forHTTPHeaderField: "X-Client-Platform")
-        req.setValue(locale.rawValue, forHTTPHeaderField: "Accept-Language")
+        setCommonHeaders(&req)
 
-        if let tokens = tokenStore.loadTokens() {
-            req.setValue("Bearer \(tokens.accessToken)", forHTTPHeaderField: "Authorization")
+        let sentAccessToken = tokenStore.loadTokens()?.accessToken
+        if let sentAccessToken {
+            req.setValue("Bearer \(sentAccessToken)", forHTTPHeaderField: "Authorization")
         } else if requiresAuth {
             throw APIClientError.unauthorized
         }
@@ -487,18 +533,14 @@ public actor APIClient {
         }
 
         if http.statusCode == 401 && allowRetryOn401 && path != "/api/auth/refresh-token" && path != "/api/auth/login" {
-            let refreshed = await tryRefreshSession()
-            if refreshed {
-                return try await request(
-                    path: path,
-                    method: method,
-                    body: body,
-                    requiresAuth: requiresAuth,
-                    allowRetryOn401: false
-                )
-            }
-            tokenStore.clearTokens()
-            throw APIClientError.unauthorized
+            try await recoverFromUnauthorized(sentAccessToken: sentAccessToken)
+            return try await request(
+                path: path,
+                method: method,
+                body: body,
+                requiresAuth: requiresAuth,
+                allowRetryOn401: false
+            )
         }
 
         if http.statusCode == 401 {
@@ -536,42 +578,63 @@ public actor APIClient {
         }
     }
 
-    public func tryRefreshSession() async -> Bool {
+    private func setCommonHeaders(_ req: inout URLRequest) {
+        req.setValue("apple", forHTTPHeaderField: "X-Client-Platform")
+        req.setValue(Self.deviceLabel, forHTTPHeaderField: "X-Device-Label")
+        req.setValue(locale.rawValue, forHTTPHeaderField: "Accept-Language")
+    }
+
+    /// After a 401: retries right away if another call already rotated the tokens, otherwise
+    /// refreshes. Tokens are only dropped when the server rejects the refresh token itself.
+    private func recoverFromUnauthorized(sentAccessToken: String?) async throws {
+        if let current = tokenStore.loadTokens()?.accessToken, current != sentAccessToken { return }
+        switch await tryRefreshSession() {
+        case .refreshed:
+            return
+        case .rejected:
+            tokenStore.clearTokens()
+            throw APIClientError.unauthorized
+        case .transient:
+            throw APIClientError.offline("Couldn’t renew the session. Try again when you’re online.")
+        }
+    }
+
+    /// Single-flight: concurrent callers share one refresh request.
+    public func tryRefreshSession() async -> RefreshOutcome {
         if let existingTask = inFlightRefreshTask {
             return await existingTask.value
         }
 
-        let task = Task<Bool, Never> {
-            guard let currentTokens = tokenStore.loadTokens(),
-                  let url = URL(string: "/api/auth/refresh-token", relativeTo: baseURL) else {
-                return false
-            }
+        let task = Task<RefreshOutcome, Never> {
+            guard let currentTokens = tokenStore.loadTokens() else { return .rejected }
+            guard let url = URL(string: "/api/auth/refresh-token", relativeTo: baseURL) else { return .transient }
 
             struct RefreshBody: Encodable { let refreshToken: String }
             var req = URLRequest(url: url)
             req.httpMethod = "POST"
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            req.setValue("apple", forHTTPHeaderField: "X-Client-Platform")
+            setCommonHeaders(&req)
             req.httpBody = try? JSONEncoder().encode(RefreshBody(refreshToken: currentTokens.refreshToken))
 
             guard let (data, response) = try? await session.data(for: req),
-                  let http = response as? HTTPURLResponse,
-                  (200...299).contains(http.statusCode) else {
-                return false
+                  let http = response as? HTTPURLResponse else {
+                return .transient
             }
+            if http.statusCode == 401 || http.statusCode == 403 {
+                // Tokens saved meanwhile (e.g. a new sign-in or Watch handoff) are still good.
+                if let latest = tokenStore.loadTokens(), latest.refreshToken != currentTokens.refreshToken {
+                    return .refreshed
+                }
+                return .rejected
+            }
+            guard (200...299).contains(http.statusCode) else { return .transient }
 
             let decoder = JSONDecoder()
-            if let envelope = try? decoder.decode(APIEnvelope<RefreshResponseDto>.self, from: data),
-               let tokens = envelope.data?.tokens {
-                try? tokenStore.saveTokens(tokens, userId: tokenStore.loadUserId())
-                return true
-            }
-            if let direct = try? decoder.decode(RefreshResponseDto.self, from: data),
-               let tokens = direct.tokens {
-                try? tokenStore.saveTokens(tokens, userId: tokenStore.loadUserId())
-                return true
-            }
-            return false
+            let tokens = (try? decoder.decode(APIEnvelope<RefreshResponseDto>.self, from: data))?.data?.tokens
+                ?? (try? decoder.decode(RefreshResponseDto.self, from: data))?.tokens
+            guard let tokens else { return .transient }
+            try? tokenStore.saveTokens(tokens, userId: tokenStore.loadUserId())
+            return .refreshed
         }
 
         inFlightRefreshTask = task

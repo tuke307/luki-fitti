@@ -113,7 +113,7 @@ public final class WatchWorkoutViewModel {
                 newVersion: recalculated.version
             )
         )
-        Task { await store.flushSyncQueue() }
+        Task { await flushSyncQueue() }
     }
 
     /// Adds or removes rest time; at zero the rest ends.
@@ -184,7 +184,7 @@ public final class WatchWorkoutViewModel {
         watchSyncCoordinator.broadcastDiscardedSession(clientSessionId: clientSessionId)
         completedSummarySession = nil
         WKInterfaceDevice.current().play(.stop)
-        Task { await store.flushSyncQueue() }
+        Task { await flushSyncQueue() }
     }
 
     /// The iPhone deleted finished workouts: drop them here too. The iPhone deletes the server copy.
@@ -213,6 +213,7 @@ public final class WatchWorkoutViewModel {
         isRefreshingFromServer = true
         defer { isRefreshingFromServer = false }
         await store.refreshFromServerAfterAuth()
+        requestAuthIfNeeded()
     }
 
     private func mergeIncomingActiveSession(_ incoming: WorkoutSessionDto?) {
@@ -240,19 +241,64 @@ public final class WatchWorkoutViewModel {
         applyAuth(WatchAuthPayload(
             preferences: payload.preferences,
             currentUser: payload.currentUser,
-            authTokens: payload.authTokens
+            authTokens: payload.authTokens,
+            authHandoffId: payload.authHandoffId
         ))
     }
 
     /// Tokens are saved before the user so the server refresh triggered by sign-in can use them.
+    /// Only a new handoff (or a first sign-in / other account) replaces the stored tokens; re-sends
+    /// of an applied one would roll back tokens this Watch has rotated since.
     private func applyAuth(_ auth: WatchAuthPayload) {
         store.preferences = auth.preferences
-        if let tokens = auth.authTokens {
-            try? store.apiClient.tokenStore.saveTokens(tokens, userId: auth.currentUser?.id)
+        let tokenStore = store.apiClient.tokenStore
+        let storedTokens = tokenStore.loadTokens()
+        let decision = WatchAuthHandoffPolicy.decide(
+            incomingTokens: auth.authTokens,
+            incomingUserId: auth.currentUser?.id,
+            incomingHandoffId: auth.authHandoffId,
+            storedTokens: storedTokens,
+            storedUserId: tokenStore.loadUserId() ?? store.currentUser?.id,
+            lastAppliedHandoffId: UserDefaults.standard.string(forKey: Self.lastAppliedHandoffIdKey)
+        )
+        switch decision {
+        case .apply:
+            if let tokens = auth.authTokens {
+                try? tokenStore.saveTokens(tokens, userId: auth.currentUser?.id)
+            }
+            if let id = auth.authHandoffId {
+                UserDefaults.standard.set(id, forKey: Self.lastAppliedHandoffIdKey)
+            }
+        case .discardStored:
+            tokenStore.clearTokens()
+        case .keep:
+            break
         }
         if let user = auth.currentUser, user != store.currentUser {
             store.saveAuthenticatedUser(user)
         }
+        // A new session after a rejected one: upload what was queued meanwhile.
+        if decision == .apply, storedTokens == nil, store.currentUser != nil {
+            Task { await refreshFromServer() }
+        }
+    }
+
+    private static let lastAppliedHandoffIdKey = "watchAuth.lastAppliedHandoffId"
+    private static let authRequestInterval: TimeInterval = 60
+    @ObservationIgnored private var lastAuthRequestAt: Date?
+
+    /// Signed in but the session was rejected: ask the iPhone for a new Watch session (at most
+    /// once a minute).
+    private func requestAuthIfNeeded() {
+        guard store.needsReauthentication else { return }
+        if let last = lastAuthRequestAt, Date().timeIntervalSince(last) < Self.authRequestInterval { return }
+        lastAuthRequestAt = Date()
+        watchSyncCoordinator.requestAuthFromCompanion()
+    }
+
+    private func flushSyncQueue() async {
+        await store.flushSyncQueue()
+        requestAuthIfNeeded()
     }
 
     public func startWorkout(from template: WorkoutTemplateDto) {
@@ -273,7 +319,7 @@ public final class WatchWorkoutViewModel {
         Task {
             _ = await healthCoordinator.requestAuthorization()
             await healthCoordinator.startWorkout(sessionType: .STRENGTH)
-            await store.flushSyncQueue()
+            await flushSyncQueue()
         }
     }
 
@@ -294,7 +340,7 @@ public final class WatchWorkoutViewModel {
         Task {
             _ = await healthCoordinator.requestAuthorization()
             await healthCoordinator.startWorkout(sessionType: .STRETCHING)
-            await store.flushSyncQueue()
+            await flushSyncQueue()
         }
     }
 
@@ -385,7 +431,7 @@ public final class WatchWorkoutViewModel {
         )
         watchSyncCoordinator.broadcastSetMutation(packet)
 
-        Task { await store.flushSyncQueue() }
+        Task { await flushSyncQueue() }
     }
 
     public func togglePause() {
@@ -406,7 +452,7 @@ public final class WatchWorkoutViewModel {
         store.enqueueSessionSync(session)
         watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
         activePageTab = 2
-        Task { await store.flushSyncQueue() }
+        Task { await flushSyncQueue() }
     }
 
     public func finishWorkout() async {
@@ -438,7 +484,7 @@ public final class WatchWorkoutViewModel {
         store.saveHistorySession(finalized)
         store.enqueueSessionSync(finalized)
         watchSyncCoordinator.transferCompletedStandaloneSession(finalized)
-        await store.flushSyncQueue()
+        await flushSyncQueue()
     }
     public static func makeConfigured() -> WatchWorkoutViewModel {
         let args = ProcessInfo.processInfo.arguments

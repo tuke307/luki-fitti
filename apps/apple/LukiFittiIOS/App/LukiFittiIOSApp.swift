@@ -33,6 +33,7 @@ public final class LukiAppViewModel {
     public let workoutExport: WorkoutHealthExport
     public let healthCoordinator: HealthKitWorkoutCoordinator
     public let watchSyncCoordinator: WatchSyncCoordinator
+    private let watchAuthHandoff = WatchAuthHandoffProvider()
     private let liveActivity = WorkoutLiveActivityController()
 
     public var selectedTab: LukiMainTab = .home
@@ -75,6 +76,11 @@ public final class LukiAppViewModel {
         }
         self.watchSyncCoordinator.onContextRequested = { [weak self] in
             self?.pushContextToWatch()
+        }
+        self.watchSyncCoordinator.onAuthRequested = { [weak self] in
+            guard let self, self.store.currentUser != nil else { return }
+            self.watchAuthHandoff.requestNewHandoff()
+            self.pushContextToWatch()
         }
         self.watchSyncCoordinator.onCounterpartInstalled = { [weak self] in
             self?.pushContextToWatch()
@@ -169,7 +175,35 @@ public final class LukiAppViewModel {
         }
     }
 
+    /// Sends workouts and sign-in to the Watch. The Watch gets its own session (minted via
+    /// `createDeviceSession`), never this iPhone's tokens, so both can rotate independently.
     public func pushContextToWatch() {
+        guard let userId = store.currentUser?.id else {
+            watchAuthHandoff.clear()
+            sendContextToWatch(handoff: nil)
+            return
+        }
+        let handoff = watchAuthHandoff.handoff(for: userId)
+        sendContextToWatch(handoff: handoff)
+        guard store.apiClient.isAuthenticated(),
+              watchSyncCoordinator.canDeliverToWatch,
+              !watchAuthHandoff.isMinting,
+              watchAuthHandoff.needsMint(for: userId) else { return }
+        let apiClient = store.apiClient
+        let mint = watchAuthHandoff.mint(
+            userId: userId,
+            isStillSignedIn: { [weak self] id in
+                guard let self else { return false }
+                return self.store.currentUser?.id == id && self.store.apiClient.isAuthenticated()
+            },
+            using: { try await apiClient.createDeviceSession(deviceLabel: "watch") }
+        )
+        Task { [weak self] in
+            if await mint.value != nil { self?.pushContextToWatch() }
+        }
+    }
+
+    private func sendContextToWatch(handoff: WatchAuthHandoff?) {
         watchSyncCoordinator.pushApplicationContextToWatch(
             catalog: store.catalog,
             folders: store.folders,
@@ -178,7 +212,8 @@ public final class LukiAppViewModel {
             historySessions: store.historySessions,
             preferences: store.preferences,
             currentUser: store.currentUser,
-            authTokens: store.apiClient.tokenStore.loadTokens(),
+            authTokens: handoff?.tokens,
+            authHandoffId: handoff?.id,
             activeSession: store.activeSession,
             deletedSessionIds: store.deletedSessionIds
         )
