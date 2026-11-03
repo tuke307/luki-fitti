@@ -1,14 +1,9 @@
 import Image from 'next/image';
 import { SiteHeader } from './SiteHeader';
 import { SiteFooter } from './SiteFooter';
-import {
-  APP_ORIGIN,
-  TESTFLIGHT_URL,
-  SCREENSHOTS,
-  featureRequestHref,
-  getSiteCopy,
-  type SiteLocale,
-} from '@/lib/site/config';
+import { APP_ORIGIN, TESTFLIGHT_URL, type SiteLocale } from '@/lib/site/config';
+import { SCREENSHOTS, featureRequestHref, getSiteCopy } from '@/lib/site/content';
+
 import { shotFile } from '@/lib/site/screens';
 
 function DownloadCta({ label, soonLabel }: { label: string; soonLabel: string }) {

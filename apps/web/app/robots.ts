@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next';
 import { headers } from 'next/headers';
-import { SITE_HOSTNAMES } from '../lib/config/env.config';
+import { SITE_HOSTNAMES } from '../lib/site/config';
 
 export default async function robots(): Promise<MetadataRoute.Robots> {
   const host = (await headers()).get('x-forwarded-host') ?? (await headers()).get('host') ?? '';

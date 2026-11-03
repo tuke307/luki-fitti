@@ -24,8 +24,6 @@ COPY --from=prepare /app/out/full/ .
 ARG NEXT_PUBLIC_SITE_URL
 ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 
-
-
 # Baked into NEXT_PUBLIC_GIT_SHA by next.config.js at build time
 ARG GIT_SHA
 ENV GIT_SHA=${GIT_SHA}
@@ -51,8 +49,6 @@ COPY --from=installer --chown=nextjs:nodejs /app/apps/web/public ./apps/web/publ
 
 # Re-declare ARGs so they are available at runtime (Next.js reads these server-side)
 ARG NEXT_PUBLIC_SITE_URL
-ARG SITE_HOSTNAMES
-ARG APP_ORIGIN
 
 ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 

@@ -63,7 +63,6 @@ import { AiUsageView } from './ai-usage/ai-usage-view';
 import { AiKeyCard } from './ai-key-card';
 import { buildFeatureRequestMailto } from '@luki-fitti/common/utils';
 import { AI_KEY_NAVIGATE_EVENT } from '@/lib/ai/ai-key-required';
-import { LANDING_URL } from '@/lib/config/env.config';
 import { SettingsRow, SettingsSection, SettingsSubpage } from './settings/settings-row';
 import { WeightView } from './weight/weight-view';
 import { hasPendingWeightFocusRequest } from './weight/weight-focus';
@@ -327,7 +326,6 @@ export function ProfileImportView() {
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
-
 
   useEffect(() => {
     if (!focusAfterChange.current) return;
@@ -1064,21 +1062,21 @@ export function ProfileImportView() {
 
           <SettingsSection title={t.profile.legalSectionTitle}>
             <SettingsRow
-              href={`${LANDING_URL}${locale === 'de' ? '/impressum' : '/en/imprint'}`}
+              href={`${locale === 'de' ? '/impressum' : '/en/imprint'}`}
               data-testid="settings-row-imprint"
               icon={FileText}
               tone="muted"
               title={t.profile.rowImprint}
             />
             <SettingsRow
-              href={`${LANDING_URL}${locale === 'de' ? '/datenschutz' : '/en/privacy'}`}
+              href={`${locale === 'de' ? '/datenschutz' : '/en/privacy'}`}
               data-testid="settings-row-privacy"
               icon={ShieldCheck}
               tone="muted"
               title={t.profile.rowPrivacy}
             />
             <SettingsRow
-              href={`${LANDING_URL}${locale === 'de' ? '/nutzungsbedingungen' : '/en/terms'}`}
+              href={`${locale === 'de' ? '/nutzungsbedingungen' : '/en/terms'}`}
               data-testid="settings-row-terms"
               icon={BookOpen}
               tone="muted"

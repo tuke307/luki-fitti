@@ -1,9 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  migrateToAppOrigin,
-  shouldMigrateToAppOrigin,
-} from './app-origin-migration';
+import { migrateToAppOrigin, shouldMigrateToAppOrigin } from './app-origin-migration';
 
 const HOSTS = ['luki-fitti.tony-luke.de'];
 

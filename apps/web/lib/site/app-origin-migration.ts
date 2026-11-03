@@ -1,8 +1,5 @@
 /** Decision for the PWA origin cutover — pure so it's unit-testable. */
-export function shouldMigrateToAppOrigin(
-  hostname: string,
-  siteHostnames: string[],
-): boolean {
+export function shouldMigrateToAppOrigin(hostname: string, siteHostnames: string[]): boolean {
   return siteHostnames.includes(hostname);
 }
 

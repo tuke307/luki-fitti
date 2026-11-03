@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next';
 import { headers } from 'next/headers';
-import { SITE_HOSTNAMES } from '../lib/config/env.config';
+import { SITE_HOSTNAMES } from '../lib/site/config';
 
 const SITE_PATHS = [
   '/',

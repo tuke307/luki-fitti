@@ -1,4 +1,5 @@
-import { APP_ORIGIN, TESTFLIGHT_URL, type getSiteCopy } from '@/lib/site/config';
+import { APP_ORIGIN, TESTFLIGHT_URL } from '@/lib/site/config';
+import { type getSiteCopy } from '@/lib/site/content';
 
 export function SiteHeader({ t }: { t: ReturnType<typeof getSiteCopy> }) {
   return (
@@ -19,7 +20,10 @@ export function SiteHeader({ t }: { t: ReturnType<typeof getSiteCopy> }) {
           </a>
         </nav>
         <div className="ml-auto flex items-center gap-3">
-          <a href={t.nav.switchHref} className="text-muted-foreground hover:text-foreground text-sm">
+          <a
+            href={t.nav.switchHref}
+            className="text-muted-foreground hover:text-foreground text-sm"
+          >
             {t.nav.switchTo}
           </a>
           <a

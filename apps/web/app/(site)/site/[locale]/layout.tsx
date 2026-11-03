@@ -37,7 +37,12 @@ export async function generateMetadata({
     title: meta.title,
     description: meta.description,
     alternates: { canonical: meta.canonical, languages: { de: '/', en: '/en' } },
-    openGraph: { title: meta.title, description: meta.description, images: [shotFile(lang, '01-active-workout.png')], type: 'website' },
+    openGraph: {
+      title: meta.title,
+      description: meta.description,
+      images: [shotFile(lang, '01-active-workout.png')],
+      type: 'website',
+    },
   };
 }
 

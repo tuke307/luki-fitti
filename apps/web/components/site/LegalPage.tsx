@@ -1,4 +1,5 @@
-import type { getSiteCopy, SiteLocale } from '@/lib/site/config';
+import type { SiteLocale } from '@/lib/site/config';
+import type { getSiteCopy } from '@/lib/site/content';
 import { SiteHeader } from './SiteHeader';
 import { SiteFooter } from './SiteFooter';
 
