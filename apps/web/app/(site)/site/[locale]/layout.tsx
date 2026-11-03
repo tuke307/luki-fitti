@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import '@luki-fitti/ui/globals.css';
+import '../site.css';
 import { notFound } from 'next/navigation';
 import { SITE_LOCALES, type SiteLocale } from '@/lib/site/config';
 import { shotFile } from '@/lib/site/screens';
@@ -56,8 +57,8 @@ export default async function SiteLayout({
   const { locale } = await params;
   if (!SITE_LOCALES.includes(locale as SiteLocale)) notFound();
   return (
-    <html lang={locale as SiteLocale}>
-      <body className="bg-background text-foreground min-h-dvh antialiased">{children}</body>
+    <html lang={locale as SiteLocale} className="dark">
+      <body className="site bg-background text-foreground min-h-dvh antialiased">{children}</body>
     </html>
   );
 }
