@@ -24,6 +24,11 @@ services:
       - HOSTNAME=0.0.0.0
       - API_URL=http://luki-fitti-api:3001/api
       - JWT_SECRET=${JWT_SECRET}
+      # Host routing in proxy.ts: SITE_HOSTNAMES serve the marketing site, APP_ORIGIN the app.
+      - SITE_HOSTNAMES=${SITE_HOSTNAMES:-luki-fitti.tony-luke.de}
+      - APP_ORIGIN=${APP_ORIGIN:-https://app.luki-fitti.tony-luke.de}
+      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-https://app.luki-fitti.tony-luke.de}
+      - NEXT_PUBLIC_TESTFLIGHT_URL=${NEXT_PUBLIC_TESTFLIGHT_URL:-}
     depends_on:
       luki-fitti-api:
         condition: service_healthy
@@ -42,6 +47,11 @@ services:
       retries: 3
       start_period: 40s
     labels:
+      # Both hosts serve the same web container; proxy.ts splits site vs app paths.
+      - 'caddy_1=https://luki-fitti.tony-luke.de'
+      - 'caddy_1.reverse_proxy={{upstreams 3000}}'
+      - 'caddy_2=https://app.luki-fitti.tony-luke.de'
+      - 'caddy_2.reverse_proxy={{upstreams 3000}}'
       - 'app.project=luki-fitti'
       - 'app.service=web'
 
@@ -106,6 +116,9 @@ services:
       - 'caddy_1=https://luki-fitti.tony-luke.de'
       - 'caddy_1.0_handle=/api/*'
       - 'caddy_1.0_handle.reverse_proxy={{upstreams 3001}}'
+      - 'caddy_2=https://app.luki-fitti.tony-luke.de'
+      - 'caddy_2.0_handle=/api/*'
+      - 'caddy_2.0_handle.reverse_proxy={{upstreams 3001}}'
       - 'app.project=luki-fitti'
       - 'app.service=api'
 

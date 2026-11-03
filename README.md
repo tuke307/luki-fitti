@@ -58,11 +58,16 @@ cp apps/web/.env.sample apps/web/.env.local
 | `REDIS_URL`                                                                                                                             | `api`, `email-worker` | Redis URL for BullMQ and access-token revocation                                                               |
 | `JWT_SECRET`                                                                                                                            | `api`, `web`          | Access token signing secret (`>= 32` chars in production)                                                      |
 | `JWT_REFRESH_SECRET`                                                                                                                    | `api`                 | Refresh token signing secret (`>= 32` chars in production)                                                     |
-| `FRONTEND_URL`                                                                                                                          | `api`                 | Allowed CORS origin (default `http://localhost:3000`)                                                          |
+| `FRONTEND_URL`                                                                                                                          | `api`                 | Allowed CORS origin — the app host `https://app.luki-fitti.tony-luke.de` (default `http://localhost:3000`)        |
 | `API_PORT`                                                                                                                              | `api`, `web`          | Backend port (default `3001`)                                                                                  |
 | `UMAMI_URL`                                                                                                                             | `api`                 | Self-hosted Umami base URL (default `https://umami.tony-luke.de`)                                              |
 | `UMAMI_WEBSITE_ID`                                                                                                                      | `api`                 | Umami website ID; pageview forwarding is off when unset or outside production                                  |
-| `UMAMI_ALLOWED_HOSTNAMES`                                                                                                               | `api`                 | Comma-separated hostnames to forward pageviews for (default `luki-fitti.tony-luke.de`)                         |
+| `UMAMI_ALLOWED_HOSTNAMES`                                                                                                               | `api`                 | Comma-separated hostnames to forward pageviews for (default `luki-fitti.tony-luke.de,app.luki-fitti.tony-luke.de`) |
+| `SITE_HOSTNAMES`                                                                                                                        | `web`                 | Hostnames that serve the marketing site (default `luki-fitti.tony-luke.de`)                                     |
+| `APP_ORIGIN`                                                                                                                            | `web`                 | App origin that site-host app paths redirect to (default `https://app.luki-fitti.tony-luke.de`)                 |
+| `NEXT_PUBLIC_SITE_URL`                                                                                                                  | `web`                 | Public app origin baked at build time (`https://app.luki-fitti.tony-luke.de`)                                    |
+| `NEXT_PUBLIC_LANDING_URL`                                                                                                               | `web`                 | Marketing site origin for in-app legal links (default `https://luki-fitti.tony-luke.de`)                         |
+| `NEXT_PUBLIC_TESTFLIGHT_URL`                                                                                                            | `web`                 | TestFlight link for the landing Download button; empty renders "Coming soon"                                  |
 | `AI_KEY_ENCRYPTION_KEY`                                                                                                                 | `api`                 | 32-byte master key (`openssl rand -base64 32`) encrypting per-user OpenRouter keys; AI stays off when unset    |
 | `SEAWEEDFS_ENDPOINT`, `SEAWEEDFS_PORT`, `SEAWEEDFS_USE_SSL`, `SEAWEEDFS_ACCESS_KEY_API`, `SEAWEEDFS_SECRET_KEY_API`, `SEAWEEDFS_BUCKET` | `api`                 | Private SeaweedFS storage for meal photos; optional. `SEAWEEDFS_ENDPOINT` is a host; TLS on 443 is the default |
 
@@ -108,7 +113,7 @@ cd apps/apple && xcodegen generate && open LukiFitti.xcodeproj
 xcrun simctl pair <WATCH_SIM_UDID> <IPHONE_SIM_UDID>
 ```
 
-- **Environment Switching:** `Config/Debug.xcconfig` defaults to `http://localhost:3001` and `Config/Release.xcconfig` defaults to `https://luki-fitti.tony-luke.de`. You can override the API URL in Xcode under **Edit Scheme (`⌘<`) → Run → Environment Variables → `LUKIFITTI_API_BASE_URL`**.
+- **Environment Switching:** `Config/Debug.xcconfig` defaults to `http://localhost:3001` and `Config/Release.xcconfig` defaults to `https://app.luki-fitti.tony-luke.de`. You can override the API URL in Xcode under **Edit Scheme (`⌘<`) → Run → Environment Variables → `LUKIFITTI_API_BASE_URL`**.
 - **Physical iPhone builds must use the prod URL:** On a real device `localhost` is the phone itself, so a plain Debug build can't reach the API or S3 storage. The scheme environment variable only applies to launches from Xcode, so override the build setting instead. Don't switch to Release for personal-team builds, because it resets the bundle ID prefix from `Local.xcconfig`.
 
   ```bash
@@ -116,7 +121,7 @@ xcrun simctl pair <WATCH_SIM_UDID> <IPHONE_SIM_UDID>
   xcrun devicectl list devices   # pick the "physical" UDID
   xcodebuild -project LukiFitti.xcodeproj -scheme LukiFittiIOS -configuration Debug \
     -destination 'id=<DEVICE_UDID>' -derivedDataPath build/DerivedData -allowProvisioningUpdates \
-    'LUKIFITTI_API_BASE_URL=https:/$()/luki-fitti.tony-luke.de' build
+    'LUKIFITTI_API_BASE_URL=https:/$()/app.luki-fitti.tony-luke.de' build
   APP=build/DerivedData/Build/Products/Debug-iphoneos/LukiFittiIOS.app
   /usr/libexec/PlistBuddy -c 'Print LUKIFITTI_API_BASE_URL' "$APP/Info.plist"   # expect prod URL
   xcrun devicectl device install app --device <DEVICE_UDID> "$APP"

@@ -1,2 +1,2 @@
 #include "Shared.xcconfig"
-LUKIFITTI_API_BASE_URL = https:/$()/luki-fitti.tony-luke.de
+LUKIFITTI_API_BASE_URL = https:/$()/app.luki-fitti.tony-luke.de
