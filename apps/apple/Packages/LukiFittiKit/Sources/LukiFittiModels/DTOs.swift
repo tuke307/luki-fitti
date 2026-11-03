@@ -123,8 +123,10 @@ public struct UserDto: Codable, Sendable, Equatable, Hashable, Identifiable {
     public var message: String?
     /// Admin permissions (empty for regular users).
     public var permissions: [String]? = nil
-    /// Opt-in features active for this user right now (`AI_WORKOUT_BUILDER`, `AI_MEAL_PHOTO`).
+    /// Features whose global switch is on (shown to everyone; a key is still needed to run).
     public var features: [String]? = nil
+    /// Whether the user has a usable OpenRouter key (own or admin-assigned).
+    public var aiKeyConfigured: Bool = false
 
     public func hasFeature(_ feature: FeatureGrant) -> Bool {
         features?.contains(feature.rawValue) ?? false
@@ -152,6 +154,23 @@ public struct UserDto: Codable, Sendable, Equatable, Hashable, Identifiable {
         self.tokens = tokens
         self.requiresEmailConfirmation = requiresEmailConfirmation
         self.message = message
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        email = try c.decode(String.self, forKey: .email)
+        name = try c.decodeIfPresent(String.self, forKey: .name)
+        emailVerified = try c.decodeIfPresent(Bool.self, forKey: .emailVerified)
+        lastLoginAt = try c.decodeIfPresent(String.self, forKey: .lastLoginAt)
+        createdAt = try c.decodeIfPresent(String.self, forKey: .createdAt)
+        preferences = try c.decodeIfPresent(UserPreferencesDto.self, forKey: .preferences)
+        tokens = try c.decodeIfPresent(AuthTokensDto.self, forKey: .tokens)
+        requiresEmailConfirmation = try c.decodeIfPresent(Bool.self, forKey: .requiresEmailConfirmation)
+        message = try c.decodeIfPresent(String.self, forKey: .message)
+        permissions = try c.decodeIfPresent([String].self, forKey: .permissions)
+        features = try c.decodeIfPresent([String].self, forKey: .features)
+        aiKeyConfigured = try c.decodeIfPresent(Bool.self, forKey: .aiKeyConfigured) ?? false
     }
 }
 

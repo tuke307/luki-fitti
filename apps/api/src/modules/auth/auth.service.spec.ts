@@ -387,7 +387,6 @@ describe('AuthService — Registration, Authentication & Brute-Force Protection'
       id: registered.id,
       email: registered.email,
       permissions: [],
-      featureGrants: [],
     });
 
     // CsrfGuard skips cookie CSRF checks when authenticated via Bearer token

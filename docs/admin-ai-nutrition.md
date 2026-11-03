@@ -2,32 +2,34 @@
 
 ## Roles and access
 
-There is no separate staff table: admin rights are fields on `User`.
+There is no separate staff table: admin rights are fields on `User`. There are no per-user AI
+feature grants — AI is on for everybody and only gated by a usable key.
 
-| Field                | Values                                                 | Meaning                               |
-| :------------------- | :----------------------------------------------------- | :------------------------------------ |
-| `User.permissions`   | `DASHBOARD_VIEW`, `USERS_MANAGE`, `AI_SETTINGS_MANAGE` | Admin portal access (any-of per page) |
-| `User.featureGrants` | `AI_WORKOUT_BUILDER`, `AI_MEAL_PHOTO`                  | Opt-in features for this user         |
+| Field              | Values                                                 | Meaning                               |
+| :----------------- | :----------------------------------------------------- | :------------------------------------ |
+| `User.permissions` | `DASHBOARD_VIEW`, `USERS_MANAGE`, `AI_SETTINGS_MANAGE` | Admin portal access (any-of per page) |
 
-- Both are re-read from the database on every request by `AuthGuard`; the JWT never carries them,
-  so revoking access is immediate.
+- Permissions are re-read from the database on every request by `AuthGuard`; the JWT never
+  carries them, so revoking access is immediate.
 - `PermissionsGuard` and `FeatureGuard` are deny-by-default: a route without
   `@RequirePermissions(...)` / `@RequireFeature(...)` metadata is rejected.
 - There is **no global OpenRouter key**. Each user needs a key: their own (USER slot, set in the
   profile) or one an admin assigned (ADMIN slot, Admin → Users). The own key wins.
-- With an **own key** every AI feature whose global switch in `AppSettings` is on is active — no
-  grant needed and no daily limit (the user pays OpenRouter directly).
-- With only an **admin-assigned key** a feature needs the grant and the global switch, and the
-  daily run limit applies.
-- `/auth/me` returns the resulting `features` list; clients only show AI entry points for
-  features in that list. `GET /api/ai/key` returns the key status (never the key).
+- With **any usable key** every AI feature whose global switch in `AppSettings` is on is
+  active. Own-key runs have no daily limit (the user pays OpenRouter directly); admin-assigned
+  runs keep the daily run limit.
+- `/auth/me` returns `features` (globally enabled features, independent of the key) and
+  `aiKeyConfigured` (whether a usable key slot exists). Clients show AI entry points for
+  `features`; tapping without a key warns the user. A server-side miss is denied by
+  `FeatureGuard` with `AI_KEY_REQUIRED` (403). `GET /api/ai/key` returns the key status
+  (never the key).
 - Keys are stored AES-256-GCM encrypted (`UserAiKey`, random IV, auth tag, AAD
   `${userId}:${slot}`) with the master key `AI_KEY_ENCRYPTION_KEY`; only the last 4 characters
   are shown. Users see whether an admin key is assigned; admins see whether an own key exists.
 - Admins cannot remove their own `USERS_MANAGE` permission (prevents lock-out).
 
 Locally, `yarn db:seed` upserts the accounts in `packages/database/data/users.jsonc` with all
-admin permissions, feature grants and the starter templates (skipped when `NODE_ENV=production`).
+admin permissions and the starter templates (skipped when `NODE_ENV=production`).
 
 The portal lives at `/admin` in the web app (Overview, Users, AI). `proxy.ts` bounces visitors
 without a session to `/login?redirect=…`; authorization itself is always enforced by the API.

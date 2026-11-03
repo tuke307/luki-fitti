@@ -187,6 +187,10 @@ export const enFeatures = {
     unavailable: 'The assistant isn’t available right now. Try again in a moment.',
     quota: 'You’ve reached today’s limit. Try again tomorrow.',
     disabled: 'This feature isn’t turned on for your account.',
+    keyRequiredTitle: 'OpenRouter key required',
+    keyRequiredBody:
+      'AI features run on your own OpenRouter API key. Add it in your profile to use them.',
+    keyRequiredAction: 'Add key',
   },
   feedback: {
     menuLabel: 'Doesn’t work for me',

@@ -30,16 +30,24 @@ export class ApiClientError extends Error {
   status: number;
   isAuthError: boolean;
   isNetworkError: boolean;
+  /** Machine-readable error code from `details.code` (e.g. AI_KEY_REQUIRED). */
+  code: string | null;
 
   constructor(
     message: string,
-    opts: { status?: number; isAuthError?: boolean; isNetworkError?: boolean } = {},
+    opts: {
+      status?: number;
+      isAuthError?: boolean;
+      isNetworkError?: boolean;
+      code?: string | null;
+    } = {},
   ) {
     super(message);
     this.name = 'ApiClientError';
     this.status = opts.status ?? 0;
     this.isAuthError = opts.isAuthError ?? false;
     this.isNetworkError = opts.isNetworkError ?? false;
+    this.code = opts.code ?? null;
   }
 }
 
@@ -107,9 +115,11 @@ export async function fetchClient<T = null>(
       : ({ success: true, data: null, error: null } as ApiResponse<T>);
 
     if (!response.ok) {
+      const details = (responseData as { details?: { code?: string } }).details;
       throw new ApiClientError(responseData.error || `Request failed (${response.status})`, {
         status: response.status,
         isAuthError: response.status === 401,
+        code: details?.code ?? null,
       });
     }
 
