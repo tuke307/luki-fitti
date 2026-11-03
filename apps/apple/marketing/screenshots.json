@@ -1,0 +1,59 @@
+[
+  {
+    "id": "active-workout",
+    "captureTest": "test01ActiveWorkout",
+    "headline": { "en": "Log every set with one tap", "de": "Jeder Satz mit einem Tipp" },
+    "subline": {
+      "en": "Workouts, rest timers and Live Activity — always in sync.",
+      "de": "Workouts, Pausen-Timer und Live Activity — immer synchron."
+    }
+  },
+  {
+    "id": "suggestion",
+    "captureTest": "test02SetSuggestion",
+    "headline": { "en": "Know when to add weight", "de": "Wissen, wann mehr Gewicht drin ist" },
+    "subline": {
+      "en": "Suggestions from your last session, right where you log.",
+      "de": "Vorschläge aus deinem letzten Training, direkt beim Loggen."
+    }
+  },
+  {
+    "id": "watch",
+    "captureTest": "test03WatchWorkout",
+    "headline": { "en": "Train right from your wrist", "de": "Direkt vom Handgelenk trainieren" },
+    "subline": {
+      "en": "Sets, heart rate and rest timer on Apple Watch.",
+      "de": "Sätze, Puls und Pausen-Timer auf der Apple Watch."
+    }
+  },
+  {
+    "id": "exercises",
+    "captureTest": "test04ExerciseLibrary",
+    "headline": { "en": "1,100+ exercises with guides", "de": "Über 1.100 Übungen mit Anleitung" },
+    "subline": {
+      "en": "Photos, cues and alternatives for every exercise.",
+      "de": "Fotos, Hinweise und Alternativen für jede Übung."
+    }
+  },
+  {
+    "id": "history",
+    "captureTest": "test05HistoryProgress",
+    "headline": { "en": "See your progress week by week", "de": "Fortschritt Woche für Woche" },
+    "subline": {
+      "en": "History, streaks and totals — without the noise.",
+      "de": "Verlauf, Serien und Summen — ohne das Rauschen."
+    }
+  },
+  {
+    "id": "meal",
+    "captureTest": "test06MealPhoto",
+    "headline": {
+      "en": "Snap your meal, get the macros",
+      "de": "Mahlzeit fotografieren, Makros erhalten"
+    },
+    "subline": {
+      "en": "Optional AI on your own OpenRouter key.",
+      "de": "Optionale KI mit deinem eigenen OpenRouter-Schlüssel."
+    }
+  }
+]

@@ -908,6 +908,10 @@ public final class LukiAppViewModel {
             store.saveHistorySession(completed)
         }
 
+        if args.contains("--uitesting-marketing") {
+            seedMarketingContent(vm: vm, store: store, args: args)
+        }
+
         if args.contains("--uitesting-seed-conflict"),
            let firstTemplate = store.folders.first?.templates.first {
             let localSession = SessionCalculator.createOfflineSessionFromTemplate(
@@ -929,6 +933,83 @@ public final class LukiAppViewModel {
         }
 
         return vm
+    }
+
+    /// Seeds believable content for `--uitesting-marketing` screenshot runs: ~8 weeks of
+    /// history, an active session mid-workout (next set carries a +2.5 kg suggestion), fake
+    /// live vitals and a meal entry with AI-tagged items — all local, no network.
+    private static func seedMarketingContent(vm: LukiAppViewModel, store: OfflineStore, args: [String]) {
+        let iso = ISO8601DateFormatter()
+        guard let template = store.folders.first?.templates.first else { return }
+
+        // ~8 weeks of history so progression insights and the progress view look real.
+        for week in stride(from: 8, through: 1, by: -1) {
+            for sessionIdx in 0..<2 {
+                var completed = SessionCalculator.createOfflineSessionFromTemplate(
+                    template: template,
+                    catalog: store.catalog,
+                    userId: "local-user",
+                    weightUnit: .KG,
+                    sourceDevice: .IPHONE
+                )
+                for exIdx in completed.exercises.indices {
+                    for sIdx in completed.exercises[exIdx].sets.indices {
+                        completed.exercises[exIdx].sets[sIdx].completed = true
+                        // Slowly trending weights, so suggestions look earned.
+                        if let w = completed.exercises[exIdx].sets[sIdx].weight {
+                            completed.exercises[exIdx].sets[sIdx].weight = w + Double(8 - week) * 2.5
+                        }
+                    }
+                    completed.exercises[exIdx].status = .COMPLETED
+                }
+                completed.status = .COMPLETED
+                let daysAgo = week * 7 + sessionIdx * 3
+                completed.completedAt = iso.string(
+                    from: Date().addingTimeInterval(-TimeInterval(daysAgo * 86400))
+                )
+                completed.startedAt = iso.string(
+                    from: Date().addingTimeInterval(-TimeInterval(daysAgo * 86400 + 3600))
+                )
+                completed.activeDurationSeconds = 2700
+                completed = SessionCalculator.recalculateSessionTotals(completed)
+                store.saveHistorySession(completed)
+            }
+        }
+
+        // Active session mid-workout; first set done so the next shows the +2.5 kg suggestion.
+        vm.startSession(from: template, sourceDevice: .IPHONE)
+        if var active = store.activeSession {
+            for exIdx in active.exercises.indices {
+                if !active.exercises[exIdx].sets.isEmpty {
+                    active.exercises[exIdx].sets[0].completed = true
+                }
+            }
+            active.startedAt = iso.string(from: Date().addingTimeInterval(-1500))
+            active.restTimerEndsAt = iso.string(from: Date().addingTimeInterval(45))
+            store.saveActiveSession(active)
+        }
+
+        // Fake live vitals for the bpm / kcal rows and the Live Activity.
+        vm.healthCoordinator.isWorkoutRunning = true
+        vm.healthCoordinator.currentHeartRateBpm = 128
+        vm.healthCoordinator.activeCaloriesKcal = 214
+
+        // Demo meal with AI-tagged items (no OpenRouter call happens).
+        let mealItems = [
+            MealItemDto(name: "Chicken breast", grams: 150, kcal: 248, proteinG: 46.5, carbsG: 0, fatG: 5.4, source: .AI, confidence: 0.92),
+            MealItemDto(name: "Rice", grams: 200, kcal: 260, proteinG: 5.4, carbsG: 56, fatG: 0.6, source: .AI, confidence: 0.88),
+            MealItemDto(name: "Broccoli", grams: 120, kcal: 41, proteinG: 3.4, carbsG: 8, fatG: 0.4, source: .AI, confidence: 0.85),
+        ]
+        var meal = MealEntryDto(
+            id: "marketing-meal",
+            clientEntryId: "marketing-meal",
+            eatenAt: iso.string(from: Date()),
+            mealType: .LUNCH,
+            label: "Lunch",
+            items: mealItems
+        )
+        meal.totals = NutritionMath.sum(mealItems)
+        vm.nutrition.upsertLocal(meal)
     }
 }
 
