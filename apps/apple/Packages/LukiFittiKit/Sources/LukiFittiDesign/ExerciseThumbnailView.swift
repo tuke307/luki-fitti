@@ -1,7 +1,7 @@
 import SwiftUI
 import LukiFittiModels
 
-/// Exercise photo thumbnail with the same footprint as `ExerciseVectorVisualView`: neutral fill
+/// Exercise photo thumbnail with the exact outer size of `ExerciseVectorVisualView`: neutral fill
 /// while loading, first catalog frame once decoded, vector visual as placeholder/fallback.
 /// Decorative only — the row's text carries the meaning.
 public struct ExerciseThumbnailView: View {
@@ -31,7 +31,9 @@ public struct ExerciseThumbnailView: View {
     }
 
     private var urls: [URL] { ExerciseMediaFrames.imageURLs(for: exercise) }
-    private var pixelSize: Int { compact ? 128 : 256 }
+    private var size: CGSize { ExerciseVectorVisualView.outerSize(compact: compact) }
+    private var radius: CGFloat { ExerciseVectorVisualView.cornerRadius(compact: compact) }
+    private var pixelSize: Int { Int(max(size.width, size.height)) * 3 }
 
     public var body: some View {
         Group {
@@ -44,14 +46,15 @@ public struct ExerciseThumbnailView: View {
                 image
                     .resizable()
                     .scaledToFill()
-                    .frame(width: compact ? 38 : 64, height: compact ? 38 : 64)
-                    .clipShape(RoundedRectangle(cornerRadius: compact ? 10 : 14, style: .continuous))
+                    .frame(width: size.width, height: size.height)
+                    .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
             }
         }
         .accessibilityHidden(true)
         .task(id: urls.first) {
-            guard let url = urls.first else { return }
+            // Reset before the guard so a reused row can't keep the previous exercise's photo.
             phase = .loading
+            guard let url = urls.first else { return }
             do {
                 let cgImage = try await ExerciseImageLoader.shared.image(for: url, maxPixelSize: pixelSize)
                 phase = .loaded(Image(decorative: cgImage, scale: 1))
@@ -64,9 +67,9 @@ public struct ExerciseThumbnailView: View {
     }
 
     private var placeholder: some View {
-        RoundedRectangle(cornerRadius: compact ? 10 : 14, style: .continuous)
+        RoundedRectangle(cornerRadius: radius, style: .continuous)
             .fill(LukiColors.fill)
-            .frame(width: compact ? 38 : 64, height: compact ? 38 : 64)
+            .frame(width: size.width, height: size.height)
     }
 
     private var vectorFallback: some View {

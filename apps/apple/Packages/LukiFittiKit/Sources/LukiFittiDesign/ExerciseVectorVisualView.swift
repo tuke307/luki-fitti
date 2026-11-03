@@ -4,6 +4,20 @@ import LukiFittiModels
 /// Native SwiftUI anatomical dual-pose (1. START / 2. CONTRACT) vector illustration
 /// matching `apps/web/components/gym/exercise-visual.tsx`.
 public struct ExerciseVectorVisualView: View {
+    /// Single-figure edge, spacing and padding per size variant, so photo thumbnails and
+    /// placeholders can reuse the exact same footprint as the two drawn figures.
+    public static func figureSize(compact: Bool) -> CGFloat { compact ? 38 : 64 }
+    public static func spacing(compact: Bool) -> CGFloat { compact ? 6 : 12 }
+    public static func padding(compact: Bool) -> CGFloat { compact ? 6 : 10 }
+    public static func cornerRadius(compact: Bool) -> CGFloat { compact ? 10 : 14 }
+
+    /// Total outer size: two figures side by side plus spacing and padding.
+    public static func outerSize(compact: Bool) -> CGSize {
+        let w = figureSize(compact: compact) * 2 + spacing(compact: compact) + padding(compact: compact) * 2
+        let h = figureSize(compact: compact) + padding(compact: compact) * 2
+        return CGSize(width: w, height: h)
+    }
+
     public let exerciseName: String
     public let primaryMuscle: MuscleGroup
     public let compact: Bool
@@ -15,13 +29,13 @@ public struct ExerciseVectorVisualView: View {
     }
 
     public var body: some View {
-        HStack(spacing: compact ? 6 : 12) {
+        HStack(spacing: Self.spacing(compact: compact)) {
             poseFrame(isPeakContraction: false, caption: "1. START")
             poseFrame(isPeakContraction: true, caption: "2. CONTRACT")
         }
-        .padding(compact ? 6 : 10)
+        .padding(Self.padding(compact: compact))
         .background(
-            RoundedRectangle(cornerRadius: compact ? 10 : 14)
+            RoundedRectangle(cornerRadius: Self.cornerRadius(compact: compact))
                 .fill(LukiColors.fill)
         )
     }
@@ -96,7 +110,10 @@ public struct ExerciseVectorVisualView: View {
                 legs.addLine(to: CGPoint(x: center.x + scale * 0.18, y: scale * 0.88))
                 context.stroke(legs, with: .color(.white.opacity(0.85)), lineWidth: 2)
             }
-            .frame(width: compact ? 38 : 64, height: compact ? 38 : 64)
+            .frame(
+                width: Self.figureSize(compact: compact),
+                height: Self.figureSize(compact: compact)
+            )
 
             if !compact {
                 Text(caption)
