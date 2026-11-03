@@ -691,6 +691,8 @@ export const de = {
     kcalValue: '{count} kcal',
     notSet: 'Nicht festgelegt',
 version: 'Version',
+    feedbackSectionTitle: 'Feedback',
+    rowFeatureRequest: 'Feature wünschen',
     backToSettings: 'Zurück zu den Einstellungen',
   },
   auth: {

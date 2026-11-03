@@ -10,6 +10,7 @@ public struct ProfileAndAuthView: View {
     @State private var password: String = ""
     @State private var name: String = ""
     @State private var statusMessage: String?
+    @State private var showsNoMailAlert = false
 
     @State private var newResetPassword: String = ""
     @State private var generalAutosave = PreferencesAutosaver()
@@ -78,6 +79,19 @@ public struct ProfileAndAuthView: View {
 
             dataSection
 
+            Section(tr("Feedback")) {
+                Button {
+                    requestFeature()
+                } label: {
+                    SettingsRow(
+                        tr("Request a feature"),
+                        systemImage: "lightbulb",
+                        tint: LukiColors.accent
+                    )
+                }
+                .accessibilityIdentifier("ios.profile.featureRequestRow")
+            }
+
             Section {
                 Text(tr("Version %@", AppVersionInfo.display))
                     .font(.footnote)
@@ -87,6 +101,14 @@ public struct ProfileAndAuthView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .alert(tr("No mail app found"), isPresented: $showsNoMailAlert) {
+            Button(tr("Copy address")) {
+                UIPasteboard.general.string = FeedbackMail.feedbackEmail
+            }
+            Button(tr("OK"), role: .cancel) {}
+        } message: {
+            Text(FeedbackMail.feedbackEmail)
+        }
         .onChange(of: GeneralPreferences(store.preferences)) { _, values in
             generalAutosave.schedule { await saveGeneral(values) }
         }
@@ -111,6 +133,19 @@ public struct ProfileAndAuthView: View {
             exerciseSuggestionsEnabled = p.exerciseSuggestionsEnabled
             notificationsEnabled = p.notificationsEnabled
             restTimerSound = p.restTimerSound
+        }
+    }
+
+    /// Opens the prefilled feature-request mail; without a configured mail app we offer the
+    /// address to copy instead.
+    private func requestFeature() {
+        guard let url = FeedbackMail.featureRequestURL(
+            locale: tr.rawValue,
+            appVersion: AppVersionInfo.display,
+            os: AppVersionInfo.osDescription
+        ) else { return }
+        UIApplication.shared.open(url) { success in
+            if !success { showsNoMailAlert = true }
         }
     }
 

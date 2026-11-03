@@ -46,7 +46,9 @@ interface SettingsRowProps {
   title: string;
   subtitle?: string;
   value?: string;
-  onClick: () => void;
+  onClick?: () => void;
+  /** External link target (e.g. mailto:) — rendered as an anchor instead of a button. */
+  href?: string;
   'data-testid'?: string;
 }
 
@@ -58,17 +60,14 @@ export function SettingsRow({
   subtitle,
   value,
   onClick,
+  href,
   ...rest
 }: SettingsRowProps) {
-  return (
-    <li className="before:bg-border relative not-first:before:absolute not-first:before:top-0 not-first:before:right-0 not-first:before:left-15 not-first:before:h-px">
-      <button
-        type="button"
-        onClick={onClick}
-        data-testid={rest['data-testid']}
-        className="hover:bg-secondary/50 active:bg-secondary/70 focus-visible:ring-ring flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
-      >
-        <span
+  const rowClass =
+    'hover:bg-secondary/50 active:bg-secondary/70 focus-visible:ring-ring flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset';
+  const content = (
+    <>
+      <span
           aria-hidden="true"
           className={cn(
             'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
@@ -91,7 +90,24 @@ export function SettingsRow({
           </span>
         )}
         <ChevronRight className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden="true" />
-      </button>
+    </>
+  );
+  return (
+    <li className="before:bg-border relative not-first:before:absolute not-first:before:top-0 not-first:before:right-0 not-first:before:left-15 not-first:before:h-px">
+      {href ? (
+        <a href={href} data-testid={rest['data-testid']} className={rowClass}>
+          {content}
+        </a>
+      ) : (
+        <button
+          type="button"
+          onClick={onClick}
+          data-testid={rest['data-testid']}
+          className={rowClass}
+        >
+          {content}
+        </button>
+      )}
     </li>
   );
 }
