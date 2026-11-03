@@ -1,0 +1,34 @@
+/* Site-only polish — imported by the (site) layout, never reaches app routes. */
+body.site ::selection {
+  background: oklch(from var(--primary) l c h / 0.3);
+  color: var(--foreground);
+}
+body.site {
+  accent-color: var(--primary);
+}
+body.site a:focus-visible,
+body.site button:focus-visible,
+body.site summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* The one authored motion: hero text + device rise in once. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes site-rise {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .site-hero-in {
+    animation: site-rise 700ms var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)) both;
+  }
+  .site-hero-device {
+    animation: site-rise 700ms var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)) 120ms both;
+  }
+}

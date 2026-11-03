@@ -112,12 +112,32 @@ async function composite(page, { srcUri, frame }) {
 }
 
 /** Fail if the rendered PNG is (nearly) a single colour. */
+function alphaAt(file) {
+  const out = execSync(
+    `python3 -c "
+from PIL import Image
+im = Image.open('${file}').convert('RGBA')
+w, h = im.size
+px = im.load()
+corners = [px[2, 2][3], px[w - 3, 2][3], px[2, h - 3][3], px[w - 3, h - 3][3]]
+centre = px[w // 2, h // 2][3]
+print(','.join(str(a) for a in corners) + '|' + str(centre))
+"`,
+    { encoding: 'utf8' },
+  ).trim();
+  const [corners, centre] = out.split('|');
+  return { corners: corners.split(',').map(Number), centre: Number(centre) };
+}
+
 function pixelVariance(file) {
   const out = execSync(
     `python3 -c "
 from PIL import Image
 import sys
-im = Image.open('${file}').convert('L').resize((64, 64))
+src = Image.open('${file}').convert('RGBA')
+im = Image.new('RGB', src.size, (0, 0, 0))
+im.paste(src, mask=src.split()[3])
+im = im.convert('L').resize((64, 64))
 px = list(im.getdata())
 m = sum(px) / len(px)
 print(round(sum((p - m) ** 2 for p in px) / len(px), 1))
@@ -206,7 +226,7 @@ async function main() {
       const landH = Math.ceil((frame ? frame.fh : 1450) * scale) + 16;
       await page.setViewportSize({ width: LAND_W, height: landH });
       await page.setContent(
-        `<!doctype html><body style="margin:0;background:#0a0a0a;"><div style="width:${composed.w}px;height:${frame ? frame.fh : 1450}px;transform:scale(${scale});transform-origin:top left;">${composed.html}</div></body>`,
+        `<!doctype html><body style="margin:0;background:transparent;"><div style="width:${composed.w}px;height:${frame ? frame.fh : 1450}px;transform:scale(${scale});transform-origin:top left;">${composed.html}</div></body>`,
         { waitUntil: 'load' },
       );
       const decoded = await page.evaluate(async () => {
@@ -218,7 +238,7 @@ async function main() {
         console.warn(`skip ${lang} ${shot.id} landing — image failed to decode`);
         continue;
       }
-      await page.screenshot({ path: landFile, type: 'png' });
+      await page.screenshot({ path: landFile, type: 'png', omitBackground: true });
 
       // ---- guards ----------------------------------------------------------
       for (const [label, file] of [
@@ -227,6 +247,11 @@ async function main() {
       ]) {
         const v = pixelVariance(file);
         if (!(v > 50)) throw new Error(`${label} ${file} looks blank (variance ${v})`);
+        if (label === 'landing') {
+          const { corners, centre } = alphaAt(file);
+          if (corners.some((a) => a > 0)) throw new Error(`${file} corner is opaque — the frame must be the edge`);
+          if (centre < 200) throw new Error(`${file} centre is transparent`);
+        }
         const hash = execSync(`md5 -q "${file}"`).toString().trim();
         // Different shots in the SAME language must differ; en↔de may legitimately be
         // identical on locale-invariant screens (numbers, kg).

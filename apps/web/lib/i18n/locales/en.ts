@@ -727,7 +727,6 @@ export const en = {
   site: {
     nav: {
       features: 'Features',
-      screenshots: 'Screenshots',
       faq: 'FAQ',
       openApp: 'Open app',
       download: 'Download',
@@ -759,12 +758,12 @@ export const en = {
         },
       ],
     },
-    shots: { title: 'See it in action' },
     features: [
       {
         title: 'Workouts & progression',
         body: 'Plan templates, log each set with one tap, and see when it is time to add weight or reps. Your history shows progress week by week.',
         shotId: 'suggestion',
+        extraShotId: 'history',
       },
       {
         title: 'Apple Watch',
@@ -784,7 +783,7 @@ export const en = {
       {
         title: 'AI — only if you want it',
         body: 'Workout plans and meal analysis run on your own OpenRouter key. No subscription, no credits — your key, your costs.',
-        shotId: 'history',
+        shotId: null,
       },
     ],
     faq: {

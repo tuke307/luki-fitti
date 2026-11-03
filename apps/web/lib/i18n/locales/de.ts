@@ -729,7 +729,6 @@ export const de = {
   site: {
     nav: {
       features: 'Funktionen',
-      screenshots: 'Screenshots',
       faq: 'FAQ',
       openApp: 'App öffnen',
       download: 'Download',
@@ -761,12 +760,12 @@ export const de = {
         },
       ],
     },
-    shots: { title: 'So sieht es aus' },
     features: [
       {
         title: 'Workouts & Progression',
         body: 'Plane Vorlagen, logge jeden Satz mit einem Tipp und sieh, wann du Gewicht oder Wiederholungen steigern solltest. Dein Verlauf zeigt dir Woche für Woche, was sich tut.',
         shotId: 'suggestion',
+        extraShotId: 'history',
       },
       {
         title: 'Apple Watch',
@@ -786,7 +785,7 @@ export const de = {
       {
         title: 'KI — nur wenn du willst',
         body: 'Workout-Vorschläge und Essensanalyse laufen über deinen eigenen OpenRouter-Key. Kein Abo, keine Credits, deine Kosten.',
-        shotId: 'history',
+        shotId: null,
       },
     ],
     faq: {

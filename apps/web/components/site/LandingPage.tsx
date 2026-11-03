@@ -1,126 +1,177 @@
 import Image from 'next/image';
+import { ChevronDown, Smartphone, TrendingUp, Watch, WifiOff } from 'lucide-react';
+
 import { SiteHeader } from './SiteHeader';
 import { SiteFooter } from './SiteFooter';
 import { APP_ORIGIN, TESTFLIGHT_URL, type SiteLocale } from '@/lib/site/config';
-import { SCREENSHOTS, featureRequestHref, getSiteCopy } from '@/lib/site/content';
-
+import { featureRequestHref, getSiteCopy, SCREENSHOTS } from '@/lib/site/content';
 import { shotFile } from '@/lib/site/screens';
 
-function DownloadCta({ label, soonLabel }: { label: string; soonLabel: string }) {
+const GLANCE_ICONS = [WifiOff, TrendingUp, Watch] as const;
+
+function OpenAppCta({ label, className }: { label: string; className: string }) {
+  return (
+    <a
+      href={APP_ORIGIN}
+      className={`bg-primary text-primary-foreground inline-flex items-center justify-center rounded-full font-medium transition-[filter] hover:brightness-110 ${className}`}
+      data-testid="hero-open-app"
+    >
+      {label}
+    </a>
+  );
+}
+
+function DownloadNote({ label, soonLabel }: { label: string; soonLabel: string }) {
   if (TESTFLIGHT_URL) {
     return (
       <a
         href={TESTFLIGHT_URL}
-        className="bg-primary text-primary-foreground inline-block rounded-full px-6 py-2.5 font-medium"
+        className="bg-secondary text-foreground inline-flex h-12 items-center justify-center rounded-full px-7 text-base font-medium transition-[filter] hover:brightness-110"
       >
         {label}
       </a>
     );
   }
   return (
-    <span
-      aria-disabled="true"
-      className="bg-secondary text-muted-foreground inline-block cursor-default rounded-full px-6 py-2.5"
-    >
+    <p className="text-muted-foreground flex items-center gap-2 text-sm">
+      <Smartphone size={16} aria-hidden />
       {soonLabel}
-    </span>
+    </p>
+  );
+}
+
+function ShotImage({
+  src,
+  alt,
+  width,
+  className,
+  priority = false,
+}: {
+  src: string;
+  alt: string;
+  width: number;
+  className?: string;
+  priority?: boolean;
+}) {
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      width={width * 2}
+      height={Math.round(width * 2 * 2.17)}
+      priority={priority}
+      className={`drop-shadow-[0_30px_60px_rgba(0,0,0,0.55)] ${className ?? ''}`}
+      unoptimized
+    />
   );
 }
 
 export function LandingPage({ locale }: { locale: SiteLocale }) {
   const t = getSiteCopy(locale);
-  const shots = SCREENSHOTS.map((s) => ({ ...s, src: shotFile(locale, s.file) }));
-  const hero = shots[0]!;
+  const shots = Object.fromEntries(
+    SCREENSHOTS.map((s) => [s.id, { ...s, src: shotFile(locale, s.file) }]),
+  );
+  const hero = shots['active-workout']!;
 
   return (
     <>
       <SiteHeader t={t} />
       <main>
-        <section className="mx-auto grid max-w-5xl items-center gap-10 px-4 py-16 sm:grid-cols-2">
-          <div className="space-y-5">
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">{t.hero.headline}</h1>
-            <p className="text-muted-foreground text-lg">{t.hero.sub}</p>
-            <div className="flex flex-wrap items-center gap-4 pt-2">
-              <a
-                href={APP_ORIGIN}
-                className="border-border hover:bg-secondary inline-block rounded-full border px-6 py-2.5 font-medium"
-                data-testid="hero-open-app"
-              >
-                {t.hero.openApp}
-              </a>
-              <DownloadCta label={t.hero.download} soonLabel={t.hero.downloadSoon} />
+        {/* ---- hero ---------------------------------------------------- */}
+        <section className="relative mx-auto grid min-h-[calc(100dvh-3.5rem)] max-w-[920px] items-center gap-12 px-4 pt-10 pb-16 sm:pt-12 lg:grid-cols-2 lg:gap-8 lg:py-12">
+          <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center lg:justify-end">
+            <div className="h-[640px] w-[640px] rounded-full bg-[radial-gradient(closest-side,oklch(0.72_0.16_50/0.22),transparent)]" />
+          </div>
+          <div className="site-hero-in space-y-6">
+            <h1 className="text-5xl leading-[1.02] font-semibold tracking-[-0.03em] text-balance sm:text-6xl lg:text-7xl">
+              {t.hero.headline}
+            </h1>
+            <p className="text-muted-foreground max-w-[34ch] text-lg text-pretty sm:text-xl">
+              {t.hero.sub}
+            </p>
+            <div className="flex flex-wrap items-center gap-5 pt-2">
+              <OpenAppCta label={t.hero.openApp} className="h-12 px-7 text-base" />
+              <DownloadNote label={t.hero.download} soonLabel={t.hero.downloadSoon} />
             </div>
           </div>
-          <div className="mx-auto w-full max-w-xs sm:max-w-sm">
-            <Image
+          <div className="site-hero-device mx-auto">
+            <ShotImage
               src={hero.src}
               alt={t.hero.heroAlt}
-              width={660}
-              height={1434}
+              width={360}
               priority
-              className="h-auto w-full rounded-[2rem] shadow-2xl"
+              className="w-[300px] drop-shadow-[0_40px_80px_rgba(0,0,0,0.6)] lg:w-[360px]"
             />
           </div>
         </section>
 
-        <section className="bg-secondary/40 border-y">
-          <div className="mx-auto max-w-5xl px-4 py-14">
-            <h2 className="text-2xl font-semibold">{t.glance.title}</h2>
-            <div className="mt-8 grid gap-4 sm:grid-cols-3">
-              {t.glance.items.map((item) => (
-                <div key={item.title} className="bg-card rounded-2xl p-6">
-                  <h3 className="font-semibold">{item.title}</h3>
-                  <p className="text-muted-foreground mt-2 text-sm">{item.body}</p>
+        {/* ---- highlights --------------------------------------------- */}
+        <section className="mx-auto max-w-5xl px-4">
+          <h2 className="sr-only">{t.glance.title}</h2>
+          <div className="border-white/10 grid gap-8 border-t py-12 sm:grid-cols-3">
+            {t.glance.items.map((item, i) => {
+              const Icon = GLANCE_ICONS[i] ?? WifiOff;
+              return (
+                <div key={item.title} className="space-y-2">
+                  <Icon size={20} className="text-primary" aria-hidden />
+                  <h3 className="text-base font-semibold">{item.title}</h3>
+                  <p className="text-muted-foreground text-sm">{item.body}</p>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </section>
 
-        <section id="screenshots" className="mx-auto max-w-5xl scroll-mt-16 px-4 py-14">
-          <h2 className="text-2xl font-semibold">{t.shots.title}</h2>
-          <div className="mt-8 flex snap-x snap-mandatory gap-5 overflow-x-auto pb-4">
-            {shots.map((shot) => (
-              <figure
-                key={shot.id}
-                className="bg-card w-56 shrink-0 snap-start overflow-hidden rounded-2xl"
-              >
-                <Image
-                  src={shot.src}
-                  alt={shot.alt[locale]}
-                  width={448}
-                  height={972}
-                  className="h-auto w-full object-cover"
-                />
-                <figcaption className="text-muted-foreground p-3 text-center text-sm">
-                  {shot.alt[locale]}
-                </figcaption>
-              </figure>
-            ))}
-          </div>
-        </section>
-
-        <section id="features" className="bg-secondary/40 scroll-mt-16 border-y">
-          <div className="mx-auto max-w-5xl space-y-16 px-4 py-16">
+        {/* ---- features ----------------------------------------------- */}
+        <section id="features" className="scroll-mt-16">
+          <div className="mx-auto max-w-6xl px-4">
             {t.features.map((feature, i) => {
-              const shot = (shots.find((s) => s.id === feature.shotId) ?? shots[0])!;
+              if (!feature.shotId) {
+                return (
+                  <div
+                    key={feature.title}
+                    className="border-white/10 mx-auto max-w-2xl border-y py-14 text-center lg:py-20"
+                  >
+                    <h3 className="text-3xl font-semibold tracking-[-0.02em] text-balance sm:text-4xl">
+                      {feature.title}
+                    </h3>
+                    <p className="text-muted-foreground mx-auto mt-4 max-w-[42ch] text-lg">
+                      {feature.body}
+                    </p>
+                  </div>
+                );
+              }
+              const shot = shots[feature.shotId] ?? hero;
+              const extra = 'extraShotId' in feature && feature.extraShotId ? shots[feature.extraShotId] : null;
               const flipped = i % 2 === 1;
+              const isWatch = feature.shotId === 'watch';
               return (
                 <div
                   key={feature.title}
-                  className={`grid items-center gap-8 sm:grid-cols-2 ${flipped ? 'sm:[&>*:first-child]:order-2' : ''}`}
+                  className={`grid items-center gap-12 py-14 lg:grid-cols-[1fr_1.1fr] lg:gap-8 lg:py-20 ${
+                    flipped ? 'lg:[&>*:first-child]:order-2' : ''
+                  }`}
                 >
-                  <div className="space-y-3">
-                    <h3 className="text-xl font-semibold">{feature.title}</h3>
-                    <p className="text-muted-foreground">{feature.body}</p>
+                  <div className="space-y-4">
+                    <h3 className="text-3xl font-semibold tracking-[-0.02em] text-balance sm:text-4xl">
+                      {feature.title}
+                    </h3>
+                    <p className="text-muted-foreground max-w-[42ch] text-lg">{feature.body}</p>
                   </div>
-                  <div className="mx-auto w-full max-w-[16rem]">
-                    <Image
+                  <div className="relative mx-auto">
+                    {extra && (
+                      <ShotImage
+                        src={extra.src}
+                        alt=""
+                        width={280}
+                        className="absolute top-[6%] -translate-x-[42%] w-[280px] scale-90 opacity-90 hidden lg:block"
+                      />
+                    )}
+                    <ShotImage
                       src={shot.src}
                       alt={shot.alt[locale]}
-                      width={528}
-                      height={1148}
-                      className="h-auto w-full rounded-[1.75rem] shadow-xl"
+                      width={isWatch ? 300 : 280}
+                      className={isWatch ? 'w-[300px]' : 'w-[280px]'}
                     />
                   </div>
                 </div>
@@ -129,24 +180,38 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
           </div>
         </section>
 
-        <section id="faq" className="mx-auto max-w-3xl scroll-mt-16 px-4 py-16">
-          <h2 className="text-2xl font-semibold">{t.faq.title}</h2>
-          <div className="mt-8 space-y-3">
+        {/* ---- faq ------------------------------------------------------ */}
+        <section id="faq" className="mx-auto max-w-3xl scroll-mt-16 px-4 py-20">
+          <h2 className="text-3xl font-semibold tracking-[-0.02em]">{t.faq.title}</h2>
+          <div className="bg-card divide-white/10 mt-8 divide-y rounded-2xl">
             {t.faq.items.slice(0, 4).map((item) => (
-              <details key={item.q} className="bg-card group rounded-2xl px-5 py-4">
-                <summary className="cursor-pointer font-medium marker:content-none">
+              <details key={item.q} className="group">
+                <summary className="flex min-h-14 cursor-pointer items-center justify-between px-5 font-medium marker:content-none">
                   {item.q}
+                  <ChevronDown
+                    size={18}
+                    className="text-muted-foreground shrink-0 transition-transform group-open:rotate-180"
+                    aria-hidden
+                  />
                 </summary>
-                <p className="text-muted-foreground mt-3 text-sm">{item.a}</p>
+                <p className="text-muted-foreground px-5 pb-5">{item.a}</p>
               </details>
             ))}
-            <details className="bg-card group rounded-2xl px-5 py-4">
-              <summary className="cursor-pointer font-medium marker:content-none">
+            <details className="group">
+              <summary className="flex min-h-14 cursor-pointer items-center justify-between px-5 font-medium marker:content-none">
                 {t.faq.items[4]!.q}
+                <ChevronDown
+                  size={18}
+                  className="text-muted-foreground shrink-0 transition-transform group-open:rotate-180"
+                  aria-hidden
+                />
               </summary>
-              <p className="text-muted-foreground mt-3 text-sm">
+              <p className="text-muted-foreground px-5 pb-5">
                 {t.faq.items[4]!.a}{' '}
-                <a href={featureRequestHref(locale)} className="text-primary font-medium underline">
+                <a
+                  href={featureRequestHref(locale)}
+                  className="text-primary font-medium underline underline-offset-4"
+                >
                   {t.faq.requestLink}
                 </a>
               </p>
@@ -154,18 +219,12 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
           </div>
         </section>
 
-        <section className="bg-secondary/40 border-t">
-          <div className="mx-auto max-w-5xl px-4 py-16 text-center">
-            <h2 className="text-3xl font-bold">{t.cta.title}</h2>
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
-              <a
-                href={APP_ORIGIN}
-                className="bg-primary text-primary-foreground inline-block rounded-full px-8 py-3 font-medium"
-              >
-                {t.cta.openApp}
-              </a>
-              <DownloadCta label={t.hero.download} soonLabel={t.hero.downloadSoon} />
-            </div>
+        {/* ---- final cta ------------------------------------------------ */}
+        <section className="mx-auto max-w-5xl px-4 py-28 text-center">
+          <h2 className="text-4xl font-semibold tracking-[-0.03em] sm:text-5xl">{t.cta.title}</h2>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-5">
+            <OpenAppCta label={t.cta.openApp} className="h-12 px-7 text-base" />
+            <DownloadNote label={t.hero.download} soonLabel={t.hero.downloadSoon} />
           </div>
         </section>
       </main>
