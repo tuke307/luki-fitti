@@ -10,7 +10,10 @@ const packageVersion = createRequire(import.meta.url)('./package.json').version;
 function gitSha() {
   if (process.env.GIT_SHA) return process.env.GIT_SHA.slice(0, 7);
   try {
-    return execSync('git rev-parse --short HEAD', { cwd: __dirname, stdio: ['ignore', 'pipe', 'ignore'] })
+    return execSync('git rev-parse --short HEAD', {
+      cwd: __dirname,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
       .toString()
       .trim();
   } catch {
