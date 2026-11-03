@@ -18,7 +18,13 @@
     "MAILPIT_URL",
     "TEST_USER_EMAIL",
     "TEST_USER_PASSWORD",
-    "TEST_USER_NAME"
+    "TEST_USER_NAME",
+    "SITE_HOSTNAMES",
+    "APP_ORIGIN",
+    "NEXT_PUBLIC_TESTFLIGHT_URL",
+    "NEXT_PUBLIC_LANDING_URL",
+    "NEXT_PUBLIC_SITE_URL",
+    "API_URL"
   ],
   "tasks": {
     "build": {

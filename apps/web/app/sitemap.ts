@@ -1,21 +1,27 @@
 import { MetadataRoute } from 'next';
-import { SITE_URL } from '../lib/config/env.config';
+import { headers } from 'next/headers';
+import { SITE_HOSTNAMES } from '../lib/config/env.config';
 
-export default function sitemap(): MetadataRoute.Sitemap {
+const SITE_PATHS = [
+  '/',
+  '/en',
+  '/impressum',
+  '/datenschutz',
+  '/nutzungsbedingungen',
+  '/en/imprint',
+  '/en/privacy',
+  '/en/terms',
+];
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const host = (await headers()).get('x-forwarded-host') ?? (await headers()).get('host') ?? '';
+  if (!SITE_HOSTNAMES.some((h) => host.startsWith(h))) return [];
+
   const now = new Date().toISOString();
-
-  return [
-    {
-      url: `${SITE_URL}/`,
-      lastModified: now,
-      changeFrequency: 'daily',
-      priority: 1.0,
-    },
-    {
-      url: `${SITE_URL}/login`,
-      lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    },
-  ];
+  return SITE_PATHS.map((path) => ({
+    url: `https://${host}${path}`,
+    lastModified: now,
+    changeFrequency: 'weekly',
+    priority: path === '/' ? 1.0 : path.startsWith('/en') && path !== '/en' ? 0.3 : 0.5,
+  }));
 }

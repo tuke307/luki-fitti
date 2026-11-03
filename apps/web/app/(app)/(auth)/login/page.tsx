@@ -11,6 +11,7 @@ import { Label } from '@luki-fitti/ui/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
+import { LANDING_URL } from '@/lib/config/env.config';
 
 /** Only same-origin paths are accepted, so `?redirect=` can't send users to another site. */
 function safeRedirect(target: string | null): string {
@@ -24,7 +25,7 @@ export default function LoginPage() {
   const redirectTo = safeRedirect(useSearchParams().get('redirect'));
   const { login, register, resendConfirmation, continueOfflineLocal, error, infoMessage, loading } =
     useAuth();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -183,6 +184,17 @@ export default function LoginPage() {
           </Button>
         </div>
       </Card>
+      <nav className="text-muted-foreground mt-4 flex justify-center gap-4 text-xs">
+        <a href={`${LANDING_URL}${locale === 'de' ? '/impressum' : '/en/imprint'}`} className="hover:text-foreground">
+          {t.profile.rowImprint}
+        </a>
+        <a href={`${LANDING_URL}${locale === 'de' ? '/datenschutz' : '/en/privacy'}`} className="hover:text-foreground">
+          {t.profile.rowPrivacy}
+        </a>
+        <a href={`${LANDING_URL}${locale === 'de' ? '/nutzungsbedingungen' : '/en/terms'}`} className="hover:text-foreground">
+          {t.profile.rowTerms}
+        </a>
+      </nav>
     </div>
   );
 }
