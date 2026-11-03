@@ -96,6 +96,8 @@ yarn dev
 | `yarn db:migrate -- <name>`          | Create and apply a new Prisma migration                                 |
 | `yarn --cwd apps/api openapi:export` | Export Swagger OpenAPI spec to `apps/apple`                             |
 
+Releasing: see [docs/release.md](docs/release.md).
+
 ---
 
 ## Native Apple App (`apps/apple`)
