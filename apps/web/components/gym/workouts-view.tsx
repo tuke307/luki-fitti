@@ -80,6 +80,7 @@ import { RainbowExerciseSuggestionCard } from './rainbow-suggestion-card';
 import { SwipeRow } from './swipe-row';
 import { TemplateSetsEditor } from './template-sets-editor';
 import { AiWorkoutBuilderDialog } from './ai-workout-builder-dialog';
+import { AiKeyRequiredDialog } from './ai-key-required-dialog';
 import type {
   TemplateExerciseInputDto,
   WorkoutFolderDto,
@@ -113,6 +114,9 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
   const suggestionsEnabled = user?.preferences?.exerciseSuggestionsEnabled ?? true;
   const canPlanWithAi = user?.features?.includes(FeatureGrant.AI_WORKOUT_BUILDER) ?? false;
   const [aiBuilderOpen, setAiBuilderOpen] = useState(false);
+  const [aiKeyWarnOpen, setAiKeyWarnOpen] = useState(false);
+  const openAiBuilder = () =>
+    user?.aiKeyConfigured ? setAiBuilderOpen(true) : setAiKeyWarnOpen(true);
 
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Record<string, boolean>>({});
   const [builderSuggestionDismissed, setBuilderSuggestionDismissed] = useState(false);
@@ -927,7 +931,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                 <FolderPlus /> {t.workouts.newFolder}
               </DropdownMenuItem>
               {canPlanWithAi && (
-                <DropdownMenuItem onSelect={() => setAiBuilderOpen(true)}>
+                <DropdownMenuItem onSelect={openAiBuilder}>
                   <Sparkles /> {t.aiBuilder.entryButton}
                 </DropdownMenuItem>
               )}
@@ -940,7 +944,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
         <button
           type="button"
           data-testid="workouts-ai-builder"
-          onClick={() => setAiBuilderOpen(true)}
+          onClick={openAiBuilder}
           className="bg-card hover:bg-secondary/40 flex min-h-14 w-full items-center gap-3 rounded-[1.25rem] px-5 py-3 text-left transition-colors"
         >
           <span className="bg-primary/12 text-primary flex size-10 shrink-0 items-center justify-center rounded-full">
@@ -954,6 +958,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
           </span>
         </button>
       )}
+      <AiKeyRequiredDialog open={aiKeyWarnOpen} onOpenChange={setAiKeyWarnOpen} />
       <AiWorkoutBuilderDialog open={aiBuilderOpen} onOpenChange={setAiBuilderOpen} />
 
       <div className="space-y-4">

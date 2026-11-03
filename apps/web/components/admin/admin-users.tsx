@@ -11,9 +11,6 @@ import {
   ADMIN_PERMISSIONS,
   ADMIN_PERMISSION_LABELS,
   AdminPermission,
-  FEATURE_GRANTS,
-  FEATURE_GRANT_LABELS,
-  type FeatureGrant,
 } from '@luki-fitti/common/enums';
 import type { AdminUserDto } from '@luki-fitti/common/schemas';
 import { api } from '@/lib/api';
@@ -57,7 +54,7 @@ export function AdminUsers() {
 
   const update = async (
     target: AdminUserDto,
-    patch: { permissions?: AdminPermission[]; featureGrants?: FeatureGrant[] },
+    patch: { permissions: AdminPermission[] },
   ) => {
     const key = `${target.id}`;
     setPending(key);
@@ -184,32 +181,7 @@ export function AdminUsers() {
                   </Button>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <fieldset className="space-y-1">
-                    <legend className="text-muted-foreground mb-1 text-[0.8125rem] font-semibold">
-                      {t.admin.features}
-                    </legend>
-                    {FEATURE_GRANTS.map((grant) => {
-                      const id = `grant-${u.id}-${grant}`;
-                      return (
-                        <label
-                          key={grant}
-                          htmlFor={id}
-                          className="flex min-h-11 items-center justify-between gap-3 text-[0.9375rem]"
-                        >
-                          {FEATURE_GRANT_LABELS[grant][locale]}
-                          <Switch
-                            id={id}
-                            checked={u.featureGrants.includes(grant)}
-                            disabled={pending === u.id}
-                            onCheckedChange={(on) =>
-                              void update(u, { featureGrants: toggle(u.featureGrants, grant, on) })
-                            }
-                          />
-                        </label>
-                      );
-                    })}
-                  </fieldset>
+                <div>
                   <fieldset className="space-y-1">
                     <legend className="text-muted-foreground mb-1 text-[0.8125rem] font-semibold">
                       {t.admin.permissions}

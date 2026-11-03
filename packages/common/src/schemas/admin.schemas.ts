@@ -12,14 +12,9 @@ export const AdminUserQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(25),
 });
 
-export const UpdateUserAccessSchema = z
-  .object({
-    permissions: z.array(z.enum(AdminPermission)).max(20).optional(),
-    featureGrants: z.array(z.enum(FeatureGrant)).max(20).optional(),
-  })
-  .refine((v) => v.permissions !== undefined || v.featureGrants !== undefined, {
-    message: 'Provide permissions and/or featureGrants',
-  });
+export const UpdateUserAccessSchema = z.object({
+  permissions: z.array(z.enum(AdminPermission)).max(20),
+});
 
 /** OpenRouter model id, e.g. `openai/gpt-6.1-terra` or `google/gemini-3.8-flash`. */
 export const OpenRouterModelIdSchema = z
@@ -57,7 +52,6 @@ export interface AdminUserDto {
   createdAt: string;
   lastLoginAt: string | null;
   permissions: AdminPermission[];
-  featureGrants: FeatureGrant[];
   completedSessions: number;
   mealEntries: number;
   aiRunsLast30Days: number;

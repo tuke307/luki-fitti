@@ -147,6 +147,20 @@ public enum NutritionMath {
         return Int(kcal.rounded())
     }
 
+    /// Live kcal estimate for a running session whose `activeDurationSeconds` is only written
+    /// when it finishes — measures the MET estimate against the elapsed seconds instead.
+    public static func liveBurnedKcalEstimate(
+        for session: WorkoutSessionDto,
+        elapsedSeconds: Int,
+        bodyWeightKg: Double?
+    ) -> Int {
+        var copy = session
+        copy.estimatedCaloriesKcal = nil
+        copy.activeCaloriesKcal = nil
+        copy.activeDurationSeconds = max(0, elapsedSeconds)
+        return burnedKcal(for: copy, bodyWeightKg: bodyWeightKg)
+    }
+
     // MARK: Daily goal suggestion
 
     /// Plausible body fat in %; values outside are ignored.

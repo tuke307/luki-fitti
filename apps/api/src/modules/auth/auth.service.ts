@@ -627,8 +627,7 @@ export class AuthService {
       weighInReminderMinutes?: number;
     } | null;
     permissions?: string[];
-    featureGrants?: string[];
-  }, features: FeatureGrant[] = []): UserDto {
+  }, features: FeatureGrant[] = [], aiKeyConfigured = false): UserDto {
     const rawLang = user.preferences?.language;
     const normalizedLang: LanguagePreference =
       rawLang === 'en' || rawLang === 'de' || rawLang === 'system' ? rawLang : 'system';
@@ -677,14 +676,18 @@ export class AuthService {
         : null,
       permissions: (user.permissions ?? []).filter(isAdminPermission) as AdminPermission[],
       features,
+      aiKeyConfigured,
     };
   }
 
-  /** Formats a user and resolves which opt-in features are active for them right now. */
+  /** Formats a user: enabled features (global switches) plus whether they have a usable key. */
   private async toUserDto(user: Parameters<AuthService['formatUserDto']>[0]): Promise<UserDto> {
-    const features = this.appSettings
-      ? await this.appSettings.resolveActiveFeatures(user)
-      : [];
-    return this.formatUserDto(user, features);
+    const [features, aiKeyConfigured] = this.appSettings
+      ? await Promise.all([
+          this.appSettings.enabledFeatures(),
+          this.appSettings.hasAiKey(user.id),
+        ])
+      : [[], false];
+    return this.formatUserDto(user, features, aiKeyConfigured);
   }
 }

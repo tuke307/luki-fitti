@@ -179,9 +179,9 @@ public struct SearchableExercisePickerSheet: View {
                                     dismiss()
                                 } label: {
                                     HStack(spacing: 12) {
-                                        ExerciseVectorVisualView(
-                                            exerciseName: ex.name,
-                                            primaryMuscle: ex.primaryMuscleGroup,
+                                        ExerciseThumbnailView(
+                                            exercise: ex,
+                                            fallbackMuscle: ex.primaryMuscleGroup,
                                             compact: true
                                         )
 

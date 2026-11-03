@@ -1,0 +1,163 @@
+[
+  {
+    "name": "heavier in-session sets hold the hint at the new weight",
+    "exerciseId": "ex-barbell-bench-press-medium-grip",
+    "repMin": 8,
+    "repMax": 12,
+    "historySets": [
+      { "weight": 42.5, "reps": 12, "rpe": null },
+      { "weight": 42.5, "reps": 12, "rpe": null },
+      { "weight": 42.5, "reps": 12, "rpe": null }
+    ],
+    "currentSets": [
+      { "setType": "WORKING", "weight": 65, "reps": 11, "rpe": null, "completed": true },
+      { "setType": "WORKING", "weight": 65, "reps": 11, "rpe": null, "completed": true },
+      { "setType": "WORKING", "weight": 65, "reps": null, "rpe": null, "completed": false }
+    ],
+    "expect": {
+      "workingSetIndex": 2,
+      "suggestedWeight": 65,
+      "suggestedReps": 11,
+      "weightDelta": 0,
+      "repsDelta": 0,
+      "phase": "MAINTAIN"
+    }
+  },
+  {
+    "name": "topping the rep band in-session earns the next weight step",
+    "exerciseId": "ex-barbell-bench-press-medium-grip",
+    "repMin": 8,
+    "repMax": 12,
+    "historySets": [
+      { "weight": 42.5, "reps": 12, "rpe": null },
+      { "weight": 42.5, "reps": 12, "rpe": null },
+      { "weight": 42.5, "reps": 12, "rpe": null }
+    ],
+    "currentSets": [
+      { "setType": "WORKING", "weight": 65, "reps": 12, "rpe": null, "completed": true },
+      { "setType": "WORKING", "weight": 65, "reps": 12, "rpe": null, "completed": true },
+      { "setType": "WORKING", "weight": null, "reps": null, "rpe": null, "completed": false }
+    ],
+    "expect": {
+      "workingSetIndex": 2,
+      "suggestedWeight": 67.5,
+      "suggestedReps": 8,
+      "weightDelta": 2.5,
+      "repsDelta": -4,
+      "phase": "INCREASE_WEIGHT"
+    }
+  },
+  {
+    "name": "max-effort top-of-band set in-session holds the weight",
+    "exerciseId": "ex-barbell-bench-press-medium-grip",
+    "repMin": 8,
+    "repMax": 12,
+    "historySets": [
+      { "weight": 42.5, "reps": 12, "rpe": null },
+      { "weight": 42.5, "reps": 12, "rpe": null },
+      { "weight": 42.5, "reps": 12, "rpe": null }
+    ],
+    "currentSets": [
+      { "setType": "WORKING", "weight": 65, "reps": 12, "rpe": 10, "completed": true },
+      { "setType": "WORKING", "weight": 65, "reps": 12, "rpe": 10, "completed": true },
+      { "setType": "WORKING", "weight": null, "reps": null, "rpe": null, "completed": false }
+    ],
+    "expect": {
+      "workingSetIndex": 2,
+      "suggestedWeight": 65,
+      "suggestedReps": 12,
+      "weightDelta": 0,
+      "repsDelta": 0,
+      "phase": "MAINTAIN"
+    }
+  },
+  {
+    "name": "first-ever session anchors the next set on the opener",
+    "exerciseId": "ex-barbell-bench-press-medium-grip",
+    "repMin": 8,
+    "repMax": 12,
+    "historySets": [],
+    "currentSets": [
+      { "setType": "WORKING", "weight": 60, "reps": 12, "rpe": null, "completed": true },
+      { "setType": "WORKING", "weight": null, "reps": null, "rpe": null, "completed": false }
+    ],
+    "expect": {
+      "workingSetIndex": 1,
+      "suggestedWeight": 62.5,
+      "suggestedReps": 8,
+      "weightDelta": 2.5,
+      "repsDelta": -4,
+      "phase": "INCREASE_WEIGHT"
+    }
+  },
+  {
+    "name": "first open set keeps the history-based suggestion",
+    "exerciseId": "ex-barbell-bench-press-medium-grip",
+    "repMin": 8,
+    "repMax": 12,
+    "historySets": [
+      { "weight": 42.5, "reps": 12, "rpe": null },
+      { "weight": 42.5, "reps": 12, "rpe": null },
+      { "weight": 42.5, "reps": 12, "rpe": null }
+    ],
+    "currentSets": [
+      { "setType": "WORKING", "weight": null, "reps": null, "rpe": null, "completed": false },
+      { "setType": "WORKING", "weight": null, "reps": null, "rpe": null, "completed": false }
+    ],
+    "expect": {
+      "workingSetIndex": 0,
+      "suggestedWeight": 45,
+      "suggestedReps": 8,
+      "weightDelta": 2.5,
+      "repsDelta": -4,
+      "phase": "INCREASE_WEIGHT"
+    }
+  },
+  {
+    "name": "completed warm-up sets are ignored as anchors",
+    "exerciseId": "ex-barbell-bench-press-medium-grip",
+    "repMin": 8,
+    "repMax": 12,
+    "historySets": [
+      { "weight": 42.5, "reps": 12, "rpe": null },
+      { "weight": 42.5, "reps": 12, "rpe": null },
+      { "weight": 42.5, "reps": 12, "rpe": null }
+    ],
+    "currentSets": [
+      { "setType": "WARMUP", "weight": 30, "reps": 15, "rpe": null, "completed": true },
+      { "setType": "WORKING", "weight": 65, "reps": 11, "rpe": null, "completed": true },
+      { "setType": "WORKING", "weight": null, "reps": null, "rpe": null, "completed": false }
+    ],
+    "expect": {
+      "workingSetIndex": 1,
+      "suggestedWeight": 65,
+      "suggestedReps": 11,
+      "weightDelta": 0,
+      "repsDelta": 0,
+      "phase": "MAINTAIN"
+    }
+  },
+  {
+    "name": "a completed warm-up alone does not anchor the first working set",
+    "exerciseId": "ex-barbell-bench-press-medium-grip",
+    "repMin": 8,
+    "repMax": 12,
+    "historySets": [
+      { "weight": 42.5, "reps": 12, "rpe": null },
+      { "weight": 42.5, "reps": 12, "rpe": null },
+      { "weight": 42.5, "reps": 12, "rpe": null }
+    ],
+    "currentSets": [
+      { "setType": "WARMUP", "weight": 30, "reps": 15, "rpe": null, "completed": true },
+      { "setType": "WORKING", "weight": null, "reps": null, "rpe": null, "completed": false }
+    ],
+    "expect": {
+      "workingSetIndex": 0,
+      "suggestedWeight": 45,
+      "suggestedReps": 8,
+      "weightDelta": 2.5,
+      "repsDelta": -4,
+      "phase": "INCREASE_WEIGHT"
+    }
+  }
+]

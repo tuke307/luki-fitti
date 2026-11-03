@@ -50,25 +50,38 @@ describe('PermissionsGuard', () => {
 });
 
 describe('FeatureGuard', () => {
-  const settings = (active: FeatureGrant[]) =>
-    ({ resolveActiveFeatures: async () => active }) as unknown as AppSettingsService;
+  const settings = (enabled: FeatureGrant[], hasKey: boolean) =>
+    ({
+      enabledFeatures: async () => enabled,
+      hasAiKey: async () => hasKey,
+    }) as unknown as AppSettingsService;
 
-  it('grants when the feature is active for the user', async () => {
-    const guard = new FeatureGuard(new Reflector(), settings([FeatureGrant.AI_MEAL_PHOTO]));
-    const ctx = contextWith(
-      { id: 'u1', featureGrants: [FeatureGrant.AI_MEAL_PHOTO] },
-      { [FEATURE_KEY]: FeatureGrant.AI_MEAL_PHOTO },
-    );
+  it('grants when the feature is enabled and the user has a key', async () => {
+    const guard = new FeatureGuard(new Reflector(), settings([FeatureGrant.AI_MEAL_PHOTO], true));
+    const ctx = contextWith({ id: 'u1' }, { [FEATURE_KEY]: FeatureGrant.AI_MEAL_PHOTO });
     assert.equal(await guard.canActivate(ctx), true);
   });
 
-  it('denies inactive features and routes without metadata', async () => {
-    const guard = new FeatureGuard(new Reflector(), settings([]));
+  it('denies disabled features and routes without metadata', async () => {
+    const guard = new FeatureGuard(new Reflector(), settings([], true));
     await assert.rejects(
       guard.canActivate(contextWith({ id: 'u1' }, { [FEATURE_KEY]: FeatureGrant.AI_MEAL_PHOTO })),
       ForbiddenException,
     );
     await assert.rejects(guard.canActivate(contextWith({ id: 'u1' }, {})), ForbiddenException);
+  });
+
+  it('denies an enabled feature without a key as AI_KEY_REQUIRED', async () => {
+    const guard = new FeatureGuard(new Reflector(), settings([FeatureGrant.AI_MEAL_PHOTO], false));
+    const ctx = contextWith({ id: 'u1' }, { [FEATURE_KEY]: FeatureGrant.AI_MEAL_PHOTO });
+    await assert.rejects(
+      guard.canActivate(ctx),
+      (err: ForbiddenException) => {
+        const body = err.getResponse() as { code?: string };
+        assert.equal(body.code, 'AI_KEY_REQUIRED');
+        return true;
+      },
+    );
   });
 });
 
@@ -76,43 +89,28 @@ describe('resolveActiveFeatures', () => {
   const on = { aiWorkoutBuilderEnabled: true, aiMealPhotoEnabled: true };
   const { USER, ADMIN } = AiKeySlot;
 
-  it('with an admin-assigned key requires the grant and the global switch', () => {
-    assert.deepEqual(resolveActiveFeatures([FeatureGrant.AI_WORKOUT_BUILDER], on, ADMIN), [
-      FeatureGrant.AI_WORKOUT_BUILDER,
-    ]);
-    assert.deepEqual(
-      resolveActiveFeatures(
-        [FeatureGrant.AI_WORKOUT_BUILDER],
-        { ...on, aiWorkoutBuilderEnabled: false },
-        ADMIN,
-      ),
-      [],
-    );
-    assert.deepEqual(resolveActiveFeatures([], on, ADMIN), []);
-  });
-
-  it('with an own key enables every globally switched-on feature without grants', () => {
-    assert.deepEqual(resolveActiveFeatures([], on, USER), [
+  it('any usable key enables every globally switched-on feature', () => {
+    assert.deepEqual(resolveActiveFeatures(on, USER), [
       FeatureGrant.AI_WORKOUT_BUILDER,
       FeatureGrant.AI_MEAL_PHOTO,
     ]);
-    assert.deepEqual(resolveActiveFeatures([], { ...on, aiMealPhotoEnabled: false }, USER), [
+    assert.deepEqual(resolveActiveFeatures(on, ADMIN), [
       FeatureGrant.AI_WORKOUT_BUILDER,
+      FeatureGrant.AI_MEAL_PHOTO,
+    ]);
+  });
+
+  it('respects the global switches', () => {
+    assert.deepEqual(resolveActiveFeatures({ ...on, aiMealPhotoEnabled: false }, USER), [
+      FeatureGrant.AI_WORKOUT_BUILDER,
+    ]);
+    assert.deepEqual(resolveActiveFeatures({ ...on, aiWorkoutBuilderEnabled: false }, ADMIN), [
+      FeatureGrant.AI_MEAL_PHOTO,
     ]);
   });
 
   it('enables nothing without a key (no global provider key)', () => {
-    assert.deepEqual(
-      resolveActiveFeatures([FeatureGrant.AI_WORKOUT_BUILDER, FeatureGrant.AI_MEAL_PHOTO], on, null),
-      [],
-    );
-  });
-
-  it('drops unknown and duplicate grants', () => {
-    assert.deepEqual(
-      resolveActiveFeatures(['BOGUS', FeatureGrant.AI_MEAL_PHOTO, FeatureGrant.AI_MEAL_PHOTO], on, ADMIN),
-      [FeatureGrant.AI_MEAL_PHOTO],
-    );
+    assert.deepEqual(resolveActiveFeatures(on, null), []);
   });
 
   it('prefers the own key over the admin-assigned key', () => {

@@ -24,6 +24,8 @@ import {
 } from '@luki-fitti/common/schemas';
 import { api } from '@/lib/api';
 import { aiErrorMessage } from '@/lib/ai/ai-errors';
+import { isAiKeyRequiredError } from '@/lib/ai/ai-key-required';
+import { AiKeyRequiredDialog } from './ai-key-required-dialog';
 import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { AiCostLabel } from './ai-usage/ai-cost-label';
@@ -109,6 +111,7 @@ function AiWorkoutBuilderBody({
   const [duration, setDuration] = useState<string>('');
   const [result, setResult] = useState<WorkoutBuilderResponseDto | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [keyRequiredOpen, setKeyRequiredOpen] = useState(false);
   const [busy, setBusyState] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -131,7 +134,8 @@ function AiWorkoutBuilderBody({
       });
       setResult(res.data);
     } catch (err) {
-      setError(aiErrorMessage(err, t));
+      if (isAiKeyRequiredError(err)) setKeyRequiredOpen(true);
+      else setError(aiErrorMessage(err, t));
     } finally {
       setBusy(false);
     }
@@ -155,6 +159,7 @@ function AiWorkoutBuilderBody({
 
   return (
     <DialogContent className="flex max-h-[92dvh] flex-col gap-0 p-0 sm:max-w-xl">
+      <AiKeyRequiredDialog open={keyRequiredOpen} onOpenChange={setKeyRequiredOpen} />
       <DialogHeader className="px-5 pt-5 pb-3 text-left">
         <DialogTitle>{result ? t.aiBuilder.preview : t.aiBuilder.title}</DialogTitle>
         <DialogDescription>{result ? result.summary : t.aiBuilder.sub}</DialogDescription>

@@ -430,7 +430,14 @@ public enum ProgressionEngine {
                 slopePerSession: 0,
                 phase: .BASELINE,
                 confidence: 0,
-                setSuggestions: baselineSuggestions,
+                setSuggestions: applyInSessionAnchors(
+                    baselineSuggestions,
+                    currentSets: currentSets,
+                    repMin: repMin,
+                    repMax: repMax,
+                    weightUnit: weightUnit,
+                    catalogExercise: catalogExercise
+                ),
                 elevatedSystemicFatigueFromHR: false
             )
         }
@@ -561,9 +568,76 @@ public enum ProgressionEngine {
             slopePerSession: slopePerSession,
             phase: overallPhase,
             confidence: confidence,
-            setSuggestions: setSuggestions,
+            setSuggestions: applyInSessionAnchors(
+                setSuggestions,
+                currentSets: currentSets,
+                repMin: repMin,
+                repMax: repMax,
+                weightUnit: weightUnit,
+                catalogExercise: catalogExercise
+            ),
             elevatedSystemicFatigueFromHR: elevatedSystemicFatigueFromHR
         )
+    }
+
+    /// Re-anchors suggestions for open working sets on what was already lifted THIS
+    /// session: once a heavier/harder set is logged, later sets should follow it
+    /// instead of the stale last-session baseline. Mirrors `applyInSessionAnchors`
+    /// in `progression.util.ts`.
+    private static func applyInSessionAnchors(
+        _ setSuggestions: [SetProgressionSuggestion],
+        currentSets: [SessionSetDto]?,
+        repMin: Int,
+        repMax: Int,
+        weightUnit: WeightUnit,
+        catalogExercise: ExerciseDto?
+    ) -> [SetProgressionSuggestion] {
+        guard let currentSets, !currentSets.isEmpty else { return setSuggestions }
+        let currentWorkingSets = currentSets.filter { $0.setType != .WARMUP && $0.setType != .STRETCH }
+
+        return setSuggestions.enumerated().map { i, suggestion in
+            guard i < currentWorkingSets.count, !currentWorkingSets[i].completed else { return suggestion }
+
+            var anchor: SessionSetDto?
+            if i > 0 {
+                for j in stride(from: i - 1, through: 0, by: -1) {
+                    let candidate = currentWorkingSets[j]
+                    if candidate.completed, (candidate.weight ?? 0) > 0, (candidate.reps ?? 0) > 0 {
+                        anchor = candidate
+                        break
+                    }
+                }
+            }
+            guard let anchor, let anchorWeight = anchor.weight, let anchorReps = anchor.reps else {
+                return suggestion
+            }
+
+            let w0 = convertWeight(anchorWeight, from: anchor.weightUnit, to: weightUnit)
+            let r0 = anchorReps
+            let rpe0 = anchor.rpe
+
+            let suggestedWeight: Double
+            let suggestedReps: Int
+            let phase: ProgressionPhase
+            if r0 >= repMax && (rpe0 ?? 8.0) < maxEffortRpe {
+                let step = getStandardWeightIncrement(unit: weightUnit, exercise: catalogExercise, currentWeight: w0)
+                suggestedWeight = roundToGymStep(w0 + step, step: 0.5)
+                suggestedReps = repMin
+                phase = .INCREASE_WEIGHT
+            } else {
+                suggestedWeight = w0
+                suggestedReps = max(repMin, min(repMax, r0))
+                phase = .MAINTAIN
+            }
+
+            var updated = suggestion
+            updated.suggestedWeight = suggestedWeight
+            updated.suggestedReps = suggestedReps
+            updated.weightDelta = ((suggestedWeight - w0) * 100.0).rounded() / 100.0
+            updated.repsDelta = suggestedReps - r0
+            updated.phase = phase
+            return updated
+        }
     }
 
     public static func formatCompactDelta(_ delta: Double) -> String? {

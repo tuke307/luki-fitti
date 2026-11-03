@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AiKeySlot, FEATURE_GRANTS, FeatureGrant, isFeatureGrant } from '@luki-fitti/common/enums';
+import { AiKeySlot, FEATURE_GRANTS, FeatureGrant } from '@luki-fitti/common/enums';
 import type { AiSettingsDto, UpdateAiSettingsDto } from '@luki-fitti/common/schemas';
 import { PrismaService } from '../database/prisma.service';
 import {
@@ -25,13 +25,12 @@ export interface AppSettingsRecord {
 
 /**
  * Pure feature resolution. AI needs a per-user OpenRouter key (there is no global key):
- *   - own key (USER)   → every feature whose global switch is on (no grant needed),
- *   - admin key (ADMIN) → granted features whose global switch is on,
- *   - no key           → nothing.
+ *   - own key (USER) or admin key (ADMIN) → every feature whose global switch is on,
+ *   - no key                              → nothing.
+ * There are no per-user feature grants anymore: a usable key unlocks everything enabled.
  * Exported for unit tests.
  */
 export function resolveActiveFeatures(
-  grants: readonly string[],
   settings: Pick<AppSettingsRecord, 'aiWorkoutBuilderEnabled' | 'aiMealPhotoEnabled'>,
   keySource: AiKeySlot | null,
 ): FeatureGrant[] {
@@ -40,9 +39,7 @@ export function resolveActiveFeatures(
     [FeatureGrant.AI_WORKOUT_BUILDER]: settings.aiWorkoutBuilderEnabled,
     [FeatureGrant.AI_MEAL_PHOTO]: settings.aiMealPhotoEnabled,
   };
-  const candidates =
-    keySource === AiKeySlot.USER ? FEATURE_GRANTS : [...new Set(grants)].filter(isFeatureGrant);
-  return candidates.filter((grant) => switches[grant]);
+  return FEATURE_GRANTS.filter((grant) => switches[grant]);
 }
 
 /** Which key would pay for a run: the own key wins over the admin-assigned key. */
@@ -88,13 +85,20 @@ export class AppSettingsService {
     return effectiveKeySource(rows.map((r) => r.slot));
   }
 
-  async resolveActiveFeatures(user: {
-    id: string;
-    featureGrants?: readonly string[];
-  }): Promise<FeatureGrant[]> {
+  async resolveActiveFeatures(user: { id: string }): Promise<FeatureGrant[]> {
     const source = await this.keySource(user.id);
-    if (!source) return [];
-    return resolveActiveFeatures(user.featureGrants ?? [], await this.get(), source);
+    return resolveActiveFeatures(await this.get(), source);
+  }
+
+  /** Features whose global switch is on (encryption must be configured to offer AI at all). */
+  async enabledFeatures(): Promise<FeatureGrant[]> {
+    if (!this.encryptionConfigured) return [];
+    return resolveActiveFeatures(await this.get(), AiKeySlot.USER);
+  }
+
+  /** Whether the user has a usable key slot (own or admin-assigned). */
+  async hasAiKey(userId: string): Promise<boolean> {
+    return (await this.keySource(userId)) !== null;
   }
 
   async getAiSettings(): Promise<AiSettingsDto> {

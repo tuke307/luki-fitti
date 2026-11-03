@@ -62,7 +62,7 @@ public struct ProfileAndAuthView: View {
                             tr("OpenRouter API key"),
                             systemImage: "key.fill",
                             tint: LukiColors.accent,
-                            subtitle: (viewModel.store.currentUser?.features ?? []).isEmpty
+                            subtitle: viewModel.store.currentUser?.aiKeyConfigured != true
                                 ? tr("Add your OpenRouter key")
                                 : nil
                         )

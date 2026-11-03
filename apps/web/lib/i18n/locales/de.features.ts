@@ -190,6 +190,10 @@ export const deFeatures: Widen<typeof enFeatures> = {
     unavailable: 'Der Assistent ist gerade nicht verfügbar. Versuch es gleich noch mal.',
     quota: 'Du hast das heutige Limit erreicht. Versuch es morgen wieder.',
     disabled: 'Diese Funktion ist für dein Konto nicht freigeschaltet.',
+    keyRequiredTitle: 'OpenRouter-Schlüssel erforderlich',
+    keyRequiredBody:
+      'KI-Funktionen laufen mit deinem eigenen OpenRouter-API-Schlüssel. Hinterlege ihn in deinem Profil, um sie zu nutzen.',
+    keyRequiredAction: 'Schlüssel hinzufügen',
   },
   feedback: {
     menuLabel: 'Funktioniert nicht für mich',

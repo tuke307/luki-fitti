@@ -5,6 +5,8 @@ public enum APIClientError: Error, LocalizedError, Sendable, Equatable {
     case invalidURL
     case unauthorized
     case forbidden(String)
+    /// 403 with `AI_KEY_REQUIRED`: the feature is on but the user has no usable OpenRouter key.
+    case aiKeyRequired
     case offline(String)
     case serverError(Int, String)
     case decodingError(String)
@@ -14,6 +16,7 @@ public enum APIClientError: Error, LocalizedError, Sendable, Equatable {
         case .invalidURL: return "Invalid API URL"
         case .unauthorized: return "Authentication required"
         case .forbidden(let msg): return msg
+        case .aiKeyRequired: return "An OpenRouter API key is required"
         case .offline(let msg): return msg
         case .serverError(_, let msg): return msg
         case .decodingError(let msg): return msg
@@ -23,6 +26,19 @@ public enum APIClientError: Error, LocalizedError, Sendable, Equatable {
 
 private struct APIErrorDetail: Decodable {
     let message: String?
+}
+
+private struct APIErrorDetails: Decodable {
+    let code: String?
+}
+
+private struct APIErrorEnvelope: Decodable {
+    let message: String?
+    let error: APIErrorDetail?
+    let details: APIErrorDetails?
+
+    var messageText: String? { error?.message ?? message }
+    var isAiKeyRequired: Bool { details?.code == "AI_KEY_REQUIRED" }
 }
 
 private struct APIEnvelope<T: Decodable>: Decodable {
@@ -485,7 +501,11 @@ public actor APIClient {
         guard (200...299).contains(http.statusCode) else {
             let msg = (try? JSONDecoder().decode(APIEnvelope<EmptyObject>.self, from: data))
                 .flatMap { $0.error?.message ?? $0.message } ?? "HTTP \(http.statusCode)"
-            if http.statusCode == 403 { throw APIClientError.forbidden(msg) }
+            if http.statusCode == 403 {
+                let env = try? JSONDecoder().decode(APIErrorEnvelope.self, from: data)
+                if env?.isAiKeyRequired == true { throw APIClientError.aiKeyRequired }
+                throw APIClientError.forbidden(msg)
+            }
             throw APIClientError.serverError(http.statusCode, msg)
         }
         return data
@@ -551,6 +571,10 @@ public actor APIClient {
             throw APIClientError.unauthorized
         }
         if http.statusCode == 403 {
+            if let errEnv = try? JSONDecoder().decode(APIErrorEnvelope.self, from: data),
+               errEnv.isAiKeyRequired {
+                throw APIClientError.aiKeyRequired
+            }
             if let errEnv = try? JSONDecoder().decode(APIEnvelope<EmptyObject>.self, from: data),
                let msg = errEnv.error?.message ?? errEnv.message {
                 throw APIClientError.forbidden(msg)
