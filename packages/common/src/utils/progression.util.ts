@@ -352,6 +352,69 @@ export function analyzeExerciseTrend(history: ExerciseHistorySessionEntry[]): Ex
 }
 
 /**
+ * Re-anchors suggestions for open working sets on what was already lifted THIS
+ * session: once a heavier/harder set is logged, later sets should follow it
+ * instead of the stale last-session baseline.
+ */
+function applyInSessionAnchors(params: {
+  setSuggestions: SetProgressionSuggestion[];
+  currentSets: SessionSetDto[] | undefined;
+  repMin: number;
+  repMax: number;
+  weightUnit: WeightUnit;
+  catalogExercise?: ExerciseDto | null;
+}): SetProgressionSuggestion[] {
+  const { setSuggestions, currentSets, repMin, repMax, weightUnit, catalogExercise } = params;
+  if (!currentSets || currentSets.length === 0) return setSuggestions;
+
+  const currentWorkingSets = currentSets.filter(
+    (s) => s.setType !== SetType.WARMUP && s.setType !== SetType.STRETCH,
+  );
+
+  return setSuggestions.map((suggestion, i) => {
+    const current = currentWorkingSets[i];
+    if (!current || current.completed) return suggestion;
+
+    let anchor: SessionSetDto | null = null;
+    for (let j = i - 1; j >= 0; j--) {
+      const candidate = currentWorkingSets[j]!;
+      if (candidate.completed && (candidate.weight ?? 0) > 0 && (candidate.reps ?? 0) > 0) {
+        anchor = candidate;
+        break;
+      }
+    }
+    if (!anchor) return suggestion;
+
+    const w0 = convertWeight(anchor.weight!, anchor.weightUnit, weightUnit);
+    const r0 = anchor.reps!;
+    const rpe0 = anchor.rpe;
+
+    let suggestedWeight: number;
+    let suggestedReps: number;
+    let phase: ProgressionPhase;
+    if (r0 >= repMax && (rpe0 ?? 8) < MAX_EFFORT_RPE) {
+      const step = getStandardWeightIncrement(weightUnit, catalogExercise, w0);
+      suggestedWeight = roundToGymStep(w0 + step, 0.5);
+      suggestedReps = repMin;
+      phase = 'INCREASE_WEIGHT';
+    } else {
+      suggestedWeight = w0;
+      suggestedReps = Math.max(repMin, Math.min(repMax, r0));
+      phase = 'MAINTAIN';
+    }
+
+    return {
+      ...suggestion,
+      suggestedWeight,
+      suggestedReps,
+      weightDelta: Math.round((suggestedWeight - w0) * 100) / 100,
+      repsDelta: suggestedReps - r0,
+      phase,
+    };
+  });
+}
+
+/**
  * Statistical / ML Progressive Overload & Autoregulation Engine.
  *
  * Analyzes global exercise history across all workouts & folders (single source of truth)
@@ -412,18 +475,25 @@ export function computeExerciseProgression(params: {
       slopePerSession: 0,
       phase: 'BASELINE',
       confidence: 0,
-      setSuggestions: Array.from({ length: Math.max(1, workingSetsCount) }, (_, idx) => ({
-        workingSetIndex: idx,
-        lastWeight: null,
-        lastReps: null,
-        lastRpe: null,
-        suggestedWeight: targetWeight,
-        suggestedReps: repMin,
-        weightDelta: 0,
-        repsDelta: 0,
-        phase: 'BASELINE',
-        confidence: 0,
-      })),
+      setSuggestions: applyInSessionAnchors({
+        setSuggestions: Array.from({ length: Math.max(1, workingSetsCount) }, (_, idx) => ({
+          workingSetIndex: idx,
+          lastWeight: null,
+          lastReps: null,
+          lastRpe: null,
+          suggestedWeight: targetWeight,
+          suggestedReps: repMin,
+          weightDelta: 0,
+          repsDelta: 0,
+          phase: 'BASELINE',
+          confidence: 0,
+        })),
+        currentSets,
+        repMin,
+        repMax,
+        weightUnit,
+        catalogExercise,
+      }),
     };
   }
 
@@ -549,7 +619,14 @@ export function computeExerciseProgression(params: {
     slopePerSession,
     phase: overallPhase,
     confidence,
-    setSuggestions,
+    setSuggestions: applyInSessionAnchors({
+      setSuggestions,
+      currentSets,
+      repMin,
+      repMax,
+      weightUnit,
+      catalogExercise,
+    }),
   };
 }
 

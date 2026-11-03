@@ -975,7 +975,9 @@ public struct ActiveSessionView: View {
                 if !set.completed,
                    let suggestion,
                    let wDelta = ProgressionEngine.formatCompactDelta(suggestion.weightDelta),
-                   let suggestedW = suggestion.suggestedWeight {
+                   let suggestedW = suggestion.suggestedWeight,
+                   // Applying a suggestion the set already matches would be a no-op — hide it.
+                   set.weight != suggestedW || (suggestion.suggestedReps != nil && set.reps != suggestion.suggestedReps) {
                     Button {
                         viewModel.updateSet(
                             clientExerciseId: exercise.clientExerciseId,

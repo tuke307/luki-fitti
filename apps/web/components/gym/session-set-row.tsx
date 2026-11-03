@@ -123,9 +123,18 @@ export function SessionSetRow({
     ? `${set.durationSeconds ?? 45} ${t.common.sec}`
     : `${set.weight ?? 0} ${unit} × ${set.reps ?? 0}`;
 
+  const suggestionAlreadyApplied =
+    setSuggestion?.suggestedWeight !== null &&
+    setSuggestion?.suggestedWeight !== undefined &&
+    set.weight === setSuggestion.suggestedWeight &&
+    (setSuggestion.suggestedReps === null ||
+      setSuggestion.suggestedReps === undefined ||
+      set.reps === setSuggestion.suggestedReps);
+
   const hasSuggestion =
     !set.completed &&
     setSuggestion &&
+    !suggestionAlreadyApplied &&
     ((weightBadgeLabel && setSuggestion.suggestedWeight !== null) ||
       (repsBadgeLabel && setSuggestion.suggestedReps !== null));
 
