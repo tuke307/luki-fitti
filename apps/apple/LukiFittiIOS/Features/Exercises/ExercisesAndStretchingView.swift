@@ -84,12 +84,11 @@ public struct ExercisesAndStretchingView: View {
                             guideExercise = exercise
                         } label: {
                             HStack(spacing: 12) {
-                                ExerciseVectorVisualView(
-                                    exerciseName: exercise.name,
-                                    primaryMuscle: exercise.primaryMuscleGroup,
+                                ExerciseThumbnailView(
+                                    exercise: exercise,
+                                    fallbackMuscle: exercise.primaryMuscleGroup,
                                     compact: true
                                 )
-                                .accessibilityHidden(true)
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(exercise.name)
                                         .font(.subheadline.bold())

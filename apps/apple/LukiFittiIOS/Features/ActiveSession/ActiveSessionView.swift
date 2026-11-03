@@ -620,9 +620,10 @@ public struct ActiveSessionView: View {
                     Button {
                         guideTargetId = exercise.clientExerciseId
                     } label: {
-                        ExerciseVectorVisualView(
-                            exerciseName: exercise.exerciseNameSnapshot,
-                            primaryMuscle: exercise.primaryMuscleSnapshot,
+                        ExerciseThumbnailView(
+                            exercise: viewModel.store.catalog.first { $0.id == exercise.exerciseId },
+                            fallbackName: exercise.exerciseNameSnapshot,
+                            fallbackMuscle: exercise.primaryMuscleSnapshot,
                             compact: true
                         )
                         .contentShape(Rectangle())

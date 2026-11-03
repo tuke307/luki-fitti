@@ -80,31 +80,89 @@ struct ExerciseGuideSheet: View {
         return tr("Also works: %@", labels)
     }
 
-    /// First photo from the catalog when there is one, otherwise the drawn start/finish poses.
-    private var imageURL: URL? {
-        guard let item = exercise?.media?.first(where: { ["IMAGE", "GIF"].contains($0.mediaType) }),
-              let url = URL(string: item.url),
-              url.scheme == "https" else { return nil }
-        return url
+    // MARK: - Media
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var frames: [CGImage]?
+    @State private var framesFailed = false
+    @State private var manualFrameIndex = 0
+
+    private var frameCaptions: [String] {
+        [tr("Start position"), tr("Finish position")]
     }
 
     @ViewBuilder
     private var media: some View {
-        if let imageURL {
-            AsyncImage(url: imageURL) { phase in
-                if let image = phase.image {
-                    image
+        if let frames, !frames.isEmpty {
+            frameView
+                .frame(maxHeight: 220)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .accessibilityLabel("\(fallbackName), \(frameCaptions[min(1, displayedFrameIndex)])")
+        } else if framesFailed {
+            vectorVisual
+        } else {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(LukiColors.fill)
+                .frame(maxWidth: .infinity, maxHeight: 220)
+                .accessibilityHidden(true)
+                .task(id: ExerciseMediaFrames.imageURLs(for: exercise).map(\.absoluteString).joined()) {
+                    await loadFrames()
+                }
+        }
+    }
+
+    private var displayedFrameIndex: Int {
+        guard let frames, !frames.isEmpty else { return 0 }
+        return min(manualFrameIndex, frames.count - 1)
+    }
+
+    @ViewBuilder
+    private var frameView: some View {
+        if reduceMotion || (frames?.count ?? 0) < 2 {
+            // Reduce Motion: no auto loop — tap toggles start/finish.
+            Image(decorative: frames![displayedFrameIndex], scale: 1)
+                .resizable()
+                .scaledToFit()
+                .onTapGesture {
+                    manualFrameIndex = (manualFrameIndex + 1) % (frames?.count ?? 1)
+                }
+        } else {
+            // ~1.1 s per frame like the web detail variant.
+            TimelineView(.periodic(from: .now, by: 1.1)) { context in
+                let idx = Int(context.date.timeIntervalSinceReferenceDate / 1.1) % frames!.count
+                ZStack {
+                    Image(decorative: frames![idx], scale: 1)
                         .resizable()
                         .scaledToFit()
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                } else {
-                    vectorVisual
+                        .transition(.opacity)
+                        .id(idx)
                 }
+                .animation(.easeInOut(duration: 0.35), value: idx)
+                .onTapGesture { manualFrameIndex = idx }
             }
-            .frame(maxHeight: 220)
-            .accessibilityLabel(fallbackName)
+        }
+    }
+
+    private func loadFrames() async {
+        let urls = ExerciseMediaFrames.imageURLs(for: exercise)
+        guard !urls.isEmpty else {
+            framesFailed = true
+            return
+        }
+        var loaded: [CGImage] = []
+        for url in urls.prefix(2) {
+            do {
+                loaded.append(try await ExerciseImageLoader.shared.image(for: url, maxPixelSize: 1024))
+            } catch is CancellationError {
+                return
+            } catch {
+                break
+            }
+        }
+        if loaded.isEmpty {
+            framesFailed = true
         } else {
-            vectorVisual
+            frames = loaded
         }
     }
 
