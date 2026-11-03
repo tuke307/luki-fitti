@@ -1,10 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import {
-  AdminPermission,
-  type FeatureGrant,
-  isAdminPermission,
-  isFeatureGrant,
-} from '@luki-fitti/common/enums';
+import { AdminPermission, isAdminPermission } from '@luki-fitti/common/enums';
 import type {
   AdminDashboardDto,
   AdminUserDto,
@@ -53,7 +48,7 @@ export class AdminService {
         where: { status: 'COMPLETED', completedAt: { gte: since30 } },
       }),
       this.prisma.mealEntry.count({ where: { eatenAt: { gte: since30 } } }),
-      this.prisma.user.count({ where: { NOT: { featureGrants: { isEmpty: true } } } }),
+      this.prisma.userAiKey.groupBy({ by: ['userId'] }).then((rows) => rows.length),
       this.prisma.aiRun.count({ where: { createdAt: { gte: since30 } } }),
     ]);
     return {
@@ -92,7 +87,6 @@ export class AdminService {
           createdAt: true,
           lastLoginAt: true,
           permissions: true,
-          featureGrants: true,
           _count: {
             select: {
               workoutSessions: { where: { status: 'COMPLETED' } },
@@ -131,7 +125,6 @@ export class AdminService {
           createdAt: u.createdAt.toISOString(),
           lastLoginAt: u.lastLoginAt?.toISOString() ?? null,
           permissions: u.permissions.filter(isAdminPermission),
-          featureGrants: u.featureGrants.filter(isFeatureGrant),
           completedSessions: u._count.workoutSessions,
           mealEntries: u._count.mealEntries,
           aiRunsLast30Days: runsByUser.get(u.id)?._count._all ?? 0,
@@ -146,7 +139,7 @@ export class AdminService {
     actorId: string,
     targetId: string,
     dto: UpdateUserAccessDto,
-  ): Promise<Pick<AdminUserDto, 'id' | 'permissions' | 'featureGrants'>> {
+  ): Promise<Pick<AdminUserDto, 'id' | 'permissions'>> {
     const target = await this.prisma.user.findUnique({
       where: { id: targetId },
       select: { id: true, permissions: true },
@@ -167,16 +160,12 @@ export class AdminService {
       where: { id: targetId },
       data: {
         ...(dto.permissions !== undefined ? { permissions: [...new Set(dto.permissions)] } : {}),
-        ...(dto.featureGrants !== undefined
-          ? { featureGrants: [...new Set(dto.featureGrants)] }
-          : {}),
       },
-      select: { id: true, permissions: true, featureGrants: true },
+      select: { id: true, permissions: true },
     });
     return {
       id: updated.id,
       permissions: updated.permissions.filter(isAdminPermission),
-      featureGrants: updated.featureGrants.filter(isFeatureGrant) as FeatureGrant[],
     };
   }
 

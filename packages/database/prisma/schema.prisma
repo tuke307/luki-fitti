@@ -169,8 +169,6 @@ model User {
   lastLoginAt              DateTime?
   /// Admin portal permissions (AdminPermission values). Empty = regular user.
   permissions              String[]  @default([])
-  /// Individually granted opt-in features (FeatureGrant values), e.g. AI features.
-  featureGrants            String[]  @default([])
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
 
@@ -540,7 +538,7 @@ model SessionSet {
 /// Single-row application settings (id = 1), edited in the admin portal.
 model AppSettings {
   id                      Int      @id @default(1)
-  /// Global kill switches. A user additionally needs the matching FeatureGrant.
+  /// Global kill switches. A user additionally needs a usable OpenRouter key.
   aiWorkoutBuilderEnabled Boolean  @default(true)
   aiMealPhotoEnabled      Boolean  @default(true)
   /// OpenRouter model ids (e.g. "openai/gpt-6.1-terra"); fallbacks are tried in order.

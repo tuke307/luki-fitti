@@ -38,6 +38,7 @@ import { DiaryAnalyticsView } from './diary-analytics-view';
 import { ExercisesView } from './exercises-view';
 import { ProfileImportView } from './profile-import-view';
 import { NutritionView } from './nutrition/nutrition-view';
+import { AI_KEY_NAVIGATE_EVENT } from '@/lib/ai/ai-key-required';
 
 export type NavTab =
   'home' | 'workouts' | 'session' | 'nutrition' | 'diary' | 'exercises' | 'profile';
@@ -70,6 +71,13 @@ export function PwaShell() {
   useEffect(() => {
     const id = window.setInterval(() => setNowMs(Date.now()), 500);
     return () => window.clearInterval(id);
+  }, []);
+
+  // "Add key" on the AI-key-required warning: the profile tab owns the settings page.
+  useEffect(() => {
+    const onOpenAiKey = () => setActiveTab('profile');
+    window.addEventListener(AI_KEY_NAVIGATE_EVENT, onOpenAiKey);
+    return () => window.removeEventListener(AI_KEY_NAVIGATE_EVENT, onOpenAiKey);
   }, []);
 
   useEffect(() => {

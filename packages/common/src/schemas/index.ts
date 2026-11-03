@@ -177,8 +177,10 @@ export const UserSchema = z.object({
   preferences: UserPreferencesSchema.nullable().optional(),
   /** Admin portal permissions; empty for regular users. */
   permissions: z.array(z.enum(AdminPermission)).optional(),
-  /** Opt-in features this user may use right now (grant AND global switch on). */
+  /** Features whose global switch is on (shown to everyone; a key is still needed to run). */
   features: z.array(z.enum(FeatureGrant)).optional(),
+  /** Whether the user has a usable OpenRouter key (own or admin-assigned). */
+  aiKeyConfigured: z.boolean().optional(),
 });
 
 export const AuthTokensSchema = z.object({

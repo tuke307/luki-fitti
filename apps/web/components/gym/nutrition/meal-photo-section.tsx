@@ -19,6 +19,8 @@ import {
 } from '@luki-fitti/common/schemas';
 import { api } from '@/lib/api';
 import { aiErrorMessage } from '@/lib/ai/ai-errors';
+import { isAiKeyRequiredError } from '@/lib/ai/ai-key-required';
+import { AiKeyRequiredDialog } from '../ai-key-required-dialog';
 import { prepareImageForUpload } from '@/lib/images/prepare-image';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { AiCostLabel } from '@/components/gym/ai-usage/ai-cost-label';
@@ -62,6 +64,7 @@ export function MealPhotoSection({
   const [picked, setPicked] = useState<PickedPhoto[]>([]);
   const [hint, setHint] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [keyRequiredOpen, setKeyRequiredOpen] = useState(false);
   const [lastUsage, setLastUsage] = useState<MealAnalysisResponseDto['usage'] | null>(null);
   const [uncertaintyNote, setUncertaintyNote] = useState<string | null>(null);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
@@ -161,7 +164,8 @@ export function MealPhotoSection({
       setUncertaintyNote(null);
       onAnalyzed(res.data);
     } catch (err) {
-      setError(aiErrorMessage(err, t));
+      if (isAiKeyRequiredError(err)) setKeyRequiredOpen(true);
+      else setError(aiErrorMessage(err, t));
     } finally {
       onBusyChange(false);
     }
@@ -169,6 +173,7 @@ export function MealPhotoSection({
 
   return (
     <section aria-labelledby="meal-photos" className="space-y-3" data-testid="meal-photo-section">
+      <AiKeyRequiredDialog open={keyRequiredOpen} onOpenChange={setKeyRequiredOpen} />
       <h3 id="meal-photos" className="text-[0.8125rem] font-semibold">
         {t.mealAi.sectionTitle}
       </h3>

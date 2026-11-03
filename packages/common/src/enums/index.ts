@@ -259,7 +259,7 @@ export const ADMIN_PERMISSION_LABELS: Record<AdminPermission, { en: string; de: 
   [AdminPermission.AI_SETTINGS_MANAGE]: { en: 'AI settings', de: 'KI-Einstellungen' },
 };
 
-/** Opt-in features an admin grants per user (stored in `User.featureGrants`). */
+/** AI feature names (used for global switches, guards and usage tracking). */
 export enum FeatureGrant {
   AI_WORKOUT_BUILDER = 'AI_WORKOUT_BUILDER',
   AI_MEAL_PHOTO = 'AI_MEAL_PHOTO',

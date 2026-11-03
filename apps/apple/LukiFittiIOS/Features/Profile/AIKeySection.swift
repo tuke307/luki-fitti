@@ -160,6 +160,7 @@ struct AIKeySettingsPage: View {
         guard let me = try? await viewModel.store.apiClient.getMe(),
               var user = viewModel.store.currentUser else { return }
         user.features = me.features
+        user.aiKeyConfigured = me.aiKeyConfigured
         user.preferences = viewModel.store.preferences
         viewModel.store.saveAuthenticatedUser(user)
     }

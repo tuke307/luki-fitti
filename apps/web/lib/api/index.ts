@@ -367,7 +367,7 @@ export const admin = {
     return apiFetch<AdminUserListDto>(`/admin/users?${qs.toString()}`);
   },
   updateUserAccess: (userId: string, data: UpdateUserAccessDto) =>
-    apiFetch<Pick<AdminUserListDto['items'][number], 'id' | 'permissions' | 'featureGrants'>>(
+    apiFetch<Pick<AdminUserListDto['items'][number], 'id' | 'permissions'>>(
       `/admin/users/${encodeURIComponent(userId)}/access`,
       { method: 'PATCH', body: JSON.stringify(data) },
     ),

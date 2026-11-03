@@ -12,7 +12,7 @@ import {
   DEFAULT_STARTER_TEMPLATES,
   DEFAULT_STRETCHING_ROUTINES,
 } from '@luki-fitti/common/catalog';
-import { ADMIN_PERMISSIONS, FEATURE_GRANTS } from '@luki-fitti/common/enums';
+import { ADMIN_PERMISSIONS } from '@luki-fitti/common/enums';
 
 interface SeedUser {
   email: string;
@@ -51,7 +51,6 @@ async function main(): Promise<void> {
           const email = seedUser.email.toLowerCase();
           const grants = {
             permissions: [...ADMIN_PERMISSIONS],
-            featureGrants: [...FEATURE_GRANTS],
           };
           await tx.user.upsert({
             where: { email },

@@ -21,6 +21,7 @@ public struct WorkoutsView: View {
     // Workout Template Builder Modal State
     @State private var activeBuilderContext: TemplateBuilderContext?
     @State private var showingAIBuilder = false
+    @State private var showsAiKeyAlert = false
 
     fileprivate struct TemplateBuilderContext: Identifiable {
         let id: String
@@ -148,7 +149,11 @@ public struct WorkoutsView: View {
                     .accessibilityIdentifier("ios.workouts.newFolderButton")
                     if viewModel.store.currentUser?.hasFeature(.AI_WORKOUT_BUILDER) == true {
                         Button {
-                            showingAIBuilder = true
+                            if viewModel.store.currentUser?.aiKeyConfigured == true {
+                                showingAIBuilder = true
+                            } else {
+                                showsAiKeyAlert = true
+                            }
                         } label: {
                             Label(tr("Plan with AI"), systemImage: "sparkles")
                         }
@@ -163,6 +168,12 @@ public struct WorkoutsView: View {
         }
         .sheet(isPresented: $showingFolderModal) {
             folderEditorSheet
+        }
+        .alert(tr("OpenRouter key required"), isPresented: $showsAiKeyAlert) {
+            Button(tr("Add key")) { viewModel.selectedTab = .profile }
+            Button(tr("Cancel"), role: .cancel) {}
+        } message: {
+            Text(tr("AI features run on your own OpenRouter API key. Add it in your profile to use them."))
         }
         .sheet(isPresented: $showingAIBuilder) {
             AIWorkoutBuilderSheet(viewModel: viewModel) { _ in

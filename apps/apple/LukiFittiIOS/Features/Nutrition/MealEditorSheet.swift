@@ -21,6 +21,7 @@ struct MealEditorSheet: View {
     @State private var items: [MealItemDto]
     /// Chosen input unit per item id (`l` is display-only; stored as ml).
     @State private var displayUnits: [String: NutritionMath.AmountDisplayUnit] = [:]
+    @State private var showsAiKeyAlert = false
     @State private var showsHistory = false
     @State private var error: String?
     @State private var saving = false
@@ -76,6 +77,15 @@ struct MealEditorSheet: View {
 
     var body: some View {
         editor
+            .alert(tr("OpenRouter key required"), isPresented: $showsAiKeyAlert) {
+                Button(tr("Add key")) {
+                    dismiss()
+                    viewModel.selectedTab = .profile
+                }
+                Button(tr("Cancel"), role: .cancel) {}
+            } message: {
+                Text(tr("AI features run on your own OpenRouter API key. Add it in your profile to use them."))
+            }
             .sheet(isPresented: $showsHistory) {
                 HistoryPickerSheet(api: viewModel.store.apiClient, onAdd: addFromHistory)
             }
@@ -345,6 +355,9 @@ struct MealEditorSheet: View {
                 return .init(message: tr("Photos weren’t stored on the server."), success: true, usage: result.usage)
             }
             return .init(success: true, usage: result.usage)
+        } catch APIClientError.aiKeyRequired {
+            showsAiKeyAlert = true
+            return .init(success: false)
         } catch {
             return .init(message: MealPhotoSheet.message(for: error, tr), success: false)
         }
@@ -366,6 +379,9 @@ struct MealEditorSheet: View {
             if let guess = result.analysis.mealTypeGuess { mealType = guess }
             let note = result.analysis.uncertaintyNote.trimmingCharacters(in: .whitespacesAndNewlines)
             return .init(success: true, usage: result.usage, note: note.isEmpty ? nil : note)
+        } catch APIClientError.aiKeyRequired {
+            showsAiKeyAlert = true
+            return .init(success: false)
         } catch {
             return .init(message: MealPhotoSheet.message(for: error, tr), success: false)
         }

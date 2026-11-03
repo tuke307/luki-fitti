@@ -6,8 +6,6 @@ export interface AuthenticatedUser {
   email: string;
   /** Admin permissions, loaded from the database on every request (never from the JWT). */
   permissions?: string[];
-  /** Individually granted opt-in features, loaded from the database on every request. */
-  featureGrants?: string[];
 }
 
 export const CurrentUser = createParamDecorator(
