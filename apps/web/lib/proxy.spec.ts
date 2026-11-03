@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 process.env.SITE_HOSTNAMES = 'site.example.com';
 process.env.APP_ORIGIN = 'https://app.example.com';
-process.env.NODE_ENV = 'production';
+(process.env as Record<string, string | undefined>).NODE_ENV = 'production';
 process.env.JWT_SECRET = 'test-secret';
 
 const { proxy } = await import('../proxy');
