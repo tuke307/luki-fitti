@@ -254,7 +254,9 @@ public final class WatchWorkoutViewModel {
         if store.activeSession?.clientSessionId == completed.clientSessionId {
             store.saveActiveSession(nil)
         }
-        store.saveHistorySession(completed)
+        if !store.isDeleted(clientSessionId: completed.clientSessionId) {
+            store.saveHistorySession(completed)
+        }
         endHealthSessionIfIdle()
     }
 
