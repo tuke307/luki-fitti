@@ -21,6 +21,6 @@ Mirror them into our own storage/CDN so we don't depend on the upstream repo.
 
 ## Pause-aware workout duration
 
-The session DTO has no accumulated pause time, so finished durations include pauses (elapsed
-time on the client is already pause-aware). This needs a schema field that tracks total
-paused time.
+The session DTO has no accumulated pause time, so finished durations include pauses (the
+client's elapsed clock freezes while paused but jumps forward after resume). This needs a
+schema field that tracks total paused time.

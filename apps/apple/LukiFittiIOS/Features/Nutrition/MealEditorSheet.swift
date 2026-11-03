@@ -131,6 +131,15 @@ struct MealEditorSheet: View {
                         showsCamera: $showsCamera,
                         viewerStart: $photoViewerStart
                     )
+                    .overlay {
+                        // Without a key the section stays visible but every entry point
+                        // (camera, picker, estimate) warns first.
+                        if viewModel.store.currentUser?.aiKeyConfigured != true {
+                            Color.clear
+                                .contentShape(Rectangle())
+                                .onTapGesture { showsAiKeyAlert = true }
+                        }
+                    }
                 }
 
                 Section {
