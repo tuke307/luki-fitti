@@ -47,11 +47,9 @@ services:
       retries: 3
       start_period: 40s
     labels:
-      # Both hosts serve the same web container; proxy.ts splits site vs app paths.
-      - 'caddy_1=https://luki-fitti.tony-luke.de'
-      - 'caddy_1.reverse_proxy={{upstreams 3000}}'
-      - 'caddy_2=https://app.luki-fitti.tony-luke.de'
-      - 'caddy_2.reverse_proxy={{upstreams 3000}}'
+      # Web domains are set in the Coolify UI (luki-fitti.tony-luke.de and
+      # app.luki-fitti.tony-luke.de → this container); Coolify generates the caddy
+      # labels. The API service below only attaches /api/* routes to both hosts.
       - 'app.project=luki-fitti'
       - 'app.service=web'
 
@@ -116,9 +114,6 @@ services:
       - 'caddy_1=https://luki-fitti.tony-luke.de'
       - 'caddy_1.0_handle=/api/*'
       - 'caddy_1.0_handle.reverse_proxy={{upstreams 3001}}'
-      - 'caddy_2=https://app.luki-fitti.tony-luke.de'
-      - 'caddy_2.0_handle=/api/*'
-      - 'caddy_2.0_handle.reverse_proxy={{upstreams 3001}}'
       - 'app.project=luki-fitti'
       - 'app.service=api'
 

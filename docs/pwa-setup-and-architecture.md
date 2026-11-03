@@ -51,3 +51,8 @@ Cutover order:
 **Offline data caveat:** IndexedDB is per-origin — anything stored in the browser under the old
 origin does not carry over. An installed PWA launched on the old origin is bounced to the new
 one by the standalone-mode check on the landing page, but it cannot bring its IndexedDB with it.
+
+**Coolify:** the web service's domains are set in the Coolify UI — `luki-fitti.tony-luke.de` and
+`app.luki-fitti.tony-luke.de` → `luki-fitti-web:3000` (Coolify generates the caddy labels;
+`compose.yml` must not repeat them). `www.luki-fitti.tony-luke.de` should redirect to the
+non-www host.
