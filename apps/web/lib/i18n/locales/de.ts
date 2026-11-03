@@ -690,6 +690,7 @@ export const de = {
     rowDataSources: 'Datenquellen',
     kcalValue: '{count} kcal',
     notSet: 'Nicht festgelegt',
+version: 'Version',
     backToSettings: 'Zurück zu den Einstellungen',
   },
   auth: {

@@ -659,6 +659,7 @@ public enum LukiStrings {
         "Change reps": "Wiederholungen ändern",
         "%d bpm": "%d Schläge/Min.",
         "Sign in again to sync": "Zum Synchronisieren erneut anmelden",
+        "Version %@": "Version %@",
         "Your session ended. Everything on this iPhone is kept and uploads after you sign in.": "Deine Sitzung ist abgelaufen. Alles auf diesem iPhone bleibt erhalten und wird nach der Anmeldung hochgeladen.",
     ]
 }
