@@ -37,7 +37,7 @@ async function ensureFrame(dmgUrl, needle, outName) {
       console.log(`Downloading ${dmgUrl}…`);
       execSync(`curl -fsSL -o "${dmg}" "${dmgUrl}"`, { stdio: 'inherit' });
     }
-    const mount = execSync(`hdiutil attach -nobrowse -readonly "${dmg}"`, { encoding: 'utf8' });
+    const mount = execSync(`yes | hdiutil attach -nobrowse -readonly "${dmg}"`, { encoding: 'utf8' });
     const volume = mount.trim().split('\n').pop().split('\t').pop().trim();
     try {
       const files = execSync(`find "${volume}" -iname '*.png'`, { encoding: 'utf8' })
@@ -58,6 +58,25 @@ async function ensureFrame(dmgUrl, needle, outName) {
     console.warn(`warn: could not fetch frame ${outName} (${e.message}) — using rounded fallback`);
     return null;
   }
+}
+
+/** Resolve the exported PNG for a shot via xcresulttool's manifest.json. */
+function rawFileFor(rawDir, shotId, rawName) {
+  try {
+    const manifest = JSON.parse(fs.readFileSync(path.join(rawDir, 'manifest.json'), 'utf8'));
+    for (const entry of manifest) {
+      for (const att of entry.attachments ?? []) {
+        const n = att.suggestedHumanReadableName ?? '';
+        if (n.startsWith(shotId) || n.includes(`-${shotId}`)) {
+          return path.join(rawDir, att.exportedFileName);
+        }
+      }
+    }
+  } catch {}
+  try {
+    return fs.readdirSync(rawDir).map((f) => path.join(rawDir, f))
+      .find((f) => f.endsWith(`${shotId}.png`) || f.endsWith(rawName));
+  } catch { return undefined; }
 }
 
 /** Bounding box of the fully transparent hole inside a bezel PNG (the screen cutout). */
@@ -125,12 +144,9 @@ async function main() {
     for (const lang of ['en', 'de']) {
       if (isWatch && lang === 'de') continue; // watch captured in en only
       const rawName = `${String(i + 1).padStart(2, '0')}-${shot.id}.png`;
-      // Attachments export with their test names; tolerate prefix variants.
       const rawDir = path.join(RAW, lang);
-      const src = fs
-        .readdirSync(rawDir)
-        .map((f) => path.join(rawDir, f))
-        .find((f) => f.endsWith(`${shot.id}.png`) || f.endsWith(rawName));
+      // Attachments export as UUID files; manifest.json maps them back to the test names.
+      const src = rawFileFor(rawDir, shot.id, rawName);
       if (!src || !fs.existsSync(src)) {
         console.warn(`skip ${lang}/${rawName} — no raw capture`);
         continue;

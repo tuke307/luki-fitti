@@ -24,18 +24,25 @@ final class MarketingScreenshotsUITests: XCTestCase {
         add(attachment)
     }
 
+    /// The seeded active session presents the full-screen workout view.
+    private func waitForWorkoutView(_ app: XCUIApplication) {
+        _ = app.buttons["ios.session.finishButton"].firstMatch.waitForExistence(timeout: 20)
+    }
+
     @MainActor
     func test01ActiveWorkout() {
         let app = launchMarketingApp(language: "en")
-        let session = app.buttons["ios.session.workoutView"].firstMatch
-        _ = session.waitForExistence(timeout: 15)
+        waitForWorkoutView(app)
         save("01-active-workout")
     }
 
     @MainActor
     func test02SetSuggestion() {
         let app = launchMarketingApp(language: "en")
-        _ = app.buttons["ios.session.workoutView"].firstMatch.waitForExistence(timeout: 15)
+        waitForWorkoutView(app)
+        // The next uncompleted set carries the +2.5 kg suggestion from the seeded history.
+        _ = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'kg'")).firstMatch
+            .waitForExistence(timeout: 10)
         save("02-suggestion")
     }
 
@@ -45,7 +52,7 @@ final class MarketingScreenshotsUITests: XCTestCase {
         let tab = app.tabBars.buttons["Library"].firstMatch
         XCTAssertTrue(tab.waitForExistence(timeout: 15))
         tab.tap()
-        sleep(2)
+        sleep(3)
         save("04-exercises")
     }
 
@@ -55,20 +62,22 @@ final class MarketingScreenshotsUITests: XCTestCase {
         let tab = app.tabBars.buttons["History"].firstMatch
         XCTAssertTrue(tab.waitForExistence(timeout: 15))
         tab.tap()
-        sleep(2)
+        sleep(3)
         save("05-history")
     }
 
     @MainActor
     func test06MealPhoto() {
         let app = launchMarketingApp(language: "en")
-        let tab = app.tabBars.buttons["Nutrition"].firstMatch
+        let tab = app.tabBars.buttons["Food"].firstMatch
         XCTAssertTrue(tab.waitForExistence(timeout: 15))
         tab.tap()
-        let meal = app.buttons["ios.nutrition.mealRow.marketing-meal"].firstMatch
-        _ = meal.waitForExistence(timeout: 10)
-        meal.tap()
-        sleep(1)
+        // Open the seeded "Lunch" meal; if the row isn't found we still capture the day view.
+        let meal = app.staticTexts["Lunch"].firstMatch
+        if meal.waitForExistence(timeout: 8) {
+            meal.tap()
+            sleep(2)
+        }
         save("06-meal")
     }
 }
