@@ -665,6 +665,10 @@ public enum LukiStrings {
         "%d bpm": "%d Schläge/Min.",
         "Sign in again to sync": "Zum Synchronisieren erneut anmelden",
         "Version %@": "Version %@",
+        "Legal": "Rechtliches",
+        "Imprint": "Impressum",
+        "Privacy policy": "Datenschutzerklärung",
+        "Terms of use": "Nutzungsbedingungen",
         "Your session ended. Everything on this iPhone is kept and uploads after you sign in.": "Deine Sitzung ist abgelaufen. Alles auf diesem iPhone bleibt erhalten und wird nach der Anmeldung hochgeladen.",
     ]
 }

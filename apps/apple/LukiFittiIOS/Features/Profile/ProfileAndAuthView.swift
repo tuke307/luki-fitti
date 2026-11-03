@@ -14,6 +14,7 @@ public struct ProfileAndAuthView: View {
     @State private var newResetPassword: String = ""
     @State private var generalAutosave = PreferencesAutosaver()
     @Environment(\.lukiLocale) private var tr
+    @Environment(\.openURL) private var openURL
 
     public init(viewModel: LukiAppViewModel) {
         self.viewModel = viewModel
@@ -77,6 +78,8 @@ public struct ProfileAndAuthView: View {
             }
 
             dataSection
+
+            legalSection
 
             Section {
                 Text(tr("Version %@", AppVersionInfo.display))
@@ -362,6 +365,28 @@ public struct ProfileAndAuthView: View {
             Text(tr("Data"))
         } footer: {
             Text(tr("Exports your workout history as a JSON file."))
+        }
+    }
+
+    /// Impressum / Datenschutz / Nutzungsbedingungen on the marketing site — German paths
+    /// unless the app language is English.
+    private var legalSection: some View {
+        let german = tr.rawValue.hasPrefix("de")
+        let rows: [(String, String, String)] = [
+            (german ? "/impressum" : "/en/imprint", tr("Imprint"), "doc.plaintext"),
+            (german ? "/datenschutz" : "/en/privacy", tr("Privacy policy"), "hand.raised"),
+            (german ? "/nutzungsbedingungen" : "/en/terms", tr("Terms of use"), "doc.text"),
+        ]
+        return Section(tr("Legal")) {
+            ForEach(rows, id: \.0) { path, label, icon in
+                Button {
+                    if let url = URL(string: "https://luki-fitti.tony-luke.de\(path)") {
+                        openURL(url)
+                    }
+                } label: {
+                    SettingsRow(label, systemImage: icon, tint: LukiColors.accent)
+                }
+            }
         }
     }
 }

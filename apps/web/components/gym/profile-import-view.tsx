@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link';
 import {
   BookOpen,
+  FileText,
   Dumbbell,
   HeartPulse,
   Salad,
@@ -60,6 +61,7 @@ import { ProfileHealthCard, ProfileNutritionGoalsCard } from './profile-body-car
 import { AiUsageView } from './ai-usage/ai-usage-view';
 import { AiKeyCard } from './ai-key-card';
 import { AI_KEY_NAVIGATE_EVENT } from '@/lib/ai/ai-key-required';
+import { LANDING_URL } from '@/lib/config/env.config';
 import { SettingsRow, SettingsSection, SettingsSubpage } from './settings/settings-row';
 import { WeightView } from './weight/weight-view';
 import { hasPendingWeightFocusRequest } from './weight/weight-focus';
@@ -125,7 +127,7 @@ export function ProfileImportView() {
   } = useAuth();
   const { folders, unfiledTemplates, stretchingRoutines, historySessions, catalog } = useGym();
   const { theme, setTheme } = useTheme();
-  const { t, format, languagePreference, setLanguagePreference } = useLocale();
+  const { t, format, languagePreference, setLanguagePreference, locale } = useLocale();
 
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
@@ -1033,6 +1035,30 @@ export function ProfileImportView() {
               icon={BookOpen}
               tone="muted"
               title={t.profile.rowDataSources}
+            />
+          </SettingsSection>
+
+          <SettingsSection title={t.profile.legalSectionTitle}>
+            <SettingsRow
+              href={`${LANDING_URL}${locale === 'de' ? '/impressum' : '/en/imprint'}`}
+              data-testid="settings-row-imprint"
+              icon={FileText}
+              tone="muted"
+              title={t.profile.rowImprint}
+            />
+            <SettingsRow
+              href={`${LANDING_URL}${locale === 'de' ? '/datenschutz' : '/en/privacy'}`}
+              data-testid="settings-row-privacy"
+              icon={ShieldCheck}
+              tone="muted"
+              title={t.profile.rowPrivacy}
+            />
+            <SettingsRow
+              href={`${LANDING_URL}${locale === 'de' ? '/nutzungsbedingungen' : '/en/terms'}`}
+              data-testid="settings-row-terms"
+              icon={BookOpen}
+              tone="muted"
+              title={t.profile.rowTerms}
             />
           </SettingsSection>
 

@@ -688,7 +688,11 @@ export const en = {
     rowDataSources: 'Data sources',
     kcalValue: '{count} kcal',
     notSet: 'Not set',
-version: 'Version',
+    legalSectionTitle: 'Legal',
+    rowImprint: 'Imprint',
+    rowPrivacy: 'Privacy policy',
+    rowTerms: 'Terms of use',
+    version: 'Version',
     backToSettings: 'Back to settings',
   },
   auth: {
