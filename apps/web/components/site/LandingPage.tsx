@@ -78,7 +78,7 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
       <SiteHeader t={t} />
       <main>
         {/* ---- hero ---------------------------------------------------- */}
-        <section className="relative mx-auto grid min-h-[calc(100dvh-3.5rem)] max-w-[920px] items-center gap-12 px-4 py-16 lg:grid-cols-2 lg:gap-8">
+        <section className="relative mx-auto grid min-h-[calc(100dvh-3.5rem)] max-w-[920px] items-center gap-12 px-4 pt-10 pb-16 sm:pt-12 lg:grid-cols-2 lg:gap-8 lg:py-12">
           <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center lg:justify-end">
             <div className="h-[640px] w-[640px] rounded-full bg-[radial-gradient(closest-side,oklch(0.72_0.16_50/0.22),transparent)]" />
           </div>
@@ -130,7 +130,7 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
                 return (
                   <div
                     key={feature.title}
-                    className="border-white/10 mx-auto max-w-2xl border-y py-20 text-center lg:py-28"
+                    className="border-white/10 mx-auto max-w-2xl border-y py-14 text-center lg:py-20"
                   >
                     <h3 className="text-3xl font-semibold tracking-[-0.02em] text-balance sm:text-4xl">
                       {feature.title}
@@ -148,7 +148,7 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
               return (
                 <div
                   key={feature.title}
-                  className={`grid items-center gap-12 py-20 lg:grid-cols-[1fr_1.1fr] lg:gap-8 lg:py-28 ${
+                  className={`grid items-center gap-12 py-14 lg:grid-cols-[1fr_1.1fr] lg:gap-8 lg:py-20 ${
                     flipped ? 'lg:[&>*:first-child]:order-2' : ''
                   }`}
                 >
@@ -164,7 +164,7 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
                         src={extra.src}
                         alt=""
                         width={280}
-                        className="absolute top-[6%] -translate-x-[18%] w-[280px] scale-90 opacity-90 hidden lg:block"
+                        className="absolute top-[6%] -translate-x-[42%] w-[280px] scale-90 opacity-90 hidden lg:block"
                       />
                     )}
                     <ShotImage
