@@ -1154,9 +1154,17 @@ private struct LiveStatsRow: View {
                 Label("\(bpm) bpm", systemImage: "heart.fill")
                     .foregroundStyle(LukiColors.heartRate)
             }
-            if let kcalText = kcalText {
-                Label(kcalText, systemImage: "flame.fill")
+            if healthCoordinator.activeCaloriesKcal > 0 {
+                Label("\(Int(healthCoordinator.activeCaloriesKcal)) kcal", systemImage: "flame.fill")
                     .foregroundStyle(LukiColors.calories)
+            } else {
+                // Without measured energy the estimate needs its own ticker to stay fresh.
+                TimelineView(.periodic(from: .now, by: 30)) { _ in
+                    if let kcalText = estimatedKcalText {
+                        Label(kcalText, systemImage: "flame.fill")
+                            .foregroundStyle(LukiColors.calories)
+                    }
+                }
             }
             Spacer()
             Text(volumeText)
@@ -1166,12 +1174,8 @@ private struct LiveStatsRow: View {
         .labelStyle(.titleAndIcon)
     }
 
-    /// Measured active energy when the Watch streams it, otherwise a live MET estimate.
-    private var kcalText: String? {
-        let measured = healthCoordinator.activeCaloriesKcal
-        if measured > 0 {
-            return "\(Int(measured)) kcal"
-        }
+    /// Live MET estimate used while no measured energy streams in from the Watch.
+    private var estimatedKcalText: String? {
         guard let started = LukiDate.parseISO(session.startedAt) else { return nil }
         let elapsed = session.status == .PAUSED
             ? session.activeDurationSeconds

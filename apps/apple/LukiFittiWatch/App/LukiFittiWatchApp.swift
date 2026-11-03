@@ -60,6 +60,9 @@ public final class WatchWorkoutViewModel {
             self.store.saveActiveSession(merged)
             self.scheduleRestEndHaptic(endsAt: merged.restTimerEndsAt)
         }
+        self.watchSyncCoordinator.onCompletedSessionReceived = { [weak self] completed in
+            self?.mergeIncomingCompletedSession(completed)
+        }
         syncWithCompanionAndServer()
     }
 
@@ -222,19 +225,13 @@ public final class WatchWorkoutViewModel {
         requestAuthIfNeeded()
     }
 
-    /// The last session id mirrored from the iPhone, so its clear/discard can drop the mirror.
-    @ObservationIgnored private var lastIncomingSessionId: String?
-
     private func mergeIncomingActiveSession(_ incoming: WorkoutSessionDto?) {
         guard let incoming else {
-            // The iPhone cleared/finished/discarded its session: drop the mirror and end the
-            // HealthKit workout session (metrics are already synced, so they're ignored).
-            if let active = store.activeSession, active.clientSessionId == lastIncomingSessionId {
+            // The iPhone cleared/finished/discarded its session: drop the mirror — but never let an
+            // iPhone with no session wipe a workout that was started on the Watch itself.
+            if store.activeSession?.sourceDevice != .APPLE_WATCH {
                 store.saveActiveSession(nil)
-                lastIncomingSessionId = nil
-                if healthCoordinator.isWorkoutRunning {
-                    Task { _ = await healthCoordinator.finishWorkout(clientSessionId: active.clientSessionId) }
-                }
+                endHealthSessionIfIdle()
             }
             return
         }
@@ -247,9 +244,25 @@ public final class WatchWorkoutViewModel {
             ? store.activeSession?.status
             : nil
         store.saveActiveSession(incoming)
-        lastIncomingSessionId = incoming.clientSessionId
         syncHealthSession(with: incoming, previousStatus: previousStatus)
         scheduleRestEndHaptic(endsAt: incoming.restTimerEndsAt)
+    }
+
+    /// The iPhone finished the shared workout: drop the mirror and keep the completed copy
+    /// (`saveHistorySession` upserts by clientSessionId, so a later context payload can't double it).
+    private func mergeIncomingCompletedSession(_ completed: WorkoutSessionDto) {
+        if store.activeSession?.clientSessionId == completed.clientSessionId {
+            store.saveActiveSession(nil)
+        }
+        store.saveHistorySession(completed)
+        endHealthSessionIfIdle()
+    }
+
+    /// Every path that can clear the active session funnels here so the HealthKit workout session
+    /// can't leak across relaunches. `finishWorkout` is a no-op when it already ran.
+    private func endHealthSessionIfIdle() {
+        guard store.activeSession == nil, healthCoordinator.isWorkoutRunning else { return }
+        Task { _ = await healthCoordinator.finishWorkout(clientSessionId: "idle-cleanup") }
     }
 
     /// Keeps the Watch's HealthKit workout session aligned with the mirrored session: started when

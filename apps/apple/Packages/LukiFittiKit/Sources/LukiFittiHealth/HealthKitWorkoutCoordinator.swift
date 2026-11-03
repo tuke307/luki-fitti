@@ -91,7 +91,6 @@ public final class HealthKitWorkoutCoordinator: NSObject {
         guard let healthStore else { return false }
         let typesToShare: Set<HKSampleType> = [
             HKObjectType.workoutType(),
-            HKQuantityType(.heartRate),
             HKQuantityType(.activeEnergyBurned),
             HKQuantityType(.basalEnergyBurned),
         ]
@@ -336,6 +335,11 @@ public final class HealthKitWorkoutCoordinator: NSObject {
     }
 
     private func attachMirroredSession(_ session: HKWorkoutSession) {
+        // A watch-started workout may arrive while no local workout runs — don't carry over
+        // stats from an earlier workout.
+        if !isWorkoutRunning {
+            resetWorkoutStats(startedAt: session.startDate ?? Date())
+        }
         hkWorkoutSession = session
         isMirroredSession = true
         session.delegate = hkDelegateProxy
