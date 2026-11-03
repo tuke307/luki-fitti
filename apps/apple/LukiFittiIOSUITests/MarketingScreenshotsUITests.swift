@@ -6,7 +6,7 @@ import XCTest
 /// than capturing the wrong screen. `*En` / `*De` variants run in the matching locale.
 final class MarketingScreenshotsUITests: XCTestCase {
     /// Locale comes from the method name (`…En` / `…De`) — env vars don't reach the runner.
-    private var lang: String { name.hasSuffix("De") ? "de" : "en" }
+    private var lang: String { name.contains("De]") ? "de" : "en" }
     private var tabLibrary: String { lang == "de" ? "Bibliothek" : "Library" }
     private var tabHistory: String { lang == "de" ? "Verlauf" : "History" }
     private var tabFood: String { lang == "de" ? "Essen" : "Food" }
@@ -30,6 +30,12 @@ final class MarketingScreenshotsUITests: XCTestCase {
                 .appendingPathComponent("marketing/assets/demo-meal.jpg")
                 .path
         app.launch()
+        // Guard the locale before any capture — the wrong language fails the test.
+        let expectedTab = lang == "de" ? "Heute" : "Today"
+        XCTAssertTrue(
+            app.tabBars.buttons[expectedTab].firstMatch.waitForExistence(timeout: 15),
+            "expected \(lang) tab '\(expectedTab)'"
+        )
         return app
     }
 

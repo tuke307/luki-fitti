@@ -3,7 +3,7 @@ import XCTest
 /// Watch marketing shot (screenshots.json `watch`): an active workout showing live bpm.
 /// `…En` / `…De` variants run in the matching locale.
 final class MarketingScreenshotsUITests: XCTestCase {
-    private var lang: String { name.hasSuffix("De") ? "de" : "en" }
+    private var lang: String { name.contains("De]") ? "de" : "en" }
 
     @MainActor
     private func shot() {

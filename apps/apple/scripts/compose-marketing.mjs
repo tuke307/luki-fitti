@@ -185,7 +185,9 @@ async function main() {
         `<!doctype html><body style="margin:0;width:${OUT_W}px;height:${OUT_H}px;background:#0a0a0a;font-family:-apple-system,'SF Pro Display',system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;padding-top:170px;box-sizing:border-box;">
         <h1 style="color:${ACCENT};font-size:88px;font-weight:700;margin:0;text-align:center;letter-spacing:-0.5px;">${shot.headline[lang]}</h1>
         <p style="color:#a0a0a0;font-size:46px;margin:26px 0 0;text-align:center;">${shot.subline[lang]}</p>
-        <div style="margin-top:80px;transform:scale(${Math.min(1100 / composed.w, 1)});transform-origin:top center;">${composed.html}</div>
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;">
+          <div style="transform:scale(${isWatch ? 1120 / composed.w : Math.min(1100 / composed.w, 1)});transform-origin:center;">${composed.html}</div>
+        </div>
       </body>`,
         { waitUntil: 'load' },
       );
