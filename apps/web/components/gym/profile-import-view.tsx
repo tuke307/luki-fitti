@@ -1026,6 +1026,11 @@ export function ProfileImportView() {
               title={t.profile.rowDataSources}
             />
           </SettingsSection>
+
+          <p className="text-muted-foreground pt-2 text-center text-xs">
+            {t.profile.version} {process.env.NEXT_PUBLIC_APP_VERSION}
+            {process.env.NEXT_PUBLIC_GIT_SHA ? ` (${process.env.NEXT_PUBLIC_GIT_SHA})` : ''}
+          </p>
         </div>
       ) : (
         <SettingsSubpage

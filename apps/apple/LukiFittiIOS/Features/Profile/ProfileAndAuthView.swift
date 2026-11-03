@@ -77,6 +77,14 @@ public struct ProfileAndAuthView: View {
             }
 
             dataSection
+
+            Section {
+                Text(tr("Version %@", AppVersionInfo.display))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .listRowBackground(Color.clear)
+            }
         }
         .listStyle(.insetGrouped)
         .onChange(of: GeneralPreferences(store.preferences)) { _, values in

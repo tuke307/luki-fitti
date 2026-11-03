@@ -1,11 +1,32 @@
+import { execSync } from 'child_process';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const packageVersion = createRequire(import.meta.url)('./package.json').version;
+
+function gitSha() {
+  if (process.env.GIT_SHA) return process.env.GIT_SHA.slice(0, 7);
+  try {
+    return execSync('git rev-parse --short HEAD', {
+      cwd: __dirname,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+      .toString()
+      .trim();
+  } catch {
+    return '';
+  }
+}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  env: {
+    NEXT_PUBLIC_APP_VERSION: packageVersion,
+    NEXT_PUBLIC_GIT_SHA: gitSha(),
+  },
   async rewrites() {
     if (process.env.NODE_ENV === 'production') return [];
     return [

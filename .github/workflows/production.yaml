@@ -141,6 +141,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=build-web
           build-args: |
             NEXT_PUBLIC_SITE_URL=${{ vars.NEXT_PUBLIC_SITE_URL }}
+            GIT_SHA=${{ github.sha }}
           tags: |
             ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
