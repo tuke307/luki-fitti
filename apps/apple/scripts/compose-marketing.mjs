@@ -162,9 +162,8 @@ async function main() {
     const isWatch = shot.id === 'watch';
     const frame = isWatch ? watchCut : iphoneCut;
     for (const lang of ['en', 'de']) {
-      if (isWatch && lang === 'de') continue; // watch captured in en only
       const num = String(i + 1).padStart(2, '0');
-      const rawDir = path.join(RAW, isWatch ? 'watch-en' : lang);
+      const rawDir = path.join(RAW, isWatch ? `watch-${lang}` : lang);
       const src = rawFileFor(rawDir, shot.id, `${num}-${shot.id}.png`);
       if (!src || !fs.existsSync(src)) {
         console.warn(`skip ${lang}/${num}-${shot.id}.png — no raw capture in ${rawDir}`);
@@ -227,10 +226,13 @@ async function main() {
         const v = pixelVariance(file);
         if (!(v > 50)) throw new Error(`${label} ${file} looks blank (variance ${v})`);
         const hash = execSync(`md5 -q "${file}"`).toString().trim();
-        if (seenHashes.has(hash)) {
-          throw new Error(`${label} ${file} is identical to ${seenHashes.get(hash)}`);
+        // Different shots in the SAME language must differ; en↔de may legitimately be
+        // identical on locale-invariant screens (numbers, kg).
+        const key = `${label}/${lang}:${hash}`;
+        if (seenHashes.has(key)) {
+          throw new Error(`${label} ${file} is identical to ${seenHashes.get(key)}`);
         }
-        seenHashes.set(hash, file);
+        seenHashes.set(key, file);
       }
       console.log(`${lang} ${shot.id} ✓ (var ${pixelVariance(appFile)})`);
     }

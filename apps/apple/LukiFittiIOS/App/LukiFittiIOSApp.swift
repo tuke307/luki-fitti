@@ -908,7 +908,11 @@ public final class LukiAppViewModel {
             store.saveHistorySession(completed)
         }
 
-        if args.contains("--uitesting-marketing") {
+        if args.contains("--uitesting-marketing") || args.contains("--uitesting-marketing-session") {
+            // Marketing shots run in the app's own locale, not just AppleLanguages.
+            if ProcessInfo.processInfo.environment["LUKIFITTI_MARKETING_LANG"] == "de" {
+                store.preferences.language = .de
+            }
             seedMarketingContent(vm: vm, store: store, args: args)
         }
 
@@ -959,6 +963,10 @@ public final class LukiAppViewModel {
                         if let w = completed.exercises[exIdx].sets[sIdx].weight {
                             completed.exercises[exIdx].sets[sIdx].weight = w + Double(8 - week) * 2.5
                         }
+                        // The last week tops the rep range → the next open set gets +2.5 kg.
+                        if week == 1 {
+                            completed.exercises[exIdx].sets[sIdx].reps = 12
+                        }
                     }
                     completed.exercises[exIdx].status = .COMPLETED
                 }
@@ -976,9 +984,11 @@ public final class LukiAppViewModel {
             }
         }
 
-        // Active session mid-workout; first set done so the next shows the +2.5 kg suggestion.
-        vm.startSession(from: template, sourceDevice: .IPHONE)
-        if var active = store.activeSession {
+        // Active session mid-workout only when the shot needs it — otherwise it covers the tabs.
+        if args.contains("--uitesting-marketing-session") {
+            vm.startSession(from: template, sourceDevice: .IPHONE)
+        }
+        if args.contains("--uitesting-marketing-session"), var active = store.activeSession {
             for exIdx in active.exercises.indices {
                 if !active.exercises[exIdx].sets.isEmpty {
                     active.exercises[exIdx].sets[0].completed = true
@@ -987,6 +997,8 @@ public final class LukiAppViewModel {
             active.startedAt = iso.string(from: Date().addingTimeInterval(-1500))
             active.restTimerEndsAt = iso.string(from: Date().addingTimeInterval(45))
             store.saveActiveSession(active)
+            // Present the full-screen workout cover for the shot.
+            vm.selectedTab = .session
         }
 
         // Fake live vitals for the bpm / kcal rows and the Live Activity.

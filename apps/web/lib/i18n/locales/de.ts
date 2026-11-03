@@ -696,6 +696,8 @@ export const de = {
     rowPrivacy: 'Datenschutzerklärung',
     rowTerms: 'Nutzungsbedingungen',
     version: 'Version',
+    feedbackSectionTitle: 'Feedback',
+    rowFeatureRequest: 'Feature wünschen',
     backToSettings: 'Zurück zu den Einstellungen',
   },
   auth: {

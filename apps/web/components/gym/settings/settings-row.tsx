@@ -67,7 +67,7 @@ export function SettingsRow({
     'hover:bg-secondary/50 active:bg-secondary/70 focus-visible:ring-ring flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset';
   const content = (
     <>
-        <span
+      <span
           aria-hidden="true"
           className={cn(
             'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
@@ -99,7 +99,12 @@ export function SettingsRow({
           {content}
         </a>
       ) : (
-        <button type="button" onClick={onClick} data-testid={rest['data-testid']} className={rowClass}>
+        <button
+          type="button"
+          onClick={onClick}
+          data-testid={rest['data-testid']}
+          className={rowClass}
+        >
           {content}
         </button>
       )}

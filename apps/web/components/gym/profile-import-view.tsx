@@ -25,6 +25,7 @@ import {
   Volume2,
   Sparkles,
   ShieldCheck,
+  Lightbulb,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Badge } from '@luki-fitti/ui/components/ui/badge';
@@ -60,6 +61,7 @@ import { type LanguagePreference, WeightUnit } from '@luki-fitti/common/enums';
 import { ProfileHealthCard, ProfileNutritionGoalsCard } from './profile-body-card';
 import { AiUsageView } from './ai-usage/ai-usage-view';
 import { AiKeyCard } from './ai-key-card';
+import { buildFeatureRequestMailto } from '@luki-fitti/common/utils';
 import { AI_KEY_NAVIGATE_EVENT } from '@/lib/ai/ai-key-required';
 import { LANDING_URL } from '@/lib/config/env.config';
 import { SettingsRow, SettingsSection, SettingsSubpage } from './settings/settings-row';
@@ -138,6 +140,11 @@ export function ProfileImportView() {
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [logoutAllDialogOpen, setLogoutAllDialogOpen] = useState(false);
+  const navigatorOs =
+    typeof navigator !== 'undefined'
+      ? ((navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData
+          ?.platform ?? undefined)
+      : undefined;
   const [page, setPage] = useState<SettingsPage>(() =>
     hasPendingWeightFocusRequest() ? 'health' : 'root',
   );
@@ -922,6 +929,13 @@ export function ProfileImportView() {
     }
   };
 
+  const featureRequestMailto = buildFeatureRequestMailto({
+    locale,
+    appVersion: `1.0.0${process.env.NEXT_PUBLIC_GIT_SHA ? ` (${process.env.NEXT_PUBLIC_GIT_SHA})` : ''}`,
+    platform: 'Web',
+    os: navigatorOs,
+  });
+
   return (
     <>
       {visiblePage === 'root' ? (
@@ -1035,6 +1049,16 @@ export function ProfileImportView() {
               icon={BookOpen}
               tone="muted"
               title={t.profile.rowDataSources}
+            />
+          </SettingsSection>
+
+          <SettingsSection title={t.profile.feedbackSectionTitle}>
+            <SettingsRow
+              href={featureRequestMailto}
+              data-testid="settings-row-feature-request"
+              icon={Lightbulb}
+              tone="warmup"
+              title={t.profile.rowFeatureRequest}
             />
           </SettingsSection>
 

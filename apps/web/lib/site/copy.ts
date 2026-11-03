@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+
 import { buildFeatureRequestMailto } from '@luki-fitti/common/utils';
 
 export type SiteLocale = 'de' | 'en';
@@ -134,6 +136,13 @@ export function getCopy(locale: SiteLocale) {
 }
 
 export function shotFile(locale: SiteLocale, file: string) {
+  // Fall back to the other language's capture when this locale has none (e.g. a missing
+  // watch shot) — a server component can check the file system at build time.
+  const preferred = `public/screens/${locale}/${file}`;
+  if (!existsSync(preferred)) {
+    const other = locale === 'de' ? 'en' : 'de';
+    if (existsSync(`public/screens/${other}/${file}`)) return `/screens/${other}/${file}`;
+  }
   return `/screens/${locale}/${file}`;
 }
 

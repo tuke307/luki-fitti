@@ -36,7 +36,7 @@ WATCH_UDID=$(pick_udid "$WATCH_SIM" watchOS)
 echo "iPhone: $IPHONE_SIM ($IPHONE_UDID)"
 echo "Watch:  $WATCH_SIM ($WATCH_UDID)"
 
-mkdir -p "$RAW_DIR/en" "$RAW_DIR/de" "$RAW_DIR/watch-en" "$RESULTS_DIR"
+mkdir -p "$RAW_DIR/en" "$RAW_DIR/de" "$RAW_DIR/watch-en" "$RAW_DIR/watch-de" "$RESULTS_DIR"
 xcodegen generate
 
 # Dark marketing shots: force the appearance on both simulators; restore afterwards.
@@ -46,31 +46,39 @@ PREV_APPEARANCE=$(xcrun simctl ui "$IPHONE_UDID" appearance 2>/dev/null | awk '{
 xcrun simctl ui "$IPHONE_UDID" appearance dark || true
 xcrun simctl ui "$WATCH_UDID" appearance dark || true
 
+IOS_SHOTS="01ActiveWorkout 02SetSuggestion 04ExerciseLibrary 05HistoryProgress 06MealPhoto"
+
 run_ios() {
-  local lang="$1"
+  local lang="$1" suffix="$2"
   local result="$RESULTS_DIR/ios-$lang.xcresult"
   rm -rf "$result"
+  # Re-apply the status bar right before this run — boot/erase may have cleared it.
   xcrun simctl status_bar "$IPHONE_UDID" override \
     --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
+  local only=()
+  for shot in $IOS_SHOTS; do
+    only+=("-only-testing:LukiFittiIOSUITests/MarketingScreenshotsUITests/test${shot}${suffix}")
+  done
   xcodebuild test \
     -project "$XCODEPROJ" -scheme LukiFittiIOS \
     -destination "platform=iOS Simulator,id=$IPHONE_UDID" \
-    -only-testing:LukiFittiIOSUITests/MarketingScreenshotsUITests \
+    "${only[@]}" \
     -resultBundlePath "$result" \
     CODE_SIGNING_ALLOWED=NO
   export_attachments "$result" "$RAW_DIR/$lang"
 }
 
 run_watch() {
-  local result="$RESULTS_DIR/watch-en.xcresult"
+  local lang="$1" suffix="$2"
+  local result="$RESULTS_DIR/watch-$lang.xcresult"
   rm -rf "$result"
   xcodebuild test \
     -project "$XCODEPROJ" -scheme LukiFittiWatch \
     -destination "platform=watchOS Simulator,id=$WATCH_UDID" \
-    -only-testing:LukiFittiWatchUITests/MarketingScreenshotsUITests \
+    "-only-testing:LukiFittiWatchUITests/MarketingScreenshotsUITests/test03WatchWorkout${suffix}" \
     -resultBundlePath "$result" \
     CODE_SIGNING_ALLOWED=NO
-  export_attachments "$result" "$RAW_DIR/watch-en"
+  export_attachments "$result" "$RAW_DIR/watch-$lang"
 }
 
 export_attachments() {
@@ -81,11 +89,12 @@ export_attachments() {
 }
 
 echo "== iPhone screenshots (en) =="
-run_ios en
+run_ios en En
 echo "== iPhone screenshots (de) =="
-run_ios de
-echo "== Watch screenshots (en) =="
-run_watch || echo "warn: watch capture failed — 03-watch will be missing"
+run_ios de De
+echo "== Watch screenshots =="
+run_watch en En || echo "warn: watch en capture failed — 03-watch (en) will be missing"
+run_watch de De || echo "warn: watch de capture failed — 03-watch (de) will be missing"
 
 xcrun simctl status_bar "$IPHONE_UDID" clear || true
 xcrun simctl ui "$IPHONE_UDID" appearance "${PREV_APPEARANCE:-light}" || true

@@ -694,6 +694,8 @@ export const en = {
     rowPrivacy: 'Privacy policy',
     rowTerms: 'Terms of use',
     version: 'Version',
+    feedbackSectionTitle: 'Feedback',
+    rowFeatureRequest: 'Request a feature',
     backToSettings: 'Back to settings',
   },
   auth: {

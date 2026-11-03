@@ -1,18 +1,27 @@
 import XCTest
 
 /// Marketing screenshot capture — run only via `-only-testing:…/MarketingScreenshotsUITests`
-/// (skipped by the normal e2e scripts). Each test saves a screenshot named after the shot id
-/// in `marketing/screenshots.json`.
+/// (skipped by the normal e2e scripts). Each test launches the app fresh with only the seed
+/// it needs and asserts the right screen is on display before saving — a test fails rather
+/// than capturing the wrong screen. `*En` / `*De` variants run in the matching locale.
 final class MarketingScreenshotsUITests: XCTestCase {
+    /// Locale comes from the method name (`…En` / `…De`) — env vars don't reach the runner.
+    private var lang: String { name.hasSuffix("De") ? "de" : "en" }
+    private var tabLibrary: String { lang == "de" ? "Bibliothek" : "Library" }
+    private var tabHistory: String { lang == "de" ? "Verlauf" : "History" }
+    private var tabFood: String { lang == "de" ? "Essen" : "Food" }
+    private var neverTrained: String { lang == "de" ? "Noch nie trainiert" : "Never trained" }
+
     @MainActor
-    private func launchMarketingApp(language: String) -> XCUIApplication {
+    private func launch(session: Bool) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
             "--uitesting",
-            "--uitesting-marketing",
-            "-AppleLanguages", "(\(language))",
+            session ? "--uitesting-marketing-session" : "--uitesting-marketing",
+            "-AppleLanguages", "(\(lang))",
             "-AppleInterfaceStyle", "Dark",
         ]
+        app.launchEnvironment["LUKIFITTI_MARKETING_LANG"] = lang
         // Simulator apps read host paths — never ships in the bundle.
         app.launchEnvironment["LUKIFITTI_MARKETING_MEAL_PHOTO"] =
             URL(fileURLWithPath: #filePath)
@@ -24,70 +33,100 @@ final class MarketingScreenshotsUITests: XCTestCase {
         return app
     }
 
-    private func save(_ name: String) {
+    @MainActor private func save(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
     }
 
-    /// The seeded active session presents the full-screen workout view.
-    private func waitForWorkoutView(_ app: XCUIApplication) {
-        _ = app.buttons["ios.session.finishButton"].firstMatch.waitForExistence(timeout: 20)
+    @MainActor private func assertSession(_ app: XCUIApplication) {
+        XCTAssertTrue(
+            app.buttons["ios.session.finishButton"].firstMatch.waitForExistence(timeout: 20),
+            "active session view must be on screen"
+        )
     }
 
-    @MainActor
-    func test01ActiveWorkout() {
-        let app = launchMarketingApp(language: "en")
-        waitForWorkoutView(app)
+    @MainActor private func shot01() {
+        let app = launch(session: true)
+        assertSession(app)
         save("01-active-workout")
     }
 
-    @MainActor
-    func test02SetSuggestion() {
-        let app = launchMarketingApp(language: "en")
-        waitForWorkoutView(app)
-        // The next uncompleted set carries the +2.5 kg suggestion from the seeded history.
-        let kg = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'kg'")).firstMatch
-        _ = kg.waitForExistence(timeout: 10)
-        // Scroll a little so the suggestion row is centered and the shot differs from 01.
-        app.swipeUp()
-        sleep(1)
+    @MainActor private func shot02() {
+        let app = launch(session: true)
+        assertSession(app)
+        // The next open set carries a +2.5 kg suggestion from the seeded history.
+        // The suggestion row lives under the next open set — scroll until it's rendered.
+        for _ in 0..<4 {
+            if app.buttons.matching(
+                NSPredicate(format: "label CONTAINS[c] 'kg' AND label CONTAINS '+'")
+            ).firstMatch.exists { break }
+            app.swipeUp()
+        }
+        let hint = app.buttons.matching(
+            NSPredicate(format: "label CONTAINS[c] 'kg' AND label CONTAINS '+'")
+        ).firstMatch
+        XCTAssertTrue(hint.waitForExistence(timeout: 10), "set suggestion must be visible")
         save("02-suggestion")
     }
 
-    @MainActor
-    func test04ExerciseLibrary() {
-        let app = launchMarketingApp(language: "en")
-        let tab = app.tabBars.buttons["Library"].firstMatch
-        XCTAssertTrue(tab.waitForExistence(timeout: 15))
+    @MainActor private func shot04() {
+        let app = launch(session: false)
+        let tab = app.tabBars.buttons[tabLibrary].firstMatch
+        XCTAssertTrue(tab.waitForExistence(timeout: 15), "Library tab missing")
         tab.tap()
-        sleep(3)
+        XCTAssertTrue(
+            app.buttons.matching(
+                NSPredicate(format: "identifier BEGINSWITH 'ios.library.exerciseRow.'")
+            ).firstMatch.waitForExistence(timeout: 10),
+            "exercise library list must be visible"
+        )
+        sleep(2)
         save("04-exercises")
     }
 
-    @MainActor
-    func test05HistoryProgress() {
-        let app = launchMarketingApp(language: "en")
-        let tab = app.tabBars.buttons["History"].firstMatch
-        XCTAssertTrue(tab.waitForExistence(timeout: 15))
+    @MainActor private func shot05() {
+        let app = launch(session: false)
+        let tab = app.tabBars.buttons[tabHistory].firstMatch
+        XCTAssertTrue(tab.waitForExistence(timeout: 15), "History tab missing")
         tab.tap()
-        sleep(3)
+        XCTAssertFalse(
+            app.staticTexts[neverTrained].firstMatch.waitForExistence(timeout: 5),
+            "history must show seeded sessions"
+        )
+        sleep(2)
         save("05-history")
     }
 
-    @MainActor
-    func test06MealPhoto() {
-        let app = launchMarketingApp(language: "en")
-        let tab = app.tabBars.buttons["Food"].firstMatch
-        XCTAssertTrue(tab.waitForExistence(timeout: 15))
+    @MainActor private func shot06() {
+        let app = launch(session: false)
+        let tab = app.tabBars.buttons[tabFood].firstMatch
+        XCTAssertTrue(tab.waitForExistence(timeout: 15), "Food tab missing")
         tab.tap()
-        // Open the seeded "Lunch" meal; if the row isn't found we still capture the day view.
-        let meal = app.staticTexts["Lunch"].firstMatch
-        if meal.waitForExistence(timeout: 8) {
-            meal.tap()
-            sleep(2)
-        }
+        // The seeded meal carries the demo photo + AI items; assert the meal is visible.
+        XCTAssertTrue(
+            app.images["ios.nutrition.photoThumbnail"].firstMatch.waitForExistence(timeout: 10) ||
+                app.staticTexts["Lunch"].firstMatch.waitForExistence(timeout: 2),
+            "meal photo section must be visible"
+        )
+        sleep(1)
         save("06-meal")
     }
+
+    // MARK: - EN
+
+    @MainActor func test01ActiveWorkoutEn() { shot01() }
+    @MainActor func test02SetSuggestionEn() { shot02() }
+    @MainActor func test04ExerciseLibraryEn() { shot04() }
+    @MainActor func test05HistoryProgressEn() { shot05() }
+    @MainActor func test06MealPhotoEn() { shot06() }
+
+    // MARK: - DE
+
+    @MainActor func test01ActiveWorkoutDe() { shot01() }
+    @MainActor func test02SetSuggestionDe() { shot02() }
+    @MainActor func test04ExerciseLibraryDe() { shot04() }
+    @MainActor func test05HistoryProgressDe() { shot05() }
+    @MainActor func test06MealPhotoDe() { shot06() }
 }
