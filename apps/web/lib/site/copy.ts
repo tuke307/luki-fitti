@@ -1,4 +1,5 @@
-import { existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
 
 import { buildFeatureRequestMailto } from '@luki-fitti/common/utils';
 
@@ -138,12 +139,17 @@ export function getCopy(locale: SiteLocale) {
 export function shotFile(locale: SiteLocale, file: string) {
   // Fall back to the other language's capture when this locale has none (e.g. a missing
   // watch shot) — a server component can check the file system at build time.
-  const preferred = `public/screens/${locale}/${file}`;
-  if (!existsSync(preferred)) {
+  let lang = locale;
+  if (!existsSync(`public/screens/${locale}/${file}`)) {
     const other = locale === 'de' ? 'en' : 'de';
-    if (existsSync(`public/screens/${other}/${file}`)) return `/screens/${other}/${file}`;
+    if (existsSync(`public/screens/${other}/${file}`)) lang = other;
   }
-  return `/screens/${locale}/${file}`;
+  // Cache-bust by content: the same URL must never serve a stale image after regeneration.
+  const hash = createHash('md5')
+    .update(readFileSync(`public/screens/${lang}/${file}`))
+    .digest('hex')
+    .slice(0, 8);
+  return `/screens/${lang}/${file}?v=${hash}`;
 }
 
 export function featureRequestHref(locale: SiteLocale): string {

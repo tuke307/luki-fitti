@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import '@luki-fitti/ui/globals.css';
+import { shotFile } from '@/lib/site/copy';
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1 };
 
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
     title: 'LukiFitti — Workout-Tracker',
     description:
       'Plane deine Workouts, protokolliere jeden Satz und sieh deinen Fortschritt — auf iPhone, Apple Watch und im Web.',
-    images: ['/screens/de/01-active-workout.png'],
+    images: [shotFile('de', '01-active-workout.png')],
     type: 'website',
   },
 };
