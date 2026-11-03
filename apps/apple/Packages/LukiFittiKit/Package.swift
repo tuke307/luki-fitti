@@ -100,5 +100,13 @@ let package = Package(
                 "LukiFittiWatchSync",
             ]
         ),
+        .testTarget(
+            name: "LukiFittiHealthTests",
+            dependencies: [
+                "LukiFittiModels",
+                "LukiFittiDomain",
+                "LukiFittiHealth",
+            ]
+        ),
     ]
 )

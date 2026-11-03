@@ -1,6 +1,7 @@
 import SwiftUI
 import Observation
 import UserNotifications
+import AudioToolbox
 import LukiFittiModels
 import LukiFittiDesign
 import LukiFittiDomain
@@ -97,6 +98,7 @@ public final class LukiAppViewModel {
             )
             self.store.saveActiveSession(merged)
             self.store.enqueueSessionSync(merged)
+            self.syncRestAlerts(session: merged)
             Task { await self.store.flushSyncQueue() }
         }
         self.watchSyncCoordinator.onActiveSessionReceived = { [weak self] incoming in
@@ -107,6 +109,10 @@ public final class LukiAppViewModel {
         }
         WorkoutLiveActivityActions.addRest = { [weak self] in self?.adjustRestTimer(deltaSeconds: 15) }
         WorkoutLiveActivityActions.skipRest = { [weak self] in self?.skipRestTimer() }
+        healthCoordinator.startObservingMirroredSessions()
+        healthCoordinator.onLiveMetricsReceived = { [weak self] in
+            self?.syncLiveActivityThrottled()
+        }
         pushContextToWatch()
         LukiNotificationCenterDelegate.shared.attach(self)
         pullFromWatchAndServer()
@@ -119,6 +125,16 @@ public final class LukiAppViewModel {
             heartRate: healthCoordinator.currentHeartRateBpm,
             locale: locale
         )
+    }
+
+    /// Live metrics arrive every ~2 s; the Dynamic Island only needs an update every 5 s.
+    @ObservationIgnored private var lastLiveActivitySyncAt = Date.distantPast
+
+    private func syncLiveActivityThrottled() {
+        let now = Date()
+        guard now.timeIntervalSince(lastLiveActivitySyncAt) >= 5 else { return }
+        lastLiveActivitySyncAt = now
+        syncLiveActivity()
     }
 
     public func pullFromWatchAndServer() {
@@ -148,6 +164,7 @@ public final class LukiAppViewModel {
         }
         store.saveActiveSession(incoming)
         store.enqueueSessionSync(incoming)
+        syncRestAlerts(session: incoming)
         Task { await store.flushSyncQueue() }
     }
 
@@ -312,15 +329,12 @@ public final class LukiAppViewModel {
                 session.restTimerDurationSec = restSec
                 session.restTimerEndsAt = ISO8601DateFormatter().string(from: Date().addingTimeInterval(TimeInterval(restSec)))
                 session.restTimerPausedRemSec = nil
-                scheduleRestTimerNotification(
-                    seconds: restSec,
-                    exerciseName: session.exercises[exIdx].exerciseNameSnapshot
-                )
             } else {
                 // Superset (0s rest): clear rest timer
                 session.restTimerEndsAt = nil
                 session.restTimerDurationSec = nil
                 session.restTimerPausedRemSec = nil
+                restAlertGate.reset()
                 cancelRestTimerNotification()
             }
         } else {
@@ -334,6 +348,7 @@ public final class LukiAppViewModel {
 
         let recalculated = SessionCalculator.recalculateSessionTotals(session)
         store.saveActiveSession(recalculated)
+        syncRestAlerts(session: recalculated, exerciseName: recalculated.exercises[exIdx].exerciseNameSnapshot)
         store.enqueueSessionSync(recalculated)
         watchSyncCoordinator.broadcastActiveSessionSnapshot(recalculated)
 
@@ -461,10 +476,7 @@ public final class LukiAppViewModel {
         session.version += 1
         store.saveActiveSession(session)
         watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
-        scheduleRestTimerNotification(
-            seconds: durationSeconds,
-            exerciseName: session.exercises.first?.exerciseNameSnapshot ?? session.workoutNameSnapshot
-        )
+        syncRestAlerts(session: session)
     }
 
     public func adjustRestTimer(deltaSeconds: Int) {
@@ -479,14 +491,12 @@ public final class LukiAppViewModel {
         if current.isPaused {
             session.restTimerPausedRemSec = newRem
             session.restTimerEndsAt = nil
+            restAlertGate.reset()
             cancelRestTimerNotification()
         } else {
             session.restTimerEndsAt = ISO8601DateFormatter().string(from: Date().addingTimeInterval(TimeInterval(newRem)))
             session.restTimerPausedRemSec = nil
-            scheduleRestTimerNotification(
-                seconds: newRem,
-                exerciseName: session.exercises.first?.exerciseNameSnapshot ?? session.workoutNameSnapshot
-            )
+            syncRestAlerts(session: session)
         }
         session.version += 1
         store.saveActiveSession(session)
@@ -499,13 +509,11 @@ public final class LukiAppViewModel {
         if current.isPaused {
             session.restTimerEndsAt = ISO8601DateFormatter().string(from: Date().addingTimeInterval(TimeInterval(current.remainingSeconds)))
             session.restTimerPausedRemSec = nil
-            scheduleRestTimerNotification(
-                seconds: current.remainingSeconds,
-                exerciseName: session.exercises.first?.exerciseNameSnapshot ?? session.workoutNameSnapshot
-            )
+            syncRestAlerts(session: session)
         } else if current.isRunning {
             session.restTimerPausedRemSec = current.remainingSeconds
             session.restTimerEndsAt = nil
+            restAlertGate.reset()
             cancelRestTimerNotification()
         }
         session.version += 1
@@ -521,7 +529,38 @@ public final class LukiAppViewModel {
         session.version += 1
         store.saveActiveSession(session)
         watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
+        restAlertGate.reset()
         cancelRestTimerNotification()
+    }
+
+    /// Schedules the rest-over alert pair for a new `restTimerEndsAt` — local notification for the
+    /// background (skipped while the Watch buzzes itself) and a foreground haptic — deduped by the
+    /// endsAt string so re-broadcasts and mutations of the same rest don't double it.
+    @ObservationIgnored private var restAlertGate = RestEndAlertGate()
+
+    private func syncRestAlerts(session: WorkoutSessionDto, exerciseName: String? = nil) {
+        guard let endsAt = session.restTimerEndsAt, let date = LukiDate.parseISO(endsAt) else {
+            restAlertGate.reset()
+            cancelRestTimerNotification()
+            return
+        }
+        guard restAlertGate.take(endsAt: endsAt) else { return }
+        if !healthCoordinator.isWatchSessionActive {
+            scheduleRestTimerNotification(
+                seconds: max(1, Int(date.timeIntervalSinceNow.rounded())),
+                exerciseName: exerciseName
+                    ?? session.exercises.first?.exerciseNameSnapshot
+                    ?? session.workoutNameSnapshot
+            )
+        }
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(max(0, date.timeIntervalSinceNow)))
+            guard let self, self.store.activeSession?.restTimerEndsAt == endsAt else { return }
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            if self.store.preferences.restTimerSound {
+                AudioServicesPlaySystemSound(1054)
+            }
+        }
     }
 
     public func scheduleRestTimerNotification(seconds: Int, exerciseName: String) {
@@ -701,11 +740,17 @@ public final class LukiAppViewModel {
         } else {
             session.status = .PAUSED
             session.pausedAt = ISO8601DateFormatter().string(from: Date())
+            let started = LukiDate.parseISO(session.startedAt) ?? Date()
+            session.activeDurationSeconds = max(
+                session.activeDurationSeconds,
+                Int(Date().timeIntervalSince(started))
+            )
             healthCoordinator.pauseWorkout()
         }
         session.version += 1
         store.saveActiveSession(session)
         store.enqueueSessionSync(session)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
     }
 
     public func finishActiveSession() async {
@@ -716,6 +761,14 @@ public final class LukiAppViewModel {
         session.restTimerEndsAt = nil
         session.restTimerDurationSec = nil
         session.restTimerPausedRemSec = nil
+        restAlertGate.reset()
+        let started = LukiDate.parseISO(session.startedAt) ?? Date()
+        session.activeDurationSeconds = max(
+            60,
+            session.activeDurationSeconds > 0
+                ? session.activeDurationSeconds
+                : Int(Date().timeIntervalSince(started))
+        )
 
         let hkMetrics = await healthCoordinator.finishWorkout(clientSessionId: session.clientSessionId)
         session.healthKitWorkoutUuid = hkMetrics.healthKitWorkoutUuid

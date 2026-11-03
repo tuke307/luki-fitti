@@ -195,6 +195,9 @@ public struct ActiveSessionView: View {
                         .foregroundStyle(isPaused ? Color.secondary : LukiColors.accent)
                     Text(session.workoutNameSnapshot)
                         .font(.title3.bold())
+                    SessionElapsedTime(session: session)
+                        .font(.footnote.monospacedDigit())
+                        .foregroundStyle(.secondary)
                 }
                 Spacer()
                 Button {
@@ -207,6 +210,8 @@ public struct ActiveSessionView: View {
 
             LiveStatsRow(
                 healthCoordinator: viewModel.healthCoordinator,
+                session: session,
+                bodyWeightKg: viewModel.bodyWeightKg(for: session),
                 volumeText: LukiFormat.volume(kg: session.totalVolumeKg, unit: session.weightUnit)
             )
 
@@ -1123,27 +1128,67 @@ public struct ActiveSessionView: View {
     }
 }
 
+/// Total workout time in its own view so the 1 s ticker re-renders only this label.
+private struct SessionElapsedTime: View {
+    let session: WorkoutSessionDto
+
+    var body: some View {
+        if session.status == .PAUSED {
+            Text(LukiFormat.clock(session.activeDurationSeconds))
+        } else if let started = LukiDate.parseISO(session.startedAt) {
+            Text(timerInterval: started...Date.distantFuture, countsDown: false)
+        } else {
+            Text(LukiFormat.clock(0))
+        }
+    }
+}
+
 /// Heart rate and energy update every few seconds; keeping them in their own view means only this
 /// row re-renders, not the whole workout list.
 private struct LiveStatsRow: View {
     let healthCoordinator: HealthKitWorkoutCoordinator
+    let session: WorkoutSessionDto
+    let bodyWeightKg: Double?
     let volumeText: String
 
     var body: some View {
         HStack(spacing: 14) {
-            Label(
-                "\(healthCoordinator.currentHeartRateBpm.map(String.init) ?? "–") bpm",
-                systemImage: "heart.fill"
-            )
-            .foregroundStyle(LukiColors.heartRate)
-            Label("\(Int(healthCoordinator.activeCaloriesKcal)) kcal", systemImage: "flame.fill")
-                .foregroundStyle(LukiColors.calories)
+            if let bpm = healthCoordinator.currentHeartRateBpm {
+                Label("\(bpm) bpm", systemImage: "heart.fill")
+                    .foregroundStyle(LukiColors.heartRate)
+            }
+            if healthCoordinator.activeCaloriesKcal > 0 {
+                Label("\(Int(healthCoordinator.activeCaloriesKcal)) kcal", systemImage: "flame.fill")
+                    .foregroundStyle(LukiColors.calories)
+            } else {
+                // Without measured energy the estimate needs its own ticker to stay fresh.
+                TimelineView(.periodic(from: .now, by: 30)) { _ in
+                    if let kcalText = estimatedKcalText {
+                        Label(kcalText, systemImage: "flame.fill")
+                            .foregroundStyle(LukiColors.calories)
+                    }
+                }
+            }
             Spacer()
             Text(volumeText)
                 .foregroundStyle(.secondary)
         }
         .font(.footnote.weight(.medium).monospacedDigit())
         .labelStyle(.titleAndIcon)
+    }
+
+    /// Live MET estimate used while no measured energy streams in from the Watch.
+    private var estimatedKcalText: String? {
+        guard let started = LukiDate.parseISO(session.startedAt) else { return nil }
+        let elapsed = session.status == .PAUSED
+            ? session.activeDurationSeconds
+            : max(0, Int(Date().timeIntervalSince(started)))
+        let estimate = NutritionMath.liveBurnedKcalEstimate(
+            for: session,
+            elapsedSeconds: elapsed,
+            bodyWeightKg: bodyWeightKg
+        )
+        return estimate > 0 ? "≈ \(estimate) kcal" : nil
     }
 }
 

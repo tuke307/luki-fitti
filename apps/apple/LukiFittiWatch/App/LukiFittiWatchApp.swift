@@ -1,6 +1,7 @@
 import SwiftUI
 import Observation
 import WatchKit
+import HealthKit
 import LukiFittiModels
 import LukiFittiDesign
 import LukiFittiDomain
@@ -57,6 +58,10 @@ public final class WatchWorkoutViewModel {
                 lastAppliedTimestamps: &self.watchSyncCoordinator.lastAppliedTimestamps
             )
             self.store.saveActiveSession(merged)
+            self.scheduleRestEndHaptic(endsAt: merged.restTimerEndsAt)
+        }
+        self.watchSyncCoordinator.onCompletedSessionReceived = { [weak self] completed in
+            self?.mergeIncomingCompletedSession(completed)
         }
         syncWithCompanionAndServer()
     }
@@ -145,8 +150,12 @@ public final class WatchWorkoutViewModel {
     }
 
     /// Buzzes when the rest is over, unless the rest was changed or skipped in the meantime.
+    /// Deduped by `endsAt` so re-broadcasts of the same rest don't double the haptic.
+    @ObservationIgnored private var restAlertGate = RestEndAlertGate()
+
     private func scheduleRestEndHaptic(endsAt: String?) {
-        guard let endsAt, let date = LukiDate.parseISO(endsAt) else { return }
+        guard let endsAt, restAlertGate.take(endsAt: endsAt),
+              let date = LukiDate.parseISO(endsAt) else { return }
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(max(0, date.timeIntervalSinceNow)))
             guard let self, self.store.activeSession?.restTimerEndsAt == endsAt else { return }
@@ -217,13 +226,64 @@ public final class WatchWorkoutViewModel {
     }
 
     private func mergeIncomingActiveSession(_ incoming: WorkoutSessionDto?) {
-        guard let incoming else { return }
+        guard let incoming else {
+            // The iPhone cleared/finished/discarded its session: drop the mirror — but never let an
+            // iPhone with no session wipe a workout that was started on the Watch itself.
+            if store.activeSession?.sourceDevice != .APPLE_WATCH {
+                store.saveActiveSession(nil)
+                endHealthSessionIfIdle()
+            }
+            return
+        }
         if let current = store.activeSession,
            current.clientSessionId == incoming.clientSessionId,
            current.version > incoming.version {
             return
         }
+        let previousStatus = store.activeSession?.clientSessionId == incoming.clientSessionId
+            ? store.activeSession?.status
+            : nil
         store.saveActiveSession(incoming)
+        syncHealthSession(with: incoming, previousStatus: previousStatus)
+        scheduleRestEndHaptic(endsAt: incoming.restTimerEndsAt)
+    }
+
+    /// The iPhone finished the shared workout: drop the mirror and keep the completed copy
+    /// (`saveHistorySession` upserts by clientSessionId, so a later context payload can't double it).
+    private func mergeIncomingCompletedSession(_ completed: WorkoutSessionDto) {
+        if store.activeSession?.clientSessionId == completed.clientSessionId {
+            store.saveActiveSession(nil)
+        }
+        if !store.isDeleted(clientSessionId: completed.clientSessionId) {
+            store.saveHistorySession(completed)
+        }
+        endHealthSessionIfIdle()
+    }
+
+    /// Every path that can clear the active session funnels here so the HealthKit workout session
+    /// can't leak across relaunches. `finishWorkout` is a no-op when it already ran.
+    private func endHealthSessionIfIdle() {
+        guard store.activeSession == nil, healthCoordinator.isWorkoutRunning else { return }
+        Task { _ = await healthCoordinator.finishWorkout(clientSessionId: "idle-cleanup") }
+    }
+
+    /// Keeps the Watch's HealthKit workout session aligned with the mirrored session: started when
+    /// the iPhone's session arrives, paused/resumed with its status changes.
+    private func syncHealthSession(with incoming: WorkoutSessionDto, previousStatus: SessionStatus?) {
+        Task {
+            if !healthCoordinator.isWorkoutRunning {
+                await healthCoordinator.startWorkout(
+                    sessionType: incoming.sessionType,
+                    startedAt: LukiDate.parseISO(incoming.startedAt) ?? Date()
+                )
+            }
+            guard incoming.status != previousStatus else { return }
+            if incoming.status == .PAUSED {
+                healthCoordinator.pauseWorkout()
+            } else if incoming.status == .IN_PROGRESS {
+                healthCoordinator.resumeWorkout()
+            }
+        }
     }
 
     private func applyWatchContext(_ payload: WatchContextPayload) {
@@ -444,6 +504,11 @@ public final class WatchWorkoutViewModel {
         } else {
             session.status = .PAUSED
             session.pausedAt = ISO8601DateFormatter().string(from: Date())
+            let started = LukiDate.parseISO(session.startedAt) ?? Date()
+            session.activeDurationSeconds = max(
+                session.activeDurationSeconds,
+                Int(Date().timeIntervalSince(started))
+            )
             healthCoordinator.pauseWorkout()
             WKInterfaceDevice.current().play(.stop)
         }
@@ -463,6 +528,14 @@ public final class WatchWorkoutViewModel {
         session.restTimerEndsAt = nil
         session.restTimerDurationSec = nil
         session.restTimerPausedRemSec = nil
+        restAlertGate.reset()
+        let started = LukiDate.parseISO(session.startedAt) ?? Date()
+        session.activeDurationSeconds = max(
+            60,
+            session.activeDurationSeconds > 0
+                ? session.activeDurationSeconds
+                : Int(Date().timeIntervalSince(started))
+        )
 
         let hkMetrics = await healthCoordinator.finishWorkout(clientSessionId: session.clientSessionId)
         session.healthKitWorkoutUuid = hkMetrics.healthKitWorkoutUuid
@@ -505,8 +578,30 @@ public final class WatchWorkoutViewModel {
     }
 }
 
+/// System entry points for the Watch-owned HealthKit workout session: an iPhone launching the app
+/// mid-workout (`startWatchApp`) arrives as `handle(_:)`; a relaunch during an active session
+/// arrives as `handleActiveWorkoutRecovery`.
+final class WatchAppDelegate: NSObject, WKApplicationDelegate {
+    func handle(_ workoutConfiguration: HKWorkoutConfiguration) {
+        let type: SessionType = workoutConfiguration.activityType == .flexibility ? .STRETCHING : .STRENGTH
+        Task { @MainActor in
+            guard let coordinator = HealthKitWorkoutCoordinator.current else { return }
+            _ = await coordinator.requestAuthorization()
+            // Start even if the active-session snapshot hasn't arrived yet — it fills in later.
+            await coordinator.startWorkout(sessionType: type)
+        }
+    }
+
+    func handleActiveWorkoutRecovery() {
+        Task { @MainActor in
+            HealthKitWorkoutCoordinator.current?.recoverActiveWorkoutSession()
+        }
+    }
+}
+
 @main
 public struct LukiFittiWatchApp: App {
+    @WKApplicationDelegateAdaptor(WatchAppDelegate.self) private var appDelegate
     @State private var viewModel = WatchWorkoutViewModel.makeConfigured()
 
     public init() {}
