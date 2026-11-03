@@ -1000,13 +1000,23 @@ public final class LukiAppViewModel {
             MealItemDto(name: "Rice", grams: 200, kcal: 260, proteinG: 5.4, carbsG: 56, fatG: 0.6, source: .AI, confidence: 0.88),
             MealItemDto(name: "Broccoli", grams: 120, kcal: 41, proteinG: 3.4, carbsG: 8, fatG: 0.4, source: .AI, confidence: 0.85),
         ]
+        // The UI test passes the absolute host path of marketing/assets/demo-meal.jpg; the
+        // photo is primed into MealPhotoCache so it shows without any server round-trip.
+        var photos: [MealPhotoDto] = []
+        if let photoPath = ProcessInfo.processInfo.environment["LUKIFITTI_MARKETING_MEAL_PHOTO"],
+           let data = try? Data(contentsOf: URL(fileURLWithPath: photoPath)) {
+            photos = [MealPhotoDto(id: "marketing-photo", mimeType: "image/jpeg")]
+            MealPhotoCache.shared.store(data, for: "marketing-photo")
+        }
+
         var meal = MealEntryDto(
             id: "marketing-meal",
             clientEntryId: "marketing-meal",
             eatenAt: iso.string(from: Date()),
             mealType: .LUNCH,
             label: "Lunch",
-            items: mealItems
+            items: mealItems,
+            photos: photos
         )
         meal.totals = NutritionMath.sum(mealItems)
         vm.nutrition.upsertLocal(meal)

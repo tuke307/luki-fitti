@@ -96,6 +96,22 @@ public struct MealPhotoDto: Codable, Sendable, Equatable, Hashable, Identifiable
     public var createdAt: String
     /// Authenticated API path (`/api/nutrition/photos/:id`); load it with the bearer token.
     public var url: String?
+
+    public init(
+        id: String,
+        mimeType: String,
+        width: Int? = nil,
+        height: Int? = nil,
+        createdAt: String = ISO8601DateFormatter().string(from: Date()),
+        url: String? = nil
+    ) {
+        self.id = id
+        self.mimeType = mimeType
+        self.width = width
+        self.height = height
+        self.createdAt = createdAt
+        self.url = url
+    }
 }
 
 public struct MealEntryDto: Codable, Sendable, Equatable, Hashable, Identifiable {

@@ -39,6 +39,8 @@ import { ExercisesView } from './exercises-view';
 import { ProfileImportView } from './profile-import-view';
 import { NutritionView } from './nutrition/nutrition-view';
 import { AI_KEY_NAVIGATE_EVENT } from '@/lib/ai/ai-key-required';
+import { migrateToAppOrigin, shouldMigrateToAppOrigin } from '@/lib/site/app-origin-migration';
+import { APP_ORIGIN_URL, PUBLIC_SITE_HOSTNAMES } from '@/lib/config/env.config';
 
 export type NavTab =
   'home' | 'workouts' | 'session' | 'nutrition' | 'diary' | 'exercises' | 'profile';
@@ -68,9 +70,35 @@ export function PwaShell() {
         null)
     : null;
 
+  const [migrating, setMigrating] = useState(false);
+
   useEffect(() => {
     const id = window.setInterval(() => setNowMs(Date.now()), 500);
     return () => window.clearInterval(id);
+  }, []);
+
+  // Old-origin cutover: an installed PWA still served on the site host moves to the app
+  // origin once the outbox is flushed. Retries on `online` when offline.
+  useEffect(() => {
+    if (!shouldMigrateToAppOrigin(window.location.hostname, PUBLIC_SITE_HOSTNAMES)) return;
+    let cancelled = false;
+    const go = async () => {
+      if (!navigator.onLine) return;
+      if (!cancelled) setMigrating(true);
+      await migrateToAppOrigin({
+        appOrigin: APP_ORIGIN_URL,
+        flush: () => flushSyncQueue(true),
+        navigate: (url) => window.location.replace(url),
+        path: window.location.pathname + window.location.search,
+      });
+    };
+    void go();
+    window.addEventListener('online', go);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('online', go);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // "Add key" on the AI-key-required warning: the profile tab owns the settings page.
@@ -308,6 +336,11 @@ export function PwaShell() {
           <ExercisesView onStartSessionNavigation={() => setActiveTab('session')} />
         )}
         {activeTab === 'profile' && <ProfileImportView />}
+        {migrating && (
+          <div className="bg-card/90 text-muted-foreground absolute top-3 left-1/2 z-50 -translate-x-1/2 rounded-full px-4 py-2 text-xs font-medium shadow-lg">
+            {t.shell.movingToNewApp}
+          </div>
+        )}
       </main>
 
       {/* Floating bottom stack: live workout accessory above the tab bar (iOS 26 pattern). */}

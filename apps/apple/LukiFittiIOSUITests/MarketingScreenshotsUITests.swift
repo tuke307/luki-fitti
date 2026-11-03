@@ -13,6 +13,13 @@ final class MarketingScreenshotsUITests: XCTestCase {
             "-AppleLanguages", "(\(language))",
             "-AppleInterfaceStyle", "Dark",
         ]
+        // Simulator apps read host paths — never ships in the bundle.
+        app.launchEnvironment["LUKIFITTI_MARKETING_MEAL_PHOTO"] =
+            URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appendingPathComponent("marketing/assets/demo-meal.jpg")
+                .path
         app.launch()
         return app
     }
@@ -41,8 +48,11 @@ final class MarketingScreenshotsUITests: XCTestCase {
         let app = launchMarketingApp(language: "en")
         waitForWorkoutView(app)
         // The next uncompleted set carries the +2.5 kg suggestion from the seeded history.
-        _ = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'kg'")).firstMatch
-            .waitForExistence(timeout: 10)
+        let kg = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'kg'")).firstMatch
+        _ = kg.waitForExistence(timeout: 10)
+        // Scroll a little so the suggestion row is centered and the shot differs from 01.
+        app.swipeUp()
+        sleep(1)
         save("02-suggestion")
     }
 

@@ -13,7 +13,8 @@
     "clean": "swift package --package-path Packages/LukiFittiKit clean",
     "catalog:export": "node --import tsx scripts/export-starter-catalog.ts",
     "catalog:check": "node --import tsx scripts/export-starter-catalog.ts --check",
-    "marketing:screenshots": "./scripts/marketing-screenshots.sh"
+    "marketing:screenshots": "./scripts/marketing-screenshots.sh",
+    "marketing:check": "bash -c 'v=$(grep -m1 MARKETING_VERSION project.yml | sed -E \"s/.*\\\"([0-9.]+)\\\".*/\\1/\"); g=$(cat marketing/VERSION 2>/dev/null || echo none); [ \"$v\" = \"$g\" ] || { echo \"Marketing screenshots were generated for $g, app version is $v \u2014 run yarn workspace @luki-fitti/apple marketing:screenshots\" >&2; exit 1; }; echo \"marketing images are for version $v\"' "
   },
   "type": "module",
   "devDependencies": {

@@ -81,6 +81,7 @@ export const en = {
     guest: 'Guest',
     guestLocalOnly: 'Saved on this device only',
     syncing: 'Syncing…',
+    movingToNewApp: 'Moving to app.luki-fitti.tony-luke.de…',
     localShort: 'Not synced',
     savedLocally: 'Saved Locally',
     localSafe: 'Saved on this device',

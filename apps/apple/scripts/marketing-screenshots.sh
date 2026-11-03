@@ -36,13 +36,20 @@ WATCH_UDID=$(pick_udid "$WATCH_SIM" watchOS)
 echo "iPhone: $IPHONE_SIM ($IPHONE_UDID)"
 echo "Watch:  $WATCH_SIM ($WATCH_UDID)"
 
-mkdir -p "$RAW_DIR/en" "$RAW_DIR/de" "$RESULTS_DIR"
+mkdir -p "$RAW_DIR/en" "$RAW_DIR/de" "$RAW_DIR/watch-en" "$RESULTS_DIR"
 xcodegen generate
+
+# Dark marketing shots: force the appearance on both simulators; restore afterwards.
+xcrun simctl boot "$IPHONE_UDID" 2>/dev/null || true
+xcrun simctl boot "$WATCH_UDID" 2>/dev/null || true
+PREV_APPEARANCE=$(xcrun simctl ui "$IPHONE_UDID" appearance 2>/dev/null | awk '{print $NF}' || echo "light")
+xcrun simctl ui "$IPHONE_UDID" appearance dark || true
+xcrun simctl ui "$WATCH_UDID" appearance dark || true
 
 run_ios() {
   local lang="$1"
   local result="$RESULTS_DIR/ios-$lang.xcresult"
-  xcrun simctl boot "$IPHONE_UDID" 2>/dev/null || true
+  rm -rf "$result"
   xcrun simctl status_bar "$IPHONE_UDID" override \
     --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
   xcodebuild test \
@@ -56,14 +63,14 @@ run_ios() {
 
 run_watch() {
   local result="$RESULTS_DIR/watch-en.xcresult"
-  xcrun simctl boot "$WATCH_UDID" 2>/dev/null || true
+  rm -rf "$result"
   xcodebuild test \
     -project "$XCODEPROJ" -scheme LukiFittiWatch \
     -destination "platform=watchOS Simulator,id=$WATCH_UDID" \
     -only-testing:LukiFittiWatchUITests/MarketingScreenshotsUITests \
     -resultBundlePath "$result" \
     CODE_SIGNING_ALLOWED=NO
-  export_attachments "$result" "$RAW_DIR/en"
+  export_attachments "$result" "$RAW_DIR/watch-en"
 }
 
 export_attachments() {
@@ -81,8 +88,12 @@ echo "== Watch screenshots (en) =="
 run_watch || echo "warn: watch capture failed — 03-watch will be missing"
 
 xcrun simctl status_bar "$IPHONE_UDID" clear || true
+xcrun simctl ui "$IPHONE_UDID" appearance "${PREV_APPEARANCE:-light}" || true
+xcrun simctl ui "$WATCH_UDID" appearance "${PREV_APPEARANCE:-light}" || true
 
 echo "== Compose App Store + landing images =="
 node scripts/compose-marketing.mjs
 
+# Stamp the version these images belong to (checked by `yarn marketing:check`).
+grep -m1 'MARKETING_VERSION' project.yml | sed -E 's/.*"([0-9.]+)".*/\1/' > "$MARKETING_DIR/VERSION"
 echo "Done. App Store: $MARKETING_DIR/appstore/{en-US,de-DE}/"
