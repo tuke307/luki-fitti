@@ -724,4 +724,45 @@ export const en = {
     currentPasswordLabel: 'Current Password',
     updatePasswordBtn: 'Update Password',
   },
+  site: {
+  nav: { features: 'Features', screenshots: 'Screenshots', faq: 'FAQ', openApp: 'Open app', download: 'Download', switchTo: 'Deutsch', switchHref: '/' },
+  hero: {
+    headline: 'Train. Log. Get stronger.',
+    sub: 'The workout tracker for iPhone, Apple Watch and the web — fully usable offline, no fluff.',
+    openApp: 'Open app',
+    download: 'Download on the App Store',
+    downloadSoon: 'Coming soon to the App Store',
+    heroAlt: 'LukiFitti active workout on iPhone',
+  },
+  glance: {
+    title: 'At a glance',
+    items: [
+      { title: 'Works offline', body: 'Start a workout, log your sets, everything syncs once you are back online.' },
+      { title: 'Knows when to push', body: 'Weight and rep suggestions derived from your last session, right where you log.' },
+      { title: 'iPhone & Watch in sync', body: 'Start on the wrist, finish on the phone — heart rate and rest timers stay aligned.' },
+    ],
+  },
+  shots: { title: 'See it in action' },
+  features: [
+    { title: 'Workouts & progression', body: 'Plan templates, log each set with one tap, and see when it is time to add weight or reps. Your history shows progress week by week.', shotId: 'suggestion' },
+    { title: 'Apple Watch', body: 'Train entirely from your wrist: check off sets, see live heart rate, rest timers with haptics and Live Activity on the lock screen.', shotId: 'watch' },
+    { title: 'Stretching studio', body: 'Guided stretches with timers — right inside your workout or as a session of its own.', shotId: 'exercises' },
+    { title: 'Calories & meal photos', body: 'Snap a photo of your meal and get calories and macros estimated. Optional, with your own OpenRouter key.', shotId: 'meal' },
+    { title: 'AI — only if you want it', body: 'Workout plans and meal analysis run on your own OpenRouter key. No subscription, no credits — your key, your costs.', shotId: 'history' },
+  ],
+  faq: {
+    title: 'FAQ',
+    items: [
+      { q: 'What is LukiFitti?', a: 'A workout tracker for strength training and stretching — on iPhone, Apple Watch and the web. Plan workouts, log sets, watch your progress.' },
+      { q: 'Does it work offline?', a: 'Yes. A workout runs completely offline; everything syncs across your devices once you are back online.' },
+      { q: 'What does it cost?', a: 'The app is free. AI features (workout planning, meal analysis) use your own OpenRouter key — you pay OpenRouter directly and only for what you use.' },
+      { q: 'What happens to my data?', a: 'Your data is stored on our server in Germany. OpenRouter keys are stored encrypted. No ads, no tracking — only privacy-friendly, aggregated page views via Umami.' },
+      { q: 'How do I request a feature?', a: 'Just write to us — we are happy to hear your ideas.' },
+    ],
+    requestLink: 'Request a feature',
+  },
+  cta: { title: 'Start your next workout.', openApp: 'Open app' },
+  footer: { impressum: 'Imprint', datenschutz: 'Privacy', nutzungsbedingungen: 'Terms', copyright: '© 2026 Tony Meißner' },
+  legal: { impressumTitle: 'Imprint', datenschutzTitle: 'Privacy Policy', nutzungsbedingungenTitle: 'Terms of Use' },
+  },
 };

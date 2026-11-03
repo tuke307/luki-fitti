@@ -1,4 +1,4 @@
-import type { getCopy, SiteLocale } from '@/lib/site/copy';
+import type { getSiteCopy, SiteLocale } from '@/lib/site/config';
 import { SiteHeader } from './SiteHeader';
 import { SiteFooter } from './SiteFooter';
 
@@ -8,7 +8,7 @@ export function LegalPage({
   title,
   children,
 }: {
-  t: ReturnType<typeof getCopy>;
+  t: ReturnType<typeof getSiteCopy>;
   locale: SiteLocale;
   title: string;
   children: React.ReactNode;

@@ -1,24 +1,22 @@
+import { APP_ORIGIN, SITE_HOSTNAMES, SITE_ORIGIN } from '@/lib/site/config';
 import { NextResponse, type NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 import { JWT_SECRET, NODE_ENV } from './lib/config/env.config';
 
-const APP_ORIGIN = process.env.APP_ORIGIN ?? 'https://app.luki-fitti.tony-luke.de';
-const SITE_HOSTNAMES = (process.env.SITE_HOSTNAMES ?? 'luki-fitti.tony-luke.de')
-  .split(',')
-  .map((h) => h.trim())
-  .filter(Boolean);
-const SITE_ORIGIN = `https://${SITE_HOSTNAMES[0]}`;
+
+
+
 
 /** Public marketing paths → internal /site routes on the site host. */
 const SITE_PATHS: Record<string, string> = {
-  '/': '/site',
+  '/': '/site/de',
   '/en': '/site/en',
-  '/impressum': '/site/impressum',
-  '/datenschutz': '/site/datenschutz',
-  '/nutzungsbedingungen': '/site/nutzungsbedingungen',
-  '/en/imprint': '/site/en/imprint',
-  '/en/privacy': '/site/en/privacy',
-  '/en/terms': '/site/en/terms',
+  '/impressum': '/site/de/impressum',
+  '/datenschutz': '/site/de/datenschutz',
+  '/nutzungsbedingungen': '/site/de/nutzungsbedingungen',
+  '/en/imprint': '/site/en/impressum',
+  '/en/privacy': '/site/en/datenschutz',
+  '/en/terms': '/site/en/nutzungsbedingungen',
 };
 
 const PUBLIC_FILE =
@@ -59,6 +57,9 @@ async function hasValidAccessToken(token: string | undefined): Promise<boolean> 
  * site via rewrites to /site/*; app paths there 308 to APP_ORIGIN. The app host serves the PWA
  * (noindex), keeps /admin auth, and redirects legal/site paths to the site host.
  */
+const isProd = process.env.NODE_ENV === 'production';
+const REDIRECT_STATUS = isProd ? 308 : 307;
+
 export async function proxy(req: NextRequest) {
   const host = hostOf(req);
   const { pathname } = req.nextUrl;
@@ -76,27 +77,38 @@ export async function proxy(req: NextRequest) {
       return NextResponse.rewrite(url);
     }
     // Internal site paths and assets pass through on the site host too.
+    if (pathname === '/site') {
+      const url = req.nextUrl.clone();
+      url.pathname = '/site/de';
+      return NextResponse.rewrite(url);
+    }
     if (pathname.startsWith('/site')) return NextResponse.next();
     // Anything else is an app path on the wrong host — move it permanently.
-    return NextResponse.redirect(new URL(pathname + req.nextUrl.search, APP_ORIGIN), 308);
+    return NextResponse.redirect(new URL(pathname + req.nextUrl.search, APP_ORIGIN), REDIRECT_STATUS);
   }
 
   // App host (and everything else, e.g. localhost dev).
   if (pathname.startsWith('/site')) {
     // Dev: /site/* is directly reachable; in prod it only exists on the site host.
     if (isLocalDev(host)) return NextResponse.next();
-    return NextResponse.redirect(new URL(pathname.slice(5) || '/', SITE_ORIGIN), 308);
+    return NextResponse.redirect(new URL(pathname.slice(5) || '/', SITE_ORIGIN), REDIRECT_STATUS);
   }
 
-  // Legal shortcuts on the app host bounce to the site host (in-app links can stay relative).
   if (SITE_PATHS[pathname] && pathname !== '/') {
-    return NextResponse.redirect(new URL(pathname, SITE_ORIGIN), 308);
+    if (!isProd) {
+      // Dev fallback (Safari can't resolve site.localhost): serve the site in place.
+      const url = req.nextUrl.clone();
+      url.pathname = SITE_PATHS[pathname];
+      return NextResponse.rewrite(url);
+    }
+    // Prod: legal shortcuts on the app host bounce to the site host.
+    return NextResponse.redirect(new URL(pathname, SITE_ORIGIN), REDIRECT_STATUS);
   }
 
   // Dev convenience: /?site=1 previews the landing on localhost.
   if (isLocalDev(host) && pathname === '/' && req.nextUrl.searchParams.get('site') === '1') {
     const url = req.nextUrl.clone();
-    url.pathname = '/site';
+    url.pathname = '/site/de';
     url.searchParams.delete('site');
     return NextResponse.rewrite(url);
   }

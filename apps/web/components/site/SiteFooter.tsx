@@ -1,10 +1,10 @@
-import type { getCopy, SiteLocale } from '@/lib/site/copy';
+import type { getSiteCopy, SiteLocale } from '@/lib/site/config';
 
 export function SiteFooter({
   t,
   locale,
 }: {
-  t: ReturnType<typeof getCopy>;
+  t: ReturnType<typeof getSiteCopy>;
   locale: SiteLocale;
 }) {
   const base = locale === 'de' ? '' : '/en';

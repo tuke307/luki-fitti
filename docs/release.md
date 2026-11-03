@@ -37,6 +37,8 @@ This writes:
 Open a few images before committing. Captions live in `apps/apple/marketing/screenshots.json`;
 change them there, never in the images.
 
+`TESTFLIGHT_URL` is a constant in `apps/web/lib/site/config.ts` — set it once the TestFlight/App Store link exists; no env var needed.
+
 ## 3. Check
 
 ```bash

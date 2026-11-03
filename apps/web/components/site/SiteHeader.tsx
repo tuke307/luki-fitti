@@ -1,6 +1,6 @@
-import { APP_URL, TESTFLIGHT_URL, type getCopy } from '@/lib/site/copy';
+import { APP_ORIGIN, TESTFLIGHT_URL, type getSiteCopy } from '@/lib/site/config';
 
-export function SiteHeader({ t }: { t: ReturnType<typeof getCopy> }) {
+export function SiteHeader({ t }: { t: ReturnType<typeof getSiteCopy> }) {
   return (
     <header className="bg-background/80 sticky top-0 z-10 border-b backdrop-blur">
       <div className="mx-auto flex h-14 max-w-5xl items-center gap-4 px-4">
@@ -23,7 +23,7 @@ export function SiteHeader({ t }: { t: ReturnType<typeof getCopy> }) {
             {t.nav.switchTo}
           </a>
           <a
-            href={APP_URL}
+            href={APP_ORIGIN}
             className="hover:text-foreground text-sm font-medium"
             data-testid="nav-open-app"
           >

@@ -25,10 +25,7 @@ services:
       - API_URL=http://luki-fitti-api:3001/api
       - JWT_SECRET=${JWT_SECRET}
       # Host routing in proxy.ts: SITE_HOSTNAMES serve the marketing site, APP_ORIGIN the app.
-      - SITE_HOSTNAMES=${SITE_HOSTNAMES:-luki-fitti.tony-luke.de}
-      - APP_ORIGIN=${APP_ORIGIN:-https://app.luki-fitti.tony-luke.de}
       - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-https://app.luki-fitti.tony-luke.de}
-      - NEXT_PUBLIC_TESTFLIGHT_URL=${NEXT_PUBLIC_TESTFLIGHT_URL:-}
     depends_on:
       luki-fitti-api:
         condition: service_healthy

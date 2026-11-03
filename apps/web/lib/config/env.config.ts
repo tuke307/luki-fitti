@@ -5,13 +5,6 @@ export const SITE_HOSTNAMES = (process.env.SITE_HOSTNAMES || 'luki-fitti.tony-lu
   .split(',')
   .map((h) => h.trim())
   .filter(Boolean);
-export const APP_ORIGIN_URL = process.env.NEXT_PUBLIC_APP_ORIGIN || 'https://app.luki-fitti.tony-luke.de';
-export const PUBLIC_SITE_HOSTNAMES = (
-  process.env.NEXT_PUBLIC_SITE_HOSTNAMES || 'luki-fitti.tony-luke.de'
-)
-  .split(',')
-  .map((h) => h.trim())
-  .filter(Boolean);
 /** Marketing site origin — where Impressum/Datenschutz/Nutzungsbedingungen live. */
 export const LANDING_URL =
   process.env.NEXT_PUBLIC_LANDING_URL || 'https://luki-fitti.tony-luke.de';

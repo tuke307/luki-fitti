@@ -2,14 +2,14 @@ import Image from 'next/image';
 import { SiteHeader } from './SiteHeader';
 import { SiteFooter } from './SiteFooter';
 import {
-  APP_URL,
+  APP_ORIGIN,
   TESTFLIGHT_URL,
   SCREENSHOTS,
   featureRequestHref,
-  getCopy,
-  shotFile,
+  getSiteCopy,
   type SiteLocale,
-} from '@/lib/site/copy';
+} from '@/lib/site/config';
+import { shotFile } from '@/lib/site/screens';
 
 function DownloadCta({ label, soonLabel }: { label: string; soonLabel: string }) {
   if (TESTFLIGHT_URL) {
@@ -33,7 +33,7 @@ function DownloadCta({ label, soonLabel }: { label: string; soonLabel: string })
 }
 
 export function LandingPage({ locale }: { locale: SiteLocale }) {
-  const t = getCopy(locale);
+  const t = getSiteCopy(locale);
   const shots = SCREENSHOTS.map((s) => ({ ...s, src: shotFile(locale, s.file) }));
   const hero = shots[0]!;
 
@@ -47,7 +47,7 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
             <p className="text-muted-foreground text-lg">{t.hero.sub}</p>
             <div className="flex flex-wrap items-center gap-4 pt-2">
               <a
-                href={APP_URL}
+                href={APP_ORIGIN}
                 className="border-border hover:bg-secondary inline-block rounded-full border px-6 py-2.5 font-medium"
                 data-testid="hero-open-app"
               >
@@ -147,10 +147,10 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
             ))}
             <details className="bg-card group rounded-2xl px-5 py-4">
               <summary className="cursor-pointer font-medium marker:content-none">
-                {t.faq.items[4].q}
+                {t.faq.items[4]!.q}
               </summary>
               <p className="text-muted-foreground mt-3 text-sm">
-                {t.faq.items[4].a}{' '}
+                {t.faq.items[4]!.a}{' '}
                 <a href={featureRequestHref(locale)} className="text-primary font-medium underline">
                   {t.faq.requestLink}
                 </a>
@@ -164,7 +164,7 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
             <h2 className="text-3xl font-bold">{t.cta.title}</h2>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
               <a
-                href={APP_URL}
+                href={APP_ORIGIN}
                 className="bg-primary text-primary-foreground inline-block rounded-full px-8 py-3 font-medium"
               >
                 {t.cta.openApp}

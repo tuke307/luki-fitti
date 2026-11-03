@@ -29,8 +29,8 @@ test('site host: / rewrites to /site', async () => {
 
 test('site host: legal paths rewrite to /site/*', async () => {
   for (const [pub, internal] of [
-    ['/impressum', '/site/impressum'],
-    ['/en/imprint', '/site/en/imprint'],
+    ['/impressum', '/site/de/impressum'],
+    ['/en/imprint', '/site/en/impressum'],
     ['/en', '/site/en'],
   ] as const) {
     const res = await proxy(req('site.example.com', pub));
@@ -49,7 +49,7 @@ test('site host: app paths 308 to APP_ORIGIN', async () => {
 });
 
 test('site host: /site/* internal paths pass through', async () => {
-  const res = await proxy(req('site.example.com', '/site/impressum'));
+  const res = await proxy(req('site.example.com', '/site/de/impressum'));
   assert.equal(decision(res).kind, 'next');
 });
 
@@ -90,9 +90,20 @@ test('app host: /admin without session redirects to login', async () => {
 });
 
 test('localhost dev: /site/* passes and ?site=1 rewrites', async () => {
-  const direct = await proxy(req('localhost:3000', '/site'));
+  const direct = await proxy(req('localhost:3000', '/site/de'));
   assert.equal(decision(direct).kind, 'next');
   const preview = await proxy(req('localhost:3000', '/?site=1'));
   assert.equal(decision(preview).kind, 'rewrite');
   assert.match(decision(preview).dest ?? '', /\/site$/);
+});
+
+
+test('dev: site.localhost host rewrites / to /site/de', async () => {
+  const r = await proxy(req('site.localhost:3000', '/'));
+  assert.ok(r.headers.get('x-middleware-rewrite')?.includes('/site/de'));
+});
+
+test('dev: app host rewrites /impressum to /site/de/impressum', async () => {
+  const r = await proxy(req('localhost:3000', '/impressum'));
+  assert.ok(r.headers.get('x-middleware-rewrite')?.includes('/site/de/impressum'));
 });

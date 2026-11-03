@@ -40,7 +40,7 @@ import { ProfileImportView } from './profile-import-view';
 import { NutritionView } from './nutrition/nutrition-view';
 import { AI_KEY_NAVIGATE_EVENT } from '@/lib/ai/ai-key-required';
 import { migrateToAppOrigin, shouldMigrateToAppOrigin } from '@/lib/site/app-origin-migration';
-import { APP_ORIGIN_URL, PUBLIC_SITE_HOSTNAMES } from '@/lib/config/env.config';
+import { APP_ORIGIN, SITE_HOSTNAMES } from '@/lib/site/config';
 
 export type NavTab =
   'home' | 'workouts' | 'session' | 'nutrition' | 'diary' | 'exercises' | 'profile';
@@ -80,13 +80,13 @@ export function PwaShell() {
   // Old-origin cutover: an installed PWA still served on the site host moves to the app
   // origin once the outbox is flushed. Retries on `online` when offline.
   useEffect(() => {
-    if (!shouldMigrateToAppOrigin(window.location.hostname, PUBLIC_SITE_HOSTNAMES)) return;
+    if (!shouldMigrateToAppOrigin(window.location.hostname, SITE_HOSTNAMES)) return;
     let cancelled = false;
     const go = async () => {
       if (!navigator.onLine) return;
       if (!cancelled) setMigrating(true);
       await migrateToAppOrigin({
-        appOrigin: APP_ORIGIN_URL,
+        appOrigin: APP_ORIGIN,
         flush: () => flushSyncQueue(true),
         navigate: (url) => window.location.replace(url),
         path: window.location.pathname + window.location.search,
