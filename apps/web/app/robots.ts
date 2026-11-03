@@ -1,13 +1,18 @@
 import { MetadataRoute } from 'next';
-import { SITE_URL } from '../lib/config/env.config';
+import { headers } from 'next/headers';
+import { SITE_HOSTNAMES } from '../lib/site/config';
 
-export default function robots(): MetadataRoute.Robots {
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const host = (await headers()).get('x-forwarded-host') ?? (await headers()).get('host') ?? '';
+  const isSite = SITE_HOSTNAMES.some((h) => host.startsWith(h));
+
+  if (isSite) {
+    return {
+      rules: { userAgent: '*', allow: '/', disallow: ['/site/'] },
+      sitemap: `https://${host}/sitemap.xml`,
+    };
+  }
   return {
-    rules: {
-      userAgent: '*',
-      allow: '/',
-      disallow: ['/admin/', '/api/'],
-    },
-    sitemap: `${SITE_URL}/sitemap.xml`,
+    rules: { userAgent: '*', disallow: '/' },
   };
 }

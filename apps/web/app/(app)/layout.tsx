@@ -6,7 +6,7 @@ import '@luki-fitti/ui/globals.css';
 import { PageViewTracker } from '@/components/analytics/page-view-tracker';
 import { Providers } from '@/providers/Providers';
 import RootLoading from './loading';
-import { SITE_URL } from '../lib/config/env.config';
+import { SITE_URL } from '@/lib/config/env.config';
 
 export const viewport: Viewport = {
   width: 'device-width',

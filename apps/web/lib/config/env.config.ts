@@ -1,5 +1,6 @@
 export const NODE_ENV = process.env.NODE_ENV || 'development';
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+/** Marketing site origin — where Impressum/Datenschutz/Nutzungsbedingungen live. */
 
 export const SERVER_API_URL = (
   process.env.API_URL ||

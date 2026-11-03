@@ -82,6 +82,7 @@ export const de = {
     guest: 'Gast',
     guestLocalOnly: 'Nur auf diesem Gerät gespeichert',
     syncing: 'Synchronisiere …',
+    movingToNewApp: 'Umzug zu app.luki-fitti.tony-luke.de…',
     localShort: 'Nicht synchronisiert',
     savedLocally: 'Lokal gespeichert',
     localSafe: 'Auf diesem Gerät gespeichert',
@@ -690,7 +691,11 @@ export const de = {
     rowDataSources: 'Datenquellen',
     kcalValue: '{count} kcal',
     notSet: 'Nicht festgelegt',
-version: 'Version',
+    legalSectionTitle: 'Rechtliches',
+    rowImprint: 'Impressum',
+    rowPrivacy: 'Datenschutzerklärung',
+    rowTerms: 'Nutzungsbedingungen',
+    version: 'Version',
     feedbackSectionTitle: 'Feedback',
     rowFeatureRequest: 'Feature wünschen',
     backToSettings: 'Zurück zu den Einstellungen',
@@ -720,5 +725,107 @@ version: 'Version',
     changePasswordTitle: 'Passwort ändern',
     currentPasswordLabel: 'Aktuelles Passwort',
     updatePasswordBtn: 'Passwort aktualisieren',
+  },
+  site: {
+    nav: {
+      features: 'Funktionen',
+      screenshots: 'Screenshots',
+      faq: 'FAQ',
+      openApp: 'App öffnen',
+      download: 'Download',
+      switchTo: 'English',
+      switchHref: '/en',
+    },
+    hero: {
+      headline: 'Trainiere. Protokolliere. Werde stärker.',
+      sub: 'Der Workout-Tracker für iPhone, Apple Watch und Web — offline nutzbar, ohne Schnickschnack.',
+      openApp: 'App öffnen',
+      download: 'Im App Store laden',
+      downloadSoon: 'Bald im App Store',
+      heroAlt: 'LukiFitti aktives Training auf dem iPhone',
+    },
+    glance: {
+      title: 'Auf einen Blick',
+      items: [
+        {
+          title: 'Funktioniert offline',
+          body: 'Workout starten, Sätze loggen, weiter synchronisieren sobald du wieder online bist.',
+        },
+        {
+          title: 'Weiß, wann mehr drin ist',
+          body: 'Vorschläge für Gewicht und Wiederholungen, abgeleitet aus deinem letzten Training.',
+        },
+        {
+          title: 'iPhone & Watch im Takt',
+          body: 'Auf der Watch anfangen, am iPhone weiter — Puls und Pausen bleiben synchron.',
+        },
+      ],
+    },
+    shots: { title: 'So sieht es aus' },
+    features: [
+      {
+        title: 'Workouts & Progression',
+        body: 'Plane Vorlagen, logge jeden Satz mit einem Tipp und sieh, wann du Gewicht oder Wiederholungen steigern solltest. Dein Verlauf zeigt dir Woche für Woche, was sich tut.',
+        shotId: 'suggestion',
+      },
+      {
+        title: 'Apple Watch',
+        body: 'Trainiere komplett vom Handgelenk: Sätze abhaken, Puls live sehen, Rest-Timer mit Vibration und Live Activity auf dem Sperrbildschirm.',
+        shotId: 'watch',
+      },
+      {
+        title: 'Stretching-Studio',
+        body: 'Dehnübungen mit Anleitung und Timer — direkt aus dem Workout oder als eigene Einheit.',
+        shotId: 'exercises',
+      },
+      {
+        title: 'Kalorien & Mahlzeiten-Foto',
+        body: 'Fotografiere dein Essen und lass dir Kalorien und Makros schätzen. Optional, mit deinem eigenen OpenRouter-Schlüssel.',
+        shotId: 'meal',
+      },
+      {
+        title: 'KI — nur wenn du willst',
+        body: 'Workout-Vorschläge und Essensanalyse laufen über deinen eigenen OpenRouter-Key. Kein Abo, keine Credits, deine Kosten.',
+        shotId: 'history',
+      },
+    ],
+    faq: {
+      title: 'Häufige Fragen',
+      items: [
+        {
+          q: 'Was ist LukiFitti?',
+          a: 'Ein Workout-Tracker für Krafttraining und Stretching — auf iPhone, Apple Watch und im Web. Du planst Workouts, loggst Sätze und siehst deinen Fortschritt.',
+        },
+        {
+          q: 'Funktioniert LukiFitti offline?',
+          a: 'Ja. Ein Workout läuft komplett offline; sobald du wieder online bist, synchronisiert die App auf allen Geräten.',
+        },
+        {
+          q: 'Was kostet LukiFitti?',
+          a: 'Die App ist kostenlos. KI-Funktionen (Workout-Planung, Essensanalyse) nutzen deinen eigenen OpenRouter-Schlüssel — du zahlst OpenRouter direkt und nur für deine Nutzung.',
+        },
+        {
+          q: 'Was passiert mit meinen Daten?',
+          a: 'Deine Daten liegen auf unserem Server in Deutschland. OpenRouter-Schlüssel werden verschlüsselt gespeichert. Es gibt keine Werbung und kein Tracking — nur datenschutzfreundliche, aggregierte Seitenaufrufe über Umami.',
+        },
+        {
+          q: 'Wie kann ich ein Feature wünschen?',
+          a: 'Schreib uns einfach — wir freuen uns über Ideen.',
+        },
+      ],
+      requestLink: 'Feature wünschen',
+    },
+    cta: { title: 'Starte dein nächstes Workout.', openApp: 'App öffnen' },
+    footer: {
+      impressum: 'Impressum',
+      datenschutz: 'Datenschutz',
+      nutzungsbedingungen: 'Nutzungsbedingungen',
+      copyright: '© 2026 Tony Meißner',
+    },
+    legal: {
+      impressumTitle: 'Impressum',
+      datenschutzTitle: 'Datenschutzerklärung',
+      nutzungsbedingungenTitle: 'Nutzungsbedingungen',
+    },
   },
 } satisfies TranslationDictionary;

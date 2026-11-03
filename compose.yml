@@ -24,6 +24,8 @@ services:
       - HOSTNAME=0.0.0.0
       - API_URL=http://luki-fitti-api:3001/api
       - JWT_SECRET=${JWT_SECRET}
+      # Host routing in proxy.ts: SITE_HOSTNAMES serve the marketing site, APP_ORIGIN the app.
+      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-https://app.luki-fitti.tony-luke.de}
     depends_on:
       luki-fitti-api:
         condition: service_healthy
@@ -42,6 +44,9 @@ services:
       retries: 3
       start_period: 40s
     labels:
+      # Web domains are set in the Coolify UI (luki-fitti.tony-luke.de and
+      # app.luki-fitti.tony-luke.de → this container); Coolify generates the caddy
+      # labels. The API service below only attaches /api/* routes to both hosts.
       - 'app.project=luki-fitti'
       - 'app.service=web'
 

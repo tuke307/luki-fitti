@@ -23,6 +23,11 @@ function gitSha() {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  allowedDevOrigins: ['site.localhost'],
+  images: {
+    // ?v=<content-hash> on the site screenshots must pass the optimizer.
+    localPatterns: [{ pathname: '/screens/**' }],
+  },
   env: {
     NEXT_PUBLIC_APP_VERSION: packageVersion,
     NEXT_PUBLIC_GIT_SHA: gitSha(),

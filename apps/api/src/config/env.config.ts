@@ -99,7 +99,7 @@ function resolveUmamiUrl(envValue: string | undefined): string {
 export const UMAMI_URL = resolveUmamiUrl(process.env.UMAMI_URL);
 export const UMAMI_WEBSITE_ID = (process.env.UMAMI_WEBSITE_ID ?? '').trim();
 export const UMAMI_ALLOWED_HOSTNAMES = (
-  process.env.UMAMI_ALLOWED_HOSTNAMES || 'luki-fitti.tony-luke.de'
+  process.env.UMAMI_ALLOWED_HOSTNAMES || 'luki-fitti.tony-luke.de,app.luki-fitti.tony-luke.de'
 )
   .split(',')
   .map((host) => host.trim().toLowerCase())

@@ -18,7 +18,9 @@
     "MAILPIT_URL",
     "TEST_USER_EMAIL",
     "TEST_USER_PASSWORD",
-    "TEST_USER_NAME"
+    "TEST_USER_NAME",
+    "API_URL",
+    "NEXT_PUBLIC_SITE_URL"
   ],
   "tasks": {
     "build": {

@@ -100,3 +100,8 @@ apps/apple/Config/Local.xcconfig
 
 # SeaweedFS S3 credentials (copy from seaweedfs-s3.json.sample)
 seaweedfs-s3.json
+
+# marketing: generated captures, device frames (Apple-owned, not redistributed), xcresults
+apps/apple/marketing/raw/
+apps/apple/marketing/frames/
+apps/apple/marketing/.xcresults/

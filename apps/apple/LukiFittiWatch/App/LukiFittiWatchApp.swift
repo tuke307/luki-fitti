@@ -569,9 +569,17 @@ public final class WatchWorkoutViewModel {
         let store = OfflineStore(storageDirectory: tempDir)
         let vm = WatchWorkoutViewModel(store: store)
 
-        if args.contains("--uitesting-seed-active-session"),
+        if args.contains("--uitesting-seed-active-session") || args.contains("--uitesting-marketing"),
            let firstTemplate = store.folders.first?.templates.first {
             vm.startWorkout(from: firstTemplate)
+        }
+
+        // Marketing shot: fake live vitals so bpm shows without HealthKit.
+        if args.contains("--uitesting-marketing"),
+           let coordinator = HealthKitWorkoutCoordinator.current {
+            coordinator.isWorkoutRunning = true
+            coordinator.currentHeartRateBpm = 128
+            coordinator.activeCaloriesKcal = 214
         }
 
         return vm

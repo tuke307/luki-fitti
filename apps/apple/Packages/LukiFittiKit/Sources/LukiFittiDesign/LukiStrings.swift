@@ -670,6 +670,10 @@ public enum LukiStrings {
         "No mail app found": "Keine Mail-App gefunden",
         "Copy address": "Adresse kopieren",
         "OK": "OK",
+        "Legal": "Rechtliches",
+        "Imprint": "Impressum",
+        "Privacy policy": "Datenschutzerklärung",
+        "Terms of use": "Nutzungsbedingungen",
         "Your session ended. Everything on this iPhone is kept and uploads after you sign in.": "Deine Sitzung ist abgelaufen. Alles auf diesem iPhone bleibt erhalten und wird nach der Anmeldung hochgeladen.",
     ]
 }

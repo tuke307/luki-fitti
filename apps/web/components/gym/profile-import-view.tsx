@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link';
 import {
   BookOpen,
+  FileText,
   Dumbbell,
   HeartPulse,
   Salad,
@@ -325,7 +326,6 @@ export function ProfileImportView() {
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
-
 
   useEffect(() => {
     if (!focusAfterChange.current) return;
@@ -1057,6 +1057,30 @@ export function ProfileImportView() {
               icon={Lightbulb}
               tone="warmup"
               title={t.profile.rowFeatureRequest}
+            />
+          </SettingsSection>
+
+          <SettingsSection title={t.profile.legalSectionTitle}>
+            <SettingsRow
+              href={`${locale === 'de' ? '/impressum' : '/en/imprint'}`}
+              data-testid="settings-row-imprint"
+              icon={FileText}
+              tone="muted"
+              title={t.profile.rowImprint}
+            />
+            <SettingsRow
+              href={`${locale === 'de' ? '/datenschutz' : '/en/privacy'}`}
+              data-testid="settings-row-privacy"
+              icon={ShieldCheck}
+              tone="muted"
+              title={t.profile.rowPrivacy}
+            />
+            <SettingsRow
+              href={`${locale === 'de' ? '/nutzungsbedingungen' : '/en/terms'}`}
+              data-testid="settings-row-terms"
+              icon={BookOpen}
+              tone="muted"
+              title={t.profile.rowTerms}
             />
           </SettingsSection>
 

@@ -30,3 +30,33 @@ For zero-install or cross-platform use without Xcode signing:
 3. Launch LukiFitti from the Home Screen for a standalone full-screen viewport (`viewport-fit=cover`) with IndexedDB offline persistence and timestamp-backed rest timers.
 
 > **Note:** When using the Safari PWA in offline or guest mode, avoid clearing Safari Website Data while unsynchronized workouts are queued locally.
+
+---
+
+## Domain cutover: app.luki-fitti.tony-luke.de
+
+The marketing site lives on `luki-fitti.tony-luke.de` and the PWA moved to
+`app.luki-fitti.tony-luke.de`. Both hosts route to the same web container; `proxy.ts` splits
+requests by host (constants in `apps/web/lib/site/config.ts`), `/api/*` stays reachable on the old host so
+installed iOS builds keep syncing.
+
+Cutover order:
+
+1. Deploy a web release **on the old host** that flushes the sync outbox, so nothing
+   unsent is left behind.
+2. Switch DNS/Caddy: `app.luki-fitti.tony-luke.de` → the server (new A/AAAA record, Caddy issues
+   the cert automatically once it resolves).
+3. Users open the app once on the new host and sign in again (host-only cookies).
+
+**Offline data caveat:** IndexedDB is per-origin — anything stored in the browser under the old
+origin does not carry over. An installed PWA launched on the old origin is bounced to the new
+one by the standalone-mode check on the landing page, but it cannot bring its IndexedDB with it.
+
+**Local development:** the app runs at `http://localhost:3000` and the landing at
+`http://site.localhost:3000` (Chrome/Firefox resolve `*.localhost` to 127.0.0.1); in Safari
+use `http://localhost:3000/site/de`. Dev redirects are 307 so nothing gets cached.
+
+**Coolify:** the web service's domains are set in the Coolify UI — `luki-fitti.tony-luke.de` and
+`app.luki-fitti.tony-luke.de` → `luki-fitti-web:3000` (Coolify generates the caddy labels;
+`compose.yml` must not repeat them). `www.luki-fitti.tony-luke.de` should redirect to the
+non-www host.
