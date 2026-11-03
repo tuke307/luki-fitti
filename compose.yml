@@ -106,6 +106,10 @@ services:
       - 'caddy_1=https://luki-fitti.tony-luke.de'
       - 'caddy_1.0_handle=/api/*'
       - 'caddy_1.0_handle.reverse_proxy={{upstreams 3001}}'
+      # Same for the app subdomain (web domains themselves are set in the Coolify UI)
+      - 'caddy_2=https://app.luki-fitti.tony-luke.de'
+      - 'caddy_2.0_handle=/api/*'
+      - 'caddy_2.0_handle.reverse_proxy={{upstreams 3001}}'
       - 'app.project=luki-fitti'
       - 'app.service=api'
 
