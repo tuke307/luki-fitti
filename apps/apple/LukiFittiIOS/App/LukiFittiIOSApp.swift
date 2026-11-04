@@ -970,6 +970,11 @@ public final class LukiAppViewModel {
                         if let w = completed.exercises[exIdx].sets[sIdx].weight {
                             completed.exercises[exIdx].sets[sIdx].weight = w + Double(8 - week) * 2.5
                         }
+                        // The first exercise dropped over the last two weeks → a regression
+                        // stall, so the suggestion card offers a replacement in the session.
+                        if exIdx == 0, week <= 2, let w = completed.exercises[exIdx].sets[sIdx].weight {
+                            completed.exercises[exIdx].sets[sIdx].weight = max(0, w - Double(3 - week) * 5 - 10)
+                        }
                         // The last week tops the rep range → the next open set gets +2.5 kg.
                         if week == 1 {
                             completed.exercises[exIdx].sets[sIdx].reps = 12
