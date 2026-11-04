@@ -9,7 +9,6 @@ import json
 import math
 import os
 import uuid
-from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -46,6 +45,7 @@ def validate(data, mapping):
     session_keys = set()
     for session in data.get('sessions', []):
         require(isinstance(session.get('name'), str) and 0 < len(session['name']) <= 160, 'Invalid session name')
+        require(session.get('sessionType', 'STRENGTH') in ['STRENGTH', 'STRETCHING', 'MIXED'], 'Unknown sessionType')
         timestamp(session['startedAt'])
         if session.get('completedAtEstimated'):
             require(timestamp(session['completedAtEstimated']) >= timestamp(session['startedAt']), 'End precedes start')
@@ -73,6 +73,10 @@ def validate(data, mapping):
                     if item.get(field) is not None:
                         number(item[field], field, integer=field in ['reps', 'durationSeconds'])
                 require(any(item.get(k) is not None for k in ['reps', 'durationSeconds', 'distanceMeters']), 'Empty set must be removed before import')
+    # Apply the same one-minute review window to this batch as to stored sessions.
+    starts = sorted(timestamp(s['startedAt']) for s in data.get('sessions', []))
+    require(all((right - left).total_seconds() > 60 for left, right in zip(starts, starts[1:])),
+            'Possible duplicate workouts in input near the same start time; review manually')
     plan_names = set()
     for plan in data.get('plans', []):
         require(plan['name'] not in plan_names, 'Duplicate plan name')
@@ -107,6 +111,25 @@ def stable_id(user_id, source, *parts):
 
 def dump(path, value):
     Path(path).write_text(json.dumps(value, ensure_ascii=False, indent=2, default=str), encoding='utf-8')
+
+
+def session_type(session, catalog):
+    if 'sessionType' in session:
+        return session['sessionType']
+    types = {catalog[e['name']]['exerciseType'] for e in session['exercises']}
+    if types == {'STRETCHING'}:
+        return 'STRETCHING'
+    return 'MIXED' if 'STRETCHING' in types else 'STRENGTH'
+
+
+def classify_ids(rows, existing_by_table):
+    new_ids, existing_ids = {}, {}
+    for table, row in rows:
+        new_ids.setdefault(table, [])
+        existing_ids.setdefault(table, [])
+        target = existing_ids if row['id'] in existing_by_table.get(table, set()) else new_ids
+        target[table].append(row['id'])
+    return new_ids, existing_ids
 
 
 def snapshot(connection, user_id):
@@ -168,7 +191,7 @@ def build(connection, data, mapping, names, user_id, source, now):
                 elif kind != 'WARMUP':
                     volume += (weight or 0) * (0.45359237 if unit == 'LBS' else 1) * (item.get('reps') or 0)
                 children.append(('SessionSet', {'id': set_id, 'clientSetId': set_id, 'sessionExerciseId': eid, 'setNumber': item['number'], 'setType': kind, 'weight': weight, 'weightUnit': unit, 'reps': item.get('reps'), 'durationSeconds': item.get('durationSeconds'), 'distanceMeters': item.get('distanceMeters'), 'completed': True, 'updatedAt': now}))
-        rows.append(('WorkoutSession', {'id': sid, 'clientSessionId': sid, 'userId': user_id, 'workoutNameSnapshot': session['name'], 'status': 'COMPLETED', 'startedAt': timestamp(session['startedAt']), 'completedAt': timestamp(session['completedAtEstimated']) if session.get('completedAtEstimated') else None, 'activeDurationSeconds': session['durationSeconds'], 'totalVolumeKg': round(volume, 1), 'totalSetsCompleted': count, 'totalRepsCompleted': reps, 'totalStretchSeconds': stretch, 'notes': 'Imported from ' + source + '. Missing set types treated as WORKING; no per-set completion times inferred.', 'updatedAt': now}))
+        rows.append(('WorkoutSession', {'id': sid, 'clientSessionId': sid, 'userId': user_id, 'sessionType': session_type(session, catalog), 'workoutNameSnapshot': session['name'], 'status': 'COMPLETED', 'startedAt': timestamp(session['startedAt']), 'completedAt': timestamp(session['completedAtEstimated']) if session.get('completedAtEstimated') else None, 'activeDurationSeconds': session['durationSeconds'], 'totalVolumeKg': round(volume, 1), 'totalSetsCompleted': count, 'totalRepsCompleted': reps, 'totalStretchSeconds': stretch, 'notes': 'Imported from ' + source + '. Missing set types treated as WORKING; no per-set completion times inferred.', 'updatedAt': now}))
         rows.extend(children)
     require(len({r['id'] for _, r in rows}) == len(rows), 'Duplicate generated IDs')
     return rows
@@ -225,11 +248,13 @@ def main():
         now = datetime.now(timezone.utc).replace(tzinfo=None)
         now = now.replace(microsecond=now.microsecond // 1000 * 1000)
         rows = build(connection, data, mapping, names, uid, args.source, now)
-        counts = Counter()
+        existing_by_table = {}
         for table in dict.fromkeys(t for t, _ in rows):
             ids = [r['id'] for t, r in rows if t == table]
             existing = connection.execute(sql.SQL('SELECT id FROM {} WHERE id=ANY(%s)').format(sql.Identifier(table)), (ids,)).fetchall()
-            counts[table] = len(ids) - len(existing)
+            existing_by_table[table] = {r['id'] for r in existing}
+        new_ids, existing_ids = classify_ids(rows, existing_by_table)
+        counts = {table: len(ids) for table, ids in new_ids.items()}
         for table, row in rows:
             if table == 'WorkoutSession':
                 matches = connection.execute('SELECT id FROM "WorkoutSession" WHERE "userId"=%s AND "startedAt">=%s::timestamp - interval \'1 minute\' AND "startedAt"<=%s::timestamp + interval \'1 minute\' AND id<>%s', (uid, row['startedAt'], row['startedAt'], row['id'])).fetchall()
@@ -253,7 +278,7 @@ def main():
         write()  # Verify idempotence within the same transaction.
         connection.execute('ROLLBACK TO SAVEPOINT rehearsal')
         require(snapshot(connection, uid) == before, 'Rollback verification failed')
-        report = {'status': 'committed' if args.commit else 'rolled-back', 'source': args.source, 'userId': uid, 'backup': str(backup), 'inputSha256': hashlib.sha256(args.input.read_bytes()).hexdigest(), 'mappingSha256': hashlib.sha256(args.mapping.read_bytes()).hexdigest(), 'newRows': dict(counts), 'ids': {t: [r['id'] for tt, r in rows if tt == t] for t in dict.fromkeys(t for t, _ in rows)}}
+        report = {'status': 'committed' if args.commit else 'rolled-back', 'source': args.source, 'userId': uid, 'backup': str(backup), 'inputSha256': hashlib.sha256(args.input.read_bytes()).hexdigest(), 'mappingSha256': hashlib.sha256(args.mapping.read_bytes()).hexdigest(), 'newRows': counts, 'insertedIds': new_ids if args.commit else {}, 'wouldInsertIds': {} if args.commit else new_ids, 'existingIds': existing_ids}
         pending = args.output / ('pending-' + run + '.json')
         if args.commit:
             write()

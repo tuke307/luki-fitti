@@ -34,7 +34,7 @@ for row in rows(workout_file):
   minutes=re.fullmatch(r'(\d+) Min\.',row[2])
   require(m or minutes, row)
   duration=(int(m[1])*60+int(m[2]))*60 if m else int(minutes[1])*60
-  session={'name':row[0],'startedAt':start.astimezone(timezone.utc).isoformat(),'durationSeconds':duration,'completedAtEstimated':(start+timedelta(seconds=duration)).astimezone(timezone.utc).isoformat(),'exercises':[]}
+  session={'name':row[0],'startedAt':start.astimezone(timezone.utc).isoformat(),'durationSeconds':duration,'completedAtEstimated':(start.astimezone(timezone.utc)+timedelta(seconds=duration)).isoformat(),'exercises':[]}
   sessions.append(session)
  elif len(row)==1 and re.match(r'^\d+\. ',row[0]):
   parts=exercise(row[0]).rsplit(' · ',1); has_reps=bool(re.fullmatch(r'\d+ Wdh',parts[1]))

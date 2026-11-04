@@ -81,6 +81,9 @@ sessions abort the import. The script does not update existing sessions
 automatically. Records created by earlier one-off import scripts require a
 separate reconciliation before adding data, since their IDs may differ.
 Backups and reports are saved under `.training-import/` by default.
+Reports separate `insertedIds` from `existingIds`. Dry runs leave `insertedIds`
+empty and list proposed additions under `wouldInsertIds`; skipped existing
+records must not be treated as part of a rollback of a later import.
 
 ## 1. Export the data
 
@@ -115,6 +118,11 @@ intermediate structure, such as JSON:
 - Map exported set types to LukiFitti types. If the export omits set types, only
   mark sets as `WARMUP` after confirmation; a lower weight alone is insufficient.
   Document any assumption that unknown set types are `WORKING`.
+
+The normalized JSON can specify `sessionType` as `STRENGTH`, `STRETCHING`, or
+`MIXED`. Otherwise, the importer derives it from exercise types: stretching-only
+sessions are `STRETCHING`, sessions combining stretching with other exercise types
+are `MIXED`, and other sessions use `STRENGTH`.
 
 The target tables are defined in
 [`schema.prisma`](../packages/database/prisma/schema.prisma):
@@ -168,3 +176,6 @@ ambiguous matches. File names and export dates must not create new workout IDs.
 Insert only missing sessions. Review changed existing sessions or possible
 duplicates rather than overwriting them automatically. Apply the same backup
 and transaction checks as for the initial import.
+The importer also rejects sessions within one minute of each other in the same
+input batch, matching its check against existing sessions. Review legitimate
+close-starting sessions separately before importing.
