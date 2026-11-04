@@ -117,8 +117,15 @@ struct AIKeySettingsPage: View {
     private func load() async {
         guard viewModel.isSignedIn else { return }
         do {
-            status = try await viewModel.store.apiClient.fetchAiKeyStatus()
+            let fetched = try await viewModel.store.apiClient.fetchAiKeyStatus()
+            status = fetched
             loadFailed = false
+            // The cached flag can lag behind the real key status; correct it so the AI entry
+            // points in Workouts and Food don't gate on a stale value.
+            if var user = viewModel.store.currentUser, user.aiKeyConfigured != fetched.hasKey {
+                user.aiKeyConfigured = fetched.hasKey
+                viewModel.store.saveAuthenticatedUser(user)
+            }
         } catch is CancellationError {
         } catch {
             loadFailed = true

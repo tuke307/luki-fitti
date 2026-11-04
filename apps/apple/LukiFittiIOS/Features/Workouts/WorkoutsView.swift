@@ -149,10 +149,12 @@ public struct WorkoutsView: View {
                     .accessibilityIdentifier("ios.workouts.newFolderButton")
                     if viewModel.store.currentUser?.hasFeature(.AI_WORKOUT_BUILDER) == true {
                         Button {
-                            if viewModel.store.currentUser?.aiKeyConfigured == true {
-                                showingAIBuilder = true
-                            } else {
-                                showsAiKeyAlert = true
+                            Task {
+                                if await viewModel.ensureAiKeyConfigured() {
+                                    showingAIBuilder = true
+                                } else {
+                                    showsAiKeyAlert = true
+                                }
                             }
                         } label: {
                             Label(tr("Plan with AI"), systemImage: "sparkles")
