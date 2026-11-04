@@ -770,6 +770,13 @@ public final class LukiAppViewModel {
                 : Int(Date().timeIntervalSince(started))
         )
 
+        // Tell the Watch right away that the workout ended — the HealthKit finish below can take
+        // a moment, and transferUserInfo alone queues in the background. The finalized copy with
+        // metrics is sent again after; the Watch upserts by clientSessionId.
+        watchSyncCoordinator.transferCompletedStandaloneSession(
+            SessionCalculator.recalculateSessionTotals(SessionCalculator.finalizeExerciseStatuses(session))
+        )
+
         let hkMetrics = await healthCoordinator.finishWorkout(clientSessionId: session.clientSessionId)
         session.healthKitWorkoutUuid = hkMetrics.healthKitWorkoutUuid
         if hkMetrics.activeCaloriesKcal > 0 {

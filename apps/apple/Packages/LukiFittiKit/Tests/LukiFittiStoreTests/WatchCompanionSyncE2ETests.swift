@@ -162,4 +162,60 @@ final class WatchCompanionSyncE2ETests: XCTestCase {
         XCTAssertEqual(iPhoneStore.historySessions.first?.avgHeartRateBpm, 148)
         XCTAssertEqual(iPhoneStore.syncQueue.count, 1)
     }
+
+    /// The iPhone finishing the workout now sends the completed session over sendMessageData AND
+    /// transferUserInfo, so the Watch can see it twice. Its merge drops the mirrored active
+    /// session, keeps one history copy, and a duplicate delivery must not resurrect anything.
+    @MainActor
+    func testIPhoneFinishEndsWatchMirrorAndDedupesDoubleDelivery() throws {
+        let iPhoneDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LukiFittiIPhoneFinishE2E-\(UUID().uuidString)", isDirectory: true)
+        let watchDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LukiFittiWatchFinishE2E-\(UUID().uuidString)", isDirectory: true)
+        defer {
+            try? FileManager.default.removeItem(at: iPhoneDir)
+            try? FileManager.default.removeItem(at: watchDir)
+        }
+
+        let iPhoneStore = OfflineStore(storageDirectory: iPhoneDir)
+        let watchStore = OfflineStore(storageDirectory: watchDir)
+
+        let template = iPhoneStore.folders[0].templates[0]
+        var session = SessionCalculator.createOfflineSessionFromTemplate(
+            template: template,
+            catalog: iPhoneStore.catalog,
+            userId: "user-finish-1",
+            weightUnit: .KG,
+            sourceDevice: .IPHONE
+        )
+        iPhoneStore.saveActiveSession(session)
+        // The Watch mirrors the iPhone's active session (same clientSessionId, IPHONE source).
+        watchStore.saveActiveSession(session)
+
+        // iPhone finishes: completed snapshot is transferred to the Watch.
+        session.status = .COMPLETED
+        session.completedAt = ISO8601DateFormatter().string(from: Date())
+        let finalized = SessionCalculator.recalculateSessionTotals(
+            SessionCalculator.finalizeExerciseStatuses(session)
+        )
+        iPhoneStore.saveActiveSession(nil)
+        iPhoneStore.saveHistorySession(finalized)
+        iPhoneStore.enqueueSessionSync(finalized)
+
+        // Watch merge, as in WatchWorkoutViewModel.mergeIncomingCompletedSession — applied twice
+        // to emulate the sendMessageData + transferUserInfo double delivery.
+        for _ in 0..<2 {
+            if watchStore.activeSession?.clientSessionId == finalized.clientSessionId {
+                watchStore.saveActiveSession(nil)
+            }
+            if !watchStore.isDeleted(clientSessionId: finalized.clientSessionId) {
+                watchStore.saveHistorySession(finalized)
+            }
+        }
+
+        XCTAssertNil(watchStore.activeSession)
+        XCTAssertEqual(watchStore.historySessions.count, 1)
+        XCTAssertEqual(watchStore.historySessions.first?.clientSessionId, finalized.clientSessionId)
+        XCTAssertEqual(watchStore.historySessions.first?.status, .COMPLETED)
+    }
 }

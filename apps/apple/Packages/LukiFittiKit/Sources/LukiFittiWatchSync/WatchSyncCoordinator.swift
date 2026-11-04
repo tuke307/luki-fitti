@@ -705,6 +705,11 @@ public final class WatchSyncCoordinator: NSObject {
         guard WCSession.isSupported(),
               WCSession.default.activationState == .activated,
               let data = try? JSONEncoder().encode(session) else { return }
+        // Live delivery first when the companion is up — transferUserInfo alone can be delayed
+        // a lot. Receivers upsert by clientSessionId, so a duplicated arrival is harmless.
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessageData(data, replyHandler: nil, errorHandler: nil)
+        }
         WCSession.default.transferUserInfo(["completed_session": data])
         #endif
     }

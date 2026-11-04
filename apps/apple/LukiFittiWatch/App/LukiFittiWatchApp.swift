@@ -248,16 +248,25 @@ public final class WatchWorkoutViewModel {
         scheduleRestEndHaptic(endsAt: incoming.restTimerEndsAt)
     }
 
-    /// The iPhone finished the shared workout: drop the mirror and keep the completed copy
+    /// The iPhone finished the shared workout: drop the mirror (which lands the UI back on Home,
+    /// no summary — the user already saw it end on the iPhone) and keep the completed copy
     /// (`saveHistorySession` upserts by clientSessionId, so a later context payload can't double it).
     private func mergeIncomingCompletedSession(_ completed: WorkoutSessionDto) {
-        if store.activeSession?.clientSessionId == completed.clientSessionId {
+        let endedMirror = store.activeSession?.clientSessionId == completed.clientSessionId
+        if endedMirror {
             store.saveActiveSession(nil)
         }
         if !store.isDeleted(clientSessionId: completed.clientSessionId) {
             store.saveHistorySession(completed)
         }
-        endHealthSessionIfIdle()
+        if endedMirror, healthCoordinator.isWorkoutRunning {
+            // The mirrored HealthKit session belongs to this workout — end it under its id so
+            // any Watch metrics land on the completed copy (the builder is discarded, iPhone
+            // stays the single Health exporter).
+            Task { _ = await healthCoordinator.finishWorkout(clientSessionId: completed.clientSessionId) }
+        } else {
+            endHealthSessionIfIdle()
+        }
     }
 
     /// Every path that can clear the active session funnels here so the HealthKit workout session
