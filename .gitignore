@@ -105,3 +105,6 @@ seaweedfs-s3.json
 apps/apple/marketing/raw/
 apps/apple/marketing/frames/
 apps/apple/marketing/.xcresults/
+
+# Private training exports, backups and import reports
+.training-import/
