@@ -26,6 +26,7 @@ import {
   Sparkles,
   ShieldCheck,
   Lightbulb,
+  ExternalLink,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Badge } from '@luki-fitti/ui/components/ui/badge';
@@ -101,6 +102,20 @@ const AUTH_ONLY_PAGES: ReadonlySet<SettingsPage> = new Set([
 ]);
 
 const HISTORY_KEY = 'profilePage';
+
+/** Step-by-step migration guides in the public repo. App names stay untranslated. */
+const IMPORT_GUIDES = [
+  {
+    name: 'GymLife',
+    url: 'https://github.com/tuke307/luki-fitti/blob/main/docs/gymlife-import.md',
+    testId: 'import-guide-gymlife',
+  },
+  {
+    name: 'Alpha Progression',
+    url: 'https://github.com/tuke307/luki-fitti/blob/main/docs/alpha-progression-import.md',
+    testId: 'import-guide-alpha-progression',
+  },
+] as const;
 
 function isSettingsPage(value: unknown): value is SettingsPage {
   return typeof value === 'string' && (SETTINGS_PAGES as readonly string[]).includes(value);
@@ -849,6 +864,27 @@ export function ProfileImportView() {
                 <FileSpreadsheet className="h-4 w-4" />
                 {t.profile.exportCsvBtn}
               </Button>
+            </div>
+
+            <div className="border-border/60 border-t pt-4">
+              <h3 className="text-sm font-semibold">{t.profile.importGuidesTitle}</h3>
+              <p className="text-muted-foreground mt-0.5 text-xs">{t.profile.importGuidesSub}</p>
+              <ul className="mt-3 space-y-1">
+                {IMPORT_GUIDES.map((guide) => (
+                  <li key={guide.testId}>
+                    <a
+                      href={guide.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      data-testid={guide.testId}
+                      className="text-primary hover:bg-secondary/60 inline-flex items-center gap-1.5 rounded-md px-1 py-0.5 text-sm font-medium"
+                    >
+                      {guide.name}
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  </li>
+                ))}
+              </ul>
             </div>
           </Card>
         );

@@ -80,6 +80,8 @@ public struct ProfileAndAuthView: View {
 
             dataSection
 
+            importSection
+
             Section(tr("Feedback")) {
                 Button {
                     requestFeature()
@@ -400,6 +402,31 @@ public struct ProfileAndAuthView: View {
             Text(tr("Data"))
         } footer: {
             Text(tr("Exports your workout history as a JSON file."))
+        }
+    }
+
+    /// Step-by-step migration guides in the public repo. App names stay untranslated.
+    private static let importGuides: [(name: String, docFile: String, accessibilityId: String)] = [
+        ("GymLife", "gymlife-import", "ios.profile.row.import.gymlife"),
+        ("Alpha Progression", "alpha-progression-import", "ios.profile.row.import.alphaProgression"),
+    ]
+
+    private var importSection: some View {
+        Section {
+            ForEach(Self.importGuides, id: \.name) { guide in
+                Button {
+                    if let url = URL(string: "https://github.com/tuke307/luki-fitti/blob/main/docs/\(guide.docFile).md") {
+                        openURL(url)
+                    }
+                } label: {
+                    SettingsRow(guide.name, systemImage: "square.and.arrow.down", tint: LukiColors.accent)
+                }
+                .accessibilityIdentifier(guide.accessibilityId)
+            }
+        } header: {
+            Text(tr("Import from other apps"))
+        } footer: {
+            Text(tr("Step-by-step guides for moving your data into LukiFitti."))
         }
     }
 

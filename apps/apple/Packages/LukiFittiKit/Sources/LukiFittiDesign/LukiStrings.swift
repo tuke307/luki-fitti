@@ -430,6 +430,8 @@ public enum LukiStrings {
         "Edit weigh-in": "Gewicht bearbeiten",
         "Enter a weight between %d and %d %@.": "Gib ein Gewicht zwischen %d und %d %@ ein.",
         "Health": "Health",
+        "Import from other apps": "Aus anderen Apps importieren",
+        "Step-by-step guides for moving your data into LukiFitti.": "Schritt-für-Schritt-Anleitungen, um deine Daten in LukiFitti zu übernehmen.",
         "Imported from Apple Health": "Aus Apple Health importiert",
         "Increase weight by %@": "Gewicht um %@ erhöhen",
         "Last weigh-in: %@": "Zuletzt gewogen: %@",
