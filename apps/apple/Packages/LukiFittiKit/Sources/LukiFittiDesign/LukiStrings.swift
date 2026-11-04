@@ -133,6 +133,7 @@ public enum LukiStrings {
         "Guest – saved on this device only": "Gast – nur auf diesem Gerät gespeichert",
         "Heart rate": "Herzfrequenz",
         "Hi, %@": "Hi, %@",
+        "How to": "Anleitung",
         "History": "Verlauf",
         "How to do %@": "So geht %@",
         "How to do it": "So geht’s",

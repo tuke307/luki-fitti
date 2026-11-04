@@ -14,7 +14,8 @@ public struct WatchActiveWorkoutView: View {
     @State private var isEditingWeight = false
     @State private var crownWeight: Double = 0
     @State private var weightLockTask: Task<Void, Never>?
-    @State private var showingRepsEditor = false
+    @State private var showingRepsSheet = false
+    @State private var showingHowTo = false
     @FocusState private var weightFocused: Bool
 
     public init(viewModel: WatchWorkoutViewModel) {
@@ -62,48 +63,49 @@ public struct WatchActiveWorkoutView: View {
 
     private var controlsPage: some View {
         let isPaused = session?.status == .PAUSED
-        return ScrollView {
-            VStack(spacing: 10) {
-                elapsedTime
-                    .font(.system(.title, design: .rounded).weight(.semibold).monospacedDigit())
-                    .foregroundStyle(isPaused ? .secondary : LukiColors.accent)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityIdentifier("watch.controls.elapsed")
+        return VStack(spacing: 8) {
+            elapsedTime
+                .font(.system(.title, design: .rounded).weight(.semibold).monospacedDigit())
+                .foregroundStyle(isPaused ? .secondary : LukiColors.accent)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("watch.controls.elapsed")
 
-                liveMetrics
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            liveMetrics
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                HStack(alignment: .top, spacing: 12) {
-                    roundButton(
-                        id: "pause",
-                        title: isPaused ? tr("Resume") : tr("Pause"),
-                        systemImage: isPaused ? "play.fill" : "pause.fill",
-                        tint: LukiColors.accent
-                    ) {
-                        viewModel.togglePause()
-                    }
-                    roundButton(
-                        id: "finish",
-                        title: tr("End"),
-                        accessibilityTitle: tr("End Workout"),
-                        systemImage: "xmark",
-                        tint: LukiColors.destructive
-                    ) {
-                        showingFinishConfirmation = true
-                    }
+            Spacer(minLength: 0)
+
+            HStack(alignment: .top, spacing: 12) {
+                roundButton(
+                    id: "pause",
+                    title: isPaused ? tr("Resume") : tr("Pause"),
+                    systemImage: isPaused ? "play.fill" : "pause.fill",
+                    tint: LukiColors.accent
+                ) {
+                    viewModel.togglePause()
                 }
-                .padding(.top, 2)
-
-                Button {
-                    viewModel.showingChangeExerciseSheet = true
-                } label: {
-                    Label(tr("Change Exercise"), systemImage: "arrow.triangle.swap")
-                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                roundButton(
+                    id: "finish",
+                    title: tr("End"),
+                    accessibilityTitle: tr("End Workout"),
+                    systemImage: "xmark",
+                    tint: LukiColors.destructive
+                ) {
+                    showingFinishConfirmation = true
                 }
-                .accessibilityIdentifier("watch.action.change")
             }
-            .padding(.horizontal, 4)
+
+            Button {
+                viewModel.showingChangeExerciseSheet = true
+            } label: {
+                Label(tr("Change Exercise"), systemImage: "arrow.triangle.swap")
+                    .font(.footnote.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 40)
+            }
+            .buttonStyle(.bordered)
+            .accessibilityIdentifier("watch.action.change")
         }
+        .padding(.horizontal, 4)
     }
 
     /// Elapsed workout time, counted by the system so it keeps running in Always On.
@@ -151,7 +153,7 @@ public struct WatchActiveWorkoutView: View {
                 Image(systemName: systemImage)
                     .font(.title2.weight(.semibold))
                     .foregroundStyle(tint)
-                    .frame(width: 60, height: 60)
+                    .frame(width: 48, height: 48)
                     .background(Circle().fill(tint.opacity(0.22)))
                 Text(title)
                     .font(.footnote)
@@ -171,17 +173,15 @@ public struct WatchActiveWorkoutView: View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let rest = SessionCalculator.computeRemainingRestSeconds(session: session, now: context.date)
             let resting = rest.isRunning || rest.isPaused
-            // A fresh scroll view per state, so rest doesn't open scrolled to where the set was.
-            ScrollView {
-                Group {
-                    if resting {
-                        restView(rest)
-                    } else {
-                        setView
-                    }
+            // A fresh view per state, so rest doesn't inherit the set page's state.
+            Group {
+                if resting {
+                    restView(rest)
+                } else {
+                    setView
                 }
-                .padding(.horizontal, 4)
             }
+            .padding(.horizontal, 4)
             .id(resting)
         }
     }
@@ -197,24 +197,10 @@ public struct WatchActiveWorkoutView: View {
         return VStack(alignment: .leading, spacing: 4) {
             Text(exercise?.exerciseNameSnapshot ?? tr("Workout"))
                 .font(.headline)
-                .lineLimit(2)
-                .minimumScaleFactor(0.85)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
 
-            HStack(spacing: 6) {
-                SetDots(total: total, completed: completed)
-                Text(tr("Set %d of %d", min(completed + 1, total), total))
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                Spacer(minLength: 0)
-                if !isLuminanceReduced, let bpm = viewModel.healthCoordinator.currentHeartRateBpm {
-                    Label("\(bpm)", systemImage: "heart.fill")
-                        .font(.subheadline.weight(.semibold).monospacedDigit())
-                        .foregroundStyle(LukiColors.heartRate)
-                        .labelStyle(.titleAndIcon)
-                        .accessibilityLabel(tr("%d bpm", bpm))
-                }
-            }
+            statusRow(completed: completed, total: total)
 
             if isStretch {
                 Text(verbatim: "\(activeSet?.durationSeconds ?? 45) \(tr("sec"))")
@@ -223,7 +209,7 @@ public struct WatchActiveWorkoutView: View {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     weightControl(activeSet?.weight ?? exercise?.targetWeight ?? 0)
                     Button {
-                        showingRepsEditor.toggle()
+                        showingRepsSheet = true
                     } label: {
                         Text(tr("× %d reps", activeSet?.reps ?? exercise?.targetRepsMin ?? 0))
                             .font(.body.monospacedDigit())
@@ -235,15 +221,16 @@ public struct WatchActiveWorkoutView: View {
                     .accessibilityHint(tr("Change reps"))
                     .accessibilityIdentifier("watch.execution.reps")
                 }
-                if showingRepsEditor && !isLuminanceReduced {
-                    repsEditor
+                .sheet(isPresented: $showingRepsSheet) {
+                    repsSheet
                 }
             }
+
+            Spacer(minLength: 0)
 
             if !isLuminanceReduced {
                 Button {
                     lockWeight()
-                    showingRepsEditor = false
                     viewModel.tapCompleteCurrentSetOrSkipRest()
                 } label: {
                     Text(tr("Complete Set"))
@@ -256,14 +243,62 @@ public struct WatchActiveWorkoutView: View {
                 .tint(LukiColors.accent)
                 .accessibilityIdentifier("watch.execution.ringButton")
 
-                if let next = nextUpText() {
-                    Text(next)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
+                nextUpLine
+            }
+        }
+    }
+
+    /// Set dots + compact "2/5" counter; the heart-rate chip only shows when it fits next to them.
+    private func statusRow(completed: Int, total: Int) -> some View {
+        let current = min(completed + 1, total)
+        let counter = Text(verbatim: "\(current)/\(total)")
+            .font(.subheadline.monospacedDigit())
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .fixedSize()
+            .accessibilityLabel(tr("Set %d of %d", current, total))
+        let bpm = isLuminanceReduced ? nil : viewModel.healthCoordinator.currentHeartRateBpm
+
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: 6) {
+                SetDots(total: total, completed: completed)
+                counter
+                Spacer(minLength: 0)
+                if let bpm {
+                    Label("\(bpm)", systemImage: "heart.fill")
+                        .font(.footnote.monospacedDigit())
+                        .foregroundStyle(LukiColors.heartRate)
+                        .labelStyle(.titleAndIcon)
+                        .lineLimit(1)
+                        .accessibilityLabel(tr("%d bpm", bpm))
                 }
             }
+            HStack(spacing: 6) {
+                SetDots(total: total, completed: completed)
+                counter
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    /// The "Next: …" hint is the first thing to go on small watches: `ViewThatFits` drops it
+    /// entirely when it would push the primary button off screen.
+    @ViewBuilder
+    private var nextUpLine: some View {
+        ViewThatFits(in: .vertical) {
+            nextUpContent
+            Color.clear.frame(height: 0)
+        }
+    }
+
+    @ViewBuilder
+    private var nextUpContent: some View {
+        if let next = nextUpText() {
+            Text(next)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -275,7 +310,7 @@ public struct WatchActiveWorkoutView: View {
         } label: {
             HStack(alignment: .firstTextBaseline, spacing: 2) {
                 Text(LukiFormat.weight(shown))
-                    .font(.system(.title, design: .rounded).weight(.semibold).monospacedDigit())
+                    .font(.system(.title2, design: .rounded).weight(.semibold).monospacedDigit())
                     .lineLimit(1)
                 Text(LukiFormat.unitLabel(unit))
                     .font(.body)
@@ -332,21 +367,34 @@ public struct WatchActiveWorkoutView: View {
         .accessibilityIdentifier("watch.execution.weight")
     }
 
-    private var repsEditor: some View {
-        HStack(spacing: 12) {
-            Button {
-                viewModel.updateNextSet(repsDelta: -1)
-            } label: {
-                Image(systemName: "minus").frame(maxWidth: .infinity, minHeight: 40)
+    /// Reps stepper as a sheet: the inline row no longer fits next to weight + reps on small
+    /// watches, so the −/+ controls get their own glanceable view with the value in the middle.
+    private var repsSheet: some View {
+        let exercise = currentExercise
+        let activeSet = exercise?.sets.first(where: { !$0.completed }) ?? exercise?.sets.last
+        let reps = activeSet?.reps ?? exercise?.targetRepsMin ?? 0
+        return VStack(spacing: 8) {
+            Text(tr("× %d reps", reps))
+                .font(.system(.title, design: .rounded).weight(.semibold).monospacedDigit())
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+
+            HStack(spacing: 12) {
+                Button {
+                    viewModel.updateNextSet(repsDelta: -1)
+                } label: {
+                    Image(systemName: "minus").frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .accessibilityLabel(tr("Fewer reps"))
+                Button {
+                    viewModel.updateNextSet(repsDelta: 1)
+                } label: {
+                    Image(systemName: "plus").frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .accessibilityLabel(tr("More reps"))
             }
-            .accessibilityLabel(tr("Fewer reps"))
-            Button {
-                viewModel.updateNextSet(repsDelta: 1)
-            } label: {
-                Image(systemName: "plus").frame(maxWidth: .infinity, minHeight: 40)
-            }
-            .accessibilityLabel(tr("More reps"))
         }
+        .accessibilityIdentifier("watch.execution.repsSheet")
     }
 
     private func restView(_ rest: RestTimerStatus) -> some View {
@@ -375,10 +423,12 @@ public struct WatchActiveWorkoutView: View {
                 .font(.system(.title3, design: .rounded).weight(.semibold).monospacedDigit())
                 .multilineTextAlignment(.center)
             }
-            .frame(width: 76, height: 76)
+            .frame(width: 64, height: 64)
             .accessibilityElement(children: .combine)
             .accessibilityLabel(tr("Rest"))
             .accessibilityValue(LukiFormat.clock(rest.remainingSeconds))
+
+            Spacer(minLength: 0)
 
             if !isLuminanceReduced {
                 Button {
@@ -398,25 +448,19 @@ public struct WatchActiveWorkoutView: View {
                     Button {
                         viewModel.adjustRest(by: -15)
                     } label: {
-                        Text(verbatim: "−15 s").frame(maxWidth: .infinity, minHeight: 40)
+                        Text(verbatim: "−15 s").frame(maxWidth: .infinity, minHeight: 36)
                     }
                     .accessibilityIdentifier("watch.rest.minus")
                     Button {
                         viewModel.adjustRest(by: 15)
                     } label: {
-                        Text(verbatim: "+15 s").frame(maxWidth: .infinity, minHeight: 40)
+                        Text(verbatim: "+15 s").frame(maxWidth: .infinity, minHeight: 36)
                     }
                     .accessibilityIdentifier("watch.rest.plus")
                 }
                 .font(.body.monospacedDigit())
 
-                if let next = nextUpText() {
-                    Text(next)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
+                nextUpLine
             }
         }
     }
@@ -468,40 +512,75 @@ public struct WatchActiveWorkoutView: View {
     private var formGuidePage: some View {
         let catalogInfo = viewModel.store.catalog.first { $0.id == currentExercise?.exerciseId }
 
-        return ScrollView {
+        return VStack(alignment: .leading, spacing: 6) {
+            if let currentExercise {
+                // The visual shrinks through `scaleEffect` (a plain frame would only clip it)
+                // so the page still fits on a 41 mm watch.
+                ViewThatFits(in: .vertical) {
+                    guideVisual(currentExercise, scale: 1)
+                    guideVisual(currentExercise, scale: 0.75)
+                    guideVisual(currentExercise, scale: 0.55)
+                }
+                .frame(maxWidth: .infinity)
+
+                Text(currentExercise.exerciseNameSnapshot)
+                    .font(.headline)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+
+                let muscles = ([currentExercise.primaryMuscleSnapshot] + (catalogInfo?.secondaryMuscleGroups ?? []))
+                    .map { LukiI18n.muscleLabel($0, locale: tr) }
+                    .joined(separator: ", ")
+                Text(muscles)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                Spacer(minLength: 0)
+
+                Button {
+                    showingHowTo = true
+                } label: {
+                    Label(tr("How to"), systemImage: "list.number")
+                        .font(.footnote.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 40)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("watch.howto.button")
+            }
+        }
+        .padding(.horizontal, 4)
+        .sheet(isPresented: $showingHowTo) {
+            howToSheet(catalogInfo: catalogInfo)
+        }
+    }
+
+    private func guideVisual(_ exercise: SessionExerciseDto, scale: CGFloat) -> some View {
+        let size = ExerciseVectorVisualView.outerSize(compact: true)
+        return ExerciseVectorVisualView(
+            exerciseName: exercise.exerciseNameSnapshot,
+            primaryMuscle: exercise.primaryMuscleSnapshot,
+            compact: true
+        )
+        .scaleEffect(scale)
+        .frame(width: size.width * scale, height: size.height * scale)
+        .accessibilityHidden(true)
+    }
+
+    /// The instruction steps are the only scrolling content on this page — in a sheet, so the
+    /// page itself always fits.
+    private func howToSheet(catalogInfo: ExerciseDto?) -> some View {
+        ScrollView {
             VStack(alignment: .leading, spacing: 6) {
-                if let currentExercise {
-                    HStack {
-                        Spacer()
-                        ExerciseVectorVisualView(
-                            exerciseName: currentExercise.exerciseNameSnapshot,
-                            primaryMuscle: currentExercise.primaryMuscleSnapshot,
-                            compact: true
-                        )
-                        .accessibilityHidden(true)
-                        Spacer()
-                    }
-
-                    Text(currentExercise.exerciseNameSnapshot)
-                        .font(.headline)
-
-                    let muscles = ([currentExercise.primaryMuscleSnapshot] + (catalogInfo?.secondaryMuscleGroups ?? []))
-                        .map { LukiI18n.muscleLabel($0, locale: tr) }
-                        .joined(separator: ", ")
-                    Text(muscles)
+                ForEach(catalogInfo?.instructions ?? [tr("Keep the movement controlled through the full range of motion.")], id: \.self) { step in
+                    Text(step)
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
-
-                    Divider()
-
-                    ForEach(catalogInfo?.instructions ?? [tr("Keep the movement controlled through the full range of motion.")], id: \.self) { step in
-                        Text(step)
-                            .font(.footnote)
-                    }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             .padding(.horizontal, 4)
         }
+        .accessibilityIdentifier("watch.howto.sheet")
     }
 
     // MARK: - Change exercise
