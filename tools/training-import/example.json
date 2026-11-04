@@ -1,0 +1,33 @@
+{
+  "plans": [
+    {
+      "name": "Example Plan",
+      "days": [
+        {
+          "name": "Day A",
+          "exercises": [
+            { "name": "Example leg curl", "plannedSets": 2, "targetReps": 10 }
+          ]
+        }
+      ]
+    }
+  ],
+  "sessions": [
+    {
+      "sourceId": "example-workout-001",
+      "name": "Example Workout",
+      "startedAt": "2026-01-12T18:00:00+01:00",
+      "durationSeconds": 1800,
+      "exercises": [
+        {
+          "name": "Example leg curl",
+          "targetReps": 10,
+          "sets": [
+            { "number": 1, "weightKg": 20, "reps": 10, "setType": "WARMUP" },
+            { "number": 2, "weightKg": 40, "reps": 10, "setType": "WORKING" }
+          ]
+        }
+      ]
+    }
+  ]
+}
