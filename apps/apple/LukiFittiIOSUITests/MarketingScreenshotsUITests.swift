@@ -62,18 +62,13 @@ final class MarketingScreenshotsUITests: XCTestCase {
     @MainActor private func shot02() {
         let app = launch(session: true)
         assertSession(app)
-        // The next open set carries a +2.5 kg suggestion from the seeded history.
-        // The suggestion row lives under the next open set — scroll until it's rendered.
-        for _ in 0..<4 {
-            if app.buttons.matching(
-                NSPredicate(format: "label CONTAINS[c] 'kg' AND label CONTAINS '+'")
-            ).firstMatch.exists { break }
+        // The seeded regression on the first exercise produces the exercise-suggestion card at
+        // the bottom of the exercise list — scroll until it's on screen.
+        let card = app.descendants(matching: .any)["ios.session.rainbowSuggestion"].firstMatch
+        for _ in 0..<6 where !card.isHittable {
             app.swipeUp()
         }
-        let hint = app.buttons.matching(
-            NSPredicate(format: "label CONTAINS[c] 'kg' AND label CONTAINS '+'")
-        ).firstMatch
-        XCTAssertTrue(hint.waitForExistence(timeout: 10), "set suggestion must be visible")
+        XCTAssertTrue(card.waitForExistence(timeout: 10), "suggestion card must be visible")
         save("02-suggestion")
     }
 

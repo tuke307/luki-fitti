@@ -662,6 +662,8 @@ export const de = {
     disabledOption: 'Aus',
     exportTitle: 'Exportieren',
     exportSub: 'Lade eine Kopie deiner Workouts und deines Verlaufs herunter.',
+    importGuidesTitle: 'Aus anderen Apps importieren',
+    importGuidesSub: 'Schritt-für-Schritt-Anleitungen, um deine Daten in LukiFitti zu übernehmen.',
     exportedStatus: '{fileName} exportiert',
     splitFoldersStat: 'Ordner',
     workoutTemplatesStat: 'Workouts',

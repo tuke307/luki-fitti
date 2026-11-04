@@ -479,6 +479,17 @@ public final class OfflineStore {
     public func refreshFromServerAfterAuth() async {
         // Also sends the pending server deletes first, so deleted workouts aren't downloaded again.
         await flushSyncQueue()
+        // Refreshes feature flags and the AI-key status on the cached user (stale caches predate
+        // `aiKeyConfigured` and read as false); local preferences and tokens stay untouched.
+        if let cached = currentUser,
+           let me = try? await apiClient.getMe(),
+           me.id == cached.id {
+            var user = cached
+            user.permissions = me.permissions
+            user.features = me.features
+            user.aiKeyConfigured = me.aiKeyConfigured
+            saveAuthenticatedUser(user)
+        }
         if let serverExercises = try? await apiClient.fetchExercises(), !serverExercises.isEmpty {
             var mergedById = Dictionary(uniqueKeysWithValues: catalog.map { ($0.id, $0) })
             for ex in serverExercises {

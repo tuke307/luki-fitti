@@ -133,11 +133,19 @@ struct MealEditorSheet: View {
                     )
                     .overlay {
                         // Without a key the section stays visible but every entry point
-                        // (camera, picker, estimate) warns first.
+                        // (camera, picker, estimate) warns first. A stale cached flag is
+                        // checked live once; when a key turns out to exist the overlay
+                        // disappears and the real controls take the tap.
                         if viewModel.store.currentUser?.aiKeyConfigured != true {
                             Color.clear
                                 .contentShape(Rectangle())
-                                .onTapGesture { showsAiKeyAlert = true }
+                                .onTapGesture {
+                                    Task {
+                                        if await !viewModel.ensureAiKeyConfigured() {
+                                            showsAiKeyAlert = true
+                                        }
+                                    }
+                                }
                         }
                     }
                 }

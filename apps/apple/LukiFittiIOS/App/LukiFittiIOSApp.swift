@@ -770,6 +770,13 @@ public final class LukiAppViewModel {
                 : Int(Date().timeIntervalSince(started))
         )
 
+        // Tell the Watch right away that the workout ended — the HealthKit finish below can take
+        // a moment, and transferUserInfo alone queues in the background. The finalized copy with
+        // metrics is sent again after; the Watch upserts by clientSessionId.
+        watchSyncCoordinator.transferCompletedStandaloneSession(
+            SessionCalculator.recalculateSessionTotals(SessionCalculator.finalizeExerciseStatuses(session))
+        )
+
         let hkMetrics = await healthCoordinator.finishWorkout(clientSessionId: session.clientSessionId)
         session.healthKitWorkoutUuid = hkMetrics.healthKitWorkoutUuid
         if hkMetrics.activeCaloriesKcal > 0 {
@@ -962,6 +969,11 @@ public final class LukiAppViewModel {
                         // Slowly trending weights, so suggestions look earned.
                         if let w = completed.exercises[exIdx].sets[sIdx].weight {
                             completed.exercises[exIdx].sets[sIdx].weight = w + Double(8 - week) * 2.5
+                        }
+                        // The first exercise dropped over the last two weeks → a regression
+                        // stall, so the suggestion card offers a replacement in the session.
+                        if exIdx == 0, week <= 2, let w = completed.exercises[exIdx].sets[sIdx].weight {
+                            completed.exercises[exIdx].sets[sIdx].weight = max(0, w - Double(3 - week) * 5 - 10)
                         }
                         // The last week tops the rep range → the next open set gets +2.5 kg.
                         if week == 1 {

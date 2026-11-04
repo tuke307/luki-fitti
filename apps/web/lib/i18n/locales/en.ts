@@ -660,6 +660,8 @@ export const en = {
     disabledOption: 'Off',
     exportTitle: 'Export',
     exportSub: 'Download a copy of your workouts and history.',
+    importGuidesTitle: 'Import from other apps',
+    importGuidesSub: 'Step-by-step guides for moving your data into LukiFitti.',
     exportedStatus: 'Exported {fileName}',
     splitFoldersStat: 'Folders',
     workoutTemplatesStat: 'Workouts',
