@@ -147,7 +147,7 @@ public struct DiaryAnalyticsView: View {
 
     private func periodActivityCard(_ snapshot: WorkoutHistorySnapshot) -> some View {
         let title: String = switch selectedPeriod {
-        case .week: tr("Last 7 days")
+        case .week: tr("This week")
         case .month: tr("Last 30 days")
         case .year: tr("Last 12 months")
         case .all: tr("By year")
@@ -165,12 +165,23 @@ public struct DiaryAnalyticsView: View {
             }
 
             if selectedPeriod == .week || selectedPeriod == .month {
-                let daysCount = selectedPeriod == .week ? 7 : 28
                 let cal = Calendar.current
-                let today = cal.startOfDay(for: Date())
+                let grid = HistoryCalendarGrid(span: selectedPeriod == .week ? .week : .month, calendar: cal)
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 7), spacing: 6) {
-                    ForEach(0..<daysCount, id: \.self) { offset in
-                        let dayDate = cal.date(byAdding: .day, value: -(daysCount - 1 - offset), to: today) ?? today
+                    ForEach(Array(HistoryCalendarGrid.weekdaySymbols(locale: Locale(identifier: tr.rawValue)).enumerated()), id: \.offset) { _, symbol in
+                        Text(symbol)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                            .accessibilityHidden(true)
+                    }
+                    ForEach(0..<grid.leadingBlanks, id: \.self) { _ in
+                        Color.clear
+                            .frame(minHeight: 44)
+                            .accessibilityHidden(true)
+                    }
+                    ForEach(grid.days, id: \.self) { dayDate in
                         let daySessions = snapshot.sessions(on: dayDate, calendar: cal)
                         let hasWorkout = !daySessions.isEmpty
                         let dayNumber = cal.component(.day, from: dayDate)
