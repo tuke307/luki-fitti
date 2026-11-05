@@ -265,6 +265,41 @@ public actor APIClient {
         try await request(path: "/api/workouts", method: "GET")
     }
 
+    // Folder/template writes. Responses are not decoded: the outbox only needs the status, and the
+    // next overview download carries the server's copy.
+
+    public func createFolder(_ body: WorkoutFolderUpsertDto) async throws {
+        let _: IgnoredResponse = try await request(path: "/api/workouts/folders", method: "POST", body: body)
+    }
+
+    public func updateFolder(id: String, _ body: WorkoutFolderUpsertDto) async throws {
+        let _: IgnoredResponse = try await request(
+            path: "/api/workouts/folders/\(Self.pathComponent(id))", method: "PUT", body: body
+        )
+    }
+
+    public func deleteFolder(id: String) async throws {
+        let _: IgnoredResponse = try await request(
+            path: "/api/workouts/folders/\(Self.pathComponent(id))", method: "DELETE"
+        )
+    }
+
+    public func createTemplate(_ body: WorkoutTemplateUpsertDto) async throws {
+        let _: IgnoredResponse = try await request(path: "/api/workouts/templates", method: "POST", body: body)
+    }
+
+    public func updateTemplate(id: String, _ body: WorkoutTemplateUpsertDto) async throws {
+        let _: IgnoredResponse = try await request(
+            path: "/api/workouts/templates/\(Self.pathComponent(id))", method: "PUT", body: body
+        )
+    }
+
+    public func deleteTemplate(id: String) async throws {
+        let _: IgnoredResponse = try await request(
+            path: "/api/workouts/templates/\(Self.pathComponent(id))", method: "DELETE"
+        )
+    }
+
     public func fetchStretchingRoutines() async throws -> [StretchingRoutineDto] {
         try await request(path: "/api/stretching/routines", method: "GET")
     }
@@ -669,6 +704,9 @@ public actor APIClient {
 }
 
 private struct EmptyObject: Decodable {}
+
+/// Accepts any JSON object (or an envelope around one).
+private struct IgnoredResponse: Decodable {}
 
 private struct AnyEncodable: Encodable {
     private let encodeFunc: (Encoder) throws -> Void

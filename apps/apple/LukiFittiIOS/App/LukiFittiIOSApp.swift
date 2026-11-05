@@ -1296,7 +1296,7 @@ public struct AppShellView: View {
         guard viewModel.store.currentUser != nil else { return false }
         switch viewModel.store.syncState {
         case .AUTH_EXPIRED, .CONFLICT, .OFFLINE: return true
-        case .SAVED_LOCALLY: return !viewModel.store.syncQueue.isEmpty
+        case .SAVED_LOCALLY: return viewModel.store.pendingChangesCount > 0
         case .SYNCED, .SYNCING: return false
         }
     }
@@ -1320,10 +1320,10 @@ public struct AppShellView: View {
         switch viewModel.store.syncState {
         case .SYNCED: return tr("Synced")
         case .SYNCING: return tr("Syncing")
-        case .SAVED_LOCALLY: return tr("Not synced yet: %d changes", viewModel.store.syncQueue.count)
+        case .SAVED_LOCALLY: return tr("Not synced yet: %d changes", viewModel.store.pendingChangesCount)
         case .CONFLICT: return tr("Changed on two devices")
         case .AUTH_EXPIRED: return tr("Sign in to sync")
-        case .OFFLINE: return tr("Offline. %d changes saved on this device", viewModel.store.syncQueue.count)
+        case .OFFLINE: return tr("Offline. %d changes saved on this device", viewModel.store.pendingChangesCount)
         }
     }
 }

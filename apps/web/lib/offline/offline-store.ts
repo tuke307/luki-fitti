@@ -36,6 +36,7 @@ import type {
   WorkoutSessionDto,
   WorkoutTemplateDto,
 } from '@luki-fitti/common/schemas';
+import type { WorkoutOutboxOp } from './workout-outbox';
 
 export type SyncState =
   'SYNCED' | 'SAVED_LOCALLY' | 'SYNCING' | 'CONFLICT' | 'AUTH_EXPIRED' | 'OFFLINE';
@@ -187,7 +188,8 @@ export async function getCachedWorkouts(): Promise<{
     unfiledTemplates: WorkoutTemplateDto[];
   }>('workouts_overview');
   const defaults = buildStarterWorkouts();
-  if (cached && cached.folders.length > 0) {
+  // A saved overview wins even when empty: the user may have deleted every folder.
+  if (cached) {
     cached.folders = cached.folders.map((f) => ({
       ...linkLegacyStarterCopy(f, DEFAULT_STARTER_FOLDERS),
       templates: f.templates.map((t) => linkLegacyStarterCopy(t, DEFAULT_STARTER_TEMPLATES)),
@@ -221,6 +223,28 @@ export async function setCachedWorkouts(overview: {
   unfiledTemplates: WorkoutTemplateDto[];
 }): Promise<void> {
   await idbSet('workouts_overview', overview);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Folder/template outbox (see workout-outbox.ts), kept in the KV store
+// ─────────────────────────────────────────────────────────────────────────────
+export async function getWorkoutOutbox(): Promise<WorkoutOutboxOp[]> {
+  return (await idbGet<WorkoutOutboxOp[]>('workout_outbox')) ?? [];
+}
+
+let workoutOutboxLock: Promise<unknown> = Promise.resolve();
+
+/** Serialized read-modify-write, so a flush and new changes never overwrite each other. */
+export function updateWorkoutOutbox(
+  fn: (outbox: WorkoutOutboxOp[]) => WorkoutOutboxOp[],
+): Promise<WorkoutOutboxOp[]> {
+  const run = workoutOutboxLock.then(async () => {
+    const next = fn(await getWorkoutOutbox());
+    await idbSet('workout_outbox', next);
+    return next;
+  });
+  workoutOutboxLock = run.catch(() => undefined);
+  return run;
 }
 
 export async function getCachedStretchingRoutines(): Promise<StretchingRoutineDto[]> {

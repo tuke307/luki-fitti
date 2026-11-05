@@ -323,13 +323,22 @@ export interface ExerciseDto {
 // ─────────────────────────────────────────────────────────────────────────────
 // Workout Folders & Workout Templates Schemas
 // ─────────────────────────────────────────────────────────────────────────────
-export const CreateFolderSchema = z.object({
+const FolderFieldsSchema = z.object({
   name: z.string().trim().min(1, 'Folder name is required').max(80),
   color: z.string().trim().default(DEFAULT_FOLDER_COLOR),
   sortOrder: z.number().int().min(0).default(0).optional(),
 });
 
-export const UpdateFolderSchema = CreateFolderSchema.partial();
+/**
+ * `id` is optional and client-generated (offline-first clients create entities before the server
+ * knows them). Replaying a create with the same id returns the existing row.
+ */
+export const CreateFolderSchema = FolderFieldsSchema.extend({ id: z.uuid().optional() });
+
+export const UpdateFolderSchema = FolderFieldsSchema.partial();
+
+/** Stable `details.code` of the 409 returned when a folder name is already taken. */
+export const FOLDER_NAME_TAKEN_CODE = 'FOLDER_NAME_TAKEN';
 
 /** One planned set of a template exercise (type + target values). */
 export const TemplateSetSchema = z.object({
@@ -361,7 +370,7 @@ export const TemplateExerciseInputSchema = z.object({
   alternativeExerciseIds: z.array(z.string()).default([]),
 });
 
-export const CreateTemplateSchema = z.object({
+const TemplateFieldsSchema = z.object({
   name: z.string().trim().min(1, 'Workout name is required').max(100),
   description: z.string().trim().max(500).nullable().optional(),
   folderId: z.string().nullable().optional(),
@@ -370,7 +379,10 @@ export const CreateTemplateSchema = z.object({
   exercises: z.array(TemplateExerciseInputSchema).default([]),
 });
 
-export const UpdateTemplateSchema = CreateTemplateSchema.partial();
+/** `id`: optional client-generated id, see `CreateFolderSchema`. */
+export const CreateTemplateSchema = TemplateFieldsSchema.extend({ id: z.uuid().optional() });
+
+export const UpdateTemplateSchema = TemplateFieldsSchema.partial();
 
 export const MoveTemplateSchema = z.object({
   folderId: z.string().nullable(),
