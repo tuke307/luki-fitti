@@ -456,7 +456,7 @@ public actor APIClient {
         raw.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed.subtracting(CharacterSet(charactersIn: "/"))) ?? raw
     }
 
-    private static func decodeEnvelope<T: Decodable>(_ data: Data) throws -> T {
+    static func decodeEnvelope<T: Decodable>(_ data: Data) throws -> T {
         let decoder = JSONDecoder()
         if let envelope = try? decoder.decode(APIEnvelope<T>.self, from: data), let unwrapped = envelope.data {
             return unwrapped
@@ -469,12 +469,14 @@ public actor APIClient {
     }
 
     /// Authenticated request with a raw body and response (multipart uploads, binary downloads).
-    private func send(
+    /// `mapError` may turn a non-2xx response into a more specific error.
+    func send(
         path: String,
         method: String,
         body: Data?,
         contentType: String?,
-        allowRetryOn401: Bool = true
+        allowRetryOn401: Bool = true,
+        mapError: (@Sendable (Int, Data) -> Error?)? = nil
     ) async throws -> Data {
         guard let url = URL(string: path, relativeTo: baseURL) else { throw APIClientError.invalidURL }
         guard let tokens = tokenStore.loadTokens() else { throw APIClientError.unauthorized }
@@ -496,9 +498,12 @@ public actor APIClient {
         guard let http = response as? HTTPURLResponse else { throw APIClientError.offline("Invalid HTTP response") }
         if http.statusCode == 401 && allowRetryOn401 {
             try await recoverFromUnauthorized(sentAccessToken: tokens.accessToken)
-            return try await send(path: path, method: method, body: body, contentType: contentType, allowRetryOn401: false)
+            return try await send(
+                path: path, method: method, body: body, contentType: contentType, allowRetryOn401: false, mapError: mapError
+            )
         }
         guard (200...299).contains(http.statusCode) else {
+            if let mapped = mapError?(http.statusCode, data) { throw mapped }
             let msg = (try? JSONDecoder().decode(APIEnvelope<EmptyObject>.self, from: data))
                 .flatMap { $0.error?.message ?? $0.message } ?? "HTTP \(http.statusCode)"
             if http.statusCode == 403 {

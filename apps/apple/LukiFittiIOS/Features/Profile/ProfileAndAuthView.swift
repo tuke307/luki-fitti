@@ -405,8 +405,13 @@ public struct ProfileAndAuthView: View {
 
     private var dataSection: some View {
         Section {
-            let jsonBackup = (try? String(data: JSONEncoder().encode(viewModel.store.historySessions), encoding: .utf8)) ?? "[]"
-            ShareLink(item: jsonBackup, preview: SharePreview("luki-fitti-backup.json")) {
+            let backup = BackupExportFile(
+                folders: viewModel.store.folders,
+                unfiledTemplates: viewModel.store.unfiledTemplates,
+                historySessions: viewModel.store.historySessions,
+                catalog: viewModel.store.catalog
+            )
+            ShareLink(item: backup, preview: SharePreview(backup.fileName)) {
                 SettingsRow(tr("Export Backup"), systemImage: "square.and.arrow.up", tint: LukiColors.setStretch)
             }
             .accessibilityIdentifier("ios.profile.row.exportBackup")
