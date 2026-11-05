@@ -169,18 +169,16 @@ struct AIWorkoutBuilderSheet: View {
                     + Array(repeating: TemplateSetDto(setType: .WORKING, reps: ex.repsMax), count: ex.workingSets)
             )
         }
-        let template = WorkoutTemplateDto(
-            id: templateId,
-            userId: viewModel.store.currentUser?.id ?? "local-user",
+        let store = viewModel.store
+        guard let template = store.saveTemplate(
+            editingTemplateId: nil,
             name: String(p.name.prefix(100)),
-            description: p.summary.isEmpty ? nil : String(p.summary.prefix(500)),
-            estimatedDurationMinutes: p.estimatedDurationMinutes,
+            description: String(p.summary.prefix(500)),
+            folderId: nil,
+            durationMinutes: p.estimatedDurationMinutes,
             exercises: exercises
-        )
-        viewModel.store.saveWorkoutsOverview(
-            folders: viewModel.store.folders,
-            unfiledTemplates: viewModel.store.unfiledTemplates + [template]
-        )
+        ) else { return }
+        Task { await store.flushSyncQueue() }
         onSaved(template)
         dismiss()
     }
