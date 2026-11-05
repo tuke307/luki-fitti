@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AdminPermission, AiSkillName, FeatureGrant } from '../enums';
+import { AiModelIdSchema } from './ai-models.schemas';
 import type { AiKeySlotStatusDto, MyAiUsageDto } from './ai.schemas';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -33,6 +34,8 @@ export const UpdateAiSettingsSchema = z.object({
   mealPhotoFallbacks: z.array(OpenRouterModelIdSchema).max(3).optional(),
   aiDailyRunLimit: z.number().int().min(0).max(1000).optional(),
   mealPhotoRetentionDays: z.number().int().min(1).max(3650).nullable().optional(),
+  /** Models users on an admin-assigned key may choose from. */
+  userModelAllowlist: z.array(AiModelIdSchema).max(200).optional(),
 });
 
 export const AiUsageQuerySchema = z.object({
@@ -84,6 +87,7 @@ export interface AiSettingsDto {
   mealPhotoFallbacks: string[];
   aiDailyRunLimit: number;
   mealPhotoRetentionDays: number | null;
+  userModelAllowlist: string[];
   /**
    * Whether AI_KEY_ENCRYPTION_KEY is configured, i.e. per-user OpenRouter keys can be stored.
    * There is no global provider key: AI only works for users with an own or admin-assigned key.

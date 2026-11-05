@@ -25,6 +25,7 @@ import {
   TargetRegion,
   WeightUnit,
 } from '../enums';
+import { AiModelChoicesSchema } from './ai-models.schemas';
 
 export const PASSWORD_RULES = {
   minLength: 8,
@@ -138,6 +139,8 @@ export const UpdatePreferencesSchema = z.object({
   weighInReminderEnabled: z.boolean().optional(),
   weighInReminderWeekday: z.number().int().min(1).max(7).optional(),
   weighInReminderMinutes: z.number().int().min(0).max(1439).optional(),
+  /** Per-skill model choice; replaces the stored map (null clears every choice). */
+  aiModels: AiModelChoicesSchema.nullable().optional(),
 });
 
 export const UserPreferencesSchema = z.object({
@@ -165,6 +168,7 @@ export const UserPreferencesSchema = z.object({
   weighInReminderEnabled: z.boolean().default(false).optional(),
   weighInReminderWeekday: z.number().default(2).optional(),
   weighInReminderMinutes: z.number().default(450).optional(),
+  aiModels: z.record(z.string(), z.string()).nullable().optional(),
 });
 
 export const UserSchema = z.object({
@@ -823,3 +827,4 @@ export * from './nutrition.schemas';
 export * from './body-weight.schemas';
 export * from './activity.schemas';
 export * from './ai.schemas';
+export * from './ai-models.schemas';

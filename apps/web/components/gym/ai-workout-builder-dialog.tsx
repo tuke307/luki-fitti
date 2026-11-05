@@ -16,7 +16,7 @@ import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
 import { Spinner } from '@luki-fitti/ui/components/ui/spinner';
 import { Textarea } from '@luki-fitti/ui/components/ui/textarea';
 import { toast } from '@luki-fitti/ui/components/ui/sonner';
-import { SetType, WeightUnit } from '@luki-fitti/common/enums';
+import { AiSkillName, SetType, WeightUnit } from '@luki-fitti/common/enums';
 import {
   AI_PROMPT_MAX_LENGTH,
   type CreateTemplateDto,
@@ -29,6 +29,7 @@ import { AiKeyRequiredDialog } from './ai-key-required-dialog';
 import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { AiCostLabel } from './ai-usage/ai-cost-label';
+import { AiInfoButton } from './ai-usage/ai-info-button';
 
 const DURATIONS = [30, 45, 60, 75, 90] as const;
 
@@ -161,7 +162,10 @@ function AiWorkoutBuilderBody({
     <DialogContent className="flex max-h-[92dvh] flex-col gap-0 p-0 sm:max-w-xl">
       <AiKeyRequiredDialog open={keyRequiredOpen} onOpenChange={setKeyRequiredOpen} />
       <DialogHeader className="px-5 pt-5 pb-3 text-left">
-        <DialogTitle>{result ? t.aiBuilder.preview : t.aiBuilder.title}</DialogTitle>
+        <div className="-my-2 flex items-center gap-1 pr-8">
+          <DialogTitle>{result ? t.aiBuilder.preview : t.aiBuilder.title}</DialogTitle>
+          <AiInfoButton skill={AiSkillName.WORKOUT_BUILDER} />
+        </div>
         <DialogDescription>{result ? result.summary : t.aiBuilder.sub}</DialogDescription>
       </DialogHeader>
 
@@ -279,7 +283,7 @@ function AiWorkoutBuilderBody({
             {result.droppedExerciseIds.length > 0 && (
               <p className="text-muted-foreground text-[0.8125rem]">{t.aiBuilder.droppedNote}</p>
             )}
-            <AiCostLabel usage={result.usage} />
+            <AiCostLabel usage={result.usage} model={result.model} />
           </>
         )}
 

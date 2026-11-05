@@ -45,6 +45,8 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
     public var weighInReminderWeekday: Int = 2
     /// Minutes after midnight (450 = 07:30).
     public var weighInReminderMinutes: Int = 450
+    /// Per-skill OpenRouter model choice keyed by `AiSkillName` raw value; missing = admin default.
+    public var aiModels: [String: String]? = nil
 
     public init(
         id: String = "pref-local",
@@ -78,6 +80,7 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
         case bodyWeightKg, heightCm, birthYear, sex, bodyFatPct, activityLevel
         case dailyKcalGoal, proteinGoalG, carbsGoalG, fatGoalG
         case weighInReminderEnabled, weighInReminderWeekday, weighInReminderMinutes
+        case aiModels
     }
 
     public init(from decoder: Decoder) throws {
@@ -107,6 +110,7 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
         self.weighInReminderEnabled = try c.decodeIfPresent(Bool.self, forKey: .weighInReminderEnabled) ?? false
         self.weighInReminderWeekday = try c.decodeIfPresent(Int.self, forKey: .weighInReminderWeekday) ?? 2
         self.weighInReminderMinutes = try c.decodeIfPresent(Int.self, forKey: .weighInReminderMinutes) ?? 450
+        self.aiModels = (try? c.decodeIfPresent([String: String].self, forKey: .aiModels)).flatMap { $0 }
     }
 }
 
@@ -198,6 +202,8 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
     public var weighInReminderEnabled: Bool? = nil
     public var weighInReminderWeekday: Int? = nil
     public var weighInReminderMinutes: Int? = nil
+    /// Replaces the stored per-skill model choices (an empty map clears them all).
+    public var aiModels: [String: String]? = nil
     /// Fields sent as JSON `null` so the server clears them. A `nil` property is otherwise left
     /// out of the request, which leaves the server value unchanged.
     public var clearedFields: Set<CodingKeys> = []
@@ -232,6 +238,7 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
         case bodyWeightKg, heightCm, birthYear, sex, bodyFatPct, activityLevel
         case dailyKcalGoal, proteinGoalG, carbsGoalG, fatGoalG
         case weighInReminderEnabled, weighInReminderWeekday, weighInReminderMinutes
+        case aiModels
     }
 
     /// Sets `value` for the request, or marks the field to be cleared on the server when `nil`.
@@ -265,6 +272,7 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
         weighInReminderEnabled = try c.decodeIfPresent(Bool.self, forKey: .weighInReminderEnabled)
         weighInReminderWeekday = try c.decodeIfPresent(Int.self, forKey: .weighInReminderWeekday)
         weighInReminderMinutes = try c.decodeIfPresent(Int.self, forKey: .weighInReminderMinutes)
+        aiModels = try c.decodeIfPresent([String: String].self, forKey: .aiModels)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -298,6 +306,7 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
         try put(weighInReminderEnabled, forKey: .weighInReminderEnabled)
         try put(weighInReminderWeekday, forKey: .weighInReminderWeekday)
         try put(weighInReminderMinutes, forKey: .weighInReminderMinutes)
+        try put(aiModels, forKey: .aiModels)
         // Sorted so the request body is stable (Set order isn't).
         for key in clearedFields.sorted(by: { $0.rawValue < $1.rawValue }) where !sent.contains(key) {
             try c.encodeNil(forKey: key)

@@ -507,4 +507,73 @@ export const deFeatures: Widen<typeof enFeatures> = {
     adminDetailTitle: 'KI-Nutzung · {email}',
     adminShowDetail: 'KI-Nutzung von {email} anzeigen',
   },
+  aiInfo: {
+    button: 'So funktioniert das',
+    title: 'So funktioniert das',
+    modelTitle: 'Modell',
+    modelDefault: 'Standard',
+    modelChosen: 'deine Wahl',
+    modelLoading: 'Modell wird geladen…',
+    modelUnavailable: 'Modelldetails sind gerade nicht verfügbar.',
+    pricing: '{input} pro 1 Mio. Eingabe-Tokens · {output} pro 1 Mio. Ausgabe-Tokens',
+    changeModel: 'Das Modell kannst du unter Profil → KI-Modelle ändern.',
+    dataTitle: 'Was gesendet wird',
+    data: {
+      'workout-builder':
+        'Dein Anfragetext und, über Werkzeuge, die das Modell aufrufen kann, deine Trainingsdaten: Profil und Ziele, Übungsfeedback, Schwachstellen, letzte Workouts und Suchen im Übungskatalog.',
+      'meal-analyzer': 'Die Fotos und dein Hinweis. Sonst nichts über dich.',
+      'meal-text-analyzer':
+        'Deine Mahlzeitbeschreibung und die gewählte Mahlzeit. Sonst nichts über dich.',
+    },
+    dataNote:
+      'Name, E-Mail und Konto-ID werden nie gesendet. OpenRouter leitet die Anfrage an den Modellanbieter weiter.',
+    promptTitle: 'Anweisungen an das Modell',
+    promptLoading: 'Anweisungen werden geladen…',
+    promptError: 'Die Anweisungen konnten nicht geladen werden. Du kannst sie auf GitHub lesen.',
+    viewOnGithub: 'Auf GitHub ansehen',
+    usedModel: 'Modell: {model}',
+  },
+  aiModels: {
+    intro:
+      'Wähle das OpenRouter-Modell für jede KI-Funktion. Preise pro 1 Mio. Tokens laut OpenRouter; die Schätzung basiert auf deinen letzten Anfragen.',
+    skills: {
+      'workout-builder': 'Workout-Planer',
+      'meal-analyzer': 'Mahlzeitfoto',
+      'meal-text-analyzer': 'Mahlzeitenbeschreibung',
+    },
+    defaultChoice: 'Standard ({model})',
+    useDefault: 'Standard verwenden',
+    restricted:
+      'Dein KI-Schlüssel wird vom Admin bereitgestellt, daher kannst du aus einer freigegebenen Liste wählen.',
+    noKey:
+      'Hinterlege deinen OpenRouter-API-Schlüssel, um KI-Funktionen zu nutzen und Modelle zu wählen.',
+    catalogUnavailable:
+      'Die Modellliste von OpenRouter ist gerade nicht verfügbar. Es werden die Standardmodelle verwendet.',
+    search: 'Modelle suchen',
+    noMatches: 'Keine Modelle passen zu deiner Suche.',
+    noEligible: 'Noch keine Modelle zur Auswahl.',
+    estimate: '≈ {cost} pro Anfrage',
+    estimateUnknown: 'Noch keine Schätzung',
+    pricing: '{input} Eingabe · {output} Ausgabe pro 1 Mio. Tokens',
+    saved: 'Modell gespeichert',
+    saveError: 'Das Modell konnte nicht gespeichert werden. Versuch es noch einmal.',
+    loadError: 'Die Modelle konnten nicht geladen werden.',
+    retry: 'Erneut versuchen',
+    loading: 'Modelle werden geladen…',
+    choose: 'Modell für {skill} wählen',
+    selected: 'Ausgewählt',
+    staleChoice: '{model} ist nicht mehr verfügbar, daher wird der Standard verwendet.',
+  },
+  aiModelAllowlist: {
+    title: 'Modelle für vom Admin zugewiesene Schlüssel',
+    sub: 'Nutzer mit eigenem Schlüssel können jedes Modell wählen, das die Funktion unterstützt. Nutzer mit einem von dir zugewiesenen Schlüssel nur aus dieser Liste.',
+    search: 'OpenRouter-Katalog durchsuchen',
+    selectedCount: '{count} ausgewählt',
+    noneSelected: 'Keine ausgewählt: Diese Nutzer verwenden immer die Standardmodelle.',
+    catalogUnavailable: 'Die OpenRouter-Modellliste ist gerade nicht verfügbar.',
+    remove: '{model} entfernen',
+    noMatches: 'Keine Modelle passen zu deiner Suche.',
+    tools: 'Werkzeuge',
+    images: 'Bilder',
+  },
 };

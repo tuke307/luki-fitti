@@ -65,7 +65,8 @@ const nextConfig = {
               // blob: = local previews of meal photos before upload (object URLs created in-page)
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
-              "connect-src 'self'",
+              // raw.githubusercontent.com = AI system prompts shown in the "How this works" dialog
+              "connect-src 'self' https://raw.githubusercontent.com",
               "frame-ancestors 'self'",
               "object-src 'none'",
               "base-uri 'self'",
