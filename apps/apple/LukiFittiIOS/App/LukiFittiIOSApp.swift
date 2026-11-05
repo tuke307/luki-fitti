@@ -560,6 +560,8 @@ public final class LukiAppViewModel {
             if self.store.preferences.restTimerSound {
                 AudioServicesPlaySystemSound(1054)
             }
+            try? await Task.sleep(for: .milliseconds(500))
+            self.syncLiveActivity()
         }
     }
 
