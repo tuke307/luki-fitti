@@ -129,5 +129,38 @@
     "pattern": "CORE_FLEXION",
     "top": ["ex-ab-crunch-machine", "ex-crunches", "ex-decline-crunch"],
     "exclude": ["ex-bird-dog"]
+  },
+  {
+    "target": "ex-barbell-row-underhand",
+    "pattern": "HORIZONTAL_PULL",
+    "preferLaterality": "UNILATERAL",
+    "laterality": "UNILATERAL",
+    "top": [
+      "ex-one-arm-dumbbell-row",
+      "ex-seated-one-arm-cable-pulley-rows",
+      "ex-alternating-kettlebell-row"
+    ],
+    "exclude": ["ex-wide-grip-lat-pulldown"]
+  },
+  {
+    "target": "ex-leg-extensions",
+    "pattern": "KNEE_EXTENSION",
+    "preferLaterality": "UNILATERAL",
+    "top": ["ex-single-leg-leg-extension", "ex-weighted-sissy-squat"],
+    "exclude": ["ex-leg-press"]
+  },
+  {
+    "target": "ex-barbell-squat",
+    "pattern": "SQUAT",
+    "preferLaterality": "UNILATERAL",
+    "top": ["ex-smith-machine-squat", "ex-leg-press", "ex-one-leg-barbell-squat"],
+    "exclude": ["ex-leg-extensions"]
+  },
+  {
+    "target": "ex-seated-leg-curl",
+    "pattern": "KNEE_FLEXION",
+    "preferLaterality": "UNILATERAL",
+    "top": ["ex-standing-leg-curl", "ex-lying-leg-curls", "ex-ball-leg-curl"],
+    "exclude": ["ex-romanian-deadlift"]
   }
 ]

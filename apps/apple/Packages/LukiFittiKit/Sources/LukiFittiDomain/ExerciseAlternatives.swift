@@ -8,6 +8,7 @@ public enum AlternativeReason: String, Sendable, Equatable, Hashable {
     case SIMILAR_MOVEMENT
     case SAME_MUSCLES
     case SAME_SIDE
+    case UNILATERAL_VARIANT
     case DONE_BEFORE
     case DIFFERENT_EQUIPMENT
 }
@@ -48,6 +49,8 @@ public enum ExerciseAlternatives {
         static let similarMovement = 12.0
         static let regionOverlap = 20.0
         static let nameOverlap = 10.0
+        /// Same movement on the preferred side; beats `sameSide + doneBefore`, not `preferred`.
+        static let preferredSide = 18.0
         static let sameSide = 8.0
         static let doneBefore = 6.0
         static let sameMechanic = 4.0
@@ -94,6 +97,7 @@ public enum ExerciseAlternatives {
         excludeIds: Set<String> = [],
         preferredIds: Set<String> = [],
         popularIds: Set<String> = [],
+        preferLaterality: Laterality? = nil,
         limit: Int? = nil
     ) -> [RankedAlternative] {
         var exclude = excludeIds
@@ -103,6 +107,14 @@ public enum ExerciseAlternatives {
         let targetPattern = target.movementPattern
         let targetRegions = target.targetRegions ?? []
         let targetWords = slugWords(target.slug)
+        // Only switch to the preferred side when such a version exists; otherwise rank as usual.
+        let preferSide: Laterality? = preferLaterality.flatMap { side in
+            guard let targetPattern else { return nil }
+            return catalog.contains {
+                !exclude.contains($0.id) && $0.exerciseType != .STRETCHING
+                    && $0.movementPattern == targetPattern && $0.laterality == side
+            } ? side : nil
+        }
 
         var ranked: [(alternative: RankedAlternative, index: Int)] = []
         for (index, candidate) in catalog.enumerated() {
@@ -132,7 +144,12 @@ public enum ExerciseAlternatives {
             score += overlap * Weight.regionOverlap
             if overlap >= sameMusclesOverlap { reasons.append(.SAME_MUSCLES) }
             score += jaccard(targetWords, slugWords(candidate.slug)) * Weight.nameOverlap
-            if let side = target.laterality, candidate.laterality == side {
+            if let preferSide {
+                if samePattern && candidate.laterality == preferSide {
+                    score += Weight.preferredSide
+                    if preferSide == .UNILATERAL { reasons.append(.UNILATERAL_VARIANT) }
+                }
+            } else if let side = target.laterality, candidate.laterality == side {
                 score += Weight.sameSide
                 reasons.append(.SAME_SIDE)
             }

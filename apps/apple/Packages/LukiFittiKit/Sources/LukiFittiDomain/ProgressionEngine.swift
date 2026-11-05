@@ -1069,7 +1069,7 @@ public enum ProgressionEngine {
 
         // Pick the first reason that is not dismissed and has a candidate not already in the workout.
         // No candidate means no honest suggestion, so the card stays hidden.
-        var picked: (reason: Reason, chosen: ExerciseDto)?
+        var picked: (reason: Reason, chosen: ExerciseDto, unilateralVariant: Bool)?
         for reason in reasons {
             let key = workoutSuggestionReasonKey(
                 reasonType: reason.reasonType,
@@ -1086,14 +1086,16 @@ public enum ProgressionEngine {
             // A stalling exercise is swapped for the same movement (a pullover for a straight-arm
             // pulldown, not just any back exercise). No honest match means no suggestion for this reason.
             let stallingCatalogEx = reason.stallingExerciseId.flatMap { id in catalog.first { $0.id == id } }
+            // A two-sided exercise that stopped progressing is best restarted one side at a time.
             if let stallingCatalogEx, stallingCatalogEx.movementPattern != nil {
                 guard let best = ExerciseAlternatives.rank(
                     target: stallingCatalogEx,
                     catalog: available,
                     historySessions: historySessions,
+                    preferLaterality: stallingCatalogEx.laterality == .BILATERAL ? .UNILATERAL : nil,
                     limit: 1
                 ).first else { continue }
-                picked = (reason, best.exercise)
+                picked = (reason, best.exercise, best.reasons.contains(.UNILATERAL_VARIANT))
                 break
             }
 
@@ -1113,7 +1115,7 @@ public enum ProgressionEngine {
                 return (candidate, score)
             }
             // Stable max: first candidate with the highest score, matching the TS sort order
-            picked = (reason, scored.reduce(scored[0]) { $1.score > $0.score ? $1 : $0 }.candidate)
+            picked = (reason, scored.reduce(scored[0]) { $1.score > $0.score ? $1 : $0 }.candidate, false)
             break
         }
 
@@ -1146,6 +1148,7 @@ public enum ProgressionEngine {
             reasonType: reasonType,
             stallingExerciseId: stallingExerciseId,
             stallingExerciseName: stallingExerciseName,
+            unilateralVariant: picked.unilateralVariant,
             evidence: WorkoutSuggestionEvidence(
                 sessionsSinceBest: trend?.sessionsSinceBest ?? 0,
                 weeksSinceBest: trend?.weeksSinceBest ?? 0,
@@ -1309,6 +1312,8 @@ public struct WorkoutExerciseSuggestion: Sendable, Equatable {
     /// Only set for stall reasons (PLATEAU / GRINDING / REGRESSION).
     public var stallingExerciseId: String?
     public var stallingExerciseName: String?
+    /// The stalling two-sided exercise is swapped for a one-sided version of the same movement.
+    public var unilateralVariant: Bool
     public var evidence: WorkoutSuggestionEvidence
     public var recommendedSets: Int
     public var recommendedRepsMin: Int
@@ -1323,6 +1328,7 @@ public struct WorkoutExerciseSuggestion: Sendable, Equatable {
         reasonType: ExerciseSuggestionReasonType,
         stallingExerciseId: String? = nil,
         stallingExerciseName: String? = nil,
+        unilateralVariant: Bool = false,
         evidence: WorkoutSuggestionEvidence = WorkoutSuggestionEvidence(),
         recommendedSets: Int = 3,
         recommendedRepsMin: Int = 10,
@@ -1336,6 +1342,7 @@ public struct WorkoutExerciseSuggestion: Sendable, Equatable {
         self.reasonType = reasonType
         self.stallingExerciseId = stallingExerciseId
         self.stallingExerciseName = stallingExerciseName
+        self.unilateralVariant = unilateralVariant
         self.evidence = evidence
         self.recommendedSets = recommendedSets
         self.recommendedRepsMin = recommendedRepsMin
