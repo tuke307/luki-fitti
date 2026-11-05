@@ -1,29 +1,35 @@
 # Import training data from Alpha Progression
 
-Export workout history and plans from Alpha Progression, convert the CSV files,
-and import the resulting data into your LukiFitti account. This developer workflow
-requires Python 3.10 or newer and PostgreSQL access; it is not an in-app upload
-feature. The iOS and web profile settings link to this guide.
+Export your workout history from Alpha Progression, convert it into a
+[`luki-fitti-import@1`](import-format.md) file, and upload it in the app under
+**Profile → Data → Import file**. Nobody needs database access for this. The iOS and web
+profile settings link to this guide.
 
-The [general import guide](training-data-import.md) documents the shared JSON
-format, exercise mappings, database configuration, and support for other apps.
+> Privacy: the export contains your full training history. Keep exports, mappings and converted
+> files outside the repository (for example in `.training-import/`, which is git-ignored), never
+> commit them, and delete them when you are done.
+
+Operators with direct PostgreSQL access can alternatively use the Python tools described in the
+[general training data import guide](training-data-import.md). That path writes to the database
+directly and is not needed for normal imports.
 
 ## 1. Export your data
 
-Use Alpha Progression's CSV export and save your **workout history** locally.
-Export **plans** separately if you also want workout templates. Check that the
-history includes your latest sessions. Menu labels and export options can vary
-between app versions.
+Use Alpha Progression's CSV export and save your **workout history** locally. Export **plans**
+separately if you also want workout templates. Check that the history includes your latest
+sessions. Menu labels and export options can vary between app versions.
 
 CSV export is available in the free version; see the
-[official guide](https://alphaprogression.com/en/blog/alpha-progression-guide).
-Keep private exports, mappings, and backups in `.training-import/`, which is
-excluded from Git. Never commit personal training data or database credentials.
+[official guide](https://alphaprogression.com/en/blog/alpha-progression-guide). Current versions
+let you download the .csv directly, send it via email, or copy it to the clipboard.
 
-## 2. Check the supported format
+## 2. Understand the export format
 
-The [CSV adapter](../tools/training-import/prepare_alpha_progression.py) supports
-this German-language, UTF-8, semicolon-delimited layout:
+The workout-history CSV is **not** a flat one-row-per-set table. It is a semicolon-delimited text
+format structured in blocks, one per session. The layout depends on the app language at export
+time.
+
+German export (UTF-8, semicolons):
 
 ```text
 "Example Workout";"2026-01-12 18:00 Uhr";"1:05 Std."
@@ -34,107 +40,83 @@ this German-language, UTF-8, semicolon-delimited layout:
 3;-;-
 ```
 
-- Start times use `YYYY-MM-DD HH:MM Uhr`, without a UTC offset.
-- Durations use `H:MM Std.` or an integer number of minutes, such as `45 Min.`.
-- Strength sets use `#;KG;WDH`; cardio sets use `#;KM;MIN.`.
-- Decimal commas are supported. Completely empty sets (`-;-`) are skipped;
-  partially empty sets stop processing for review.
-- Exercise headers contain a numbered name and equipment, with an optional
-  integer rep target ending in `Wdh`.
-- Plan files contain a plan name/date row, `Tag …` rows, and exercise rows with
-  set counts and integer rep targets. Only these basic plan targets are imported.
+English export (some versions use tabs instead of semicolons):
 
-English headers, tab delimiters, RIR columns, embedded `WU…` warmup entries,
-and values such as `8+` require an adapted parser. They are not supported by
-this adapter. Inspect the actual files before proceeding; do not discard columns
-or warmup information to make an unsupported format parse. Custom-exercise and
-body-measurement export files are not handled here.
+```text
+"Push Day A";"2026-02-19 4:54 h";"1:02 hr"
 
-## 3. Convert the CSV files
-
-From the repository root:
-
-```sh
-python -m pip install -r tools/training-import/requirements.txt
-python tools/training-import/prepare_alpha_progression.py --workouts ".training-import/Workouts.csv" --plans ".training-import/Plans.csv" --output ".training-import/normalized.json" --timezone Europe/Berlin
+"1. Hack Squats · Machine · 8 reps";"WU1 · 37,5 kg · 9 reps<br>WU2 · 72,5 kg · 7 reps"
+#;KG;REPS;RIR
+1;115;8;1
+2;115;8;0
+3;115;6;0
 ```
 
-Replace the filenames with your own. Omit `--plans` if unavailable. Set
-`--timezone` to the time zone in which the sessions took place. An export spanning
-different local time zones needs additional normalization.
+- **Session header**: `"<workout name>";"<start>";"<duration>"`. Start times are wall clocks
+  **without a time zone** (`YYYY-MM-DD HH:MM Uhr` / `YYYY-MM-DD H:MM h`). Durations use
+  `H:MM Std.` / `H:MM hr`, or whole minutes such as `45 Min.`.
+- **Exercise header**: `"<n>. <exercise name> · <equipment> · <target reps> Wdh|reps"`. The English
+  export may add a second field listing warm-up sets as `WU<i> · <weight> kg · <reps> reps`,
+  separated by `<br>`.
+- **Column header**: `#;KG;WDH` or `#;KG;REPS;RIR` before each exercise's sets (cardio uses
+  `#;KM;MIN.`).
+- **Set rows**: `<set #>;<weight kg>;<reps>[;<RIR>]`. Completely empty sets (`-;-`) carry no data.
 
-This layout has no explicit set types, so sets default to `WORKING`. Only after
-confirmation for every affected occurrence, add
-`--warmup-first "EXACT EXERCISE NAME"` to mark set number 1 as `WARMUP`.
-Repeat the option for multiple exercises. Use the normalized name, including
-equipment but excluding numbering and target reps, such as
-`Example Exercise · Maschine`. If warmup behavior varies by session, review and
-correct the JSON rather than applying a blanket rule.
+Gotchas:
 
-Review converted sessions, skipped sets, units, and warmup assumptions. Estimated
-end times are derived from UTC start times and exported durations. Missing
-per-set timestamps, RPE, calories, and heart rates are not invented.
+- **European decimal commas** (`102,5` = 102.5).
+- A `+` suffix on reps (`8+`) means "at least N reps"; on weight (`+35`) it marks added weight on a
+  bodyweight exercise.
+- RIR is optional in the app, so expect empty or missing values.
+- Exercise names follow the export language.
+- The exact layout can vary between app versions and export kinds (plans vs. history). **Verify
+  the mapping below against your own file before importing.**
 
-## 4. Map exercises and configure access
+## 3. Map to the LukiFitti model
 
-Create `.training-import/mapping.json` using
-[example-mapping.json](../tools/training-import/example-mapping.json) as a format
-reference. Replace its sample data with a mapping for every normalized exercise
-name. Match movement, equipment, and variant to an accessible catalog slug.
+| Alpha Progression                     | LukiFitti (`packages/database/prisma/schema.prisma`)                                          |
+| ------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Session header block                  | `WorkoutSession` (status `COMPLETED`, `startedAt` from the date, `activeDurationSeconds` from the duration) |
+| Exercise header (`Name · Equipment`)  | `SessionExercise` (`exerciseNameSnapshot`; use `Equipment` for catalog matching)               |
+| `WU<n>` entries                       | `SessionSet` with `setType = WARMUP`                                                          |
+| Set rows                              | `SessionSet` (`weight`, `reps`; RIR becomes RPE as `10 − RIR`)                                 |
+| Plans export                          | `WorkoutTemplate` (+ `WorkoutFolder` if the plan has groupings); verify the layout against your export |
 
-If no faithful match exists, define a personal exercise with the `custom` mapping
-in the [general guide](training-data-import.md#using-the-scripts). Personal
-exercises and imported plans belong to the target account; personal history must
-not be added to global catalogs or schema migrations.
+Exercises: match each Alpha Progression exercise to the **global system catalog**
+(`INITIAL_EXERCISE_CATALOG` in `packages/common/src/catalog/data.ts`) by name, equipment and primary
+muscle; see [finding catalog slugs](import-format.md#finding-catalog-slugs). Exercises that don't
+exist in the catalog can be included in the import file as `customExercises` (they become your own
+custom exercises). Adding new **system** exercises to the catalog is a separate maintainer task
+(see [exercise-catalog.md](exercise-catalog.md)) and never contains personal data.
 
-Configure `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, and `PGPASSWORD` or
-`PGPASSFILE` through the environment. The database login needs the relevant table
-privileges and is separate from the app account selected with `--email`.
-TLS is required by default; see the general guide for connection configuration.
+## 4. Convert and upload
 
-## 5. Validate, rehearse, and import
+1. **Map the exercise names.** Create a mapping file (keep it next to the export, not in the repo)
+   from each Alpha Progression exercise to a catalog slug. Keys are matched case-insensitively;
+   `"Name · Equipment"` wins over `"Name"`:
 
-Validate the JSON without connecting to PostgreSQL:
+   ```json
+   {
+     "Hack Squats · Machine": "barbell-hack-squat",
+     "Bench Press": "barbell-bench-press-medium-grip"
+   }
+   ```
 
-```sh
-python tools/training-import/import_training.py --input ".training-import/normalized.json" --mapping ".training-import/mapping.json" --source "alpha-progression" --email "account@example.com" --validate-only
-```
+2. **Run the converter.** The export's times are naive wall clocks; pass the time zone they were
+   recorded in (defaults to the computer's zone):
 
-Run a database rehearsal:
+   ```bash
+   yarn workspace @luki-fitti/common build   # lets the converter validate its output
+   node scripts/import/alpha-progression-to-luki.mjs .training-import/Workouts.csv \
+     --map .training-import/alpha-mapping.json --tz Europe/Berlin > .training-import/luki-import.json
+   ```
 
-```sh
-python tools/training-import/import_training.py --input ".training-import/normalized.json" --mapping ".training-import/mapping.json" --source "alpha-progression" --email "account@example.com"
-```
+   It stops and lists every exercise name that has no mapping entry, and validates the file
+   against the shared schema when `packages/common` is built. Warm-ups (`WU<n>`) become `WARMUP`
+   sets, RIR becomes RPE as `10 − RIR`, decimal commas and `+` markers are handled.
 
-This backs up existing training data, tests inserts, verifies fields and
-relationships, repeats inserts to check idempotence, and rolls back. Review the
-report under `.training-import/` before proceeding.
+3. **Upload it in the app:** Profile → Data → Import file. Check the preview (sessions, sets, date
+   range, unknown exercises), then import. Importing the same file again changes nothing, so a
+   later export can be converted and uploaded as a whole.
 
-Persist only after a successful rehearsal:
-
-```sh
-python tools/training-import/import_training.py --input ".training-import/normalized.json" --mapping ".training-import/mapping.json" --source "alpha-progression" --email "account@example.com" --commit
-```
-
-The commit run repeats the rollback rehearsal before saving, then reads the data
-back for verification. Conflicting existing records are not overwritten. Reports
-separate inserted IDs from existing IDs; dry runs list proposed additions under
-`wouldInsertIds`.
-
-Reload LukiFitti and verify dates, exercise order, weights, reps, warmup labels,
-and templates. Historical sessions are not automatically linked to templates.
-Planned weights and custom rest periods must be added afterwards.
-
-## 6. Add missing sessions later
-
-Export the complete history again, convert it, and reuse the same mapping,
-target account, and `--source "alpha-progression"`. Repeat validation and the
-rehearsal. Identical records are skipped; only missing records are added. Changed
-existing records or sessions starting within one minute of each other require
-review.
-
-This CSV layout has no source IDs, so workout identity falls back to UTC start
-time and workout name. Renaming a workout or changing the export time zone can
-change its identity and requires reconciliation. Records created by earlier
-one-off import scripts also need reconciliation because their ID schemes may
-differ; do not assume this script will recognize them automatically.
+Plans and custom-exercise exports are not converted yet.
