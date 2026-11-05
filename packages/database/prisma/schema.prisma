@@ -188,6 +188,7 @@ model User {
   aiRuns             AiRun[]
   /// Encrypted OpenRouter keys (never select with the user; see UserAiKey).
   aiKeys             UserAiKey[]
+  importJobs         ImportJob[]
 }
 
 model UserPreferences {
@@ -829,4 +830,27 @@ model HealthWorkout {
 
   @@unique([userId, healthKitUuid])
   @@index([userId, startedAt])
+}
+
+enum ImportJobStatus {
+  SUCCESS
+  FAILED
+}
+
+/// One row per file import commit attempt. Never stores the file or any set data, only counts.
+model ImportJob {
+  id        String          @id @default(uuid())
+  userId    String
+  /// File format, e.g. "luki-fitti-import@1".
+  format    String
+  sourceApp String
+  status    ImportJobStatus
+  /// Per-kind counts `{ customExercises, folders, templates, sessions: { total, new, existing }, ... }`.
+  counts    Json
+  errorCode String?
+  createdAt DateTime        @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
