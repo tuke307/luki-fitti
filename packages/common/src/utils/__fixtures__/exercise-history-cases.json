@@ -1,0 +1,119 @@
+[
+  {
+    "name": "weighted sets with warm-ups and a PR",
+    "exerciseId": "ex-bench",
+    "unit": "KG",
+    "sessions": [
+      {
+        "day": 0,
+        "sets": [
+          ["WARMUP", 40, 10, null],
+          ["WORKING", 60, 8, null],
+          ["WORKING", 60, 7, null]
+        ]
+      },
+      {
+        "day": 7,
+        "sets": [
+          ["WORKING", 65, 8, null],
+          ["WORKING", 62.5, 8, null]
+        ]
+      },
+      {
+        "day": 14,
+        "sets": [
+          ["WARMUP", 40, 10, null],
+          ["WORKING", 62.5, 6, null]
+        ]
+      }
+    ],
+    "expect": {
+      "metric": "WEIGHT",
+      "sessionDays": [14, 7, 0],
+      "bestEstimated1RM": 81.51,
+      "heaviestSet": [65, 8],
+      "prDay": 7,
+      "trend": [75.24, 81.51, 73.79],
+      "warmupsInNewest": 1
+    }
+  },
+  {
+    "name": "pounds converted to kilograms",
+    "exerciseId": "ex-bench",
+    "unit": "KG",
+    "sessions": [{ "day": 0, "unit": "LBS", "sets": [["WORKING", 135, 5, null]] }],
+    "expect": {
+      "metric": "WEIGHT",
+      "sessionDays": [0],
+      "bestEstimated1RM": 69.9,
+      "heaviestSet": [61, 5],
+      "prDay": null,
+      "trend": [69.9],
+      "warmupsInNewest": 0
+    }
+  },
+  {
+    "name": "bodyweight reps",
+    "exerciseId": "ex-pullups",
+    "unit": "KG",
+    "sessions": [
+      {
+        "day": 0,
+        "sets": [
+          ["WORKING", null, 8, null],
+          ["WORKING", null, 6, null]
+        ]
+      },
+      { "day": 3, "sets": [["WORKING", null, 10, null]] }
+    ],
+    "expect": {
+      "metric": "REPS",
+      "sessionDays": [3, 0],
+      "bestEstimated1RM": null,
+      "heaviestSet": null,
+      "prDay": 3,
+      "trend": [8, 10],
+      "warmupsInNewest": 0
+    }
+  },
+  {
+    "name": "stretching durations",
+    "exerciseId": "st-hamstring",
+    "exerciseType": "STRETCHING",
+    "unit": "KG",
+    "sessions": [
+      {
+        "day": 0,
+        "sets": [
+          ["STRETCH", null, null, 30],
+          ["STRETCH", null, null, 45]
+        ]
+      },
+      { "day": 2, "sets": [["STRETCH", null, null, 40]] }
+    ],
+    "expect": {
+      "metric": "DURATION",
+      "sessionDays": [2, 0],
+      "bestEstimated1RM": null,
+      "heaviestSet": null,
+      "prDay": 0,
+      "trend": [],
+      "warmupsInNewest": 0
+    }
+  },
+  {
+    "name": "only warm-ups is no history",
+    "exerciseId": "ex-bench",
+    "unit": "KG",
+    "sessions": [{ "day": 0, "sets": [["WARMUP", 40, 10, null]] }],
+    "expect": {
+      "metric": "WEIGHT",
+      "sessionDays": [],
+      "bestEstimated1RM": null,
+      "heaviestSet": null,
+      "prDay": null,
+      "trend": [],
+      "warmupsInNewest": 0
+    }
+  }
+]

@@ -2,6 +2,7 @@ import {
   EquipmentType,
   ExerciseCategory,
   ExerciseType,
+  Laterality,
   MuscleGroup,
   SetType,
   WeightUnit,
@@ -838,6 +839,8 @@ export interface WorkoutExerciseSuggestion {
   /** Only set for stall reasons (PLATEAU / GRINDING / REGRESSION). */
   stallingExerciseId: string | null;
   stallingExerciseName: string | null;
+  /** The stalling two-sided exercise is swapped for a one-sided version of the same movement. */
+  unilateralVariant: boolean;
   evidence: WorkoutSuggestionEvidence;
   recommendedSets: number;
   recommendedRepsMin: number;
@@ -1122,7 +1125,8 @@ export function computeWorkoutExerciseSuggestion(params: {
 
   // Pick the first reason that is not dismissed and has a candidate not already in the workout.
   // No candidate means no honest suggestion, so the card stays hidden.
-  let picked: { reason: ReasonCandidate; chosen: ExerciseDto } | null = null;
+  let picked: { reason: ReasonCandidate; chosen: ExerciseDto; unilateralVariant: boolean } | null =
+    null;
   for (const reason of reasons) {
     if (dismissedReasons.has(workoutSuggestionReasonKey(reason))) continue;
     const available = strengthCatalog.filter(
@@ -1137,10 +1141,20 @@ export function computeWorkoutExerciseSuggestion(params: {
     const stallingCatalogEx = reason.stallingExerciseId
       ? catalog.find((c) => c.id === reason.stallingExerciseId)
       : null;
+    // A two-sided exercise that stopped progressing is best restarted one side at a time.
     if (stallingCatalogEx?.movementPattern) {
-      const best = rankAlternatives(stallingCatalogEx, available, { historySessions, limit: 1 })[0];
+      const best = rankAlternatives(stallingCatalogEx, available, {
+        historySessions,
+        limit: 1,
+        preferLaterality:
+          stallingCatalogEx.laterality === Laterality.BILATERAL ? Laterality.UNILATERAL : undefined,
+      })[0];
       if (!best) continue;
-      picked = { reason, chosen: best.exercise };
+      picked = {
+        reason,
+        chosen: best.exercise,
+        unilateralVariant: best.reasons.includes('UNILATERAL_VARIANT'),
+      };
       break;
     }
 
@@ -1166,7 +1180,7 @@ export function computeWorkoutExerciseSuggestion(params: {
       return { candidate, score };
     });
     scored.sort((a, b) => b.score - a.score);
-    picked = { reason, chosen: scored[0]!.candidate };
+    picked = { reason, chosen: scored[0]!.candidate, unilateralVariant: false };
     break;
   }
 
@@ -1207,6 +1221,7 @@ export function computeWorkoutExerciseSuggestion(params: {
     reasonType,
     stallingExerciseId,
     stallingExerciseName,
+    unilateralVariant: picked.unilateralVariant,
     evidence: {
       sessionsSinceBest: trend?.sessionsSinceBest ?? 0,
       weeksSinceBest: trend?.weeksSinceBest ?? 0,

@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { ExerciseType, MovementPattern } from '../enums';
+import { ExerciseType, Laterality, MovementPattern } from '../enums';
 import type { WorkoutSessionDto } from '../schemas';
 import { CORE_EXERCISE_CATALOG } from '../catalog/data';
 import { ALL_SYSTEM_EXERCISES } from '../catalog/extended';
@@ -11,6 +11,8 @@ interface AlternativesCase {
   target: string;
   pattern: MovementPattern;
   laterality?: string;
+  preferLaterality?: Laterality;
+  preferredIds?: string[];
   /** Exact top 3, shared with `ExerciseAlternativesTests.swift` to keep both ports in sync. */
   top: string[];
   exclude: string[];
@@ -26,9 +28,12 @@ const exercise = (id: string) => byId.get(id)!;
 
 describe('rankAlternatives — shared cases', () => {
   for (const c of cases) {
-    it(`ranks alternatives for ${c.target}`, () => {
+    const mode = [c.preferLaterality, ...(c.preferredIds ?? [])].filter(Boolean).join(', ');
+    it(`ranks alternatives for ${c.target}${mode ? ` (${mode})` : ''}`, () => {
       const ranked = rankAlternatives(exercise(c.target), ALL_SYSTEM_EXERCISES, {
         popularIds: coreIds,
+        preferLaterality: c.preferLaterality,
+        preferredIds: c.preferredIds,
       });
       const top = ranked.slice(0, 3);
       assert.deepEqual(
@@ -126,5 +131,45 @@ describe('rankAlternatives', () => {
         MovementPattern.HORIZONTAL_PULL,
       ),
     );
+  });
+
+  it('ranks one-sided versions of the same movement first when asked', () => {
+    const row = exercise('ex-barbell-row-underhand');
+    const [first] = rankAlternatives(row, ALL_SYSTEM_EXERCISES, {
+      preferLaterality: Laterality.UNILATERAL,
+    });
+    assert.equal(first!.exercise.laterality, Laterality.UNILATERAL);
+    assert.equal(first!.exercise.movementPattern, MovementPattern.HORIZONTAL_PULL);
+    assert.ok(first!.reasons.includes('UNILATERAL_VARIANT'));
+    assert.ok(!first!.reasons.includes('SAME_SIDE'));
+  });
+
+  it('beats a two-sided option done before, but not your own alternatives', () => {
+    const row = { ...exercise('ex-barbell-row-underhand'), alternativeExerciseIds: [] };
+    const history = [
+      { exercises: [{ exerciseId: 'ex-bent-over-barbell-row', sets: [{ completed: true }] }] },
+    ] as unknown as WorkoutSessionDto[];
+    const ranked = rankAlternatives(row, ALL_SYSTEM_EXERCISES, {
+      historySessions: history,
+      preferLaterality: Laterality.UNILATERAL,
+    });
+    const oneSided = ranked.findIndex((r) => r.exercise.laterality === Laterality.UNILATERAL);
+    const doneBefore = ranked.findIndex((r) => r.exercise.id === 'ex-bent-over-barbell-row');
+    assert.ok(oneSided < doneBefore);
+
+    const withOwn = rankAlternatives(row, ALL_SYSTEM_EXERCISES, {
+      preferredIds: ['ex-bent-over-barbell-row'],
+      preferLaterality: Laterality.UNILATERAL,
+    });
+    assert.equal(withOwn[0]!.exercise.id, 'ex-bent-over-barbell-row');
+  });
+
+  it('ranks exactly as before when no one-sided version of the movement exists', () => {
+    const curl = exercise('ex-seated-leg-curl');
+    const before = rankAlternatives(curl, ALL_SYSTEM_EXERCISES);
+    const after = rankAlternatives(curl, ALL_SYSTEM_EXERCISES, {
+      preferLaterality: Laterality.UNILATERAL,
+    });
+    assert.deepEqual(after, before);
   });
 });

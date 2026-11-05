@@ -867,6 +867,7 @@ private struct TemplateBuilderSheetView: View {
                                     .buttonStyle(.plain)
                                     .accessibilityLabel(tr("How to do %@", resolvedEx.name))
                                     .accessibilityIdentifier("ios.templateBuilder.guideButton.\(idx + 1)")
+                                    LateralityBadge(resolvedEx.laterality)
                                 }
 
                                 Spacer()
@@ -980,7 +981,7 @@ private struct TemplateBuilderSheetView: View {
                 }
             }
             .sheet(item: $guideExercise) { exercise in
-                ExerciseGuideSheet(exercise: exercise)
+                ExerciseGuideSheet(exercise: exercise, historySessions: historySessions, weightUnit: defaultWeightUnit)
             }
             .sheet(isPresented: $showingAddPickerSheet) {
                 SearchableExercisePickerSheet(

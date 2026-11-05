@@ -1,4 +1,4 @@
-import { ExerciseType, MovementPattern } from '../enums';
+import { ExerciseType, Laterality, MovementPattern } from '../enums';
 import type { ExerciseDto, WorkoutSessionDto } from '../schemas';
 
 /** Why an exercise was ranked as an alternative; the client turns these into a short label. */
@@ -8,6 +8,7 @@ export type AlternativeReason =
   | 'SIMILAR_MOVEMENT'
   | 'SAME_MUSCLES'
   | 'SAME_SIDE'
+  | 'UNILATERAL_VARIANT'
   | 'DONE_BEFORE'
   | 'DIFFERENT_EQUIPMENT';
 
@@ -27,6 +28,11 @@ export interface RankAlternativesOptions {
   preferredIds?: Iterable<string>;
   /** Everyday exercises (e.g. the core catalog), ranked above obscure variants on a tie. */
   popularIds?: Iterable<string>;
+  /**
+   * Favour same-movement candidates trained on this side (e.g. one-arm rows for a stalling
+   * barbell row). Replaces the "same side" bonus when such a candidate exists.
+   */
+  preferLaterality?: Laterality;
   limit?: number;
 }
 
@@ -60,6 +66,8 @@ export const ALTERNATIVE_WEIGHTS = {
   regionOverlap: 20,
   /** Multiplied by the Jaccard overlap of the slug words, so close variants come first. */
   nameOverlap: 10,
+  /** Same movement on the preferred side; beats `sameSide + doneBefore`, not `preferred`. */
+  preferredSide: 18,
   sameSide: 8,
   doneBefore: 6,
   sameMechanic: 4,
@@ -120,6 +128,21 @@ export function rankAlternatives(
   const targetPattern = target.movementPattern ?? null;
   const targetRegions = target.targetRegions ?? [];
   const targetWords = alternativeSlugWords(target.slug);
+  // Only switch to the preferred side when such a version exists; otherwise rank as usual.
+  const preferSide =
+    options.preferLaterality &&
+    targetPattern !== null &&
+    catalog.some(
+      (c) =>
+        !exclude.has(c.id) &&
+        c.exerciseType !== ExerciseType.STRETCHING &&
+        c.movementPattern === targetPattern &&
+        c.laterality === options.preferLaterality,
+    )
+      ? options.preferLaterality
+      : null;
+  // On the preferred side only the user's own alternatives outrank it, not the catalog's.
+  const bonusIds = preferSide ? userPreferred : preferred;
 
   const ranked: Array<RankedAlternative & { index: number }> = [];
   catalog.forEach((candidate, index) => {
@@ -135,7 +158,7 @@ export function rankAlternatives(
 
     const reasons: AlternativeReason[] = [];
     let score = 0;
-    if (preferred.has(candidate.id)) {
+    if (bonusIds.has(candidate.id)) {
       score += W.preferred;
       reasons.push('YOUR_ALTERNATIVE');
     }
@@ -150,7 +173,12 @@ export function rankAlternatives(
     score += overlap * W.regionOverlap;
     if (overlap >= SAME_MUSCLES_OVERLAP) reasons.push('SAME_MUSCLES');
     score += jaccard(targetWords, alternativeSlugWords(candidate.slug)) * W.nameOverlap;
-    if (target.laterality && candidate.laterality === target.laterality) {
+    if (preferSide) {
+      if (samePattern && candidate.laterality === preferSide) {
+        score += W.preferredSide;
+        if (preferSide === Laterality.UNILATERAL) reasons.push('UNILATERAL_VARIANT');
+      }
+    } else if (target.laterality && candidate.laterality === target.laterality) {
       score += W.sameSide;
       reasons.push('SAME_SIDE');
     }

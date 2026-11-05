@@ -24,6 +24,7 @@ import {
   type DismissedWorkoutSuggestion,
   type WorkoutSuggestionInputExercise,
 } from './progression.util';
+import { rankAlternatives } from './exercise-alternatives.util';
 
 const BENCH = 'ex-barbell-bench-press-medium-grip';
 const SHOULDER_PRESS = 'ex-dumbbell-shoulder-press';
@@ -46,7 +47,7 @@ function buildSession(
   targetRepsMin = 8,
   targetRepsMax = 12,
 ): WorkoutSessionDto {
-  const ex = catalog.find((c) => c.id === exerciseId)!;
+  const ex = ALL_SYSTEM_EXERCISES.find((c) => c.id === exerciseId)!;
   const startedAt = new Date(START + dayOffset * DAY_MS).toISOString();
   const id = `hist-${exerciseId}-${dayOffset}`;
   return {
@@ -320,5 +321,59 @@ describe('computeWorkoutExerciseSuggestion — swaps keep the movement', () => {
     const suggestion = suggestPull('ex-one-arm-dumbbell-row');
     assert.equal(suggestion.suggestedExercise.movementPattern, MovementPattern.HORIZONTAL_PULL);
     assert.equal(suggestion.suggestedExercise.laterality, Laterality.UNILATERAL);
+  });
+
+  it('keeps a one-arm swap a plain swap, not a one-sided variant', () => {
+    assert.equal(suggestPull('ex-one-arm-dumbbell-row').unilateralVariant, false);
+  });
+
+  it('replaces a stalling two-sided barbell row with a one-arm row', () => {
+    const suggestion = suggestPull('ex-barbell-row-underhand');
+    assert.equal(suggestion.stallingExerciseId, 'ex-barbell-row-underhand');
+    assert.equal(suggestion.suggestedExercise.movementPattern, MovementPattern.HORIZONTAL_PULL);
+    assert.equal(suggestion.suggestedExercise.laterality, Laterality.UNILATERAL);
+    assert.equal(suggestion.unilateralVariant, true);
+  });
+
+  it('prefers a one-arm row over the catalog alternatives of a stalling barbell row', () => {
+    const suggestion = suggestPull('ex-bent-over-barbell-row');
+    assert.equal(suggestion.suggestedExercise.movementPattern, MovementPattern.HORIZONTAL_PULL);
+    assert.equal(suggestion.suggestedExercise.laterality, Laterality.UNILATERAL);
+    assert.equal(suggestion.unilateralVariant, true);
+  });
+
+  it('gives the same swap as before when no one-sided version of the movement exists', () => {
+    const noOneSidedRows = ALL_SYSTEM_EXERCISES.filter(
+      (e) =>
+        e.movementPattern !== MovementPattern.HORIZONTAL_PULL ||
+        e.laterality !== Laterality.UNILATERAL,
+    );
+    const stalling = 'ex-barbell-row-underhand';
+    const suggestion = computeWorkoutExerciseSuggestion({
+      workoutName: 'Pull Day',
+      exercises: pullDay(stalling),
+      catalog: noOneSidedRows,
+      historySessions: [0, 7, 14].map((d) => buildSession(d, stalling, threeSets(30, 10, 9.5))),
+      weightUnit: WeightUnit.KG,
+    })!;
+    const inWorkout = new Set(pullDay(stalling).map((e) => e.exerciseId));
+    const [before] = rankAlternatives(
+      noOneSidedRows.find((e) => e.id === stalling)!,
+      noOneSidedRows.filter(
+        (e) => e.exerciseType === ExerciseType.STRENGTH && !inWorkout.has(e.id),
+      ),
+      { limit: 1 },
+    );
+    assert.equal(suggestion.suggestedExercise.id, before!.exercise.id);
+    assert.equal(suggestion.unilateralVariant, false);
+  });
+
+  it('leaves muscle-balance suggestions for two-sided workouts unchanged', () => {
+    const suggestion = suggest([
+      { exerciseId: BENCH, plannedSets: 3 },
+      { exerciseId: SHOULDER_PRESS, plannedSets: 3 },
+    ])!;
+    assert.equal(suggestion.reasonType, 'MISSING_MUSCLE');
+    assert.equal(suggestion.unilateralVariant, false);
   });
 });

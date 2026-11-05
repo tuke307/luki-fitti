@@ -8,6 +8,7 @@ import { useLocale } from '@/providers/i18n/locale-context';
 import type { WorkoutExerciseSuggestion } from '@luki-fitti/common/utils/client';
 import type { WeightUnit } from '@luki-fitti/common/enums';
 import { ExerciseVisual } from './exercise-visual';
+import { LateralityBadge } from './laterality-badge';
 
 interface RainbowExerciseSuggestionCardProps {
   suggestion: WorkoutExerciseSuggestion;
@@ -48,12 +49,14 @@ export function RainbowExerciseSuggestionCard({
     MISSING_MUSCLE: t.workouts.suggestionReasonMissingMuscle,
     LOW_VOLUME: t.workouts.suggestionReasonLowVolume,
   };
-  const reasonText = format(reasonTemplates[reasonType], {
-    stalling: stallingExerciseName ?? '',
-    name: suggestedExercise.name,
-    muscle: muscleLabel(targetMuscle),
-    split: splitArchetype.replace('_', ' '),
-  });
+  const reasonText = suggestion.unilateralVariant
+    ? t.laterality.suggestionReason
+    : format(reasonTemplates[reasonType], {
+        stalling: stallingExerciseName ?? '',
+        name: suggestedExercise.name,
+        muscle: muscleLabel(targetMuscle),
+        split: splitArchetype.replace('_', ' '),
+      });
 
   const roundedChange = Math.round(evidence.changePct);
   const evidenceText =
@@ -127,6 +130,9 @@ export function RainbowExerciseSuggestionCard({
                 <span className="truncate text-[0.9375rem] font-semibold">
                   {suggestedExercise.name}
                 </span>
+                {suggestion.unilateralVariant && (
+                  <LateralityBadge laterality={suggestedExercise.laterality} />
+                )}
                 <span className="bg-secondary text-secondary-foreground tabular-nums rounded-full px-2.5 py-0.5 text-[0.8125rem] font-medium">
                   {suggestion.recommendedSets}×{repRangeText}
                   {suggestion.recommendedWeight

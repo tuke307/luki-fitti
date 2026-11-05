@@ -54,6 +54,19 @@ final class SuggestionReasonFormatterTests: XCTestCase {
         XCTAssertEqual(SuggestionReasonFormatter.evidence(for: missing, locale: .de), "0 von 6 Sätzen")
     }
 
+    func testOneSidedVariantCopy() {
+        var oneSided = suggestion(.PLATEAU, evidence: WorkoutSuggestionEvidence(sessionsSinceBest: 4, weeksSinceBest: 6))
+        oneSided.unilateralVariant = true
+        XCTAssertEqual(
+            SuggestionReasonFormatter.reason(for: oneSided, locale: .de),
+            "Probier es einseitig – jede Seite einzeln trainieren kann neuen Fortschritt bringen."
+        )
+        XCTAssertEqual(
+            SuggestionReasonFormatter.evidence(for: oneSided, locale: .en),
+            "4 sessions · 6 wks without a new best"
+        )
+    }
+
     func testButtonsAndEffortLabels() {
         XCTAssertEqual(SuggestionReasonFormatter.badge(locale: .de), "Vorschlag")
         XCTAssertEqual(SuggestionReasonFormatter.addButton(locale: .de), "Hinzufügen")

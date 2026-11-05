@@ -98,6 +98,7 @@ public struct ExercisesAndStretchingView: View {
                                         .font(.footnote)
                                         .foregroundStyle(.secondary)
                                         .multilineTextAlignment(.leading)
+                                    if exercise.exerciseType != .STRETCHING { LateralityBadge(exercise.laterality) }
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.right")
@@ -148,7 +149,11 @@ public struct ExercisesAndStretchingView: View {
         }
         .background(LukiColors.groupedBackground)
         .sheet(item: $guideExercise) { exercise in
-            ExerciseGuideSheet(exercise: exercise)
+            ExerciseGuideSheet(
+                exercise: exercise,
+                historySessions: viewModel.store.historySessions,
+                weightUnit: viewModel.store.preferences.weightUnit
+            )
         }
         // Build the search index once per catalog instead of on every keystroke.
         .task(id: viewModel.store.catalog.count) {

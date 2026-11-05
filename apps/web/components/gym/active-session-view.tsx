@@ -69,6 +69,7 @@ import {
 import { filterExercisesByQuery } from './exercise-picker';
 import { ExerciseVisual } from './exercise-visual';
 import { ExerciseGuideSheet } from './exercise-guide-sheet';
+import { LateralityBadge } from './laterality-badge';
 import { RainbowExerciseSuggestionCard } from './rainbow-suggestion-card';
 import { alignSetSuggestions, SessionSetRow } from './session-set-row';
 import { getSetBadgeLabels } from './set-type-badge';
@@ -565,7 +566,10 @@ export function ActiveSessionView({
                   {ex.exerciseNameSnapshot}
                 </button>
               </h2>
-              <p className="text-muted-foreground text-[0.8125rem] tabular-nums">{goalLine}</p>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <p className="text-muted-foreground text-[0.8125rem] tabular-nums">{goalLine}</p>
+                <LateralityBadge laterality={catEx?.laterality} />
+              </div>
               {renderStatusChips(ex)}
             </div>
             {renderExerciseMenu(ex, idx)}
@@ -689,9 +693,12 @@ export function ActiveSessionView({
                     >
                       {ex.exerciseNameSnapshot}
                     </button>
-                    <p className="text-muted-foreground truncate text-[0.8125rem] tabular-nums">
-                      {muscleLabel(ex.primaryMuscleSnapshot)} · {formatExercisePillText(ex)}
-                    </p>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <p className="text-muted-foreground truncate text-[0.8125rem] tabular-nums">
+                        {muscleLabel(ex.primaryMuscleSnapshot)} · {formatExercisePillText(ex)}
+                      </p>
+                      <LateralityBadge laterality={catEx?.laterality} />
+                    </div>
                     {renderStatusChips(ex)}
                   </div>
                   {renderExerciseMenu(ex, globalIndex)}

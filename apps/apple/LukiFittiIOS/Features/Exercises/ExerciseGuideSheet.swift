@@ -9,14 +9,24 @@ struct ExerciseGuideSheet: View {
     let exercise: ExerciseDto?
     let fallbackName: String
     let fallbackMuscle: MuscleGroup
+    let historySessions: [WorkoutSessionDto]
+    let weightUnit: WeightUnit
 
     @Environment(\.lukiLocale) private var tr
     @Environment(\.dismiss) private var dismiss
 
-    init(exercise: ExerciseDto?, fallbackName: String? = nil, fallbackMuscle: MuscleGroup? = nil) {
+    init(
+        exercise: ExerciseDto?,
+        fallbackName: String? = nil,
+        fallbackMuscle: MuscleGroup? = nil,
+        historySessions: [WorkoutSessionDto],
+        weightUnit: WeightUnit
+    ) {
         self.exercise = exercise
         self.fallbackName = exercise?.name ?? fallbackName ?? ""
         self.fallbackMuscle = exercise?.primaryMuscleGroup ?? fallbackMuscle ?? .FULL_BODY
+        self.historySessions = historySessions
+        self.weightUnit = weightUnit
     }
 
     var body: some View {
@@ -39,6 +49,7 @@ struct ExerciseGuideSheet: View {
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
+                        LateralityBadge(exercise?.laterality)
                     }
 
                     if let description = exercise?.description, !description.isEmpty {
@@ -48,6 +59,15 @@ struct ExerciseGuideSheet: View {
                     }
 
                     steps
+
+                    ExerciseHistorySection(
+                        exerciseId: exercise?.id,
+                        exerciseName: fallbackName,
+                        exerciseType: exercise?.exerciseType,
+                        historySessions: historySessions,
+                        weightUnit: weightUnit
+                    )
+                    .padding(.top, 4)
                 }
                 .padding(16)
             }

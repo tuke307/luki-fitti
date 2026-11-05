@@ -9,6 +9,8 @@ final class ExerciseAlternativesTests: XCTestCase {
         var target: String
         var pattern: MovementPattern
         var laterality: Laterality?
+        var preferLaterality: Laterality?
+        var preferredIds: [String]?
         var top: [String]
         var exclude: [String]
     }
@@ -39,7 +41,13 @@ final class ExerciseAlternativesTests: XCTestCase {
             let exercises = StarterCatalogLoader.load(locale: locale).exercises
             for c in cases {
                 let target = try XCTUnwrap(exercises.first { $0.id == c.target })
-                let ranked = ExerciseAlternatives.rank(target: target, catalog: exercises, popularIds: coreIds)
+                let ranked = ExerciseAlternatives.rank(
+                    target: target,
+                    catalog: exercises,
+                    preferredIds: Set(c.preferredIds ?? []),
+                    popularIds: coreIds,
+                    preferLaterality: c.preferLaterality
+                )
                 let top = Array(ranked.prefix(3))
                 XCTAssertEqual(top.map(\.exercise.id), c.top, "[\(locale)] \(c.target)")
                 for r in top {
@@ -81,5 +89,50 @@ final class ExerciseAlternativesTests: XCTestCase {
         custom.movementPattern = nil
         custom.alternativeExerciseIds = []
         XCTAssertTrue(ExerciseAlternatives.rank(target: custom, catalog: catalog).isEmpty)
+    }
+
+    func testRanksOneSidedVersionsFirstWhenAsked() throws {
+        let first = try XCTUnwrap(ExerciseAlternatives.rank(
+            target: exercise("ex-barbell-row-underhand"),
+            catalog: catalog,
+            preferLaterality: .UNILATERAL
+        ).first)
+        XCTAssertEqual(first.exercise.laterality, .UNILATERAL)
+        XCTAssertEqual(first.exercise.movementPattern, .HORIZONTAL_PULL)
+        XCTAssertTrue(first.reasons.contains(.UNILATERAL_VARIANT))
+        XCTAssertFalse(first.reasons.contains(.SAME_SIDE))
+    }
+
+    func testOneSidedBeatsDoneBeforeButNotYourOwnAlternatives() {
+        var row = exercise("ex-barbell-row-underhand")
+        row.alternativeExerciseIds = []
+        let history = [WorkoutSessionDto(workoutNameSnapshot: "Pull", exercises: [SessionExerciseDto(
+            sessionId: "s",
+            exerciseId: "ex-bent-over-barbell-row",
+            exerciseNameSnapshot: "Row",
+            primaryMuscleSnapshot: .BACK,
+            orderIndex: 0,
+            sets: [SessionSetDto(sessionExerciseId: "e", setNumber: 1, completed: true)]
+        )])]
+        let ranked = ExerciseAlternatives.rank(target: row, catalog: catalog, historySessions: history, preferLaterality: .UNILATERAL)
+        let oneSided = ranked.firstIndex { $0.exercise.laterality == .UNILATERAL } ?? .max
+        let doneBefore = ranked.firstIndex { $0.exercise.id == "ex-bent-over-barbell-row" } ?? .max
+        XCTAssertLessThan(oneSided, doneBefore)
+
+        let withOwn = ExerciseAlternatives.rank(
+            target: row,
+            catalog: catalog,
+            preferredIds: ["ex-bent-over-barbell-row"],
+            preferLaterality: .UNILATERAL
+        )
+        XCTAssertEqual(withOwn.first?.exercise.id, "ex-bent-over-barbell-row")
+    }
+
+    func testRanksAsBeforeWithoutAOneSidedVersion() {
+        let curl = exercise("ex-seated-leg-curl")
+        XCTAssertEqual(
+            ExerciseAlternatives.rank(target: curl, catalog: catalog, preferLaterality: .UNILATERAL),
+            ExerciseAlternatives.rank(target: curl, catalog: catalog)
+        )
     }
 }

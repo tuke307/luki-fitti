@@ -14,6 +14,7 @@ export * from './progression.util';
 export * from './template-sets.util';
 export * from './active-session.util';
 export * from './exercise-alternatives.util';
+export * from './exercise-history.util';
 export * from './exercise-search.util';
 export * from './exercise-search.vocab';
 

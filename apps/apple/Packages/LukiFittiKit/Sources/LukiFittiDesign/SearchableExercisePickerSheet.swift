@@ -191,9 +191,12 @@ public struct SearchableExercisePickerSheet: View {
                                                 .foregroundStyle(isSelected ? LukiColors.accent : .primary)
                                                 .multilineTextAlignment(.leading)
 
-                                            Text("\(LukiI18n.muscleLabel(ex.primaryMuscleGroup, locale: tr)) · \(LukiI18n.equipmentLabel(ex.equipment, locale: tr))")
-                                                .font(.footnote)
-                                                .foregroundStyle(.secondary)
+                                            HStack(spacing: 6) {
+                                                Text("\(LukiI18n.muscleLabel(ex.primaryMuscleGroup, locale: tr)) · \(LukiI18n.equipmentLabel(ex.equipment, locale: tr))")
+                                                    .font(.footnote)
+                                                    .foregroundStyle(.secondary)
+                                                LateralityBadge(ex.exerciseType == .STRETCHING ? nil : ex.laterality)
+                                            }
                                         }
 
                                         Spacer()
@@ -250,10 +253,13 @@ public struct SearchableExercisePickerSheet: View {
                             .font(.subheadline.bold())
                             .foregroundStyle(.primary)
                             .multilineTextAlignment(.leading)
-                        Text(item.detail)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.leading)
+                        HStack(spacing: 6) {
+                            Text(item.detail)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.leading)
+                            LateralityBadge(item.exercise.laterality)
+                        }
                     }
                     .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                     .padding(10)
@@ -271,7 +277,8 @@ public struct SearchableExercisePickerSheet: View {
     }
 }
 
-/// The short reason line of a ranked alternative, e.g. "Same movement · Cable · Both sides".
+/// The short reason line of a ranked alternative, e.g. "Same movement · Cable · Done before". The
+/// side is shown as a `LateralityBadge` next to it.
 public enum AlternativeReasonFormatter {
     public static func line(for alternative: RankedAlternative, locale tr: SupportedLocale) -> String {
         let reasons = alternative.reasons
@@ -279,13 +286,8 @@ public enum AlternativeReasonFormatter {
         let movement: String? = reasons.contains(.SAME_MOVEMENT)
             ? tr("Same movement")
             : reasons.contains(.SIMILAR_MOVEMENT) ? tr("Similar movement") : nil
-        let side: String? = switch ex.laterality {
-        case .UNILATERAL: tr("One side")
-        case .BILATERAL: tr("Both sides")
-        case nil: nil
-        }
         let done: String? = reasons.contains(.DONE_BEFORE) ? tr("Done before") : nil
-        return [movement, LukiI18n.equipmentLabel(ex.equipment, locale: tr), side, done]
+        return [movement, LukiI18n.equipmentLabel(ex.equipment, locale: tr), done]
             .compactMap { $0 }
             .joined(separator: " · ")
     }
