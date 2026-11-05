@@ -1,0 +1,19 @@
+[
+  {
+    "ID": 10,
+    "Name": "4er Split",
+    "IsFolder": 1,
+    "ParentID": null,
+    "OrderNumber": 0,
+    "Deleted": 0
+  },
+  {
+    "ID": 11,
+    "Name": "Day 1",
+    "IsFolder": "false",
+    "ParentID": 10,
+    "OrderNumber": 1,
+    "Deleted": 0
+  },
+  { "ID": 12, "Name": "Gone", "IsFolder": 0, "ParentID": null, "OrderNumber": 2, "Deleted": "true" }
+]
