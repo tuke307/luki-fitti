@@ -49,7 +49,7 @@ export class TrainingTools implements OnModuleInit {
       tool({
         name: 'search_exercises',
         description:
-          'Search the exercise catalog (English or German, typo tolerant). Returns ids you may use in the workout. Filter by muscle group, equipment and type.',
+          'Search the exercise catalog (English or German, typo tolerant). Returns ids you may use in the workout, with movement pattern and laterality (UNILATERAL = one side at a time, BILATERAL = both sides). Filter by muscle group, equipment and type.',
         input: z.object({
           query: z.string().max(80).optional().describe('Free text, e.g. "incline press" or "Schrägbank"'),
           muscleGroup: z.enum(MuscleGroup).optional(),
@@ -61,7 +61,8 @@ export class TrainingTools implements OnModuleInit {
       }),
       tool({
         name: 'get_exercise_details',
-        description: 'Details for specific exercise ids: muscles, equipment, short description and known alternatives.',
+        description:
+          'Details for specific exercise ids: muscles, equipment, movement pattern, laterality (UNILATERAL = one side at a time, BILATERAL = both sides), short description and known alternatives.',
         input: z.object({ exerciseIds: z.array(z.string().max(120)).min(1).max(10) }),
         execute: (ctx, input) => this.exerciseDetails(ctx, input.exerciseIds),
       }),
@@ -123,6 +124,8 @@ export class TrainingTools implements OnModuleInit {
         secondaryMuscleGroups: e.secondaryMuscleGroups,
         equipment: e.equipment,
         category: e.category,
+        movementPattern: e.movementPattern ?? null,
+        laterality: e.laterality ?? null,
       }));
   }
 
@@ -139,6 +142,8 @@ export class TrainingTools implements OnModuleInit {
             secondaryMuscleGroups: e.secondaryMuscleGroups,
             equipment: e.equipment,
             category: e.category,
+            movementPattern: e.movementPattern ?? null,
+            laterality: e.laterality ?? null,
             alternatives: (e.alternatives ?? []).slice(0, 6).map((a) => ({
               id: a.id,
               name: a.name,
