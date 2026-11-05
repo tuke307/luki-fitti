@@ -4,6 +4,8 @@ import type {
   AdminUserAiKeyDto,
   AdminUserAiUsageDto,
   AiKeyStatusDto,
+  AiModelCatalogDto,
+  AiModelsDto,
   AdminUserListDto,
   AdminUserQueryDto,
   AiSettingsDto,
@@ -337,6 +339,7 @@ export const ai = {
       body: JSON.stringify(data),
     }),
   myUsage: (days: number) => apiFetch<MyAiUsageDto>(`/ai/usage/me?days=${days}`),
+  models: () => apiFetch<AiModelsDto>('/ai/models'),
   /** Own OpenRouter key: write-only, responses only carry the status. */
   keyStatus: () => apiFetch<AiKeyStatusDto>('/ai/key'),
   setKey: (apiKey: string) =>
@@ -381,6 +384,7 @@ export const admin = {
       method: 'DELETE',
     }),
   getAiSettings: () => apiFetch<AiSettingsDto>('/admin/settings/ai'),
+  aiModelCatalog: () => apiFetch<AiModelCatalogDto>('/admin/settings/ai/models'),
   updateAiSettings: (data: UpdateAiSettingsDto) =>
     apiFetch<AiSettingsDto>('/admin/settings/ai', { method: 'PUT', body: JSON.stringify(data) }),
   aiUsage: (days: number) => apiFetch<AiUsageSummaryDto>(`/admin/ai-usage?days=${days}`),

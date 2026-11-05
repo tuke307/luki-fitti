@@ -7,7 +7,7 @@ import { Label } from '@luki-fitti/ui/components/ui/label';
 import { Spinner } from '@luki-fitti/ui/components/ui/spinner';
 import { Textarea } from '@luki-fitti/ui/components/ui/textarea';
 import { toast } from '@luki-fitti/ui/components/ui/sonner';
-import type { MealType } from '@luki-fitti/common/enums';
+import { AiSkillName, type MealType } from '@luki-fitti/common/enums';
 import {
   MEAL_DESCRIPTION_MAX_LENGTH,
   MEAL_DESCRIPTION_MIN_LENGTH,
@@ -24,6 +24,7 @@ import { AiKeyRequiredDialog } from '../ai-key-required-dialog';
 import { prepareImageForUpload } from '@/lib/images/prepare-image';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { AiCostLabel } from '@/components/gym/ai-usage/ai-cost-label';
+import { AiInfoButton } from '@/components/gym/ai-usage/ai-info-button';
 import { MealPhotoViewer, type ViewerPhoto } from './meal-photo-viewer';
 
 interface PickedPhoto {
@@ -66,6 +67,7 @@ export function MealPhotoSection({
   const [error, setError] = useState<string | null>(null);
   const [keyRequiredOpen, setKeyRequiredOpen] = useState(false);
   const [lastUsage, setLastUsage] = useState<MealAnalysisResponseDto['usage'] | null>(null);
+  const [lastModel, setLastModel] = useState<string | null>(null);
   const [uncertaintyNote, setUncertaintyNote] = useState<string | null>(null);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const galleryInput = useRef<HTMLInputElement>(null);
@@ -121,6 +123,7 @@ export function MealPhotoSection({
     if (!res.data.analysis.containsFood) toast.info(t.mealAi.noFoodText);
     setHint('');
     setLastUsage(res.data.usage ?? null);
+    setLastModel(res.data.model ?? null);
     setUncertaintyNote(res.data.items.length ? res.data.analysis.uncertaintyNote || null : null);
     onProposed(res.data);
   };
@@ -161,6 +164,7 @@ export function MealPhotoSection({
       setPicked([]);
       setHint('');
       setLastUsage(res.data.usage ?? null);
+      setLastModel(res.data.model ?? null);
       setUncertaintyNote(null);
       onAnalyzed(res.data);
     } catch (err) {
@@ -284,28 +288,33 @@ export function MealPhotoSection({
       </div>
 
       {(!textOnly || description.length > 0) && (
-        <Button
-          type="button"
-          onClick={() => void analyze()}
-          disabled={disabled || (textOnly && description.length < MEAL_DESCRIPTION_MIN_LENGTH)}
-          className="w-full sm:w-auto"
-        >
-          {busy ? (
-            <>
-              <Spinner /> {t.mealAi.analyzing}
-            </>
-          ) : (
-            <>
-              <Sparkles className="h-4 w-4" /> {t.mealAi.estimate}
-            </>
-          )}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            onClick={() => void analyze()}
+            disabled={disabled || (textOnly && description.length < MEAL_DESCRIPTION_MIN_LENGTH)}
+            className="flex-1 sm:flex-none"
+          >
+            {busy ? (
+              <>
+                <Spinner /> {t.mealAi.analyzing}
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" /> {t.mealAi.estimate}
+              </>
+            )}
+          </Button>
+          <AiInfoButton
+            skill={textOnly ? AiSkillName.MEAL_TEXT_ANALYZER : AiSkillName.MEAL_ANALYZER}
+          />
+        </div>
       )}
 
       {uncertaintyNote && (
         <p className="text-muted-foreground text-[0.8125rem]">{uncertaintyNote}</p>
       )}
-      {lastUsage && <AiCostLabel usage={lastUsage} />}
+      {lastUsage && <AiCostLabel usage={lastUsage} model={lastModel} />}
 
       {error && (
         <p className="text-destructive text-[0.875rem]" role="alert">
