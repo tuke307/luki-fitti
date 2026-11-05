@@ -11,6 +11,7 @@ import { AiProviderError } from '../openrouter.client';
 import type { PrismaService } from '../../database/prisma.service';
 import type { AppSettingsService } from '../../app-settings/app-settings.service';
 import type { AiKeyService, ResolvedAiKey } from '../ai-key.service';
+import type { AiModelsService } from '../ai-models.service';
 
 const answerSchema = z.object({ total: z.number().int().min(0) });
 
@@ -44,7 +45,7 @@ const USER_KEY: ResolvedAiKey = { apiKey: 'sk-or-v1-FAKE-USER-KEY-FOR-TESTING', 
 
 function setup(
   script: Array<ChatResponse | Error>,
-  opts: { runsToday?: number; limit?: number; key?: ResolvedAiKey | null } = {},
+  opts: { runsToday?: number; limit?: number; key?: ResolvedAiKey | null; chosenModel?: string } = {},
 ) {
   const requests: ChatRequest[] = [];
   const apiKeys: string[] = [];
@@ -93,8 +94,16 @@ function setup(
     resolveForRun: async () => (opts.key === undefined ? ADMIN_KEY : opts.key),
   } as unknown as AiKeyService;
 
-  const runner = new AgentRunnerService(prisma, settings, client, registry, aiKeys);
-  return { runner, requests, runs, toolInputs, apiKeys, countQueries };
+  const resolveCalls: unknown[][] = [];
+  const models = {
+    resolvePrimary: async (...args: unknown[]) => {
+      resolveCalls.push(args);
+      return opts.chosenModel ?? (args[3] as string);
+    },
+  } as unknown as AiModelsService;
+
+  const runner = new AgentRunnerService(prisma, settings, client, registry, aiKeys, models);
+  return { runner, requests, runs, toolInputs, apiKeys, countQueries, resolveCalls };
 }
 
 const input = { userId: 'user-1', locale: 'en' as const, content: 'hello' };
@@ -191,6 +200,16 @@ describe('AgentRunnerService', () => {
     await runner.run(skill, input);
     assert.deepEqual(apiKeys, [ADMIN_KEY.apiKey]);
     assert.equal(runs[0]!.keySource, AiKeySlot.ADMIN);
+  });
+
+  it('uses the resolved primary model and keeps the admin fallbacks', async () => {
+    const { runner, requests, resolveCalls } = setup([reply([toolCall('c1', 'submit', { total: 1 })])], {
+      chosenModel: 'test/chosen',
+    });
+    await runner.run(skill, input);
+    assert.deepEqual(resolveCalls[0], ['user-1', AiSkillName.WORKOUT_BUILDER, AiKeySlot.ADMIN, 'test/primary']);
+    assert.equal(requests[0]!.model, 'test/chosen');
+    assert.deepEqual(requests[0]!.fallbackModels, ['test/fallback']);
   });
 
   it('only counts admin-key runs against the daily limit', async () => {
