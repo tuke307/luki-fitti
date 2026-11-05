@@ -220,6 +220,8 @@ model UserPreferences {
   weighInReminderWeekday     Int          @default(2)
   /// Minutes after local midnight for the weekly weigh-in reminder (450 = 07:30).
   weighInReminderMinutes     Int          @default(450)
+  /// Per-skill OpenRouter model choice: Partial<Record<AiSkillName, modelId>>; null = defaults.
+  aiModels                   Json?
   createdAt                  DateTime     @default(now())
   updatedAt                  DateTime     @updatedAt
 
@@ -550,6 +552,8 @@ model AppSettings {
   aiDailyRunLimit         Int      @default(30)
   /// Delete stored meal photos after N days; null keeps them until the meal is deleted.
   mealPhotoRetentionDays  Int?
+  /// Models users on an admin-assigned key may choose from (own-key users may pick any capable model).
+  userModelAllowlist      String[] @default([])
   updatedAt               DateTime @updatedAt
 }
 
