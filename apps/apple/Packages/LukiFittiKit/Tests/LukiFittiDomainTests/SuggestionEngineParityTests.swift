@@ -244,6 +244,13 @@ final class SuggestionEngineParityTests: XCTestCase {
         )
     }
 
+    func testStallingBarbellRowPrefersAOneArmRowOverCatalogAlternatives() throws {
+        let suggestion = try XCTUnwrap(suggestPull(stalling: "ex-bent-over-barbell-row"))
+        XCTAssertEqual(suggestion.suggestedExercise.movementPattern, .HORIZONTAL_PULL)
+        XCTAssertEqual(suggestion.suggestedExercise.laterality, .UNILATERAL)
+        XCTAssertTrue(suggestion.unilateralVariant)
+    }
+
     func testSameSwapAsBeforeWithoutAOneSidedVersion() throws {
         let stalling = "ex-barbell-row-underhand"
         let noOneSidedRows = catalog.filter { $0.movementPattern != .HORIZONTAL_PULL || $0.laterality != .UNILATERAL }

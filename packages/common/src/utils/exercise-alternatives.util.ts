@@ -141,6 +141,8 @@ export function rankAlternatives(
     )
       ? options.preferLaterality
       : null;
+  // On the preferred side only the user's own alternatives outrank it, not the catalog's.
+  const bonusIds = preferSide ? userPreferred : preferred;
 
   const ranked: Array<RankedAlternative & { index: number }> = [];
   catalog.forEach((candidate, index) => {
@@ -156,7 +158,7 @@ export function rankAlternatives(
 
     const reasons: AlternativeReason[] = [];
     let score = 0;
-    if (preferred.has(candidate.id)) {
+    if (bonusIds.has(candidate.id)) {
       score += W.preferred;
       reasons.push('YOUR_ALTERNATIVE');
     }

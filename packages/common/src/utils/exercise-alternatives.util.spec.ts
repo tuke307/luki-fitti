@@ -12,6 +12,7 @@ interface AlternativesCase {
   pattern: MovementPattern;
   laterality?: string;
   preferLaterality?: Laterality;
+  preferredIds?: string[];
   /** Exact top 3, shared with `ExerciseAlternativesTests.swift` to keep both ports in sync. */
   top: string[];
   exclude: string[];
@@ -27,10 +28,12 @@ const exercise = (id: string) => byId.get(id)!;
 
 describe('rankAlternatives — shared cases', () => {
   for (const c of cases) {
-    it(`ranks alternatives for ${c.target}${c.preferLaterality ? ` (${c.preferLaterality})` : ''}`, () => {
+    const mode = [c.preferLaterality, ...(c.preferredIds ?? [])].filter(Boolean).join(', ');
+    it(`ranks alternatives for ${c.target}${mode ? ` (${mode})` : ''}`, () => {
       const ranked = rankAlternatives(exercise(c.target), ALL_SYSTEM_EXERCISES, {
         popularIds: coreIds,
         preferLaterality: c.preferLaterality,
+        preferredIds: c.preferredIds,
       });
       const top = ranked.slice(0, 3);
       assert.deepEqual(

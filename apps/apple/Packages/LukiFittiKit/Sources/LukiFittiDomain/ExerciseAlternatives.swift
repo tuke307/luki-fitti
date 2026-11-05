@@ -115,6 +115,8 @@ public enum ExerciseAlternatives {
                     && $0.movementPattern == targetPattern && $0.laterality == side
             } ? side : nil
         }
+        // On the preferred side only the user's own alternatives outrank it, not the catalog's.
+        let bonusIds = preferSide != nil ? preferredIds : preferred
 
         var ranked: [(alternative: RankedAlternative, index: Int)] = []
         for (index, candidate) in catalog.enumerated() {
@@ -129,7 +131,7 @@ public enum ExerciseAlternatives {
 
             var reasons: [AlternativeReason] = []
             var score = 0.0
-            if preferred.contains(candidate.id) {
+            if bonusIds.contains(candidate.id) {
                 score += Weight.preferred
                 reasons.append(.YOUR_ALTERNATIVE)
             }

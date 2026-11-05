@@ -335,6 +335,13 @@ describe('computeWorkoutExerciseSuggestion — swaps keep the movement', () => {
     assert.equal(suggestion.unilateralVariant, true);
   });
 
+  it('prefers a one-arm row over the catalog alternatives of a stalling barbell row', () => {
+    const suggestion = suggestPull('ex-bent-over-barbell-row');
+    assert.equal(suggestion.suggestedExercise.movementPattern, MovementPattern.HORIZONTAL_PULL);
+    assert.equal(suggestion.suggestedExercise.laterality, Laterality.UNILATERAL);
+    assert.equal(suggestion.unilateralVariant, true);
+  });
+
   it('gives the same swap as before when no one-sided version of the movement exists', () => {
     const noOneSidedRows = ALL_SYSTEM_EXERCISES.filter(
       (e) =>

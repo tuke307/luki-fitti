@@ -10,6 +10,7 @@ final class ExerciseAlternativesTests: XCTestCase {
         var pattern: MovementPattern
         var laterality: Laterality?
         var preferLaterality: Laterality?
+        var preferredIds: [String]?
         var top: [String]
         var exclude: [String]
     }
@@ -43,6 +44,7 @@ final class ExerciseAlternativesTests: XCTestCase {
                 let ranked = ExerciseAlternatives.rank(
                     target: target,
                     catalog: exercises,
+                    preferredIds: Set(c.preferredIds ?? []),
                     popularIds: coreIds,
                     preferLaterality: c.preferLaterality
                 )
