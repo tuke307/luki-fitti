@@ -28,5 +28,8 @@ export * from './body-weight.util';
 export * from './maintenance.util';
 export * from './muscle-volume.util';
 
+// Backup export in the `luki-fitti-import@1` file format (client-safe)
+export * from './import-file.util';
+
 // Note: Pipes and decorators are NOT exported here as they contain NestJS server-side code
 // Server-side utilities can still be imported via '@luki-fitti/common/utils' for server components and API routes

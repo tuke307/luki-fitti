@@ -1,0 +1,5 @@
+[
+  { "ID": 1, "Name": "Bench Press", "CustomName": null, "Deleted": 0 },
+  { "ID": 2, "Name": "Squat", "CustomName": "Back Squat", "Deleted": "false" },
+  { "ID": 3, "Name": "Old", "CustomName": null, "Deleted": 1 }
+]

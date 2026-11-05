@@ -1,0 +1,177 @@
+{
+  "format": "luki-fitti-import@1",
+  "exportedAt": "2026-11-01T00:00:00.000Z",
+  "source": {
+    "app": "LukiFitti Web"
+  },
+  "customExercises": [
+    {
+      "key": "7c0f6d1e-custom",
+      "name": "My Press",
+      "primaryMuscleGroup": "CHEST",
+      "equipment": "BARBELL",
+      "exerciseType": "STRENGTH",
+      "instructions": ["Push."]
+    }
+  ],
+  "folders": [
+    {
+      "key": "folder-1",
+      "name": "Split",
+      "color": "#3A7BD5",
+      "sortOrder": 0
+    }
+  ],
+  "templates": [
+    {
+      "key": "tpl-1",
+      "folderKey": "folder-1",
+      "name": "Push",
+      "estimatedDurationMinutes": 60,
+      "sortOrder": 0,
+      "exercises": [
+        {
+          "exercise": {
+            "slug": "barbell-bench-press-medium-grip"
+          },
+          "orderIndex": 0,
+          "sets": [
+            {
+              "setType": "WARMUP",
+              "weight": 48,
+              "reps": 8,
+              "durationSeconds": null
+            },
+            {
+              "setType": "WORKING",
+              "weight": 80,
+              "reps": 8,
+              "durationSeconds": null
+            },
+            {
+              "setType": "WORKING",
+              "weight": 80,
+              "reps": 8,
+              "durationSeconds": null
+            },
+            {
+              "setType": "WORKING",
+              "weight": 80,
+              "reps": 8,
+              "durationSeconds": null
+            }
+          ],
+          "restSeconds": 120,
+          "alternativeExercises": [
+            {
+              "customKey": "7c0f6d1e-custom"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "tpl-2",
+      "name": "Push",
+      "estimatedDurationMinutes": 60,
+      "sortOrder": 0,
+      "exercises": [
+        {
+          "exercise": {
+            "slug": "barbell-bench-press-medium-grip"
+          },
+          "orderIndex": 0,
+          "sets": [
+            {
+              "setType": "WARMUP",
+              "weight": 48,
+              "reps": 8,
+              "durationSeconds": null
+            },
+            {
+              "setType": "WORKING",
+              "weight": 80,
+              "reps": 8,
+              "durationSeconds": null
+            },
+            {
+              "setType": "WORKING",
+              "weight": 80,
+              "reps": 8,
+              "durationSeconds": null
+            },
+            {
+              "setType": "WORKING",
+              "weight": 80,
+              "reps": 8,
+              "durationSeconds": null
+            }
+          ],
+          "restSeconds": 120,
+          "alternativeExercises": [
+            {
+              "customKey": "7c0f6d1e-custom"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "sessions": [
+    {
+      "key": "s-1",
+      "workoutName": "Push",
+      "templateKey": "tpl-1",
+      "sessionType": "STRENGTH",
+      "startedAt": "2026-10-30T17:00:00.000Z",
+      "completedAt": "2026-10-30T18:00:00.000Z",
+      "activeDurationSeconds": 3600,
+      "exercises": [
+        {
+          "exercise": {
+            "customKey": "7c0f6d1e-custom"
+          },
+          "orderIndex": 0,
+          "restSeconds": 90,
+          "sets": [
+            {
+              "setNumber": 1,
+              "setType": "WORKING",
+              "weightUnit": "KG",
+              "reps": 8,
+              "rpe": 8.5,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "s-3",
+      "workoutName": "Push",
+      "sessionType": "STRENGTH",
+      "startedAt": "2026-10-30T17:00:00.000Z",
+      "completedAt": "2026-10-30T18:00:00.000Z",
+      "activeDurationSeconds": 3600,
+      "exercises": [
+        {
+          "exercise": {
+            "customKey": "7c0f6d1e-custom"
+          },
+          "orderIndex": 0,
+          "restSeconds": 90,
+          "sets": [
+            {
+              "setNumber": 1,
+              "setType": "WORKING",
+              "weightUnit": "KG",
+              "reps": 8,
+              "rpe": 8.5,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

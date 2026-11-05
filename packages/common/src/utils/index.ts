@@ -20,3 +20,4 @@ export * from './body-weight.util';
 export * from './maintenance.util';
 export * from './muscle-volume.util';
 export * from './feature-request.util';
+export * from './import-file.util';

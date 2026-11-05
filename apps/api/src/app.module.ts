@@ -21,6 +21,7 @@ import { NutritionModule } from './modules/nutrition/nutrition.module';
 import { BodyWeightModule } from './modules/body-weight/body-weight.module';
 import { ActivityModule } from './modules/activity/activity.module';
 import { AiModule } from './modules/ai/ai.module';
+import { ImportModule } from './modules/import/import.module';
 import { NODE_ENV } from './config/env.config';
 
 @Module({
@@ -53,6 +54,7 @@ import { NODE_ENV } from './config/env.config';
     BodyWeightModule,
     ActivityModule,
     AiModule,
+    ImportModule,
   ],
   providers: [
     {
