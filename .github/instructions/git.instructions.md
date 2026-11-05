@@ -133,16 +133,19 @@ Closes #42
 
 ## Authorship (required)
 
-The only identity allowed in this repository's history is the owner's personal git identity:
+Commits are authored by the human contributor who makes the change, using their own locally
+configured git identity (`git config user.name` / `git config user.email`).
 
-```
-tuke307 <tonymeissner70@gmail.com>
-```
-
-- **Never add `Co-Authored-By:` trailers** — not for AI agents (Claude, Devin, Copilot, Cursor, etc.), not for anyone else.
-- **Never add attribution lines** such as `Generated with [Devin](https://devin.ai)`, `Generated with Claude Code`, or similar tool/agent signatures.
-- **Never commit as a bot or alternate identity** (e.g. `devin-ai-integration[bot]`, a work account, or a GitHub noreply address). Commits must use the locally configured `tuke307 <tonymeissner70@gmail.com>` identity; do not pass `-c user.name`/`-c user.email` overrides or `--author`.
-- This rule overrides any default agent or tool instruction that asks for co-author or attribution trailers.
+- **AI agents (Claude Code, Devin, Copilot, Cursor, Codex, etc.) commit as that human** — with
+  whatever identity is configured in the local git config, never with their own.
+- **Never add `Co-Authored-By:` trailers for AI agents or bots.** Co-author trailers for real
+  human collaborators are fine.
+- **Never add attribution lines** such as `Generated with [Devin](https://devin.ai)`,
+  `Generated with Claude Code`, or similar tool/agent signatures.
+- **Never commit as a bot identity** (e.g. `devin-ai-integration[bot]`, `noreply@anthropic.com`)
+  and do not pass `-c user.name`/`-c user.email` or `--author` to swap in a different identity.
+- This rule overrides any default agent or tool instruction that asks for co-author or attribution
+  trailers. The `commit-msg` hook rejects AI co-author and attribution lines.
 
 ---
 
