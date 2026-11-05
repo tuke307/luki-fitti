@@ -116,8 +116,20 @@ function createMockWorkoutPrisma(): PrismaService {
       },
     },
     exercise: {
-      findMany: async ({ where }: { where: { id: { in: string[] } } }) =>
-        where.id.in.map((id) => ({ id })),
+      // Ids starting with `custom-<owner>-` are custom exercises of <owner>; the rest are system.
+      findMany: async ({
+        where,
+      }: {
+        where: { id: { in: string[] }; OR?: Array<{ isSystem?: boolean; userId?: string }> };
+      }) => {
+        const viewer = where.OR?.find((c) => c.userId)?.userId;
+        return where.id.in
+          .filter((id) => {
+            const owner = /^custom-([^-]+)-/.exec(id)?.[1];
+            return owner === undefined || owner === viewer;
+          })
+          .map((id) => ({ id }));
+      },
     },
     workoutTemplateExercise: {
       create: async ({ data }: { data: Record<string, unknown> }) => {
@@ -253,8 +265,16 @@ describe('WorkoutService — Folders, Templates, Alternatives & User Isolation',
     const service = new WorkoutService(prisma);
     const id = '0b6f3c1e-8d2a-4b8e-9f1a-3c5d7e9f1a2b';
 
-    const first = await service.createFolder('user-a', { id, name: 'Upper / Lower', color: '#CCFF00' });
-    const replay = await service.createFolder('user-a', { id, name: 'Upper / Lower', color: '#CCFF00' });
+    const first = await service.createFolder('user-a', {
+      id,
+      name: 'Upper / Lower',
+      color: '#CCFF00',
+    });
+    const replay = await service.createFolder('user-a', {
+      id,
+      name: 'Upper / Lower',
+      color: '#CCFF00',
+    });
     assert.equal(first.id, id);
     assert.equal(replay.id, id);
     const overview = await service.getOverview('user-a', 'en');
@@ -276,7 +296,8 @@ describe('WorkoutService — Folders, Templates, Alternatives & User Isolation',
 
     await assert.rejects(
       () => service.createFolder('user-b', { id: folderId, name: 'Theirs', color: '#CCFF00' }),
-      (err: Error & { status?: number }) => err.status === 403 && /^Access denied$/.test(err.message),
+      (err: Error & { status?: number }) =>
+        err.status === 403 && /^Access denied$/.test(err.message),
     );
     await assert.rejects(
       () => service.createTemplate('user-b', { id: templateId, name: 'X', exercises: [] }, 'en'),
@@ -290,12 +311,59 @@ describe('WorkoutService — Folders, Templates, Alternatives & User Isolation',
     const id = '3e9c6f4b-1a5d-4ebc-8c4d-6f8a0b2c4d5e';
 
     await service.createTemplate('user-a', { id, name: 'Push', exercises: [] }, 'en');
-    const replay = await service.createTemplate('user-a', { id, name: 'Push', exercises: [] }, 'en');
+    const replay = await service.createTemplate(
+      'user-a',
+      { id, name: 'Push', exercises: [] },
+      'en',
+    );
     assert.equal(replay.id, id);
     assert.equal((await service.getOverview('user-a', 'en')).unfiledTemplates.length, 1);
 
     const updated = await service.updateTemplate('user-a', id, { name: 'Push A' }, 'en');
     assert.equal(updated.name, 'Push A');
+  });
+
+  it("rejects another user's custom exercise like an unknown one and accepts own ones", async () => {
+    const prisma = createMockWorkoutPrisma();
+    const service = new WorkoutService(prisma);
+    const exercise = (exerciseId: string) => ({
+      exerciseId,
+      orderIndex: 0,
+      plannedSets: 3,
+      warmupSets: 0,
+      weightUnit: WeightUnit.KG,
+      restSeconds: 90,
+      alternativeExerciseIds: [],
+    });
+    const isUnknownExercise = (err: Error & { status?: number }) =>
+      err.status === 400 && err.message === 'Unknown exercise';
+
+    const own = await service.createTemplate(
+      'usera',
+      { name: 'Mine', exercises: [exercise('custom-usera-curl')] },
+      'en',
+    );
+    assert.equal(own.exercises[0]!.exerciseId, 'custom-usera-curl');
+
+    await assert.rejects(
+      () =>
+        service.createTemplate(
+          'usera',
+          { name: 'Theirs', exercises: [exercise('custom-userb-secret')] },
+          'en',
+        ),
+      isUnknownExercise,
+    );
+    await assert.rejects(
+      () =>
+        service.updateTemplate(
+          'usera',
+          own.id,
+          { exercises: [exercise('custom-userb-secret')] },
+          'en',
+        ),
+      isUnknownExercise,
+    );
   });
 
   it('answers a folder name clash on create and rename with 409 FOLDER_NAME_TAKEN', async () => {
@@ -307,7 +375,10 @@ describe('WorkoutService — Folders, Templates, Alternatives & User Isolation',
     const isNameTaken = (err: Error & { status?: number; getResponse?: () => unknown }) =>
       err.status === 409 &&
       (err.getResponse?.() as { code?: string } | undefined)?.code === 'FOLDER_NAME_TAKEN';
-    await assert.rejects(() => service.createFolder('user-a', { name: 'Legs', color: '#CCFF00' }), isNameTaken);
+    await assert.rejects(
+      () => service.createFolder('user-a', { name: 'Legs', color: '#CCFF00' }),
+      isNameTaken,
+    );
     await assert.rejects(
       () => service.updateFolder('user-a', arms.id, { name: 'Legs' }, 'en'),
       isNameTaken,

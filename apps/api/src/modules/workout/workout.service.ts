@@ -267,17 +267,26 @@ export class WorkoutService {
     };
   }
 
-  /**
-   * Unknown exercise ids would fail the foreign key with a 500; offline clients would then retry
-   * forever, so reject them as a client error.
-   */
-  private async assertExercisesExist(exercises: TemplateExerciseInputDto[] | undefined) {
-    const ids = [...new Set((exercises ?? []).map((e) => e.exerciseId))];
-    if (ids.length === 0) return;
-    const found = await this.prisma.exercise.findMany({
-      where: { id: { in: ids } },
+  /** Exercises the user may reference: system exercises and their own custom ones. */
+  private visibleExerciseIds(userId: string, ids: string[]): Promise<{ id: string }[]> {
+    return this.prisma.exercise.findMany({
+      where: { id: { in: ids }, OR: [{ isSystem: true }, { userId }] },
       select: { id: true },
     });
+  }
+
+  /**
+   * Unknown exercise ids would fail the foreign key with a 500 (offline clients would retry
+   * forever), and another user's custom exercise would leak its details through the overview.
+   * Both get the same 400, so the response doesn't reveal whether the exercise exists.
+   */
+  private async assertExercisesVisible(
+    userId: string,
+    exercises: TemplateExerciseInputDto[] | undefined,
+  ) {
+    const ids = [...new Set((exercises ?? []).map((e) => e.exerciseId))];
+    if (ids.length === 0) return;
+    const found = await this.visibleExerciseIds(userId, ids);
     if (found.length !== ids.length) throw new BadRequestException('Unknown exercise');
   }
 
@@ -302,7 +311,7 @@ export class WorkoutService {
         throw new ForbiddenException('Invalid target folder');
       }
     }
-    await this.assertExercisesExist(dto.exercises);
+    await this.assertExercisesVisible(userId, dto.exercises);
 
     const created = await this.prisma.$transaction(async (tx) => {
       const tpl = await tx.workoutTemplate.create({
@@ -363,7 +372,7 @@ export class WorkoutService {
       }
     }
 
-    await this.assertExercisesExist(dto.exercises);
+    await this.assertExercisesVisible(userId, dto.exercises);
 
     // Editing the text of a starter copy turns it into user content: persist what the user sees
     // (the localized catalog text) for every field they did not change, and unlink it.
@@ -566,10 +575,10 @@ export class WorkoutService {
 
     const knownIds = new Set(
       (
-        await this.prisma.exercise.findMany({
-          where: { id: { in: exercises.map((e) => e.exerciseId) } },
-          select: { id: true },
-        })
+        await this.visibleExerciseIds(
+          userId,
+          exercises.map((e) => e.exerciseId),
+        )
       ).map((e) => e.id),
     );
     await this.updateTemplate(
