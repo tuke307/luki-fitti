@@ -256,6 +256,8 @@ public enum LukiStrings {
         "Similar movement": "Ähnliche Bewegung",
         "Skip Rest": "Pause überspringen",
         "Skip rest": "Pause überspringen",
+        "Subtract 15 seconds": "15 Sekunden abziehen",
+        "Add 15 seconds": "15 Sekunden hinzufügen",
         "Start": "Starten",
         "Start %@": "%@ starten",
         "Start rest": "Pause starten",
