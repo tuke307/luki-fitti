@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
   ForbiddenException,
@@ -12,7 +13,7 @@ import {
   DEFAULT_FOLDER_COLOR,
   summarizeTemplateSets,
 } from '@luki-fitti/common/utils';
-import { TemplateSetSchema } from '@luki-fitti/common/schemas';
+import { FOLDER_NAME_TAKEN_CODE, TemplateSetSchema } from '@luki-fitti/common/schemas';
 import type {
   TemplateExerciseInputDto,
   WorkoutSessionDto,
@@ -23,6 +24,30 @@ import type {
   WorkoutFolderDto,
   WorkoutTemplateDto,
 } from '@luki-fitti/common/schemas';
+
+const FOLDER_TEMPLATES_INCLUDE = {
+  templates: {
+    orderBy: [{ sortOrder: 'asc' as const }, { createdAt: 'asc' as const }],
+    include: {
+      exercises: {
+        orderBy: { orderIndex: 'asc' as const },
+        include: { exercise: true },
+      },
+    },
+  },
+};
+
+function folderNameTaken(): ConflictException {
+  return new ConflictException({
+    message: 'A folder with this name already exists',
+    code: FOLDER_NAME_TAKEN_CODE,
+  });
+}
+
+/** Prisma unique-constraint violation (P2002). */
+function isUniqueViolation(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && (err as { code?: unknown }).code === 'P2002';
+}
 
 @Injectable()
 export class WorkoutService {
@@ -69,22 +94,40 @@ export class WorkoutService {
     };
   }
 
-  async createFolder(userId: string, dto: CreateFolderDto): Promise<WorkoutFolderDto> {
-    const existing = await this.prisma.workoutFolder.findUnique({
-      where: { userId_name: { userId, name: dto.name.trim() } },
-    });
-    if (existing) {
-      throw new ConflictException('A folder with this name already exists');
+  /**
+   * With a client-generated `id`, replaying the create returns the existing folder (idempotent
+   * offline sync). An id owned by another user is rejected without revealing more.
+   */
+  async createFolder(
+    userId: string,
+    dto: CreateFolderDto,
+    locale: SupportedLocale = 'en',
+  ): Promise<WorkoutFolderDto> {
+    if (dto.id) {
+      const replay = await this.findOwnFolderReplay(userId, dto.id, locale);
+      if (replay) return replay;
     }
+    const name = dto.name.trim();
+    await this.assertFolderNameFree(userId, name);
 
-    const folder = await this.prisma.workoutFolder.create({
-      data: {
-        userId,
-        name: dto.name.trim(),
-        color: dto.color ?? DEFAULT_FOLDER_COLOR,
-        sortOrder: dto.sortOrder ?? 0,
-      },
-    });
+    let folder;
+    try {
+      folder = await this.prisma.workoutFolder.create({
+        data: {
+          ...(dto.id ? { id: dto.id } : {}),
+          userId,
+          name,
+          color: dto.color ?? DEFAULT_FOLDER_COLOR,
+          sortOrder: dto.sortOrder ?? 0,
+        },
+      });
+    } catch (err) {
+      if (!isUniqueViolation(err)) throw err;
+      // Lost a race: either a concurrent replay of this create or a concurrent same-name folder.
+      const replay = dto.id ? await this.findOwnFolderReplay(userId, dto.id, locale) : null;
+      if (replay) return replay;
+      throw folderNameTaken();
+    }
 
     return {
       id: folder.id,
@@ -110,28 +153,49 @@ export class WorkoutService {
     if (folder.userId !== userId) {
       throw new ForbiddenException('Access denied to this folder');
     }
+    if (dto.name !== undefined) {
+      await this.assertFolderNameFree(userId, dto.name.trim(), folderId);
+    }
 
-    const updated = await this.prisma.workoutFolder.update({
-      where: { id: folderId },
-      data: {
-        ...(dto.name !== undefined ? { name: dto.name.trim(), systemKey: null } : {}),
-        ...(dto.color !== undefined ? { color: dto.color } : {}),
-        ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
-      },
-      include: {
-        templates: {
-          orderBy: { sortOrder: 'asc' },
-          include: {
-            exercises: {
-              orderBy: { orderIndex: 'asc' },
-              include: { exercise: true },
-            },
-          },
+    let updated;
+    try {
+      updated = await this.prisma.workoutFolder.update({
+        where: { id: folderId },
+        data: {
+          ...(dto.name !== undefined ? { name: dto.name.trim(), systemKey: null } : {}),
+          ...(dto.color !== undefined ? { color: dto.color } : {}),
+          ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
         },
-      },
-    });
+        include: FOLDER_TEMPLATES_INCLUDE,
+      });
+    } catch (err) {
+      if (isUniqueViolation(err)) throw folderNameTaken();
+      throw err;
+    }
 
     return this.mapFolderDto(updated, locale);
+  }
+
+  private async findOwnFolderReplay(
+    userId: string,
+    folderId: string,
+    locale: SupportedLocale,
+  ): Promise<WorkoutFolderDto | null> {
+    const existing = await this.prisma.workoutFolder.findUnique({
+      where: { id: folderId },
+      include: FOLDER_TEMPLATES_INCLUDE,
+    });
+    if (!existing) return null;
+    if (existing.userId !== userId) throw new ForbiddenException('Access denied');
+    return this.mapFolderDto({ ...existing, templates: existing.templates ?? [] }, locale);
+  }
+
+  /** Folder names are unique per user; a clash is a 409 with a stable code clients act on. */
+  private async assertFolderNameFree(userId: string, name: string, exceptFolderId?: string) {
+    const clash = await this.prisma.workoutFolder.findUnique({
+      where: { userId_name: { userId, name } },
+    });
+    if (clash && clash.id !== exceptFolderId) throw folderNameTaken();
   }
 
   async deleteFolder(userId: string, folderId: string): Promise<{ success: boolean }> {
@@ -203,11 +267,33 @@ export class WorkoutService {
     };
   }
 
+  /**
+   * Unknown exercise ids would fail the foreign key with a 500; offline clients would then retry
+   * forever, so reject them as a client error.
+   */
+  private async assertExercisesExist(exercises: TemplateExerciseInputDto[] | undefined) {
+    const ids = [...new Set((exercises ?? []).map((e) => e.exerciseId))];
+    if (ids.length === 0) return;
+    const found = await this.prisma.exercise.findMany({
+      where: { id: { in: ids } },
+      select: { id: true },
+    });
+    if (found.length !== ids.length) throw new BadRequestException('Unknown exercise');
+  }
+
   async createTemplate(
     userId: string,
     dto: CreateTemplateDto,
     locale: SupportedLocale,
   ): Promise<WorkoutTemplateDto> {
+    // Client-generated id: a replayed create returns the existing template (see createFolder).
+    if (dto.id) {
+      const existing = await this.prisma.workoutTemplate.findUnique({ where: { id: dto.id } });
+      if (existing) {
+        if (existing.userId !== userId) throw new ForbiddenException('Access denied');
+        return this.getTemplateById(userId, dto.id, locale);
+      }
+    }
     if (dto.folderId) {
       const folder = await this.prisma.workoutFolder.findUnique({
         where: { id: dto.folderId },
@@ -216,10 +302,12 @@ export class WorkoutService {
         throw new ForbiddenException('Invalid target folder');
       }
     }
+    await this.assertExercisesExist(dto.exercises);
 
     const created = await this.prisma.$transaction(async (tx) => {
       const tpl = await tx.workoutTemplate.create({
         data: {
+          ...(dto.id ? { id: dto.id } : {}),
           userId,
           folderId: dto.folderId ?? null,
           name: dto.name.trim(),
@@ -274,6 +362,8 @@ export class WorkoutService {
         throw new ForbiddenException('Invalid target folder');
       }
     }
+
+    await this.assertExercisesExist(dto.exercises);
 
     // Editing the text of a starter copy turns it into user content: persist what the user sees
     // (the localized catalog text) for every field they did not change, and unlink it.

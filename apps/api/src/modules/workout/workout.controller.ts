@@ -41,8 +41,9 @@ export class WorkoutController {
   async createFolder(
     @CurrentUser() user: AuthenticatedUser,
     @Body(new ZodValidationPipe(CreateFolderSchema)) body: CreateFolderDto,
+    @RequestLocale() locale: SupportedLocale,
   ) {
-    return this.workoutService.createFolder(user.id, body);
+    return this.workoutService.createFolder(user.id, body, locale);
   }
 
   @Put('folders/:id')

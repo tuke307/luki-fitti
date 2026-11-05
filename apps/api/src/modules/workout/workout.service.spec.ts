@@ -23,6 +23,13 @@ function createMockWorkoutPrisma(): PrismaService {
 
   const prisma = {
     workoutFolder: {
+      findMany: async ({ where }: { where: { userId: string } }) =>
+        Array.from(folders.values())
+          .filter((f) => f.userId === where.userId)
+          .map((f) => ({
+            ...f,
+            templates: Array.from(templates.values()).filter((t) => t.folderId === f.id),
+          })),
       findUnique: async ({
         where,
       }: {
@@ -39,10 +46,15 @@ function createMockWorkoutPrisma(): PrismaService {
         return null;
       },
       create: async ({ data }: { data: Record<string, unknown> }) => {
-        const id = `folder-${folders.size + 1}`;
+        const id = (data.id as string | undefined) ?? `folder-${folders.size + 1}`;
         const f = { id, ...data, createdAt: new Date(), updatedAt: new Date() };
         folders.set(id, f);
         return f;
+      },
+      update: async ({ where, data }: { where: { id: string }; data: Record<string, unknown> }) => {
+        const f = folders.get(where.id);
+        if (f) Object.assign(f, data);
+        return { ...f, templates: [] };
       },
       delete: async ({ where }: { where: { id: string } }) => {
         folders.delete(where.id);
@@ -75,7 +87,7 @@ function createMockWorkoutPrisma(): PrismaService {
         };
       },
       create: async ({ data }: { data: Record<string, unknown> }) => {
-        const id = `tpl-${templates.size + 1}`;
+        const id = (data.id as string | undefined) ?? `tpl-${templates.size + 1}`;
         const t = { id, ...data, createdAt: new Date(), updatedAt: new Date() };
         templates.set(id, t);
         templateExercises.set(id, []);
@@ -234,6 +246,75 @@ describe('WorkoutService — Folders, Templates, Alternatives & User Isolation',
     await service.deleteFolder('user-a', folder.id);
     const afterFolderDelete = await service.getTemplateById('user-a', tpl.id, 'en');
     assert.equal(afterFolderDelete.folderId, null);
+  });
+
+  it('replays a folder create with a client id without duplicating it', async () => {
+    const prisma = createMockWorkoutPrisma();
+    const service = new WorkoutService(prisma);
+    const id = '0b6f3c1e-8d2a-4b8e-9f1a-3c5d7e9f1a2b';
+
+    const first = await service.createFolder('user-a', { id, name: 'Upper / Lower', color: '#CCFF00' });
+    const replay = await service.createFolder('user-a', { id, name: 'Upper / Lower', color: '#CCFF00' });
+    assert.equal(first.id, id);
+    assert.equal(replay.id, id);
+    const overview = await service.getOverview('user-a', 'en');
+    assert.equal(overview.folders.filter((f) => f.id === id).length, 1);
+
+    const renamed = await service.updateFolder('user-a', id, { name: 'Upper Lower' }, 'en');
+    assert.equal(renamed.id, id);
+    assert.equal(renamed.name, 'Upper Lower');
+  });
+
+  it('rejects a client id owned by another user', async () => {
+    const prisma = createMockWorkoutPrisma();
+    const service = new WorkoutService(prisma);
+    const folderId = '1c7a4d2f-9e3b-4c9f-8a2b-4d6e8f0a2b3c';
+    const templateId = '2d8b5e3a-0f4c-4dab-9b3c-5e7f9a1b3c4d';
+
+    await service.createFolder('user-a', { id: folderId, name: 'Mine', color: '#CCFF00' });
+    await service.createTemplate('user-a', { id: templateId, name: 'Mine', exercises: [] }, 'en');
+
+    await assert.rejects(
+      () => service.createFolder('user-b', { id: folderId, name: 'Theirs', color: '#CCFF00' }),
+      (err: Error & { status?: number }) => err.status === 403 && /^Access denied$/.test(err.message),
+    );
+    await assert.rejects(
+      () => service.createTemplate('user-b', { id: templateId, name: 'X', exercises: [] }, 'en'),
+      (err: Error & { status?: number }) => err.status === 403,
+    );
+  });
+
+  it('replays a template create with a client id and updates it afterwards', async () => {
+    const prisma = createMockWorkoutPrisma();
+    const service = new WorkoutService(prisma);
+    const id = '3e9c6f4b-1a5d-4ebc-8c4d-6f8a0b2c4d5e';
+
+    await service.createTemplate('user-a', { id, name: 'Push', exercises: [] }, 'en');
+    const replay = await service.createTemplate('user-a', { id, name: 'Push', exercises: [] }, 'en');
+    assert.equal(replay.id, id);
+    assert.equal((await service.getOverview('user-a', 'en')).unfiledTemplates.length, 1);
+
+    const updated = await service.updateTemplate('user-a', id, { name: 'Push A' }, 'en');
+    assert.equal(updated.name, 'Push A');
+  });
+
+  it('answers a folder name clash on create and rename with 409 FOLDER_NAME_TAKEN', async () => {
+    const prisma = createMockWorkoutPrisma();
+    const service = new WorkoutService(prisma);
+    await service.createFolder('user-a', { name: 'Legs', color: '#CCFF00' });
+    const arms = await service.createFolder('user-a', { name: 'Arms', color: '#CCFF00' });
+
+    const isNameTaken = (err: Error & { status?: number; getResponse?: () => unknown }) =>
+      err.status === 409 &&
+      (err.getResponse?.() as { code?: string } | undefined)?.code === 'FOLDER_NAME_TAKEN';
+    await assert.rejects(() => service.createFolder('user-a', { name: 'Legs', color: '#CCFF00' }), isNameTaken);
+    await assert.rejects(
+      () => service.updateFolder('user-a', arms.id, { name: 'Legs' }, 'en'),
+      isNameTaken,
+    );
+    // Same name for another user, and re-saving a folder under its own name, are fine.
+    await service.createFolder('user-b', { name: 'Legs', color: '#CCFF00' });
+    await service.updateFolder('user-a', arms.id, { name: 'Arms', color: '#FF0000' }, 'en');
   });
 
   it('serves untouched starter copies in the request language and detaches them on edit', async () => {
