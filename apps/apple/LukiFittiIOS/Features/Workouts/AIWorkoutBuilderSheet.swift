@@ -31,9 +31,13 @@ struct AIWorkoutBuilderSheet: View {
                     proposal(result)
                 } else {
                     Section {
-                        Text(tr("Describe what you want. LukiFitti looks at your history, weak points and what didn’t work for you."))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                        HStack(alignment: .top) {
+                            Text(tr("Describe what you want. LukiFitti looks at your history, weak points and what didn’t work for you."))
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Spacer(minLength: 0)
+                            AIInfoButton(skill: .workoutBuilder, api: viewModel.store.apiClient)
+                        }
                         TextField(tr("e.g. A chest workout. My upper chest is my weak point."), text: $prompt, axis: .vertical)
                             .lineLimit(3...6)
                             .disabled(busy)
@@ -117,7 +121,7 @@ struct AIWorkoutBuilderSheet: View {
             }
         }
         if let usage = p.usage {
-            Section { AICostLabel(usage: usage) }
+            Section { AICostLabel(usage: usage, model: p.model) }
         }
         Section {
             Button(tr("Try again")) { result = nil }

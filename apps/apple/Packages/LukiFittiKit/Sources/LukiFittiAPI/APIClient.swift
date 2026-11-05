@@ -379,6 +379,11 @@ public actor APIClient {
         return try await request(path: "/api/ai/usage/me?days=\(range)", method: "GET")
     }
 
+    /// Eligible OpenRouter models per AI skill with prices and cost estimates.
+    public func fetchAiModels() async throws -> AiModelsDto {
+        try await request(path: "/api/ai/models", method: "GET")
+    }
+
     /// Status of the own / admin-assigned OpenRouter key (never the key itself).
     public func fetchAiKeyStatus() async throws -> AiKeyStatusDto {
         try await request(path: "/api/ai/key", method: "GET")

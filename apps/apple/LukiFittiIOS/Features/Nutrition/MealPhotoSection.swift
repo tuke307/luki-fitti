@@ -27,6 +27,7 @@ struct MealPhotoSection: View {
     @State private var hint = ""
     @State private var message: String?
     @State private var lastUsage: AiRunUsageDto?
+    @State private var lastModel: String?
     @State private var note: String?
 
     struct EstimateResult {
@@ -34,6 +35,7 @@ struct MealPhotoSection: View {
         var success: Bool
         var usage: AiRunUsageDto?
         var note: String?
+        var model: String?
     }
 
     struct LocalPhoto: Identifiable {
@@ -84,24 +86,27 @@ struct MealPhotoSection: View {
             .accessibilityLabel(textOnly ? tr("Describe your meal") : tr("Anything to add? (optional)"))
             .accessibilityIdentifier("ios.nutrition.photoHint")
             if !textOnly || !trimmedHint.isEmpty {
-                Button {
-                    Task { await estimate() }
-                } label: {
-                    HStack {
-                        if busy { ProgressView() } else { Image(systemName: "sparkles") }
-                        Text(busy ? tr("Looking at your meal…") : tr("Estimate with AI"))
+                HStack(spacing: 4) {
+                    Button {
+                        Task { await estimate() }
+                    } label: {
+                        HStack {
+                            if busy { ProgressView() } else { Image(systemName: "sparkles") }
+                            Text(busy ? tr("Looking at your meal…") : tr("Estimate with AI"))
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 44)
                     }
-                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!canEstimate)
+                    .accessibilityIdentifier("ios.nutrition.estimateButton")
+                    AIInfoButton(skill: textOnly ? .mealTextAnalyzer : .mealAnalyzer, api: api)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(!canEstimate)
-                .accessibilityIdentifier("ios.nutrition.estimateButton")
             }
             if let note {
                 Text(note).font(.footnote).foregroundStyle(.secondary)
             }
             if let lastUsage {
-                AICostLabel(usage: lastUsage)
+                AICostLabel(usage: lastUsage, model: lastModel)
                     .accessibilityIdentifier("ios.nutrition.aiCostLabel")
             }
             if !isOnline {
@@ -198,7 +203,10 @@ struct MealPhotoSection: View {
         message = nil
         let result = await onEstimate(picked.map(\.image), trimmedHint)
         message = result.message
-        if let usage = result.usage { lastUsage = usage }
+        if let usage = result.usage {
+            lastUsage = usage
+            lastModel = result.model
+        }
         if result.success {
             note = result.note
             picked = []
