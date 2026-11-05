@@ -60,6 +60,8 @@ import type {
   WorkoutFolderDto,
   WorkoutSessionDto,
   WorkoutTemplateDto,
+  ImportCommitResultDto,
+  ImportPreviewDto,
 } from '@luki-fitti/common/schemas';
 
 export const auth = {
@@ -390,6 +392,14 @@ export const admin = {
     ),
 };
 
+/** File import (`luki-fitti-import@1`); `fileText` is the uploaded JSON file, sent unchanged. */
+export const importData = {
+  preview: (fileText: string) =>
+    apiFetch<ImportPreviewDto>('/import/preview', { method: 'POST', body: fileText }),
+  commit: (fileText: string) =>
+    apiFetch<ImportCommitResultDto>('/import/commit', { method: 'POST', body: fileText }),
+};
+
 export * from './client';
 
 export const api = {
@@ -405,4 +415,5 @@ export const api = {
   ai,
   exerciseFeedback,
   admin,
+  importData,
 };

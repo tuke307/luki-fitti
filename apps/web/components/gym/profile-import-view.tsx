@@ -65,7 +65,7 @@ import { AiUsageView } from './ai-usage/ai-usage-view';
 import { AiKeyCard } from './ai-key-card';
 import { AiModelsPage } from './settings/ai-models-page';
 import { ImportPage } from './settings/import-page';
-import { buildFeatureRequestMailto } from '@luki-fitti/common/utils';
+import { buildFeatureRequestMailto, buildImportFile } from '@luki-fitti/common/utils';
 import { AI_KEY_NAVIGATE_EVENT } from '@/lib/ai/ai-key-required';
 import { SettingsRow, SettingsSection, SettingsSubpage } from './settings/settings-row';
 import { WeightView } from './weight/weight-view';
@@ -150,7 +150,7 @@ export function ProfileImportView() {
     infoMessage: authInfoMessage,
     loading: authLoading,
   } = useAuth();
-  const { folders, unfiledTemplates, stretchingRoutines, historySessions, catalog } = useGym();
+  const { folders, unfiledTemplates, historySessions, catalog } = useGym();
   const { theme, setTheme } = useTheme();
   const { t, format, languagePreference, setLanguagePreference, locale } = useLocale();
 
@@ -199,51 +199,15 @@ export function ProfileImportView() {
 
   const handleExportJson = () => {
     const dateStamp = new Date().toISOString().slice(0, 10);
-    const folderByTplId = new Map<string, string>();
-    for (const f of folders) {
-      for (const tItem of f.templates) {
-        folderByTplId.set(tItem.id, f.name);
-      }
-    }
-
-    const payload = {
-      exportedAt: new Date().toISOString(),
-      app: 'LukiFitti',
-      version: '1.0',
-      user: {
-        email: user?.email ?? null,
-        name: user?.name ?? null,
-        preferences: user?.preferences ?? null,
-      },
+    // Same `luki-fitti-import@1` format the import accepts, so a backup restores into any account.
+    const payload = buildImportFile({
       folders,
       unfiledTemplates,
-      stretchingRoutines,
+      historySessions,
+      catalog,
       customExercises: catalog.filter((e) => !e.isSystem),
-      sessions: historySessions,
-      workouts: historySessions.map((s) => ({
-        date: s.startedAt,
-        workoutName: s.workoutNameSnapshot,
-        folder: (s.templateId && folderByTplId.get(s.templateId)) || null,
-        durationSeconds: s.activeDurationSeconds,
-        totalVolumeKg: s.totalVolumeKg,
-        exercises: s.exercises.map((ex) => ({
-          name: ex.exerciseNameSnapshot,
-          primaryMuscle: ex.primaryMuscleSnapshot,
-          sets: ex.sets
-            .filter((st) => st.completed)
-            .map((st) => ({
-              setNumber: st.setNumber,
-              setType: st.setType,
-              weight: st.weight,
-              unit: st.weightUnit,
-              reps: st.reps,
-              durationSeconds: st.durationSeconds,
-              rpe: st.rpe,
-              notes: st.notes,
-            })),
-        })),
-      })),
-    };
+      sourceApp: 'LukiFitti Web',
+    });
 
     const fileName = `luki-fitti-backup-${dateStamp}.json`;
     triggerDownload(JSON.stringify(payload, null, 2), fileName, 'application/json;charset=utf-8');
