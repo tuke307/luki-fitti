@@ -1,4 +1,11 @@
-import { BadRequestException, Injectable, Optional } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  Injectable,
+  InternalServerErrorException,
+  Optional,
+} from '@nestjs/common';
+import { logger } from '@luki-fitti/logger';
 import { PrismaService } from '../database/prisma.service';
 import { SessionService } from '../session/session.service';
 import { ExerciseService } from '../exercise/exercise.service';
@@ -170,7 +177,10 @@ export class ImportService {
         state.preview ? ImportService.jobCounts(state.preview) : {},
         unknown ? 'UNKNOWN_SLUGS' : 'COMMIT_FAILED',
       );
-      throw error;
+      if (error instanceof HttpException) throw error;
+      // Database errors can quote the rows they failed on; keep file data out of logs and responses.
+      logger.error(`Import commit failed (${error instanceof Error ? error.name : 'unknown error'})`);
+      throw new InternalServerErrorException({ message: 'Import failed', code: 'IMPORT_FAILED' });
     }
   }
 

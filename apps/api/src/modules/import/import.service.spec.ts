@@ -211,7 +211,7 @@ describe('ImportService', () => {
 
   it('rolls back everything when a write fails midway', async () => {
     const { service, size, rows } = createService({ failOn: 'sessionSet' });
-    await assert.rejects(service.commit('user-a', example(), 'en'), /simulated database failure/);
+    await assert.rejects(service.commit('user-a', example(), 'en'), /Import failed/);
     for (const table of [
       'exercise',
       'workoutFolder',
