@@ -127,11 +127,11 @@ export function ExerciseHistorySection({
         </p>
       ) : (
         <>
-          <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <dl className={`grid gap-2 ${summary.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
             {summary.map((item) => (
               <div key={item.label} className="bg-secondary/40 rounded-xl px-3 py-2">
                 <dt className="text-muted-foreground text-xs">{item.label}</dt>
-                <dd className="tabular-nums text-[0.9375rem] font-semibold">{item.value}</dd>
+                <dd className="tabular-nums text-sm font-semibold">{item.value}</dd>
               </div>
             ))}
           </dl>
