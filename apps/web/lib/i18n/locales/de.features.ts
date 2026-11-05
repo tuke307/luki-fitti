@@ -511,7 +511,7 @@ export const deFeatures: Widen<typeof enFeatures> = {
     skills: {
       'workout-builder': 'Workout-Planer',
       'meal-analyzer': 'Mahlzeitfoto',
-      'meal-text-analyzer': 'Mahlzeitbeschreibung',
+      'meal-text-analyzer': 'Mahlzeitenbeschreibung',
     },
     defaultChoice: 'Standard ({model})',
     useDefault: 'Standard verwenden',
