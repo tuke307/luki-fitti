@@ -30,17 +30,13 @@ import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { Textarea } from '@luki-fitti/ui/components/ui/textarea';
 import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
-import {
-  computeExerciseProgression,
-  formatDateTime,
-  searchExercises,
-} from '@luki-fitti/common/utils/client';
+import { searchExercises } from '@luki-fitti/common/utils/client';
 import { ExercisePicker, filterExercisesByQuery, searchIndexFor } from './exercise-picker';
 import { ExerciseVisual } from './exercise-visual';
 import { ExerciseGuideSheet } from './exercise-guide-sheet';
+import { LateralityBadge } from './laterality-badge';
 import { ConfirmDestructiveDialog } from './confirm-destructive-dialog';
 import { NumberInput } from './number-input';
-import { unitLabel } from '@/lib/format/weight';
 import {
   EquipmentType,
   ExerciseCategory,
@@ -65,8 +61,6 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
     deleteStretchingRoutine,
     startStretchingSession,
     activeSession,
-    historySessions,
-    weightUnit,
     addExerciseToSession,
   } = useGym();
   const { t, format, muscleLabel, equipmentLabel, exerciseTypeLabel } = useLocale();
@@ -383,11 +377,14 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                       <ExerciseVisual exercise={ex} variant="thumbnail" className="h-12 w-14" />
                       <span className="min-w-0 flex-1">
                         <h3 className="truncate text-[1.0625rem] font-medium">{ex.name}</h3>
-                        <span className="text-muted-foreground block truncate text-[0.8125rem]">
-                          {muscleLabel(ex.primaryMuscleGroup)} · {equipmentLabel(ex.equipment)}
-                          {isStretch && ex.recommendedDurationSeconds
-                            ? ` · ${ex.recommendedDurationSeconds}${t.exercises.holdSuffix}`
-                            : ''}
+                        <span className="flex min-w-0 items-center gap-1.5">
+                          <span className="text-muted-foreground block truncate text-[0.8125rem]">
+                            {muscleLabel(ex.primaryMuscleGroup)} · {equipmentLabel(ex.equipment)}
+                            {isStretch && ex.recommendedDurationSeconds
+                              ? ` · ${ex.recommendedDurationSeconds}${t.exercises.holdSuffix}`
+                              : ''}
+                          </span>
+                          {!isStretch && <LateralityBadge laterality={ex.laterality} />}
                         </span>
                       </span>
                     </button>
@@ -687,65 +684,6 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
             )}
 
             <ExerciseFeedbackPanel key={selectedExercise.id} exerciseId={selectedExercise.id} />
-
-            {/* Global Exercise History (Single Source of Truth across all workouts) */}
-            {(() => {
-              const insight = computeExerciseProgression({
-                exerciseId: selectedExercise.id,
-                exerciseName: selectedExercise.name,
-                historySessions,
-                catalogExercise: selectedExercise,
-                weightUnit,
-              });
-              if (insight.history.length === 0) return null;
-              return (
-                <div className="space-y-2 border-t pt-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-display text-sm font-bold">
-                      {format(t.exercises.globalHistoryTitle, { count: insight.sessionsCount })}
-                    </h3>
-                    {insight.ewma1RM > 0 && (
-                      <Badge variant="default" className="tabular-nums text-xs">
-                        {format(t.exercises.strengthTrendBadge, {
-                          value: insight.ewma1RM,
-                          unit: unitLabel(weightUnit),
-                        })}
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="space-y-1.5">
-                    {insight.history
-                      .slice(-4)
-                      .reverse()
-                      .map((entry) => (
-                        <div
-                          key={entry.clientSessionId}
-                          className="bg-secondary/40 flex flex-wrap items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs"
-                        >
-                          <div>
-                            <p className="font-semibold">{entry.workoutName}</p>
-                            <p className="text-muted-foreground tabular-nums text-xs">
-                              {formatDateTime(entry.startedAt)}
-                            </p>
-                          </div>
-                          <div className="flex flex-wrap gap-1">
-                            {entry.workingSets.map((ws, i) => (
-                              <Badge
-                                key={i}
-                                variant="secondary"
-                                className="bg-background tabular-nums px-1.5 py-0.5 text-xs font-bold"
-                              >
-                                {ws.weightNormalized}
-                                {weightUnit.toLowerCase()} × {ws.reps}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              );
-            })()}
           </>
         )}
       </ExerciseGuideSheet>

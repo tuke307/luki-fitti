@@ -74,6 +74,7 @@ import {
 } from '@luki-fitti/common/utils/client';
 import { FeatureGrant, SessionStatus } from '@luki-fitti/common/enums';
 import { ExercisePicker } from './exercise-picker';
+import { LateralityBadge } from './laterality-badge';
 import { ExerciseVisual } from './exercise-visual';
 import { NumberInput } from './number-input';
 import { RainbowExerciseSuggestionCard } from './rainbow-suggestion-card';
@@ -638,6 +639,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                                       .filter(Boolean)
                                       .join(' · ')}
                                   </span>
+                                  <LateralityBadge laterality={exObj?.laterality} />
                                   {altNames.length > 0 && (
                                     <Badge
                                       variant="default"
@@ -684,11 +686,14 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                       />
                     )}
                     <div className="min-w-0">
-                      <p className="truncate text-[0.9375rem] font-medium">
-                        <span className="text-muted-foreground tabular-nums">
-                          {globalIndex + 1}.{' '}
+                      <p className="flex min-w-0 items-center gap-1.5 text-[0.9375rem] font-medium">
+                        <span className="truncate">
+                          <span className="text-muted-foreground tabular-nums">
+                            {globalIndex + 1}.{' '}
+                          </span>
+                          {exObj?.name ?? t.common.exercise}
                         </span>
-                        {exObj?.name ?? t.common.exercise}
+                        <LateralityBadge laterality={exObj?.laterality} />
                       </p>
                       <p className="text-muted-foreground truncate text-[0.8125rem] tabular-nums">
                         {[
@@ -1222,6 +1227,9 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                           </div>
 
                           <div className="flex shrink-0 flex-wrap items-center justify-between gap-1.5 sm:justify-end">
+                            <LateralityBadge
+                              laterality={catalog.find((c) => c.id === slot.exerciseId)?.laterality}
+                            />
                             {idx < tplExercises.length - 1 && (
                               <Button
                                 type="button"
