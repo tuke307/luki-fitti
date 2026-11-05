@@ -150,7 +150,7 @@ struct AIWorkoutBuilderSheet: View {
 
     /// Saves the proposal as a regular (unfiled) workout: warm-ups + working sets, no weights yet.
     private func save(_ p: WorkoutBuilderResponseDto) {
-        let templateId = "tpl-\(UUID().uuidString.lowercased())"
+        let templateId = UUID().uuidString.lowercased()
         let exercises = p.exercises.enumerated().map { index, ex in
             WorkoutTemplateExerciseDto(
                 templateId: templateId,
