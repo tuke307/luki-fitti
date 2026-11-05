@@ -160,6 +160,13 @@ file and let the user upload it in the app. Nobody needs database access.
    value. It stops and lists every exercise without a mapping entry, and names the columns a
    table actually has if one it expects is missing (adjust `COLUMNS` in the script then).
 
+   Assumptions to check against your backup: the links between tables are read from
+   `TrainingExercise.TrainingID` / `ExerciseID`, `GymSet.TrainingExerciseID`,
+   `TrainingLog.TrainingID`, `TrainingExerciseLog.TrainingLogID` / `ExerciseID` and
+   `GymSetLog.TrainingExerciseLogID` (each also accepted with an `Id` suffix); warm-ups are
+   `SetType = 1`; weights are kg. These names come from the documented schema, not from a verified
+   export of every GymLife version.
+
 3. **Upload it in the app:** Profile → Data → Import file. Check the preview, then import.
    Importing the same file again changes nothing.
 
