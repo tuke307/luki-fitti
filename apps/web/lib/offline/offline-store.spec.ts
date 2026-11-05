@@ -618,3 +618,11 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
     assert.equal(await getAcknowledgedServerVersion('sess-ack'), undefined);
   });
 });
+
+describe('Offline workouts cache', () => {
+  it('keeps an empty saved overview instead of restoring the starter folders', async () => {
+    await setCachedWorkouts({ folders: [], unfiledTemplates: [] });
+    const cached = await getCachedWorkouts();
+    assert.equal(cached.folders.length, 0);
+  });
+});
