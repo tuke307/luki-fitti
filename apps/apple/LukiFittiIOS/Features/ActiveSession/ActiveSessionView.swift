@@ -81,7 +81,9 @@ public struct ActiveSessionView: View {
                 ExerciseGuideSheet(
                     exercise: viewModel.store.catalog.first { $0.id == target.exerciseId },
                     fallbackName: target.exerciseNameSnapshot,
-                    fallbackMuscle: target.primaryMuscleSnapshot
+                    fallbackMuscle: target.primaryMuscleSnapshot,
+                    historySessions: viewModel.store.historySessions,
+                    weightUnit: viewModel.store.activeSession?.weightUnit ?? viewModel.store.preferences.weightUnit
                 )
             }
         }
@@ -652,6 +654,7 @@ public struct ActiveSessionView: View {
                         Text(goal)
                             .font(.footnote.monospacedDigit())
                             .foregroundStyle(.secondary)
+                        LateralityBadge(viewModel.store.catalog.first { $0.id == exercise.exerciseId }?.laterality)
                     }
                     Spacer(minLength: 0)
                     exerciseMenu(session: session, exercise: exercise, exerciseIndex: exerciseIndex)
@@ -769,6 +772,7 @@ public struct ActiveSessionView: View {
                                     Text("\(LukiI18n.muscleLabel(member.exercise.primaryMuscleSnapshot, locale: tr)) · \(repsTarget(member.exercise))")
                                         .font(.footnote.monospacedDigit())
                                         .foregroundStyle(.secondary)
+                                    LateralityBadge(viewModel.store.catalog.first { $0.id == member.exercise.exerciseId }?.laterality)
                                 }
                                 Spacer()
                                 exerciseMenu(session: session, exercise: member.exercise, exerciseIndex: member.index)
