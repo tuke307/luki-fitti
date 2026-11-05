@@ -512,6 +512,9 @@ public struct WorkoutTemplateDto: Codable, Sendable, Equatable, Hashable, Identi
     public var createdAt: String
     public var updatedAt: String
     public var exercises: [WorkoutTemplateExerciseDto]
+    /// Catalog id of an untouched starter copy (text served in the request language); editing the
+    /// text clears it.
+    public var systemKey: String?
 
     public init(
         id: String = UUID().uuidString,
@@ -523,7 +526,8 @@ public struct WorkoutTemplateDto: Codable, Sendable, Equatable, Hashable, Identi
         sortOrder: Int = 0,
         createdAt: String = ISO8601DateFormatter().string(from: Date()),
         updatedAt: String = ISO8601DateFormatter().string(from: Date()),
-        exercises: [WorkoutTemplateExerciseDto] = []
+        exercises: [WorkoutTemplateExerciseDto] = [],
+        systemKey: String? = nil
     ) {
         self.id = id
         self.userId = userId
@@ -535,6 +539,7 @@ public struct WorkoutTemplateDto: Codable, Sendable, Equatable, Hashable, Identi
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.exercises = exercises
+        self.systemKey = systemKey
     }
 }
 
@@ -545,6 +550,8 @@ public struct WorkoutFolderDto: Codable, Sendable, Equatable, Hashable, Identifi
     public var color: String
     public var sortOrder: Int
     public var templates: [WorkoutTemplateDto]
+    /// Catalog id of an untouched starter folder; renaming clears it.
+    public var systemKey: String?
 
     public init(
         id: String = UUID().uuidString,
@@ -552,7 +559,8 @@ public struct WorkoutFolderDto: Codable, Sendable, Equatable, Hashable, Identifi
         name: String,
         color: String = "#E8743B",
         sortOrder: Int = 0,
-        templates: [WorkoutTemplateDto] = []
+        templates: [WorkoutTemplateDto] = [],
+        systemKey: String? = nil
     ) {
         self.id = id
         self.userId = userId
@@ -560,6 +568,7 @@ public struct WorkoutFolderDto: Codable, Sendable, Equatable, Hashable, Identifi
         self.color = color
         self.sortOrder = sortOrder
         self.templates = templates
+        self.systemKey = systemKey
     }
 }
 

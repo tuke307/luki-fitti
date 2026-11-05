@@ -58,6 +58,10 @@ public final class OfflineStore {
     /// Deleted workouts whose server copy still has to be deleted (retried on every sync).
     public private(set) var pendingServerDeletes: [String] = []
     @ObservationIgnored private var isFlushingDeletes = false
+    /// Folder/template changes not sent to the server yet (see `WorkoutOutbox`).
+    public internal(set) var workoutOutbox: [WorkoutOutboxOp] = []
+    @ObservationIgnored var inFlightWorkoutKeys: Set<String> = []
+    @ObservationIgnored var isFlushingWorkoutOutbox = false
     private static let maxDeletedSessionIds = 500
 
     private let storageDirectory: URL
@@ -105,7 +109,8 @@ public final class OfflineStore {
             writeJSON(catalog, to: "exercise_catalog.json")
         }
 
-        if let savedOverview: WorkoutsOverviewDto = readJSON("workouts_overview.json"), !savedOverview.folders.isEmpty {
+        // A saved overview wins even when empty: the user may have deleted every folder.
+        if let savedOverview: WorkoutsOverviewDto = readJSON("workouts_overview.json") {
             folders = savedOverview.folders
             unfiledTemplates = savedOverview.unfiledTemplates
         } else {
@@ -129,6 +134,7 @@ public final class OfflineStore {
             .filter { $0.status == .COMPLETED && !isDeleted($0) }
             .sorted { $0.startedAt > $1.startedAt }
         syncQueue = readJSON("sync_queue.json") ?? []
+        workoutOutbox = readJSON("workout_outbox.json") ?? []
         currentUser = readJSON("current_user.json")
         conflictItem = syncQueue.first(where: { $0.serverConflictSession != nil })
         updateSyncStateBadge()
@@ -269,6 +275,11 @@ public final class OfflineStore {
 
     public func flushSyncQueue() async {
         await flushPendingDeletes()
+        // Workout structure goes first: synced sessions may reference a new workout.
+        let workoutFlush = await flushWorkoutOutbox()
+        if workoutFlush.needsRefresh, let overview = try? await apiClient.fetchWorkoutsOverview() {
+            applyServerWorkoutsOverview(overview)
+        }
         guard !syncQueue.isEmpty else {
             updateSyncStateBadge()
             return
@@ -408,6 +419,7 @@ public final class OfflineStore {
             "current_user.json",
             "deleted_sessions.json",
             "pending_session_deletes.json",
+            "workout_outbox.json",
         ] {
             deleteFile(file)
         }
@@ -415,6 +427,7 @@ public final class OfflineStore {
         activeSession = nil
         historySessions = []
         syncQueue = []
+        workoutOutbox = []
         deletedSessionIds = []
         pendingServerDeletes = []
         currentUser = nil
@@ -499,7 +512,7 @@ public final class OfflineStore {
             saveCatalog(mergedList)
         }
         if let overview = try? await apiClient.fetchWorkoutsOverview() {
-            saveWorkoutsOverview(folders: overview.folders, unfiledTemplates: overview.unfiledTemplates)
+            applyServerWorkoutsOverview(overview)
             // Ensure any exercise embedded in user templates is also in the local catalog
             var mergedById = Dictionary(uniqueKeysWithValues: catalog.map { ($0.id, $0) })
             var addedAny = false
@@ -534,12 +547,15 @@ public final class OfflineStore {
         currentUser != nil && !apiClient.isAuthenticated()
     }
 
-    private func updateSyncStateBadge() {
+    /// Changes on this device not on the server yet (workouts and folder/workout edits).
+    public var pendingChangesCount: Int { syncQueue.count + workoutOutbox.count }
+
+    func updateSyncStateBadge() {
         if needsReauthentication {
             syncState = .AUTH_EXPIRED
         } else if conflictItem != nil {
             syncState = .CONFLICT
-        } else if !syncQueue.isEmpty {
+        } else if !syncQueue.isEmpty || !workoutOutbox.isEmpty {
             syncState = .SAVED_LOCALLY
         } else {
             syncState = .SYNCED
@@ -550,13 +566,13 @@ public final class OfflineStore {
         storageDirectory.appendingPathComponent(name)
     }
 
-    private func readJSON<T: Decodable>(_ name: String) -> T? {
+    func readJSON<T: Decodable>(_ name: String) -> T? {
         let url = fileURL(name)
         guard let data = try? Data(contentsOf: url) else { return nil }
         return try? JSONDecoder().decode(T.self, from: data)
     }
 
-    private func writeJSON<T: Encodable>(_ value: T, to name: String) {
+    func writeJSON<T: Encodable>(_ value: T, to name: String) {
         let url = fileURL(name)
         guard let data = try? JSONEncoder().encode(value) else { return }
         try? data.write(to: url, options: .atomic)
