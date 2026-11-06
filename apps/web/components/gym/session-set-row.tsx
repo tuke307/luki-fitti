@@ -139,7 +139,7 @@ export function SessionSetRow({
       (repsBadgeLabel && setSuggestion.suggestedReps !== null));
 
   const stepperBtn =
-    'text-foreground/70 hover:text-foreground flex h-11 w-9 shrink-0 items-center justify-center rounded-lg transition-colors active:bg-background/70';
+    'text-foreground/70 hover:text-foreground flex h-11 w-8 shrink-0 items-center justify-center rounded-lg transition-colors active:bg-background/70';
   const isSpecialType = set.setType !== SetType.WORKING;
 
   return (
@@ -166,7 +166,7 @@ export function SessionSetRow({
             {contextLabel}
           </p>
         )}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {/* Set badge opens the set menu: type picker plus Delete, so nothing is swipe-only. */}
           <SetTypeMenu
             setType={set.setType}
@@ -210,7 +210,7 @@ export function SessionSetRow({
             </div>
           ) : (
             <>
-              <div className="bg-secondary flex h-11 min-w-0 flex-[1.3] items-center rounded-xl px-0.5">
+              <div className="bg-secondary flex h-11 flex-[1.3] items-center rounded-xl px-0 min-w-[6.5rem]">
                 <button
                   type="button"
                   aria-label={format(t.a11y.decreaseWeight, { step, n })}
@@ -229,9 +229,15 @@ export function SessionSetRow({
                     value={set.weight}
                     onValueChange={(val) => patch({ weight: val })}
                     placeholder="0"
-                    className="font-rounded w-full min-w-0 bg-transparent text-center text-[1.0625rem] font-semibold outline-none"
+                    className="font-rounded w-full min-w-10 bg-transparent text-center text-[1.0625rem] font-semibold outline-none max-sm:text-[0.9375rem]"
                   />
-                  <span className="text-muted-foreground text-[0.8125rem]">{unit}</span>
+                  <span className="sr-only">{unit}</span>
+                  <span
+                    aria-hidden="true"
+                    className="text-muted-foreground hidden text-[0.8125rem] min-[400px]:inline"
+                  >
+                    {unit}
+                  </span>
                 </div>
                 <button
                   type="button"
@@ -243,7 +249,7 @@ export function SessionSetRow({
                 </button>
               </div>
 
-              <div className="bg-secondary flex h-11 min-w-0 flex-1 items-center rounded-xl px-0.5">
+              <div className="bg-secondary flex h-11 flex-1 items-center rounded-xl px-0 min-w-[6rem]">
                 <button
                   type="button"
                   aria-label={format(t.a11y.decreaseReps, { n })}
@@ -260,7 +266,7 @@ export function SessionSetRow({
                   value={set.reps}
                   onValueChange={(val) => patch({ reps: val })}
                   placeholder="0"
-                  className="font-rounded w-full min-w-10 bg-transparent text-center text-[1.0625rem] font-semibold outline-none"
+                  className="font-rounded w-full min-w-8 bg-transparent text-center text-[1.0625rem] font-semibold outline-none max-sm:text-[0.9375rem]"
                 />
                 <button
                   type="button"
