@@ -27,6 +27,21 @@
     <string>LukiFitti saves your completed strength and stretching workouts to Apple Health to close your Move and Exercise rings, and saves the weigh-ins you log in LukiFitti as body weight.</string>
     <key>NSCameraUsageDescription</key>
     <string>LukiFitti uses the camera when you photograph a meal so it can estimate the foods and calories.</string>
+    <key>UILaunchScreen</key>
+    <dict/>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationPortraitUpsideDown</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
     <key>NSSupportsLiveActivities</key>
     <true/>
     <key>LUKIFITTI_API_BASE_URL</key>
