@@ -43,6 +43,7 @@ import {
   isoWeekDays,
   orderWarmupsFirst,
   startOfIsoWeek,
+  computeHistoryInsights,
 } from '@luki-fitti/common/utils/client';
 import {
   ExerciseType,
@@ -156,17 +157,6 @@ export function DiaryAnalyticsView() {
     let totalStretchSec = 0;
 
     const muscleSets = new Map<MuscleGroup, { sets: number; volumeKg: number }>();
-    const prMap = new Map<
-      string,
-      {
-        exerciseName: string;
-        muscle: MuscleGroup;
-        maxWeightKg: number;
-        reps: number;
-        est1RM: number;
-        date: string;
-      }
-    >();
     const progression: Array<{
       date: string;
       workoutName: string;
@@ -216,23 +206,6 @@ export function DiaryAnalyticsView() {
               const est1RM = wKg * (1 + reps / 30);
               if (wKg > exMaxWeight) exMaxWeight = wKg;
               if (est1RM > exBest1RM) exBest1RM = est1RM;
-
-              const key = ex.exerciseId ?? ex.exerciseNameSnapshot;
-              const prev = prMap.get(key);
-              if (
-                !prev ||
-                wKg > prev.maxWeightKg ||
-                (wKg === prev.maxWeightKg && reps > prev.reps)
-              ) {
-                prMap.set(key, {
-                  exerciseName: ex.exerciseNameSnapshot,
-                  muscle: ex.primaryMuscleSnapshot,
-                  maxWeightKg: Math.round(wKg * 10) / 10,
-                  reps,
-                  est1RM: Math.round(est1RM * 10) / 10,
-                  date: formatDate(s.startedAt),
-                });
-              }
             }
           }
           muscleSets.set(ex.primaryMuscleSnapshot, curM);
@@ -272,7 +245,10 @@ export function DiaryAnalyticsView() {
       totalVolumeKg: Math.round(totalVolumeKg),
       totalStretchMinutes: Math.round(totalStretchSec / 60),
       muscleDistribution,
-      personalRecords: Array.from(prMap.values()).sort((a, b) => b.est1RM - a.est1RM),
+      personalRecords: computeHistoryInsights(filteredSessions, {
+        muscle: filterMuscle !== 'ALL' ? filterMuscle : undefined,
+        exerciseId: selectedExerciseId !== 'ALL' ? selectedExerciseId : undefined,
+      }).personalRecords.map((p) => ({ ...p, date: formatDate(p.startedAt) })),
       progression: progression.slice(-20),
     };
   }, [filteredSessions, filterMuscle, selectedExerciseId, muscleLabel]);
