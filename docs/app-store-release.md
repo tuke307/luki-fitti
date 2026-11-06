@@ -38,33 +38,60 @@ There is one app record, not three: the watch app and the widgets ship inside th
 ## Signing setup
 
 The pipeline signs manually, with one certificate and three provisioning profiles. Create them once
-and renew them yearly.
+and renew them yearly. Keep the files together in a folder outside this repository, under the file
+names given below, because the commands in [GitHub secrets](#github-secrets) expect them.
 
 ### 1. Distribution certificate
+
+The portal needs a certificate request from your Mac. Xcode creates it for you, which makes this the
+shortest route:
+
+1. Xcode → Settings → Apple Accounts (Accounts in older versions) → select the team → **Manage
+   Certificates…**.
+2. **+** → **Apple Distribution**. If the button is disabled, your account lacks the right to create
+   distribution certificates, which takes the Account Holder or Admin role.
+3. Right-click the new certificate → **Export Certificate**. Save it as `distribution.p12`, with a
+   strong password. That password is the value of `APPLE_DISTRIBUTION_P12_PASSWORD`.
+
+The new certificate then shows up in the portal as well.
+
+Or with Keychain Access, which is in `/System/Library/CoreServices/Applications/` on current macOS:
 
 1. Keychain Access → Certificate Assistant → **Request a Certificate From a Certificate Authority**,
    saved to disk.
 2. Portal → Certificates → **+** → **Apple Distribution**, then upload the request and download the
    certificate.
 3. Open the certificate to add it to your keychain. In **My Certificates**, export it with its
-   private key as `.p12`, using a strong password.
+   private key as `distribution.p12`, using a strong password.
 
 ### 2. Provisioning profiles
 
-Portal → Profiles → **+** → **App Store Connect**. Create these after the App Group is assigned, and
-select the certificate from step 1. The names must match exactly, because
-`apps/apple/Config/AppStore.xcconfig` and `ExportOptions-AppStore.plist` refer to them:
+Create these after the App Group is assigned. Repeat the steps for each row of the table:
 
-| App ID                          | Profile name                  |
-| :--                             | :--                           |
-| `com.lukifitti.app`             | `LukiFitti iOS App Store`     |
-| `com.lukifitti.app.watchkitapp` | `LukiFitti Watch App Store`   |
-| `com.lukifitti.app.widgets`     | `LukiFitti Widgets App Store` |
+1. [Portal → Profiles](https://developer.apple.com/account/resources/profiles/list) → **+** → under
+   Distribution, **App Store Connect**.
+2. Select the App ID.
+3. Select the certificate from step 1. If there are several, take the one with the latest expiry
+   date.
+4. Enter the profile name exactly as shown, because `apps/apple/Config/AppStore.xcconfig` and
+   `ExportOptions-AppStore.plist` refer to it.
+5. **Generate**, download the file and rename it.
+
+| App ID                          | Profile name                  | File name                 |
+| :--                             | :--                           | :--                       |
+| `com.lukifitti.app`             | `LukiFitti iOS App Store`     | `ios.mobileprovision`     |
+| `com.lukifitti.app.watchkitapp` | `LukiFitti Watch App Store`   | `watch.mobileprovision`   |
+| `com.lukifitti.app.widgets`     | `LukiFitti Widgets App Store` | `widgets.mobileprovision` |
 
 ### 3. App Store Connect API key
 
-App Store Connect → Users and Access → Integrations → Team Keys → **+**, with the **App Manager**
-role. The `.p8` file can be downloaded only once. Note the key ID and the issuer ID.
+Open [Users and Access → Integrations → Team Keys](https://appstoreconnect.apple.com/access/integrations/api)
+in App Store Connect. If it shows **Request Access**, the Account Holder has to confirm that first.
+
+1. **+**, name the key `LukiFitti CI`, select the **App Manager** role, then **Generate**.
+2. Download the key, which is possible only once. Rename `AuthKey_….p8` to `AuthKey.p8`.
+3. Note two values from the same page: the **Key ID** in the key's row is `ASC_KEY_ID`, and the
+   **Issuer ID** above the table is `ASC_ISSUER_ID`.
 
 ## GitHub secrets
 
@@ -82,8 +109,9 @@ The workflow needs these secrets:
 | `ASC_ISSUER_ID`                   | API issuer ID                            |
 | `ASC_KEY_P8_BASE64`               | The `.p8` file, base64 encoded           |
 
-Any collaborator on this repository can set them with `gh`. Run this in your own terminal. Values
-entered at the prompt don't end up in the shell history, and the files are read directly:
+Any collaborator on this repository can set them with `gh`. Run this in your own terminal, from the
+folder with the files. Values entered at the prompt don't end up in the shell history, and the files
+are read directly:
 
 ```bash
 gh secret set APPLE_TEAM_ID --repo tuke307/luki-fitti
@@ -98,7 +126,13 @@ base64 -i widgets.mobileprovision | gh secret set APPLE_PROFILE_WIDGETS_BASE64 -
 base64 -i AuthKey.p8 | gh secret set ASC_KEY_P8_BASE64 --repo tuke307/luki-fitti
 ```
 
-Keep the files in a password manager, outside this repository.
+Check that all nine are listed. This shows only the names, because GitHub doesn't reveal the values:
+
+```bash
+gh secret list --repo tuke307/luki-fitti
+```
+
+Then move the files to a password manager and delete the folder.
 
 ## Running the pipeline
 
