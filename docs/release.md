@@ -3,10 +3,11 @@
 Web, API and email worker deploy automatically: every push to `main` builds the changed images
 and deploys them to Coolify (`.github/workflows/production.yaml`). Database migrations run in
 the `luki-fitti-db-migrate` container before the API starts. The iOS and watchOS apps are
-archived and uploaded by hand.
+archived and uploaded by the App Store workflow, which you start by hand
+(`.github/workflows/app-store.yaml`, see [app-store-release.md](app-store-release.md)).
 
-> Until the first App Store release the version stays at **1.0.0** (only `CURRENT_PROJECT_VERSION`
-> goes up for TestFlight uploads). Until then, regenerate the marketing screenshots whenever the
+> Until the first App Store release the version stays at **1.0.0** (only the build number goes
+> up for TestFlight uploads). Until then, regenerate the marketing screenshots whenever the
 > UI changes noticeably; from the first App Store release on, regenerate them with every
 > version bump.
 
@@ -17,7 +18,7 @@ One version for all platforms:
 | Where | Field |
 | :-- | :-- |
 | `apps/web/package.json` | `version` (shown in web settings) |
-| `apps/apple/project.yml` | `MARKETING_VERSION` (same as web) and `CURRENT_PROJECT_VERSION` (+1 for every upload) |
+| `apps/apple/project.yml` | `MARKETING_VERSION` (same as web). The App Store workflow sets the build number itself; raise `CURRENT_PROJECT_VERSION` only for uploads from Xcode |
 
 ## 2. Regenerate the marketing screenshots
 
@@ -55,9 +56,9 @@ Production workflow. Check the version footer in web settings after the deploy.
 
 ## 5. iOS and watchOS
 
-1. `cd apps/apple && xcodegen generate`
-2. Archive the `LukiFittiIOS` scheme in Xcode (Release) and upload it to App Store Connect; the
-   watch app ships inside it.
-3. In App Store Connect: add the build to TestFlight, and for an App Store release upload the
+1. Run the App Store workflow on `main`: `gh workflow run app-store.yaml --ref main`. It archives
+   the `LukiFittiIOS` scheme and uploads it to App Store Connect; the watch app ships inside it.
+   Setup and secrets are described in [app-store-release.md](app-store-release.md).
+2. In App Store Connect: add the build to TestFlight, and for an App Store release upload the
    screenshots from `apps/apple/marketing/appstore/` (English and German) and write the release
    notes.

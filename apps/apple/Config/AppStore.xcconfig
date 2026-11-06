@@ -1,0 +1,11 @@
+// Manual App Store signing, passed to xcodebuild with -xcconfig by .github/workflows/app-store.yaml.
+// Holds no secrets: the team ID comes from the workflow, the certificate and profiles from its environment.
+// The profile names must match the names in the Apple Developer portal (docs/app-store-release.md).
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_IDENTITY = Apple Distribution
+
+// Resolved per target, so Swift package targets stay without a profile.
+PROVISIONING_PROFILE_SPECIFIER = $(LUKIFITTI_APP_STORE_PROFILE_$(TARGET_NAME))
+LUKIFITTI_APP_STORE_PROFILE_LukiFittiIOS = LukiFitti iOS App Store
+LUKIFITTI_APP_STORE_PROFILE_LukiFittiWatch = LukiFitti Watch App Store
+LUKIFITTI_APP_STORE_PROFILE_LukiFittiWidgets = LukiFitti Widgets App Store
