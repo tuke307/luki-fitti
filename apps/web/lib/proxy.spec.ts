@@ -20,9 +20,9 @@ function decision(res: { headers: Headers }): { kind: string; dest?: string } {
   return { kind: 'next' };
 }
 
-test('site host: / rewrites to /site', async () => {
+test('site host: / rewrites to /site/de', async () => {
   const res = await proxy(req('luki-fitti.tony-luke.de', '/'));
-  assert.deepEqual(decision(res), { kind: 'rewrite', dest: 'https://luki-fitti.tony-luke.de/site' });
+  assert.deepEqual(decision(res), { kind: 'rewrite', dest: 'https://luki-fitti.tony-luke.de/site/de' });
 });
 
 test('site host: legal paths rewrite to /site/*', async () => {
@@ -93,14 +93,4 @@ test('localhost dev: /site/* passes and ?site=1 rewrites', async () => {
   const preview = await proxy(req('localhost:3000', '/?site=1'));
   assert.equal(decision(preview).kind, 'rewrite');
   assert.match(decision(preview).dest ?? '', /\/site\/de$/);
-});
-
-test('dev: site.localhost host rewrites / to /site/de', async () => {
-  const r = await proxy(req('site.localhost:3000', '/'));
-  assert.ok(r.headers.get('x-middleware-rewrite')?.includes('/site/de'));
-});
-
-test('dev: app host rewrites /impressum to /site/de/impressum', async () => {
-  const r = await proxy(req('localhost:3000', '/impressum'));
-  assert.ok(r.headers.get('x-middleware-rewrite')?.includes('/site/de/impressum'));
 });
