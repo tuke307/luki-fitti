@@ -16,6 +16,8 @@
     },
     {
       "id": "ipad-13",
+      "bezel": true,
+      "deviceFrac": 0.88,
       "canvas": [2064, 2752],
       "raw": "raw/ipad-{lang}",
       "frame": "ipad-pro-13.png",
