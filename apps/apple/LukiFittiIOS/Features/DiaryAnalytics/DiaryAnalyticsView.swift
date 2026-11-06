@@ -611,6 +611,11 @@ public struct DiaryAnalyticsView: View {
                         .font(.footnote.weight(.medium))
                         .foregroundStyle(.secondary)
                 }
+                if session.sourceDevice == .IMPORT {
+                    Label(tr("Imported"), systemImage: "square.and.arrow.down")
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Text(item.date.formatted(date: .abbreviated, time: .shortened))

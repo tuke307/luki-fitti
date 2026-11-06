@@ -457,6 +457,7 @@ public enum LukiStrings {
         "Health": "Health",
         "Import from other apps": "Aus anderen Apps importieren",
         "Step-by-step guides for moving your data into LukiFitti.": "Schritt-für-Schritt-Anleitungen, um deine Daten in LukiFitti zu übernehmen.",
+        "Imported": "Importiert",
         "Imported from Apple Health": "Aus Apple Health importiert",
         "Increase weight by %@": "Gewicht um %@ erhöhen",
         "Last weigh-in: %@": "Zuletzt gewogen: %@",
