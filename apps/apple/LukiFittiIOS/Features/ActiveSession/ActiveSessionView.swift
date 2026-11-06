@@ -18,17 +18,30 @@ public struct ActiveSessionView: View {
     }
 
     public var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                if let completed = viewModel.completedSummarySession {
-                    summaryCard(completed)
-                } else if let session = viewModel.store.activeSession {
-                    sessionHeader(session)
-                    verticalExerciseStack(session)
-                    sessionFooterActions
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    if let completed = viewModel.completedSummarySession {
+                        summaryCard(completed)
+                    } else if let session = viewModel.store.activeSession {
+                        sessionHeader(session)
+                        verticalExerciseStack(session)
+                        sessionFooterActions
+                    }
+                }
+                .padding(16)
+            }
+            .onChange(of: viewModel.store.activeSession?.restTimerEndsAt) { _, endsAt in
+                // The rest dock covers the bottom of the list; bring the next open set above it.
+                guard endsAt != nil,
+                      let session = viewModel.store.activeSession,
+                      let next = session.exercises
+                      .flatMap(\.sets)
+                      .first(where: { !$0.completed }) else { return }
+                withAnimation {
+                    proxy.scrollTo(next.clientSetId, anchor: .bottom)
                 }
             }
-            .padding(16)
         }
         .scrollDismissesKeyboard(.interactively)
         .toolbar {
@@ -749,6 +762,7 @@ public struct ActiveSessionView: View {
                         badgeLabel: idx < labels.count ? labels[idx] : "\(idx + 1)",
                         suggestion: idx < suggestions.count ? suggestions[idx] : nil
                     )
+                    .id(set.clientSetId)
                 }
             }
 

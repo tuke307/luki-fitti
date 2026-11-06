@@ -210,6 +210,34 @@ final class IOSActiveSessionUITests: XCTestCase {
         XCTAssertEqual(numbers.last, "3", "summary should show 3 sets, got “\(sets.label)”")
     }
 
+    /// On small phones the rest dock covered the next set row; the app must scroll it clear so
+    /// three sets can be tapped in a row without manual scrolling and all three are saved.
+    func testCompletesThreeSetsWithoutManualScrollingOnSmallScreens() {
+        let app = IOSUITestHelpers.launchApp()
+        let start = app.buttons["ios.home.startSuggestedButton"]
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        start.tap()
+
+        for n in 1...3 {
+            let complete = app.buttons["ios.session.completeSet.\(n)"]
+            XCTAssertTrue(complete.waitForExistence(timeout: 5))
+            complete.tap()
+            XCTAssertTrue(
+                complete.waitForLabel(beginningWith: "Mark set \(n) not done"),
+                "set \(n) should be completed, label “\(complete.label)”"
+            )
+        }
+
+        let finish = app.buttons["ios.session.finishButton"]
+        for _ in 0..<10 where !(finish.exists && finish.isHittable) { app.swipeUp() }
+        finish.tap()
+
+        let sets = app.descendants(matching: .any)["ios.session.summary.sets"]
+        XCTAssertTrue(sets.waitForExistence(timeout: 8))
+        let numbers = sets.label.split(whereSeparator: { !$0.isNumber })
+        XCTAssertEqual(numbers.last, "3", "summary should show 3 sets, got “\(sets.label)”")
+    }
+
     func testReplaceSheetOffersTheSameMovementFirst() {
         let app = IOSUITestHelpers.launchApp(extraArguments: ["--uitesting-seed-active-session"])
         let header = app.descendants(matching: .any)["ios.session.exerciseHeader.1"]
