@@ -391,6 +391,7 @@ export const en = {
     removeFromSessionTitle: 'Remove from this workout',
     targetSetsRepsLabel: 'Goal',
     restIntervalLabel: 'Rest',
+    restShort: '{seconds} s rest',
     lastSessionFrom: 'Last time ({name})',
     previousBenchmark: 'Last time',
     firstLoggedSession: 'First time doing this exercise',

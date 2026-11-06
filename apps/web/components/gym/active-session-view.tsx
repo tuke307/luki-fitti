@@ -532,15 +532,11 @@ export function ActiveSessionView({
       ex.targetRepsMin && ex.targetRepsMax && ex.targetRepsMin !== ex.targetRepsMax
         ? `${ex.targetRepsMin}–${ex.targetRepsMax}`
         : `${ex.targetRepsMin ?? 10}`;
-    const goalLine = [
+    const goalParts = [
       muscleLabel(ex.primaryMuscleSnapshot),
-      `${ex.plannedSets}×${repsText}${ex.targetWeight ? ` · ${ex.targetWeight} ${activeSession.weightUnit.toLowerCase()}` : ''}`,
-      ex.restSeconds > 0
-        ? `${ex.restSeconds} ${t.common.sec} ${t.session.restIntervalLabel.toLowerCase()}`
-        : null,
-    ]
-      .filter(Boolean)
-      .join(' · ');
+      `${ex.plannedSets}×${repsText}${ex.targetWeight ? ` ${ex.targetWeight} ${activeSession.weightUnit.toLowerCase()}` : ''}`,
+      ex.restSeconds > 0 ? format(t.session.restShort, { seconds: ex.restSeconds }) : null,
+    ].filter(Boolean);
 
     return (
       <section
@@ -566,7 +562,14 @@ export function ActiveSessionView({
                 </button>
               </h2>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <p className="text-muted-foreground text-[0.8125rem] tabular-nums">{goalLine}</p>
+                <p className="text-muted-foreground text-[0.8125rem] tabular-nums">
+                  {goalParts.map((part, i) => (
+                    <React.Fragment key={i}>
+                      {i > 0 && ' · '}
+                      <span className="whitespace-nowrap">{part}</span>
+                    </React.Fragment>
+                  ))}
+                </p>
                 <LateralityBadge laterality={catEx?.laterality} />
               </div>
               {renderStatusChips(ex)}

@@ -392,6 +392,7 @@ export const de = {
     removeFromSessionTitle: 'Aus diesem Training entfernen',
     targetSetsRepsLabel: 'Ziel',
     restIntervalLabel: 'Pause',
+    restShort: '{seconds} s Pause',
     lastSessionFrom: 'Letztes Mal ({name})',
     previousBenchmark: 'Letztes Mal',
     firstLoggedSession: 'Zum ersten Mal dabei',
