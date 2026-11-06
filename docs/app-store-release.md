@@ -155,10 +155,10 @@ After the upload, App Store Connect processes the build, and then it shows up un
 
 ## Before the first App Store submission
 
-- Add `PrivacyInfo.xcprivacy`: the apps use `UserDefaults`, which Apple requires a declared reason
-  for.
-- Answer the encryption question for each build, or set `ITSAppUsesNonExemptEncryption` in
-  `Info.plist` once the answer is clear.
+- Each app target ships a `PrivacyInfo.xcprivacy` (`UserDefaults` reason CA92.1). The collected
+  data types in it must match the App Privacy answers in App Store Connect.
+  `ITSAppUsesNonExemptEncryption` is `false`, because the apps only use HTTPS and system
+  encryption.
 - Fill in the App Store listing, App Privacy and the privacy policy URL. Screenshots are in
   `apps/apple/marketing/appstore/`.
 
