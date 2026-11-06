@@ -513,7 +513,8 @@ export const enFeatures = {
     modelChosen: 'your choice',
     modelLoading: 'Loading model…',
     modelUnavailable: 'Model details are unavailable right now.',
-    pricing: '{input} per 1M input tokens · {output} per 1M output tokens',
+    pricingInput: '{input} per 1M input tokens',
+    pricingOutput: '{output} per 1M output tokens',
     changeModel: 'You can change the model under Profile → AI models.',
     dataTitle: 'What gets sent',
     data: {

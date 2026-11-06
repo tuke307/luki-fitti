@@ -523,7 +523,8 @@ export const deFeatures: Widen<typeof enFeatures> = {
     modelChosen: 'deine Wahl',
     modelLoading: 'Modell wird geladen…',
     modelUnavailable: 'Modelldetails sind gerade nicht verfügbar.',
-    pricing: '{input} pro 1 Mio. Eingabe-Tokens · {output} pro 1 Mio. Ausgabe-Tokens',
+    pricingInput: '{input} pro 1 Mio. Eingabe-Tokens',
+    pricingOutput: '{output} pro 1 Mio. Ausgabe-Tokens',
     changeModel: 'Das Modell kannst du unter Profil → KI-Modelle ändern.',
     dataTitle: 'Was gesendet wird',
     data: {
