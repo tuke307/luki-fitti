@@ -1,8 +1,20 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Route } from '@playwright/test';
 import { mockAuthenticatedSession, resetOfflineStore } from './helpers/offline-store.js';
 import { toggleCompleteSetRow } from './helpers/session.js';
 import { expectSyncBadge } from './helpers/shell.js';
 import { createWorkoutTemplate, gotoWorkoutsTab, startWorkoutByName } from './helpers/workouts.js';
+
+/** Echoes mutation requests (POST/PUT/PATCH/DELETE) back as a success; GETs hit the API. */
+const fulfillMutation = async (route: Route) => {
+  const req = route.request();
+  if (req.method() === 'GET' || req.method() === 'HEAD') return route.fallback();
+  const body = req.postDataJSON() ?? { success: true };
+  await route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ success: true, data: body }),
+  });
+};
 
 test.describe('Offline Durability & Sync Conflict Resolution', () => {
   test('workout sets logged offline survive page reload via IndexedDB', async ({
@@ -38,6 +50,12 @@ test.describe('Offline Durability & Sync Conflict Resolution', () => {
   }) => {
     await resetOfflineStore(page);
     await mockAuthenticatedSession(page);
+
+    // flushSyncQueue uploads pending workout changes before sessions. Without these
+    // mocks the template created below hits the real API, gets a 401 and stops the
+    // flush with `stoppedBy: 'auth'` — the session sync is never attempted.
+    await page.route('**/api/workouts/folders/**', fulfillMutation);
+    await page.route('**/api/workouts/templates/**', fulfillMutation);
 
     let syncCallCount = 0;
     await page.route('**/api/sessions/sync', async (route) => {
