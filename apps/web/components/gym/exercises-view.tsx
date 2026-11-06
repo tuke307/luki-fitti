@@ -11,6 +11,7 @@ import {
   ArrowRightLeft,
   Filter,
   ChevronRight,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { Badge } from '@luki-fitti/ui/components/ui/badge';
 import { Button } from '@luki-fitti/ui/components/ui/button';
@@ -34,6 +35,9 @@ import { searchExercises } from '@luki-fitti/common/utils/client';
 import { ExercisePicker, filterExercisesByQuery, searchIndexFor } from './exercise-picker';
 import { ExerciseVisual } from './exercise-visual';
 import { ExerciseGuideSheet } from './exercise-guide-sheet';
+import { ChipStrip } from './chip-strip';
+import { MobileSheet } from './mobile-sheet';
+import { PageTitle } from './page-title';
 import { LateralityBadge } from './laterality-badge';
 import { ConfirmDestructiveDialog } from './confirm-destructive-dialog';
 import { NumberInput } from './number-input';
@@ -63,7 +67,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
     activeSession,
     addExerciseToSession,
   } = useGym();
-  const { t, format, muscleLabel, equipmentLabel, exerciseTypeLabel } = useLocale();
+  const { t, format, bcp47, muscleLabel, equipmentLabel, exerciseTypeLabel } = useLocale();
 
   const [subTab, setSubTab] = useState<'catalog' | 'stretching'>('catalog');
   const [search, setSearch] = useState('');
@@ -77,6 +81,7 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
   } | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showCreateRoutineModal, setShowCreateRoutineModal] = useState(false);
+  const [showFilterSheet, setShowFilterSheet] = useState(false);
 
   // New Custom Exercise state
   const [newName, setNewName] = useState('');
@@ -141,6 +146,63 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
       ...catalog.filter((e) => e.exerciseType !== ExerciseType.STRETCHING),
     ],
     [catalog, stretchExercises],
+  );
+
+  const formatCount = (count: number) => count.toLocaleString(bcp47);
+  const activeFilterCount = Number(selectedType !== 'ALL') + Number(selectedEquipment !== 'ALL');
+  const openNewRoutine = () => {
+    if (routineItems.length === 0 && stretchExercises[0]) {
+      setRoutineItems([
+        {
+          exerciseId: stretchExercises[0].id,
+          sets: 2,
+          durationSeconds: 45,
+          reps: null,
+          transitionSeconds: 15,
+        },
+      ]);
+    }
+    setShowCreateRoutineModal(true);
+  };
+
+  const typeAndEquipmentFilters = (
+    <>
+      <div
+        role="group"
+        aria-label={t.exercises.typeLabel}
+        className="flex flex-wrap items-center gap-1.5 sm:gap-2"
+      >
+        <span className="text-muted-foreground flex items-center gap-1 text-xs">
+          <Filter className="h-3.5 w-3.5" />
+          {t.exercises.typeLabel}
+        </span>
+        {(['ALL', ...Object.values(ExerciseType)] as const).map((tp) => (
+          <Button
+            key={tp}
+            type="button"
+            aria-pressed={selectedType === tp}
+            variant={selectedType === tp ? 'accent' : 'secondary'}
+            size="xs"
+            onClick={() => setSelectedType(tp)}
+          >
+            {tp === 'ALL' ? t.exercises.allTypes : exerciseTypeLabel(tp)}
+          </Button>
+        ))}
+      </div>
+      <NativeSelect
+        aria-label={t.a11y.filterEquipment}
+        value={selectedEquipment}
+        onChange={(e) => setSelectedEquipment(e.target.value as EquipmentType | 'ALL')}
+        className="w-full sm:w-auto"
+      >
+        <option value="ALL">{t.exercises.allEquipment}</option>
+        {Object.values(EquipmentType).map((eq) => (
+          <option key={eq} value={eq}>
+            {equipmentLabel(eq)}
+          </option>
+        ))}
+      </NativeSelect>
+    </>
   );
 
   const handleCreateExercise = async (e: React.FormEvent) => {
@@ -213,76 +275,68 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
 
   return (
     <div className="min-w-0 max-w-full space-y-6 pb-10">
-      {/* Header & Sub-navigation */}
-      <div className="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:justify-between">
-        <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-            {t.exercises.title}
-          </h1>
-          <p className="text-muted-foreground text-xs sm:text-sm">
-            {format(t.exercises.subtitle, { count: catalog.length })}
-          </p>
-        </div>
-
-        <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center lg:w-auto">
-          <Tabs
-            value={subTab}
-            onValueChange={(val) => setSubTab(val as 'catalog' | 'stretching')}
-            className="w-full min-w-0 sm:w-auto"
-          >
-            <TabsList className="grid w-full grid-cols-2 sm:inline-flex sm:w-auto">
-              <TabsTrigger value="catalog" className="truncate px-2 text-xs sm:px-3">
-                {format(t.exercises.catalogTab, { count: catalog.length })}
-              </TabsTrigger>
-              <TabsTrigger
-                value="stretching"
-                className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground truncate px-2 text-xs sm:px-3"
-              >
-                {format(t.exercises.stretchingTab, { count: stretchingRoutines.length })}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          {subTab === 'catalog' ? (
-            <Button
-              type="button"
-              onClick={() => setShowCreateModal(true)}
-              className="w-full shrink-0 sm:w-auto"
-            >
-              <Plus className="h-4 w-4" />
-              {t.exercises.customExerciseBtn}
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="accent"
-              onClick={() => {
-                if (routineItems.length === 0 && stretchExercises[0]) {
-                  setRoutineItems([
-                    {
-                      exerciseId: stretchExercises[0].id,
-                      sets: 2,
-                      durationSeconds: 45,
-                      reps: null,
-                      transitionSeconds: 15,
-                    },
-                  ]);
+      <div className="space-y-3">
+        <PageTitle
+          title={t.exercises.title}
+          actions={
+            <>
+              <Button
+                type="button"
+                size="icon"
+                variant="secondary"
+                aria-label={
+                  subTab === 'catalog' ? t.exercises.customExerciseBtn : t.exercises.newRoutineBtn
                 }
-                setShowCreateRoutineModal(true);
-              }}
-              className="w-full shrink-0 sm:w-auto"
-            >
-              <Plus className="h-4 w-4" />
-              {t.exercises.newRoutineBtn}
-            </Button>
-          )}
-        </div>
+                onClick={subTab === 'catalog' ? () => setShowCreateModal(true) : openNewRoutine}
+                className="bg-card size-11 md:hidden"
+              >
+                <Plus className="text-primary h-5 w-5" />
+              </Button>
+              {subTab === 'catalog' ? (
+                <Button
+                  type="button"
+                  onClick={() => setShowCreateModal(true)}
+                  className="hidden md:inline-flex"
+                >
+                  <Plus className="h-4 w-4" />
+                  {t.exercises.customExerciseBtn}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="accent"
+                  onClick={openNewRoutine}
+                  className="hidden md:inline-flex"
+                >
+                  <Plus className="h-4 w-4" />
+                  {t.exercises.newRoutineBtn}
+                </Button>
+              )}
+            </>
+          }
+        />
+
+        <Tabs
+          value={subTab}
+          onValueChange={(val) => setSubTab(val as 'catalog' | 'stretching')}
+          className="w-full min-w-0 md:w-fit"
+        >
+          <TabsList className="grid w-full grid-cols-2 md:inline-flex md:w-auto">
+            <TabsTrigger value="catalog" className="truncate px-2 sm:px-3">
+              {format(t.exercises.catalogTabCount, { count: formatCount(catalog.length) })}
+            </TabsTrigger>
+            <TabsTrigger value="stretching" className="truncate px-2 sm:px-3">
+              {format(t.exercises.stretchingTabCount, {
+                count: formatCount(stretchingRoutines.length),
+              })}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       {subTab === 'catalog' ? (
         <>
-          {/* Search & Filters */}
-          <Card className="min-w-0 space-y-3 overflow-hidden p-3.5 sm:p-4">
+          <div className="min-w-0 space-y-3">
             <div className="relative">
               <Search className="text-muted-foreground absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2" />
               <Input
@@ -291,70 +345,52 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={t.exercises.searchPlaceholder}
                 aria-label={t.exercises.searchPlaceholder}
-                className="h-10 pr-4 pl-10 text-xs sm:text-sm"
+                className="bg-card h-11 rounded-xl border-0 pr-4 pl-10 text-[1.0625rem] md:text-sm"
               />
             </div>
 
-            {/* Muscle Group Pills */}
-            <div className="scrollbar-hide -mx-1 flex max-w-full items-center gap-1.5 overflow-x-auto px-1 pb-1">
+            <div className="flex min-w-0 items-center gap-2">
+              <ChipStrip
+                ariaLabel={t.a11y.filterMuscle}
+                value={selectedMuscle}
+                onValueChange={setSelectedMuscle}
+                options={[
+                  { value: 'ALL' as const, label: t.exercises.allMuscles },
+                  ...Object.values(MuscleGroup).map((mg) => ({
+                    value: mg,
+                    label: muscleLabel(mg),
+                  })),
+                ]}
+                className="flex-1"
+              />
               <Button
                 type="button"
-                variant={selectedMuscle === 'ALL' ? 'default' : 'secondary'}
-                size="xs"
-                onClick={() => setSelectedMuscle('ALL')}
-                className="shrink-0"
+                data-testid="library-filter-btn"
+                variant="secondary"
+                onClick={() => setShowFilterSheet(true)}
+                aria-label={
+                  activeFilterCount > 0
+                    ? `${t.exercises.filterBtn} (${activeFilterCount})`
+                    : t.exercises.filterBtn
+                }
+                className={`h-10 shrink-0 gap-1.5 px-3.5 md:hidden ${
+                  activeFilterCount > 0 ? 'bg-primary/12 text-primary' : 'bg-card'
+                }`}
               >
-                {t.exercises.allMuscles}
+                <SlidersHorizontal className="h-4 w-4" />
+                {t.exercises.filterBtn}
+                {activeFilterCount > 0 && (
+                  <span className="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-full text-xs tabular-nums">
+                    {activeFilterCount}
+                  </span>
+                )}
               </Button>
-              {Object.values(MuscleGroup).map((mg) => (
-                <Button
-                  key={mg}
-                  type="button"
-                  variant={selectedMuscle === mg ? 'default' : 'secondary'}
-                  size="xs"
-                  onClick={() => setSelectedMuscle(mg)}
-                  className="shrink-0"
-                >
-                  {muscleLabel(mg)}
-                </Button>
-              ))}
             </div>
 
-            {/* Type & Equipment Filter Row */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-1 sm:gap-2">
-              <div className="text-muted-foreground flex items-center gap-1 text-xs">
-                <Filter className="h-3.5 w-3.5" />
-                <span>{t.exercises.typeLabel}</span>
-              </div>
-              {(['ALL', ...Object.values(ExerciseType)] as const).map((tp) => (
-                <Button
-                  key={tp}
-                  type="button"
-                  variant={selectedType === tp ? 'accent' : 'secondary'}
-                  size="xs"
-                  onClick={() => setSelectedType(tp)}
-                >
-                  {tp === 'ALL' ? t.exercises.allTypes : exerciseTypeLabel(tp)}
-                </Button>
-              ))}
-
-              <div className="w-full pt-1 sm:ml-auto sm:w-auto sm:pt-0">
-                <NativeSelect
-                  aria-label={t.a11y.filterEquipment}
-                  value={selectedEquipment}
-                  onChange={(e) => setSelectedEquipment(e.target.value as EquipmentType | 'ALL')}
-                  className="w-full sm:w-auto"
-                >
-                  <option value="ALL">{t.exercises.allEquipment}</option>
-                  {Object.values(EquipmentType).map((eq) => (
-                    <option key={eq} value={eq}>
-                      {equipmentLabel(eq)}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </div>
+            <div className="hidden items-center justify-between gap-2 md:flex">
+              {typeAndEquipmentFilters}
             </div>
-          </Card>
+          </div>
 
           {/* Exercise Cards Grid */}
           {filteredCatalog.length === 0 ? (
@@ -461,99 +497,114 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
             {stretchingRoutines
               .filter((r) => stretchAreaFilter === 'ALL' || r.targetArea === stretchAreaFilter)
               .map((routine) => (
-                <Card key={routine.id} className="min-w-0 justify-between p-4 sm:p-5">
-                  <div>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
+                <Card key={routine.id} className="min-w-0 gap-3 p-4 sm:p-5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Badge variant="accent" className="text-xs">
                           {routine.targetArea}
                         </Badge>
-                        <h3 className="font-display mt-2 text-lg font-bold">{routine.name}</h3>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <span className="tabular-nums text-muted-foreground text-xs">
+                        <span className="text-muted-foreground text-xs tabular-nums">
                           ~{Math.round(routine.estimatedDurationSeconds / 60)} {t.common.min}
                         </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label={format(t.exercises.deleteRoutineAria, { name: routine.name })}
-                          onClick={() =>
-                            setRoutinePendingDelete({ id: routine.id, name: routine.name })
-                          }
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                       </div>
+                      <h3 className="font-display text-lg leading-snug font-bold">
+                        {routine.name}
+                      </h3>
                     </div>
-                    {routine.description && (
-                      <p className="text-muted-foreground mt-1.5 text-xs">{routine.description}</p>
-                    )}
-
-                    <div className="mt-4 space-y-2">
-                      {routine.exercises.map((item, idx) => {
-                        const exObj =
-                          item.exercise ?? catalog.find((c) => c.id === item.exerciseId);
-                        const exName = exObj?.name ?? t.common.stretch;
-                        return (
-                          <div
-                            key={item.id ?? idx}
-                            onClick={() => {
-                              if (exObj) setSelectedExercise(exObj);
-                            }}
-                            className="bg-secondary/50 hover:bg-secondary/80 flex cursor-pointer items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs transition"
-                          >
-                            <div className="flex min-w-0 items-center gap-2.5">
-                              {exObj && (
-                                <ExerciseVisual
-                                  exercise={exObj}
-                                  variant="thumbnail"
-                                  className="h-9 w-12"
-                                />
-                              )}
-                              <div className="min-w-0">
-                                <p className="truncate font-semibold">
-                                  {idx + 1}. {exName}
-                                </p>
-                                {item.notes && (
-                                  <p className="text-muted-foreground truncate text-xs">
-                                    {item.notes}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <span className="tabular-nums text-accent shrink-0 font-semibold">
-                              {item.sets} ×{' '}
-                              {item.durationSeconds
-                                ? `${item.durationSeconds}s`
-                                : `${item.reps} ${t.common.reps}`}{' '}
-                              ({item.transitionSeconds}
-                              {t.workouts.restSuffix})
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="mt-5 border-t pt-3">
                     <Button
                       type="button"
-                      data-testid={`start-routine-${routine.name}`}
-                      variant="accent"
-                      size="lg"
-                      onClick={async () => {
-                        await startStretchingSession(routine.id);
-                        onStartSessionNavigation();
-                      }}
-                      className="w-full"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={format(t.exercises.deleteRoutineAria, { name: routine.name })}
+                      onClick={() =>
+                        setRoutinePendingDelete({ id: routine.id, name: routine.name })
+                      }
+                      className="text-muted-foreground hover:text-destructive -mt-1.5 -mr-2 shrink-0"
                     >
-                      <Play className="h-4 w-4 fill-current" />
-                      {t.exercises.startStretchingSessionBtn}
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
+                  {routine.description && (
+                    <p className="text-muted-foreground text-[0.8125rem] leading-relaxed">
+                      {routine.description}
+                    </p>
+                  )}
+
+                  <Button
+                    type="button"
+                    data-testid={`start-routine-${routine.name}`}
+                    size="lg"
+                    onClick={async () => {
+                      await startStretchingSession(routine.id);
+                      onStartSessionNavigation();
+                    }}
+                    className="w-full"
+                  >
+                    <Play className="h-4 w-4 fill-current" />
+                    {t.exercises.startStretchingSessionBtn}
+                  </Button>
+
+                  {routine.exercises.length > 0 && (
+                    <details className="group">
+                      <summary className="text-muted-foreground hover:text-foreground flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-[0.8125rem] font-medium [&::-webkit-details-marker]:hidden">
+                        <ChevronRight
+                          aria-hidden="true"
+                          className="h-4 w-4 transition-transform group-open:rotate-90"
+                        />
+                        {format(t.exercises.routineStepsToggle, {
+                          count: routine.exercises.length,
+                        })}
+                      </summary>
+                      <ol className="space-y-2 pt-1">
+                        {routine.exercises.map((item, idx) => {
+                          const exObj =
+                            item.exercise ?? catalog.find((c) => c.id === item.exerciseId);
+                          const exName = exObj?.name ?? t.common.stretch;
+                          return (
+                            <li key={item.id ?? idx}>
+                              <button
+                                type="button"
+                                disabled={!exObj}
+                                onClick={() => {
+                                  if (exObj) setSelectedExercise(exObj);
+                                }}
+                                className="bg-secondary/50 hover:bg-secondary/80 flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-xs transition"
+                              >
+                                <span className="flex min-w-0 items-center gap-2.5">
+                                  {exObj && (
+                                    <ExerciseVisual
+                                      exercise={exObj}
+                                      variant="thumbnail"
+                                      className="h-9 w-12"
+                                    />
+                                  )}
+                                  <span className="min-w-0">
+                                    <span className="block truncate font-semibold">
+                                      {idx + 1}. {exName}
+                                    </span>
+                                    {item.notes && (
+                                      <span className="text-muted-foreground block truncate text-xs">
+                                        {item.notes}
+                                      </span>
+                                    )}
+                                  </span>
+                                </span>
+                                <span className="text-accent shrink-0 font-semibold tabular-nums">
+                                  {item.sets} ×{' '}
+                                  {item.durationSeconds
+                                    ? `${item.durationSeconds}s`
+                                    : `${item.reps} ${t.common.reps}`}{' '}
+                                  ({item.transitionSeconds}
+                                  {t.workouts.restSuffix})
+                                </span>
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ol>
+                    </details>
+                  )}
                 </Card>
               ))}
           </div>
@@ -687,6 +738,17 @@ export function ExercisesView({ onStartSessionNavigation }: ExercisesViewProps) 
           </>
         )}
       </ExerciseGuideSheet>
+
+      <MobileSheet
+        open={showFilterSheet}
+        onOpenChange={setShowFilterSheet}
+        title={t.exercises.filterBtn}
+        hideCancel
+        confirm={{ label: t.common.done, onConfirm: () => setShowFilterSheet(false) }}
+        data-testid="library-filter-sheet"
+      >
+        <div className="space-y-4">{typeAndEquipmentFilters}</div>
+      </MobileSheet>
 
       {/* Create Custom Exercise Modal */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>

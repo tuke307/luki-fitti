@@ -39,6 +39,7 @@ export function ExerciseVisual({
   const [activeFrameIdx, setActiveFrameIdx] = useState(0);
   const [isPlayingLoop, setIsPlayingLoop] = useState(variant === 'detail');
   const [failedUrls, setFailedUrls] = useState<Record<string, boolean>>({});
+  const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isPlayingLoop || imageFrames.length < 2) return;
@@ -53,18 +54,28 @@ export function ExerciseVisual({
     validFrames[activeFrameIdx % Math.max(1, validFrames.length)] ?? validFrames[0];
 
   if (variant === 'thumbnail') {
+    const thumbLoaded = Boolean(currentFrame && loadedUrl === currentFrame.url);
     return (
       <div
-        className={`bg-secondary/70 border-border/60 relative flex h-11 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border ${className}`}
+        data-loaded={currentFrame ? thumbLoaded : undefined}
+        className={`bg-secondary/70 border-border/60 relative flex h-11 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border ${
+          currentFrame && !thumbLoaded ? 'animate-pulse' : ''
+        } ${className}`}
       >
         {currentFrame ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
+            ref={(img) => {
+              if (img?.complete && img.naturalWidth > 0) setLoadedUrl(currentFrame.url);
+            }}
             src={currentFrame.url}
             alt={exercise.name}
             loading="lazy"
+            onLoad={() => setLoadedUrl(currentFrame.url)}
             onError={() => setFailedUrls((prev) => ({ ...prev, [currentFrame.url]: true }))}
-            className="h-full w-full object-cover"
+            className={`h-full w-full object-cover transition-[opacity,filter,transform] duration-300 ease-out ${
+              thumbLoaded ? 'blur-0 scale-100 opacity-100' : 'scale-105 opacity-0 blur-sm'
+            }`}
           />
         ) : (
           <Dumbbell className="text-primary h-5 w-5 opacity-75" />

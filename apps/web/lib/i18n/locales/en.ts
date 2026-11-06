@@ -195,6 +195,9 @@ export const en = {
     allExercises: 'All Exercises',
     selected: 'Selected',
     changeExercise: 'Search or change exercise',
+    // Wave 2 w3b
+    exerciseInfoAria: 'How to do {name}',
+    backBtn: 'Back',
   },
   home: {
     greeting: 'Hi, {name}',
@@ -522,6 +525,9 @@ export const en = {
       '{name} will be removed from your history on all your devices. This can’t be undone.',
     deleteWorkoutBtn: 'Delete Workout',
     estMaxLabel: 'Est. max',
+    // Wave 2 w3b
+    workoutCountOne: '1 workout',
+    workoutCountOther: '{count} workouts',
   },
   exercises: {
     title: 'Library',
@@ -593,6 +599,11 @@ export const en = {
     holdSecLabel: 'Hold (sec)',
     transitionSecLabel: 'Transition (s)',
     saveRoutineBtn: 'Save',
+    // Wave 2 w3b
+    catalogTabCount: 'Exercises ({count})',
+    stretchingTabCount: 'Stretching ({count})',
+    filterBtn: 'Filter',
+    routineStepsToggle: 'Stretches ({count})',
   },
   visual: {
     startFrame: 'Start',

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { Check, ChevronsUpDown, Dumbbell, Search, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronsUpDown, Dumbbell, Info, Search, X } from 'lucide-react';
 import { Badge } from '@luki-fitti/ui/components/ui/badge';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import {
@@ -23,6 +23,7 @@ import {
 } from '@luki-fitti/common/utils/client';
 import { de } from '@/lib/i18n';
 import { useLocale } from '@/providers/i18n/locale-context';
+import { ExerciseGuideContent } from './exercise-guide-sheet';
 import { ExerciseVisual } from './exercise-visual';
 import { LateralityBadge } from './laterality-badge';
 
@@ -95,8 +96,9 @@ export function ExercisePicker({
   className,
   triggerClassName,
 }: ExercisePickerProps) {
-  const { t, muscleLabel, equipmentLabel, exerciseTypeLabel } = useLocale();
+  const { t, format, muscleLabel, equipmentLabel, exerciseTypeLabel } = useLocale();
   const [open, setOpen] = useState(false);
+  const [guideExercise, setGuideExercise] = useState<ExerciseDto | null>(null);
   const [search, setSearch] = useState('');
   const [selectedMuscle, setSelectedMuscle] = useState<MuscleGroup | 'ALL'>('ALL');
 
@@ -113,6 +115,7 @@ export function ExercisePicker({
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen);
     if (!nextOpen) {
+      setGuideExercise(null);
       setSearch('');
       setSelectedMuscle('ALL');
     }
@@ -144,8 +147,45 @@ export function ExercisePicker({
       </Button>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-h-[88dvh] overflow-hidden p-4 sm:max-w-lg sm:p-5">
-          <div className="flex max-h-[calc(88dvh-2.5rem)] min-w-0 flex-col gap-3 overflow-hidden">
+        <DialogContent
+          onEscapeKeyDown={(event) => {
+            // Escape leaves the guide page first, like the back button.
+            if (!guideExercise) return;
+            event.preventDefault();
+            setGuideExercise(null);
+          }}
+          className="max-h-[88dvh] overflow-hidden p-4 sm:max-w-lg sm:p-5"
+        >
+          {/* The guide opens as a page inside this sheet: a nested phone drawer would sit in a
+              separate dialog layer stack and fight this dialog over focus and outside clicks. */}
+          {guideExercise && (
+            <div
+              data-testid="picker-exercise-guide"
+              className="flex max-h-[calc(88dvh-2.5rem)] min-w-0 flex-col gap-3 overflow-hidden"
+            >
+              <DialogHeader className="shrink-0 space-y-1">
+                <button
+                  type="button"
+                  onClick={() => setGuideExercise(null)}
+                  className="text-primary -ml-1 flex min-h-11 w-fit items-center gap-0.5 text-[0.9375rem]"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                  {t.picker.backBtn}
+                </button>
+                <DialogTitle className="font-display text-base font-bold sm:text-lg">
+                  {t.session.showGuideBtn}
+                </DialogTitle>
+                <DialogDescription className="sr-only">{guideExercise.name}</DialogDescription>
+              </DialogHeader>
+              <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
+                <ExerciseGuideContent exercise={guideExercise} showEmptyState />
+              </div>
+            </div>
+          )}
+          <div
+            hidden={Boolean(guideExercise)}
+            className="flex max-h-[calc(88dvh-2.5rem)] min-w-0 flex-col gap-3 overflow-hidden"
+          >
             <DialogHeader className="shrink-0 space-y-1">
               <DialogTitle className="font-display text-base font-bold sm:text-lg">
                 {title ?? t.picker.selectExercise}
@@ -235,40 +275,54 @@ export function ExercisePicker({
                 filtered.map((ex) => {
                   const isSelected = ex.id === value;
                   return (
-                    <button
+                    <div
                       key={ex.id}
-                      type="button"
-                      onClick={() => {
-                        onValueChange(ex.id);
-                        handleOpenChange(false);
-                      }}
                       className={cn(
-                        'flex w-full items-center justify-between gap-2.5 rounded-xl border p-2.5 text-left text-xs transition',
+                        'flex w-full items-center gap-1 rounded-xl border text-xs transition',
                         isSelected
                           ? 'border-primary bg-primary/12'
                           : 'bg-secondary/35 hover:bg-secondary/75 border-transparent',
                       )}
                     >
-                      <div className="flex min-w-0 items-center gap-2.5">
-                        <ExerciseVisual exercise={ex} variant="thumbnail" className="h-9 w-11" />
-                        <div className="min-w-0">
-                          <p className="truncate font-bold">{ex.name}</p>
-                          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                            <Badge variant="secondary" className="px-1.5 py-0 text-xs">
-                              {muscleLabel(ex.primaryMuscleGroup)}
-                            </Badge>
-                            <span className="text-muted-foreground text-xs">
-                              {equipmentLabel(ex.equipment)} • {exerciseTypeLabel(ex.exerciseType)}
-                            </span>
-                            <LateralityBadge
-                              laterality={ex.laterality}
-                              className="px-1.5 py-0 text-xs"
-                            />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onValueChange(ex.id);
+                          handleOpenChange(false);
+                        }}
+                        className="flex min-w-0 flex-1 items-center justify-between gap-2.5 rounded-xl p-2.5 text-left"
+                      >
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <ExerciseVisual exercise={ex} variant="thumbnail" className="h-9 w-11" />
+                          <div className="min-w-0">
+                            <p className="truncate font-bold">{ex.name}</p>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                              <Badge variant="secondary" className="px-1.5 py-0 text-xs">
+                                {muscleLabel(ex.primaryMuscleGroup)}
+                              </Badge>
+                              <span className="text-muted-foreground text-xs">
+                                {equipmentLabel(ex.equipment)} •{' '}
+                                {exerciseTypeLabel(ex.exerciseType)}
+                              </span>
+                              <LateralityBadge
+                                laterality={ex.laterality}
+                                className="px-1.5 py-0 text-xs"
+                              />
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      {isSelected && <Check className="text-primary h-4 w-4 shrink-0" />}
-                    </button>
+                        {isSelected && <Check className="text-primary h-4 w-4 shrink-0" />}
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="picker-exercise-info"
+                        aria-label={format(t.picker.exerciseInfoAria, { name: ex.name })}
+                        onClick={() => setGuideExercise(ex)}
+                        className="text-muted-foreground hover:text-primary focus-visible:ring-ring/50 flex size-11 shrink-0 items-center justify-center rounded-full outline-hidden focus-visible:ring-[3px]"
+                      >
+                        <Info className="h-5 w-5" />
+                      </button>
+                    </div>
                   );
                 })
               )}

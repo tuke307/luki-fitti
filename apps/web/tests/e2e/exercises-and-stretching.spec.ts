@@ -74,7 +74,7 @@ test.describe('Exercise Catalog & Stretching Studio', () => {
   test('creates a stretching routine and completes a stretching session', async ({ page }) => {
     const ROUTINE_NAME = 'E2E Post-Lift Mobility';
 
-    await page.getByRole('tab', { name: /^Stretching$/i }).click();
+    await page.getByRole('tab', { name: /^Stretching/i }).click();
     await page.getByRole('button', { name: /New Routine/i }).click();
 
     const dialog = page.getByRole('dialog');
