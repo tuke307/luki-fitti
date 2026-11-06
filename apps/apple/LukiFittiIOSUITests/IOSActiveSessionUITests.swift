@@ -139,6 +139,105 @@ final class IOSActiveSessionUITests: XCTestCase {
         XCTAssertFalse(app.descendants(matching: .any)["ios.session.exerciseHeader.1"].exists)
     }
 
+    /// Audit §7: while resting, the dock must not cover Finish / Discard at the end of the list.
+    func testRestDockKeepsFinishAndDiscardReachable() {
+        let app = IOSUITestHelpers.launchApp(extraArguments: ["--uitesting-seed-active-session"])
+        let completeSet1Button = app.buttons["ios.session.completeSet.1"]
+        XCTAssertTrue(completeSet1Button.waitForExistence(timeout: 10))
+        completeSet1Button.tap()
+        let dock = app.descendants(matching: .any)["ios.session.restDock"]
+        if !app.buttons["Skip Rest"].waitForExistence(timeout: 3) { app.buttons["90s"].tap() }
+        XCTAssertTrue(app.buttons["Skip Rest"].waitForExistence(timeout: 5), "rest timer should be running")
+
+        let finish = app.buttons["ios.session.finishButton"]
+        let discard = app.buttons["ios.session.abandonButton"]
+        for _ in 0..<10 where !(discard.exists && discard.isHittable) { app.swipeUp() }
+        // One more swipe so the list sits at its end, then both buttons must clear the dock.
+        app.swipeUp()
+        XCTAssertTrue(finish.isHittable)
+        XCTAssertTrue(discard.isHittable)
+        XCTAssertLessThanOrEqual(finish.frame.maxY, dock.frame.minY + 1)
+        XCTAssertLessThanOrEqual(discard.frame.maxY, dock.frame.minY + 1)
+        XCTAssertTrue(app.buttons["Skip Rest"].exists, "still resting")
+
+        finish.tap()
+        XCTAssertTrue(app.buttons["ios.session.viewInDiaryButton"].waitForExistence(timeout: 8))
+    }
+
+    /// Audit caveat: one run saved "0 sets" after minimize → re-open → exercise "…" menu → Finish.
+    func testFinishAfterMinimizeReopenAndExerciseMenuKeepsCompletedSets() {
+        let app = IOSUITestHelpers.launchApp()
+        let start = app.buttons["ios.home.startSuggestedButton"]
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        start.tap()
+
+        for n in 1...3 {
+            let complete = app.buttons["ios.session.completeSet.\(n)"]
+            XCTAssertTrue(complete.waitForExistence(timeout: 5))
+            // On small phones the rest dock can sit over the next row; scroll it clear first.
+            let dock = app.descendants(matching: .any)["ios.session.restDock"]
+            for _ in 0..<4 where dock.exists && complete.frame.maxY > dock.frame.minY {
+                app.swipeUp(velocity: .slow)
+            }
+            complete.tap()
+            XCTAssertTrue(
+                complete.waitForLabel(beginningWith: "Mark set \(n) not done"),
+                "set \(n) should be completed, label “\(complete.label)”"
+            )
+        }
+
+        app.buttons["ios.session.minimizeButton"].tap()
+        let accessory = app.buttons["ios.shell.sessionAccessory"]
+        XCTAssertTrue(accessory.waitForExistence(timeout: 5))
+        accessory.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["ios.session.exerciseHeader.1"].waitForExistence(timeout: 5))
+
+        let menu = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'More actions'")).firstMatch
+        XCTAssertTrue(menu.waitForExistence(timeout: 5))
+        menu.tap()
+        XCTAssertTrue(app.buttons["Replace"].waitForExistence(timeout: 5))
+        // Close the menu without picking anything.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap()
+        XCTAssertTrue(app.buttons["Replace"].waitForNonExistence(timeout: 5))
+
+        let finish = app.buttons["ios.session.finishButton"]
+        for _ in 0..<10 where !(finish.exists && finish.isHittable) { app.swipeUp() }
+        finish.tap()
+
+        let sets = app.descendants(matching: .any)["ios.session.summary.sets"]
+        XCTAssertTrue(sets.waitForExistence(timeout: 8))
+        let numbers = sets.label.split(whereSeparator: { !$0.isNumber })
+        XCTAssertEqual(numbers.last, "3", "summary should show 3 sets, got “\(sets.label)”")
+    }
+
+    /// On small phones the rest dock covered the next set row; the app must scroll it clear so
+    /// three sets can be tapped in a row without manual scrolling and all three are saved.
+    func testCompletesThreeSetsWithoutManualScrollingOnSmallScreens() {
+        let app = IOSUITestHelpers.launchApp()
+        let start = app.buttons["ios.home.startSuggestedButton"]
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        start.tap()
+
+        for n in 1...3 {
+            let complete = app.buttons["ios.session.completeSet.\(n)"]
+            XCTAssertTrue(complete.waitForExistence(timeout: 5))
+            complete.tap()
+            XCTAssertTrue(
+                complete.waitForLabel(beginningWith: "Mark set \(n) not done"),
+                "set \(n) should be completed, label “\(complete.label)”"
+            )
+        }
+
+        let finish = app.buttons["ios.session.finishButton"]
+        for _ in 0..<10 where !(finish.exists && finish.isHittable) { app.swipeUp() }
+        finish.tap()
+
+        let sets = app.descendants(matching: .any)["ios.session.summary.sets"]
+        XCTAssertTrue(sets.waitForExistence(timeout: 8))
+        let numbers = sets.label.split(whereSeparator: { !$0.isNumber })
+        XCTAssertEqual(numbers.last, "3", "summary should show 3 sets, got “\(sets.label)”")
+    }
+
     func testReplaceSheetOffersTheSameMovementFirst() {
         let app = IOSUITestHelpers.launchApp(extraArguments: ["--uitesting-seed-active-session"])
         let header = app.descendants(matching: .any)["ios.session.exerciseHeader.1"]
@@ -160,5 +259,12 @@ final class IOSActiveSessionUITests: XCTestCase {
         search.tap()
         search.typeText("curl")
         XCTAssertFalse(bestMatches.waitForExistence(timeout: 2))
+    }
+}
+
+private extension XCUIElement {
+    func waitForLabel(beginningWith prefix: String, timeout: TimeInterval = 5) -> Bool {
+        let predicate = NSPredicate(format: "label BEGINSWITH %@", prefix)
+        return XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: predicate, object: self)], timeout: timeout) == .completed
     }
 }

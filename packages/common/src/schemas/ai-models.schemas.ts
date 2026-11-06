@@ -19,8 +19,11 @@ export const aiPromptRawUrl = (skill: AiSkillName) => `${GITHUB_RAW_BASE}/${AI_P
 export const aiPromptGithubUrl = (skill: AiSkillName) =>
   `${GITHUB_BLOB_BASE}/${AI_PROMPT_FILES[skill]}`;
 
-/** Model ids a user may pick, e.g. `openai/gpt-6.1-terra` or `meta-llama/llama-5:free`. */
-export const AI_MODEL_ID_PATTERN = /^[a-z0-9][a-z0-9._-]*\/[a-z0-9._:-]+$/;
+/**
+ * Model ids a user may pick, e.g. `openai/gpt-6.1-terra`, `meta-llama/llama-5:free` or an
+ * OpenRouter "latest" alias such as `~anthropic/claude-sonnet-latest` (accepted for chat).
+ */
+export const AI_MODEL_ID_PATTERN = /^~?[a-z0-9][a-z0-9._-]*\/[a-z0-9._:-]+$/;
 export const AI_MODEL_ID_MAX_LENGTH = 100;
 
 export const AiModelIdSchema = z
@@ -58,7 +61,10 @@ export interface AiModelInfoDto {
 }
 
 export interface AiModelOptionDto extends AiModelInfoDto {
-  /** Average tokens of recent runs × this model's prices; null without run history. */
+  /**
+   * Average tokens of recent runs × this model's prices, plus its per-image price for skills that
+   * send photos (assumed one image per run; runs don't record the count). Null without history.
+   */
   estimatedCostPerRunUsd: number | null;
 }
 

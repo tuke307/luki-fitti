@@ -110,10 +110,17 @@ function AiInfoBody({ skill }: { skill: AiSkillName }) {
                 <p className="text-muted-foreground text-[0.8125rem] break-all">
                   {effective.id}
                   {' · '}
-                  {format(t.aiInfo.pricing, {
-                    input: formatUsd(effective.pricing.promptPerMTokUsd, bcp47),
-                    output: formatUsd(effective.pricing.completionPerMTokUsd, bcp47),
-                  })}
+                  <span className="whitespace-nowrap">
+                    {format(t.aiInfo.pricingInput, {
+                      input: formatUsd(effective.pricing.promptPerMTokUsd, bcp47),
+                    })}
+                  </span>
+                  {' · '}
+                  <span className="whitespace-nowrap">
+                    {format(t.aiInfo.pricingOutput, {
+                      output: formatUsd(effective.pricing.completionPerMTokUsd, bcp47),
+                    })}
+                  </span>
                 </p>
               )}
               <p className="text-muted-foreground text-[0.8125rem]">{t.aiInfo.changeModel}</p>

@@ -1,0 +1,189 @@
+[
+  {
+    "name": "warm-ups count as sets but not as volume or bests",
+    "sessions": [
+      {
+        "day": 0,
+        "exercises": [
+          {
+            "id": "bench",
+            "name": "Barbell Bench Press",
+            "muscle": "CHEST",
+            "sets": [
+              ["WARMUP", 51, 6, true],
+              ["WARMUP", 51, 6, true],
+              ["WORKING", 85, 6, true],
+              ["WORKING", 85, 6, false]
+            ]
+          }
+        ]
+      }
+    ],
+    "expect": {
+      "muscles": [["CHEST", 3, 510, 100]],
+      "bests": [["bench", "Barbell Bench Press", "CHEST", 85, 6, 102, 0]]
+    }
+  },
+  {
+    "name": "heavier wins, equal weight needs more reps, first day keeps a tie",
+    "sessions": [
+      {
+        "day": 0,
+        "exercises": [
+          {
+            "id": "squat",
+            "name": "Back Squat",
+            "muscle": "QUADRICEPS",
+            "sets": [["WORKING", 100, 5, true]]
+          }
+        ]
+      },
+      {
+        "day": 2,
+        "exercises": [
+          {
+            "id": "squat",
+            "name": "Back Squat",
+            "muscle": "QUADRICEPS",
+            "sets": [
+              ["WORKING", 100, 5, true],
+              ["WORKING", 100, 8, true]
+            ]
+          }
+        ]
+      },
+      {
+        "day": 4,
+        "exercises": [
+          {
+            "id": "squat",
+            "name": "Back Squat",
+            "muscle": "QUADRICEPS",
+            "sets": [
+              ["WORKING", 100, 8, true],
+              ["WORKING", 90, 12, true]
+            ]
+          }
+        ]
+      }
+    ],
+    "expect": {
+      "muscles": [["QUADRICEPS", 5, 3680, 100]],
+      "bests": [["squat", "Back Squat", "QUADRICEPS", 100, 8, 126.7, 2]]
+    }
+  },
+  {
+    "name": "pounds convert to kg, bests sort by estimated max",
+    "sessions": [
+      {
+        "day": 1,
+        "unit": "LBS",
+        "exercises": [
+          {
+            "id": "curl",
+            "name": "Dumbbell Curl",
+            "muscle": "BICEPS",
+            "sets": [["WORKING", 30, 10, true]]
+          },
+          {
+            "id": "row",
+            "name": "Barbell Row",
+            "muscle": "BACK",
+            "sets": [
+              ["WORKING", 135, 8, true],
+              ["DROPSET", 95, 10, true]
+            ]
+          }
+        ]
+      }
+    ],
+    "expect": {
+      "muscles": [
+        ["BACK", 2, 921, 67],
+        ["BICEPS", 1, 136, 33]
+      ],
+      "bests": [
+        ["row", "Barbell Row", "BACK", 61.2, 8, 77.6, 1],
+        ["curl", "Dumbbell Curl", "BICEPS", 13.6, 10, 18.1, 1]
+      ]
+    }
+  },
+  {
+    "name": "stretches add sets only; muscle filter skips other exercises",
+    "filter": { "muscle": "CHEST" },
+    "sessions": [
+      {
+        "day": 0,
+        "exercises": [
+          {
+            "id": "fly",
+            "name": "Cable Chest Fly",
+            "muscle": "CHEST",
+            "sets": [["WORKING", 20, 12, true]]
+          },
+          {
+            "id": "pushdown",
+            "name": "Cable Pushdown",
+            "muscle": "TRICEPS",
+            "sets": [["WORKING", 30, 12, true]]
+          },
+          {
+            "id": "doorway",
+            "name": "Doorway Stretch",
+            "muscle": "CHEST",
+            "type": "STRETCHING",
+            "sets": [["STRETCH", null, null, true]]
+          }
+        ]
+      }
+    ],
+    "expect": {
+      "muscles": [["CHEST", 2, 240, 100]],
+      "bests": [["fly", "Cable Chest Fly", "CHEST", 20, 12, 28, 0]]
+    }
+  },
+  {
+    "name": "exercise filter keeps only that exercise",
+    "filter": { "exerciseId": "bench" },
+    "sessions": [
+      {
+        "day": 0,
+        "exercises": [
+          {
+            "id": "bench",
+            "name": "Barbell Bench Press",
+            "muscle": "CHEST",
+            "sets": [["WORKING", 80, 5, true]]
+          },
+          {
+            "id": "incline",
+            "name": "Incline Dumbbell Press",
+            "muscle": "CHEST",
+            "sets": [["WORKING", 30, 10, true]]
+          }
+        ]
+      }
+    ],
+    "expect": {
+      "muscles": [["CHEST", 1, 400, 100]],
+      "bests": [["bench", "Barbell Bench Press", "CHEST", 80, 5, 93.3, 0]]
+    }
+  },
+  {
+    "name": "nothing completed gives nothing",
+    "sessions": [
+      {
+        "day": 0,
+        "exercises": [
+          {
+            "id": "bench",
+            "name": "Barbell Bench Press",
+            "muscle": "CHEST",
+            "sets": [["WORKING", 80, 5, false]]
+          }
+        ]
+      }
+    ],
+    "expect": { "muscles": [], "bests": [] }
+  }
+]

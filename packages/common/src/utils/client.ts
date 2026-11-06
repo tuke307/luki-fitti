@@ -17,6 +17,7 @@ export * from './exercise-alternatives.util';
 export * from './exercise-history.util';
 export * from './exercise-search.util';
 export * from './exercise-search.vocab';
+export * from './history-insights.util';
 
 // Folder accent palette (client-safe)
 export * from './folder-color.util';

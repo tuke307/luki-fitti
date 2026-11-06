@@ -36,6 +36,7 @@ describe('UpdatePreferencesSchema.aiModels', () => {
   it('accepts valid model ids per skill and null', () => {
     assert.ok(parse({ 'workout-builder': 'openai/gpt-6.1-terra' }).success);
     assert.ok(parse({ 'meal-analyzer': 'meta-llama/llama-5-70b:free' }).success);
+    assert.ok(parse({ 'workout-builder': '~anthropic/claude-sonnet-latest' }).success);
     assert.ok(parse({}).success);
     assert.ok(parse(null).success);
   });
@@ -46,12 +47,41 @@ describe('UpdatePreferencesSchema.aiModels', () => {
       { 'workout-builder': 'OpenAI/GPT' },
       { 'workout-builder': 'openai/gpt 4' },
       { 'workout-builder': '../etc/passwd' },
+      { 'workout-builder': '~~anthropic/claude-latest' },
+      { 'workout-builder': 'anthropic/~claude-latest' },
       { 'workout-builder': 'https://evil.example/x' },
       { 'workout-builder': `a/${'b'.repeat(100)}` },
       { 'workout-builder': 42 },
       { 'unknown-skill': 'openai/gpt-6.1-terra' },
     ]) {
       assert.equal(parse(bad).success, false, JSON.stringify(bad));
+    }
+  });
+});
+
+describe('UpdateAiSettingsSchema model ids', () => {
+  it('accepts an OpenRouter ~latest alias in model and allowlist fields', async () => {
+    const { UpdateAiSettingsSchema } = await import('./admin.schemas');
+    const res = UpdateAiSettingsSchema.safeParse({
+      workoutBuilderModel: '~anthropic/claude-sonnet-latest',
+      userModelAllowlist: ['~anthropic/claude-sonnet-latest', 'openai/gpt-6.1-terra'],
+    });
+    assert.ok(res.success, JSON.stringify(res.success ? null : res.error.issues));
+  });
+
+  it('rejects junk model ids in model and allowlist fields', async () => {
+    const { UpdateAiSettingsSchema } = await import('./admin.schemas');
+    for (const bad of ['gpt-4', 'openai/gpt 4', '~~anthropic/x', '../etc', 'https://evil/x']) {
+      assert.equal(
+        UpdateAiSettingsSchema.safeParse({ workoutBuilderModel: bad }).success,
+        false,
+        bad,
+      );
+      assert.equal(
+        UpdateAiSettingsSchema.safeParse({ userModelAllowlist: [bad] }).success,
+        false,
+        bad,
+      );
     }
   });
 });

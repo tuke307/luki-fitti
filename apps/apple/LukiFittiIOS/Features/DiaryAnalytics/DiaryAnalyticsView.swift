@@ -8,6 +8,7 @@ public struct DiaryAnalyticsView: View {
     @Bindable public var viewModel: LukiAppViewModel
     @State private var selectedPeriod: HistoryPeriod = .month
     @State private var filterMuscle: MuscleGroup?
+    @State private var filterExerciseId: String?
     @State private var inspectingSession: WorkoutSessionDto?
     @State private var pendingDelete: WorkoutSessionDto?
     @State private var memo = SnapshotMemo()
@@ -24,7 +25,8 @@ public struct DiaryAnalyticsView: View {
         let snapshot = memo.snapshot(
             sessions: viewModel.store.historySessions,
             period: selectedPeriod,
-            muscle: filterMuscle
+            muscle: filterMuscle,
+            exerciseId: filterExerciseId
         )
         return ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -40,6 +42,7 @@ public struct DiaryAnalyticsView: View {
         }
         .onChange(of: selectedPeriod) { visibleCount = Self.pageSize }
         .onChange(of: filterMuscle) { visibleCount = Self.pageSize }
+        .onChange(of: filterExerciseId) { visibleCount = Self.pageSize }
         .background(LukiColors.groupedBackground)
         .sheet(item: $inspectingSession) { session in
             HistorySessionEditorSheet(session: session) { viewModel.updateHistoricalSession($0) }
@@ -79,6 +82,8 @@ public struct DiaryAnalyticsView: View {
     private var muscleFilterStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
+                exerciseFilterMenu
+
                 Button {
                     filterMuscle = nil
                 } label: {
@@ -106,6 +111,47 @@ public struct DiaryAnalyticsView: View {
                 }
             }
         }
+    }
+
+    /// Web's "All Exercises" picker as a chip: lists the exercises the person has logged.
+    private var exerciseFilterMenu: some View {
+        let exercises = WorkoutHistorySnapshot.loggedExercises(in: viewModel.store.historySessions)
+        let selectedName = exercises.first { $0.id == filterExerciseId }?.name
+        return Menu {
+            Picker(tr("Exercise"), selection: $filterExerciseId) {
+                Text(tr("All Exercises")).tag(String?.none)
+                ForEach(exercises, id: \.id) { ex in
+                    Text(ex.name).tag(Optional(ex.id))
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "line.3.horizontal.decrease")
+                    .accessibilityHidden(true)
+                Text(selectedName ?? tr("All Exercises"))
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.caption.weight(.bold))
+                    .accessibilityHidden(true)
+            }
+            .font(.subheadline.weight(.semibold))
+            .padding(.horizontal, 14)
+            .frame(minHeight: 44)
+            .background(Capsule().fill(selectedName != nil ? LukiColors.accent : LukiColors.cardBackground))
+            .foregroundStyle(selectedName != nil ? LukiColors.accentForeground : .primary)
+            .frame(maxWidth: 240)
+        }
+        .accessibilityLabel(tr("Filter by exercise"))
+        .accessibilityValue(selectedName ?? tr("All Exercises"))
+        .accessibilityIdentifier("ios.diary.exerciseFilter")
+    }
+
+    private func workoutCountText(_ count: Int) -> String {
+        count == 1 ? tr("1 workout") : tr("%d workouts", count)
+    }
+
+    private func setCountText(_ count: Int) -> String {
+        count == 1 ? tr("1 set") : tr("%d sets", count)
     }
 
     private func kpiSummaryGrid(_ snapshot: WorkoutHistorySnapshot) -> some View {
@@ -159,7 +205,7 @@ public struct DiaryAnalyticsView: View {
                     .font(.headline)
                     .foregroundStyle(.primary)
                 Spacer()
-                Text(tr("%d workouts", snapshot.count))
+                Text(workoutCountText(snapshot.count))
                     .font(.caption.bold().monospacedDigit())
                     .foregroundStyle(LukiColors.accent)
             }
@@ -208,7 +254,7 @@ public struct DiaryAnalyticsView: View {
                         }
                         .buttonStyle(.plain)
                         .disabled(!hasWorkout)
-                        .accessibilityLabel(tr("%@: %d workouts", dayDate.formatted(.dateTime.weekday(.wide).day().month()), daySessions.count))
+                        .accessibilityLabel("\(dayDate.formatted(.dateTime.weekday(.wide).day().month())): \(workoutCountText(daySessions.count))")
                     }
                 }
             } else {
@@ -232,7 +278,7 @@ public struct DiaryAnalyticsView: View {
                                         .font(.footnote.monospacedDigit())
                                         .foregroundStyle(bucket.count > 0 ? LukiColors.accent : .secondary)
                                 }
-                                Text(tr("%d sets", bucket.sets) + " · " + LukiFormat.volume(kg: Double(bucket.volumeKg), unit: unit))
+                                Text(setCountText(bucket.sets) + " · " + LukiFormat.volume(kg: Double(bucket.volumeKg), unit: unit))
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }
@@ -268,73 +314,260 @@ public struct DiaryAnalyticsView: View {
         }
     }
 
+    private var selectedExerciseName: String? {
+        guard let filterExerciseId else { return nil }
+        return WorkoutHistorySnapshot.loggedExercises(in: viewModel.store.historySessions)
+            .first { $0.id == filterExerciseId }?.name
+    }
+
+    /// Kilograms in the person's unit, one decimal at most.
+    private func displayWeight(_ kg: Double) -> String {
+        LukiFormat.weight(((unit == .LBS ? kg * ProgressionEngine.kgToLbs : kg) * 10).rounded() / 10)
+    }
+
     private func progressionChartCard(_ snapshot: WorkoutHistorySnapshot) -> some View {
-        let points = snapshot.progression
+        let exerciseName = selectedExerciseName
+        let isEmpty = exerciseName == nil ? snapshot.progression.isEmpty : snapshot.exerciseProgression.isEmpty
+        let unitText = LukiFormat.unitLabel(unit)
         return VStack(alignment: .leading, spacing: 10) {
-            Text(tr("Progress"))
-                .font(.headline)
-                .foregroundStyle(.primary)
-            if points.isEmpty {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(exerciseName ?? tr("Progress"))
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                Text(exerciseName == nil
+                    ? tr("Volume and sets over recent workouts")
+                    : tr("Heaviest set and estimated max over recent workouts"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            if isEmpty {
                 Text(tr("No strength workouts in this period."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 12)
             } else {
-                Chart(points) { point in
-                    AreaMark(
-                        x: .value(tr("Date"), point.date),
-                        y: .value(tr("Volume"), LukiFormat.volumeValue(kg: point.volumeKg, unit: unit))
-                    )
-                    .foregroundStyle(LukiColors.accent.opacity(0.3))
-
-                    LineMark(
-                        x: .value(tr("Date"), point.date),
-                        y: .value(tr("Volume"), LukiFormat.volumeValue(kg: point.volumeKg, unit: unit))
-                    )
-                    .foregroundStyle(LukiColors.accent)
-
-                    PointMark(
-                        x: .value(tr("Date"), point.date),
-                        y: .value(tr("Volume"), LukiFormat.volumeValue(kg: point.volumeKg, unit: unit))
-                    )
-                    .foregroundStyle(LukiColors.accent)
-                    .symbolSize(24)
+                if exerciseName == nil {
+                    sessionProgressChart(snapshot.progression)
+                } else {
+                    exerciseProgressChart(snapshot.exerciseProgression)
                 }
-                .chartXAxis {
-                    AxisMarks(values: .automatic(desiredCount: 4)) { _ in
-                        AxisGridLine()
-                        AxisValueLabel(format: .dateTime.day().month(.abbreviated))
-                    }
+                HStack(spacing: 14) {
+                    legendItem(
+                        exerciseName == nil ? tr("Volume (%@)", unitText) : tr("Est. max (%@)", unitText),
+                        color: LukiColors.accent,
+                        shape: Circle()
+                    )
+                    legendItem(
+                        exerciseName == nil ? tr("Sets") : tr("Heaviest (%@)", unitText),
+                        color: Self.barColor,
+                        shape: RoundedRectangle(cornerRadius: 2)
+                    )
                 }
-                .chartYAxisLabel(LukiFormat.unitLabel(unit))
-                .frame(height: 150)
+                .font(.caption.weight(.semibold))
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
+        .accessibilityIdentifier("ios.diary.progressCard")
+    }
+
+    private static let barColor = Color.secondary.opacity(0.35)
+
+    /// Slim bars like web (max 18 pt); with many sessions they share the band instead.
+    private static func barWidth(count: Int) -> MarkDimension {
+        count < 8 ? .fixed(18) : .ratio(0.5)
+    }
+
+    private func legendItem(_ title: String, color: Color, shape: some Shape) -> some View {
+        HStack(spacing: 5) {
+            shape.fill(color).frame(width: 10, height: 10)
+            Text(title).foregroundStyle(.secondary)
+        }
+    }
+
+    /// Sessions are categories (several can share a day); a handful of them get a date label.
+    private func sessionAxisLabels(_ ids: [String], dates: [String: Date]) -> some AxisContent {
+        let stride = max(1, Int((Double(ids.count) / 4).rounded(.up)))
+        let shown = ids.enumerated().filter { $0.offset % stride == 0 }.map(\.element)
+        return AxisMarks(values: shown) { value in
+            AxisValueLabel {
+                if let id = value.as(String.self), let date = dates[id] {
+                    Text(date.formatted(.dateTime.day().month(.abbreviated)))
+                }
+            }
+        }
+    }
+
+    /// Web's combined chart: volume as an area line on the trailing axis, sets as bars read on the
+    /// leading axis. Swift Charts has one y scale, so the bars are scaled onto the volume range.
+    private func sessionProgressChart(_ points: [WorkoutHistorySnapshot.ProgressPoint]) -> some View {
+        let volumes = points.map { Double(LukiFormat.volumeValue(kg: $0.volumeKg, unit: unit)) }
+        let maxVolume = max(1, volumes.max() ?? 1)
+        let maxSets = max(1, points.map(\.sets).max() ?? 1)
+        let scale = maxVolume / Double(maxSets)
+        let setStep = max(1, Int((Double(maxSets) / 3).rounded(.up)))
+        let setTicks = Array(Swift.stride(from: 0, through: maxSets, by: setStep)).map { Double($0) * scale }
+        let dates = Dictionary(uniqueKeysWithValues: points.map { ($0.id, $0.date) })
+        let barWidth = Self.barWidth(count: points.count)
+        return Chart {
+            ForEach(Array(zip(points, volumes)), id: \.0.id) { point, volume in
+                BarMark(
+                    x: .value(tr("Workout"), point.id),
+                    y: .value(tr("Sets"), Double(point.sets) * scale),
+                    width: barWidth
+                )
+                .foregroundStyle(Self.barColor)
+                .cornerRadius(3)
+                .accessibilityLabel(point.date.formatted(date: .abbreviated, time: .omitted))
+                .accessibilityValue(setCountText(point.sets))
+
+                AreaMark(x: .value(tr("Workout"), point.id), y: .value(tr("Volume"), volume))
+                    .foregroundStyle(LukiColors.accent.opacity(0.18))
+                    .interpolationMethod(.monotone)
+                LineMark(x: .value(tr("Workout"), point.id), y: .value(tr("Volume"), volume))
+                    .foregroundStyle(LukiColors.accent)
+                    .interpolationMethod(.monotone)
+                    .lineStyle(StrokeStyle(lineWidth: 2.5))
+                PointMark(x: .value(tr("Workout"), point.id), y: .value(tr("Volume"), volume))
+                    .foregroundStyle(LukiColors.accent)
+                    .symbolSize(24)
+                    .accessibilityLabel(point.date.formatted(date: .abbreviated, time: .omitted))
+                    .accessibilityValue(LukiFormat.volume(kg: point.volumeKg, unit: unit))
+            }
+        }
+        .chartXAxis { sessionAxisLabels(points.map(\.id), dates: dates) }
+        .chartYAxis {
+            AxisMarks(position: .trailing)
+            AxisMarks(position: .leading, values: setTicks) { value in
+                AxisValueLabel {
+                    Text("\(Int(((value.as(Double.self) ?? 0) / scale).rounded()))")
+                }
+            }
+        }
+        .chartYScale(domain: 0...(maxVolume * 1.1))
+        .frame(height: 190)
+    }
+
+    private func exerciseProgressChart(_ points: [WorkoutHistorySnapshot.ExercisePoint]) -> some View {
+        let toUnit: (Double) -> Double = { kg in self.unit == .LBS ? kg * ProgressionEngine.kgToLbs : kg }
+        let dates = Dictionary(uniqueKeysWithValues: points.map { ($0.id, $0.date) })
+        return Chart {
+            ForEach(points) { point in
+                BarMark(
+                    x: .value(tr("Workout"), point.id),
+                    y: .value(tr("Heaviest (%@)", LukiFormat.unitLabel(unit)), toUnit(point.maxWeightKg)),
+                    width: Self.barWidth(count: points.count)
+                )
+                .foregroundStyle(Self.barColor)
+                .cornerRadius(3)
+                AreaMark(x: .value(tr("Workout"), point.id), y: .value(tr("Est. max"), toUnit(point.est1RM)))
+                    .foregroundStyle(LukiColors.accent.opacity(0.18))
+                    .interpolationMethod(.monotone)
+                LineMark(x: .value(tr("Workout"), point.id), y: .value(tr("Est. max"), toUnit(point.est1RM)))
+                    .foregroundStyle(LukiColors.accent)
+                    .interpolationMethod(.monotone)
+                    .lineStyle(StrokeStyle(lineWidth: 2.5))
+                PointMark(x: .value(tr("Workout"), point.id), y: .value(tr("Est. max"), toUnit(point.est1RM)))
+                    .foregroundStyle(LukiColors.accent)
+                    .symbolSize(24)
+            }
+        }
+        .chartXAxis { sessionAxisLabels(points.map(\.id), dates: dates) }
+        .chartYAxis { AxisMarks(position: .trailing) }
+        .frame(height: 190)
     }
 
     private func muscleAndPrGrid(_ snapshot: WorkoutHistorySnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 18) {
+            musclesCard(snapshot.insights.muscles)
+            personalBestsCard(snapshot.insights.personalBests)
+        }
+    }
+
+    private func musclesCard(_ muscles: [HistoryInsights.MuscleShare]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(tr("Muscles trained"))
                 .font(.headline)
                 .foregroundStyle(.primary)
 
-            ForEach(MuscleGroup.allCases.prefix(6), id: \.self) { muscle in
-                let sets = snapshot.setsByMuscle[muscle] ?? 0
-                HStack {
-                    Text(LukiI18n.muscleLabel(muscle, locale: tr))
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                    Spacer()
-                    Text(tr("%d sets", sets))
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
+            if muscles.isEmpty {
+                Text(tr("Finish a workout to see which muscles you trained."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 8)
+            }
+            ForEach(muscles) { share in
+                let volume = LukiFormat.volume(kg: Double(share.volumeKg), unit: unit)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(LukiI18n.muscleLabel(share.muscle, locale: tr))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                        Spacer(minLength: 8)
+                        Text(share.sets == 1
+                            ? tr("1 set (%d%%) · %@", share.pct, volume)
+                            : tr("%d sets (%d%%) · %@", share.sets, share.pct, volume))
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.trailing)
+                    }
+                    ProgressView(value: Double(max(4, share.pct)), total: 100)
+                        .tint(LukiColors.accent)
+                        .accessibilityHidden(true)
                 }
+                .accessibilityElement(children: .combine)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
+        .accessibilityIdentifier("ios.diary.musclesCard")
+    }
+
+    private func personalBestsCard(_ bests: [HistoryInsights.PersonalBest]) -> some View {
+        let unitText = LukiFormat.unitLabel(unit)
+        return VStack(alignment: .leading, spacing: 12) {
+            Label(tr("Personal bests"), systemImage: "trophy")
+                .font(.headline)
+                .foregroundStyle(.primary)
+
+            if bests.isEmpty {
+                Text(tr("Your personal bests show up here after your first workouts."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 8)
+            }
+            ForEach(bests.prefix(6)) { best in
+                let date = LukiISODate.parse(best.startedAt)?.formatted(.dateTime.day().month(.abbreviated)) ?? ""
+                HStack(alignment: .top, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(best.exerciseName)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                        Text("\(LukiI18n.muscleLabel(best.muscle, locale: tr)) · \(date)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 8)
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("\(displayWeight(best.maxWeightKg)) \(unitText) × \(best.reps)")
+                            .font(.subheadline.weight(.semibold).monospacedDigit())
+                            .foregroundStyle(LukiColors.accent)
+                        Text(tr("Est. max: %@", "\(displayWeight(best.est1RM)) \(unitText)"))
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(12)
+                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(LukiColors.fill))
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
+        .accessibilityIdentifier("ios.diary.personalBestsCard")
     }
 
     private func timelineSection(_ snapshot: WorkoutHistorySnapshot) -> some View {
@@ -378,6 +611,11 @@ public struct DiaryAnalyticsView: View {
                         .font(.footnote.weight(.medium))
                         .foregroundStyle(.secondary)
                 }
+                if session.sourceDevice == .IMPORT {
+                    Label(tr("Imported"), systemImage: "square.and.arrow.down")
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Text(item.date.formatted(date: .abbreviated, time: .shortened))
@@ -385,7 +623,10 @@ public struct DiaryAnalyticsView: View {
                 .foregroundStyle(.secondary)
 
             HStack(spacing: 12) {
-                Text(tr("%d sets", session.totalSetsCompleted))
+                Label(tr("%d min", max(1, Int((Double(session.activeDurationSeconds) / 60).rounded()))), systemImage: "clock")
+                    .accessibilityLabel(tr("Duration"))
+                    .accessibilityValue(tr("%d min", max(1, Int((Double(session.activeDurationSeconds) / 60).rounded()))))
+                Text(setCountText(session.totalSetsCompleted))
                 Text(LukiFormat.volume(kg: session.totalVolumeKg, unit: session.weightUnit))
                 if notDone > 0 {
                     Text(tr("%d not done", notDone))
@@ -435,16 +676,16 @@ public struct DiaryAnalyticsView: View {
 /// shared storage, so unchanged renders cost one comparison.
 @MainActor
 private final class SnapshotMemo {
-    private var key: (sessions: [WorkoutSessionDto], period: HistoryPeriod, muscle: MuscleGroup?, day: Date)?
+    private var key: (sessions: [WorkoutSessionDto], period: HistoryPeriod, muscle: MuscleGroup?, exerciseId: String?, day: Date)?
     private var value = WorkoutHistorySnapshot.empty
 
-    func snapshot(sessions: [WorkoutSessionDto], period: HistoryPeriod, muscle: MuscleGroup?) -> WorkoutHistorySnapshot {
+    func snapshot(sessions: [WorkoutSessionDto], period: HistoryPeriod, muscle: MuscleGroup?, exerciseId: String?) -> WorkoutHistorySnapshot {
         let day = Calendar.current.startOfDay(for: Date())
-        if let key, key.period == period, key.muscle == muscle, key.day == day, key.sessions == sessions {
+        if let key, key.period == period, key.muscle == muscle, key.exerciseId == exerciseId, key.day == day, key.sessions == sessions {
             return value
         }
-        value = WorkoutHistorySnapshot(sessions: sessions, period: period, muscle: muscle)
-        key = (sessions, period, muscle, day)
+        value = WorkoutHistorySnapshot(sessions: sessions, period: period, muscle: muscle, exerciseId: exerciseId)
+        key = (sessions, period, muscle, exerciseId, day)
         return value
     }
 }

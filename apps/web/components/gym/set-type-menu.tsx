@@ -55,7 +55,7 @@ export function SetTypeMenu({
           type="button"
           data-testid="set-menu-trigger"
           aria-label={format(t.a11y.setTypeMenu, { n: setNumber, type: setTypeLabel(setType) })}
-          className="focus-visible:ring-ring/50 -m-1 flex size-11 shrink-0 items-center justify-center rounded-full outline-hidden focus-visible:ring-[3px]"
+          className="focus-visible:ring-ring/50 -m-1 flex size-11 shrink-0 items-center justify-center rounded-full outline-hidden focus-visible:ring-[3px] max-sm:size-9"
         >
           <SetTypeBadge setType={setType} label={badgeLabel} completed={completed} size={size} />
         </button>

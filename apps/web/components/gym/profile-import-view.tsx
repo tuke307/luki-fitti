@@ -10,8 +10,6 @@ import {
   Salad,
   User,
   LogOut,
-  LogIn,
-  UserPlus,
   Download,
   FileJson,
   FileSpreadsheet,
@@ -22,7 +20,6 @@ import {
   AlertTriangle,
   Globe,
   Bell,
-  Volume2,
   Sparkles,
   ShieldCheck,
   Lightbulb,
@@ -43,7 +40,6 @@ import {
 } from '@luki-fitti/ui/components/ui/dialog';
 import { Input } from '@luki-fitti/ui/components/ui/input';
 import { Label } from '@luki-fitti/ui/components/ui/label';
-import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
 import { toast } from '@luki-fitti/ui/components/ui/sonner';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useAuth } from '@/providers/auth/auth-context';
@@ -67,7 +63,19 @@ import { AiModelsPage } from './settings/ai-models-page';
 import { ImportPage } from './settings/import-page';
 import { buildFeatureRequestMailto, buildImportFile } from '@luki-fitti/common/utils';
 import { AI_KEY_NAVIGATE_EVENT } from '@/lib/ai/ai-key-required';
-import { SettingsRow, SettingsSection, SettingsSubpage } from './settings/settings-row';
+import {
+  SettingsBar,
+  SettingsButtonRow,
+  SettingsRow,
+  SettingsSection,
+  SettingsSelectRow,
+  SettingsSheetContext,
+  SettingsStepperRow,
+  SettingsSubpage,
+  SettingsSwitchRow,
+} from './settings/settings-row';
+import { PageTitle } from './page-title';
+import { unitLabel } from '@/lib/format/weight';
 import { WeightView } from './weight/weight-view';
 import { hasPendingWeightFocusRequest } from './weight/weight-focus';
 
@@ -101,14 +109,19 @@ type SettingsPage = (typeof SETTINGS_PAGES)[number];
 
 const AUTH_ONLY_PAGES: ReadonlySet<SettingsPage> = new Set([
   'account',
-  'nutrition',
-  'health',
   'aiKey',
   'aiModels',
   'aiUsage',
-  'export',
   'import',
 ]);
+
+const REST_OPTIONS = [60, 75, 90, 120, 150, 180] as const;
+
+interface ProfileImportViewProps {
+  /** `sheet`: the phone Profile drawer with an inline title bar and a Done button. */
+  variant?: 'page' | 'sheet';
+  onClose?: () => void;
+}
 
 const HISTORY_KEY = 'profilePage';
 
@@ -135,7 +148,7 @@ function readHistoryPage(): SettingsPage | null {
   return isSettingsPage(value) ? value : null;
 }
 
-export function ProfileImportView() {
+export function ProfileImportView({ variant = 'page', onClose }: ProfileImportViewProps = {}) {
   const {
     user,
     authMode,
@@ -280,6 +293,11 @@ export function ProfileImportView() {
   const isAuthenticated = authMode === 'AUTHENTICATED';
   const visiblePage: SettingsPage = AUTH_ONLY_PAGES.has(page) && !isAuthenticated ? 'root' : page;
   const weightUnit = user?.preferences?.weightUnit ?? WeightUnit.KG;
+  const weeklyGoal = user?.preferences?.weeklyGoalSessions ?? 4;
+  const weeklyGoalText = format(
+    weeklyGoal === 1 ? t.profile.weeklyGoalValueOne : t.profile.weeklyGoalValue,
+    { count: weeklyGoal },
+  );
   const kcalGoal = user?.preferences?.dailyKcalGoal ?? null;
   const languageName =
     languagePreference === 'en'
@@ -323,6 +341,7 @@ export function ProfileImportView() {
     focusAfterChange.current = false;
     if (visiblePage !== 'root') {
       window.scrollTo({ top: 0 });
+      headingRef.current?.closest('[data-settings-scroll]')?.scrollTo({ top: 0 });
       headingRef.current?.focus();
     } else if (lastOpened.current) {
       document
@@ -361,176 +380,191 @@ export function ProfileImportView() {
           <User className="text-primary h-5 w-5" />
           <h2 className="font-display text-lg font-bold">{t.profile.accountSectionTitle}</h2>
         </div>
-        <Badge
-          variant={authMode === 'AUTHENTICATED' ? 'success' : 'warning'}
-          className="rounded-full px-3 py-1 text-xs"
-        >
-          {authMode === 'AUTHENTICATED'
-            ? t.profile.authenticatedBadge
-            : t.profile.offlineLocalBadge}
+        <Badge variant="success" className="rounded-full px-3 py-1 text-xs">
+          {t.profile.authenticatedBadge}
         </Badge>
       </div>
 
       {user && (
         <div className="bg-secondary/40 rounded-2xl p-3.5 text-xs">
-          <p className="text-sm font-bold">{user.name || 'GymBuddy'}</p>
+          {user.name && <p className="text-sm font-bold">{user.name}</p>}
           <p className="text-muted-foreground">{user.email}</p>
-          <p className="text-muted-foreground mt-1 text-xs">
-            {authMode === 'AUTHENTICATED' ? t.profile.authenticatedDesc : t.profile.guestDesc}
-          </p>
+          <p className="text-muted-foreground mt-1 text-xs">{t.profile.authenticatedDesc}</p>
         </div>
       )}
 
-      {authMode === 'AUTHENTICATED' ? (
-        <div className="space-y-3">
-          {authInfoMessage && (
-            <div className="border-primary/40 bg-primary/12 text-primary flex items-start gap-2 rounded-2xl border p-3 text-xs">
+      <div className="space-y-3">
+        {authInfoMessage && (
+          <div className="border-primary/40 bg-primary/12 text-primary flex items-start gap-2 rounded-2xl border p-3 text-xs">
+            <MailCheck className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{authInfoMessage}</span>
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" variant="secondary" asChild>
+            <Link href="/change-password">
+              <KeyRound className="h-4 w-4" /> {t.profile.changePasswordBtn}
+            </Link>
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => void logout()}
+            className="hover:bg-destructive/20 hover:text-destructive w-fit"
+          >
+            <LogOut className="h-4 w-4" /> {t.profile.signOutBtn}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setLogoutAllDialogOpen(true)}
+            className="hover:bg-destructive/20 hover:text-destructive w-fit"
+          >
+            <LogOut className="h-4 w-4" /> {t.profile.signOutAllBtn}
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => {
+              setDeletePassword('');
+              setDeleteError(null);
+              setDeleteDialogOpen(true);
+            }}
+            className="w-fit"
+          >
+            <Trash2 className="h-4 w-4" /> {t.profile.deleteAccountBtn}
+          </Button>
+        </div>
+      </div>
+    </Card>
+  );
+
+  const fieldClass =
+    'h-11 rounded-none border-0 bg-transparent px-4 text-[1.0625rem] shadow-none focus-visible:ring-0 dark:bg-transparent';
+  const fieldItemClass =
+    'focus-within:ring-ring relative focus-within:ring-2 focus-within:ring-inset not-first:before:bg-border not-first:before:absolute not-first:before:top-0 not-first:before:right-0 not-first:before:left-4 not-first:before:h-px';
+
+  /** Guest sign-in / register, laid out like the iOS Account section. */
+  const guestAccountBlock = (
+    <section
+      aria-labelledby="guest-account-heading"
+      className="space-y-1.5"
+      data-testid="guest-account-block"
+    >
+      <h2 id="guest-account-heading" className="text-muted-foreground px-4 text-[0.8125rem]">
+        {t.profile.accountSectionTitle}
+      </h2>
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          if (authTab === 'login') {
+            await login(email, password);
+          } else {
+            await register({ email, password, name: name || undefined });
+          }
+        }}
+        className="space-y-3"
+      >
+        <Tabs value={authTab} onValueChange={(val) => setAuthTab(val as 'login' | 'register')}>
+          <TabsList className="w-full">
+            <TabsTrigger value="login">{t.profile.signInTab}</TabsTrigger>
+            <TabsTrigger value="register">{t.profile.registerAccountTab}</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        <ul className="bg-card overflow-hidden rounded-[1.25rem]">
+          {authTab === 'register' && (
+            <li className={fieldItemClass}>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t.profile.yourNamePlaceholder}
+                aria-label={t.profile.yourNamePlaceholder}
+                autoComplete="name"
+                className={fieldClass}
+              />
+            </li>
+          )}
+          <li className={fieldItemClass}>
+            <Input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder={t.profile.emailAddressPlaceholder}
+              aria-label={t.profile.emailAddressPlaceholder}
+              autoComplete="email"
+              className={fieldClass}
+            />
+          </li>
+          <li className={fieldItemClass}>
+            <Input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={t.profile.passwordPlaceholder}
+              aria-label={t.profile.passwordPlaceholder}
+              autoComplete={authTab === 'login' ? 'current-password' : 'new-password'}
+              className={fieldClass}
+            />
+          </li>
+        </ul>
+
+        {authInfoMessage && (
+          <div className="border-primary/40 bg-primary/12 text-primary space-y-2 rounded-2xl border p-3 text-[0.8125rem]">
+            <div className="flex items-start gap-2">
               <MailCheck className="mt-0.5 h-4 w-4 shrink-0" />
               <span>{authInfoMessage}</span>
             </div>
-          )}
-          <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" variant="secondary" asChild>
-              <Link href="/change-password">
-                <KeyRound className="h-4 w-4" /> {t.profile.changePasswordBtn}
-              </Link>
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => void logout()}
-              className="hover:bg-destructive/20 hover:text-destructive w-fit"
-            >
-              <LogOut className="h-4 w-4" /> {t.profile.signOutBtn}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setLogoutAllDialogOpen(true)}
-              className="hover:bg-destructive/20 hover:text-destructive w-fit"
-            >
-              <LogOut className="h-4 w-4" /> {t.profile.signOutAllBtn}
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={() => {
-                setDeletePassword('');
-                setDeleteError(null);
-                setDeleteDialogOpen(true);
-              }}
-              className="w-fit"
-            >
-              <Trash2 className="h-4 w-4" /> {t.profile.deleteAccountBtn}
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (authTab === 'login') {
-              await login(email, password);
-            } else {
-              await register({ email, password, name: name || undefined });
-            }
-          }}
-          className="space-y-3 border-t pt-3"
-        >
-          <Tabs value={authTab} onValueChange={(val) => setAuthTab(val as 'login' | 'register')}>
-            <TabsList className="w-full">
-              <TabsTrigger value="login">{t.profile.signInTab}</TabsTrigger>
-              <TabsTrigger value="register">{t.profile.registerTab}</TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          {authTab === 'register' && (
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t.profile.yourNamePlaceholder}
-              className="text-xs"
-            />
-          )}
-          <Input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder={t.profile.emailPlaceholder}
-            className="text-xs"
-          />
-          <Input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder={t.profile.passwordPlaceholder}
-            className="text-xs"
-          />
-
-          {authTab === 'login' && (
-            <div className="flex justify-end">
-              <Link
-                href="/forgot-password"
-                className="text-primary text-xs font-semibold hover:underline"
+            {email.trim() && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="xs"
+                disabled={authLoading}
+                onClick={() => void resendConfirmation(email.trim())}
               >
-                {t.profile.forgotPasswordLink}
-              </Link>
-            </div>
-          )}
-
-          {authInfoMessage && (
-            <div className="border-primary/40 bg-primary/12 text-primary space-y-2 rounded-2xl border p-3 text-xs">
-              <div className="flex items-start gap-2">
-                <MailCheck className="mt-0.5 h-4 w-4 shrink-0" />
-                <span>{authInfoMessage}</span>
-              </div>
-              {email.trim() && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="xs"
-                  disabled={authLoading}
-                  onClick={() => void resendConfirmation(email.trim())}
-                >
-                  {t.profile.resendConfirmationBtn}
-                </Button>
-              )}
-            </div>
-          )}
-
-          {authError && (
-            <div className="space-y-2">
-              <p className="text-destructive text-xs">{authError}</p>
-              {authError.toLowerCase().includes('confirm your email') && email.trim() && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="xs"
-                  disabled={authLoading}
-                  onClick={() => void resendConfirmation(email.trim())}
-                >
-                  <MailCheck className="h-3.5 w-3.5" /> {t.profile.resendConfirmationBtn}
-                </Button>
-              )}
-            </div>
-          )}
-
-          <Button type="submit" disabled={authLoading} className="w-full">
-            {authTab === 'login' ? (
-              <>
-                <LogIn className="h-4 w-4" /> {t.profile.signInSyncBtn}
-              </>
-            ) : (
-              <>
-                <UserPlus className="h-4 w-4" /> {t.profile.createAccountBtn}
-              </>
+                {t.profile.resendConfirmationBtn}
+              </Button>
             )}
-          </Button>
-        </form>
-      )}
-    </Card>
+          </div>
+        )}
+
+        {authError && (
+          <div className="space-y-2 px-4">
+            <p className="text-destructive text-[0.8125rem]">{authError}</p>
+            {authError.toLowerCase().includes('confirm your email') && email.trim() && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="xs"
+                disabled={authLoading}
+                onClick={() => void resendConfirmation(email.trim())}
+              >
+                <MailCheck className="h-3.5 w-3.5" /> {t.profile.resendConfirmationBtn}
+              </Button>
+            )}
+          </div>
+        )}
+
+        <Button type="submit" disabled={authLoading} className="h-12 w-full text-[1.0625rem]">
+          {authTab === 'login' ? t.profile.signInSyncBtn : t.profile.createAccountBtn}
+        </Button>
+
+        {authTab === 'login' && (
+          <div className="flex justify-center">
+            <Link
+              href="/forgot-password"
+              className="text-primary flex min-h-11 items-center px-2 text-[0.9375rem] hover:underline"
+            >
+              {t.profile.forgotPasswordLink}
+            </Link>
+          </div>
+        )}
+      </form>
+      <p className="text-muted-foreground px-4 text-[0.8125rem]">{t.profile.guestDesc}</p>
+    </section>
   );
 
   const subpageContent = (): React.ReactNode => {
@@ -539,76 +573,37 @@ export function ProfileImportView() {
         return accountCard;
       case 'training':
         return (
-          <Card className="space-y-4 rounded-[1.25rem] p-5 text-xs">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold">{t.profile.defaultRestLabel}</p>
-                <p className="text-muted-foreground text-xs">{t.profile.defaultRestSub}</p>
-              </div>
-              <NativeSelect
-                aria-label={t.a11y.defaultRestSeconds}
-                value={user?.preferences?.defaultRestSeconds ?? 90}
-                onChange={(e) =>
-                  void updatePreferences({ defaultRestSeconds: Number(e.target.value) })
-                }
-                className="tabular-nums w-auto"
-              >
-                {[60, 75, 90, 120, 150, 180].map((sec) => (
-                  <option key={sec} value={sec}>
-                    {sec} {t.common.sec}
-                  </option>
-                ))}
-              </NativeSelect>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold">{t.profile.weeklyGoalLabel}</p>
-                <p className="text-muted-foreground text-xs">{t.profile.weeklyGoalSub}</p>
-              </div>
-              <NativeSelect
-                aria-label={t.a11y.weeklyGoalSessions}
-                value={user?.preferences?.weeklyGoalSessions ?? 4}
-                onChange={(e) =>
-                  void updatePreferences({ weeklyGoalSessions: Number(e.target.value) })
-                }
-                className="tabular-nums w-auto"
-              >
-                {[2, 3, 4, 5, 6].map((g) => (
-                  <option key={g} value={g}>
-                    {format(t.profile.sessionsPerWeek, { count: g })}
-                  </option>
-                ))}
-              </NativeSelect>
-            </div>
-
-            {/* Smart Rainbow Exercise Suggestions Toggle (Default: On) */}
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="flex items-center gap-1.5 font-semibold">
-                  <Sparkles className="h-3.5 w-3.5 text-warning" />
-                  {t.profile.exerciseSuggestionsLabel}
-                </p>
-                <p className="text-muted-foreground text-xs">{t.profile.exerciseSuggestionsSub}</p>
-              </div>
-              <Tabs
-                data-testid="profile-exercise-suggestions-tabs"
-                value={(user?.preferences?.exerciseSuggestionsEnabled ?? true) ? 'on' : 'off'}
-                onValueChange={(val) =>
-                  void updatePreferences({ exerciseSuggestionsEnabled: val === 'on' })
-                }
-              >
-                <TabsList>
-                  <TabsTrigger value="on" data-testid="exercise-suggestions-on">
-                    {t.profile.enabledOption}
-                  </TabsTrigger>
-                  <TabsTrigger value="off" data-testid="exercise-suggestions-off">
-                    {t.profile.disabledOption}
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-          </Card>
+          <SettingsSection footer={t.profile.exerciseSuggestionsSub}>
+            <SettingsSelectRow
+              title={t.profile.defaultRestLabel}
+              value={String(user?.preferences?.defaultRestSeconds ?? 90)}
+              options={REST_OPTIONS.map((sec) => ({
+                value: String(sec),
+                label: `${sec} ${t.common.sec}`,
+              }))}
+              onValueChange={(val) => void updatePreferences({ defaultRestSeconds: Number(val) })}
+              data-testid="profile-default-rest-select"
+            />
+            <SettingsStepperRow
+              title={t.profile.weeklyGoalLabel}
+              value={weeklyGoal}
+              valueText={weeklyGoalText}
+              min={1}
+              max={14}
+              onChange={(next) => void updatePreferences({ weeklyGoalSessions: next })}
+              decrementLabel={t.profile.stepperDecrement}
+              incrementLabel={t.profile.stepperIncrement}
+              data-testid="profile-weekly-goal-stepper"
+            />
+            <SettingsSwitchRow
+              title={t.profile.exerciseSuggestionsLabel}
+              checked={user?.preferences?.exerciseSuggestionsEnabled ?? true}
+              onCheckedChange={(checked) =>
+                void updatePreferences({ exerciseSuggestionsEnabled: checked })
+              }
+              data-testid="exercise-suggestions-switch"
+            />
+          </SettingsSection>
         );
       case 'nutrition':
         return <ProfileNutritionGoalsCard />;
@@ -621,151 +616,81 @@ export function ProfileImportView() {
         );
       case 'notifications':
         return (
-          <Card className="space-y-4 rounded-[1.25rem] p-5 text-xs">
-            {/* Workout & Rest Timer Notifications Toggle + Test Notification */}
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="flex items-center gap-1.5 font-semibold">
-                    <Bell className="text-primary h-3.5 w-3.5" />
-                    {t.profile.notificationsLabel}
-                  </p>
-                  <p className="text-muted-foreground text-xs">{t.profile.notificationsSub}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="xs"
-                    data-testid="profile-test-notification-btn"
-                    onClick={async () => {
-                      await requestWorkoutNotificationPermission();
-                      await triggerWorkoutNotification({
-                        title: t.profile.testNotificationTitle,
-                        body: t.profile.testNotificationBody,
-                        tag: 'luki-fitti-test',
-                        playSound: user?.preferences?.restTimerSound ?? true,
-                        showToast: true,
-                      });
-                    }}
-                    className="font-bold"
-                  >
-                    <Bell className="h-3 w-3" />
-                    {t.profile.testNotificationBtn}
-                  </Button>
-                  <Tabs
-                    data-testid="profile-notifications-tabs"
-                    value={(user?.preferences?.notificationsEnabled ?? true) ? 'on' : 'off'}
-                    onValueChange={async (val) => {
-                      const enabled = val === 'on';
-                      if (enabled) {
-                        await requestWorkoutNotificationPermission();
-                      }
-                      await updatePreferences({ notificationsEnabled: enabled });
-                    }}
-                  >
-                    <TabsList>
-                      <TabsTrigger value="on" data-testid="notifications-on">
-                        {t.profile.enabledOption}
-                      </TabsTrigger>
-                      <TabsTrigger value="off" data-testid="notifications-off">
-                        {t.profile.disabledOption}
-                      </TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="flex items-center gap-1.5 font-semibold">
-                    <Volume2 className="text-accent h-3.5 w-3.5" />
-                    {t.profile.restSoundLabel}
-                  </p>
-                  <p className="text-muted-foreground text-xs">{t.profile.restSoundSub}</p>
-                </div>
-                <Tabs
-                  value={(user?.preferences?.restTimerSound ?? true) ? 'on' : 'off'}
-                  onValueChange={(val) => void updatePreferences({ restTimerSound: val === 'on' })}
-                >
-                  <TabsList>
-                    <TabsTrigger value="on">{t.profile.enabledOption}</TabsTrigger>
-                    <TabsTrigger value="off">{t.profile.disabledOption}</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
-            </div>
-          </Card>
+          <SettingsSection>
+            <SettingsSwitchRow
+              title={t.profile.notificationsLabel}
+              subtitle={t.profile.notificationsSub}
+              checked={user?.preferences?.notificationsEnabled ?? true}
+              onCheckedChange={async (enabled) => {
+                if (enabled) {
+                  await requestWorkoutNotificationPermission();
+                }
+                await updatePreferences({ notificationsEnabled: enabled });
+              }}
+              data-testid="notifications-switch"
+            />
+            <SettingsSwitchRow
+              title={t.profile.restSoundLabel}
+              subtitle={t.profile.restSoundSub}
+              checked={user?.preferences?.restTimerSound ?? true}
+              onCheckedChange={(checked) => void updatePreferences({ restTimerSound: checked })}
+              data-testid="rest-sound-switch"
+            />
+            <SettingsButtonRow
+              title={t.profile.sendTestNotificationBtn}
+              data-testid="profile-test-notification-btn"
+              onClick={async () => {
+                await requestWorkoutNotificationPermission();
+                await triggerWorkoutNotification({
+                  title: t.profile.testNotificationTitle,
+                  body: t.profile.testNotificationBody,
+                  tag: 'luki-fitti-test',
+                  playSound: user?.preferences?.restTimerSound ?? true,
+                  showToast: true,
+                });
+              }}
+            />
+          </SettingsSection>
         );
       case 'language':
         return (
-          <Card className="space-y-4 rounded-[1.25rem] p-5 text-xs">
-            {/* Language Switcher */}
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="flex items-center gap-1.5 font-semibold">
-                  <Globe className="text-primary h-3.5 w-3.5" />
-                  {t.profile.languageLabel}
-                </p>
-                <p className="text-muted-foreground text-xs">{t.profile.languageSub}</p>
-              </div>
-              <Tabs
-                value={languagePreference}
-                onValueChange={(val) => {
-                  if (val === 'system' || val === 'en' || val === 'de') {
-                    void setLanguagePreference(val as LanguagePreference);
-                  }
-                }}
-              >
-                <TabsList>
-                  <TabsTrigger value="system">{t.profile.langSystem}</TabsTrigger>
-                  <TabsTrigger value="en">{t.profile.langEn}</TabsTrigger>
-                  <TabsTrigger value="de">{t.profile.langDe}</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="font-semibold">{t.profile.themeLabel}</p>
-                <p className="text-muted-foreground text-xs">{t.profile.themeSub}</p>
-              </div>
-              <Tabs
-                value={theme ?? 'system'}
-                onValueChange={(val) => {
-                  setTheme(val);
-                  if (val === 'dark' || val === 'light' || val === 'system') {
-                    void updatePreferences({ theme: val });
-                  }
-                }}
-              >
-                <TabsList>
-                  <TabsTrigger value="system">{t.profile.themeSystem}</TabsTrigger>
-                  <TabsTrigger value="light">{t.profile.themeLight}</TabsTrigger>
-                  <TabsTrigger value="dark">{t.profile.themeDark}</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p id="settings-unit-label" className="font-semibold">
-                {t.profile.weightUnitLabel}
-              </p>
-              <Tabs
-                value={weightUnit}
-                onValueChange={(val) => {
-                  if (val === WeightUnit.KG || val === WeightUnit.LBS) {
-                    void updatePreferences({ weightUnit: val });
-                  }
-                }}
-              >
-                <TabsList aria-labelledby="settings-unit-label">
-                  <TabsTrigger value={WeightUnit.KG}>KG</TabsTrigger>
-                  <TabsTrigger value={WeightUnit.LBS}>LBS</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-          </Card>
+          <SettingsSection>
+            <SettingsSelectRow<LanguagePreference>
+              title={t.profile.languageLabel}
+              value={languagePreference}
+              options={[
+                { value: 'system', label: t.profile.langSystem },
+                { value: 'en', label: t.profile.langEn },
+                { value: 'de', label: t.profile.langDe },
+              ]}
+              onValueChange={(val) => void setLanguagePreference(val)}
+              data-testid="profile-language-select"
+            />
+            <SettingsSelectRow<'system' | 'light' | 'dark'>
+              title={t.profile.themeLabel}
+              value={theme === 'light' || theme === 'dark' ? theme : 'system'}
+              options={[
+                { value: 'system', label: t.profile.themeSystem },
+                { value: 'light', label: t.profile.themeLight },
+                { value: 'dark', label: t.profile.themeDark },
+              ]}
+              onValueChange={(val) => {
+                setTheme(val);
+                void updatePreferences({ theme: val });
+              }}
+              data-testid="profile-theme-select"
+            />
+            <SettingsSelectRow<WeightUnit>
+              title={t.profile.weightUnitLabel}
+              value={weightUnit}
+              options={[
+                { value: WeightUnit.KG, label: unitLabel(WeightUnit.KG) },
+                { value: WeightUnit.LBS, label: unitLabel(WeightUnit.LBS) },
+              ]}
+              onValueChange={(val) => void updatePreferences({ weightUnit: val })}
+              data-testid="profile-weight-unit-select"
+            />
+          </SettingsSection>
         );
       case 'aiKey':
         return <AiKeyCard />;
@@ -848,73 +773,41 @@ export function ProfileImportView() {
         );
       case 'usage':
         return (
-          <Card className="space-y-4 rounded-[1.25rem] p-5 text-xs">
+          <SettingsSection footer={t.profile.usageStatsSub}>
             {/* Anonymous usage statistics opt-out (device-local, stored in localStorage) */}
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="flex items-center gap-1.5 font-semibold">
-                  <ShieldCheck className="text-primary h-3.5 w-3.5" />
-                  {t.profile.usageStatsLabel}
-                </p>
-                <p className="text-muted-foreground text-xs">{t.profile.usageStatsSub}</p>
-              </div>
-              <Tabs
-                data-testid="profile-usage-stats-tabs"
-                value={analyticsOptedOut ? 'off' : 'on'}
-                onValueChange={(val) => setAnalyticsOptOut(val === 'off')}
-              >
-                <TabsList>
-                  <TabsTrigger value="on" data-testid="usage-stats-on">
-                    {t.profile.enabledOption}
-                  </TabsTrigger>
-                  <TabsTrigger value="off" data-testid="usage-stats-off">
-                    {t.profile.disabledOption}
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-          </Card>
+            <SettingsSwitchRow
+              title={t.profile.usageStatsLabel}
+              checked={!analyticsOptedOut}
+              onCheckedChange={(checked) => setAnalyticsOptOut(!checked)}
+              data-testid="usage-stats-switch"
+            />
+          </SettingsSection>
         );
       case 'sources':
         return (
-          <Card data-testid="exercise-data-sources" className="space-y-2 rounded-[1.25rem] p-5">
-            <h2 className="text-[0.9375rem] font-semibold">{t.profile.dataSourcesTitle}</h2>
-            <p className="text-muted-foreground text-[0.8125rem]">{t.profile.dataSourcesDesc}</p>
-            <ul className="space-y-1 text-[0.8125rem]">
-              <li>
-                <a
-                  href="https://github.com/yuhonas/free-exercise-db"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary font-medium"
-                >
-                  free-exercise-db
-                </a>{' '}
-                <span className="text-muted-foreground">· Unlicense (public domain)</span>
-              </li>
-              <li>
-                <a
-                  href="https://wger.de"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary font-medium"
-                >
-                  wger Workout Manager
-                </a>{' '}
-                <span className="text-muted-foreground">
-                  ·{' '}
-                  <a
-                    href="https://creativecommons.org/licenses/by-sa/4.0/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline"
-                  >
-                    CC-BY-SA 4.0
-                  </a>
-                </span>
-              </li>
-            </ul>
-          </Card>
+          <div data-testid="exercise-data-sources" className="space-y-4">
+            <SettingsSection footer={t.profile.dataSourcesDesc}>
+              <SettingsRow
+                href="https://github.com/yuhonas/free-exercise-db"
+                external
+                title="free-exercise-db"
+                subtitle="Unlicense (public domain)"
+              />
+              <SettingsRow
+                href="https://wger.de"
+                external
+                title="wger Workout Manager"
+                subtitle="CC-BY-SA 4.0"
+              />
+            </SettingsSection>
+            <SettingsSection>
+              <SettingsRow
+                href="https://creativecommons.org/licenses/by-sa/4.0/"
+                external
+                title={t.profile.licenseRow}
+              />
+            </SettingsSection>
+          </div>
         );
       default:
         return null;
@@ -929,43 +822,53 @@ export function ProfileImportView() {
   });
 
   return (
-    <>
-      {visiblePage === 'root' ? (
-        <div className="space-y-6 pb-12">
-          <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-              {t.profile.title}
-            </h1>
-            <p className="text-muted-foreground text-sm">{t.profile.subtitle}</p>
-          </div>
-
-          {isAuthenticated ? (
-            <SettingsSection title={t.profile.accountSectionTitle}>
-              <SettingsRow
-                onClick={() => openPage('account')}
-                data-testid="settings-row-account"
-                icon={User}
-                tone="primary"
-                title={t.profile.rowProfileAccount}
-                subtitle={user?.email}
+    <SettingsSheetContext.Provider value={variant === 'sheet'}>
+      <div className={variant === 'page' ? 'mx-auto max-w-2xl' : undefined}>
+        {visiblePage === 'root' ? (
+          <div className="space-y-6 pb-12">
+            {variant === 'sheet' ? (
+              <SettingsBar
+                title={t.nav.profile}
+                headingRef={headingRef}
+                trailing={
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    data-testid="profile-sheet-done"
+                    className="text-primary min-h-11 px-2 text-[1.0625rem] font-semibold"
+                  >
+                    {t.common.done}
+                  </button>
+                }
               />
-            </SettingsSection>
-          ) : (
-            <section aria-label={t.profile.accountSectionTitle}>{accountCard}</section>
-          )}
+            ) : (
+              <PageTitle title={t.nav.profile} />
+            )}
 
-          <SettingsSection title={t.profile.personalizationTitle}>
-            <SettingsRow
-              onClick={() => openPage('training')}
-              data-testid="settings-row-training"
-              icon={Dumbbell}
-              tone="primary"
-              title={t.profile.rowTraining}
-              value={format(t.profile.sessionsPerWeek, {
-                count: user?.preferences?.weeklyGoalSessions ?? 4,
-              })}
-            />
-            {isAuthenticated && (
+            {isAuthenticated ? (
+              <SettingsSection title={t.profile.accountSectionTitle}>
+                <SettingsRow
+                  onClick={() => openPage('account')}
+                  data-testid="settings-row-account"
+                  icon={User}
+                  tone="primary"
+                  title={t.profile.rowProfileAccount}
+                  subtitle={user?.email}
+                />
+              </SettingsSection>
+            ) : (
+              guestAccountBlock
+            )}
+
+            <SettingsSection title={t.profile.personalizationTitle}>
+              <SettingsRow
+                onClick={() => openPage('training')}
+                data-testid="settings-row-training"
+                icon={Dumbbell}
+                tone="primary"
+                title={t.profile.rowTraining}
+                value={weeklyGoalText}
+              />
               <SettingsRow
                 onClick={() => openPage('nutrition')}
                 data-testid="settings-row-nutrition"
@@ -978,8 +881,6 @@ export function ProfileImportView() {
                     : format(t.profile.kcalValue, { count: kcalGoal })
                 }
               />
-            )}
-            {isAuthenticated && (
               <SettingsRow
                 onClick={() => openPage('health')}
                 data-testid="settings-row-health"
@@ -987,52 +888,50 @@ export function ProfileImportView() {
                 tone="destructive"
                 title={t.profile.rowHealthDetails}
               />
-            )}
-            <SettingsRow
-              onClick={() => openPage('notifications')}
-              data-testid="settings-row-notifications"
-              icon={Bell}
-              tone="warning"
-              title={t.profile.rowNotifications}
-            />
-            <SettingsRow
-              onClick={() => openPage('language')}
-              data-testid="settings-row-language"
-              icon={Globe}
-              tone="warmup"
-              title={t.profile.rowLanguageUnits}
-              value={`${languageName} · ${weightUnit}`}
-            />
-          </SettingsSection>
-
-          {isAuthenticated && (
-            <SettingsSection title={t.profile.aiSectionTitle}>
               <SettingsRow
-                onClick={() => openPage('aiKey')}
-                data-testid="settings-row-ai-key"
-                icon={KeyRound}
-                tone="dropset"
-                title={t.profile.rowAiKey}
+                onClick={() => openPage('notifications')}
+                data-testid="settings-row-notifications"
+                icon={Bell}
+                tone="warning"
+                title={t.profile.rowNotifications}
               />
               <SettingsRow
-                onClick={() => openPage('aiModels')}
-                data-testid="settings-row-ai-models"
-                icon={Cpu}
-                tone="dropset"
-                title={t.profile.rowAiModels}
-              />
-              <SettingsRow
-                onClick={() => openPage('aiUsage')}
-                data-testid="settings-row-ai-usage"
-                icon={Sparkles}
-                tone="dropset"
-                title={t.profile.rowAiUsage}
+                onClick={() => openPage('language')}
+                data-testid="settings-row-language"
+                icon={Globe}
+                tone="warmup"
+                title={t.profile.rowLanguageUnits}
+                value={`${languageName} · ${unitLabel(weightUnit)}`}
               />
             </SettingsSection>
-          )}
 
-          <SettingsSection title={t.profile.dataSectionTitle}>
             {isAuthenticated && (
+              <SettingsSection title={t.profile.aiSectionTitle}>
+                <SettingsRow
+                  onClick={() => openPage('aiKey')}
+                  data-testid="settings-row-ai-key"
+                  icon={KeyRound}
+                  tone="dropset"
+                  title={t.profile.rowAiKey}
+                />
+                <SettingsRow
+                  onClick={() => openPage('aiModels')}
+                  data-testid="settings-row-ai-models"
+                  icon={Cpu}
+                  tone="dropset"
+                  title={t.profile.rowAiModels}
+                />
+                <SettingsRow
+                  onClick={() => openPage('aiUsage')}
+                  data-testid="settings-row-ai-usage"
+                  icon={Sparkles}
+                  tone="dropset"
+                  title={t.profile.rowAiUsage}
+                />
+              </SettingsSection>
+            )}
+
+            <SettingsSection title={t.profile.dataSectionTitle} footer={t.profile.dataGuidesFooter}>
               <SettingsRow
                 onClick={() => openPage('export')}
                 data-testid="settings-row-export"
@@ -1040,95 +939,95 @@ export function ProfileImportView() {
                 tone="stretch"
                 title={t.profile.rowExportBackup}
               />
-            )}
-            {isAuthenticated && (
+              {isAuthenticated && (
+                <SettingsRow
+                  onClick={() => openPage('import')}
+                  data-testid="settings-row-import"
+                  icon={Upload}
+                  tone="stretch"
+                  title={t.profile.rowImportFile}
+                />
+              )}
+              {IMPORT_GUIDES.map((guide) => (
+                <SettingsRow
+                  key={guide.testId}
+                  onClick={() => window.open(guide.url, '_blank', 'noopener,noreferrer')}
+                  data-testid={guide.testId}
+                  icon={BookOpen}
+                  tone="muted"
+                  title={guide.name}
+                />
+              ))}
+            </SettingsSection>
+
+            <SettingsSection title={t.profile.aboutSectionTitle}>
               <SettingsRow
-                onClick={() => openPage('import')}
-                data-testid="settings-row-import"
-                icon={Upload}
-                tone="stretch"
-                title={t.profile.rowImportFile}
+                onClick={() => openPage('usage')}
+                data-testid="settings-row-usage"
+                icon={ShieldCheck}
+                tone="muted"
+                title={t.profile.rowUsageStats}
+                value={analyticsOptedOut ? t.profile.disabledOption : t.profile.enabledOption}
               />
-            )}
-            {IMPORT_GUIDES.map((guide) => (
               <SettingsRow
-                key={guide.testId}
-                onClick={() => window.open(guide.url, '_blank', 'noopener,noreferrer')}
-                data-testid={guide.testId}
+                onClick={() => openPage('sources')}
+                data-testid="settings-row-sources"
                 icon={BookOpen}
                 tone="muted"
-                title={guide.name}
+                title={t.profile.rowDataSources}
               />
-            ))}
-          </SettingsSection>
+            </SettingsSection>
 
-          <SettingsSection title={t.profile.aboutSectionTitle}>
-            <SettingsRow
-              onClick={() => openPage('usage')}
-              data-testid="settings-row-usage"
-              icon={ShieldCheck}
-              tone="muted"
-              title={t.profile.rowUsageStats}
-              value={analyticsOptedOut ? t.profile.disabledOption : t.profile.enabledOption}
-            />
-            <SettingsRow
-              onClick={() => openPage('sources')}
-              data-testid="settings-row-sources"
-              icon={BookOpen}
-              tone="muted"
-              title={t.profile.rowDataSources}
-            />
-          </SettingsSection>
+            <SettingsSection title={t.profile.feedbackSectionTitle}>
+              <SettingsRow
+                href={featureRequestMailto}
+                data-testid="settings-row-feature-request"
+                icon={Lightbulb}
+                tone="warmup"
+                title={t.profile.rowFeatureRequest}
+              />
+            </SettingsSection>
 
-          <SettingsSection title={t.profile.feedbackSectionTitle}>
-            <SettingsRow
-              href={featureRequestMailto}
-              data-testid="settings-row-feature-request"
-              icon={Lightbulb}
-              tone="warmup"
-              title={t.profile.rowFeatureRequest}
-            />
-          </SettingsSection>
+            <SettingsSection title={t.profile.legalSectionTitle}>
+              <SettingsRow
+                href={`${locale === 'de' ? '/impressum' : '/en/imprint'}`}
+                data-testid="settings-row-imprint"
+                icon={FileText}
+                tone="muted"
+                title={t.profile.rowImprint}
+              />
+              <SettingsRow
+                href={`${locale === 'de' ? '/datenschutz' : '/en/privacy'}`}
+                data-testid="settings-row-privacy"
+                icon={ShieldCheck}
+                tone="muted"
+                title={t.profile.rowPrivacy}
+              />
+              <SettingsRow
+                href={`${locale === 'de' ? '/nutzungsbedingungen' : '/en/terms'}`}
+                data-testid="settings-row-terms"
+                icon={BookOpen}
+                tone="muted"
+                title={t.profile.rowTerms}
+              />
+            </SettingsSection>
 
-          <SettingsSection title={t.profile.legalSectionTitle}>
-            <SettingsRow
-              href={`${locale === 'de' ? '/impressum' : '/en/imprint'}`}
-              data-testid="settings-row-imprint"
-              icon={FileText}
-              tone="muted"
-              title={t.profile.rowImprint}
-            />
-            <SettingsRow
-              href={`${locale === 'de' ? '/datenschutz' : '/en/privacy'}`}
-              data-testid="settings-row-privacy"
-              icon={ShieldCheck}
-              tone="muted"
-              title={t.profile.rowPrivacy}
-            />
-            <SettingsRow
-              href={`${locale === 'de' ? '/nutzungsbedingungen' : '/en/terms'}`}
-              data-testid="settings-row-terms"
-              icon={BookOpen}
-              tone="muted"
-              title={t.profile.rowTerms}
-            />
-          </SettingsSection>
-
-          <p className="text-muted-foreground pt-2 text-center text-xs">
-            {t.profile.version} {process.env.NEXT_PUBLIC_APP_VERSION}
-            {process.env.NEXT_PUBLIC_GIT_SHA ? ` (${process.env.NEXT_PUBLIC_GIT_SHA})` : ''}
-          </p>
-        </div>
-      ) : (
-        <SettingsSubpage
-          title={pageTitles[visiblePage]}
-          backLabel={t.profile.backToSettings}
-          onBack={goBack}
-          headingRef={headingRef}
-        >
-          {subpageContent()}
-        </SettingsSubpage>
-      )}
+            <p className="text-muted-foreground pt-2 text-center text-xs">
+              {t.profile.version} {process.env.NEXT_PUBLIC_APP_VERSION}
+              {process.env.NEXT_PUBLIC_GIT_SHA ? ` (${process.env.NEXT_PUBLIC_GIT_SHA})` : ''}
+            </p>
+          </div>
+        ) : (
+          <SettingsSubpage
+            title={pageTitles[visiblePage]}
+            backLabel={t.profile.backToSettings}
+            onBack={goBack}
+            headingRef={headingRef}
+          >
+            {subpageContent()}
+          </SettingsSubpage>
+        )}
+      </div>
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="sm:max-w-md">
@@ -1229,6 +1128,6 @@ export function ProfileImportView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </SettingsSheetContext.Provider>
   );
 }

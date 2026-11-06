@@ -11,6 +11,9 @@ struct HistorySessionEditorSheet: View {
     @State private var draft: WorkoutSessionDto
     @Environment(\.dismiss) private var dismiss
     @Environment(\.lukiLocale) private var tr
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    /// Keeps "12 reps" readable: the reps stepper never shrinks below this share of the row.
+    @ScaledMetric(relativeTo: .body) private var repsMinWidth: CGFloat = 124
 
     /// Stretches stay stretches; strength sets can be corrected between these.
     private static let strengthSetTypes: [SetType] = [.WARMUP, .WORKING, .DROPSET]
@@ -146,7 +149,7 @@ struct HistorySessionEditorSheet: View {
                 .accessibilityLabel(tr("Set %d: %@", n, LukiI18n.setTypeLabel(set.setType, locale: tr)))
                 .accessibilityIdentifier("ios.diary.setType.\(id)")
 
-                LukiValueStepper(
+                let weightStepper = LukiValueStepper(
                     value: LukiFormat.weight(weight),
                     unit: LukiFormat.unitLabel(set.weightUnit),
                     minusLabel: tr("Decrease weight by %@, set %d", LukiFormat.weight(step), n),
@@ -154,8 +157,7 @@ struct HistorySessionEditorSheet: View {
                     onMinus: { updateSet(ex, set.clientSetId) { $0.weight = max(0, weight - step) } },
                     onPlus: { updateSet(ex, set.clientSetId) { $0.weight = weight + step } }
                 )
-                .layoutPriority(1)
-                LukiValueStepper(
+                let repsStepper = LukiValueStepper(
                     value: "\(reps)",
                     unit: tr("reps"),
                     minusLabel: tr("Decrease reps, set %d", n),
@@ -163,6 +165,18 @@ struct HistorySessionEditorSheet: View {
                     onMinus: { updateSet(ex, set.clientSetId) { $0.reps = max(0, reps - 1) } },
                     onPlus: { updateSet(ex, set.clientSetId) { $0.reps = reps + 1 } }
                 )
+                // Accessibility sizes stack the steppers; side by side the reps keep a fixed share so
+                // the weight stepper can't squeeze the count away.
+                if dynamicTypeSize.isAccessibilitySize {
+                    VStack(spacing: 8) {
+                        weightStepper
+                        repsStepper
+                    }
+                } else {
+                    weightStepper
+                    repsStepper
+                        .frame(minWidth: min(repsMinWidth, 160), maxWidth: 160)
+                }
             }
         }
         .accessibilityElement(children: .contain)

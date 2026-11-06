@@ -79,29 +79,31 @@ test.describe('Body weight tracking', () => {
     await expect(homeCard).toBeVisible({ timeout: 10_000 });
     await homeCard.getByRole('button', { name: /Log weight|Gewicht eintragen/ }).click();
 
-    const section = page.getByRole('region', { name: /^(Body weight|Körpergewicht)$/ });
-    await expect(section).toBeVisible();
-    await expect(section.getByText(/No weigh-ins yet|Noch keine Einträge/)).toBeVisible();
-    const input = section.getByLabel(/Weight \(kg\)|Gewicht \(kg\)/);
+    // "Log weight" pushes the Weight page inside Today and opens the log sheet.
+    await expect(page.getByTestId('weight-page')).toBeAttached();
+    const sheet = page.getByTestId('weight-log-sheet');
+    const input = sheet.getByLabel(/Weight \(kg\)|Gewicht \(kg\)/);
     await expect(input).toBeFocused();
 
     // Out-of-range values are rejected with an accessible error.
     await input.fill('12');
-    await section.getByRole('button', { name: /^(Log weight|Gewicht eintragen)$/ }).click();
-    await expect(section.getByRole('alert')).toContainText(/25|400/);
+    await page.getByTestId('weight-sheet-save').click();
+    await expect(sheet.getByRole('alert')).toContainText(/25|400/);
     await expect(input).toHaveAttribute('aria-invalid', 'true');
 
     await input.fill('80.4');
-    await section.getByLabel(/Note|Notiz/).fill('Morning');
-    await section.getByRole('button', { name: /^(Log weight|Gewicht eintragen)$/ }).click();
+    await sheet.getByLabel(/Note|Notiz/).fill('Morning');
+    await page.getByTestId('weight-sheet-save').click();
+    await expect(sheet).not.toBeVisible();
 
+    const section = page.getByRole('region', { name: /^(Weight|Gewicht)$/ });
+    await expect(section).toBeVisible();
     const rows = section.getByTestId('weight-history-row');
     await expect(rows).toHaveCount(1);
     await expect(rows.first()).toContainText('80.4');
     await expect(rows.first()).toContainText('Morning');
     await expect(section.getByTestId('weight-current')).toContainText('80.4 kg');
     await expect(section.getByTestId('weight-chart-summary')).toContainText(/80\.4/);
-    await expect(page.getByTestId('body-current-weight')).toContainText('80.4 kg');
     expect([...api.store.values()].map((e) => e.weightKg)).toEqual([80.4]);
 
     await rows
@@ -113,7 +115,28 @@ test.describe('Body weight tracking', () => {
     await dialog.getByRole('button', { name: /^(Delete|Löschen)$/ }).click();
 
     await expect(rows).toHaveCount(0);
-    await expect(section.getByText(/No weigh-ins yet|Noch keine Einträge/)).toBeVisible();
+    await expect(section.getByText(/No weigh-ins yet|Noch kein Gewicht eingetragen/)).toBeVisible();
     expect(api.deleted).toEqual(['bw-1']);
+  });
+
+  test('guests log weigh-ins on this device only', async ({ page }) => {
+    const api = await mockBodyWeightApi(page);
+
+    await page.getByTestId('home-weight-open').click();
+    const section = page.getByRole('region', { name: /^(Weight|Gewicht)$/ });
+    await expect(section.getByText(/No weigh-ins yet|Noch kein Gewicht eingetragen/)).toBeVisible();
+    await page.getByTestId('weight-page-log').click();
+    await page
+      .getByTestId('weight-log-sheet')
+      .getByLabel(/Weight \(kg\)|Gewicht \(kg\)/)
+      .fill('72.5');
+    await page.getByTestId('weight-sheet-save').click();
+    await expect(section.getByTestId('weight-current')).toContainText('72.5 kg');
+
+    await page.getByTestId('weight-page-back').click();
+    await expect(page.getByTestId('home-weight-card')).toContainText('72.5');
+    await page.reload();
+    await expect(page.getByTestId('home-weight-card')).toContainText('72.5', { timeout: 10_000 });
+    expect(api.store.size).toBe(0);
   });
 });

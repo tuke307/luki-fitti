@@ -33,9 +33,17 @@ public struct RestTimerLiveActivity: Widget {
                     .dynamicIsland(verticalPlacement: .belowIfTooWide)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    TimerValue(state: context.state, isResting: context.isResting)
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(LukiColors.accent)
+                    VStack(alignment: .trailing, spacing: 0) {
+                        if !context.isResting {
+                            Text(context.attributes.labels.elapsed)
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        TimerValue(state: context.state, isResting: context.isResting)
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(context.isResting ? LukiColors.accent : .primary)
+                    }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack(spacing: 8) {
@@ -55,7 +63,7 @@ public struct RestTimerLiveActivity: Widget {
             } compactTrailing: {
                 TimerValue(state: context.state, isResting: context.isResting)
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(LukiColors.accent)
+                    .foregroundStyle(context.isResting ? LukiColors.accent : .secondary)
                     .frame(maxWidth: 52)
             } minimal: {
                 // Remaining rest (or elapsed time) instead of a static logo.

@@ -136,6 +136,8 @@ public struct ProfileAndAuthView: View {
         let exerciseSuggestionsEnabled: Bool
         let notificationsEnabled: Bool
         let restTimerSound: Bool
+        let defaultRestSeconds: Int
+        let theme: String
 
         init(_ p: UserPreferencesDto) {
             language = p.language
@@ -144,6 +146,8 @@ public struct ProfileAndAuthView: View {
             exerciseSuggestionsEnabled = p.exerciseSuggestionsEnabled
             notificationsEnabled = p.notificationsEnabled
             restTimerSound = p.restTimerSound
+            defaultRestSeconds = p.defaultRestSeconds
+            theme = p.theme
         }
     }
 
@@ -169,6 +173,8 @@ public struct ProfileAndAuthView: View {
             weeklyGoalSessions: values.weeklyGoalSessions
         )
         dto.weightUnit = values.weightUnit
+        dto.defaultRestSeconds = values.defaultRestSeconds
+        dto.theme = values.theme
         return await viewModel.savePreferences(viewModel.store.preferences, server: dto)
     }
 
@@ -348,12 +354,12 @@ public struct ProfileAndAuthView: View {
             NavigationLink {
                 NutritionGoalsView(viewModel: viewModel)
             } label: {
-                SettingsRow(
-                    tr("Nutrition goals"),
-                    systemImage: "fork.knife",
-                    tint: LukiColors.success,
-                    value: prefs.dailyKcalGoal.map { tr("%d kcal", $0) } ?? tr("Not set")
-                )
+                let goalValue = prefs.dailyKcalGoal.map { tr("%d kcal", $0) } ?? tr("Not set")
+                // A long value ("Nicht angegeben") would hyphenate the title; then it moves under it.
+                ViewThatFits(in: .horizontal) {
+                    SettingsRow(tr("Nutrition goals"), systemImage: "fork.knife", tint: LukiColors.success, value: goalValue)
+                    SettingsRow(tr("Nutrition goals"), systemImage: "fork.knife", tint: LukiColors.success, subtitle: goalValue)
+                }
             }
             .accessibilityIdentifier("ios.profile.nutritionGoalsRow")
 
@@ -415,6 +421,15 @@ public struct ProfileAndAuthView: View {
                 SettingsRow(tr("Export Backup"), systemImage: "square.and.arrow.up", tint: LukiColors.setStretch)
             }
             .accessibilityIdentifier("ios.profile.row.exportBackup")
+
+            let workoutLog = WorkoutLogExportFile(
+                historySessions: viewModel.store.historySessions,
+                folders: viewModel.store.folders
+            )
+            ShareLink(item: workoutLog, preview: SharePreview(workoutLog.fileName)) {
+                SettingsRow(tr("Workout Log (CSV)"), systemImage: "tablecells", tint: LukiColors.setStretch)
+            }
+            .accessibilityIdentifier("ios.profile.row.exportCsv")
 
             if viewModel.store.currentUser != nil {
                 NavigationLink {
@@ -606,6 +621,20 @@ private struct TrainingSettingsPage: View {
         @Bindable var store = viewModel.store
         return List {
             Section {
+                Picker(selection: $store.preferences.defaultRestSeconds) {
+                    ForEach(Self.restOptions(current: store.preferences.defaultRestSeconds), id: \.self) { seconds in
+                        Text(tr("%d s", seconds)).tag(seconds)
+                    }
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(tr("Rest timer"))
+                        Text(tr("Starts after each set"))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .accessibilityIdentifier("ios.profile.defaultRestPicker")
+
                 Stepper(value: $store.preferences.weeklyGoalSessions, in: 1...14) {
                     LabeledContent(tr("Weekly goal"), value: tr("%d workouts", store.preferences.weeklyGoalSessions))
                 }
@@ -629,6 +658,12 @@ private struct TrainingSettingsPage: View {
         .navigationTitle(tr("Training"))
         .navigationBarTitleDisplayMode(.inline)
         .modifier(PopOnDeepLink(viewModel: viewModel))
+    }
+
+    /// The web's choices; a value set elsewhere (e.g. by the API) stays selectable.
+    static func restOptions(current: Int) -> [Int] {
+        let options = [60, 75, 90, 120, 150, 180]
+        return options.contains(current) ? options : (options + [current]).sorted()
     }
 }
 
@@ -844,6 +879,14 @@ private struct LanguageUnitsSettingsPage: View {
                     }
                 }
                 .accessibilityIdentifier("ios.profile.languagePicker")
+
+                Picker(tr("Appearance"), selection: Binding(
+                    get: { LukiAppearance(rawValue: store.preferences.theme) ?? .system },
+                    set: { store.preferences.theme = $0.rawValue }
+                )) {
+                    ForEach(LukiAppearance.allCases, id: \.self) { Text(tr($0.title)).tag($0) }
+                }
+                .accessibilityIdentifier("ios.profile.appearancePicker")
 
                 Picker(tr("Weight unit"), selection: $store.preferences.weightUnit) {
                     ForEach(WeightUnit.allCases, id: \.self) { Text(LukiFormat.unitLabel($0)).tag($0) }

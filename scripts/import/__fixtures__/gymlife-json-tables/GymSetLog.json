@@ -1,5 +1,26 @@
 [
-  { "ID": 60, "TrainingExerciseLogID": 50, "NumberOfRepetitions": 10, "Weight": 40, "SetType": 1 },
-  { "ID": 61, "TrainingExerciseLogID": 50, "NumberOfRepetitions": 8, "Weight": 80, "SetType": 0 },
-  { "ID": 62, "TrainingExerciseLogID": 51, "NumberOfRepetitions": 5, "Weight": 100, "SetType": 0 }
+  {
+    "GymSetLogID": 61,
+    "TrainingExerciseLogID": 50,
+    "NumberOfSets": 2,
+    "NumberOfRepetitions": 8,
+    "Weight": 80,
+    "SetType": 0
+  },
+  {
+    "GymSetLogID": 60,
+    "TrainingExerciseLogID": 50,
+    "NumberOfSets": 1,
+    "NumberOfRepetitions": 10,
+    "Weight": 40,
+    "SetType": 1
+  },
+  {
+    "GymSetLogID": 62,
+    "TrainingExerciseLogID": 51,
+    "NumberOfSets": 1,
+    "NumberOfRepetitions": 5,
+    "Weight": 100,
+    "SetType": 0
+  }
 ]

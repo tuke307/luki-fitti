@@ -1,0 +1,110 @@
+{
+  "format": "luki-fitti-import@1",
+  "exportedAt": "2026-11-01T09:00:00.000Z",
+  "source": { "app": "Example", "note": "Made-up data for docs and tests" },
+  "customExercises": [
+    {
+      "key": "ex-landmine-press",
+      "name": "Landmine Press",
+      "primaryMuscleGroup": "SHOULDERS",
+      "equipment": "BARBELL",
+      "exerciseType": "STRENGTH",
+      "laterality": "UNILATERAL",
+      "description": "Press the end of a landmine barbell overhead.",
+      "instructions": ["Hold the bar end at shoulder height.", "Press up and forward."]
+    }
+  ],
+  "folders": [
+    { "key": "folder-push-pull", "name": "Push / Pull", "color": "#3A7BD5", "sortOrder": 0 }
+  ],
+  "templates": [
+    {
+      "key": "tpl-push",
+      "folderKey": "folder-push-pull",
+      "name": "Push Day",
+      "description": "Chest and shoulders",
+      "estimatedDurationMinutes": 60,
+      "sortOrder": 0,
+      "exercises": [
+        {
+          "exercise": { "slug": "barbell-bench-press-medium-grip" },
+          "orderIndex": 0,
+          "restSeconds": 120,
+          "sets": [
+            { "setType": "WARMUP", "weight": 40, "reps": 10, "durationSeconds": null },
+            { "setType": "WORKING", "weight": 80, "reps": 8, "durationSeconds": null },
+            { "setType": "WORKING", "weight": 80, "reps": 8, "durationSeconds": null }
+          ],
+          "alternativeExercises": [{ "slug": "incline-dumbbell-press" }]
+        },
+        {
+          "exercise": { "customKey": "ex-landmine-press" },
+          "orderIndex": 1,
+          "restSeconds": 90,
+          "sets": [{ "setType": "WORKING", "weight": 25, "reps": 10, "durationSeconds": null }]
+        }
+      ]
+    }
+  ],
+  "sessions": [
+    {
+      "key": "session-2026-10-30",
+      "workoutName": "Push Day",
+      "templateKey": "tpl-push",
+      "sessionType": "STRENGTH",
+      "startedAt": "2026-10-30T17:00:00.000Z",
+      "completedAt": "2026-10-30T18:02:00.000Z",
+      "activeDurationSeconds": 3720,
+      "notes": "Felt strong",
+      "exercises": [
+        {
+          "exercise": { "slug": "barbell-bench-press-medium-grip" },
+          "orderIndex": 0,
+          "restSeconds": 120,
+          "sets": [
+            {
+              "setNumber": 1,
+              "setType": "WARMUP",
+              "weight": 40,
+              "weightUnit": "KG",
+              "reps": 10,
+              "completed": true
+            },
+            {
+              "setNumber": 2,
+              "setType": "WORKING",
+              "weight": 80,
+              "weightUnit": "KG",
+              "reps": 8,
+              "rpe": 8,
+              "completed": true
+            },
+            {
+              "setNumber": 3,
+              "setType": "WORKING",
+              "weight": 80,
+              "weightUnit": "KG",
+              "reps": 7,
+              "rpe": 9,
+              "completed": true
+            }
+          ]
+        },
+        {
+          "exercise": { "customKey": "ex-landmine-press" },
+          "orderIndex": 1,
+          "sets": [
+            {
+              "setNumber": 1,
+              "setType": "WORKING",
+              "weight": 25,
+              "weightUnit": "KG",
+              "reps": 10,
+              "completed": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

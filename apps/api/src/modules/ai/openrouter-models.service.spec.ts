@@ -58,11 +58,14 @@ describe('parseOpenRouterModels', () => {
         upstream({ id: 'no/pricing', pricing: undefined }),
         { id: 42 },
         upstream({ id: 'good/two:free' }),
+        upstream({ id: '~good/three-latest' }),
+        upstream({ id: 'bad~/tilde' }),
+        upstream({ id: '~~bad/double' }),
       ],
     });
     assert.deepEqual(
       models.map((m) => m.id),
-      ['good/one', 'good/two:free'],
+      ['good/one', 'good/two:free', '~good/three-latest'],
     );
   });
 

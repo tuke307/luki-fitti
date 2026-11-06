@@ -132,6 +132,7 @@ describe('ImportService', () => {
     assert.equal(session!.id, sessionId);
     assert.equal(session!.clientSessionId, sessionId);
     assert.equal(session!.status, 'COMPLETED');
+    assert.equal(session!.sourceDevice, 'IMPORT');
     assert.equal(session!.templateId, importId('user-a', 'template', 'tpl-push'));
     // Warm-ups do not count towards volume: 80×8 + 80×7 + 25×10.
     assert.equal(session!.totalVolumeKg, 1450);

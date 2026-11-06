@@ -147,7 +147,15 @@ export function NumberInput(props: NumberInputProps) {
   };
 
   if (variant === 'bare') {
-    return <input {...sharedProps} className={cn(sharedProps.className, 'max-sm:text-base')} />;
+    return (
+      <input
+        {...sharedProps}
+        className={cn(
+          sharedProps.className,
+          'max-sm:text-base [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
+        )}
+      />
+    );
   }
 
   return <Input {...sharedProps} />;

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { z } from 'zod';
-import type { AiModelInfoDto } from '@luki-fitti/common/schemas';
+import { AI_MODEL_ID_PATTERN, type AiModelInfoDto } from '@luki-fitti/common/schemas';
 import { OPENROUTER_BASE_URL } from '@/config/env.config';
 
 const MODELS_TIMEOUT_MS = 10_000;
@@ -37,8 +37,6 @@ const UpstreamModelSchema = z.object({
 
 const UpstreamListSchema = z.object({ data: z.array(z.unknown()) });
 
-/** Same shape users may save (`AiModelIdSchema`), so every catalog id is also a valid choice. */
-const MODEL_ID = /^[a-z0-9][a-z0-9._-]*\/[a-z0-9._:-]+$/;
 
 const perMTok = (perToken: number) => Math.round(perToken * 1_000_000 * 1e6) / 1e6;
 
@@ -52,7 +50,8 @@ export function parseOpenRouterModels(json: unknown): AiModelInfoDto[] {
     const parsed = UpstreamModelSchema.safeParse(raw);
     if (!parsed.success) continue;
     const m = parsed.data;
-    if (m.id.length > 100 || !MODEL_ID.test(m.id) || seen.has(m.id)) continue;
+    // Same shape users may save (`AiModelIdSchema`), so every catalog id is also a valid choice.
+    if (m.id.length > 100 || !AI_MODEL_ID_PATTERN.test(m.id) || seen.has(m.id)) continue;
     seen.add(m.id);
     models.push({
       id: m.id,

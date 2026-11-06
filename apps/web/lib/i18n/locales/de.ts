@@ -99,6 +99,8 @@ export const de = {
     useServerVersion: 'Anderes Gerät verwenden',
     keepLocalData: 'Dieses Gerät behalten',
     pendingChanges: '{count} Änderungen warten auf Synchronisierung',
+    // Wave 2 w2
+    minimizeWorkout: 'Training minimieren',
   },
   enums: {
     muscleGroups: {
@@ -194,6 +196,9 @@ export const de = {
     allExercises: 'Alle Übungen',
     selected: 'Ausgewählt',
     changeExercise: 'Übung suchen oder ändern',
+    // Wave 2 w3b
+    exerciseInfoAria: 'So geht’s: {name}',
+    backBtn: 'Zurück',
   },
   home: {
     greeting: 'Hi, {name}',
@@ -236,6 +241,14 @@ export const de = {
     lastTrained: 'Zuletzt {date}',
     startWorkoutBtn: 'Starten',
     statsTitle: 'Überblick',
+    // Wave 2 w3a
+    noWorkoutsYet: 'Noch keine Trainings.',
+    musclesTrainedTitle: 'Trainierte Muskeln',
+    musclesTrainedSub: 'Durchschnittliche Sätze pro Woche',
+    rangeWeeksLong: '{weeks} Wochen',
+    setsPerWeekShort: '{sets} Sätze/Woche',
+    musclesTargetNote:
+      'Ziel sind {min}–{max} Sätze pro Muskel und Woche. Muskeln, die bei einer Übung mithelfen, zählen als halber Satz.',
   },
   workouts: {
     title: 'Workouts',
@@ -333,6 +346,12 @@ export const de = {
     startWorkoutAria: '{name} starten',
     editListBtn: 'Bearbeiten',
     addMenuLabel: 'Hinzufügen',
+    // Wave 2 w3a
+    expandAll: 'Alle aufklappen',
+    collapseAll: 'Alle zuklappen',
+    builderCreateTitle: 'Neues Workout',
+    builderEditTitle: 'Workout bearbeiten',
+    builderCreateBtn: 'Erstellen',
   },
   session: {
     savedQueuedBadge: 'Training gespeichert',
@@ -373,6 +392,7 @@ export const de = {
     removeFromSessionTitle: 'Aus diesem Training entfernen',
     targetSetsRepsLabel: 'Ziel',
     restIntervalLabel: 'Pause',
+    restShort: '{seconds} s Pause',
     lastSessionFrom: 'Letztes Mal ({name})',
     previousBenchmark: 'Letztes Mal',
     firstLoggedSession: 'Zum ersten Mal dabei',
@@ -441,7 +461,7 @@ export const de = {
   },
   diary: {
     title: 'Verlauf',
-    subtitle: 'Jedes Training und dein Fortschritt.',
+    subtitle: 'Jedes Training und wie du vorankommst.',
     periodWeek: 'Diese Woche',
     periodMonth: 'Dieser Monat',
     periodYear: 'Dieses Jahr',
@@ -501,12 +521,16 @@ export const de = {
     syncedWithAppleHealth: 'Apple Health',
     recordedOnAppleWatch: 'Apple Watch',
     recordedOnIphone: 'iPhone',
+    imported: 'Importiert',
     heartRateCurveTitle: 'Herzfrequenz',
     deleteWorkoutTitle: 'Dieses Training löschen?',
     deleteWorkoutDesc:
       '{name} wird auf allen deinen Geräten aus deinem Verlauf entfernt. Das lässt sich nicht rückgängig machen.',
     deleteWorkoutBtn: 'Training löschen',
     estMaxLabel: 'Geschätztes Max.',
+    // Wave 2 w3b
+    workoutCountOne: '1 Training',
+    workoutCountOther: '{count} Trainings',
   },
   exercises: {
     title: 'Bibliothek',
@@ -578,6 +602,11 @@ export const de = {
     holdSecLabel: 'Halten (Sek.)',
     transitionSecLabel: 'Wechsel (Sek.)',
     saveRoutineBtn: 'Speichern',
+    // Wave 2 w3b
+    catalogTabCount: 'Übungen ({count})',
+    stretchingTabCount: 'Dehnen ({count})',
+    filterBtn: 'Filter',
+    routineStepsToggle: 'Dehnübungen ({count})',
   },
   visual: {
     startFrame: 'Start',
@@ -704,6 +733,16 @@ export const de = {
     feedbackSectionTitle: 'Feedback',
     rowFeatureRequest: 'Feature wünschen',
     backToSettings: 'Zurück zu den Einstellungen',
+    // Wave 2 w2
+    registerAccountTab: 'Registrieren',
+    emailAddressPlaceholder: 'E-Mail-Adresse',
+    weeklyGoalValue: '{count} Trainings',
+    weeklyGoalValueOne: '{count} Training',
+    stepperDecrement: 'Verringern',
+    stepperIncrement: 'Erhöhen',
+    dataGuidesFooter: 'Schritt-für-Schritt-Anleitungen, um deine Daten in LukiFitti zu übernehmen.',
+    sendTestNotificationBtn: 'Test-Benachrichtigung senden',
+    licenseRow: 'Lizenz CC-BY-SA 4.0',
   },
   auth: {
     signInTab: 'Anmelden',
