@@ -136,7 +136,8 @@ public struct WorkoutsView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button {
-                        openNewTemplateBuilder(defaultFolderId: viewModel.store.folders.first?.id)
+                        // From the toolbar a new workout starts unfiled; folder menus pass their folder.
+                        openNewTemplateBuilder(defaultFolderId: nil)
                     } label: {
                         Label(tr("New Workout"), systemImage: "dumbbell")
                     }
@@ -340,7 +341,10 @@ public struct WorkoutsView: View {
                         Text(template.name)
                             .foregroundStyle(.primary)
                             .lineLimit(1)
-                        Text(tr("%d exercises · ~%d min · %@", template.exercises.count, template.estimatedDurationMinutes ?? 60, lastText))
+                        let minutes = template.estimatedDurationMinutes ?? 60
+                        Text(template.exercises.count == 1
+                            ? tr("1 exercise · ~%d min · %@", minutes, lastText)
+                            : tr("%d exercises · ~%d min · %@", template.exercises.count, minutes, lastText))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
@@ -355,14 +359,27 @@ public struct WorkoutsView: View {
                         .buttonStyle(.borderless)
                         .accessibilityLabel(tr("Edit %@", template.name))
                 } else {
+                    // Visible overflow like web's "•••"; the same actions as the context menu.
+                    Menu {
+                        templateActions(template)
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel(tr("More actions for %@", template.name))
+                    .accessibilityIdentifier("ios.workouts.templateMenu.\(template.id)")
                     // Plain accent glyph: glass belongs to the bars, not to every list row.
                     Button {
                         viewModel.startSession(from: template, sourceDevice: .IPHONE)
                     } label: {
                         Image(systemName: "play.circle.fill")
-                            .font(.title)
+                            .font(.system(size: 34))
                             .foregroundStyle(LukiColors.accent)
-                            .frame(minWidth: 44, minHeight: 44)
+                            .frame(width: 44, height: 44)
                     }
                     .buttonStyle(.borderless)
                     .accessibilityLabel(tr("Start %@", template.name))
@@ -386,23 +403,26 @@ public struct WorkoutsView: View {
                 Label(tr("Delete"), systemImage: "trash")
             }
         }
-        .contextMenu {
-            Button { openEditTemplateBuilder(template) } label: { Label(tr("Edit"), systemImage: "pencil") }
-            Button { duplicateTemplate(template) } label: { Label(tr("Duplicate"), systemImage: "plus.square.on.square") }
-            Menu {
-                Button(tr("Unfiled")) { moveTemplate(template, toFolderId: nil) }
-                ForEach(viewModel.store.folders) { f in
-                    Button(f.name) { moveTemplate(template, toFolderId: f.id) }
-                }
-            } label: {
-                Label(tr("Move to"), systemImage: "folder")
+        .contextMenu { templateActions(template) }
+    }
+
+    @ViewBuilder
+    private func templateActions(_ template: WorkoutTemplateDto) -> some View {
+        Button { openEditTemplateBuilder(template) } label: { Label(tr("Edit"), systemImage: "pencil") }
+        Button { duplicateTemplate(template) } label: { Label(tr("Duplicate"), systemImage: "plus.square.on.square") }
+        Menu {
+            Button(tr("Unfiled")) { moveTemplate(template, toFolderId: nil) }
+            ForEach(viewModel.store.folders) { f in
+                Button(f.name) { moveTemplate(template, toFolderId: f.id) }
             }
-            Divider()
-            Button(role: .destructive) {
-                deleteTarget = DeleteTarget(id: template.id, name: template.name, isFolder: false)
-            } label: {
-                Label(tr("Delete"), systemImage: "trash")
-            }
+        } label: {
+            Label(tr("Move to"), systemImage: "folder")
+        }
+        Divider()
+        Button(role: .destructive) {
+            deleteTarget = DeleteTarget(id: template.id, name: template.name, isFolder: false)
+        } label: {
+            Label(tr("Delete"), systemImage: "trash")
         }
     }
 
@@ -442,8 +462,8 @@ public struct WorkoutsView: View {
                                     Text(exInfo?.name ?? tr("Exercise"))
                                         .font(.subheadline.weight(.semibold))
                                         .foregroundStyle(.primary)
-                                        .lineLimit(1)
-                                    Spacer()
+                                        .lineLimit(2)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                     Text("\(ex.plannedSets)×\(ex.targetRepsMin ?? 8)–\(ex.targetRepsMax ?? 12)")
                                         .font(.footnote.monospacedDigit())
                                         .foregroundStyle(LukiColors.accent)
@@ -465,29 +485,36 @@ public struct WorkoutsView: View {
                         let ex = firstItem.item
                         let idx = firstItem.globalIndex
                         let exInfo = ex.exercise ?? viewModel.store.catalog.first { $0.id == ex.exerciseId }
-                        HStack(spacing: 8) {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Text("\(idx + 1).")
                                 .font(.caption.bold().monospacedDigit())
                                 .foregroundStyle(LukiColors.accent)
-                            Text(exInfo?.name ?? tr("Exercise"))
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-                            Spacer()
-                            if !ex.alternativeExerciseIds.isEmpty {
-                                Text(tr("+%d alternatives", ex.alternativeExerciseIds.count))
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
+                            // Name gets two lines and the alternatives sit under it, so neither
+                            // truncates nor wraps beside the targets.
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(exInfo?.name ?? tr("Exercise"))
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(2)
+                                let alternatives = ex.alternativeExerciseIds.count
+                                if alternatives > 0 {
+                                    Text(alternatives == 1 ? tr("+1 alternative") : tr("+%d alternatives", alternatives))
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             Text("\(ex.plannedSets)×\(ex.targetRepsMin ?? 8)–\(ex.targetRepsMax ?? 12)")
                                 .font(.footnote.monospacedDigit())
                                 .foregroundStyle(LukiColors.accent)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
                                 .background(RoundedRectangle(cornerRadius: 6).fill(LukiColors.accent.opacity(0.16)))
+                                .fixedSize()
                             Text("\(ex.restSeconds)s")
-                                .font(.footnote)
+                                .font(.footnote.monospacedDigit())
                                 .foregroundStyle(.secondary)
+                                .fixedSize()
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)

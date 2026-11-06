@@ -876,5 +876,25 @@ public enum LukiStrings {
         // Food
         "%d of %d days logged": "%d von %d Tagen eingetragen",
         "Avg. %d kcal per logged day": "Ø %d kcal pro eingetragenem Tag",
+        // Wave 2 w1a
+        "1 workout": "1 Training",
+        "1 set (%d%%) · %@": "1 Satz (%d %%) · %@",
+        "%d sets (%d%%) · %@": "%d Sätze (%d %%) · %@",
+        "+1 alternative": "+1 Alternative",
+        "All Exercises": "Alle Übungen",
+        "Filter by exercise": "Nach Übung filtern",
+        "Volume and sets over recent workouts": "Volumen und Sätze der letzten Trainings",
+        "Heaviest set and estimated max over recent workouts": "Schwerster Satz und geschätztes Maximum der letzten Trainings",
+        "Est. max": "Geschätztes Max.",
+        "Est. max (%@)": "Gesch. Max. (%@)",
+        "Est. max: %@": "Geschätztes Max.: %@",
+        "Heaviest (%@)": "Schwerster (%@)",
+        "Finish a workout to see which muscles you trained.": "Beende ein Training, um zu sehen, welche Muskeln du trainiert hast.",
+        "Personal bests": "Bestleistungen",
+        "Your personal bests show up here after your first workouts.": "Deine Bestleistungen erscheinen hier nach deinen ersten Trainings.",
+        "Coaching note: %@": "Trainingshinweis: %@",
+        "1 set": "1 Satz",
+        "1 set · %@": "1 Satz · %@",
+        "1 exercise · ~%d min · %@": "1 Übung · ~%d Min. · %@",
     ]
 }

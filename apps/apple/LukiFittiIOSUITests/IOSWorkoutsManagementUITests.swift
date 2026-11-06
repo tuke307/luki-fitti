@@ -44,5 +44,9 @@ final class IOSWorkoutsManagementUITests: XCTestCase {
 
         app.buttons["Create"].tap()
         XCTAssertTrue(app.staticTexts["E2E iOS Bench Day"].waitForExistence(timeout: 5))
+        // "+" → New Workout lands in Unfiled, not in the first folder; one exercise reads singular.
+        XCTAssertTrue(app.staticTexts["Unfiled Workouts"].exists)
+        let row = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH '1 exercise ·'")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
     }
 }
