@@ -96,10 +96,8 @@ public struct HomeDashboardView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 10) { startButtons(suggestion) }
-                VStack(spacing: 10) { startButtons(suggestion) }
-            }
+            // Stacked full width like web: side by side, "Choose Workout" wrapped (EN and DE).
+            VStack(spacing: 10) { startButtons(suggestion) }
         }
         .padding(18)
         .background(cardShape)
