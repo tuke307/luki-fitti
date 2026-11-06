@@ -21,6 +21,7 @@ import {
   UpdateUserAccessSchema,
   type AdminUserQueryDto,
   type AdminUserAiKeyDto,
+  type AiModelCatalogDto,
   type AiUsageQueryDto,
   type SetAiKeyDto,
   type UpdateAiSettingsDto,
@@ -34,6 +35,7 @@ import { CurrentUser, type AuthenticatedUser } from '@/decorators/current-user.d
 import { ZodValidationPipe } from '@/pipes/zod-validation.pipe';
 import { AppSettingsService } from '../app-settings/app-settings.service';
 import { AiKeyService } from '../ai/ai-key.service';
+import { OpenRouterModelsService } from '../ai/openrouter-models.service';
 import { AdminService } from './admin.service';
 
 @ApiTags('Admin')
@@ -44,6 +46,7 @@ export class AdminController {
     private readonly adminService: AdminService,
     private readonly appSettings: AppSettingsService,
     private readonly aiKeys: AiKeyService,
+    private readonly modelCatalog: OpenRouterModelsService,
   ) {}
 
   @Get('dashboard')
@@ -108,6 +111,14 @@ export class AdminController {
   @ApiOperation({ summary: 'Get AI feature switches, models and limits' })
   getAiSettings() {
     return this.appSettings.getAiSettings();
+  }
+
+  @Get('settings/ai/models')
+  @RequirePermissions(AdminPermission.AI_SETTINGS_MANAGE)
+  @ApiOperation({ summary: 'OpenRouter model catalog for the user model allowlist editor' })
+  async getAiModelCatalog(): Promise<AiModelCatalogDto> {
+    const { available, models } = await this.modelCatalog.catalog();
+    return { catalogAvailable: available, models };
   }
 
   @Put('settings/ai')

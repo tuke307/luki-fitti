@@ -9,6 +9,11 @@
         "include": "../templates/**/*",
         "outDir": "dist/templates",
         "watchAssets": true
+      },
+      {
+        "include": "modules/ai/prompts/*.md",
+        "outDir": "dist/src",
+        "watchAssets": true
       }
     ]
   }

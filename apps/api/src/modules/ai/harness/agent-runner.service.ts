@@ -12,6 +12,7 @@ import { AiKeySlot, AiRunStatus } from '@luki-fitti/common/enums';
 import { PrismaService } from '../../database/prisma.service';
 import { AppSettingsService } from '../../app-settings/app-settings.service';
 import { AiKeyService, type ResolvedAiKey } from '../ai-key.service';
+import { AiModelsService } from '../ai-models.service';
 import {
   AiProviderError,
   OpenRouterClient,
@@ -72,6 +73,7 @@ export class AgentRunnerService {
     private readonly client: OpenRouterClient,
     private readonly tools: ToolRegistry,
     private readonly aiKeys: AiKeyService,
+    private readonly models: AiModelsService,
   ) {}
 
   /**
@@ -109,7 +111,10 @@ export class AgentRunnerService {
   ): Promise<SkillRunResult<z.infer<TOutput>>> {
     const key = await this.assertWithinQuota(input.userId);
     const settings = await this.appSettings.get();
-    const { primary, fallbacks } = skill.model(settings);
+    const defaults = skill.model(settings);
+    // The user's choice only when it is currently eligible for their key; else the admin default.
+    const primary = await this.models.resolvePrimary(input.userId, skill.name, key.source, defaults.primary);
+    const { fallbacks } = defaults;
     const ctx: ToolContext = { userId: input.userId, locale: input.locale };
     const started = Date.now();
     const usage = { promptTokens: 0, completionTokens: 0, costUsd: 0, costKnown: false };

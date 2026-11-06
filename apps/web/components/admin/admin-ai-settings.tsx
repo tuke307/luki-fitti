@@ -16,6 +16,7 @@ import { useLocale } from '@/providers/i18n/locale-context';
 import { AdminState } from './admin-shell';
 import { useAdminResource } from './use-admin-resource';
 import { AdminUserAiUsageDialog } from './admin-user-ai-usage-dialog';
+import { AdminModelAllowlist } from './admin-model-allowlist';
 
 const splitList = (value: string) =>
   value
@@ -32,6 +33,7 @@ interface FormState {
   mealPhotoFallbacks: string;
   aiDailyRunLimit: string;
   mealPhotoRetentionDays: string;
+  userModelAllowlist: string[];
 }
 
 const toForm = (s: AiSettingsDto): FormState => ({
@@ -43,6 +45,7 @@ const toForm = (s: AiSettingsDto): FormState => ({
   mealPhotoFallbacks: s.mealPhotoFallbacks.join(', '),
   aiDailyRunLimit: String(s.aiDailyRunLimit),
   mealPhotoRetentionDays: s.mealPhotoRetentionDays === null ? '' : String(s.mealPhotoRetentionDays),
+  userModelAllowlist: s.userModelAllowlist,
 });
 
 export function AdminAiSettings() {
@@ -93,6 +96,7 @@ function AiSettingsForm({
       mealPhotoRetentionDays: form.mealPhotoRetentionDays.trim()
         ? Number(form.mealPhotoRetentionDays)
         : null,
+      userModelAllowlist: form.userModelAllowlist,
     });
     if (!parsed.success) {
       setErrors(Object.fromEntries(parsed.error.issues.map((i) => [String(i.path[0]), i.message])));
@@ -228,6 +232,11 @@ function AiSettingsForm({
             </div>
           </div>
         </section>
+
+        <AdminModelAllowlist
+          value={form.userModelAllowlist}
+          onChange={(ids) => set('userModelAllowlist', ids)}
+        />
 
         <section className="bg-card space-y-4 rounded-[1.25rem] p-5" aria-labelledby="ai-limits">
           <h2 id="ai-limits" className="text-[1.0625rem] font-semibold">

@@ -26,7 +26,8 @@ import {
   Sparkles,
   ShieldCheck,
   Lightbulb,
-  ExternalLink,
+  Cpu,
+  Upload,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Badge } from '@luki-fitti/ui/components/ui/badge';
@@ -62,7 +63,9 @@ import { type LanguagePreference, WeightUnit } from '@luki-fitti/common/enums';
 import { ProfileHealthCard, ProfileNutritionGoalsCard } from './profile-body-card';
 import { AiUsageView } from './ai-usage/ai-usage-view';
 import { AiKeyCard } from './ai-key-card';
-import { buildFeatureRequestMailto } from '@luki-fitti/common/utils';
+import { AiModelsPage } from './settings/ai-models-page';
+import { ImportPage } from './settings/import-page';
+import { buildFeatureRequestMailto, buildImportFile } from '@luki-fitti/common/utils';
 import { AI_KEY_NAVIGATE_EVENT } from '@/lib/ai/ai-key-required';
 import { SettingsRow, SettingsSection, SettingsSubpage } from './settings/settings-row';
 import { WeightView } from './weight/weight-view';
@@ -85,8 +88,11 @@ const SETTINGS_PAGES = [
   'health',
   'notifications',
   'language',
-  'ai',
+  'aiKey',
+  'aiModels',
+  'aiUsage',
   'export',
+  'import',
   'usage',
   'sources',
 ] as const;
@@ -97,8 +103,11 @@ const AUTH_ONLY_PAGES: ReadonlySet<SettingsPage> = new Set([
   'account',
   'nutrition',
   'health',
-  'ai',
+  'aiKey',
+  'aiModels',
+  'aiUsage',
   'export',
+  'import',
 ]);
 
 const HISTORY_KEY = 'profilePage';
@@ -141,7 +150,7 @@ export function ProfileImportView() {
     infoMessage: authInfoMessage,
     loading: authLoading,
   } = useAuth();
-  const { folders, unfiledTemplates, stretchingRoutines, historySessions, catalog } = useGym();
+  const { folders, unfiledTemplates, historySessions, catalog } = useGym();
   const { theme, setTheme } = useTheme();
   const { t, format, languagePreference, setLanguagePreference, locale } = useLocale();
 
@@ -190,51 +199,15 @@ export function ProfileImportView() {
 
   const handleExportJson = () => {
     const dateStamp = new Date().toISOString().slice(0, 10);
-    const folderByTplId = new Map<string, string>();
-    for (const f of folders) {
-      for (const tItem of f.templates) {
-        folderByTplId.set(tItem.id, f.name);
-      }
-    }
-
-    const payload = {
-      exportedAt: new Date().toISOString(),
-      app: 'LukiFitti',
-      version: '1.0',
-      user: {
-        email: user?.email ?? null,
-        name: user?.name ?? null,
-        preferences: user?.preferences ?? null,
-      },
+    // Same `luki-fitti-import@1` format the import accepts, so a backup restores into any account.
+    const payload = buildImportFile({
       folders,
       unfiledTemplates,
-      stretchingRoutines,
+      historySessions,
+      catalog,
       customExercises: catalog.filter((e) => !e.isSystem),
-      sessions: historySessions,
-      workouts: historySessions.map((s) => ({
-        date: s.startedAt,
-        workoutName: s.workoutNameSnapshot,
-        folder: (s.templateId && folderByTplId.get(s.templateId)) || null,
-        durationSeconds: s.activeDurationSeconds,
-        totalVolumeKg: s.totalVolumeKg,
-        exercises: s.exercises.map((ex) => ({
-          name: ex.exerciseNameSnapshot,
-          primaryMuscle: ex.primaryMuscleSnapshot,
-          sets: ex.sets
-            .filter((st) => st.completed)
-            .map((st) => ({
-              setNumber: st.setNumber,
-              setType: st.setType,
-              weight: st.weight,
-              unit: st.weightUnit,
-              reps: st.reps,
-              durationSeconds: st.durationSeconds,
-              rpe: st.rpe,
-              notes: st.notes,
-            })),
-        })),
-      })),
-    };
+      sourceApp: 'LukiFitti Web',
+    });
 
     const fileName = `luki-fitti-backup-${dateStamp}.json`;
     triggerDownload(JSON.stringify(payload, null, 2), fileName, 'application/json;charset=utf-8');
@@ -322,8 +295,11 @@ export function ProfileImportView() {
     health: t.profile.rowHealthDetails,
     notifications: t.profile.rowNotifications,
     language: t.profile.rowLanguageUnits,
-    ai: t.profile.rowAiUsage,
+    aiKey: t.profile.rowAiKey,
+    aiModels: t.profile.rowAiModels,
+    aiUsage: t.profile.rowAiUsage,
     export: t.profile.rowExportBackup,
+    import: t.profile.rowImportFile,
     usage: t.profile.rowUsageStats,
     sources: t.profile.rowDataSources,
   };
@@ -364,7 +340,7 @@ export function ProfileImportView() {
 
   // Deep link: the AI-key-required warning asks to land on the AI key page.
   useEffect(() => {
-    const onOpenAiKey = () => openPage('ai');
+    const onOpenAiKey = () => openPage('aiKey');
     window.addEventListener(AI_KEY_NAVIGATE_EVENT, onOpenAiKey);
     return () => window.removeEventListener(AI_KEY_NAVIGATE_EVENT, onOpenAiKey);
   }, []);
@@ -791,16 +767,19 @@ export function ProfileImportView() {
             </div>
           </Card>
         );
-      case 'ai':
+      case 'aiKey':
+        return <AiKeyCard />;
+      case 'aiModels':
+        return <AiModelsPage />;
+      case 'aiUsage':
         return (
-          <div className="space-y-4">
-            <AiKeyCard />
-            <Card className="space-y-3 rounded-[1.25rem] p-5">
-              <p className="text-muted-foreground text-xs">{t.aiUsage.sub}</p>
-              <AiUsageView />
-            </Card>
-          </div>
+          <Card className="space-y-3 rounded-[1.25rem] p-5">
+            <p className="text-muted-foreground text-xs">{t.aiUsage.sub}</p>
+            <AiUsageView />
+          </Card>
         );
+      case 'import':
+        return <ImportPage />;
       case 'export':
         return (
           <Card className="space-y-4 rounded-[1.25rem] p-5">
@@ -864,27 +843,6 @@ export function ProfileImportView() {
                 <FileSpreadsheet className="h-4 w-4" />
                 {t.profile.exportCsvBtn}
               </Button>
-            </div>
-
-            <div className="border-border/60 border-t pt-4">
-              <h3 className="text-sm font-semibold">{t.profile.importGuidesTitle}</h3>
-              <p className="text-muted-foreground mt-0.5 text-xs">{t.profile.importGuidesSub}</p>
-              <ul className="mt-3 space-y-1">
-                {IMPORT_GUIDES.map((guide) => (
-                  <li key={guide.testId}>
-                    <a
-                      href={guide.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      data-testid={guide.testId}
-                      className="text-primary hover:bg-secondary/60 inline-flex items-center gap-1.5 rounded-md px-1 py-0.5 text-sm font-medium"
-                    >
-                      {guide.name}
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
-                  </li>
-                ))}
-              </ul>
             </div>
           </Card>
         );
@@ -1050,8 +1008,22 @@ export function ProfileImportView() {
           {isAuthenticated && (
             <SettingsSection title={t.profile.aiSectionTitle}>
               <SettingsRow
-                onClick={() => openPage('ai')}
-                data-testid="settings-row-ai"
+                onClick={() => openPage('aiKey')}
+                data-testid="settings-row-ai-key"
+                icon={KeyRound}
+                tone="dropset"
+                title={t.profile.rowAiKey}
+              />
+              <SettingsRow
+                onClick={() => openPage('aiModels')}
+                data-testid="settings-row-ai-models"
+                icon={Cpu}
+                tone="dropset"
+                title={t.profile.rowAiModels}
+              />
+              <SettingsRow
+                onClick={() => openPage('aiUsage')}
+                data-testid="settings-row-ai-usage"
                 icon={Sparkles}
                 tone="dropset"
                 title={t.profile.rowAiUsage}
@@ -1059,7 +1031,7 @@ export function ProfileImportView() {
             </SettingsSection>
           )}
 
-          <SettingsSection title={t.profile.advancedTitle}>
+          <SettingsSection title={t.profile.dataSectionTitle}>
             {isAuthenticated && (
               <SettingsRow
                 onClick={() => openPage('export')}
@@ -1069,6 +1041,28 @@ export function ProfileImportView() {
                 title={t.profile.rowExportBackup}
               />
             )}
+            {isAuthenticated && (
+              <SettingsRow
+                onClick={() => openPage('import')}
+                data-testid="settings-row-import"
+                icon={Upload}
+                tone="stretch"
+                title={t.profile.rowImportFile}
+              />
+            )}
+            {IMPORT_GUIDES.map((guide) => (
+              <SettingsRow
+                key={guide.testId}
+                onClick={() => window.open(guide.url, '_blank', 'noopener,noreferrer')}
+                data-testid={guide.testId}
+                icon={BookOpen}
+                tone="muted"
+                title={guide.name}
+              />
+            ))}
+          </SettingsSection>
+
+          <SettingsSection title={t.profile.aboutSectionTitle}>
             <SettingsRow
               onClick={() => openPage('usage')}
               data-testid="settings-row-usage"

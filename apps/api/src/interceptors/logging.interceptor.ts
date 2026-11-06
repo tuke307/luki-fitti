@@ -28,7 +28,12 @@ export class LoggingInterceptor implements NestInterceptor {
     logger.info(`OriginalUrl: ${request.originalUrl}`);
     logger.info(`Headers: ${JSON.stringify(redactForLog(request.headers))}`);
     logger.info(`Query: ${JSON.stringify(redactForLog(request.query))}`);
-    logger.info(`Body: ${JSON.stringify(redactForLog(request.body))}`);
+    // Import files hold a user's whole training history; never log them.
+    logger.info(
+      request.originalUrl.startsWith('/api/import/')
+        ? 'Body: [import file omitted]'
+        : `Body: ${JSON.stringify(redactForLog(request.body))}`,
+    );
 
     return next.handle();
   }

@@ -70,6 +70,12 @@ public struct ProfileAndAuthView: View {
                     }
                     .accessibilityIdentifier("ios.profile.aiKeyRow")
                     NavigationLink {
+                        AIModelsSettingsView(viewModel: viewModel)
+                    } label: {
+                        SettingsRow(tr("AI models"), systemImage: "cpu", tint: LukiColors.setDropset)
+                    }
+                    .accessibilityIdentifier("ios.profile.aiModelsRow")
+                    NavigationLink {
                         AIUsageView(viewModel: viewModel)
                     } label: {
                         SettingsRow(tr("AI usage"), systemImage: "sparkles", tint: LukiColors.setDropset)
@@ -80,7 +86,7 @@ public struct ProfileAndAuthView: View {
 
             dataSection
 
-            importSection
+            aboutSection
 
             Section(tr("Feedback")) {
                 Button {
@@ -391,28 +397,34 @@ public struct ProfileAndAuthView: View {
         }
     }
 
-    private var dataSection: some View {
-        Section {
-            let jsonBackup = (try? String(data: JSONEncoder().encode(viewModel.store.historySessions), encoding: .utf8)) ?? "[]"
-            ShareLink(item: jsonBackup, preview: SharePreview("luki-fitti-backup.json")) {
-                SettingsRow(tr("Export Backup"), systemImage: "square.and.arrow.up", tint: LukiColors.setStretch)
-            }
-            .accessibilityIdentifier("ios.profile.row.exportBackup")
-        } header: {
-            Text(tr("Data"))
-        } footer: {
-            Text(tr("Exports your workout history as a JSON file."))
-        }
-    }
-
     /// Step-by-step migration guides in the public repo. App names stay untranslated.
     private static let importGuides: [(name: String, docFile: String, accessibilityId: String)] = [
         ("GymLife", "gymlife-import", "ios.profile.row.import.gymlife"),
         ("Alpha Progression", "alpha-progression-import", "ios.profile.row.import.alphaProgression"),
     ]
 
-    private var importSection: some View {
+    private var dataSection: some View {
         Section {
+            let backup = BackupExportFile(
+                folders: viewModel.store.folders,
+                unfiledTemplates: viewModel.store.unfiledTemplates,
+                historySessions: viewModel.store.historySessions,
+                catalog: viewModel.store.catalog
+            )
+            ShareLink(item: backup, preview: SharePreview(backup.fileName)) {
+                SettingsRow(tr("Export Backup"), systemImage: "square.and.arrow.up", tint: LukiColors.setStretch)
+            }
+            .accessibilityIdentifier("ios.profile.row.exportBackup")
+
+            if viewModel.store.currentUser != nil {
+                NavigationLink {
+                    ImportDataView(viewModel: viewModel)
+                } label: {
+                    SettingsRow(tr("Import file"), systemImage: "square.and.arrow.down", tint: LukiColors.setStretch)
+                }
+                .accessibilityIdentifier("ios.profile.row.importFile")
+            }
+
             ForEach(Self.importGuides, id: \.name) { guide in
                 Button {
                     if let url = URL(string: "https://github.com/tuke307/luki-fitti/blob/main/docs/\(guide.docFile).md") {
@@ -424,9 +436,20 @@ public struct ProfileAndAuthView: View {
                 .accessibilityIdentifier(guide.accessibilityId)
             }
         } header: {
-            Text(tr("Import from other apps"))
+            Text(tr("Data"))
         } footer: {
             Text(tr("Step-by-step guides for moving your data into LukiFitti."))
+        }
+    }
+
+    private var aboutSection: some View {
+        Section(tr("About")) {
+            NavigationLink {
+                DataSourcesView()
+            } label: {
+                SettingsRow(tr("Data sources"), systemImage: "books.vertical", tint: LukiColors.accent)
+            }
+            .accessibilityIdentifier("ios.profile.row.dataSources")
         }
     }
 

@@ -539,19 +539,14 @@ public struct WorkoutsView: View {
 
     /// Edits a saved workout's exercises in place, keeping its position in the folder.
     private func updateTemplateExercises(_ templateId: String, _ transform: (inout [WorkoutTemplateExerciseDto]) -> Void) {
-        var folders = viewModel.store.folders
-        var unfiled = viewModel.store.unfiledTemplates
-        for f in folders.indices {
-            for t in folders[f].templates.indices where folders[f].templates[t].id == templateId {
-                transform(&folders[f].templates[t].exercises)
-                for i in folders[f].templates[t].exercises.indices { folders[f].templates[t].exercises[i].orderIndex = i }
-            }
-        }
-        for t in unfiled.indices where unfiled[t].id == templateId {
-            transform(&unfiled[t].exercises)
-            for i in unfiled[t].exercises.indices { unfiled[t].exercises[i].orderIndex = i }
-        }
-        viewModel.store.saveWorkoutsOverview(folders: folders, unfiledTemplates: unfiled)
+        viewModel.store.updateTemplateExercises(id: templateId, transform)
+        syncWorkoutChanges()
+    }
+
+    /// Sends queued folder/workout changes right away (they stay queued when offline).
+    private func syncWorkoutChanges() {
+        let store = viewModel.store
+        Task { await store.flushSyncQueue() }
     }
 
     // MARK: - Folder Editor Sheet
@@ -613,50 +608,20 @@ public struct WorkoutsView: View {
     }
 
     private func saveFolder() {
-        let trimmed = folderName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        var folders = viewModel.store.folders
-        if let editingFolderId,
-           let idx = folders.firstIndex(where: { $0.id == editingFolderId }) {
-            folders[idx].name = trimmed
-            folders[idx].color = folderColor
-        } else {
-            folders.append(
-                WorkoutFolderDto(
-                    id: "folder-\(UUID().uuidString.lowercased())",
-                    name: trimmed,
-                    color: folderColor,
-                    sortOrder: folders.count
-                )
-            )
-        }
-        viewModel.store.saveWorkoutsOverview(folders: folders, unfiledTemplates: viewModel.store.unfiledTemplates)
+        guard !folderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        viewModel.store.saveFolder(id: editingFolderId, name: folderName, color: folderColor)
+        syncWorkoutChanges()
         showingFolderModal = false
     }
 
     private func reorderFolder(_ folderId: String, moveUp: Bool) {
-        var folders = viewModel.store.folders
-        guard let idx = folders.firstIndex(where: { $0.id == folderId }) else { return }
-        let targetIdx = moveUp ? idx - 1 : idx + 1
-        guard folders.indices.contains(targetIdx) else { return }
-        folders.swapAt(idx, targetIdx)
-        for i in folders.indices { folders[i].sortOrder = i }
-        viewModel.store.saveWorkoutsOverview(folders: folders, unfiledTemplates: viewModel.store.unfiledTemplates)
+        viewModel.store.reorderFolder(id: folderId, moveUp: moveUp)
+        syncWorkoutChanges()
     }
 
     private func deleteFolder(_ folderId: String) {
-        var folders = viewModel.store.folders
-        var unfiled = viewModel.store.unfiledTemplates
-        if let idx = folders.firstIndex(where: { $0.id == folderId }) {
-            let moved = folders[idx].templates.map { tpl -> WorkoutTemplateDto in
-                var copy = tpl
-                copy.folderId = nil
-                return copy
-            }
-            unfiled.append(contentsOf: moved)
-            folders.remove(at: idx)
-        }
-        viewModel.store.saveWorkoutsOverview(folders: folders, unfiledTemplates: unfiled)
+        viewModel.store.deleteFolder(id: folderId)
+        syncWorkoutChanges()
     }
 
     private func openNewTemplateBuilder(defaultFolderId: String?) {
@@ -712,57 +677,17 @@ public struct WorkoutsView: View {
         durationMin: Int,
         exercises: [WorkoutTemplateExerciseDto]
     ) {
-        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedName.isEmpty else { return }
-
         let targetFolderId: String? = folderId.isEmpty ? nil : folderId
-        let templateId = editingTemplateId ?? "tpl-\(UUID().uuidString.lowercased())"
-        let normalizedExercises = exercises.enumerated().map { idx, item -> WorkoutTemplateExerciseDto in
-            var copy = item
-            copy.templateId = templateId
-            copy.orderIndex = idx
-            if copy.exercise == nil {
-                copy.exercise = viewModel.store.catalog.first { $0.id == copy.exerciseId }
-            }
-            let range = TemplateSets.deriveRepRange(
-                TemplateSets.resolve(copy),
-                currentMin: copy.targetRepsMin,
-                currentMax: copy.targetRepsMax
-            )
-            copy.targetRepsMin = range.min
-            copy.targetRepsMax = range.max
-            return copy
-        }
-
-        let updatedTemplate = WorkoutTemplateDto(
-            id: templateId,
-            userId: viewModel.store.currentUser?.id ?? "local-user",
+        guard viewModel.store.saveTemplate(
+            editingTemplateId: editingTemplateId,
+            name: name,
+            description: desc,
             folderId: targetFolderId,
-            name: trimmedName,
-            description: desc.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : desc,
-            estimatedDurationMinutes: durationMin,
-            sortOrder: 0,
-            exercises: normalizedExercises
-        )
-
-        var folders = viewModel.store.folders
-        var unfiled = viewModel.store.unfiledTemplates
-
-        if let editingTemplateId {
-            for i in folders.indices {
-                folders[i].templates.removeAll { $0.id == editingTemplateId }
-            }
-            unfiled.removeAll { $0.id == editingTemplateId }
-        }
-
-        if let targetFolderId,
-           let folderIdx = folders.firstIndex(where: { $0.id == targetFolderId }) {
-            folders[folderIdx].templates.append(updatedTemplate)
-        } else {
-            unfiled.append(updatedTemplate)
-        }
-
-        viewModel.store.saveWorkoutsOverview(folders: folders, unfiledTemplates: unfiled)
+            durationMinutes: durationMin,
+            exercises: exercises
+        ) != nil else { return }
+        syncWorkoutChanges()
+        let folders = viewModel.store.folders
         // Reveal the saved workout: folders start collapsed.
         let savedInFolder = targetFolderId.map { id in folders.contains { $0.id == id } } ?? false
         expandedFolderIds.insert(savedInFolder ? targetFolderId! : "__unfiled__")
@@ -770,56 +695,19 @@ public struct WorkoutsView: View {
     }
 
     private func duplicateTemplate(_ template: WorkoutTemplateDto) {
-        var copy = template
-        copy.id = "tpl-\(UUID().uuidString.lowercased())"
-        copy.name = tr("%@ (Copy)", template.name)
-        var folders = viewModel.store.folders
-        if let folderId = template.folderId,
-           let idx = folders.firstIndex(where: { $0.id == folderId }) {
-            if let sourcePos = folders[idx].templates.firstIndex(where: { $0.id == template.id }) {
-                folders[idx].templates.insert(copy, at: sourcePos + 1)
-            } else {
-                folders[idx].templates.append(copy)
-            }
-            viewModel.store.saveWorkoutsOverview(folders: folders, unfiledTemplates: viewModel.store.unfiledTemplates)
-        } else {
-            var unfiled = viewModel.store.unfiledTemplates
-            unfiled.append(copy)
-            viewModel.store.saveWorkoutsOverview(folders: folders, unfiledTemplates: unfiled)
-        }
+        viewModel.store.duplicateTemplate(template, name: tr("%@ (Copy)", template.name))
+        syncWorkoutChanges()
     }
 
     private func moveTemplate(_ template: WorkoutTemplateDto, toFolderId: String?) {
-        var folders = viewModel.store.folders
-        var unfiled = viewModel.store.unfiledTemplates
-
-        for i in folders.indices {
-            folders[i].templates.removeAll { $0.id == template.id }
-        }
-        unfiled.removeAll { $0.id == template.id }
-
-        var moved = template
-        moved.folderId = toFolderId
-
-        if let toFolderId,
-           let fIdx = folders.firstIndex(where: { $0.id == toFolderId }) {
-            folders[fIdx].templates.append(moved)
-        } else {
-            unfiled.append(moved)
-        }
-
-        viewModel.store.saveWorkoutsOverview(folders: folders, unfiledTemplates: unfiled)
+        viewModel.store.moveTemplate(id: template.id, toFolderId: toFolderId)
+        syncWorkoutChanges()
         expandedFolderIds.insert(toFolderId ?? "__unfiled__")
     }
 
     private func deleteTemplate(_ templateId: String) {
-        var folders = viewModel.store.folders
-        var unfiled = viewModel.store.unfiledTemplates
-        for i in folders.indices {
-            folders[i].templates.removeAll { $0.id == templateId }
-        }
-        unfiled.removeAll { $0.id == templateId }
-        viewModel.store.saveWorkoutsOverview(folders: folders, unfiledTemplates: unfiled)
+        viewModel.store.deleteTemplate(id: templateId)
+        syncWorkoutChanges()
     }
 }
 
@@ -979,6 +867,7 @@ private struct TemplateBuilderSheetView: View {
                                     .buttonStyle(.plain)
                                     .accessibilityLabel(tr("How to do %@", resolvedEx.name))
                                     .accessibilityIdentifier("ios.templateBuilder.guideButton.\(idx + 1)")
+                                    LateralityBadge(resolvedEx.laterality)
                                 }
 
                                 Spacer()
@@ -1092,7 +981,7 @@ private struct TemplateBuilderSheetView: View {
                 }
             }
             .sheet(item: $guideExercise) { exercise in
-                ExerciseGuideSheet(exercise: exercise)
+                ExerciseGuideSheet(exercise: exercise, historySessions: historySessions, weightUnit: defaultWeightUnit)
             }
             .sheet(isPresented: $showingAddPickerSheet) {
                 SearchableExercisePickerSheet(

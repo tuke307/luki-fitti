@@ -265,6 +265,41 @@ public actor APIClient {
         try await request(path: "/api/workouts", method: "GET")
     }
 
+    // Folder/template writes. Responses are not decoded: the outbox only needs the status, and the
+    // next overview download carries the server's copy.
+
+    public func createFolder(_ body: WorkoutFolderUpsertDto) async throws {
+        let _: IgnoredResponse = try await request(path: "/api/workouts/folders", method: "POST", body: body)
+    }
+
+    public func updateFolder(id: String, _ body: WorkoutFolderUpsertDto) async throws {
+        let _: IgnoredResponse = try await request(
+            path: "/api/workouts/folders/\(Self.pathComponent(id))", method: "PUT", body: body
+        )
+    }
+
+    public func deleteFolder(id: String) async throws {
+        let _: IgnoredResponse = try await request(
+            path: "/api/workouts/folders/\(Self.pathComponent(id))", method: "DELETE"
+        )
+    }
+
+    public func createTemplate(_ body: WorkoutTemplateUpsertDto) async throws {
+        let _: IgnoredResponse = try await request(path: "/api/workouts/templates", method: "POST", body: body)
+    }
+
+    public func updateTemplate(id: String, _ body: WorkoutTemplateUpsertDto) async throws {
+        let _: IgnoredResponse = try await request(
+            path: "/api/workouts/templates/\(Self.pathComponent(id))", method: "PUT", body: body
+        )
+    }
+
+    public func deleteTemplate(id: String) async throws {
+        let _: IgnoredResponse = try await request(
+            path: "/api/workouts/templates/\(Self.pathComponent(id))", method: "DELETE"
+        )
+    }
+
     public func fetchStretchingRoutines() async throws -> [StretchingRoutineDto] {
         try await request(path: "/api/stretching/routines", method: "GET")
     }
@@ -379,6 +414,11 @@ public actor APIClient {
         return try await request(path: "/api/ai/usage/me?days=\(range)", method: "GET")
     }
 
+    /// Eligible OpenRouter models per AI skill with prices and cost estimates.
+    public func fetchAiModels() async throws -> AiModelsDto {
+        try await request(path: "/api/ai/models", method: "GET")
+    }
+
     /// Status of the own / admin-assigned OpenRouter key (never the key itself).
     public func fetchAiKeyStatus() async throws -> AiKeyStatusDto {
         try await request(path: "/api/ai/key", method: "GET")
@@ -456,7 +496,7 @@ public actor APIClient {
         raw.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed.subtracting(CharacterSet(charactersIn: "/"))) ?? raw
     }
 
-    private static func decodeEnvelope<T: Decodable>(_ data: Data) throws -> T {
+    static func decodeEnvelope<T: Decodable>(_ data: Data) throws -> T {
         let decoder = JSONDecoder()
         if let envelope = try? decoder.decode(APIEnvelope<T>.self, from: data), let unwrapped = envelope.data {
             return unwrapped
@@ -469,12 +509,14 @@ public actor APIClient {
     }
 
     /// Authenticated request with a raw body and response (multipart uploads, binary downloads).
-    private func send(
+    /// `mapError` may turn a non-2xx response into a more specific error.
+    func send(
         path: String,
         method: String,
         body: Data?,
         contentType: String?,
-        allowRetryOn401: Bool = true
+        allowRetryOn401: Bool = true,
+        mapError: (@Sendable (Int, Data) -> Error?)? = nil
     ) async throws -> Data {
         guard let url = URL(string: path, relativeTo: baseURL) else { throw APIClientError.invalidURL }
         guard let tokens = tokenStore.loadTokens() else { throw APIClientError.unauthorized }
@@ -496,9 +538,12 @@ public actor APIClient {
         guard let http = response as? HTTPURLResponse else { throw APIClientError.offline("Invalid HTTP response") }
         if http.statusCode == 401 && allowRetryOn401 {
             try await recoverFromUnauthorized(sentAccessToken: tokens.accessToken)
-            return try await send(path: path, method: method, body: body, contentType: contentType, allowRetryOn401: false)
+            return try await send(
+                path: path, method: method, body: body, contentType: contentType, allowRetryOn401: false, mapError: mapError
+            )
         }
         guard (200...299).contains(http.statusCode) else {
+            if let mapped = mapError?(http.statusCode, data) { throw mapped }
             let msg = (try? JSONDecoder().decode(APIEnvelope<EmptyObject>.self, from: data))
                 .flatMap { $0.error?.message ?? $0.message } ?? "HTTP \(http.statusCode)"
             if http.statusCode == 403 {
@@ -669,6 +714,9 @@ public actor APIClient {
 }
 
 private struct EmptyObject: Decodable {}
+
+/// Accepts any JSON object (or an envelope around one).
+private struct IgnoredResponse: Decodable {}
 
 private struct AnyEncodable: Encodable {
     private let encodeFunc: (Encoder) throws -> Void

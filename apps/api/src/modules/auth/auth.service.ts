@@ -36,11 +36,12 @@ import {
   type LanguagePreference,
   WeightUnit,
 } from '@luki-fitti/common/enums';
-import type {
-  RegisterDto,
-  RegisterResponseDto,
-  UpdatePreferencesDto,
-  UserDto,
+import {
+  AiModelChoicesSchema,
+  type RegisterDto,
+  type RegisterResponseDto,
+  type UpdatePreferencesDto,
+  type UserDto,
 } from '@luki-fitti/common/schemas';
 
 const MAX_FAILED_ATTEMPTS = 5;
@@ -450,6 +451,9 @@ export class AuthService {
         .filter((key) => prefFields[key] !== undefined)
         .map((key) => [key, prefFields[key]]),
     );
+    // Per-skill model choices replace the stored map; `null` clears them (validated by the schema).
+    const aiModelFields =
+      prefFields.aiModels !== undefined ? { aiModels: prefFields.aiModels ?? {} } : {};
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -468,6 +472,7 @@ export class AuthService {
               weeklyGoalSessions: prefFields.weeklyGoalSessions ?? 4,
               ...nullableFields,
               ...reminderFields,
+              ...aiModelFields,
             },
             update: {
               ...nullableFields,
@@ -493,6 +498,7 @@ export class AuthService {
                 ? { weeklyGoalSessions: prefFields.weeklyGoalSessions }
                 : {}),
               ...reminderFields,
+              ...aiModelFields,
             },
           },
         },
@@ -625,6 +631,7 @@ export class AuthService {
       weighInReminderEnabled?: boolean;
       weighInReminderWeekday?: number;
       weighInReminderMinutes?: number;
+      aiModels?: unknown;
     } | null;
     permissions?: string[];
   }, features: FeatureGrant[] = [], aiKeyConfigured = false): UserDto {
@@ -672,6 +679,7 @@ export class AuthService {
             weighInReminderEnabled: user.preferences.weighInReminderEnabled ?? false,
             weighInReminderWeekday: user.preferences.weighInReminderWeekday ?? 2,
             weighInReminderMinutes: user.preferences.weighInReminderMinutes ?? 450,
+            aiModels: AiModelChoicesSchema.safeParse(user.preferences.aiModels ?? {}).data ?? {},
           }
         : null,
       permissions: (user.permissions ?? []).filter(isAdminPermission) as AdminPermission[],

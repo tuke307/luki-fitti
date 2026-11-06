@@ -118,9 +118,9 @@ public final class WorkoutLiveActivityController {
         let state = Self.contentState(for: session, heartRate: heartRate, locale: locale)
         guard state != lastState else { return }
         lastState = state
-        let content = ActivityContent(state: state, staleDate: nil)
+        let content = ActivityContent(state: state, staleDate: state.restTimerEndsAt)
 
-        if let activity, activity.activityState == .active {
+        if let activity, activity.activityState == .active || activity.activityState == .stale {
             Task {
                 for running in Activity<WorkoutActivityAttributes>.activities {
                     await running.update(content)
@@ -132,7 +132,7 @@ public final class WorkoutLiveActivityController {
                 labels: .init(
                     rest: locale("Rest"),
                     restPaused: locale("Rest paused"),
-                    addRest: "+15s",
+                    addRest: "+15",
                     skipRest: locale("Skip Rest"),
                     elapsed: locale("Elapsed")
                 )

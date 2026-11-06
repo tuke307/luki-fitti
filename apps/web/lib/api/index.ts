@@ -4,6 +4,8 @@ import type {
   AdminUserAiKeyDto,
   AdminUserAiUsageDto,
   AiKeyStatusDto,
+  AiModelCatalogDto,
+  AiModelsDto,
   AdminUserListDto,
   AdminUserQueryDto,
   AiSettingsDto,
@@ -60,6 +62,8 @@ import type {
   WorkoutFolderDto,
   WorkoutSessionDto,
   WorkoutTemplateDto,
+  ImportCommitResultDto,
+  ImportPreviewDto,
 } from '@luki-fitti/common/schemas';
 
 export const auth = {
@@ -337,6 +341,7 @@ export const ai = {
       body: JSON.stringify(data),
     }),
   myUsage: (days: number) => apiFetch<MyAiUsageDto>(`/ai/usage/me?days=${days}`),
+  models: () => apiFetch<AiModelsDto>('/ai/models'),
   /** Own OpenRouter key: write-only, responses only carry the status. */
   keyStatus: () => apiFetch<AiKeyStatusDto>('/ai/key'),
   setKey: (apiKey: string) =>
@@ -381,6 +386,7 @@ export const admin = {
       method: 'DELETE',
     }),
   getAiSettings: () => apiFetch<AiSettingsDto>('/admin/settings/ai'),
+  aiModelCatalog: () => apiFetch<AiModelCatalogDto>('/admin/settings/ai/models'),
   updateAiSettings: (data: UpdateAiSettingsDto) =>
     apiFetch<AiSettingsDto>('/admin/settings/ai', { method: 'PUT', body: JSON.stringify(data) }),
   aiUsage: (days: number) => apiFetch<AiUsageSummaryDto>(`/admin/ai-usage?days=${days}`),
@@ -388,6 +394,14 @@ export const admin = {
     apiFetch<AdminUserAiUsageDto>(
       `/admin/ai-usage/users/${encodeURIComponent(userId)}?days=${days}`,
     ),
+};
+
+/** File import (`luki-fitti-import@1`); `fileText` is the uploaded JSON file, sent unchanged. */
+export const importData = {
+  preview: (fileText: string) =>
+    apiFetch<ImportPreviewDto>('/import/preview', { method: 'POST', body: fileText }),
+  commit: (fileText: string) =>
+    apiFetch<ImportCommitResultDto>('/import/commit', { method: 'POST', body: fileText }),
 };
 
 export * from './client';
@@ -405,4 +419,5 @@ export const api = {
   ai,
   exerciseFeedback,
   admin,
+  importData,
 };

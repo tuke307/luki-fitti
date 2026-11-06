@@ -138,4 +138,8 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get healthWorkout(): typeof prisma.healthWorkout {
     return prisma.healthWorkout;
   }
+
+  get importJob(): typeof prisma.importJob {
+    return prisma.importJob;
+  }
 }

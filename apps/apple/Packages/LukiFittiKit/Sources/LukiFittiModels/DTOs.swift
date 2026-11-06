@@ -45,6 +45,8 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
     public var weighInReminderWeekday: Int = 2
     /// Minutes after midnight (450 = 07:30).
     public var weighInReminderMinutes: Int = 450
+    /// Per-skill OpenRouter model choice keyed by `AiSkillName` raw value; missing = admin default.
+    public var aiModels: [String: String]? = nil
 
     public init(
         id: String = "pref-local",
@@ -78,6 +80,7 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
         case bodyWeightKg, heightCm, birthYear, sex, bodyFatPct, activityLevel
         case dailyKcalGoal, proteinGoalG, carbsGoalG, fatGoalG
         case weighInReminderEnabled, weighInReminderWeekday, weighInReminderMinutes
+        case aiModels
     }
 
     public init(from decoder: Decoder) throws {
@@ -107,6 +110,7 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
         self.weighInReminderEnabled = try c.decodeIfPresent(Bool.self, forKey: .weighInReminderEnabled) ?? false
         self.weighInReminderWeekday = try c.decodeIfPresent(Int.self, forKey: .weighInReminderWeekday) ?? 2
         self.weighInReminderMinutes = try c.decodeIfPresent(Int.self, forKey: .weighInReminderMinutes) ?? 450
+        self.aiModels = (try? c.decodeIfPresent([String: String].self, forKey: .aiModels)).flatMap { $0 }
     }
 }
 
@@ -198,6 +202,8 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
     public var weighInReminderEnabled: Bool? = nil
     public var weighInReminderWeekday: Int? = nil
     public var weighInReminderMinutes: Int? = nil
+    /// Replaces the stored per-skill model choices (an empty map clears them all).
+    public var aiModels: [String: String]? = nil
     /// Fields sent as JSON `null` so the server clears them. A `nil` property is otherwise left
     /// out of the request, which leaves the server value unchanged.
     public var clearedFields: Set<CodingKeys> = []
@@ -232,6 +238,7 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
         case bodyWeightKg, heightCm, birthYear, sex, bodyFatPct, activityLevel
         case dailyKcalGoal, proteinGoalG, carbsGoalG, fatGoalG
         case weighInReminderEnabled, weighInReminderWeekday, weighInReminderMinutes
+        case aiModels
     }
 
     /// Sets `value` for the request, or marks the field to be cleared on the server when `nil`.
@@ -265,6 +272,7 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
         weighInReminderEnabled = try c.decodeIfPresent(Bool.self, forKey: .weighInReminderEnabled)
         weighInReminderWeekday = try c.decodeIfPresent(Int.self, forKey: .weighInReminderWeekday)
         weighInReminderMinutes = try c.decodeIfPresent(Int.self, forKey: .weighInReminderMinutes)
+        aiModels = try c.decodeIfPresent([String: String].self, forKey: .aiModels)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -298,6 +306,7 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
         try put(weighInReminderEnabled, forKey: .weighInReminderEnabled)
         try put(weighInReminderWeekday, forKey: .weighInReminderWeekday)
         try put(weighInReminderMinutes, forKey: .weighInReminderMinutes)
+        try put(aiModels, forKey: .aiModels)
         // Sorted so the request body is stable (Set order isn't).
         for key in clearedFields.sorted(by: { $0.rawValue < $1.rawValue }) where !sent.contains(key) {
             try c.encodeNil(forKey: key)
@@ -512,6 +521,9 @@ public struct WorkoutTemplateDto: Codable, Sendable, Equatable, Hashable, Identi
     public var createdAt: String
     public var updatedAt: String
     public var exercises: [WorkoutTemplateExerciseDto]
+    /// Catalog id of an untouched starter copy (text served in the request language); editing the
+    /// text clears it.
+    public var systemKey: String?
 
     public init(
         id: String = UUID().uuidString,
@@ -523,7 +535,8 @@ public struct WorkoutTemplateDto: Codable, Sendable, Equatable, Hashable, Identi
         sortOrder: Int = 0,
         createdAt: String = ISO8601DateFormatter().string(from: Date()),
         updatedAt: String = ISO8601DateFormatter().string(from: Date()),
-        exercises: [WorkoutTemplateExerciseDto] = []
+        exercises: [WorkoutTemplateExerciseDto] = [],
+        systemKey: String? = nil
     ) {
         self.id = id
         self.userId = userId
@@ -535,6 +548,7 @@ public struct WorkoutTemplateDto: Codable, Sendable, Equatable, Hashable, Identi
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.exercises = exercises
+        self.systemKey = systemKey
     }
 }
 
@@ -545,6 +559,8 @@ public struct WorkoutFolderDto: Codable, Sendable, Equatable, Hashable, Identifi
     public var color: String
     public var sortOrder: Int
     public var templates: [WorkoutTemplateDto]
+    /// Catalog id of an untouched starter folder; renaming clears it.
+    public var systemKey: String?
 
     public init(
         id: String = UUID().uuidString,
@@ -552,7 +568,8 @@ public struct WorkoutFolderDto: Codable, Sendable, Equatable, Hashable, Identifi
         name: String,
         color: String = "#E8743B",
         sortOrder: Int = 0,
-        templates: [WorkoutTemplateDto] = []
+        templates: [WorkoutTemplateDto] = [],
+        systemKey: String? = nil
     ) {
         self.id = id
         self.userId = userId
@@ -560,6 +577,7 @@ public struct WorkoutFolderDto: Codable, Sendable, Equatable, Hashable, Identifi
         self.color = color
         self.sortOrder = sortOrder
         self.templates = templates
+        self.systemKey = systemKey
     }
 }
 

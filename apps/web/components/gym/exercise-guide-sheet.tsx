@@ -11,6 +11,8 @@ import {
 } from '@luki-fitti/ui/components/ui/dialog';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { ExerciseVisual } from './exercise-visual';
+import { ExerciseHistorySection } from './exercise-history-section';
+import { LateralityBadge } from './laterality-badge';
 import type { MuscleGroup } from '@luki-fitti/common/enums';
 import type { ExerciseDto } from '@luki-fitti/common/schemas';
 
@@ -23,7 +25,7 @@ interface ExerciseGuideSheetProps {
   onOpenChange: (open: boolean) => void;
   /** Show a friendly note instead of nothing when there are no steps. */
   showEmptyState?: boolean;
-  /** Extra sections rendered below the steps, e.g. alternatives or history. */
+  /** Extra sections rendered below the history, e.g. alternatives. */
   children?: React.ReactNode;
 }
 
@@ -64,6 +66,7 @@ export function ExerciseGuideSheet({
                     <Badge variant="secondary" className="text-muted-foreground text-xs">
                       {exerciseTypeLabel(exercise.exerciseType)}
                     </Badge>
+                    <LateralityBadge laterality={exercise.laterality} className="text-xs" />
                   </>
                 )}
               </div>
@@ -101,6 +104,13 @@ export function ExerciseGuideSheet({
                   </p>
                 )
               )}
+
+              <ExerciseHistorySection
+                key={exercise?.id ?? name}
+                exerciseId={exercise?.id}
+                exerciseName={name}
+                exerciseType={exercise?.exerciseType}
+              />
 
               {children}
             </div>

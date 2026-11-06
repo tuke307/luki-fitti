@@ -201,13 +201,16 @@ final class SuggestionEngineParityTests: XCTestCase {
         XCTAssertEqual(insight.setSuggestions.first?.suggestedReps, 9)
     }
 
-    private func suggestPull(stalling: String) -> WorkoutExerciseSuggestion? {
-        let exercises = ["ex-wide-grip-lat-pulldown", "ex-seated-cable-rows", stalling, "ex-barbell-curl"]
+    private func pullDay(_ stalling: String) -> [WorkoutSuggestionInputExercise] {
+        ["ex-wide-grip-lat-pulldown", "ex-seated-cable-rows", stalling, "ex-barbell-curl"]
             .map { WorkoutSuggestionInputExercise(exerciseId: $0, plannedSets: 3) }
-        return ProgressionEngine.computeWorkoutExerciseSuggestion(
+    }
+
+    private func suggestPull(stalling: String, catalog: [ExerciseDto]? = nil) -> WorkoutExerciseSuggestion? {
+        ProgressionEngine.computeWorkoutExerciseSuggestion(
             workoutName: "Pull Day",
-            exercises: exercises,
-            catalog: catalog,
+            exercises: pullDay(stalling),
+            catalog: catalog ?? self.catalog,
             historySessions: [0, 7, 14].map { session(day: $0, exerciseId: stalling, weight: 30, reps: 10, rpe: 9.5) }
         )
     }
@@ -223,5 +226,51 @@ final class SuggestionEngineParityTests: XCTestCase {
         let suggestion = try XCTUnwrap(suggestPull(stalling: "ex-one-arm-dumbbell-row"))
         XCTAssertEqual(suggestion.suggestedExercise.movementPattern, .HORIZONTAL_PULL)
         XCTAssertEqual(suggestion.suggestedExercise.laterality, .UNILATERAL)
+    }
+
+    func testOneArmSwapIsNotAOneSidedVariant() throws {
+        XCTAssertFalse(try XCTUnwrap(suggestPull(stalling: "ex-one-arm-dumbbell-row")).unilateralVariant)
+    }
+
+    func testStallingTwoSidedBarbellRowIsSwappedForAOneArmRow() throws {
+        let suggestion = try XCTUnwrap(suggestPull(stalling: "ex-barbell-row-underhand"))
+        XCTAssertEqual(suggestion.stallingExerciseId, "ex-barbell-row-underhand")
+        XCTAssertEqual(suggestion.suggestedExercise.movementPattern, .HORIZONTAL_PULL)
+        XCTAssertEqual(suggestion.suggestedExercise.laterality, .UNILATERAL)
+        XCTAssertTrue(suggestion.unilateralVariant)
+        XCTAssertEqual(
+            SuggestionReasonFormatter.reason(for: suggestion, locale: .en),
+            "Try one side at a time — training each arm or leg separately can restart progress."
+        )
+    }
+
+    func testStallingBarbellRowPrefersAOneArmRowOverCatalogAlternatives() throws {
+        let suggestion = try XCTUnwrap(suggestPull(stalling: "ex-bent-over-barbell-row"))
+        XCTAssertEqual(suggestion.suggestedExercise.movementPattern, .HORIZONTAL_PULL)
+        XCTAssertEqual(suggestion.suggestedExercise.laterality, .UNILATERAL)
+        XCTAssertTrue(suggestion.unilateralVariant)
+    }
+
+    func testSameSwapAsBeforeWithoutAOneSidedVersion() throws {
+        let stalling = "ex-barbell-row-underhand"
+        let noOneSidedRows = catalog.filter { $0.movementPattern != .HORIZONTAL_PULL || $0.laterality != .UNILATERAL }
+        let suggestion = try XCTUnwrap(suggestPull(stalling: stalling, catalog: noOneSidedRows))
+        let inWorkout = Set(pullDay(stalling).compactMap(\.exerciseId))
+        let before = try XCTUnwrap(ExerciseAlternatives.rank(
+            target: noOneSidedRows.first { $0.id == stalling }!,
+            catalog: noOneSidedRows.filter { $0.exerciseType == .STRENGTH && !inWorkout.contains($0.id) },
+            limit: 1
+        ).first)
+        XCTAssertEqual(suggestion.suggestedExercise.id, before.exercise.id)
+        XCTAssertFalse(suggestion.unilateralVariant)
+    }
+
+    func testMuscleBalanceSuggestionIsUnchanged() throws {
+        let suggestion = try XCTUnwrap(suggest([
+            WorkoutSuggestionInputExercise(exerciseId: bench, plannedSets: 3),
+            WorkoutSuggestionInputExercise(exerciseId: shoulderPress, plannedSets: 3),
+        ]))
+        XCTAssertEqual(suggestion.reasonType, .MISSING_MUSCLE)
+        XCTAssertFalse(suggestion.unilateralVariant)
     }
 }

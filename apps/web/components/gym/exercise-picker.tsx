@@ -24,6 +24,7 @@ import {
 import { de } from '@/lib/i18n';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { ExerciseVisual } from './exercise-visual';
+import { LateralityBadge } from './laterality-badge';
 
 const CORE_EXERCISE_IDS = new Set(CORE_EXERCISE_CATALOG.map((e) => e.id));
 const searchIndexes = new WeakMap<ExerciseDto[], ExerciseSearchIndex>();
@@ -259,6 +260,10 @@ export function ExercisePicker({
                             <span className="text-muted-foreground text-xs">
                               {equipmentLabel(ex.equipment)} • {exerciseTypeLabel(ex.exerciseType)}
                             </span>
+                            <LateralityBadge
+                              laterality={ex.laterality}
+                              className="px-1.5 py-0 text-xs"
+                            />
                           </div>
                         </div>
                       </div>

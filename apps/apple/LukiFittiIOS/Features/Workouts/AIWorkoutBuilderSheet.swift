@@ -31,9 +31,13 @@ struct AIWorkoutBuilderSheet: View {
                     proposal(result)
                 } else {
                     Section {
-                        Text(tr("Describe what you want. LukiFitti looks at your history, weak points and what didn’t work for you."))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                        HStack(alignment: .top) {
+                            Text(tr("Describe what you want. LukiFitti looks at your history, weak points and what didn’t work for you."))
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Spacer(minLength: 0)
+                            AIInfoButton(skill: .workoutBuilder, api: viewModel.store.apiClient)
+                        }
                         TextField(tr("e.g. A chest workout. My upper chest is my weak point."), text: $prompt, axis: .vertical)
                             .lineLimit(3...6)
                             .disabled(busy)
@@ -117,7 +121,7 @@ struct AIWorkoutBuilderSheet: View {
             }
         }
         if let usage = p.usage {
-            Section { AICostLabel(usage: usage) }
+            Section { AICostLabel(usage: usage, model: p.model) }
         }
         Section {
             Button(tr("Try again")) { result = nil }
@@ -146,7 +150,7 @@ struct AIWorkoutBuilderSheet: View {
 
     /// Saves the proposal as a regular (unfiled) workout: warm-ups + working sets, no weights yet.
     private func save(_ p: WorkoutBuilderResponseDto) {
-        let templateId = "tpl-\(UUID().uuidString.lowercased())"
+        let templateId = UUID().uuidString.lowercased()
         let exercises = p.exercises.enumerated().map { index, ex in
             WorkoutTemplateExerciseDto(
                 templateId: templateId,
@@ -165,18 +169,16 @@ struct AIWorkoutBuilderSheet: View {
                     + Array(repeating: TemplateSetDto(setType: .WORKING, reps: ex.repsMax), count: ex.workingSets)
             )
         }
-        let template = WorkoutTemplateDto(
-            id: templateId,
-            userId: viewModel.store.currentUser?.id ?? "local-user",
+        let store = viewModel.store
+        guard let template = store.saveTemplate(
+            editingTemplateId: nil,
             name: String(p.name.prefix(100)),
-            description: p.summary.isEmpty ? nil : String(p.summary.prefix(500)),
-            estimatedDurationMinutes: p.estimatedDurationMinutes,
+            description: String(p.summary.prefix(500)),
+            folderId: nil,
+            durationMinutes: p.estimatedDurationMinutes,
             exercises: exercises
-        )
-        viewModel.store.saveWorkoutsOverview(
-            folders: viewModel.store.folders,
-            unfiledTemplates: viewModel.store.unfiledTemplates + [template]
-        )
+        ) else { return }
+        Task { await store.flushSyncQueue() }
         onSaved(template)
         dismiss()
     }

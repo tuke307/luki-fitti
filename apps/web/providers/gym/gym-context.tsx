@@ -27,6 +27,7 @@ import {
   getLocalActiveSession,
   getLocalHistorySessions,
   getSyncQueue,
+  getWorkoutOutbox,
   loadExtendedExercises,
   mergeMissingExercises,
   recalculateSessionTotals,
@@ -41,8 +42,23 @@ import {
   setDismissedSuggestions,
   setFocusedExercise as storeFocusedExercise,
   substituteExerciseInSession,
+  updateWorkoutOutbox,
   type SyncState,
 } from '@/lib/offline/offline-store';
+import {
+  deleteOp,
+  enqueueOp,
+  flushWorkoutOutbox,
+  folderUpsertOp,
+  isSyncable,
+  newEntityId,
+  overlayPendingOps,
+  rekeyLegacyEntities,
+  templateUpsertOp,
+  type WorkoutOutboxFlushResult,
+  type WorkoutOutboxOp,
+  type WorkoutsOverview,
+} from '@/lib/offline/workout-outbox';
 import {
   ExerciseType,
   SessionExerciseOrigin,
@@ -190,6 +206,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [syncState, setSyncState] = useState<SyncState>('SYNCED');
   const [pendingSyncCount, setPendingSyncCount] = useState<number>(0);
+  const [pendingWorkoutOpsCount, setPendingWorkoutOpsCount] = useState<number>(0);
   const [conflictServerSession, setConflictServerSession] = useState<WorkoutSessionDto | null>(
     null,
   );
@@ -291,6 +308,75 @@ export function GymProvider({ children }: { children: ReactNode }) {
   const lastRefreshAtRef = useRef<number>(0);
   const syncTimerRef = useRef<number | null>(null);
   const deletedSessionIdsRef = useRef<Set<string>>(new Set());
+  const isFlushingWorkoutsRef = useRef(false);
+  const inFlightWorkoutKeysRef = useRef<Set<string>>(new Set());
+
+  /** Applies a change to the cached overview and the state (for changes made by a sync). */
+  const applyWorkoutsLocally = useCallback(
+    async (fn: (overview: WorkoutsOverview) => WorkoutsOverview) => {
+      const next = fn(await getCachedWorkouts());
+      setFolders(next.folders);
+      setUnfiledTemplates(next.unfiledTemplates);
+      await setCachedWorkouts(next);
+    },
+    [],
+  );
+
+  const enqueueWorkoutOps = useCallback(async (ops: WorkoutOutboxOp[]) => {
+    const outbox = await updateWorkoutOutbox((current) =>
+      ops.reduce((acc, op) => enqueueOp(acc, op, inFlightWorkoutKeysRef.current), current),
+    );
+    setPendingWorkoutOpsCount(outbox.length);
+  }, []);
+
+  /** Sends pending folder/template changes (signed in only); `null` when nothing was sent. */
+  const flushWorkoutChanges = useCallback(async (): Promise<WorkoutOutboxFlushResult | null> => {
+    if (!isAuthenticated || isFlushingWorkoutsRef.current) return null;
+    isFlushingWorkoutsRef.current = true;
+    try {
+      // Folders and workouts created before changes were queued get server ids and are uploaded.
+      const legacy = rekeyLegacyEntities(await getCachedWorkouts());
+      if (legacy.ops.length > 0) {
+        await applyWorkoutsLocally(() => legacy.overview);
+        await enqueueWorkoutOps(legacy.ops);
+      }
+      if (!navigator.onLine) return null;
+      return await flushWorkoutOutbox({
+        api: {
+          createFolder: (body) => api.workouts.createFolder(body),
+          updateFolder: (id, body) => api.workouts.updateFolder(id, body),
+          deleteFolder: (id) => api.workouts.deleteFolder(id),
+          createTemplate: (body) => api.workouts.createTemplate(body),
+          updateTemplate: (id, body) => api.workouts.updateTemplate(id, body),
+          deleteTemplate: (id) => api.workouts.deleteTemplate(id),
+        },
+        readOutbox: getWorkoutOutbox,
+        updateOutbox: updateWorkoutOutbox,
+        inFlightKeys: inFlightWorkoutKeysRef.current,
+        localFolderNames: async () => (await getCachedWorkouts()).folders.map((f) => f.name),
+        renameFolderLocally: (id, name) =>
+          applyWorkoutsLocally((o) => ({
+            ...o,
+            folders: o.folders.map((f) => (f.id === id ? { ...f, name, systemKey: null } : f)),
+          })),
+        onRejected: (op) =>
+          trackEvent('offline_sync', { status: 'workout_change_rejected', kind: op.kind }),
+      });
+    } finally {
+      isFlushingWorkoutsRef.current = false;
+      setPendingWorkoutOpsCount((await getWorkoutOutbox()).length);
+    }
+  }, [applyWorkoutsLocally, enqueueWorkoutOps, isAuthenticated]);
+
+  /** Replaces local folders/workouts with the server's, keeping changes not sent yet. */
+  const refreshWorkoutsFromServer = useCallback(async () => {
+    const res = await api.workouts.getOverview();
+    if (!res.success || !res.data) return;
+    const merged = overlayPendingOps(res.data, await getWorkoutOutbox());
+    setFolders(merged.folders);
+    setUnfiledTemplates(merged.unfiledTemplates);
+    await setCachedWorkouts(merged);
+  }, []);
 
   const flushSyncQueue = useCallback(
     async (forceOverwrite = false) => {
@@ -300,15 +386,29 @@ export function GymProvider({ children }: { children: ReactNode }) {
       }
       if (!isAuthenticated) {
         setPendingSyncCount(0);
+        setPendingWorkoutOpsCount(0);
         setSyncState(navigator.onLine ? 'SAVED_LOCALLY' : 'OFFLINE');
         return;
       }
+
+      // Workout structure goes first: synced sessions may reference a new workout.
+      const workoutFlush = await flushWorkoutChanges().catch(() => null);
+      if (workoutFlush?.stoppedBy === 'auth') {
+        setSyncState('AUTH_EXPIRED');
+        return;
+      }
+      if (workoutFlush?.needsRefresh) {
+        void refreshWorkoutsFromServer().catch(() => undefined);
+      }
+      const workoutChangesLeft = (await getWorkoutOutbox()).length > 0;
 
       const queue = await getSyncQueue();
       setPendingSyncCount(queue.length);
 
       if (queue.length === 0) {
-        setSyncState(navigator.onLine ? 'SYNCED' : 'OFFLINE');
+        setSyncState(
+          !navigator.onLine ? 'OFFLINE' : workoutChangesLeft ? 'SAVED_LOCALLY' : 'SYNCED',
+        );
         return;
       }
 
@@ -392,7 +492,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
 
         const remaining = await getSyncQueue();
         setPendingSyncCount(remaining.length);
-        setSyncState(remaining.length === 0 ? 'SYNCED' : 'SAVED_LOCALLY');
+        setSyncState(remaining.length === 0 && !workoutChangesLeft ? 'SYNCED' : 'SAVED_LOCALLY');
         // Successful syncs are not tracked: they run on a short timer during every workout.
       } catch (err) {
         if (err instanceof ApiClientError && err.isAuthError) {
@@ -410,7 +510,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [isAuthenticated],
+    [flushWorkoutChanges, isAuthenticated, refreshWorkoutsFromServer],
   );
 
   useEffect(() => {
@@ -422,7 +522,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
     isRefreshingRef.current = true;
 
     try {
-      const [localCat, localWorkouts, localStretch, localActive, localHistory, queue] =
+      const [localCat, localWorkouts, localStretch, localActive, localHistory, queue, outbox] =
         await Promise.all([
           getCachedCatalog(),
           getCachedWorkouts(),
@@ -430,6 +530,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
           getLocalActiveSession(),
           getLocalHistorySessions(),
           getSyncQueue(),
+          getWorkoutOutbox(),
         ]);
 
       setCatalog(mergeMissingExercises(localCat, extendedExercisesRef.current));
@@ -453,6 +554,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
         ),
       );
       setPendingSyncCount(isAuthenticated ? queue.length : 0);
+      setPendingWorkoutOpsCount(isAuthenticated ? outbox.length : 0);
 
       if (!navigator.onLine || !isAuthenticated) {
         setSyncState(
@@ -466,6 +568,9 @@ export function GymProvider({ children }: { children: ReactNode }) {
         );
         return;
       }
+
+      // Send local folder/workout changes before downloading, so the server copy includes them.
+      await flushWorkoutChanges().catch(() => null);
 
       const [catRes, wkRes, stRes, sessRes, activeRes] = await Promise.all([
         api.exercises.list(),
@@ -481,9 +586,11 @@ export function GymProvider({ children }: { children: ReactNode }) {
         await setCachedCatalog(serverCatalog);
       }
       if (wkRes.success && wkRes.data) {
-        setFolders(wkRes.data.folders);
-        setUnfiledTemplates(wkRes.data.unfiledTemplates);
-        await setCachedWorkouts(wkRes.data);
+        // Changes still waiting to be sent must neither come back nor disappear.
+        const merged = overlayPendingOps(wkRes.data, await getWorkoutOutbox());
+        setFolders(merged.folders);
+        setUnfiledTemplates(merged.unfiledTemplates);
+        await setCachedWorkouts(merged);
       }
       if (stRes.success && stRes.data) {
         setStretchingRoutines(stRes.data);
@@ -550,7 +657,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
     } finally {
       isRefreshingRef.current = false;
     }
-  }, [flushSyncQueue, isAuthenticated]);
+  }, [flushSyncQueue, flushWorkoutChanges, isAuthenticated]);
 
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -685,48 +792,73 @@ export function GymProvider({ children }: { children: ReactNode }) {
     return custom;
   };
 
+  /**
+   * Folder/workout changes apply locally right away; signed-in users also queue them for the
+   * server (online and offline alike), so a later download never undoes them.
+   */
+  const commitWorkouts = async (next: WorkoutsOverview, ops: WorkoutOutboxOp[] = []) => {
+    setFolders(next.folders);
+    setUnfiledTemplates(next.unfiledTemplates);
+    await setCachedWorkouts(next);
+    const syncable = isAuthenticated ? ops.filter((op) => isSyncable(op.id)) : [];
+    if (syncable.length === 0) return;
+    await enqueueWorkoutOps(syncable);
+    setSyncState(navigator.onLine ? 'SAVED_LOCALLY' : 'OFFLINE');
+    if (navigator.onLine) void flushSyncQueue();
+  };
+
+  const toTemplateExercises = (
+    templateId: string,
+    inputs: NonNullable<UpdateTemplateDto['exercises']>,
+  ): WorkoutTemplateDto['exercises'] => {
+    const catalogById = new Map(catalog.map((e) => [e.id, e]));
+    return inputs.map((ex, idx) => {
+      const sets = ex.sets && ex.sets.length > 0 ? ex.sets : null;
+      const summary = sets ? summarizeTemplateSets(sets) : null;
+      return {
+        id: ex.id ?? newEntityId(),
+        templateId,
+        exerciseId: ex.exerciseId,
+        sets,
+        orderIndex: idx,
+        plannedSets: summary?.plannedSets ?? ex.plannedSets,
+        warmupSets: summary?.warmupSets ?? ex.warmupSets ?? 0,
+        targetRepsMin: ex.targetRepsMin ?? 8,
+        targetRepsMax: ex.targetRepsMax ?? 12,
+        targetWeight: (summary ? summary.targetWeight : ex.targetWeight) ?? null,
+        weightUnit: ex.weightUnit ?? weightUnit,
+        restSeconds: ex.restSeconds ?? 90,
+        targetDurationSeconds: ex.targetDurationSeconds ?? null,
+        targetDistanceMeters: ex.targetDistanceMeters ?? null,
+        notes: ex.notes ?? null,
+        alternativeExerciseIds: ex.alternativeExerciseIds ?? [],
+        exercise: catalogById.get(ex.exerciseId),
+      };
+    });
+  };
+
   const createFolder = async (dto: CreateFolderDto) => {
-    if (navigator.onLine && isAuthenticated) {
-      try {
-        const res = await api.workouts.createFolder(dto);
-        if (res.success && res.data) {
-          const nextFolders = [...folders, res.data];
-          setFolders(nextFolders);
-          await setCachedWorkouts({ folders: nextFolders, unfiledTemplates });
-          return;
-        }
-      } catch {
-        // Offline fallback below
-      }
-    }
     const newFolder: WorkoutFolderDto = {
-      id: `folder-${Date.now()}`,
+      id: newEntityId(),
       userId: user?.id ?? 'local-athlete',
       name: dto.name.trim(),
       color: dto.color ?? DEFAULT_FOLDER_COLOR,
       sortOrder: folders.length,
       templates: [],
     };
-    const nextFolders = [...folders, newFolder];
-    setFolders(nextFolders);
-    await setCachedWorkouts({ folders: nextFolders, unfiledTemplates });
+    await commitWorkouts({ folders: [...folders, newFolder], unfiledTemplates }, [
+      folderUpsertOp(newFolder, false),
+    ]);
   };
 
   const renameFolder = async (folderId: string, name: string, color?: string) => {
-    if (navigator.onLine && isAuthenticated) {
-      try {
-        await api.workouts.updateFolder(folderId, { name, ...(color ? { color } : {}) });
-      } catch {
-        // Offline fallback
-      }
-    }
-    const nextFolders = folders.map((f) =>
-      f.id === folderId
-        ? { ...f, name: name.trim(), systemKey: null, ...(color ? { color } : {}) }
-        : f,
+    const target = folders.find((f) => f.id === folderId);
+    if (!target) return;
+    const renamed = { ...target, name: name.trim(), systemKey: null, ...(color ? { color } : {}) };
+    await commitWorkouts(
+      { folders: folders.map((f) => (f.id === folderId ? renamed : f)), unfiledTemplates },
+      [folderUpsertOp(renamed)],
     );
-    setFolders(nextFolders);
-    await setCachedWorkouts({ folders: nextFolders, unfiledTemplates });
   };
 
   const reorderFolder = async (folderId: string, direction: 'UP' | 'DOWN') => {
@@ -741,167 +873,89 @@ export function GymProvider({ children }: { children: ReactNode }) {
     copy.splice(targetIdx, 0, moved);
 
     const reindexed = copy.map((f, i) => ({ ...f, sortOrder: i }));
-    setFolders(reindexed);
-    await setCachedWorkouts({ folders: reindexed, unfiledTemplates });
-
-    if (navigator.onLine && isAuthenticated) {
-      try {
-        await Promise.all(
-          reindexed.map((f) => api.workouts.updateFolder(f.id, { sortOrder: f.sortOrder })),
-        );
-      } catch {
-        // Offline fallback already saved
-      }
-    }
+    const changed = reindexed.filter(
+      (f) => folders.find((o) => o.id === f.id)?.sortOrder !== f.sortOrder,
+    );
+    await commitWorkouts(
+      { folders: reindexed, unfiledTemplates },
+      changed.map((f) => folderUpsertOp(f)),
+    );
   };
 
   const deleteFolder = async (folderId: string) => {
-    if (navigator.onLine && isAuthenticated) {
-      try {
-        await api.workouts.deleteFolder(folderId);
-      } catch {
-        // Offline fallback
-      }
-    }
     const target = folders.find((f) => f.id === folderId);
     const movedTemplates = (target?.templates ?? []).map((t) => ({ ...t, folderId: null }));
-    const nextFolders = folders.filter((f) => f.id !== folderId);
-    const nextUnfiled = [...unfiledTemplates, ...movedTemplates];
-    setFolders(nextFolders);
-    setUnfiledTemplates(nextUnfiled);
-    await setCachedWorkouts({ folders: nextFolders, unfiledTemplates: nextUnfiled });
+    // Pending creates of its workouts must not point at the deleted folder.
+    await commitWorkouts(
+      {
+        folders: folders.filter((f) => f.id !== folderId),
+        unfiledTemplates: [...unfiledTemplates, ...movedTemplates],
+      },
+      [...movedTemplates.map((t) => templateUpsertOp(t)), deleteOp('folder', folderId)],
+    );
   };
 
   const createTemplate = async (dto: CreateTemplateDto): Promise<WorkoutTemplateDto> => {
-    if (navigator.onLine && isAuthenticated) {
-      try {
-        const res = await api.workouts.createTemplate(dto);
-        if (res.success && res.data) {
-          await refreshAllData();
-          return res.data;
-        }
-      } catch {
-        // Offline fallback
-      }
-    }
-
-    const catalogById = new Map(catalog.map((e) => [e.id, e]));
     const nowIso = new Date().toISOString();
-    const tplId = `tpl-${Date.now()}`;
+    const tplId = newEntityId();
+    const folderId = dto.folderId ?? null;
+    const siblings = folderId
+      ? (folders.find((f) => f.id === folderId)?.templates ?? [])
+      : unfiledTemplates;
     const newTpl: WorkoutTemplateDto = {
       id: tplId,
+      systemKey: null,
       userId: user?.id ?? 'local-athlete',
-      folderId: dto.folderId ?? null,
+      folderId,
       name: dto.name.trim(),
       description: dto.description ?? null,
       estimatedDurationMinutes: dto.estimatedDurationMinutes ?? 60,
-      sortOrder: 0,
+      sortOrder: dto.sortOrder ?? siblings.length,
       createdAt: nowIso,
       updatedAt: nowIso,
-      exercises: (dto.exercises ?? []).map((ex, idx) => ({
-        id: `tple-${Date.now()}-${idx}`,
-        templateId: tplId,
-        exerciseId: ex.exerciseId,
-        orderIndex: idx,
-        plannedSets: ex.plannedSets,
-        warmupSets: ex.warmupSets ?? 0,
-        targetRepsMin: ex.targetRepsMin ?? 8,
-        targetRepsMax: ex.targetRepsMax ?? 12,
-        targetWeight: ex.targetWeight ?? null,
-        weightUnit: ex.weightUnit ?? weightUnit,
-        restSeconds: ex.restSeconds ?? 90,
-        targetDurationSeconds: ex.targetDurationSeconds ?? null,
-        targetDistanceMeters: ex.targetDistanceMeters ?? null,
-        notes: ex.notes ?? null,
-        alternativeExerciseIds: ex.alternativeExerciseIds ?? [],
-        exercise: catalogById.get(ex.exerciseId),
-      })),
+      exercises: toTemplateExercises(tplId, dto.exercises ?? []),
     };
-
-    if (newTpl.folderId) {
-      const nextFolders = folders.map((f) =>
-        f.id === newTpl.folderId ? { ...f, templates: [...f.templates, newTpl] } : f,
-      );
-      setFolders(nextFolders);
-      await setCachedWorkouts({ folders: nextFolders, unfiledTemplates });
-    } else {
-      const nextUnfiled = [...unfiledTemplates, newTpl];
-      setUnfiledTemplates(nextUnfiled);
-      await setCachedWorkouts({ folders, unfiledTemplates: nextUnfiled });
-    }
+    const op = templateUpsertOp(newTpl, false);
+    await commitWorkouts(overlayPendingOps({ folders, unfiledTemplates }, [op]), [op]);
     return newTpl;
   };
 
-  /** Applies a template change to local state and the offline cache only. */
-  const applyTemplateUpdateLocally = async (templateId: string, dto: UpdateTemplateDto) => {
-    const catalogById = new Map(catalog.map((e) => [e.id, e]));
-    const applyUpdate = (current: WorkoutTemplateDto): WorkoutTemplateDto => {
-      if (current.id !== templateId) return current;
-      // Editing a starter copy turns it into user content in the language the user sees.
-      const editsText =
-        dto.name !== undefined || dto.description !== undefined || dto.exercises !== undefined;
-      const t =
-        current.systemKey && editsText
-          ? { ...localizeTemplate(current, locale), systemKey: null }
-          : current;
-      return {
-        ...t,
-        name: dto.name ?? t.name,
-        description: dto.description !== undefined ? (dto.description ?? null) : t.description,
-        folderId: dto.folderId !== undefined ? dto.folderId : t.folderId,
-        estimatedDurationMinutes: dto.estimatedDurationMinutes ?? t.estimatedDurationMinutes,
-        updatedAt: new Date().toISOString(),
-        exercises:
-          dto.exercises !== undefined
-            ? dto.exercises.map((ex, idx) => {
-                const sets = ex.sets && ex.sets.length > 0 ? ex.sets : null;
-                const summary = sets ? summarizeTemplateSets(sets) : null;
-                return {
-                  id: ex.id ?? `tple-${Date.now()}-${idx}`,
-                  templateId,
-                  exerciseId: ex.exerciseId,
-                  sets,
-                  orderIndex: idx,
-                  plannedSets: summary?.plannedSets ?? ex.plannedSets,
-                  warmupSets: summary?.warmupSets ?? ex.warmupSets ?? 0,
-                  targetRepsMin: ex.targetRepsMin ?? 8,
-                  targetRepsMax: ex.targetRepsMax ?? 12,
-                  targetWeight: (summary ? summary.targetWeight : ex.targetWeight) ?? null,
-                  weightUnit: ex.weightUnit ?? weightUnit,
-                  restSeconds: ex.restSeconds ?? 90,
-                  targetDurationSeconds: ex.targetDurationSeconds ?? null,
-                  targetDistanceMeters: ex.targetDistanceMeters ?? null,
-                  notes: ex.notes ?? null,
-                  alternativeExerciseIds: ex.alternativeExerciseIds ?? [],
-                  exercise: catalogById.get(ex.exerciseId),
-                };
-              })
-            : t.exercises,
-      };
+  const applyTemplateUpdate = async (
+    templateId: string,
+    dto: UpdateTemplateDto,
+    { localOnly = false } = {},
+  ) => {
+    const current = [...folders.flatMap((f) => f.templates), ...unfiledTemplates].find(
+      (t) => t.id === templateId,
+    );
+    if (!current) return;
+    // Editing a starter copy turns it into user content in the language the user sees.
+    const editsText =
+      dto.name !== undefined || dto.description !== undefined || dto.exercises !== undefined;
+    const t =
+      current.systemKey && editsText
+        ? { ...localizeTemplate(current, locale), systemKey: null }
+        : current;
+    const updated: WorkoutTemplateDto = {
+      ...t,
+      name: dto.name ?? t.name,
+      description: dto.description !== undefined ? (dto.description ?? null) : t.description,
+      folderId: dto.folderId !== undefined ? dto.folderId : t.folderId,
+      estimatedDurationMinutes: dto.estimatedDurationMinutes ?? t.estimatedDurationMinutes,
+      sortOrder: dto.sortOrder ?? t.sortOrder,
+      updatedAt: new Date().toISOString(),
+      exercises:
+        dto.exercises !== undefined ? toTemplateExercises(templateId, dto.exercises) : t.exercises,
     };
-
-    const nextFolders = folders.map((f) => ({
-      ...f,
-      templates: f.templates.map(applyUpdate),
-    }));
-    const nextUnfiled = unfiledTemplates.map(applyUpdate);
-    setFolders(nextFolders);
-    setUnfiledTemplates(nextUnfiled);
-    await setCachedWorkouts({ folders: nextFolders, unfiledTemplates: nextUnfiled });
+    const op = templateUpsertOp(updated);
+    await commitWorkouts(
+      overlayPendingOps({ folders, unfiledTemplates }, [op]),
+      localOnly ? [] : [op],
+    );
   };
 
-  const updateTemplate = async (templateId: string, dto: UpdateTemplateDto) => {
-    if (navigator.onLine && isAuthenticated) {
-      try {
-        await api.workouts.updateTemplate(templateId, dto);
-        await refreshAllData();
-        return;
-      } catch {
-        // Offline fallback
-      }
-    }
-    await applyTemplateUpdateLocally(templateId, dto);
-  };
+  const updateTemplate = (templateId: string, dto: UpdateTemplateDto) =>
+    applyTemplateUpdate(templateId, dto);
 
   const duplicateTemplate = async (templateId: string): Promise<WorkoutTemplateDto | null> => {
     const allTemplates = [
@@ -911,130 +965,73 @@ export function GymProvider({ children }: { children: ReactNode }) {
     const source = allTemplates.find((t) => t.id === templateId);
     if (!source) return null;
 
-    if (navigator.onLine && isAuthenticated) {
-      try {
-        const res = await api.workouts.duplicateTemplate(templateId);
-        if (res.success && res.data) {
-          await refreshAllData();
-          return res.data;
-        }
-      } catch {
-        // Offline fallback below
-      }
-    }
-
-    const catalogById = new Map(catalog.map((e) => [e.id, e]));
     const nowIso = new Date().toISOString();
-    const tplId = `tpl-${Date.now()}`;
+    const tplId = newEntityId();
     const newTpl: WorkoutTemplateDto = {
+      ...source,
       id: tplId,
+      systemKey: null,
       userId: user?.id ?? 'local-athlete',
-      folderId: source.folderId,
       name: `${source.name} (Copy)`,
-      description: source.description,
       estimatedDurationMinutes: source.estimatedDurationMinutes ?? 60,
       sortOrder: source.sortOrder + 1,
       createdAt: nowIso,
       updatedAt: nowIso,
       exercises: source.exercises.map((ex, idx) => ({
-        id: `tple-${Date.now()}-${idx}`,
+        ...ex,
+        id: newEntityId(),
         templateId: tplId,
-        exerciseId: ex.exerciseId,
         orderIndex: idx,
-        plannedSets: ex.plannedSets,
-        warmupSets: ex.warmupSets,
-        targetRepsMin: ex.targetRepsMin,
-        targetRepsMax: ex.targetRepsMax,
-        targetWeight: ex.targetWeight,
-        weightUnit: ex.weightUnit,
-        restSeconds: ex.restSeconds,
-        targetDurationSeconds: ex.targetDurationSeconds,
-        targetDistanceMeters: ex.targetDistanceMeters,
-        notes: ex.notes,
-        alternativeExerciseIds: ex.alternativeExerciseIds,
-        exercise: ex.exercise ?? catalogById.get(ex.exerciseId),
+        exercise: ex.exercise ?? catalog.find((e) => e.id === ex.exerciseId),
       })),
     };
 
-    if (source.folderId) {
-      const nextFolders = folders.map((f) => {
-        if (f.id !== source.folderId) return f;
-        const copyList = [...f.templates];
-        const sourceIdx = copyList.findIndex((t) => t.id === templateId);
-        if (sourceIdx >= 0) {
-          copyList.splice(sourceIdx + 1, 0, newTpl);
-        } else {
-          copyList.push(newTpl);
-        }
-        return {
-          ...f,
-          templates: copyList.map((t, i) => ({ ...t, sortOrder: i })),
-        };
-      });
-      setFolders(nextFolders);
-      await setCachedWorkouts({ folders: nextFolders, unfiledTemplates });
-    } else {
-      const copyList = [...unfiledTemplates];
-      const sourceIdx = copyList.findIndex((t) => t.id === templateId);
-      if (sourceIdx >= 0) {
-        copyList.splice(sourceIdx + 1, 0, newTpl);
-      } else {
-        copyList.push(newTpl);
-      }
-      const nextUnfiled = copyList.map((t, i) => ({ ...t, sortOrder: i }));
-      setUnfiledTemplates(nextUnfiled);
-      await setCachedWorkouts({ folders, unfiledTemplates: nextUnfiled });
-    }
-
-    return newTpl;
+    const list = source.folderId
+      ? (folders.find((f) => f.id === source.folderId)?.templates ?? [])
+      : unfiledTemplates;
+    const copyList = [...list];
+    const sourceIdx = copyList.findIndex((t) => t.id === templateId);
+    copyList.splice(sourceIdx >= 0 ? sourceIdx + 1 : copyList.length, 0, newTpl);
+    const reindexed = copyList.map((t, i) => ({ ...t, sortOrder: i }));
+    const placed = reindexed.find((t) => t.id === tplId) ?? newTpl;
+    const moved = reindexed.filter(
+      (t) => t.id !== tplId && list.find((o) => o.id === t.id)?.sortOrder !== t.sortOrder,
+    );
+    const inFolder = Boolean(source.folderId) && folders.some((f) => f.id === source.folderId);
+    await commitWorkouts(
+      inFolder
+        ? {
+            folders: folders.map((f) =>
+              f.id === source.folderId ? { ...f, templates: reindexed } : f,
+            ),
+            unfiledTemplates,
+          }
+        : { folders, unfiledTemplates: reindexed },
+      [templateUpsertOp(placed, false), ...moved.map((t) => templateUpsertOp(t))],
+    );
+    return placed;
   };
 
   const moveTemplate = async (templateId: string, targetFolderId: string | null) => {
-    if (navigator.onLine && isAuthenticated) {
-      try {
-        await api.workouts.moveTemplate(templateId, targetFolderId);
-      } catch {
-        // Offline fallback
-      }
-    }
-
-    const allTemplates = [...folders.flatMap((f) => f.templates), ...unfiledTemplates];
-    const tpl = allTemplates.find((t) => t.id === templateId);
+    const tpl = [...folders.flatMap((f) => f.templates), ...unfiledTemplates].find(
+      (t) => t.id === templateId,
+    );
     if (!tpl) return;
-
-    const updatedTpl: WorkoutTemplateDto = { ...tpl, folderId: targetFolderId };
-    const nextFolders = folders.map((f) => {
-      const without = f.templates.filter((t) => t.id !== templateId);
-      return f.id === targetFolderId
-        ? { ...f, templates: [...without, updatedTpl] }
-        : { ...f, templates: without };
-    });
-    const nextUnfiled =
-      targetFolderId === null
-        ? [...unfiledTemplates.filter((t) => t.id !== templateId), updatedTpl]
-        : unfiledTemplates.filter((t) => t.id !== templateId);
-
-    setFolders(nextFolders);
-    setUnfiledTemplates(nextUnfiled);
-    await setCachedWorkouts({ folders: nextFolders, unfiledTemplates: nextUnfiled });
+    const op = templateUpsertOp({ ...tpl, folderId: targetFolderId });
+    await commitWorkouts(overlayPendingOps({ folders, unfiledTemplates }, [op]), [op]);
   };
 
   const deleteTemplate = async (templateId: string) => {
-    if (navigator.onLine && isAuthenticated) {
-      try {
-        await api.workouts.deleteTemplate(templateId);
-      } catch {
-        // Offline fallback
-      }
-    }
-    const nextFolders = folders.map((f) => ({
-      ...f,
-      templates: f.templates.filter((t) => t.id !== templateId),
-    }));
-    const nextUnfiled = unfiledTemplates.filter((t) => t.id !== templateId);
-    setFolders(nextFolders);
-    setUnfiledTemplates(nextUnfiled);
-    await setCachedWorkouts({ folders: nextFolders, unfiledTemplates: nextUnfiled });
+    await commitWorkouts(
+      {
+        folders: folders.map((f) => ({
+          ...f,
+          templates: f.templates.filter((t) => t.id !== templateId),
+        })),
+        unfiledTemplates: unfiledTemplates.filter((t) => t.id !== templateId),
+      },
+      [deleteOp('template', templateId)],
+    );
   };
 
   const createStretchingRoutine = async (dto: CreateStretchingRoutineDto) => {
@@ -1530,7 +1527,11 @@ export function GymProvider({ children }: { children: ReactNode }) {
       ? buildTemplateExercisesFromSession(sourceTemplate, finalized)
       : null;
     if (sourceTemplate && templateExercises) {
-      await applyTemplateUpdateLocally(sourceTemplate.id, { exercises: templateExercises });
+      await applyTemplateUpdate(
+        sourceTemplate.id,
+        { exercises: templateExercises },
+        { localOnly: true },
+      );
     }
 
     await saveLocalHistorySession(finalized);
@@ -1680,7 +1681,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
         historySessions,
         isOnline,
         syncState,
-        pendingSyncCount,
+        pendingSyncCount: pendingSyncCount + pendingWorkoutOpsCount,
         conflictServerSession,
         weightUnit,
         createCustomExercise,

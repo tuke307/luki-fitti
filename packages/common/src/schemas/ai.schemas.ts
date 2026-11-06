@@ -166,6 +166,8 @@ export interface WorkoutBuilderResponseDto {
   /** Proposal ids that were not in the catalog and therefore dropped. */
   droppedExerciseIds: string[];
   usage: AiRunUsageDto;
+  /** OpenRouter model that produced the answer. */
+  model: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -222,6 +224,8 @@ export interface MealAnalysisResponseDto {
   /** Whether photos were kept (false when server photo storage is not configured). */
   photosStored: boolean;
   usage: AiRunUsageDto;
+  /** OpenRouter model that produced the answer. */
+  model: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -250,6 +254,8 @@ export interface MealTextAnalysisResponseDto {
   items: MealProposalItemDto[];
   analysis: MealAnalysisDto;
   usage: AiRunUsageDto;
+  /** OpenRouter model that produced the answer. */
+  model: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

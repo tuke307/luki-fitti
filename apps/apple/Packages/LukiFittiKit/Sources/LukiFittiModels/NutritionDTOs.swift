@@ -324,6 +324,8 @@ public struct WorkoutBuilderResponseDto: Codable, Sendable, Equatable, Hashable 
     public var notes: [String]
     public var droppedExerciseIds: [String]
     public var usage: AiRunUsageDto?
+    /// OpenRouter model that answered (older servers omit it).
+    public var model: String?
 }
 
 public struct MealAnalysisSummaryDto: Codable, Sendable, Equatable, Hashable {
@@ -351,6 +353,8 @@ public struct MealTextAnalysisResponseDto: Codable, Sendable, Equatable, Hashabl
     public var items: [MealItemInputDto]
     public var analysis: MealAnalysisSummaryDto
     public var usage: AiRunUsageDto?
+    /// OpenRouter model that answered (older servers omit it).
+    public var model: String?
 }
 
 extension MealItemDto {
@@ -378,6 +382,8 @@ public struct MealAnalysisResponseDto: Codable, Sendable, Equatable, Hashable {
     public var analysis: MealAnalysisSummaryDto
     public var photosStored: Bool
     public var usage: AiRunUsageDto?
+    /// OpenRouter model that answered (older servers omit it).
+    public var model: String?
 }
 
 /// Tokens and the OpenRouter cost in USD (as reported, no conversion; `nil` when unknown).

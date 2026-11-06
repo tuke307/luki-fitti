@@ -25,6 +25,7 @@ import {
   TargetRegion,
   WeightUnit,
 } from '../enums';
+import { AiModelChoicesSchema } from './ai-models.schemas';
 
 export const PASSWORD_RULES = {
   minLength: 8,
@@ -138,6 +139,8 @@ export const UpdatePreferencesSchema = z.object({
   weighInReminderEnabled: z.boolean().optional(),
   weighInReminderWeekday: z.number().int().min(1).max(7).optional(),
   weighInReminderMinutes: z.number().int().min(0).max(1439).optional(),
+  /** Per-skill model choice; replaces the stored map (null clears every choice). */
+  aiModels: AiModelChoicesSchema.nullable().optional(),
 });
 
 export const UserPreferencesSchema = z.object({
@@ -165,6 +168,7 @@ export const UserPreferencesSchema = z.object({
   weighInReminderEnabled: z.boolean().default(false).optional(),
   weighInReminderWeekday: z.number().default(2).optional(),
   weighInReminderMinutes: z.number().default(450).optional(),
+  aiModels: z.record(z.string(), z.string()).nullable().optional(),
 });
 
 export const UserSchema = z.object({
@@ -323,13 +327,22 @@ export interface ExerciseDto {
 // ─────────────────────────────────────────────────────────────────────────────
 // Workout Folders & Workout Templates Schemas
 // ─────────────────────────────────────────────────────────────────────────────
-export const CreateFolderSchema = z.object({
+const FolderFieldsSchema = z.object({
   name: z.string().trim().min(1, 'Folder name is required').max(80),
   color: z.string().trim().default(DEFAULT_FOLDER_COLOR),
   sortOrder: z.number().int().min(0).default(0).optional(),
 });
 
-export const UpdateFolderSchema = CreateFolderSchema.partial();
+/**
+ * `id` is optional and client-generated (offline-first clients create entities before the server
+ * knows them). Replaying a create with the same id returns the existing row.
+ */
+export const CreateFolderSchema = FolderFieldsSchema.extend({ id: z.uuid().optional() });
+
+export const UpdateFolderSchema = FolderFieldsSchema.partial();
+
+/** Stable `details.code` of the 409 returned when a folder name is already taken. */
+export const FOLDER_NAME_TAKEN_CODE = 'FOLDER_NAME_TAKEN';
 
 /** One planned set of a template exercise (type + target values). */
 export const TemplateSetSchema = z.object({
@@ -361,7 +374,7 @@ export const TemplateExerciseInputSchema = z.object({
   alternativeExerciseIds: z.array(z.string()).default([]),
 });
 
-export const CreateTemplateSchema = z.object({
+const TemplateFieldsSchema = z.object({
   name: z.string().trim().min(1, 'Workout name is required').max(100),
   description: z.string().trim().max(500).nullable().optional(),
   folderId: z.string().nullable().optional(),
@@ -370,7 +383,10 @@ export const CreateTemplateSchema = z.object({
   exercises: z.array(TemplateExerciseInputSchema).default([]),
 });
 
-export const UpdateTemplateSchema = CreateTemplateSchema.partial();
+/** `id`: optional client-generated id, see `CreateFolderSchema`. */
+export const CreateTemplateSchema = TemplateFieldsSchema.extend({ id: z.uuid().optional() });
+
+export const UpdateTemplateSchema = TemplateFieldsSchema.partial();
 
 export const MoveTemplateSchema = z.object({
   folderId: z.string().nullable(),
@@ -811,3 +827,5 @@ export * from './nutrition.schemas';
 export * from './body-weight.schemas';
 export * from './activity.schemas';
 export * from './ai.schemas';
+export * from './ai-models.schemas';
+export * from './import';

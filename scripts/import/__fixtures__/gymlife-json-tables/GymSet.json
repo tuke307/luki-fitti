@@ -1,0 +1,5 @@
+[
+  { "ID": 30, "TrainingExerciseID": 20, "NumberOfRepetitions": 10, "Weight": 40, "SetType": 1 },
+  { "ID": 31, "TrainingExerciseID": 20, "NumberOfRepetitions": 8, "Weight": 80, "SetType": 0 },
+  { "ID": 32, "TrainingExerciseID": 21, "NumberOfRepetitions": 5, "Weight": 100, "SetType": 0 }
+]

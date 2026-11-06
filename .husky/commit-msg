@@ -8,3 +8,4 @@ if ! command -v node >/dev/null 2>&1 && [ -x "/opt/homebrew/bin/node" ]; then
 fi
 
 commitlint --edit "$1"
+node scripts/commit-msg-guard.mjs "$1"

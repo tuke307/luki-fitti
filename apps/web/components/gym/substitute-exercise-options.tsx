@@ -12,9 +12,11 @@ import type {
 import { rankAlternatives, type RankedAlternative } from '@luki-fitti/common/utils/client';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { filterExercisesByQuery } from './exercise-picker';
+import { LateralityBadge } from './laterality-badge';
 
 const CORE_EXERCISE_IDS = CORE_EXERCISE_CATALOG.map((e) => e.id);
 const BEST_MATCH_LIMIT = 8;
+const ONE_SIDED_LIMIT = 3;
 
 interface SubstituteExerciseOptionsProps {
   target: SessionExerciseDto;
@@ -50,18 +52,29 @@ export function SubstituteExerciseOptions({
   const excludeKey = [...sessionExerciseIds, ...target.alternativeExerciseIds]
     .filter(Boolean)
     .join('\n');
-  const bestMatches = useMemo<RankedAlternative[]>(
-    () =>
-      targetExercise
+  // A two-sided exercise gets its one-sided versions first; they are left out of the best matches.
+  const { oneSided, bestMatches } = useMemo(() => {
+    if (!targetExercise) return { oneSided: [], bestMatches: [] };
+    const options = {
+      historySessions,
+      excludeIds: excludeKey.split('\n'),
+      popularIds: CORE_EXERCISE_IDS,
+    };
+    const oneSided: RankedAlternative[] =
+      targetExercise.laterality === Laterality.BILATERAL
         ? rankAlternatives(targetExercise, catalog, {
-            historySessions,
-            excludeIds: excludeKey.split('\n'),
-            popularIds: CORE_EXERCISE_IDS,
-            limit: BEST_MATCH_LIMIT,
-          })
-        : [],
-    [targetExercise, catalog, historySessions, excludeKey],
-  );
+            ...options,
+            preferLaterality: Laterality.UNILATERAL,
+            limit: ONE_SIDED_LIMIT,
+          }).filter((r) => r.reasons.includes('UNILATERAL_VARIANT'))
+        : [];
+    const bestMatches = rankAlternatives(targetExercise, catalog, {
+      ...options,
+      excludeIds: [...options.excludeIds, ...oneSided.map((r) => r.exercise.id)],
+      limit: BEST_MATCH_LIMIT,
+    });
+    return { oneSided, bestMatches };
+  }, [targetExercise, catalog, historySessions, excludeKey]);
   const showFullList = searching || showAll || bestMatches.length === 0;
 
   const reasonLine = ({ exercise, reasons }: RankedAlternative) =>
@@ -72,11 +85,6 @@ export function SubstituteExerciseOptions({
           ? t.session.reasonSimilarMovement
           : null,
       equipmentLabel(exercise.equipment),
-      exercise.laterality === Laterality.UNILATERAL
-        ? t.session.reasonOneSide
-        : exercise.laterality === Laterality.BILATERAL
-          ? t.session.reasonBothSides
-          : null,
       reasons.includes('DONE_BEFORE') ? t.session.reasonDoneBefore : null,
     ]
       .filter(Boolean)
@@ -106,25 +114,36 @@ export function SubstituteExerciseOptions({
         </div>
       )}
 
-      {!searching && bestMatches.length > 0 && (
-        <div className="space-y-2 pt-1" data-testid="substitute-best-matches">
-          <p className="text-foreground text-xs font-bold">{t.session.bestMatches}</p>
-          {bestMatches.map((match) => (
-            <Button
-              key={match.exercise.id}
-              type="button"
-              variant="secondary"
-              onClick={() => onSelect(match.exercise.id)}
-              className="flex h-auto w-full flex-col items-start gap-0.5 rounded-xl p-3 text-left text-xs font-medium"
-            >
-              <span>{match.exercise.name}</span>
-              <span className="text-muted-foreground text-[11px] font-normal">
-                {reasonLine(match)}
-              </span>
-            </Button>
-          ))}
-        </div>
-      )}
+      {!searching &&
+        [
+          { id: 'one-sided', title: t.laterality.oneSideGroup, matches: oneSided },
+          { id: 'best-matches', title: t.session.bestMatches, matches: bestMatches },
+        ].map(
+          (group) =>
+            group.matches.length > 0 && (
+              <div key={group.id} className="space-y-2 pt-1" data-testid={`substitute-${group.id}`}>
+                <p className="text-foreground text-xs font-bold">{group.title}</p>
+                {group.matches.map((match) => (
+                  <Button
+                    key={match.exercise.id}
+                    type="button"
+                    variant="secondary"
+                    onClick={() => onSelect(match.exercise.id)}
+                    className="flex h-auto w-full flex-col items-start gap-0.5 rounded-xl p-3 text-left text-xs font-medium"
+                  >
+                    <span>{match.exercise.name}</span>
+                    <span className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-[11px] font-normal">
+                      {reasonLine(match)}
+                      <LateralityBadge
+                        laterality={match.exercise.laterality}
+                        className="px-1.5 text-[11px]"
+                      />
+                    </span>
+                  </Button>
+                ))}
+              </div>
+            ),
+        )}
 
       {showFullList ? (
         <div className="space-y-2 pt-1">

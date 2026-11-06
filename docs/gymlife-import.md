@@ -131,15 +131,43 @@ Verify image URLs return HTTP 200 before committing.
 
 ## 6. Import a user's history
 
-Personal data (folders, templates, sessions, sets) is user-specific and should **not** go into
-migrations. Generate a one-off SQL script (or use the API) scoped to the target user:
+Personal data (folders, templates, sessions, sets) is user-specific and never goes into migrations
+or SQL scripts. Convert the extracted tables into a [`luki-fitti-import@1`](import-format.md)
+file and let the user upload it in the app. Nobody needs database access.
 
-- look the user up by e-mail inside the script; abort if not found,
-- wrap everything in a transaction (`BEGIN … COMMIT`),
-- use deterministic IDs (e.g. UUIDv5 from the Gymlife IDs) with `ON CONFLICT DO NOTHING`, so
-  re-running is safe,
-- reference exercises by system catalog slug,
-- record the run in `ImportJob` (`sourceFormat = 'GYMLIFE_SQLITE'`) with counts in `summaryJson`.
+1. **Map the exercise names.** Create `gymlife-extracted/mapping.json` from each GymLife exercise
+   name (`CustomName` if set, otherwise `Name`) to a catalog slug (see
+   [finding catalog slugs](import-format.md#finding-catalog-slugs)). Keys are matched
+   case-insensitively:
 
-Run it against a local database first, then check the totals (sessions, sets, templates) in the
-app before touching production.
+   ```json
+   { "Seated Machine Leg Extensions": "leg-extensions", "Back Squat": "barbell-squat" }
+   ```
+
+2. **Run the converter** on the `json-tables/` from step 4 and keep the output inside the
+   git-ignored folder:
+
+   ```bash
+   yarn workspace @luki-fitti/common build   # lets the converter validate its output
+   node scripts/import/gymlife-to-luki.mjs gymlife-extracted/json-tables \
+     --map gymlife-extracted/mapping.json > gymlife-extracted/luki-import.json
+   ```
+
+   It converts folders (`Training.IsFolder`), templates with their planned sets, and completed
+   workouts (`TrainingLog.IsCompleted`) with their logged sets; soft-deleted rows are skipped and
+   GymLife ids become the entry keys. Weights are taken as kg. Sets whose `SetType` is `1` (or
+   contains "warm") become warm-ups; pass `--warmup-set-type <value>` if your data uses another
+   value. It stops and lists every exercise without a mapping entry, and names the columns a
+   table actually has if one it expects is missing (adjust `COLUMNS` in the script then).
+
+   Assumptions to check against your backup: the links between tables are read from
+   `TrainingExercise.TrainingID` / `ExerciseID`, `GymSet.TrainingExerciseID`,
+   `TrainingLog.TrainingID`, `TrainingExerciseLog.TrainingLogID` / `ExerciseID` and
+   `GymSetLog.TrainingExerciseLogID` (each also accepted with an `Id` suffix); warm-ups are
+   `SetType = 1`; weights are kg. These names come from the documented schema, not from a verified
+   export of every GymLife version.
+
+3. **Upload it in the app:** Profile → Data → Import file. Check the preview, then import.
+   Importing the same file again changes nothing.
+
+Delete `gymlife-extracted/` when you are done.

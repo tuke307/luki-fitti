@@ -25,6 +25,11 @@ public enum SuggestionReasonFormatter {
         let stalling = suggestion.stallingExerciseName ?? ""
         let split = suggestion.splitArchetype.rawValue.replacingOccurrences(of: "_", with: " ")
 
+        if suggestion.unilateralVariant {
+            return locale == .de
+                ? "Probier es einseitig – jede Seite einzeln trainieren kann neuen Fortschritt bringen."
+                : "Try one side at a time — training each arm or leg separately can restart progress."
+        }
         switch (suggestion.reasonType, locale) {
         case (.PLATEAU, .en):
             return "\(stalling) hasn’t hit a new best in a while. \(name) could give your \(muscle) a fresh challenge."

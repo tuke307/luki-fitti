@@ -20,6 +20,7 @@ export interface AppSettingsRecord {
   mealPhotoFallbacks: string[];
   aiDailyRunLimit: number;
   mealPhotoRetentionDays: number | null;
+  userModelAllowlist: string[];
   updatedAt: Date;
 }
 
@@ -114,11 +115,13 @@ export class AppSettingsService {
         ...dto,
         workoutBuilderFallbacks: dedupe(dto.workoutBuilderFallbacks),
         mealPhotoFallbacks: dedupe(dto.mealPhotoFallbacks),
+        userModelAllowlist: dedupe(dto.userModelAllowlist),
       },
       update: {
         ...dto,
         workoutBuilderFallbacks: dedupe(dto.workoutBuilderFallbacks),
         mealPhotoFallbacks: dedupe(dto.mealPhotoFallbacks),
+        userModelAllowlist: dedupe(dto.userModelAllowlist),
       },
     });
     this.cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
@@ -139,6 +142,7 @@ export class AppSettingsService {
       mealPhotoFallbacks: value.mealPhotoFallbacks,
       aiDailyRunLimit: value.aiDailyRunLimit,
       mealPhotoRetentionDays: value.mealPhotoRetentionDays,
+      userModelAllowlist: value.userModelAllowlist,
       encryptionConfigured: this.encryptionConfigured,
       usersWithOwnKey,
       usersWithAdminKey,

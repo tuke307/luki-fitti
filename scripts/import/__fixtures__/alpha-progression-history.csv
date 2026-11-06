@@ -1,0 +1,18 @@
+"Push Day A";"2026-02-19 4:54 h";"1:02 hr"
+
+"1. Bench Press · Barbell · 8 reps";"WU1 · 40 kg · 10 reps<br>WU2 · 60 kg · 5 reps"
+#;KG;REPS;RIR
+1;80;8;2
+2;82,5;8+;1
+3;82,5;6;
+
+"2. Dips · Bodyweight · 10 reps";""
+#;KG;REPS;RIR
+1;+10;10;1
+
+"Legs";"2026-03-29 18:05 h";"0:45 hr"
+
+"1. Back Squat · Barbell · 5 reps";""
+#;KG;REPS;RIR
+1;100;5;3
+2;100;5;2

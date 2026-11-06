@@ -11,6 +11,7 @@ public struct ActiveSessionView: View {
     @State private var guideTargetId: String?
     @State private var showingAddExerciseSheet = false
     @State private var showingDiscardConfirmation = false
+    @ScaledMetric(relativeTo: .body) private var restIconSize: CGFloat = 30
 
     public init(viewModel: LukiAppViewModel) {
         self.viewModel = viewModel
@@ -81,7 +82,9 @@ public struct ActiveSessionView: View {
                 ExerciseGuideSheet(
                     exercise: viewModel.store.catalog.first { $0.id == target.exerciseId },
                     fallbackName: target.exerciseNameSnapshot,
-                    fallbackMuscle: target.primaryMuscleSnapshot
+                    fallbackMuscle: target.primaryMuscleSnapshot,
+                    historySessions: viewModel.store.historySessions,
+                    weightUnit: viewModel.store.activeSession?.weightUnit ?? viewModel.store.preferences.weightUnit
                 )
             }
         }
@@ -271,36 +274,48 @@ public struct ActiveSessionView: View {
             Text(rest.isPaused ? tr("Rest paused") : tr("Rest"))
                 .font(.footnote.weight(.medium))
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
             Text(LukiFormat.clock(rest.remainingSeconds))
                 .font(.system(.title2, design: .rounded).weight(.semibold).monospacedDigit())
+                .lineLimit(1)
         }
+        .fixedSize()
         .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder
     private func restControls(_ rest: RestTimerStatus) -> some View {
-        Button("-15s") { viewModel.adjustRestTimer(deltaSeconds: -15) }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
-        Button("+15s") { viewModel.adjustRestTimer(deltaSeconds: 15) }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
-        Button {
-            viewModel.togglePauseRestTimer()
-        } label: {
-            Image(systemName: rest.isPaused ? "play.fill" : "pause.fill")
-                .frame(minWidth: 24, minHeight: 28)
+        restIconButton("gobackward.15", label: tr("Subtract 15 seconds")) {
+            viewModel.adjustRestTimer(deltaSeconds: -15)
         }
         .buttonStyle(.bordered)
-        .accessibilityLabel(rest.isPaused ? tr("Resume") : tr("Pause"))
-        Button {
+        restIconButton("goforward.15", label: tr("Add 15 seconds")) {
+            viewModel.adjustRestTimer(deltaSeconds: 15)
+        }
+        .buttonStyle(.bordered)
+        restIconButton(rest.isPaused ? "play.fill" : "pause.fill", label: rest.isPaused ? tr("Resume") : tr("Pause")) {
+            viewModel.togglePauseRestTimer()
+        }
+        .buttonStyle(.bordered)
+        restIconButton("forward.end.fill", label: tr("Skip Rest")) {
             viewModel.skipRestTimer()
-        } label: {
-            Image(systemName: "forward.end.fill")
-                .frame(minWidth: 24, minHeight: 28)
         }
         .buttonStyle(.borderedProminent)
-        .accessibilityLabel(tr("Skip Rest"))
+    }
+
+    private func restIconButton(_ systemImage: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.body.weight(.semibold))
+                .frame(width: min(restIconSize, 40), height: min(restIconSize, 40))
+        }
+        .buttonBorderShape(.circle)
+        .controlSize(.regular)
+        .lineLimit(1)
+        .fixedSize()
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Circle())
+        .accessibilityLabel(label)
     }
 
     private var restPresets: some View {
@@ -310,6 +325,8 @@ public struct ActiveSessionView: View {
                     .buttonStyle(.bordered)
                     .controlSize(.large)
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .fixedSize()
             }
         }
     }
@@ -652,6 +669,7 @@ public struct ActiveSessionView: View {
                         Text(goal)
                             .font(.footnote.monospacedDigit())
                             .foregroundStyle(.secondary)
+                        LateralityBadge(viewModel.store.catalog.first { $0.id == exercise.exerciseId }?.laterality)
                     }
                     Spacer(minLength: 0)
                     exerciseMenu(session: session, exercise: exercise, exerciseIndex: exerciseIndex)
@@ -769,6 +787,7 @@ public struct ActiveSessionView: View {
                                     Text("\(LukiI18n.muscleLabel(member.exercise.primaryMuscleSnapshot, locale: tr)) · \(repsTarget(member.exercise))")
                                         .font(.footnote.monospacedDigit())
                                         .foregroundStyle(.secondary)
+                                    LateralityBadge(viewModel.store.catalog.first { $0.id == member.exercise.exerciseId }?.laterality)
                                 }
                                 Spacer()
                                 exerciseMenu(session: session, exercise: member.exercise, exerciseIndex: member.index)

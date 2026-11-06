@@ -366,12 +366,12 @@ struct MealEditorSheet: View {
             viewModel.nutrition.upsertLocal(result.entry)
             replaceAIItems(with: result.entry.items.filter { $0.source == .AI })
             if !result.analysis.containsFood {
-                return .init(message: tr("We couldn’t find food in these photos."), success: true, usage: result.usage)
+                return .init(message: tr("We couldn’t find food in these photos."), success: true, usage: result.usage, model: result.model)
             }
             if !result.photosStored {
-                return .init(message: tr("Photos weren’t stored on the server."), success: true, usage: result.usage)
+                return .init(message: tr("Photos weren’t stored on the server."), success: true, usage: result.usage, model: result.model)
             }
-            return .init(success: true, usage: result.usage)
+            return .init(success: true, usage: result.usage, model: result.model)
         } catch APIClientError.aiKeyRequired {
             showsAiKeyAlert = true
             return .init(success: false)
@@ -390,12 +390,12 @@ struct MealEditorSheet: View {
                 MealTextAnalysisRequestDto(description: description, mealType: mealType)
             )
             guard result.analysis.containsFood, !result.items.isEmpty else {
-                return .init(message: tr("We couldn’t find food in this description."), success: false, usage: result.usage)
+                return .init(message: tr("We couldn’t find food in this description."), success: false, usage: result.usage, model: result.model)
             }
             replaceAIItems(with: result.items.map { MealItemDto($0) })
             if let guess = result.analysis.mealTypeGuess { mealType = guess }
             let note = result.analysis.uncertaintyNote.trimmingCharacters(in: .whitespacesAndNewlines)
-            return .init(success: true, usage: result.usage, note: note.isEmpty ? nil : note)
+            return .init(success: true, usage: result.usage, note: note.isEmpty ? nil : note, model: result.model)
         } catch APIClientError.aiKeyRequired {
             showsAiKeyAlert = true
             return .init(success: false)
