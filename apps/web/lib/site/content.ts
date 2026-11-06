@@ -43,6 +43,31 @@ export const SCREENSHOTS: ScreenShot[] = [
   },
 ];
 
+/** Hero device switcher: same moment on iPhone, iPad and Apple Watch. */
+export const HERO_DEVICES = [
+  {
+    id: 'iphone',
+    label: 'iPhone',
+    file: '01-active-workout.png',
+    width: 360,
+    alt: { de: 'Aktives Training auf dem iPhone', en: 'Active workout on iPhone' },
+  },
+  {
+    id: 'ipad',
+    label: 'iPad',
+    file: 'ipad/01-active-workout.png',
+    width: 440,
+    alt: { de: 'Aktives Training auf dem iPad', en: 'Active workout on iPad' },
+  },
+  {
+    id: 'watch',
+    label: 'Apple Watch',
+    file: '03-watch.png',
+    width: 260,
+    alt: { de: 'Aktives Training auf der Apple Watch', en: 'Active workout on Apple Watch' },
+  },
+] as const;
+
 /** Server-side site copy straight from the app dictionaries (no client locale context). */
 export function getSiteCopy(locale: SiteLocale) {
   return (locale === 'de' ? de : en).site;
