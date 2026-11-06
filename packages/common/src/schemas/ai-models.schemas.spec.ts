@@ -36,6 +36,7 @@ describe('UpdatePreferencesSchema.aiModels', () => {
   it('accepts valid model ids per skill and null', () => {
     assert.ok(parse({ 'workout-builder': 'openai/gpt-6.1-terra' }).success);
     assert.ok(parse({ 'meal-analyzer': 'meta-llama/llama-5-70b:free' }).success);
+    assert.ok(parse({ 'workout-builder': '~anthropic/claude-sonnet-latest' }).success);
     assert.ok(parse({}).success);
     assert.ok(parse(null).success);
   });
@@ -46,6 +47,8 @@ describe('UpdatePreferencesSchema.aiModels', () => {
       { 'workout-builder': 'OpenAI/GPT' },
       { 'workout-builder': 'openai/gpt 4' },
       { 'workout-builder': '../etc/passwd' },
+      { 'workout-builder': '~~anthropic/claude-latest' },
+      { 'workout-builder': 'anthropic/~claude-latest' },
       { 'workout-builder': 'https://evil.example/x' },
       { 'workout-builder': `a/${'b'.repeat(100)}` },
       { 'workout-builder': 42 },

@@ -27,7 +27,10 @@ const model = (id: string, opts: Partial<AiModelInfoDto> = {}): AiModelInfoDto =
 
 const catalog = [
   model('a/tools-text'),
-  model('b/tools-vision', { supportsImages: true }),
+  model('b/tools-vision', {
+    supportsImages: true,
+    pricing: { promptPerMTokUsd: 1, completionPerMTokUsd: 4, imageUsd: 0.005 },
+  }),
   model('c/no-tools', { supportsTools: false, supportsImages: true }),
 ];
 
@@ -75,6 +78,14 @@ describe('cost estimate', () => {
     // 4000 × $1/1M + 1000 × $4/1M = $0.008
     const cost = estimateCostPerRun(avg, { promptPerMTokUsd: 1, completionPerMTokUsd: 4, imageUsd: null });
     assert.ok(Math.abs(cost! - 0.008) < 1e-12);
+  });
+
+  it('adds the per-image price per image sent', () => {
+    const pricing = { promptPerMTokUsd: 1, completionPerMTokUsd: 4, imageUsd: 0.003 };
+    const avg = { promptTokens: 4000, completionTokens: 1000 };
+    assert.ok(Math.abs(estimateCostPerRun(avg, pricing, 1)! - 0.011) < 1e-12);
+    assert.ok(Math.abs(estimateCostPerRun(avg, pricing)! - 0.008) < 1e-12);
+    assert.ok(Math.abs(estimateCostPerRun(avg, { ...pricing, imageUsd: null }, 1)! - 0.008) < 1e-12);
   });
 
   it('is null without history', () => {
@@ -185,6 +196,9 @@ describe('AiModelsService', () => {
     assert.equal(mealText.defaultModel, 'x/default-meal');
     assert.equal(mealText.effectiveModel, 'x/default-meal');
     assert.equal(mealText.effectiveModelInfo, null);
+    // Photo skill: the same tokens plus one image at $0.005.
+    const meal = dto.skills.find((s) => s.skill === AiSkillName.MEAL_ANALYZER)!;
+    assert.ok(Math.abs(meal.models[0]!.estimatedCostPerRunUsd! - 0.007) < 1e-12);
     const ownQuery = runQueries.find((q) => q.where.userId === 'u')!;
     assert.equal(ownQuery.take, 20);
     assert.equal(ownQuery.where.status, 'SUCCESS');
