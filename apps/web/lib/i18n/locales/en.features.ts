@@ -573,6 +573,9 @@ export const enFeatures = {
     images: 'Images',
   },
   dataImport: {
+    signInHint: 'Sign in to import a file.',
+    guidesTitle: 'From other apps',
+    guidesFooter: 'Step-by-step guides for moving your data into LukiFitti.',
     intro:
       'Import a LukiFitti backup or a file made by one of the migration guides. Anything already in your account is skipped, so importing the same file twice changes nothing.',
     formatHelp: 'What file can I import?',

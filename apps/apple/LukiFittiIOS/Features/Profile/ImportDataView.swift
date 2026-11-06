@@ -26,43 +26,75 @@ struct ImportDataView: View {
         case failed(String)
     }
 
+    /// Step-by-step migration guides in the public repo. App names stay untranslated.
+    private static let importGuides: [(name: String, docFile: String, accessibilityId: String)] = [
+        ("GymLife", "gymlife-import", "ios.profile.row.import.gymlife"),
+        ("Alpha Progression", "alpha-progression-import", "ios.profile.row.import.alphaProgression"),
+    ]
+
     var body: some View {
         List {
-            Section {
-                Text(tr("Import a LukiFitti backup or a file made by one of the migration guides. Anything already in your account is skipped, so importing the same file twice changes nothing."))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                Button {
-                    openURL(Self.formatDocURL)
-                } label: {
-                    Label(tr("What file can I import?"), systemImage: "questionmark.circle")
+            if viewModel.store.currentUser == nil {
+                Section {
+                    Text(tr("Sign in to import a file."))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("ios.import.signInHint")
                 }
-                .accessibilityIdentifier("ios.import.formatDoc")
+            } else {
+                Section {
+                    Text(tr("Import a LukiFitti backup or a file made by one of the migration guides. Anything already in your account is skipped, so importing the same file twice changes nothing."))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Button {
+                        openURL(Self.formatDocURL)
+                    } label: {
+                        Label(tr("What file can I import?"), systemImage: "questionmark.circle")
+                    }
+                    .accessibilityIdentifier("ios.import.formatDoc")
+                }
+
+                stateSection
+
+                Section {
+                    if case .preview(let data, let preview) = state, preview.hasNewData {
+                        Button {
+                            Task { await commit(data, preview) }
+                        } label: {
+                            Label(tr("Import Data"), systemImage: "square.and.arrow.down")
+                                .fontWeight(.semibold)
+                        }
+                        .accessibilityIdentifier("ios.import.commit")
+                    }
+                    Button {
+                        showsPicker = true
+                    } label: {
+                        Label(state == .idle ? tr("Choose File") : tr("Choose Another File"), systemImage: "doc")
+                    }
+                    .disabled(isBusy)
+                    .accessibilityIdentifier("ios.import.chooseFile")
+                }
             }
 
-            stateSection
-
             Section {
-                if case .preview(let data, let preview) = state, preview.hasNewData {
+                ForEach(Self.importGuides, id: \.name) { guide in
                     Button {
-                        Task { await commit(data, preview) }
+                        if let url = URL(string: "https://github.com/tuke307/luki-fitti/blob/main/docs/\(guide.docFile).md") {
+                            openURL(url)
+                        }
                     } label: {
-                        Label(tr("Import Data"), systemImage: "square.and.arrow.down")
-                            .fontWeight(.semibold)
+                        SettingsRow(guide.name, systemImage: "square.and.arrow.down", tint: LukiColors.accent)
                     }
-                    .accessibilityIdentifier("ios.import.commit")
+                    .accessibilityIdentifier(guide.accessibilityId)
                 }
-                Button {
-                    showsPicker = true
-                } label: {
-                    Label(state == .idle ? tr("Choose File") : tr("Choose Another File"), systemImage: "doc")
-                }
-                .disabled(isBusy)
-                .accessibilityIdentifier("ios.import.chooseFile")
+            } header: {
+                Text(tr("From other apps"))
+            } footer: {
+                Text(tr("Step-by-step guides for moving your data into LukiFitti."))
             }
         }
         .listStyle(.insetGrouped)
-        .navigationTitle(tr("Import file"))
+        .navigationTitle(tr("Data import"))
         .navigationBarTitleDisplayMode(.inline)
         .fileImporter(isPresented: $showsPicker, allowedContentTypes: [.json]) { result in
             guard case .success(let url) = result else { return }
@@ -220,6 +252,41 @@ struct ImportDataView: View {
         case APIClientError.offline: return .failed(tr("Couldn’t reach the server. Check your connection and try again."))
         default: return .failed(tr("The import failed. Nothing was changed. Please try again."))
         }
+    }
+}
+
+/// Export & backup page: full JSON backup and the workout-log CSV as share sheets.
+struct DataExportView: View {
+    @Bindable var viewModel: LukiAppViewModel
+    @Environment(\.lukiLocale) private var tr
+
+    var body: some View {
+        List {
+            Section {
+                let backup = BackupExportFile(
+                    folders: viewModel.store.folders,
+                    unfiledTemplates: viewModel.store.unfiledTemplates,
+                    historySessions: viewModel.store.historySessions,
+                    catalog: viewModel.store.catalog
+                )
+                ShareLink(item: backup, preview: SharePreview(backup.fileName)) {
+                    SettingsRow(tr("Export Backup"), systemImage: "square.and.arrow.up", tint: LukiColors.setStretch)
+                }
+                .accessibilityIdentifier("ios.profile.row.exportBackup")
+
+                let workoutLog = WorkoutLogExportFile(
+                    historySessions: viewModel.store.historySessions,
+                    folders: viewModel.store.folders
+                )
+                ShareLink(item: workoutLog, preview: SharePreview(workoutLog.fileName)) {
+                    SettingsRow(tr("Workout Log (CSV)"), systemImage: "tablecells", tint: LukiColors.setStretch)
+                }
+                .accessibilityIdentifier("ios.profile.row.exportCsv")
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle(tr("Export & backup"))
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

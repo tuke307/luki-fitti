@@ -125,4 +125,18 @@ test.describe('PWA Shell, Navigation & Preferences', () => {
       await expect(page.getByTestId(`settings-row-${row}`)).toBeVisible();
     }
   });
+
+  test('shows the unified data section for guests', async ({ page }) => {
+    await gotoProfileTab(page);
+    for (const row of ['import', 'export', 'sources']) {
+      await expect(page.getByTestId(`settings-row-${row}`)).toBeVisible();
+    }
+    await expect(page.getByTestId('settings-row-usage')).toHaveCount(0);
+
+    await page.getByTestId('settings-row-import').click();
+    await expect(page.getByTestId('import-sign-in-hint')).toBeVisible();
+    await expect(page.getByTestId('import-guide-gymlife')).toBeVisible();
+    await expect(page.getByTestId('import-guide-alpha-progression')).toBeVisible();
+    await expect(page.getByTestId('import-page')).toHaveCount(0);
+  });
 });

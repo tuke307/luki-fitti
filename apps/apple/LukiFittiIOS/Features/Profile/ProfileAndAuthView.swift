@@ -86,8 +86,6 @@ public struct ProfileAndAuthView: View {
 
             dataSection
 
-            aboutSection
-
             Section(tr("Feedback")) {
                 Button {
                     requestFeature()
@@ -403,68 +401,30 @@ public struct ProfileAndAuthView: View {
         }
     }
 
-    /// Step-by-step migration guides in the public repo. App names stay untranslated.
-    private static let importGuides: [(name: String, docFile: String, accessibilityId: String)] = [
-        ("GymLife", "gymlife-import", "ios.profile.row.import.gymlife"),
-        ("Alpha Progression", "alpha-progression-import", "ios.profile.row.import.alphaProgression"),
-    ]
-
     private var dataSection: some View {
         Section {
-            let backup = BackupExportFile(
-                folders: viewModel.store.folders,
-                unfiledTemplates: viewModel.store.unfiledTemplates,
-                historySessions: viewModel.store.historySessions,
-                catalog: viewModel.store.catalog
-            )
-            ShareLink(item: backup, preview: SharePreview(backup.fileName)) {
-                SettingsRow(tr("Export Backup"), systemImage: "square.and.arrow.up", tint: LukiColors.setStretch)
+            NavigationLink {
+                ImportDataView(viewModel: viewModel)
+            } label: {
+                SettingsRow(tr("Data import"), systemImage: "square.and.arrow.down", tint: LukiColors.setStretch)
             }
-            .accessibilityIdentifier("ios.profile.row.exportBackup")
+            .accessibilityIdentifier("ios.profile.row.importFile")
 
-            let workoutLog = WorkoutLogExportFile(
-                historySessions: viewModel.store.historySessions,
-                folders: viewModel.store.folders
-            )
-            ShareLink(item: workoutLog, preview: SharePreview(workoutLog.fileName)) {
-                SettingsRow(tr("Workout Log (CSV)"), systemImage: "tablecells", tint: LukiColors.setStretch)
+            NavigationLink {
+                DataExportView(viewModel: viewModel)
+            } label: {
+                SettingsRow(tr("Export & backup"), systemImage: "square.and.arrow.up", tint: LukiColors.setStretch)
             }
-            .accessibilityIdentifier("ios.profile.row.exportCsv")
+            .accessibilityIdentifier("ios.profile.row.dataExport")
 
-            if viewModel.store.currentUser != nil {
-                NavigationLink {
-                    ImportDataView(viewModel: viewModel)
-                } label: {
-                    SettingsRow(tr("Import file"), systemImage: "square.and.arrow.down", tint: LukiColors.setStretch)
-                }
-                .accessibilityIdentifier("ios.profile.row.importFile")
-            }
-
-            ForEach(Self.importGuides, id: \.name) { guide in
-                Button {
-                    if let url = URL(string: "https://github.com/tuke307/luki-fitti/blob/main/docs/\(guide.docFile).md") {
-                        openURL(url)
-                    }
-                } label: {
-                    SettingsRow(guide.name, systemImage: "square.and.arrow.down", tint: LukiColors.accent)
-                }
-                .accessibilityIdentifier(guide.accessibilityId)
-            }
-        } header: {
-            Text(tr("Data"))
-        } footer: {
-            Text(tr("Step-by-step guides for moving your data into LukiFitti."))
-        }
-    }
-
-    private var aboutSection: some View {
-        Section(tr("About")) {
             NavigationLink {
                 DataSourcesView()
             } label: {
                 SettingsRow(tr("Data sources"), systemImage: "books.vertical", tint: LukiColors.accent)
             }
             .accessibilityIdentifier("ios.profile.row.dataSources")
+        } header: {
+            Text(tr("Data"))
         }
     }
 
