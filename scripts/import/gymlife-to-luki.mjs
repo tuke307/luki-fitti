@@ -16,9 +16,10 @@ const USAGE =
   'Usage: gymlife-to-luki.mjs <json-tables dir> --map <mapping.json> [--warmup-set-type <value>]';
 
 /**
- * Column names per table. The documented ones come first; the alternatives cover the spellings
- * seen in different GymLife versions. A missing required column stops the conversion and lists
- * the columns the table does have, so the mapping can be adjusted here.
+ * Column names per table, verified against a real GymLife backup. Primary keys are named after
+ * the table (`TrainingID`, `GymSetLogID`, …) except `Exercise.ID`. The alternatives cover other
+ * spellings. A missing required column stops the conversion and lists the columns the table does
+ * have, so the mapping can be adjusted here.
  */
 const COLUMNS = {
   id: ['ID', 'Id', 'id'],
@@ -33,6 +34,7 @@ const COLUMNS = {
   restSeconds: ['RestSeconds', 'Rest'],
   trainingExerciseId: ['TrainingExerciseID', 'TrainingExerciseId'],
   reps: ['NumberOfRepetitions', 'Repetitions', 'Reps'],
+  setCount: ['NumberOfSets'],
   weight: ['Weight'],
   setType: ['SetType'],
   date: ['Date', 'StartDate'],
@@ -52,10 +54,11 @@ function readTable(dir, table) {
 function column(rows, table, field, { required = true } = {}) {
   const sample = rows[0];
   if (!sample) return null;
-  const found = COLUMNS[field].find((c) => c in sample);
+  const candidates = field === 'id' ? [`${table}ID`, `${table}Id`, ...COLUMNS.id] : COLUMNS[field];
+  const found = candidates.find((c) => c in sample);
   if (!found && required) {
     throw new Error(
-      `${table}.json has no ${COLUMNS[field].join('/')} column (it has: ${Object.keys(sample).join(', ')})`,
+      `${table}.json has no ${candidates.join('/')} column (it has: ${Object.keys(sample).join(', ')})`,
     );
   }
   return found ?? null;
@@ -81,8 +84,15 @@ const inRange = (value, min, max) => {
   const n = num(value);
   return n !== undefined && n >= min && n <= max ? n : undefined;
 };
+/** By `OrderNumber`, then by id (set tables have no order column; ids follow insertion order). */
 const byOrder = (get) => (a, b) =>
-  (num(get(a, 'orderNumber')) ?? 0) - (num(get(b, 'orderNumber')) ?? 0);
+  (num(get(a, 'orderNumber')) ?? 0) - (num(get(b, 'orderNumber')) ?? 0) ||
+  (num(get(a, 'id')) ?? 0) - (num(get(b, 'id')) ?? 0);
+/** A set row with `NumberOfSets = n` stands for n identical sets. */
+const expandSets = (rows, get) =>
+  rows.flatMap((row) =>
+    Array.from({ length: Math.round(inRange(get(row, 'setCount'), 1, 100) ?? 1) }, () => row),
+  );
 const groupBy = (rows, key) => {
   const map = new Map();
   for (const row of rows) {
@@ -119,7 +129,7 @@ export function convertGymlife(dir, { resolver, warmupSetType = '1' }) {
     readTable(dir, 'GymSet'),
     'GymSet',
     ['trainingExerciseId'],
-    ['reps', 'weight', 'setType', 'orderNumber', 'deleted'],
+    ['id', 'reps', 'weight', 'setType', 'setCount', 'orderNumber', 'deleted'],
   );
   const trainingLog = accessor(
     readTable(dir, 'TrainingLog'),
@@ -137,7 +147,7 @@ export function convertGymlife(dir, { resolver, warmupSetType = '1' }) {
     readTable(dir, 'GymSetLog'),
     'GymSetLog',
     ['trainingExerciseLogId'],
-    ['reps', 'weight', 'setType', 'orderNumber', 'deleted'],
+    ['id', 'reps', 'weight', 'setType', 'setCount', 'orderNumber', 'deleted'],
   );
 
   const exerciseById = new Map(exercises.rows.map((r) => [String(exercises.get(r, 'id')), r]));
@@ -198,8 +208,12 @@ export function convertGymlife(dir, { resolver, warmupSetType = '1' }) {
         .slice(0, 60)
         .flatMap((te, orderIndex) => {
           const slug = slugFor(trainingExercise.get(te, 'exerciseId'));
-          const sets = (setsByTemplateExercise.get(String(trainingExercise.get(te, 'id'))) ?? [])
-            .sort(byOrder(gymSet.get))
+          const sets = expandSets(
+            (setsByTemplateExercise.get(String(trainingExercise.get(te, 'id'))) ?? []).sort(
+              byOrder(gymSet.get),
+            ),
+            gymSet.get,
+          )
             .slice(0, 40)
             .map((s) => ({
               setType: setTypeOf(gymSet.get(s, 'setType')),
@@ -243,7 +257,7 @@ export function convertGymlife(dir, { resolver, warmupSetType = '1' }) {
         defined({
           key: `gymlife:log:${id}`,
           workoutName:
-            String(trainingLog.get(r, 'name') ?? nameOfTraining.get(trainingId) ?? '')
+            String(trainingLog.get(r, 'name') || nameOfTraining.get(trainingId) || '')
               .trim()
               .slice(0, 160) || 'Workout',
           templateKey: templateKeys.get(trainingId),
@@ -257,8 +271,12 @@ export function convertGymlife(dir, { resolver, warmupSetType = '1' }) {
             .flatMap((el, orderIndex) => {
               const slug = slugFor(exerciseLog.get(el, 'exerciseId'));
               if (!slug) return [];
-              const sets = (setsByExerciseLog.get(String(exerciseLog.get(el, 'id'))) ?? [])
-                .sort(byOrder(setLog.get))
+              const sets = expandSets(
+                (setsByExerciseLog.get(String(exerciseLog.get(el, 'id'))) ?? []).sort(
+                  byOrder(setLog.get),
+                ),
+                setLog.get,
+              )
                 .slice(0, 100)
                 .map((s, i) =>
                   defined({

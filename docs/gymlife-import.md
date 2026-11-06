@@ -75,6 +75,7 @@ Gotchas:
 - Booleans appear both as `0/1` and as the strings `'true'/'false'`; normalize both.
 - Rows with `Deleted = 1` are soft-deleted; skip them.
 - `CustomName` overrides `Name` when the user renamed a built-in exercise.
+- `GymSet` / `GymSetLog` rows carry `NumberOfSets`: one row can stand for several identical sets.
 
 ## 4. Export to JSON / CSV
 
@@ -160,12 +161,15 @@ file and let the user upload it in the app. Nobody needs database access.
    value. It stops and lists every exercise without a mapping entry, and names the columns a
    table actually has if one it expects is missing (adjust `COLUMNS` in the script then).
 
-   Assumptions to check against your backup: the links between tables are read from
+   The column names were verified against a real GymLife backup: primary keys are named after
+   their table (`TrainingID`, `TrainingExerciseID`, `GymSetID`, `TrainingLogID`,
+   `TrainingExerciseLogID`, `GymSetLogID`; only `Exercise` uses `ID`), and the links are
    `TrainingExercise.TrainingID` / `ExerciseID`, `GymSet.TrainingExerciseID`,
    `TrainingLog.TrainingID`, `TrainingExerciseLog.TrainingLogID` / `ExerciseID` and
-   `GymSetLog.TrainingExerciseLogID` (each also accepted with an `Id` suffix); warm-ups are
-   `SetType = 1`; weights are kg. These names come from the documented schema, not from a verified
-   export of every GymLife version.
+   `GymSetLog.TrainingExerciseLogID`. A set row with `NumberOfSets = n` stands for n identical
+   sets (GymLife's own `totalRepetitions` only add up that way); set rows have no order column,
+   so they are ordered by id. That backup had `SetType = 0` on every set, so the warm-up value
+   `1` is still unconfirmed; check yours before relying on it.
 
 3. **Upload it in the app:** Profile → Data → Import file. Check the preview, then import.
    Importing the same file again changes nothing.

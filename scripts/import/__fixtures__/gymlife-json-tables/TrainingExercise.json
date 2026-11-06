@@ -1,18 +1,16 @@
 [
   {
-    "ID": 20,
+    "TrainingExerciseID": 20,
     "TrainingID": 11,
     "ExerciseID": 1,
     "OrderNumber": 0,
-    "RestSeconds": 120,
-    "Deleted": 0
+    "RestSeconds": 120
   },
   {
-    "ID": 21,
+    "TrainingExerciseID": 21,
     "TrainingID": 11,
     "ExerciseID": 2,
     "OrderNumber": 1,
-    "RestSeconds": 180,
-    "Deleted": 0
+    "RestSeconds": 180
   }
 ]
