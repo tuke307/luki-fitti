@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { Flame, Plus, Target } from 'lucide-react';
+import { CalendarDays, Flame, Plus, Target } from 'lucide-react';
 import {
   Bar,
   BarChart,
@@ -39,6 +39,7 @@ import { useNutrition } from '@/lib/nutrition/use-nutrition';
 import { useBodyWeight } from '@/lib/body-weight/use-body-weight';
 import { useHealthActivity } from '@/lib/activity/use-health-activity';
 import type { NavTab } from '../pwa-shell';
+import { PageTitle } from '../page-title';
 import { DayWeekStrip } from './day-week-strip';
 import { MealEditorDialog } from './meal-editor-dialog';
 import { NutritionGoalsDialog } from './nutrition-goals-form';
@@ -76,8 +77,7 @@ const itemAmounts = (e: MealEntryDto, locale: string) =>
     .join(', ');
 
 export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => void }) {
-  const { user, authMode } = useAuth();
-  const isAuthenticated = authMode === 'AUTHENTICATED';
+  const { user } = useAuth();
   const { historySessions, isOnline } = useGym();
   const { t, format, bcp47 } = useLocale();
   const { entries, pending, save, remove, upsertLocal, loadFrom } = useNutrition();
@@ -188,15 +188,52 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
   return (
     <div className="mx-auto max-w-2xl min-w-0 space-y-6 pb-10">
       <header className="space-y-3">
-        <div className="min-w-0 space-y-1">
-          <p
-            className="text-muted-foreground text-[0.9375rem] font-medium first-letter:uppercase"
-            aria-live="polite"
-          >
-            {dayLabel}
-          </p>
-          <h1 className="text-[2.125rem] leading-tight font-bold">{t.nutrition.title}</h1>
-        </div>
+        <PageTitle
+          title={t.nutrition.title}
+          actions={
+            <>
+              {selected !== todayKey && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="text-primary h-10 rounded-full px-4"
+                  onClick={() => setSelected(todayKey)}
+                >
+                  {t.nutrition.today}
+                </Button>
+              )}
+              <span className="bg-secondary text-primary hover:bg-secondary/80 relative flex size-10 items-center justify-center rounded-full transition-colors">
+                <CalendarDays className="h-5 w-5" aria-hidden="true" />
+                <input
+                  type="date"
+                  aria-label={t.nutrition.jumpToDate}
+                  max={todayKey}
+                  value={selected}
+                  onClick={(e) => {
+                    try {
+                      e.currentTarget.showPicker?.();
+                    } catch {
+                      // Some browsers only open the picker from their own control.
+                    }
+                  }}
+                  onChange={(e) => {
+                    const key = e.target.value;
+                    if (/^\d{4}-\d{2}-\d{2}$/.test(key))
+                      setSelected(key > todayKey ? todayKey : key);
+                  }}
+                  className="absolute inset-0 size-full cursor-pointer rounded-full opacity-0"
+                />
+              </span>
+            </>
+          }
+        />
+        <p
+          className="text-muted-foreground -mt-2 text-[1.0625rem] font-semibold first-letter:uppercase"
+          aria-live="polite"
+        >
+          {dayLabel}
+        </p>
         <DayWeekStrip
           selected={selected}
           todayKey={todayKey}
@@ -210,45 +247,41 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
 
       <section aria-label={t.nutrition.eaten} className="bg-card space-y-5 rounded-[1.25rem] p-5">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-[1.0625rem] font-semibold tabular-nums">
-            {kcalGoal !== null
-              ? `${t.nutrition.goal}: ${kcalGoal} ${t.nutrition.kcal}`
-              : t.profileBody.goalsTitle}
+          <h2 className="min-w-0 text-[1.0625rem] font-semibold tabular-nums">
+            {t.nutrition.dailyGoalTitle}
+            {kcalGoal !== null && (
+              <span className="text-muted-foreground font-normal">
+                {' '}
+                · {kcalGoal} {t.nutrition.kcal}
+              </span>
+            )}
           </h2>
-          {isAuthenticated ? (
-            <NutritionGoalsDialog>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                aria-label={t.profileBody.goalsAria}
-                data-testid="nutrition-goals-btn"
-              >
-                <Target className="h-4 w-4" aria-hidden="true" /> {t.profileBody.goalsButton}
-              </Button>
-            </NutritionGoalsDialog>
-          ) : null}
+          <NutritionGoalsDialog>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              aria-label={t.profileBody.goalsAria}
+              data-testid="nutrition-goals-btn"
+              className="text-primary shrink-0 rounded-full"
+            >
+              <Target className="h-4 w-4" aria-hidden="true" /> {t.profileBody.goalsButton}
+            </Button>
+          </NutritionGoalsDialog>
         </div>
         <div className="flex items-center gap-5">
-          {isAuthenticated ? (
-            <NutritionGoalsDialog>
-              <button
-                type="button"
-                aria-label={t.profileBody.goalsAria}
-                className="focus-visible:ring-ring/50 shrink-0 rounded-full outline-none focus-visible:ring-[3px]"
-              >
-                <IntakeRing
-                  progress={ringProgress(day.totals.kcal, kcalGoal, day.burnedKcal)}
-                  over={remaining !== null && remaining < 0}
-                />
-              </button>
-            </NutritionGoalsDialog>
-          ) : (
-            <IntakeRing
-              progress={ringProgress(day.totals.kcal, kcalGoal, day.burnedKcal)}
-              over={remaining !== null && remaining < 0}
-            />
-          )}
+          <NutritionGoalsDialog>
+            <button
+              type="button"
+              aria-label={t.profileBody.goalsAria}
+              className="focus-visible:ring-ring/50 shrink-0 rounded-full outline-none focus-visible:ring-[3px]"
+            >
+              <IntakeRing
+                progress={ringProgress(day.totals.kcal, kcalGoal, day.burnedKcal)}
+                over={remaining !== null && remaining < 0}
+              />
+            </button>
+          </NutritionGoalsDialog>
           <dl className="grid min-w-0 flex-1 grid-cols-3 gap-2">
             {[
               [t.nutrition.eaten, day.totals.kcal],
@@ -267,27 +300,13 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
             ))}
           </dl>
         </div>
-        {kcalGoal === null &&
-          (isAuthenticated ? (
-            <NutritionGoalsDialog>
-              <Button type="button" variant="link" size="sm" className="px-0">
-                <Plus className="h-4 w-4" aria-hidden="true" /> {t.profileBody.setGoalHint}
-              </Button>
-            </NutritionGoalsDialog>
-          ) : (
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-muted-foreground text-[0.875rem]">{t.nutrition.noGoal}</p>
-              <Button
-                type="button"
-                variant="link"
-                size="sm"
-                className="px-0"
-                onClick={() => onNavigate('profile')}
-              >
-                {t.nutrition.setGoal}
-              </Button>
-            </div>
-          ))}
+        {kcalGoal === null && (
+          <NutritionGoalsDialog>
+            <Button type="button" variant="link" size="sm" className="px-0">
+              <Plus className="h-4 w-4" aria-hidden="true" /> {t.profileBody.setGoalHint}
+            </Button>
+          </NutritionGoalsDialog>
+        )}
         <ul className="grid grid-cols-3 gap-3">
           {macros.map((m) => {
             const p = goalProgress(m.value, m.goal);
@@ -427,7 +446,16 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
             {day.dailyActivityKcal !== null
               ? t.nutrition.healthBurnNote
               : t.nutrition.burnEstimateNote}{' '}
-            {day.usedDefaultBodyWeight && t.nutrition.burnDefaultWeightNote}
+            {day.usedDefaultBodyWeight && (
+              // Weigh-ins live on the Today tab's Weight page (guests included).
+              <button
+                type="button"
+                onClick={() => onNavigate('home')}
+                className="text-primary font-medium underline-offset-2 hover:underline"
+              >
+                {t.nutrition.logWeightForEstimate}
+              </button>
+            )}
           </p>
         </section>
       )}
