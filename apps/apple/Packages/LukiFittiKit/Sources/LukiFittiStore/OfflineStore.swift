@@ -62,6 +62,9 @@ public final class OfflineStore {
     public internal(set) var workoutOutbox: [WorkoutOutboxOp] = []
     @ObservationIgnored var inFlightWorkoutKeys: Set<String> = []
     @ObservationIgnored var isFlushingWorkoutOutbox = false
+    /// Custom exercise / stretching routine changes not sent yet (see `OfflineStore+CustomLibrary`).
+    public internal(set) var libraryOutbox = CustomLibraryOutbox()
+    @ObservationIgnored var isFlushingCustomLibrary = false
     private static let maxDeletedSessionIds = 500
 
     private let storageDirectory: URL
@@ -135,6 +138,7 @@ public final class OfflineStore {
             .sorted { $0.startedAt > $1.startedAt }
         syncQueue = readJSON("sync_queue.json") ?? []
         workoutOutbox = readJSON("workout_outbox.json") ?? []
+        libraryOutbox = readJSON("custom_library_outbox.json") ?? CustomLibraryOutbox()
         currentUser = readJSON("current_user.json")
         conflictItem = syncQueue.first(where: { $0.serverConflictSession != nil })
         updateSyncStateBadge()
@@ -275,6 +279,8 @@ public final class OfflineStore {
 
     public func flushSyncQueue() async {
         await flushPendingDeletes()
+        // Custom exercises first: workouts and routines may use them.
+        await flushCustomLibrary()
         // Workout structure goes first: synced sessions may reference a new workout.
         let workoutFlush = await flushWorkoutOutbox()
         if workoutFlush.needsRefresh, let overview = try? await apiClient.fetchWorkoutsOverview() {
@@ -420,6 +426,7 @@ public final class OfflineStore {
             "deleted_sessions.json",
             "pending_session_deletes.json",
             "workout_outbox.json",
+            "custom_library_outbox.json",
         ] {
             deleteFile(file)
         }
@@ -428,6 +435,7 @@ public final class OfflineStore {
         historySessions = []
         syncQueue = []
         workoutOutbox = []
+        libraryOutbox = CustomLibraryOutbox()
         deletedSessionIds = []
         pendingServerDeletes = []
         currentUser = nil
@@ -531,7 +539,7 @@ public final class OfflineStore {
             }
         }
         if let routines = try? await apiClient.fetchStretchingRoutines(), !routines.isEmpty {
-            saveStretchingRoutines(routines)
+            applyServerStretchingRoutines(routines)
         }
         if let sessions = try? await apiClient.fetchSessions() {
             // Deleted workouts whose server delete hasn't gone through yet are filtered here.
@@ -548,14 +556,14 @@ public final class OfflineStore {
     }
 
     /// Changes on this device not on the server yet (workouts and folder/workout edits).
-    public var pendingChangesCount: Int { syncQueue.count + workoutOutbox.count }
+    public var pendingChangesCount: Int { syncQueue.count + workoutOutbox.count + customLibraryPendingCount }
 
     func updateSyncStateBadge() {
         if needsReauthentication {
             syncState = .AUTH_EXPIRED
         } else if conflictItem != nil {
             syncState = .CONFLICT
-        } else if !syncQueue.isEmpty || !workoutOutbox.isEmpty {
+        } else if !syncQueue.isEmpty || !workoutOutbox.isEmpty || customLibraryPendingCount > 0 {
             syncState = .SAVED_LOCALLY
         } else {
             syncState = .SYNCED
