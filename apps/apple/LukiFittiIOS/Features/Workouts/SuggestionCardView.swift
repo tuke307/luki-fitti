@@ -21,10 +21,17 @@ struct SuggestionCardView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
                 VStack(alignment: .leading, spacing: compact ? 2 : 4) {
-                    Text("\(SuggestionReasonFormatter.badge(locale: locale)) · \(suggestion.suggestedExercise.name)")
-                        .font(compact ? .footnote : .subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
+                    HStack(spacing: 6) {
+                        Text("\(SuggestionReasonFormatter.badge(locale: locale)) · \(suggestion.suggestedExercise.name)")
+                            .font(compact ? .footnote : .subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                        // Like the web card: the side chip only when a one-sided variant was picked.
+                        if suggestion.unilateralVariant {
+                            LateralityBadge(suggestion.suggestedExercise.laterality)
+                                .environment(\.lukiLocale, locale)
+                        }
+                    }
                     Text(SuggestionReasonFormatter.reason(for: suggestion, locale: locale))
                         .font(compact ? .caption2 : .footnote)
                         .foregroundStyle(.secondary)
