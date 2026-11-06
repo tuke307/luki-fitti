@@ -194,6 +194,9 @@ export const de = {
     allExercises: 'Alle Übungen',
     selected: 'Ausgewählt',
     changeExercise: 'Übung suchen oder ändern',
+    // Wave 2 w3b
+    exerciseInfoAria: 'So geht’s: {name}',
+    backBtn: 'Zurück',
   },
   home: {
     greeting: 'Hi, {name}',
@@ -441,7 +444,7 @@ export const de = {
   },
   diary: {
     title: 'Verlauf',
-    subtitle: 'Jedes Training und dein Fortschritt.',
+    subtitle: 'Jedes Training und wie du vorankommst.',
     periodWeek: 'Diese Woche',
     periodMonth: 'Dieser Monat',
     periodYear: 'Dieses Jahr',
@@ -507,6 +510,9 @@ export const de = {
       '{name} wird auf allen deinen Geräten aus deinem Verlauf entfernt. Das lässt sich nicht rückgängig machen.',
     deleteWorkoutBtn: 'Training löschen',
     estMaxLabel: 'Geschätztes Max.',
+    // Wave 2 w3b
+    workoutCountOne: '1 Training',
+    workoutCountOther: '{count} Trainings',
   },
   exercises: {
     title: 'Bibliothek',
@@ -578,6 +584,11 @@ export const de = {
     holdSecLabel: 'Halten (Sek.)',
     transitionSecLabel: 'Wechsel (Sek.)',
     saveRoutineBtn: 'Speichern',
+    // Wave 2 w3b
+    catalogTabCount: 'Übungen ({count})',
+    stretchingTabCount: 'Dehnen ({count})',
+    filterBtn: 'Filter',
+    routineStepsToggle: 'Dehnübungen ({count})',
   },
   visual: {
     startFrame: 'Start',
