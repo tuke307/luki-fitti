@@ -3,11 +3,19 @@ import { ChevronDown, Smartphone, TrendingUp, Watch, WifiOff } from 'lucide-reac
 
 import { SiteHeader } from './SiteHeader';
 import { SiteFooter } from './SiteFooter';
+import { HeroDeviceSwitcher } from './HeroDeviceSwitcher';
 import { APP_ORIGIN, TESTFLIGHT_URL, type SiteLocale } from '@/lib/site/config';
-import { featureRequestHref, getSiteCopy, SCREENSHOTS } from '@/lib/site/content';
-import { shotFile } from '@/lib/site/screens';
+import { featureRequestHref, getSiteCopy, HERO_DEVICES, SCREENSHOTS } from '@/lib/site/content';
+import { shotFile, shotInfo } from '@/lib/site/screens';
 
 const GLANCE_ICONS = [WifiOff, TrendingUp, Watch] as const;
+
+/** Responsive display widths for the hero device images. */
+const HERO_DEVICE_WIDTHS: Record<string, string> = {
+  iphone: 'w-[300px]',
+  ipad: 'w-[340px] lg:w-[400px]',
+  watch: 'w-[240px] lg:w-[260px]',
+};
 
 function OpenAppCta({ label, className }: { label: string; className: string }) {
   return (
@@ -72,6 +80,22 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
     SCREENSHOTS.map((s) => [s.id, { ...s, src: shotFile(locale, s.file) }]),
   );
   const hero = shots['active-workout']!;
+  const heroDevices = HERO_DEVICES.flatMap((d) => {
+    const info = shotInfo(locale, d.file);
+    return info
+      ? [
+          {
+            id: d.id,
+            label: d.label,
+            src: info.src,
+            alt: d.alt[locale],
+            width: info.width,
+            height: info.height,
+            displayWidth: HERO_DEVICE_WIDTHS[d.id] ?? 'w-[300px]',
+          },
+        ]
+      : [];
+  });
 
   return (
     <>
@@ -98,13 +122,7 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
             </div>
           </div>
           <div className="site-hero-device mx-auto">
-            <ShotImage
-              src={hero.src}
-              alt={t.hero.heroAlt}
-              width={360}
-              priority
-              className="w-[300px] drop-shadow-[0_40px_80px_rgba(0,0,0,0.6)] lg:w-[360px]"
-            />
+            <HeroDeviceSwitcher devices={heroDevices} tablistLabel={t.hero.deviceLabel} />
           </div>
         </section>
 

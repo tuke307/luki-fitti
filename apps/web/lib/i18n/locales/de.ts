@@ -778,6 +778,7 @@ export const de = {
       download: 'Im App Store laden',
       downloadSoon: 'Bald im App Store',
       heroAlt: 'LukiFitti aktives Training auf dem iPhone',
+      deviceLabel: 'Gerät',
     },
     glance: {
       title: 'Auf einen Blick',

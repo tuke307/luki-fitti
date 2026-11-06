@@ -776,6 +776,7 @@ export const en = {
       download: 'Download on the App Store',
       downloadSoon: 'Coming soon to the App Store',
       heroAlt: 'LukiFitti active workout on iPhone',
+      deviceLabel: 'Device',
     },
     glance: {
       title: 'At a glance',
