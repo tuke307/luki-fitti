@@ -36,6 +36,34 @@ test.describe('Offline Durability & Sync Conflict Resolution', () => {
     await toggleCompleteSetRow(page, 1);
     await toggleCompleteSetRow(page, 2);
 
+    // The click handler persists asynchronously — wait until IndexedDB holds
+    // both sets before reloading, or the reload can cut the transaction.
+    await expect
+      .poll(
+        () =>
+          page.evaluate(async () => {
+            const db = await new Promise<IDBDatabase>((resolve, reject) => {
+              const req = window.indexedDB.open('luki_fitti_offline_v1');
+              req.onsuccess = () => resolve(req.result);
+              req.onerror = () => reject(req.error);
+            });
+            const session = await new Promise<{ totalSetsCompleted?: number } | null>(
+              (resolve, reject) => {
+                const req = db
+                  .transaction('kv_store', 'readonly')
+                  .objectStore('kv_store')
+                  .get('active_workout_session');
+                req.onsuccess = () => resolve(req.result ?? null);
+                req.onerror = () => reject(req.error);
+              },
+            );
+            db.close();
+            return session?.totalSetsCompleted ?? 0;
+          }),
+        { timeout: 10_000 },
+      )
+      .toBe(2);
+
     // Bring network back to allow Next.js dev server reload, then verify IndexedDB state persisted
     await context.setOffline(false);
     await page.reload();
