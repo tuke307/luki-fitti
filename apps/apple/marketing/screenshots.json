@@ -29,6 +29,19 @@
       "mode": "raw"
     }
   ],
+  "creatives": [
+    {
+      "id": "universal",
+      "canvas": [5244, 2950],
+      "safe": [4425, 2247],
+      "shot": "active-workout",
+      "devices": ["ipad-13", "iphone-6.9", "watch"],
+      "headline": {
+        "en": "Train. Log. Get stronger.",
+        "de": "Trainiere. Protokolliere. Werde stärker."
+      }
+    }
+  ],
   "shots": [
     {
       "id": "active-workout",

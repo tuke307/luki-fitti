@@ -422,6 +422,122 @@ async function main() {
       }
     }
   }
+
+  // ---- Creatives: universal 16:9 asset for header + search results ----------
+  // Center-cropped downstream to 21:9 (header) and 3:2 (search), so everything
+  // that matters stays inside the centered `safe` intersection, with ~4% margin.
+  for (const creative of CONFIG.creatives ?? []) {
+    const [cw, ch] = creative.canvas;
+    const [sw, sh] = creative.safe;
+    const margin = Math.round(Math.min(sw, sh) * 0.04);
+    const contentW = sw - margin * 2;
+    const contentH = sh - margin * 2;
+    const shot = SHOTS.find((s) => s.id === creative.shot);
+    if (!shot) throw new Error(`creative ${creative.id}: unknown shot '${creative.shot}'`);
+
+    for (const lang of LANGS) {
+      const composed = {};
+      let missingIpad = false;
+      for (const deviceId of creative.devices) {
+        const device = DEVICES.get(deviceId);
+        const rawDir = path.join(MARKETING, (shot.raw ?? device.raw).replace('{lang}', lang));
+        const attId = deviceId === 'watch' ? 'watch' : shot.id;
+        const attName = deviceId === 'watch' ? '03-watch.png' : `01-${shot.id}.png`;
+        const src = rawFileFor(rawDir, attId, attName);
+        if (!src || !fs.existsSync(src)) {
+          if (deviceId === 'ipad-13') missingIpad = true;
+          else console.warn(`creative ${lang}: no raw for ${deviceId} in ${rawDir}`);
+          continue;
+        }
+        const frame = await frameFor(
+          shot.frame && deviceId === 'watch' ? shot.frame : device.frame,
+        );
+        composed[deviceId] = await composite(page, { srcUri: dataUri(src), frame });
+      }
+      if (missingIpad) console.warn(`creative ${lang}: no iPad raw — iPhone + Watch only`);
+      if (!composed['iphone-6.9']) {
+        console.warn(`skip creative ${lang} — no iPhone raw`);
+        continue;
+      }
+
+      const ipadC = composed['ipad-13'];
+      const phoneC = composed['iphone-6.9'];
+      const watchC = composed['watch'];
+      const rightW = Math.round(contentW * 0.62);
+      const phoneH = Math.round(contentH * 0.96);
+      const ipadH = ipadC ? Math.round(contentH * 0.78) : 0;
+      const watchW = watchC ? Math.round(rightW * 0.3) : 0;
+      const headFont = Math.round(ch * 0.065);
+      const glowW = Math.round(rightW * 1.15);
+
+      const deviceDiv = (c, h, style) =>
+        `<div style="position:absolute;${style}"><div style="transform:scale(${h / c.h});transform-origin:bottom left;">${c.html}</div></div>`;
+      const watchDiv = (c, w, style) =>
+        `<div style="position:absolute;${style}"><div style="transform:scale(${w / c.w});transform-origin:bottom left;">${c.html}</div></div>`;
+
+      let devicesHtml = '';
+      if (ipadC) devicesHtml += deviceDiv(ipadC, ipadH, 'left:0;bottom:0;');
+      devicesHtml += deviceDiv(
+        phoneC,
+        phoneH,
+        `left:${Math.round(rightW * (ipadC ? 0.32 : 0.2))};bottom:0;`,
+      );
+      if (watchC)
+        devicesHtml += watchDiv(watchC, watchW, `right:0;bottom:${Math.round(contentH * 0.06)};`);
+
+      const outDir = path.join(APPSTORE, LOCALE_DIR[lang], 'creative');
+      fs.mkdirSync(outDir, { recursive: true });
+      const outFile = path.join(outDir, `${creative.id}.png`);
+
+      await page.setViewportSize({ width: cw, height: ch });
+      await page.setContent(
+        `<!doctype html><body style="margin:0;width:${cw}px;height:${ch}px;background:#0a0a0a;font-family:-apple-system,'SF Pro Display',system-ui,sans-serif;position:relative;overflow:hidden;">
+        <div style="position:absolute;right:${Math.round((cw - sw) / 2 - glowW * 0.15)}px;top:50%;transform:translateY(-50%);width:${glowW}px;height:${glowW}px;border-radius:50%;background:radial-gradient(closest-side, ${ACCENT}55, transparent);"></div>
+        <div style="position:absolute;left:${Math.round((cw - sw) / 2 + margin)}px;top:50%;transform:translateY(-50%);width:${contentW}px;height:${contentH}px;">
+          <div style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:${Math.round(contentW * 0.36)}px;">
+            <h1 style="color:${ACCENT};font-size:${headFont}px;font-weight:700;line-height:1.08;margin:0;letter-spacing:-1px;text-wrap:balance;">${creative.headline[lang]}</h1>
+          </div>
+          <div style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:${rightW}px;height:${contentH}px;">
+            ${devicesHtml}
+          </div>
+        </div>
+      </body>`,
+        { waitUntil: 'load' },
+      );
+      await decodeImages(page);
+      await page.screenshot({ path: outFile, type: 'png' });
+      flattenPng(outFile);
+      checkAppStoreOutput(outFile, creative.canvas);
+      const v = pixelVariance(outFile);
+      if (!(v > 50)) throw new Error(`creative ${outFile} looks blank (variance ${v})`);
+      console.log(`${lang} creative ${creative.id} ✓ (var ${v})`);
+
+      // ---- review previews (gitignored) ------------------------------------
+      const previewDir = path.join(MARKETING, '.preview', LOCALE_DIR[lang]);
+      fs.mkdirSync(previewDir, { recursive: true });
+      const sx = Math.round((cw - 4425) / 2);
+      const sy = Math.round((ch - 2247) / 2);
+      const hx = Math.round((cw - 5244) / 2);
+      const hy = Math.round((ch - 2247) / 2);
+      execSync(`python3 - <<'PY'
+from PIL import Image, ImageDraw
+im = Image.open('${outFile}').convert('RGB')
+W, H = im.size
+# 21:9 header crop (centered), 3:2 search crop (centered), safe rect
+hdr = im.crop((0, ${hy}, 5244, ${hy} + 2247))
+hdr.save('${previewDir}/header-crop.png')
+srch = im.crop((${sx}, 0, ${sx} + 4425, 2950))
+srch.save('${previewDir}/search-crop.png')
+g = im.copy()
+d = ImageDraw.Draw(g)
+d.rectangle([0, ${hy}, 5243, ${hy} + 2246], outline=(255, 0, 0), width=10)
+d.rectangle([${sx}, 0, ${sx} + 4424, 2949], outline=(0, 90, 255), width=10)
+d.rectangle([${sx}, ${sy}, ${sx} + 4424, ${sy} + 2246], outline=(0, 200, 0), width=10)
+g.save('${previewDir}/universal-guides.png')
+PY`);
+      console.log(`${lang} previews → ${previewDir}`);
+    }
+  }
   await browser.close();
 }
 
