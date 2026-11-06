@@ -58,3 +58,30 @@ describe('UpdatePreferencesSchema.aiModels', () => {
     }
   });
 });
+
+describe('UpdateAiSettingsSchema model ids', () => {
+  it('accepts an OpenRouter ~latest alias in model and allowlist fields', async () => {
+    const { UpdateAiSettingsSchema } = await import('./admin.schemas');
+    const res = UpdateAiSettingsSchema.safeParse({
+      workoutBuilderModel: '~anthropic/claude-sonnet-latest',
+      userModelAllowlist: ['~anthropic/claude-sonnet-latest', 'openai/gpt-6.1-terra'],
+    });
+    assert.ok(res.success, JSON.stringify(res.success ? null : res.error.issues));
+  });
+
+  it('rejects junk model ids in model and allowlist fields', async () => {
+    const { UpdateAiSettingsSchema } = await import('./admin.schemas');
+    for (const bad of ['gpt-4', 'openai/gpt 4', '~~anthropic/x', '../etc', 'https://evil/x']) {
+      assert.equal(
+        UpdateAiSettingsSchema.safeParse({ workoutBuilderModel: bad }).success,
+        false,
+        bad,
+      );
+      assert.equal(
+        UpdateAiSettingsSchema.safeParse({ userModelAllowlist: [bad] }).success,
+        false,
+        bad,
+      );
+    }
+  });
+});

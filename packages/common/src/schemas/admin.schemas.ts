@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { AdminPermission, AiSkillName, FeatureGrant } from '../enums';
-import { AiModelIdSchema } from './ai-models.schemas';
+import { AI_MODEL_ID_PATTERN, AiModelIdSchema } from './ai-models.schemas';
 import type { AiKeySlotStatusDto, MyAiUsageDto } from './ai.schemas';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -23,7 +23,7 @@ export const OpenRouterModelIdSchema = z
   .trim()
   .min(3)
   .max(120)
-  .regex(/^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._:-]*$/i, 'Invalid OpenRouter model id');
+  .regex(AI_MODEL_ID_PATTERN, 'Invalid OpenRouter model id');
 
 export const UpdateAiSettingsSchema = z.object({
   aiWorkoutBuilderEnabled: z.boolean().optional(),
