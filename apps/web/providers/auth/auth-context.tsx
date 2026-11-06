@@ -101,8 +101,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
           }
         } else if (err instanceof ApiClientError && err.isAuthError) {
-          await clearAllLocalData().catch(() => undefined);
-          localStorage.removeItem('luki_cached_user_profile');
+          // A rejected session signs the person out. Drop local data only when this device
+          // actually belonged to a signed-in account — a guest's workouts, weigh-ins and
+          // cached content are theirs and survive every reload.
+          if (localStorage.getItem('luki_cached_user_profile')) {
+            await clearAllLocalData().catch(() => undefined);
+            localStorage.removeItem('luki_cached_user_profile');
+          }
           setUser(loadGuestUser());
           setAuthMode('OFFLINE_LOCAL');
           setLoading(false);
