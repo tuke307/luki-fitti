@@ -1,0 +1,6 @@
+[
+  { "MuscleGroupID": 4, "Name": "Chest" },
+  { "MuscleGroupID": 9, "Name": "Middle Back & Lats" },
+  { "MuscleGroupID": 12, "Name": "Quadriceps" },
+  { "MuscleGroupID": 15, "Name": "Upper Back & Lower Traps" }
+]
