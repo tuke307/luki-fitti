@@ -534,7 +534,7 @@ export function ActiveSessionView({
         : `${ex.targetRepsMin ?? 10}`;
     const goalParts = [
       muscleLabel(ex.primaryMuscleSnapshot),
-      `${ex.plannedSets}×${repsText}${ex.targetWeight ? ` ${ex.targetWeight} ${activeSession.weightUnit.toLowerCase()}` : ''}`,
+      `${ex.plannedSets}×${repsText}${ex.targetWeight ? ` · ${ex.targetWeight} ${activeSession.weightUnit.toLowerCase()}` : ''}`,
       ex.restSeconds > 0 ? format(t.session.restShort, { seconds: ex.restSeconds }) : null,
     ].filter(Boolean);
 

@@ -260,7 +260,7 @@ export function SessionSetRow({
                   value={set.reps}
                   onValueChange={(val) => patch({ reps: val })}
                   placeholder="0"
-                  className="font-rounded w-full min-w-0 bg-transparent text-center text-[1.0625rem] font-semibold outline-none"
+                  className="font-rounded w-full min-w-10 bg-transparent text-center text-[1.0625rem] font-semibold outline-none"
                 />
                 <button
                   type="button"
