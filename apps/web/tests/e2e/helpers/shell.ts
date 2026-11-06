@@ -5,21 +5,28 @@
 import { expect, type Page } from '@playwright/test';
 
 export type ShellTab =
-  | 'home'
-  | 'workouts'
-  | 'session'
-  | 'nutrition'
-  | 'diary'
-  | 'exercises'
-  | 'profile';
+  'home' | 'workouts' | 'session' | 'nutrition' | 'diary' | 'exercises' | 'profile';
 
 /**
  * Navigate to a main PWA tab, automatically picking the desktop horizontal nav
  * button or the mobile bottom tab bar button depending on viewport visibility.
  */
 export async function navigateToTab(page: Page, tab: ShellTab): Promise<void> {
-  // Profile lives in the header avatar and the live workout in the floating accessory
-  // on every viewport, so they use a single shared test id.
+  // The live workout is a full-screen cover and Profile a sheet on phones: leave them first.
+  const minimize = page.getByTestId('session-minimize-btn');
+  if (tab !== 'session' && (await minimize.isVisible())) {
+    await minimize.click();
+    await expect(page.getByTestId('session-overlay')).toHaveCount(0);
+  }
+  const profileDone = page.getByTestId('profile-sheet-done');
+  if (tab !== 'profile' && (await profileDone.isVisible())) {
+    await profileDone.click();
+    await expect(page.getByTestId('profile-sheet')).toHaveCount(0);
+  }
+  if (tab === 'session' && (await page.getByTestId('session-overlay').isVisible())) return;
+
+  // Profile lives in the header avatar (floating on phones) and the live workout in the
+  // floating accessory on every viewport, so they use a single shared test id.
   if (tab === 'profile' || tab === 'session') {
     const sharedBtn = page.getByTestId(`nav-${tab}`);
     await expect(sharedBtn).toBeVisible({ timeout: 10_000 });

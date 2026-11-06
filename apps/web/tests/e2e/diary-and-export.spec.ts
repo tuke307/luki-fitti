@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
 import { clickDialogButton } from './helpers/dialogs.js';
 import {
@@ -107,5 +108,19 @@ test.describe('Training Diary Analytics & Backup Exports', () => {
     await page.getByTestId('export-csv-btn').click();
     const csvDownload = await csvDownloadPromise;
     expect(csvDownload.suggestedFilename()).toMatch(/^luki-fitti-workouts-.*\.csv$/);
+  });
+
+  test('exports a JSON backup from local data as a guest', async ({ page }) => {
+    await resetOfflineStore(page);
+    await gotoProfileTab(page);
+    await page.getByTestId('settings-row-export').click();
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByTestId('export-json-btn').click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/^luki-fitti-backup-.*\.json$/);
+    const backup = JSON.parse(await readFile(await download.path(), 'utf8'));
+    expect(backup.format).toBe('luki-fitti-import@1');
+    expect(backup.folders.length).toBeGreaterThan(0);
   });
 });

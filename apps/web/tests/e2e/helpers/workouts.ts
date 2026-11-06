@@ -108,5 +108,8 @@ export async function startWorkoutByName(page: Page, name: string): Promise<void
   }
   await expect(card).toBeVisible({ timeout: 10_000 });
   await card.getByTestId('template-action-start').click();
-  await expect(page.getByRole('heading', { name, exact: true })).toBeVisible({ timeout: 10_000 });
+  // The live workout opens as a full-screen cover over the tab.
+  await expect(
+    page.getByTestId('session-overlay').getByRole('heading', { name, exact: true }),
+  ).toBeVisible({ timeout: 10_000 });
 }
