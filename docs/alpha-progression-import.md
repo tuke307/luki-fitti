@@ -62,6 +62,15 @@ English export (some versions use tabs instead of semicolons):
   `#;KM;MIN.`).
 - **Set rows**: `<set #>;<weight kg>;<reps>[;<RIR>]`. Completely empty sets (`-;-`) carry no data.
 
+German plans export (`Plans.csv`): one `"<plan>";"<date>"` row per plan, a `"Tag <n>"` row per
+day, then one row per exercise with its set count and rep target:
+
+```text
+"Example Plan";"2026-01-01"
+"Tag 1"
+"1. Example Exercise · Maschine";"3 Sätze";"10 Wdh"
+```
+
 Gotchas:
 
 - **European decimal commas** (`102,5` = 102.5).
@@ -80,7 +89,7 @@ Gotchas:
 | Exercise header (`Name · Equipment`)  | `SessionExercise` (`exerciseNameSnapshot`; use `Equipment` for catalog matching)               |
 | `WU<n>` entries                       | `SessionSet` with `setType = WARMUP`                                                          |
 | Set rows                              | `SessionSet` (`weight`, `reps`; RIR becomes RPE as `10 − RIR`)                                 |
-| Plans export                          | `WorkoutTemplate` (+ `WorkoutFolder` if the plan has groupings); verify the layout against your export |
+| Plans export                          | One `WorkoutFolder` per plan, one `WorkoutTemplate` per `Tag` (working sets with the rep target, 90 s rest) |
 
 Exercises: match each Alpha Progression exercise to the **global system catalog**
 (`INITIAL_EXERCISE_CATALOG` in `packages/common/src/catalog/data.ts`) by name, equipment and primary
@@ -108,15 +117,21 @@ custom exercises). Adding new **system** exercises to the catalog is a separate 
    ```bash
    yarn workspace @luki-fitti/common build   # lets the converter validate its output
    node scripts/import/alpha-progression-to-luki.mjs .training-import/Workouts.csv \
+     --plans .training-import/Plans.csv \
      --map .training-import/alpha-mapping.json --tz Europe/Berlin > .training-import/luki-import.json
    ```
 
-   It stops and lists every exercise name that has no mapping entry, and validates the file
-   against the shared schema when `packages/common` is built. Warm-ups (`WU<n>`) become `WARMUP`
-   sets, RIR becomes RPE as `10 − RIR`, decimal commas and `+` markers are handled.
+   Both the English and the German layout are read; `--plans` is optional, and the history file
+   can be left out to convert only the plans. It stops and lists every exercise name that has no
+   mapping entry, and validates the file against the shared schema when `packages/common` is
+   built. Warm-ups (`WU<n>`) become `WARMUP` sets, RIR becomes RPE as `10 − RIR`, decimal commas
+   and `+` markers are handled. Empty sets (`-;-`) are dropped; a set with only weight or only
+   reps stops the conversion with its line number so you can fix it. Cardio blocks (`#;KM;MIN.`)
+   are skipped with a warning because the import format has no distance field yet.
 
 3. **Upload it in the app:** Profile → Data → Import file. Check the preview (sessions, sets, date
    range, unknown exercises), then import. Importing the same file again changes nothing, so a
    later export can be converted and uploaded as a whole.
 
-Plans and custom-exercise exports are not converted yet.
+Plans are converted into folders and workouts (see above). Custom-exercise exports are not
+converted yet: map those exercises to catalog slugs, or add them as `customExercises` by hand.
