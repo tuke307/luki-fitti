@@ -49,6 +49,8 @@ public struct ActiveSessionView: View {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     restTimerCard(session, now: context.date)
                 }
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("ios.session.restDock")
                 .padding(.horizontal, 12)
                 .padding(.bottom, 6)
             }
@@ -161,8 +163,12 @@ public struct ActiveSessionView: View {
 
     @ViewBuilder
     private func summaryStats(_ session: WorkoutSessionDto) -> some View {
+        statPill(label: tr("Duration"), value: tr("%d min", max(1, Int((Double(session.activeDurationSeconds) / 60).rounded()))))
+            .accessibilityIdentifier("ios.session.summary.duration")
         statPill(label: tr("Sets"), value: "\(session.totalSetsCompleted)")
+            .accessibilityIdentifier("ios.session.summary.sets")
         statPill(label: tr("Volume"), value: LukiFormat.volume(kg: session.totalVolumeKg, unit: session.weightUnit))
+            .accessibilityIdentifier("ios.session.summary.volume")
         if let kcal = session.activeCaloriesKcal, kcal > 0 {
             statPill(label: tr("Active energy"), value: "\(Int(kcal)) kcal")
         }
@@ -198,9 +204,6 @@ public struct ActiveSessionView: View {
                         .foregroundStyle(isPaused ? Color.secondary : LukiColors.accent)
                     Text(session.workoutNameSnapshot)
                         .font(.title3.bold())
-                    SessionElapsedTime(session: session)
-                        .font(.footnote.monospacedDigit())
-                        .foregroundStyle(.secondary)
                 }
                 Spacer()
                 Button {
@@ -211,22 +214,46 @@ public struct ActiveSessionView: View {
                 .buttonStyle(.bordered)
             }
 
+            // Elapsed / Sets / Volume like web; heart rate and energy follow when there's data.
+            HStack(alignment: .top, spacing: 8) {
+                headerStat(tr("Elapsed")) { SessionElapsedTime(session: session) }
+                headerStat(tr("Sets")) {
+                    Text("\(doneSets) \(Text("/ \(totalSets)").font(.subheadline.weight(.medium)).foregroundStyle(.secondary))")
+                }
+                .accessibilityValue(tr("%d of %d sets", doneSets, totalSets))
+                headerStat(tr("Volume")) {
+                    let volume = LukiFormat.volumeValue(kg: session.totalVolumeKg, unit: session.weightUnit).formatted()
+                    Text("\(volume) \(Text(LukiFormat.unitLabel(session.weightUnit)).font(.subheadline.weight(.medium)).foregroundStyle(.secondary))")
+                }
+            }
+
             LiveStatsRow(
                 healthCoordinator: viewModel.healthCoordinator,
                 session: session,
-                bodyWeightKg: viewModel.bodyWeightKg(for: session),
-                volumeText: LukiFormat.volume(kg: session.totalVolumeKg, unit: session.weightUnit)
+                bodyWeightKg: viewModel.bodyWeightKg(for: session)
             )
 
-            ProgressView(value: pct) {
-                Text(tr("%d of %d sets", doneSets, totalSets))
-                    .font(.footnote.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
-            .tint(LukiColors.accent)
+            ProgressView(value: pct)
+                .tint(LukiColors.accent)
+                .accessibilityLabel(tr("%d of %d sets", doneSets, totalSets))
         }
         .padding(14)
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
+    }
+
+    private func headerStat<Value: View>(_ label: String, @ViewBuilder value: () -> Value) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            value()
+                .font(.system(.title3, design: .rounded).weight(.semibold).monospacedDigit())
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Rest timer
@@ -262,6 +289,7 @@ public struct ActiveSessionView: View {
                         restPresets
                     }
                     HStack(spacing: 8) { restPresets }
+                        .frame(maxWidth: .infinity)
                 }
             }
         }
@@ -455,6 +483,27 @@ public struct ActiveSessionView: View {
         return minReps == maxReps ? "\(exercise.plannedSets)×\(minReps)" : "\(exercise.plannedSets)×\(minReps)–\(maxReps)"
     }
 
+    /// "3×6–8 · 85 kg" when the plan has a target weight.
+    private func targetLine(_ exercise: SessionExerciseDto) -> String {
+        guard let weight = exercise.targetWeight, weight > 0 else { return repsTarget(exercise) }
+        return "\(repsTarget(exercise)) · \(LukiFormat.weight(weight)) \(LukiFormat.unitLabel(unit))"
+    }
+
+    @ViewBuilder
+    private func coachingNote(_ exercise: SessionExerciseDto, index: Int) -> some View {
+        if let note = exercise.notes?.trimmingCharacters(in: .whitespacesAndNewlines), !note.isEmpty {
+            Text(note)
+                .font(.footnote)
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(LukiColors.fill))
+                .accessibilityLabel(tr("Coaching note: %@", note))
+                .accessibilityIdentifier("ios.session.coachingNote.\(index + 1)")
+        }
+    }
+
     private func collapsedExerciseRow(exercise: SessionExerciseDto, index: Int) -> some View {
         let doneCount = exercise.sets.filter(\.completed).count
         let isCompleted = exercise.status == .COMPLETED
@@ -486,7 +535,7 @@ public struct ActiveSessionView: View {
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.primary)
                                 .lineLimit(1)
-                            Text("\(LukiI18n.muscleLabel(exercise.primaryMuscleSnapshot, locale: tr)) · \(repsTarget(exercise))")
+                            Text("\(LukiI18n.muscleLabel(exercise.primaryMuscleSnapshot, locale: tr)) · \(targetLine(exercise))")
                                 .font(.footnote.monospacedDigit())
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
@@ -628,7 +677,7 @@ public struct ActiveSessionView: View {
         let labels = LukiI18n.setBadgeLabels(exercise.sets.map(\.setType))
         let goal = [
             LukiI18n.muscleLabel(exercise.primaryMuscleSnapshot, locale: tr),
-            repsTarget(exercise),
+            targetLine(exercise),
             exercise.restSeconds > 0 ? tr("%d s rest", exercise.restSeconds) : nil,
         ].compactMap { $0 }.joined(separator: " · ")
 
@@ -681,6 +730,8 @@ public struct ActiveSessionView: View {
             }
 
             lastSessionLine(insight)
+
+            coachingNote(exercise, index: exerciseIndex)
 
             VStack(spacing: 0) {
                 ForEach(Array(exercise.sets.enumerated()), id: \.element.clientSetId) { idx, set in
@@ -784,7 +835,7 @@ public struct ActiveSessionView: View {
                                     }
                                     .buttonStyle(.plain)
                                     .accessibilityHint(tr("How to do it"))
-                                    Text("\(LukiI18n.muscleLabel(member.exercise.primaryMuscleSnapshot, locale: tr)) · \(repsTarget(member.exercise))")
+                                    Text("\(LukiI18n.muscleLabel(member.exercise.primaryMuscleSnapshot, locale: tr)) · \(targetLine(member.exercise))")
                                         .font(.footnote.monospacedDigit())
                                         .foregroundStyle(.secondary)
                                     LateralityBadge(viewModel.store.catalog.first { $0.id == member.exercise.exerciseId }?.laterality)
@@ -793,6 +844,7 @@ public struct ActiveSessionView: View {
                                 exerciseMenu(session: session, exercise: member.exercise, exerciseIndex: member.index)
                             }
                             lastSessionLine(member.insight)
+                            coachingNote(member.exercise, index: member.index)
                         }
                         .padding(10)
                         .background(LukiColors.cardBackground)
@@ -1168,7 +1220,6 @@ private struct LiveStatsRow: View {
     let healthCoordinator: HealthKitWorkoutCoordinator
     let session: WorkoutSessionDto
     let bodyWeightKg: Double?
-    let volumeText: String
 
     var body: some View {
         HStack(spacing: 14) {
@@ -1188,9 +1239,7 @@ private struct LiveStatsRow: View {
                     }
                 }
             }
-            Spacer()
-            Text(volumeText)
-                .foregroundStyle(.secondary)
+            Spacer(minLength: 0)
         }
         .font(.footnote.weight(.medium).monospacedDigit())
         .labelStyle(.titleAndIcon)
