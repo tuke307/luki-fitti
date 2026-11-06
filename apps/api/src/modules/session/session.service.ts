@@ -5,6 +5,7 @@ import { WorkoutService } from '../workout/workout.service';
 import { resolveBodyWeightAt } from '../body-weight/body-weight.service';
 import {
   ExerciseType,
+  MuscleGroup,
   SessionExerciseOrigin,
   SessionExerciseStatus,
   SessionSourceDevice,
@@ -24,16 +25,29 @@ import { TemplateSetSchema } from '@luki-fitti/common/schemas';
 import { estimateWorkoutEnergy } from '@luki-fitti/common/utils';
 import type {
   HeartRateSampleDto,
+  SessionExerciseSyncDto,
+  SessionSetSyncDto,
   StartSessionDto,
   SyncSessionPayloadDto,
   SyncSessionResponseDto,
   WorkoutSessionDto,
 } from '@luki-fitti/common/schemas';
+import type { Prisma, SessionExercise, SessionSet, WorkoutSession } from '@luki-fitti/database';
 
 const LBS_TO_KG = 0.45359237;
 
 /** A running workout untouched this long counts as abandoned and may be replaced. */
 export const STALE_ACTIVE_SESSION_MS = 12 * 60 * 60 * 1000;
+
+type SessionRecord = WorkoutSession & {
+  exercises?: (SessionExercise & { sets?: SessionSet[] })[];
+};
+
+const toIsoString = (value: Date | string): string =>
+  value instanceof Date ? value.toISOString() : value;
+
+const toIsoStringOrNull = (value: Date | string | null | undefined): string | null =>
+  value == null ? null : toIsoString(value);
 
 @Injectable()
 export class SessionService {
@@ -108,7 +122,7 @@ export class SessionService {
 
     let workoutName = dto.workoutName ?? 'Custom Gym Session';
     let sessionType = dto.sessionType ?? SessionType.STRENGTH;
-    const exercisesToCreate: Array<any> = [];
+    const exercisesToCreate: SessionExerciseSyncDto[] = [];
 
     if (dto.templateId) {
       const tpl = await this.prisma.workoutTemplate.findUnique({
@@ -161,7 +175,7 @@ export class SessionService {
       for (const [idx, te] of tpl.exercises.entries()) {
         const lastEx = latestByExerciseId.get(te.exerciseId);
         const primaryLastWeight = lastEx?.sets[0]?.weight ?? te.targetWeight ?? null;
-        const sets: Array<any> = [];
+        const sets: SessionSetSyncDto[] = [];
         let setNum = 1;
         const explicit = TemplateSetSchema.array().safeParse(te.sets ?? []);
         if (explicit.success && explicit.data.length > 0) {
@@ -172,7 +186,7 @@ export class SessionService {
               setNumber: setNum++,
               setType: planned.setType,
               weight: planned.weight,
-              weightUnit: te.weightUnit,
+              weightUnit: te.weightUnit as WeightUnit,
               reps: planned.reps,
               durationSeconds: planned.durationSeconds ?? te.targetDurationSeconds ?? null,
               completed: false,
@@ -185,7 +199,7 @@ export class SessionService {
               setNumber: setNum++,
               setType: SetType.WARMUP,
               weight: primaryLastWeight ? Math.round(primaryLastWeight * 0.6 * 2) / 2 : null,
-              weightUnit: te.weightUnit,
+              weightUnit: te.weightUnit as WeightUnit,
               reps: te.targetRepsMin ?? 10,
               completed: false,
             });
@@ -197,7 +211,7 @@ export class SessionService {
               setNumber: setNum++,
               setType: SetType.WORKING,
               weight: histSet?.weight ?? te.targetWeight ?? null,
-              weightUnit: te.weightUnit,
+              weightUnit: te.weightUnit as WeightUnit,
               reps: histSet?.reps ?? te.targetRepsMin ?? 10,
               durationSeconds: te.targetDurationSeconds ?? null,
               completed: false,
@@ -211,8 +225,8 @@ export class SessionService {
           exerciseNameSnapshot:
             (te.exercise.isSystem && getExerciseText(te.exerciseId, locale)?.name) ||
             te.exercise.name,
-          primaryMuscleSnapshot: te.exercise.primaryMuscleGroup,
-          exerciseTypeSnapshot: te.exercise.exerciseType,
+          primaryMuscleSnapshot: te.exercise.primaryMuscleGroup as MuscleGroup,
+          exerciseTypeSnapshot: te.exercise.exerciseType as ExerciseType,
           origin: SessionExerciseOrigin.PLANNED,
           status: idx === 0 ? SessionExerciseStatus.IN_PROGRESS : SessionExerciseStatus.PENDING,
           orderIndex: idx,
@@ -267,8 +281,8 @@ export class SessionService {
           exerciseNameSnapshot:
             (re.exercise.isSystem && getExerciseText(re.exerciseId, locale)?.name) ||
             re.exercise.name,
-          primaryMuscleSnapshot: re.exercise.primaryMuscleGroup,
-          exerciseTypeSnapshot: re.exercise.exerciseType,
+          primaryMuscleSnapshot: re.exercise.primaryMuscleGroup as MuscleGroup,
+          exerciseTypeSnapshot: re.exercise.exerciseType as ExerciseType,
           origin: SessionExerciseOrigin.PLANNED,
           status: idx === 0 ? SessionExerciseStatus.IN_PROGRESS : SessionExerciseStatus.PENDING,
           orderIndex: idx,
@@ -311,14 +325,14 @@ export class SessionService {
           data: {
             ...exData,
             sessionId: session.id,
-          },
+          } as Prisma.SessionExerciseUncheckedCreateInput,
         });
         for (const s of sets) {
           await tx.sessionSet.create({
             data: {
               ...s,
               sessionExerciseId: createdEx.id,
-            },
+            } as Prisma.SessionSetUncheckedCreateInput,
           });
         }
       }
@@ -811,38 +825,30 @@ export class SessionService {
     return { success: true };
   }
 
-  private mapSessionDto(session: any): WorkoutSessionDto {
+  private mapSessionDto(session: SessionRecord): WorkoutSessionDto {
     return {
       id: session.id,
       clientSessionId: session.clientSessionId,
       userId: session.userId,
       templateId: session.templateId,
       stretchingRoutineId: session.stretchingRoutineId,
-      sessionType: session.sessionType,
+      sessionType: session.sessionType as SessionType,
       workoutNameSnapshot: session.workoutNameSnapshot,
-      status: session.status,
-      startedAt:
-        session.startedAt instanceof Date ? session.startedAt.toISOString() : session.startedAt,
-      pausedAt:
-        session.pausedAt instanceof Date ? session.pausedAt.toISOString() : session.pausedAt,
-      completedAt:
-        session.completedAt instanceof Date
-          ? session.completedAt.toISOString()
-          : session.completedAt,
+      status: session.status as SessionStatus,
+      startedAt: toIsoString(session.startedAt),
+      pausedAt: toIsoStringOrNull(session.pausedAt),
+      completedAt: toIsoStringOrNull(session.completedAt),
       activeDurationSeconds: session.activeDurationSeconds,
-      weightUnit: session.weightUnit,
+      weightUnit: session.weightUnit as WeightUnit,
       totalVolumeKg: session.totalVolumeKg,
       totalSetsCompleted: session.totalSetsCompleted,
       totalRepsCompleted: session.totalRepsCompleted,
       totalStretchSeconds: session.totalStretchSeconds,
       notes: session.notes,
-      restTimerEndsAt:
-        session.restTimerEndsAt instanceof Date
-          ? session.restTimerEndsAt.toISOString()
-          : session.restTimerEndsAt,
+      restTimerEndsAt: toIsoStringOrNull(session.restTimerEndsAt),
       restTimerDurationSec: session.restTimerDurationSec,
       restTimerPausedRemSec: session.restTimerPausedRemSec,
-      sourceDevice: session.sourceDevice ?? SessionSourceDevice.WEB,
+      sourceDevice: (session.sourceDevice ?? SessionSourceDevice.WEB) as SessionSourceDevice,
       healthKitWorkoutUuid: session.healthKitWorkoutUuid ?? null,
       activeCaloriesKcal: session.activeCaloriesKcal ?? null,
       totalCaloriesKcal: session.totalCaloriesKcal ?? null,
@@ -854,11 +860,8 @@ export class SessionService {
         ? (session.heartRateSamplesJson as HeartRateSampleDto[])
         : null,
       version: session.version,
-      lastSyncedAt:
-        session.lastSyncedAt instanceof Date
-          ? session.lastSyncedAt.toISOString()
-          : session.lastSyncedAt,
-      exercises: (session.exercises ?? []).map((ex: any) => ({
+      lastSyncedAt: toIsoString(session.lastSyncedAt),
+      exercises: (session.exercises ?? []).map((ex) => ({
         id: ex.id,
         clientExerciseId: ex.clientExerciseId,
         sessionId: ex.sessionId,
@@ -866,10 +869,10 @@ export class SessionService {
         replacedExerciseId: ex.replacedExerciseId,
         replacedExerciseName: ex.replacedExerciseName,
         exerciseNameSnapshot: ex.exerciseNameSnapshot,
-        primaryMuscleSnapshot: ex.primaryMuscleSnapshot,
-        exerciseTypeSnapshot: ex.exerciseTypeSnapshot,
-        origin: ex.origin,
-        status: ex.status,
+        primaryMuscleSnapshot: ex.primaryMuscleSnapshot as MuscleGroup,
+        exerciseTypeSnapshot: ex.exerciseTypeSnapshot as ExerciseType,
+        origin: ex.origin as SessionExerciseOrigin,
+        status: ex.status as SessionExerciseStatus,
         orderIndex: ex.orderIndex,
         plannedSets: ex.plannedSets,
         plannedWarmupSets: ex.plannedWarmupSets,
@@ -878,22 +881,22 @@ export class SessionService {
         targetWeight: ex.targetWeight,
         targetDurationSeconds: ex.targetDurationSeconds,
         restSeconds: ex.restSeconds,
-        alternativeExerciseIds: ex.alternativeExerciseIds ?? [],
+        alternativeExerciseIds: (ex.alternativeExerciseIds as string[] | null) ?? [],
         notes: ex.notes,
-        sets: (ex.sets ?? []).map((s: any) => ({
+        sets: (ex.sets ?? []).map((s) => ({
           id: s.id,
           clientSetId: s.clientSetId,
           sessionExerciseId: s.sessionExerciseId,
           setNumber: s.setNumber,
-          setType: s.setType,
+          setType: s.setType as SetType,
           weight: s.weight,
-          weightUnit: s.weightUnit,
+          weightUnit: s.weightUnit as WeightUnit,
           reps: s.reps,
           durationSeconds: s.durationSeconds,
           distanceMeters: s.distanceMeters,
           rpe: s.rpe,
           completed: s.completed,
-          completedAt: s.completedAt instanceof Date ? s.completedAt.toISOString() : s.completedAt,
+          completedAt: toIsoStringOrNull(s.completedAt),
           isPersonalRecord: s.isPersonalRecord,
           notes: s.notes,
           avgHeartRateBpm: s.avgHeartRateBpm ?? null,

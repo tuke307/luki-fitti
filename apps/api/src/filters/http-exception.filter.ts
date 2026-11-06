@@ -28,7 +28,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
       } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
-        const responseObj = exceptionResponse as any;
+        const responseObj = exceptionResponse as {
+          message?: string;
+          errors?: Array<{ field: string; message: string }>;
+          code?: string;
+        };
         message = responseObj.message || message;
 
         // Handle validation errors
@@ -51,11 +55,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
       } else if (exception.name === 'ForbiddenError') {
         status = HttpStatus.FORBIDDEN;
         message = 'Forbidden: You do not have access to this resource';
-      } else if ((exception as any).code === 'P2002') {
+      } else if ((exception as { code?: string }).code === 'P2002') {
         // Prisma unique constraint violation
         status = HttpStatus.BAD_REQUEST;
         message = 'Duplicate Entry';
-      } else if ((exception as any).code === 'P2025') {
+      } else if ((exception as { code?: string }).code === 'P2025') {
         // Prisma foreign key constraint violation
         status = HttpStatus.BAD_REQUEST;
         message = 'Foreign Key Constraint Violation';

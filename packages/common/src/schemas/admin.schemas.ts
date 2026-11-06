@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AdminPermission, AiSkillName, FeatureGrant } from '../enums';
+import { AdminPermission, AiSkillName } from '../enums';
 import { AI_MODEL_ID_PATTERN, AiModelIdSchema } from './ai-models.schemas';
 import type { AiKeySlotStatusDto, MyAiUsageDto } from './ai.schemas';
 

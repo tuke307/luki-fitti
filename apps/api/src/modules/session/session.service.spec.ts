@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import type { SyncSessionPayloadDto } from '@luki-fitti/common/schemas';
 import { SessionService, STALE_ACTIVE_SESSION_MS } from './session.service';
+import type { PrismaService } from '../database/prisma.service';
 import {
   ExerciseType,
   MuscleGroup,
@@ -14,28 +15,51 @@ import {
   WeightUnit,
 } from '@luki-fitti/common/enums';
 
-function createMockSessionPrisma() {
-  const sessions = new Map<string, any>();
-  const exercises = new Map<string, any>();
-  const sets = new Map<string, any>();
+interface MockRow {
+  id: string;
+  [key: string]: unknown;
+}
 
-  const buildFullSession = (s: any) => {
+interface MockWhere {
+  id?: string;
+  clientSessionId?: string;
+  sessionId?: string;
+  sessionExerciseId?: string;
+  clientExerciseId?: string;
+  clientSetId?: string;
+}
+
+interface MockMutationArgs {
+  where: MockWhere;
+  update: Record<string, unknown>;
+  create: Record<string, unknown>;
+}
+
+function createMockSessionPrisma() {
+  const sessions = new Map<string, MockRow>();
+  const exercises = new Map<string, MockRow>();
+  const sets = new Map<string, MockRow>();
+
+  const buildFullSession = (s: MockRow | null | undefined) => {
     if (!s) return null;
     const exList = Array.from(exercises.values())
       .filter((e) => e.sessionId === s.id)
-      .sort((a, b) => a.orderIndex - b.orderIndex)
+      .sort((a, b) => (a.orderIndex as number) - (b.orderIndex as number))
       .map((e) => ({
         ...e,
         sets: Array.from(sets.values())
           .filter((st) => st.sessionExerciseId === e.id)
-          .sort((a, b) => a.setNumber - b.setNumber),
+          .sort((a, b) => (a.setNumber as number) - (b.setNumber as number)),
       }));
     return { ...s, exercises: exList };
   };
 
-  const prisma: any = {
+  const prisma: Record<string, unknown> & {
+    _sessions: Map<string, MockRow>;
+    _sets: Map<string, MockRow>;
+  } = {
     workoutSession: {
-      findUnique: async ({ where }: any) => {
+      findUnique: async ({ where }: { where: MockWhere }) => {
         if (where.clientSessionId) {
           const found = Array.from(sessions.values()).find(
             (s) => s.clientSessionId === where.clientSessionId,
@@ -45,12 +69,12 @@ function createMockSessionPrisma() {
         if (where.id) return buildFullSession(sessions.get(where.id));
         return null;
       },
-      findUniqueOrThrow: async ({ where }: any) => {
-        const s = sessions.get(where.id);
+      findUniqueOrThrow: async ({ where }: { where: MockWhere }) => {
+        const s = sessions.get(where.id as string);
         if (!s) throw new Error('Not found');
         return buildFullSession(s);
       },
-      upsert: async ({ where, update, create }: any) => {
+      upsert: async ({ where, update, create }: MockMutationArgs) => {
         const existing = Array.from(sessions.values()).find(
           (s) => s.clientSessionId === where.clientSessionId,
         );
@@ -65,17 +89,21 @@ function createMockSessionPrisma() {
       },
     },
     sessionExercise: {
-      deleteMany: async ({ where }: any) => {
+      deleteMany: async ({
+        where,
+      }: {
+        where: { sessionId: string; clientExerciseId: { notIn: string[] } };
+      }) => {
         for (const [k, v] of exercises.entries()) {
           if (
             v.sessionId === where.sessionId &&
-            !where.clientExerciseId.notIn.includes(v.clientExerciseId)
+            !where.clientExerciseId.notIn.includes(v.clientExerciseId as string)
           ) {
             exercises.delete(k);
           }
         }
       },
-      upsert: async ({ where, update, create }: any) => {
+      upsert: async ({ where, update, create }: MockMutationArgs) => {
         const existing = Array.from(exercises.values()).find(
           (e) => e.clientExerciseId === where.clientExerciseId,
         );
@@ -90,17 +118,21 @@ function createMockSessionPrisma() {
       },
     },
     sessionSet: {
-      deleteMany: async ({ where }: any) => {
+      deleteMany: async ({
+        where,
+      }: {
+        where: { sessionExerciseId: string; clientSetId: { notIn: string[] } };
+      }) => {
         for (const [k, v] of sets.entries()) {
           if (
             v.sessionExerciseId === where.sessionExerciseId &&
-            !where.clientSetId.notIn.includes(v.clientSetId)
+            !where.clientSetId.notIn.includes(v.clientSetId as string)
           ) {
             sets.delete(k);
           }
         }
       },
-      upsert: async ({ where, update, create }: any) => {
+      upsert: async ({ where, update, create }: MockMutationArgs) => {
         const existing = Array.from(sets.values()).find(
           (st) => st.clientSetId === where.clientSetId,
         );
@@ -114,7 +146,7 @@ function createMockSessionPrisma() {
         return created;
       },
     },
-    $transaction: async (fn: any) => fn(prisma),
+    $transaction: async (fn: (tx: unknown) => unknown) => fn(prisma),
     _sessions: sessions,
     _sets: sets,
   };
@@ -125,7 +157,7 @@ function createMockSessionPrisma() {
 describe('SessionService — Offline Sync Idempotency, Conflict Detection & Volume Math', () => {
   it('calculates working strength volume separately from warm-ups and stretching duration', () => {
     const prisma = createMockSessionPrisma();
-    const service = new SessionService(prisma);
+    const service = new SessionService(prisma as unknown as PrismaService);
 
     const metrics = service.computeSessionMetrics([
       {
@@ -196,7 +228,7 @@ describe('SessionService — Offline Sync Idempotency, Conflict Detection & Volu
 
   it('handles repeated offline sync requests idempotently without duplicating sessions or sets, and detects version conflicts', async () => {
     const prisma = createMockSessionPrisma();
-    const service = new SessionService(prisma);
+    const service = new SessionService(prisma as unknown as PrismaService);
 
     const basePayload = {
       clientSessionId: 'client-uuid-100',
@@ -256,7 +288,7 @@ describe('SessionService — Offline Sync Idempotency, Conflict Detection & Volu
 
   it('treats a retried sync from the same device as idempotent, even when the first response was lost', async () => {
     const prisma = createMockSessionPrisma();
-    const service = new SessionService(prisma);
+    const service = new SessionService(prisma as unknown as PrismaService);
     const payload = {
       clientSessionId: 'client-uuid-lost-response',
       sessionType: SessionType.STRENGTH,
@@ -284,7 +316,7 @@ describe('SessionService — Offline Sync Idempotency, Conflict Detection & Volu
 
   it('accepts a same-device sync against a legacy server row that bumped the version by one', async () => {
     const prisma = createMockSessionPrisma();
-    const service = new SessionService(prisma);
+    const service = new SessionService(prisma as unknown as PrismaService);
     const legacy = {
       clientSessionId: 'client-uuid-legacy',
       sessionType: SessionType.STRENGTH,
@@ -309,7 +341,7 @@ describe('SessionService — Offline Sync Idempotency, Conflict Detection & Volu
 
   it('still detects a real conflict when another device wrote a newer version', async () => {
     const prisma = createMockSessionPrisma();
-    const service = new SessionService(prisma);
+    const service = new SessionService(prisma as unknown as PrismaService);
     const base = {
       clientSessionId: 'client-uuid-two-devices',
       sessionType: SessionType.STRENGTH,
@@ -366,7 +398,7 @@ describe('SessionService — Offline Sync Idempotency, Conflict Detection & Volu
         calls.push({ userId, templateId: session.templateId });
       },
     };
-    const service = new SessionService(prisma, workoutService as never);
+    const service = new SessionService(prisma as unknown as PrismaService, workoutService as never);
     const base = {
       clientSessionId: 'client-uuid-writeback',
       templateId: 'tpl-1',
@@ -393,7 +425,7 @@ describe('SessionService — Offline Sync Idempotency, Conflict Detection & Volu
 
   it('persists Apple Watch HealthKit telemetry, heartRateSamples, and per-set HR metrics and computes fallback HR stats', async () => {
     const prisma = createMockSessionPrisma();
-    const service = new SessionService(prisma);
+    const service = new SessionService(prisma as unknown as PrismaService);
 
     const watchPayload = {
       clientSessionId: 'watch-session-uuid-1',
@@ -484,7 +516,7 @@ describe('SessionService — Offline Sync Idempotency, Conflict Detection & Volu
       },
     };
     prisma.userPreferences = { findUnique: async () => ({ bodyWeightKg: 999 }) };
-    const service = new SessionService(prisma);
+    const service = new SessionService(prisma as unknown as PrismaService);
 
     const sync = async (clientSessionId: string, startedAt: string) =>
       (
@@ -513,17 +545,20 @@ describe('SessionService — Offline Sync Idempotency, Conflict Detection & Volu
     const noHistory = createMockSessionPrisma();
     noHistory.bodyWeightEntry = { findFirst: async () => null };
     noHistory.userPreferences = { findUnique: async () => ({ bodyWeightKg: 60 }) };
-    const legacy = await new SessionService(noHistory).syncSession('user-1', {
-      clientSessionId: 'client-weight-legacy',
-      sessionType: SessionType.STRENGTH,
-      workoutNameSnapshot: 'Day 1',
-      status: SessionStatus.COMPLETED,
-      startedAt: '2026-10-05T17:00:00Z',
-      activeDurationSeconds: 3600,
-      weightUnit: WeightUnit.KG,
-      version: 1,
-      exercises: [],
-    });
+    const legacy = await new SessionService(noHistory as unknown as PrismaService).syncSession(
+      'user-1',
+      {
+        clientSessionId: 'client-weight-legacy',
+        sessionType: SessionType.STRENGTH,
+        workoutNameSnapshot: 'Day 1',
+        status: SessionStatus.COMPLETED,
+        startedAt: '2026-10-05T17:00:00Z',
+        activeDurationSeconds: 3600,
+        weightUnit: WeightUnit.KG,
+        version: 1,
+        exercises: [],
+      },
+    );
     assert.equal(legacy.session.estimatedCaloriesKcal, mid);
   });
 });
@@ -538,7 +573,7 @@ describe('SessionService — running workouts on other devices', () => {
       calls.push(args.where);
       return { count: 0 };
     };
-    return { service: new SessionService(prisma), calls };
+    return { service: new SessionService(prisma as unknown as PrismaService), calls };
   }
   const payload = (extra: Record<string, unknown> = {}) =>
     ({

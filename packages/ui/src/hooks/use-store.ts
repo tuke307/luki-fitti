@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useSyncExternalStore } from 'react';
 /**
  * This hook fix hydration when use persist to save hook data to localStorage
  */
@@ -7,11 +7,11 @@ export const useStore = <T, F>(
   callback: (state: T) => F,
 ) => {
   const result = store(callback) as F;
-  const [data, setData] = useState<F>();
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
-  useEffect(() => {
-    setData(result);
-  }, [result]);
-
-  return data;
+  return mounted ? result : undefined;
 };
