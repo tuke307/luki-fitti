@@ -23,14 +23,16 @@ test.describe('Food tab — manual meal logging', () => {
     await dialog.locator('input[id$="-grams"]').fill('100');
     await expect(dialog.locator('input[id$="-kcal"]')).toHaveValue('95');
     await expect(dialog.locator('input[id$="-proteinG"]')).toHaveValue('10');
-    await dialog.getByRole('button', { name: /Save entry|Eintrag speichern/ }).click();
+    await dialog.getByRole('button', { name: /^(Add|Hinzufügen)$/ }).click();
 
     const breakfast = page.getByRole('region', { name: /Breakfast|Frühstück/ });
     await expect(breakfast).toContainText('Greek yogurt');
     await expect(breakfast).toContainText('95');
   });
 
-  test('navigates days with the week strip, keyboard and today button', async ({ page }) => {
+  test('navigates days with the week strip, keyboard and today button', async ({
+    page,
+  }, testInfo) => {
     await navigateToTab(page, 'nutrition');
     const strip = page.getByRole('group', { name: /Days of the week|Tage der Woche/ });
     const today = strip.locator('button[aria-current="date"]');
@@ -45,6 +47,8 @@ test.describe('Food tab — manual meal logging', () => {
     await expect(today).toHaveAttribute('aria-pressed', 'true');
     await expect(main.getByRole('button', { name: /^(Today|Heute)$/ })).toHaveCount(0);
 
+    // Phones page weeks by swiping the strip; the arrows exist from `md` up.
+    if (testInfo.project.name === 'mobile') return;
     await page.getByRole('button', { name: /Previous week|Vorherige Woche/ }).click();
     await expect(strip.locator('button[aria-current="date"]')).toHaveCount(0);
     await page.getByRole('button', { name: /Next week|Nächste Woche/ }).click();
@@ -68,7 +72,7 @@ test.describe('Food tab — manual meal logging', () => {
     await expect(dialog.locator('input[id$="-kcal"]')).toHaveValue('140');
     await dialog.locator('input[id$="-grams"]').fill('1.5');
     await expect(dialog.locator('input[id$="-kcal"]')).toHaveValue('420');
-    await dialog.getByRole('button', { name: /Save entry|Eintrag speichern/ }).click();
+    await dialog.getByRole('button', { name: /^(Add|Hinzufügen)$/ }).click();
 
     const lunch = page.getByRole('region', { name: /Lunch|Mittagessen/ });
     await expect(lunch).toContainText('Iced tea');
@@ -80,7 +84,7 @@ test.describe('Food tab — manual meal logging', () => {
     await page.getByRole('button', { name: /Add food & drink|Essen & Trinken hinzufügen/ }).click();
     const dialog = page.getByRole('dialog');
     await dialog.locator('input[id$="-kcal"]').fill('120');
-    await dialog.getByRole('button', { name: /Save entry|Eintrag speichern/ }).click();
+    await dialog.getByRole('button', { name: /^(Add|Hinzufügen)$/ }).click();
     await expect(dialog.getByRole('alert')).toContainText(/name|Namen/);
   });
 });

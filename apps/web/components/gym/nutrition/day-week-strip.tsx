@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type TouchEvent } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@luki-fitti/ui/components/ui/button';
-import { Input } from '@luki-fitti/ui/components/ui/input';
 import { cn } from '@luki-fitti/ui/lib/utils';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { ringProgress, shiftDay, weekDays, weekStartKey } from '@/lib/nutrition/nutrition-day';
@@ -21,8 +20,13 @@ interface DayWeekStripProps {
 }
 
 const toDate = (key: string) => new Date(`${key}T12:00:00`);
+/** Horizontal travel (px) that pages the strip on phones; shorter moves count as taps. */
+const SWIPE_MIN_PX = 48;
 
-/** Food tab day navigation: a Monday-first week of days with kcal rings, week paging and a date jump. */
+/**
+ * Food tab day navigation: a Monday-first week of days with kcal rings. Phones page weeks by
+ * swiping (like iOS); `md` and up keep the range label with arrows.
+ */
 export function DayWeekStrip({
   selected,
   todayKey,
@@ -37,6 +41,7 @@ export function DayWeekStrip({
   const [syncedSelection, setSyncedSelection] = useState(selected);
   const buttons = useRef(new Map<string, HTMLButtonElement>());
   const focusSelected = useRef(false);
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
 
   if (syncedSelection !== selected) {
     setSyncedSelection(selected);
@@ -62,6 +67,23 @@ export function DayWeekStrip({
   const shortDate = (key: string) =>
     toDate(key).toLocaleDateString(bcp47, { day: 'numeric', month: 'short' });
 
+  const pageWeek = (direction: -1 | 1) =>
+    setVisibleWeek((w) => (direction > 0 && w >= currentWeek ? w : shiftDay(w, direction * 7)));
+
+  const onTouchStart = (event: TouchEvent) => {
+    const touch = event.touches[0];
+    swipeStart.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
+  };
+  const onTouchEnd = (event: TouchEvent) => {
+    const start = swipeStart.current;
+    const touch = event.changedTouches[0];
+    swipeStart.current = null;
+    if (!start || !touch) return;
+    const dx = touch.clientX - start.x;
+    if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) < Math.abs(touch.clientY - start.y)) return;
+    pageWeek(dx > 0 ? -1 : 1);
+  };
+
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>, key: string) => {
     const target = {
       ArrowLeft: shiftDay(key, -1),
@@ -79,13 +101,13 @@ export function DayWeekStrip({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-1">
+      <div className="hidden items-center gap-1 md:flex">
         <Button
           type="button"
           variant="ghost"
           size="icon"
           aria-label={t.nutrition.previousWeek}
-          onClick={() => setVisibleWeek((w) => shiftDay(w, -7))}
+          onClick={() => pageWeek(-1)}
         >
           <ChevronLeft className="h-5 w-5" />
         </Button>
@@ -98,7 +120,7 @@ export function DayWeekStrip({
           size="icon"
           aria-label={t.nutrition.nextWeek}
           disabled={visibleWeek >= currentWeek}
-          onClick={() => setVisibleWeek((w) => shiftDay(w, 7))}
+          onClick={() => pageWeek(1)}
         >
           <ChevronRight className="h-5 w-5" />
         </Button>
@@ -106,7 +128,9 @@ export function DayWeekStrip({
       <div
         role="group"
         aria-label={format(t.nutrition.weekStrip, { date: longDate(visibleWeek) })}
-        className="flex gap-1"
+        className="flex touch-pan-y gap-1"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
       >
         {days.map((key) => {
           const isFuture = key > todayKey;
@@ -166,24 +190,6 @@ export function DayWeekStrip({
             </button>
           );
         })}
-      </div>
-      <div className="flex items-center justify-end gap-2">
-        <Input
-          type="date"
-          aria-label={t.nutrition.jumpToDate}
-          max={todayKey}
-          value={selected}
-          onChange={(e) => {
-            const key = e.target.value;
-            if (/^\d{4}-\d{2}-\d{2}$/.test(key)) onSelect(clamp(key));
-          }}
-          className="h-9 w-auto tabular-nums"
-        />
-        {selected !== todayKey && (
-          <Button type="button" variant="secondary" size="sm" onClick={() => onSelect(todayKey)}>
-            {t.nutrition.today}
-          </Button>
-        )}
       </div>
     </div>
   );

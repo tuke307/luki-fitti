@@ -88,7 +88,7 @@ export async function createWorkoutTemplate(
   if (options.description) {
     await dialog.locator('#tpl-desc').fill(options.description);
   }
-  await clickDialogButton(page, /^(Create Workout|Workout erstellen)$/);
+  await clickDialogButton(page, /^(Create|Erstellen)$/);
   await expect(templateCardByName(page, options.name)).toBeVisible({ timeout: 10_000 });
 }
 

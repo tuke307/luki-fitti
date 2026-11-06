@@ -237,6 +237,14 @@ export const en = {
     lastTrained: 'Last trained {date}',
     startWorkoutBtn: 'Start',
     statsTitle: 'Overview',
+    // Wave 2 w3a
+    noWorkoutsYet: 'No workouts yet.',
+    musclesTrainedTitle: 'Muscles trained',
+    musclesTrainedSub: 'Average sets per week',
+    rangeWeeksLong: '{weeks} weeks',
+    setsPerWeekShort: '{sets} sets/week',
+    musclesTargetNote:
+      'Aim for {min}–{max} sets per muscle each week. Muscles that help in an exercise count as half a set.',
   },
   workouts: {
     title: 'Workouts',
@@ -334,6 +342,12 @@ export const en = {
     startWorkoutAria: 'Start {name}',
     editListBtn: 'Edit',
     addMenuLabel: 'Add',
+    // Wave 2 w3a
+    expandAll: 'Expand All',
+    collapseAll: 'Collapse All',
+    builderCreateTitle: 'Create Workout Template',
+    builderEditTitle: 'Edit Workout',
+    builderCreateBtn: 'Create',
   },
   session: {
     savedQueuedBadge: 'Workout saved',

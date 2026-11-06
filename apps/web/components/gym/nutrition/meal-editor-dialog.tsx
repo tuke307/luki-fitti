@@ -14,14 +14,6 @@ import {
 } from '@luki-fitti/ui/components/ui/alert-dialog';
 import { Badge } from '@luki-fitti/ui/components/ui/badge';
 import { Button } from '@luki-fitti/ui/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@luki-fitti/ui/components/ui/dialog';
 import { Input } from '@luki-fitti/ui/components/ui/input';
 import { Label } from '@luki-fitti/ui/components/ui/label';
 import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
@@ -46,6 +38,7 @@ import {
 import { api } from '@/lib/api';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { mealTypeForTime, newClientId } from '@/lib/nutrition/nutrition-day';
+import { MobileSheet } from '../mobile-sheet';
 import { HistoryPickerDialog } from './history-picker-dialog';
 import { MealPhotoSection } from './meal-photo-section';
 
@@ -175,20 +168,41 @@ interface MealEditorDialogProps {
   onDiscardEntry?: (entry: MealEntryDto) => Promise<void>;
 }
 
+const FORM_ID = 'meal-editor';
+const IDLE = { saving: false, analyzing: false };
+
 export function MealEditorDialog({ open, onOpenChange, ...props }: MealEditorDialogProps) {
+  const { t } = useLocale();
   // The body decides whether closing is allowed (busy analysis, unsaved estimate).
   const closeGuardRef = useRef<() => boolean>(() => true);
+  const [status, setStatus] = useState(IDLE);
   return (
-    <Dialog open={open} onOpenChange={(o) => (o || closeGuardRef.current()) && onOpenChange(o)}>
+    <MobileSheet
+      open={open}
+      onOpenChange={(o) => (o || closeGuardRef.current()) && onOpenChange(o)}
+      title={props.entry ? t.nutrition.editMeal : t.nutrition.newMeal}
+      description={t.nutrition.addFood}
+      confirm={{
+        label: props.entry ? t.common.save : t.nutrition.addEntryBtn,
+        onConfirm: () =>
+          (document.getElementById(FORM_ID) as HTMLFormElement | null)?.requestSubmit(),
+        disabled: status.analyzing,
+        loading: status.saving,
+        testId: 'meal-editor-save',
+      }}
+      className="sm:max-w-xl"
+      data-testid="meal-editor"
+    >
       {/* Mounted only while open, so every opening starts from the entry's current values. */}
       {open && (
         <MealEditorBody
           {...props}
           closeGuardRef={closeGuardRef}
           onClose={() => onOpenChange(false)}
+          onStatusChange={setStatus}
         />
       )}
-    </Dialog>
+    </MobileSheet>
   );
 }
 
@@ -204,9 +218,11 @@ function MealEditorBody({
   onDiscardEntry,
   closeGuardRef,
   onClose,
+  onStatusChange,
 }: Omit<MealEditorDialogProps, 'open' | 'onOpenChange'> & {
   closeGuardRef: React.RefObject<() => boolean>;
   onClose: () => void;
+  onStatusChange: (status: typeof IDLE) => void;
 }) {
   const { t, format, bcp47 } = useLocale();
   const [mealType, setMealType] = useState<MealType>(
@@ -240,6 +256,11 @@ function MealEditorBody({
       closeGuardRef.current = () => true;
     };
   }, [analyzing, closeGuardRef, unsavedEstimate]);
+
+  useEffect(() => {
+    onStatusChange({ saving, analyzing });
+  }, [analyzing, onStatusChange, saving]);
+  useEffect(() => () => onStatusChange(IDLE), [onStatusChange]);
 
   const eatenAtIso = () => {
     const [h, m] = time.split(':').map(Number) as [number, number];
@@ -421,17 +442,8 @@ function MealEditorBody({
   };
 
   return (
-    <DialogContent className="flex max-h-[92dvh] flex-col gap-0 p-0 sm:max-w-xl">
-      <DialogHeader className="px-5 pt-5 pb-3 text-left">
-        <DialogTitle>{entry ? t.nutrition.editMeal : t.nutrition.newMeal}</DialogTitle>
-        <DialogDescription className="sr-only">{t.nutrition.addFood}</DialogDescription>
-      </DialogHeader>
-
-      <form
-        id="meal-editor"
-        onSubmit={submit}
-        className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 pb-4"
-      >
+    <>
+      <form id={FORM_ID} onSubmit={submit} className="min-w-0 space-y-5">
         {canUsePhotos && (
           <MealPhotoSection
             savedPhotos={serverEntry?.photos ?? []}
@@ -628,7 +640,7 @@ function MealEditorBody({
         )}
       </form>
 
-      <DialogFooter className="border-border/60 flex-col gap-3 border-t px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="border-border/60 mt-5 flex items-center justify-between gap-3 border-t pt-4">
         <p className="text-[0.9375rem] tabular-nums" aria-live="polite">
           <span className="font-semibold">
             {t.nutrition.total}: {totals.kcal} {t.nutrition.kcal}
@@ -639,31 +651,22 @@ function MealEditorBody({
             {totals.carbsG} · {t.nutrition.fatShort} {totals.fatG}
           </span>
         </p>
-        <div className="flex gap-2">
-          {serverEntry && onDelete && (
-            <Button
-              type="button"
-              variant="destructive"
-              size="icon"
-              aria-label={t.nutrition.deleteMeal}
-              disabled={analyzing}
-              onClick={() => {
-                onDelete(serverEntry);
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
+        {serverEntry && onDelete && (
           <Button
-            type="submit"
-            form="meal-editor"
-            disabled={saving || analyzing}
-            className="flex-1 sm:flex-none"
+            type="button"
+            variant="destructive"
+            size="icon"
+            aria-label={t.nutrition.deleteMeal}
+            disabled={analyzing}
+            onClick={() => {
+              onDelete(serverEntry);
+            }}
+            className="shrink-0"
           >
-            {t.nutrition.saveMeal}
+            <Trash2 className="h-4 w-4" />
           </Button>
-        </div>
-      </DialogFooter>
+        )}
+      </div>
 
       <HistoryPickerDialog
         open={historyOpen && isOnline}
@@ -699,6 +702,6 @@ function MealEditorBody({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </DialogContent>
+    </>
   );
 }

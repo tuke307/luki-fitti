@@ -33,6 +33,8 @@ interface WeightEntryFormProps {
   suggestedKg?: number | null;
   onSave: (payload: UpsertBodyWeightEntryDto) => Promise<void>;
   onCancelEdit: () => void;
+  /** Inside a sheet: the sheet's top bar submits the form (by this id) and shows the title. */
+  sheetFormId?: string;
 }
 
 const NOTE_MAX = 280;
@@ -44,6 +46,7 @@ export function WeightEntryForm({
   suggestedKg,
   onSave,
   onCancelEdit,
+  sheetFormId,
 }: WeightEntryFormProps) {
   const { t, format } = useLocale();
   const [nowMs] = useState(() => Date.now());
@@ -112,12 +115,16 @@ export function WeightEntryForm({
 
   return (
     <form
+      id={sheetFormId}
       onSubmit={submit}
       noValidate
       aria-labelledby="weight-form-title"
-      className="bg-secondary/50 space-y-3 rounded-2xl p-4"
+      className={sheetFormId ? 'space-y-3' : 'bg-secondary/50 space-y-3 rounded-2xl p-4'}
     >
-      <h3 id="weight-form-title" className="text-[0.9375rem] font-semibold">
+      <h3
+        id="weight-form-title"
+        className={sheetFormId ? 'sr-only' : 'text-[0.9375rem] font-semibold'}
+      >
         {editing ? t.weight.editTitle : t.weight.logTitle}
       </h3>
       <div className="grid gap-3 sm:grid-cols-[minmax(0,9rem)_minmax(0,1fr)]">
@@ -133,6 +140,7 @@ export function WeightEntryForm({
             min={minDisplay}
             max={maxDisplay}
             required
+            autoFocus={Boolean(sheetFormId)}
             placeholder={placeholder}
             value={value}
             onChange={(e) => setValue(e.target.value)}
@@ -180,7 +188,7 @@ export function WeightEntryForm({
         </p>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      <div className={sheetFormId ? 'hidden' : 'flex flex-wrap gap-2'}>
         <Button type="submit" disabled={saving}>
           {editing ? t.weight.saveChanges : t.weight.logButton}
         </Button>
