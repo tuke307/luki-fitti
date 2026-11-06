@@ -111,6 +111,7 @@ seaweedfs-s3.json
 # marketing: generated captures, device frames (Apple-owned, not redistributed), xcresults
 apps/apple/marketing/raw/
 apps/apple/marketing/frames/
+apps/apple/marketing/.preview/
 apps/apple/marketing/.xcresults/
 
 # Private training exports, backups and import reports

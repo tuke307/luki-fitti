@@ -31,12 +31,24 @@ final class MarketingScreenshotsUITests: XCTestCase {
                 .path
         app.launch()
         // Guard the locale before any capture — the wrong language fails the test.
+        // iPhone shows a TabBar; on iPad the same tabs live in the sidebar/top bar.
         let expectedTab = lang == "de" ? "Heute" : "Today"
+        let tabButton =
+            app.tabBars.buttons[expectedTab].firstMatch.exists
+                ? app.tabBars.buttons[expectedTab].firstMatch
+                : app.buttons[expectedTab].firstMatch
         XCTAssertTrue(
-            app.tabBars.buttons[expectedTab].firstMatch.waitForExistence(timeout: 15),
+            tabButton.waitForExistence(timeout: 15),
             "expected \(lang) tab '\(expectedTab)'"
         )
         return app
+    }
+
+    /// Tabs render in a UITabBar on iPhone and in the iPad sidebar/top bar.
+    private func tabElement(_ app: XCUIApplication, _ name: String) -> XCUIElement {
+        app.tabBars.buttons[name].firstMatch.exists
+            ? app.tabBars.buttons[name].firstMatch
+            : app.buttons[name].firstMatch
     }
 
     @MainActor private func save(_ name: String) {
@@ -74,7 +86,7 @@ final class MarketingScreenshotsUITests: XCTestCase {
 
     @MainActor private func shot04() {
         let app = launch(session: false)
-        let tab = app.tabBars.buttons[tabLibrary].firstMatch
+        let tab = tabElement(app, tabLibrary)
         XCTAssertTrue(tab.waitForExistence(timeout: 15), "Library tab missing")
         tab.tap()
         XCTAssertTrue(
@@ -89,7 +101,7 @@ final class MarketingScreenshotsUITests: XCTestCase {
 
     @MainActor private func shot05() {
         let app = launch(session: false)
-        let tab = app.tabBars.buttons[tabHistory].firstMatch
+        let tab = tabElement(app, tabHistory)
         XCTAssertTrue(tab.waitForExistence(timeout: 15), "History tab missing")
         tab.tap()
         XCTAssertFalse(
@@ -102,7 +114,7 @@ final class MarketingScreenshotsUITests: XCTestCase {
 
     @MainActor private func shot06() {
         let app = launch(session: false)
-        let tab = app.tabBars.buttons[tabFood].firstMatch
+        let tab = tabElement(app, tabFood)
         XCTAssertTrue(tab.waitForExistence(timeout: 15), "Food tab missing")
         tab.tap()
         // The seeded meal carries the demo photo + AI items; assert the meal is visible.
