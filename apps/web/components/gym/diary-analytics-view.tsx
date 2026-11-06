@@ -10,6 +10,7 @@ import {
   Edit3,
   Trash2,
   Heart,
+  FileInput,
   Flame,
   Watch,
   Smartphone,
@@ -956,6 +957,12 @@ export function DiaryAnalyticsView() {
                       <Badge variant="outline" className="gap-1 text-xs">
                         <Smartphone className="h-3 w-3" />
                         {t.diary.recordedOnIphone}
+                      </Badge>
+                    )}
+                    {session.sourceDevice === SessionSourceDevice.IMPORT && (
+                      <Badge variant="outline" className="gap-1 text-xs">
+                        <FileInput className="h-3 w-3" />
+                        {t.diary.imported}
                       </Badge>
                     )}
                     {session.healthKitWorkoutUuid && (

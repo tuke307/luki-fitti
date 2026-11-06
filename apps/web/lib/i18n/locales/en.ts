@@ -520,6 +520,7 @@ export const en = {
     syncedWithAppleHealth: 'Apple Health',
     recordedOnAppleWatch: 'Apple Watch',
     recordedOnIphone: 'iPhone',
+    imported: 'Imported',
     heartRateCurveTitle: 'Heart rate',
     deleteWorkoutTitle: 'Delete this workout?',
     deleteWorkoutDesc:

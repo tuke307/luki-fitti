@@ -521,6 +521,7 @@ export const de = {
     syncedWithAppleHealth: 'Apple Health',
     recordedOnAppleWatch: 'Apple Watch',
     recordedOnIphone: 'iPhone',
+    imported: 'Importiert',
     heartRateCurveTitle: 'Herzfrequenz',
     deleteWorkoutTitle: 'Dieses Training löschen?',
     deleteWorkoutDesc:
