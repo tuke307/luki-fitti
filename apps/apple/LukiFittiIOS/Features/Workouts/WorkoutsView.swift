@@ -136,7 +136,8 @@ public struct WorkoutsView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button {
-                        openNewTemplateBuilder(defaultFolderId: viewModel.store.folders.first?.id)
+                        // From the toolbar a new workout starts unfiled; folder menus pass their folder.
+                        openNewTemplateBuilder(defaultFolderId: nil)
                     } label: {
                         Label(tr("New Workout"), systemImage: "dumbbell")
                     }
@@ -340,7 +341,10 @@ public struct WorkoutsView: View {
                         Text(template.name)
                             .foregroundStyle(.primary)
                             .lineLimit(1)
-                        Text(tr("%d exercises · ~%d min · %@", template.exercises.count, template.estimatedDurationMinutes ?? 60, lastText))
+                        let minutes = template.estimatedDurationMinutes ?? 60
+                        Text(template.exercises.count == 1
+                            ? tr("1 exercise · ~%d min · %@", minutes, lastText)
+                            : tr("%d exercises · ~%d min · %@", template.exercises.count, minutes, lastText))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)

@@ -61,7 +61,8 @@ public struct HomeDashboardView: View {
                     .foregroundStyle(LukiColors.accent)
                 Text(active.workoutNameSnapshot)
                     .font(.title2.bold())
-                Text(tr("%d sets · %@", active.totalSetsCompleted, LukiFormat.volume(kg: active.totalVolumeKg, unit: active.weightUnit)))
+                let volume = LukiFormat.volume(kg: active.totalVolumeKg, unit: active.weightUnit)
+                Text(active.totalSetsCompleted == 1 ? tr("1 set · %@", volume) : tr("%d sets · %@", active.totalSetsCompleted, volume))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }

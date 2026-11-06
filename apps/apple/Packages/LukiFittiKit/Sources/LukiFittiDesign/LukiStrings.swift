@@ -784,5 +784,8 @@ public enum LukiStrings {
         "Personal bests": "Bestleistungen",
         "Your personal bests show up here after your first workouts.": "Deine Bestleistungen erscheinen hier nach deinen ersten Trainings.",
         "Coaching note: %@": "Trainingshinweis: %@",
+        "1 set": "1 Satz",
+        "1 set · %@": "1 Satz · %@",
+        "1 exercise · ~%d min · %@": "1 Übung · ~%d Min. · %@",
     ]
 }

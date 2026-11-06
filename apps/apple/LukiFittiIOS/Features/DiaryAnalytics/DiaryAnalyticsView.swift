@@ -150,6 +150,10 @@ public struct DiaryAnalyticsView: View {
         count == 1 ? tr("1 workout") : tr("%d workouts", count)
     }
 
+    private func setCountText(_ count: Int) -> String {
+        count == 1 ? tr("1 set") : tr("%d sets", count)
+    }
+
     private func kpiSummaryGrid(_ snapshot: WorkoutHistorySnapshot) -> some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
             kpiCard(
@@ -274,7 +278,7 @@ public struct DiaryAnalyticsView: View {
                                         .font(.footnote.monospacedDigit())
                                         .foregroundStyle(bucket.count > 0 ? LukiColors.accent : .secondary)
                                 }
-                                Text(tr("%d sets", bucket.sets) + " · " + LukiFormat.volume(kg: Double(bucket.volumeKg), unit: unit))
+                                Text(setCountText(bucket.sets) + " · " + LukiFormat.volume(kg: Double(bucket.volumeKg), unit: unit))
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }
@@ -416,7 +420,7 @@ public struct DiaryAnalyticsView: View {
                 .foregroundStyle(Self.barColor)
                 .cornerRadius(3)
                 .accessibilityLabel(point.date.formatted(date: .abbreviated, time: .omitted))
-                .accessibilityValue(tr("%d sets", point.sets))
+                .accessibilityValue(setCountText(point.sets))
 
                 AreaMark(x: .value(tr("Workout"), point.id), y: .value(tr("Volume"), volume))
                     .foregroundStyle(LukiColors.accent.opacity(0.18))
@@ -617,7 +621,7 @@ public struct DiaryAnalyticsView: View {
                 Label(tr("%d min", max(1, Int((Double(session.activeDurationSeconds) / 60).rounded()))), systemImage: "clock")
                     .accessibilityLabel(tr("Duration"))
                     .accessibilityValue(tr("%d min", max(1, Int((Double(session.activeDurationSeconds) / 60).rounded()))))
-                Text(tr("%d sets", session.totalSetsCompleted))
+                Text(setCountText(session.totalSetsCompleted))
                 Text(LukiFormat.volume(kg: session.totalVolumeKg, unit: session.weightUnit))
                 if notDone > 0 {
                     Text(tr("%d not done", notDone))
