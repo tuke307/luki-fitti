@@ -8,4 +8,4 @@ export const APP_ORIGIN = isProd ? 'https://app.luki-fitti.tony-luke.de' : 'http
 export const SITE_ORIGIN = `http${isProd ? 's' : ''}://${SITE_HOSTNAMES[0]}`;
 
 // Set the TestFlight/App Store link here once it exists; empty shows "Coming soon".
-export const TESTFLIGHT_URL = '';
+export const TESTFLIGHT_URL = 'https://testflight.apple.com/join/3agxtuUt';

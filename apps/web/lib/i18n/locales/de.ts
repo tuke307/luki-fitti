@@ -775,7 +775,7 @@ export const de = {
       headline: 'Trainiere. Protokolliere. Werde stärker.',
       sub: 'Der Workout-Tracker für iPhone, Apple Watch und Web — offline nutzbar, ohne Schnickschnack.',
       openApp: 'App öffnen',
-      download: 'Im App Store laden',
+      download: 'TestFlight-Beta beitreten',
       downloadSoon: 'Bald im App Store',
       heroAlt: 'LukiFitti aktives Training auf dem iPhone',
       deviceLabel: 'Gerät',

@@ -773,7 +773,7 @@ export const en = {
       headline: 'Train. Log. Get stronger.',
       sub: 'The workout tracker for iPhone, Apple Watch and the web — fully usable offline, no fluff.',
       openApp: 'Open app',
-      download: 'Download on the App Store',
+      download: 'Join the TestFlight beta',
       downloadSoon: 'Coming soon to the App Store',
       heroAlt: 'LukiFitti active workout on iPhone',
       deviceLabel: 'Device',
