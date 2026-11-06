@@ -157,10 +157,15 @@ After the upload, App Store Connect processes the build, and then it shows up un
 
 - Add `PrivacyInfo.xcprivacy`: the apps use `UserDefaults`, which Apple requires a declared reason
   for.
-- Answer the encryption question for each build, or set `ITSAppUsesNonExemptEncryption` in
-  `Info.plist` once the answer is clear.
 - Fill in the App Store listing, App Privacy and the privacy policy URL. Screenshots are in
   `apps/apple/marketing/appstore/`.
+
+## Encryption declaration
+
+`ITSAppUsesNonExemptEncryption` is `false` in `apps/apple/LukiFittiIOS/Info.plist`, so App Store
+Connect doesn't ask about encryption for each build. The answer is "none of the above algorithms",
+because the apps only use what Apple's operating systems provide: HTTPS through `URLSession`, the
+Keychain and `CryptoKit`. Check this again before adding a dependency that brings its own encryption.
 
 ## Security
 
