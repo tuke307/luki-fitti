@@ -27,6 +27,10 @@ const EMPTY: BodyWeightSnapshot = { entries: [], pending: 0, loaded: false };
 let snapshot: BodyWeightSnapshot = EMPTY;
 const listeners = new Set<() => void>();
 let initPromise: Promise<void> | null = null;
+/** Which user / mode the store was initialised for (`<userId>:online|local`). */
+let initKey: string | null = null;
+/** Signed in and reachable: writes go to the API. Otherwise they stay on the device (outbox). */
+let online = false;
 let flushing = false;
 let onlineListenerAttached = false;
 /** Called after a write reached the server (the server keeps preferences.bodyWeightKg current). */
@@ -57,7 +61,7 @@ const without = (clientEntryId: string) =>
   snapshot.entries.filter((e) => e.clientEntryId !== clientEntryId);
 
 async function flush(): Promise<void> {
-  if (flushing) return;
+  if (!online || flushing) return;
   flushing = true;
   let wroteToServer = false;
   try {
@@ -91,6 +95,7 @@ async function flush(): Promise<void> {
 }
 
 async function refresh(): Promise<void> {
+  if (!online) return;
   try {
     await flush();
     const res = await api.bodyWeight.listEntries();
@@ -104,16 +109,27 @@ async function refresh(): Promise<void> {
   }
 }
 
-function init(): Promise<void> {
-  if (initPromise) return initPromise;
+function init(userId: string, isOnline: boolean): Promise<void> {
+  const key = `${userId}:${isOnline ? 'online' : 'local'}`;
+  online = isOnline;
+  if (initPromise && initKey === key) return initPromise;
+  // Another person on this device: drop their in-memory weigh-ins before reading the cache.
+  if (initKey && !initKey.startsWith(`${userId}:`)) reset();
+  const previous = initPromise;
+  initKey = key;
   initPromise = (async () => {
-    const [cached, outbox] = await Promise.all([
-      getCachedBodyWeightEntries(),
-      getBodyWeightOutbox(),
-    ]);
-    // Only fill from cache if nothing newer was committed meanwhile.
-    if (!snapshot.loaded) emit({ entries: sortWeighIns(cached), pending: outbox.length });
-    emit({ loaded: true });
+    if (previous) {
+      await previous.catch(() => undefined);
+    } else {
+      const [cached, outbox] = await Promise.all([
+        getCachedBodyWeightEntries(),
+        getBodyWeightOutbox(),
+      ]);
+      // Only fill from cache if nothing newer was committed meanwhile.
+      if (!snapshot.loaded) emit({ entries: sortWeighIns(cached), pending: outbox.length });
+      emit({ loaded: true });
+    }
+    // Signing in uploads what was logged as a guest (queued in the outbox) via flush().
     await refresh().catch(() => undefined);
   })();
   if (!onlineListenerAttached && typeof window !== 'undefined') {
@@ -127,6 +143,7 @@ function init(): Promise<void> {
 
 function reset() {
   initPromise = null;
+  initKey = null;
   if (snapshot !== EMPTY) emit(EMPTY);
 }
 
@@ -134,15 +151,17 @@ function reset() {
 async function save(payload: UpsertBodyWeightEntryDto): Promise<boolean> {
   const existing = snapshot.entries.find((e) => e.clientEntryId === payload.clientEntryId);
   commit([...without(payload.clientEntryId), weightEntryFromPayload(payload, existing)]);
-  try {
-    const res = await api.bodyWeight.upsertEntry(payload);
-    if (res.data) commit([...without(res.data.clientEntryId), res.data]);
-    afterServerWrite?.();
-    return true;
-  } catch (err) {
-    if (!isOffline(err)) {
-      commit([...without(payload.clientEntryId), ...(existing ? [existing] : [])]);
-      throw err;
+  if (online) {
+    try {
+      const res = await api.bodyWeight.upsertEntry(payload);
+      if (res.data) commit([...without(res.data.clientEntryId), res.data]);
+      afterServerWrite?.();
+      return true;
+    } catch (err) {
+      if (!isOffline(err)) {
+        commit([...without(payload.clientEntryId), ...(existing ? [existing] : [])]);
+        throw err;
+      }
     }
   }
   await enqueueBodyWeightChange({
@@ -160,17 +179,19 @@ async function remove(entry: BodyWeightEntryDto): Promise<boolean> {
   commit(without(entry.clientEntryId));
   const neverSynced = entry.id.startsWith('local-');
   if (!neverSynced) {
-    try {
-      await api.bodyWeight.deleteEntry(entry.id).catch((err: unknown) => {
-        if (err instanceof ApiClientError && err.status === 404) return;
-        throw err;
-      });
-      afterServerWrite?.();
-      return true;
-    } catch (err) {
-      if (!isOffline(err)) {
-        commit([...snapshot.entries, entry]);
-        throw err;
+    if (online) {
+      try {
+        await api.bodyWeight.deleteEntry(entry.id).catch((err: unknown) => {
+          if (err instanceof ApiClientError && err.status === 404) return;
+          throw err;
+        });
+        afterServerWrite?.();
+        return true;
+      } catch (err) {
+        if (!isOffline(err)) {
+          commit([...snapshot.entries, entry]);
+          throw err;
+        }
       }
     }
     await enqueueBodyWeightChange({
@@ -190,23 +211,25 @@ async function remove(entry: BodyWeightEntryDto): Promise<boolean> {
 }
 
 /**
- * Offline-first weigh-in history for signed-in users: reads from the IndexedDB cache immediately,
- * refreshes from the API and queues upserts/deletes while offline. Guests get an empty history
- * (weigh-ins are an account feature).
+ * Offline-first weigh-in history: reads from the IndexedDB cache immediately, refreshes from the
+ * API and queues upserts/deletes while offline. Guests keep their weigh-ins on this device (in the
+ * same outbox), so they upload once the person signs in.
  */
 export function useBodyWeight() {
-  const { authMode, refreshUser } = useAuth();
-  const enabled = authMode === 'AUTHENTICATED';
+  const { authMode, user, refreshUser } = useAuth();
+  const enabled = authMode !== 'UNAUTHENTICATED' && Boolean(user);
+  const isOnline = authMode === 'AUTHENTICATED';
+  const userId = user?.id ?? null;
   const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   useEffect(() => {
-    if (!enabled) {
+    if (!enabled || !userId) {
       reset();
       return;
     }
-    afterServerWrite = () => void refreshUser();
-    void init();
-  }, [enabled, refreshUser]);
+    afterServerWrite = isOnline ? () => void refreshUser() : null;
+    void init(userId, isOnline);
+  }, [enabled, isOnline, userId, refreshUser]);
 
   const guardedSave = useCallback(
     (payload: UpsertBodyWeightEntryDto) => (enabled ? save(payload) : Promise.resolve(false)),
@@ -216,7 +239,10 @@ export function useBodyWeight() {
     (entry: BodyWeightEntryDto) => (enabled ? remove(entry) : Promise.resolve(false)),
     [enabled],
   );
-  const guardedRefresh = useCallback(() => (enabled ? refresh() : Promise.resolve()), [enabled]);
+  const guardedRefresh = useCallback(
+    () => (enabled && isOnline ? refresh() : Promise.resolve()),
+    [enabled, isOnline],
+  );
 
   const entries = enabled ? state.entries : EMPTY.entries;
   const latest = useMemo(() => latestWeighIn(entries), [entries]);

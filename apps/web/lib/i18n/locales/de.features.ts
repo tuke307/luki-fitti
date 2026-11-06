@@ -115,6 +115,10 @@ export const deFeatures: Widen<typeof enFeatures> = {
       [MealType.DRINK]: 'Getränk',
       [MealType.OTHER]: 'Sonstiges',
     },
+    // Wave 2 w3a
+    dailyGoalTitle: 'Tagesziel',
+    addEntryBtn: 'Hinzufügen',
+    logWeightForEstimate: 'Trag dein Gewicht ein, um genauer zu schätzen.',
   },
   mealAi: {
     snapButton: 'Foto machen',
@@ -300,6 +304,10 @@ export const deFeatures: Widen<typeof enFeatures> = {
       'Trag dein erstes Gewicht ein. Nach ein paar Einträgen siehst du hier deinen Verlauf und den 7-Tage-Schnitt.',
     homeChartAria:
       'Gewicht vom {from} bis {to}: zuletzt {latest} {unit}, 7-Tage-Schnitt {avg} {unit}.',
+    // Wave 2 w3a
+    pageTitle: 'Gewicht',
+    pageEmptyTitle: 'Noch kein Gewicht eingetragen.',
+    pageEmptyHint: 'Trag dein Gewicht einmal pro Woche ein, am besten morgens.',
   },
   profileBody: {
     title: 'Körper & Ernährung',

@@ -113,6 +113,10 @@ export const enFeatures = {
       [MealType.DRINK]: 'Drink',
       [MealType.OTHER]: 'Other',
     },
+    // Wave 2 w3a
+    dailyGoalTitle: 'Daily goal',
+    addEntryBtn: 'Add',
+    logWeightForEstimate: 'Log your weight for a better estimate.',
   },
   mealAi: {
     snapButton: 'Snap a photo',
@@ -294,6 +298,10 @@ export const enFeatures = {
       'Log your first weigh-in. After a few, your trend and 7-day average appear here.',
     homeChartAria:
       'Weight from {from} to {to}: latest {latest} {unit}, 7-day average {avg} {unit}.',
+    // Wave 2 w3a
+    pageTitle: 'Weight',
+    pageEmptyTitle: 'No weigh-ins yet.',
+    pageEmptyHint: 'Log your weight once a week, ideally in the morning.',
   },
   profileBody: {
     title: 'Body & nutrition',

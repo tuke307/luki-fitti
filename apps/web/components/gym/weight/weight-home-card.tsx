@@ -19,14 +19,14 @@ import {
 } from '@/lib/body-weight/weight-format';
 
 interface WeightHomeCardProps {
-  /** Opens the weight section (profile tab) with the weight input focused. */
+  /** Opens the Weight page with the log sheet open. */
   onLogWeight: () => void;
-  /** Opens the weight section (profile tab) at the history. */
-  onOpenHistory: () => void;
+  /** Opens the Weight page. */
+  onOpen: () => void;
 }
 
 /** Today card: current weight, 7-day change and a 30-day chart with the 7-day average. */
-export function WeightHomeCard({ onLogWeight, onOpenHistory }: WeightHomeCardProps) {
+export function WeightHomeCard({ onLogWeight, onOpen }: WeightHomeCardProps) {
   const { user } = useAuth();
   const { t, format, bcp47 } = useLocale();
   const { enabled, entries, latest } = useBodyWeight();
@@ -69,22 +69,18 @@ export function WeightHomeCard({ onLogWeight, onOpenHistory }: WeightHomeCardPro
       data-testid="home-weight-card"
       className="bg-card space-y-4 rounded-[1.25rem] p-5"
     >
-      <div className="flex items-center justify-between gap-3">
-        <h2 id="home-weight" className="flex items-center gap-2 text-[1.0625rem] font-semibold">
-          <Scale className="text-primary h-4 w-4" aria-hidden="true" /> {t.weight.title}
-        </h2>
-        {entries.length > 0 && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="text-primary -mr-2"
-            onClick={onOpenHistory}
-          >
-            {t.weight.homeOpen} <ChevronRight className="h-4 w-4" aria-hidden="true" />
-          </Button>
-        )}
-      </div>
+      <h2 id="home-weight" className="text-[1.0625rem] font-semibold">
+        <button
+          type="button"
+          onClick={onOpen}
+          data-testid="home-weight-open"
+          className="focus-visible:ring-ring/50 -m-1 flex w-[calc(100%+0.5rem)] min-h-11 items-center gap-2 rounded-xl p-1 text-left outline-none focus-visible:ring-[3px]"
+        >
+          <Scale className="text-primary h-4 w-4" aria-hidden="true" />
+          <span className="min-w-0 flex-1">{t.weight.pageTitle}</span>
+          <ChevronRight className="text-muted-foreground h-4 w-4" aria-hidden="true" />
+        </button>
+      </h2>
 
       {latest ? (
         <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
