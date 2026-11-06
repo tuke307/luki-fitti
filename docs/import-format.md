@@ -176,11 +176,11 @@ A larger example (used by the tests) is
 ## Finding catalog slugs
 
 Every system exercise has a slug (e.g. `barbell-squat`, `dumbbell-bench-press`). To list them all
-with their English names:
+with their English names, equipment and primary muscle group (tab-separated):
 
 ```bash
 yarn workspace @luki-fitti/common build
-node --input-type=module -e "const { ALL_SYSTEM_EXERCISES } = await import('./packages/common/dist/catalog/extended/index.js'); for (const e of ALL_SYSTEM_EXERCISES) console.log(e.slug + '\t' + e.name);"
+node --input-type=module -e "const { ALL_SYSTEM_EXERCISES } = await import('./packages/common/dist/catalog/extended/index.js'); for (const e of ALL_SYSTEM_EXERCISES) console.log([e.slug, e.name, e.equipment, e.primaryMuscleGroup].join('\t'));"
 ```
 
 The same slugs are in the iOS bundle

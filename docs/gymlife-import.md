@@ -1,8 +1,9 @@
-# Importing data from Gymlife (developer guide)
+# Importing data from GymLife (developer guide)
 
 A rough, developer-oriented walkthrough for pulling workouts, templates and exercises out of the
-Gymlife iOS app and bringing them into LukiFitti. It is not an end-user feature; expect to adapt
-the steps to the backup you are working with.
+GymLife iOS app and bringing them into LukiFitti. It is not an end-user feature; expect to adapt
+the steps to the backup you are working with. The converter needs Node ≥ 22.13 (`node:sqlite`;
+the repo requires `>=22` anyway).
 
 > Privacy: an iPhone backup contains far more than Gymlife data (messages, health data, photos).
 > Work on a copy, never commit backup files or extracted data, and delete them when you are done.
@@ -25,7 +26,7 @@ Backups live in:
 
 Terminal needs **Full Disk Access** (System Settings → Privacy & Security) to read this folder.
 
-## 2. Find the Gymlife SQLite database
+## 2. Find the GymLife SQLite database
 
 A backup stores files under hashed names. `Manifest.db` (SQLite) maps them back to app paths.
 
@@ -47,7 +48,7 @@ cp "<ab>/<abcdef…>" ~/source/luki-fitti/gymlife-extracted/gymlife_backup.sqlit
 ```
 
 Exercise images referenced in the database (`Exercise.Image`) ship inside the app bundle and are
-**not** part of the backup. LukiFitti uses its own image mapping instead (see step 5).
+**not** part of the backup. LukiFitti uses its own image mapping instead (see step 4).
 
 ## 3. Explore the schema
 
@@ -71,27 +72,16 @@ Tables that matter:
 Gotchas:
 
 - `Date` / `StartDate` are **Unix seconds** (floats); `Duration` is seconds.
-- `Weight` is an integer in the unit the user had configured (kg in our data).
+- `Weight` is in the unit the user had configured (kg in our data) and can be **decimal**
+  (e.g. `17.5`), not only integer.
 - Booleans appear both as `0/1` and as the strings `'true'/'false'`; normalize both.
-- Rows with `Deleted = 1` are soft-deleted; skip them.
+- `Deleted` exists only on `Exercise`, `Training` and `TrainingLog` — not on the link/set tables.
+  Soft-deleted trainings/logs are skipped, but soft-deleted exercises are kept: history still
+  references them.
 - `CustomName` overrides `Name` when the user renamed a built-in exercise.
 - `GymSet` / `GymSetLog` rows carry `NumberOfSets`: one row can stand for several identical sets.
 
-## 4. Export to JSON / CSV
-
-Dumping tables to JSON makes mapping easier to iterate on:
-
-```bash
-cd gymlife-extracted && mkdir -p json-tables
-for t in Exercise Training TrainingExercise GymSet TrainingLog TrainingExerciseLog GymSetLog \
-         MuscleGroup PrimaryMuscleGroups SecondaryMuscleGroups Equipment; do
-  sqlite3 -json gymlife_backup.sqlite "SELECT * FROM \"$t\" WHERE COALESCE(Deleted, 0) = 0;" \
-    > "json-tables/$t.json" 2>/dev/null \
-  || sqlite3 -json gymlife_backup.sqlite "SELECT * FROM \"$t\";" > "json-tables/$t.json"
-done
-```
-
-## 5. Map to the LukiFitti model
+## 4. Map to the LukiFitti model
 
 | Gymlife                        | LukiFitti (`packages/database/prisma/schema.prisma`)                                                                                                    |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -103,63 +93,63 @@ done
 | `GymSetLog`                    | `SessionSet`                                                                                                                                            |
 | `Exercise`                     | `Exercise` — see below                                                                                                                                  |
 
-Exercises: first match each Gymlife exercise to the **global system catalog**
-(`INITIAL_EXERCISE_CATALOG` in `packages/common/src/catalog/data.ts`) by name, muscle group and
-equipment. Only exercises that are genuinely missing should be added — to that same catalog,
-never as a separate list — together with:
+Exercises: each GymLife exercise is matched to the **system catalog** by slug (step 5). The
+catalog is generated from free-exercise-db and wger and covers the GymLife library well; an
+exercise without a faithful match is imported as a per-user custom exercise. Changing the catalog
+itself is a separate task, described in [exercise-catalog.md](exercise-catalog.md).
 
-- clean English name and German search terms in `tags`,
-- instructions split into steps (Gymlife `Description` uses newlines),
-- an image folder from [Free Exercise DB](https://github.com/yuhonas/free-exercise-db) in
-  `EXERCISE_DB_FOLDER_BY_SLUG` (use `null` when no faithful photo exists — the app then shows the
-  anatomy visual),
-- a Prisma migration that upserts the new system exercises (see
-  `20261025140000_expand_exercise_catalog` for the pattern, including re-pointing references from
-  per-user copies),
-- a German translation (name, description, same number of instruction steps) in
-  `packages/common/src/catalog/locales/de.ts`, keyed by exercise id —
-  `yarn workspace @luki-fitti/common test` fails while one is missing,
-- a regenerated iOS catalog: run `yarn workspace @luki-fitti/common build` and then
-  `yarn workspace @luki-fitti/apple catalog:export`, which writes
-  `apps/apple/Packages/LukiFittiKit/Sources/LukiFittiModels/Resources/starter_catalog.json` for every
-  supported language (`catalog:check` verifies it is up to date).
-
-The catalog is the only source of system exercise text: the API and the apps resolve name,
-description and steps from it by id in the requested language (`Accept-Language`); the text columns
-of system rows in the `Exercise` table are not used for display.
-
-Verify image URLs return HTTP 200 before committing.
-
-## 6. Import a user's history
+## 5. Import a user's history
 
 Personal data (folders, templates, sessions, sets) is user-specific and never goes into migrations
-or SQL scripts. Convert the extracted tables into a [`luki-fitti-import@1`](import-format.md)
-file and let the user upload it in the app. Nobody needs database access.
+or SQL scripts. Convert the SQLite file into a [`luki-fitti-import@1`](import-format.md) file and
+let the user upload it in the app. Nobody needs database access. The steps below are written so
+an AI agent can follow them end to end.
 
-1. **Map the exercise names.** Create `gymlife-extracted/mapping.json` from each GymLife exercise
-   name (`CustomName` if set, otherwise `Name`) to a catalog slug (see
-   [finding catalog slugs](import-format.md#finding-catalog-slugs)). Keys are matched
-   case-insensitively:
+1. **List the exercises the backup uses.** The converter reads the `.sqlite` directly:
 
-   ```json
-   { "Seated Machine Leg Extensions": "leg-extensions", "Back Squat": "barbell-squat" }
+   ```bash
+   node scripts/import/gymlife-to-luki.mjs gymlife-extracted/gymlife_backup.sqlite \
+     --list-exercises > gymlife-extracted/exercises.json
    ```
 
-2. **Run the converter** on the `json-tables/` from step 4 and keep the output inside the
-   git-ignored folder:
+   Each entry has the exercise `id`, GymLife `code` (`ExerciseCode`, `null` for user-created
+   ones), `name` (`CustomName` if the user renamed it, otherwise `Name`), `builtInName`, flags
+   (`userCreated`, `deleted`), the LukiFitti `equipment` / `primaryMuscleGroup` it would get as a
+   custom exercise, the GymLife `gymlifeMuscleGroups`, a `description` excerpt, and how often it
+   is used (`templateUses`, `sessionUses`). Soft-deleted exercises appear too — history still
+   references them.
+
+2. **List the catalog slugs** (with name, equipment and primary muscle group) as described in
+   [finding catalog slugs](import-format.md#finding-catalog-slugs).
+
+3. **Write `gymlife-extracted/mapping.json`**: a JSON object `{ "<name from the list>": "<slug>" }`
+   for every exercise that has a faithful match in the catalog. Keys are matched
+   case-insensitively and both `name` and `builtInName` are tried (users often rename built-ins),
+   so either can be used as the key. Match on movement, equipment and muscle group; use the
+   `description` to disambiguate vague names (e.g. "Row", "Upper back"). Only map when the catalog
+   exercise is the _same movement_; when in doubt, ask the user — and leave anything without a
+   faithful match out of the file entirely. Unmapped exercises are imported as custom exercises,
+   so nothing is lost. Every slug you use must appear in the catalog list from step 2.
+
+4. **Run the converter** and keep the output inside the git-ignored folder:
 
    ```bash
    yarn workspace @luki-fitti/common build   # lets the converter validate its output
-   node scripts/import/gymlife-to-luki.mjs gymlife-extracted/json-tables \
+   node scripts/import/gymlife-to-luki.mjs gymlife-extracted/gymlife_backup.sqlite \
      --map gymlife-extracted/mapping.json > gymlife-extracted/luki-import.json
    ```
 
    It converts folders (`Training.IsFolder`), templates with their planned sets, and completed
-   workouts (`TrainingLog.IsCompleted`) with their logged sets; soft-deleted rows are skipped and
-   GymLife ids become the entry keys. Weights are taken as kg. Sets whose `SetType` is `1` (or
-   contains "warm") become warm-ups; pass `--warmup-set-type <value>` if your data uses another
-   value. It stops and lists every exercise without a mapping entry, and names the columns a
-   table actually has if one it expects is missing (adjust `COLUMNS` in the script then).
+   workouts (`TrainingLog.IsCompleted`) with their logged sets; soft-deleted trainings and logs
+   are skipped, soft-deleted _exercises_ are imported anyway, and GymLife ids become the entry
+   keys. Weights are taken as kg. Sets whose `SetType` is `1` (or contains "warm") become
+   warm-ups; pass `--warmup-set-type <value>` if your data uses another value. A `TrainingLog`
+   duration that is missing or outside 0–24 h falls back to the sum of that log's
+   `TrainingExerciseLog.Duration`. Exercises left out of the mapping become entries in
+   `customExercises` (key `gymlife:exercise:<ID>`) and are listed on stderr — add them to the
+   mapping and rerun if you wanted a catalog exercise instead. The converter also names the
+   columns a table actually has if one it expects is missing (adjust `COLUMNS` in the script
+   then).
 
    The column names were verified against a real GymLife backup: primary keys are named after
    their table (`TrainingID`, `TrainingExerciseID`, `GymSetID`, `TrainingLogID`,
@@ -171,7 +161,23 @@ file and let the user upload it in the app. Nobody needs database access.
    so they are ordered by id. That backup had `SetType = 0` on every set, so the warm-up value
    `1` is still unconfirmed; check yours before relying on it.
 
-3. **Upload it in the app:** Profile → Data → Import file. Check the preview, then import.
+5. **Sanity-check the counts** against the source:
+
+   ```bash
+   sqlite3 gymlife-extracted/gymlife_backup.sqlite \
+     "SELECT COUNT(*) FROM TrainingLog
+      WHERE IsCompleted IN (1, '1', 'true') AND COALESCE(Deleted, 0) NOT IN (1, '1', 'true');"
+   sqlite3 gymlife-extracted/gymlife_backup.sqlite \
+     "SELECT SUM(g.NumberOfSets) FROM GymSetLog g
+      JOIN TrainingExerciseLog e ON e.TrainingExerciseLogID = g.TrainingExerciseLogID
+      JOIN TrainingLog l ON l.TrainingLogID = e.TrainingLogID
+      WHERE l.IsCompleted IN (1, '1', 'true') AND COALESCE(l.Deleted, 0) NOT IN (1, '1', 'true');"
+   ```
+
+   These should match the number of `sessions` and the total number of session sets in the
+   output.
+
+6. **Upload it in the app:** Profile → Data → Import file. Check the preview, then import.
    Importing the same file again changes nothing.
 
 Delete `gymlife-extracted/` when you are done.

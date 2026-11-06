@@ -1,0 +1,6 @@
+[
+  { "ExerciseID": 1, "MuscleGroupID": 4 },
+  { "ExerciseID": 2, "MuscleGroupID": 9 },
+  { "ExerciseID": 2, "MuscleGroupID": 12 },
+  { "ExerciseID": 3, "MuscleGroupID": 15 }
+]

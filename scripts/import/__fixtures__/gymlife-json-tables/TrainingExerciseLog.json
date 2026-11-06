@@ -1,4 +1,16 @@
 [
-  { "TrainingExerciseLogID": 50, "TrainingLogID": 40, "ExerciseID": 1, "OrderNumber": 0 },
-  { "TrainingExerciseLogID": 51, "TrainingLogID": 40, "ExerciseID": 2, "OrderNumber": 1 }
+  {
+    "TrainingExerciseLogID": 50,
+    "TrainingLogID": 40,
+    "ExerciseID": 1,
+    "OrderNumber": 0,
+    "Duration": 1800
+  },
+  {
+    "TrainingExerciseLogID": 51,
+    "TrainingLogID": 40,
+    "ExerciseID": 2,
+    "OrderNumber": 1,
+    "Duration": 1500
+  }
 ]

@@ -1,5 +1,38 @@
 [
-  { "ID": 1, "Name": "Bench Press", "CustomName": null, "Deleted": 0 },
-  { "ID": 2, "Name": "Squat", "CustomName": "Back Squat", "Deleted": "false" },
-  { "ID": 3, "Name": "Old", "CustomName": null, "Deleted": 1 }
+  {
+    "ID": 1,
+    "Name": "Bench Press",
+    "CustomName": null,
+    "Deleted": 0,
+    "ExerciseCode": 100,
+    "IsDefaultExercise": "true",
+    "EquipmentID": 1,
+    "PrimaryMuscleGroupID": 4,
+    "IsStretching": 0,
+    "Description": "Lie on the bench.\nPress the bar up."
+  },
+  {
+    "ID": 2,
+    "Name": "Squat",
+    "CustomName": "Back Squat",
+    "Deleted": "false",
+    "ExerciseCode": 101,
+    "IsDefaultExercise": "true",
+    "EquipmentID": 3,
+    "PrimaryMuscleGroupID": 12,
+    "IsStretching": "false",
+    "Description": "Brace.\nSquat down.\nDrive up."
+  },
+  {
+    "ID": 3,
+    "Name": "Old Stretch",
+    "CustomName": null,
+    "Deleted": 1,
+    "ExerciseCode": null,
+    "IsDefaultExercise": "false",
+    "EquipmentID": 12,
+    "PrimaryMuscleGroupID": 1,
+    "IsStretching": 1,
+    "Description": "Hold the stretch."
+  }
 ]
