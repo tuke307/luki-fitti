@@ -84,7 +84,7 @@ extension OfflineStore {
     ) -> WorkoutTemplateDto? {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return nil }
-        let existing = editingTemplateId.flatMap { template(id: $0) }
+        let existing = editingTemplateId.flatMap { self.template(id: $0) }
         let templateId = existing?.id ?? WorkoutOutbox.newId()
         let normalized = exercises.enumerated().map { idx, item -> WorkoutTemplateExerciseDto in
             var copy = item
