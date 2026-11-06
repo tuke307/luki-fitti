@@ -10,7 +10,7 @@ import LukiFittiModels
 /// tag/alias matches before muscle/equipment labels. Words shorter than 4 letters only match whole
 /// words or word starts, so "rdl" never finds "hurdle".
 public enum ExerciseSearchText {
-    nonisolated(unsafe) private static let phrases: [(NSRegularExpression, String)] =
+    private static let phrases: [(NSRegularExpression, String)] =
         ExerciseSearchData.bundled.phrases.compactMap { phrase in
             (try? NSRegularExpression(pattern: phrase.pattern)).map { ($0, phrase.replacement) }
         }
