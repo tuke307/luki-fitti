@@ -25,14 +25,15 @@ One version for all platforms:
 Required for every version bump, so the App Store listing and the one-pager show the current UI.
 
 ```bash
-yarn workspace @luki-fitti/apple marketing:screenshots   # iPhone 6.9" + Apple Watch simulators, EN + DE
+yarn workspace @luki-fitti/apple marketing:screenshots   # iPhone, iPad + Apple Watch simulators, EN + DE
 yarn workspace @luki-fitti/apple marketing:check         # fails if the images are older than the version
 ```
 
 This writes:
 
-- `apps/apple/marketing/appstore/{en-US,de-DE}/` — App Store screenshots (1320×2868)
-- `apps/web/public/screens/{en,de}/` — images for the one-pager
+- `apps/apple/marketing/appstore/{en-US,de-DE}/<device>/` — App Store screenshots per device
+  (`iphone-6.9` 1320×2868, `iphone-6.3` 1206×2622, `ipad-13` 2064×2752, `watch` 422×514)
+- `apps/web/public/screens/{en,de}/` — images for the one-pager (`ipad/` holds the iPad hero)
 - `apps/apple/marketing/VERSION` — the version the images belong to
 
 Open a few images before committing. Captions live in `apps/apple/marketing/screenshots.json`;
