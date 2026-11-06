@@ -554,8 +554,7 @@ export class ImportService {
           weightUnit: s.exercises[0]?.sets[0]?.weightUnit ?? WeightUnit.KG,
           ...metrics,
           notes: s.notes ?? null,
-          // No IMPORT source yet: an unknown enum value would break older app builds' decoding.
-          sourceDevice: SessionSourceDevice.WEB,
+          sourceDevice: SessionSourceDevice.IMPORT,
           estimatedCaloriesKcal,
           lastSyncedAt: new Date(),
         });
