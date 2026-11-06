@@ -98,6 +98,8 @@ export const en = {
     useServerVersion: 'Use other device',
     keepLocalData: 'Keep this device',
     pendingChanges: '{count} changes waiting to sync',
+    // Wave 2 w2
+    minimizeWorkout: 'Minimize workout',
   },
   enums: {
     muscleGroups: {
@@ -702,6 +704,16 @@ export const en = {
     feedbackSectionTitle: 'Feedback',
     rowFeatureRequest: 'Request a feature',
     backToSettings: 'Back to settings',
+    // Wave 2 w2
+    registerAccountTab: 'Register Account',
+    emailAddressPlaceholder: 'Email address',
+    weeklyGoalValue: '{count} workouts',
+    weeklyGoalValueOne: '{count} workout',
+    stepperDecrement: 'Decrement',
+    stepperIncrement: 'Increment',
+    dataGuidesFooter: 'Step-by-step guides for moving your data into LukiFitti.',
+    sendTestNotificationBtn: 'Send Test Notification',
+    licenseRow: 'CC-BY-SA 4.0 license',
   },
   auth: {
     signInTab: 'Sign In',

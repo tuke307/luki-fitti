@@ -155,83 +155,77 @@ export function ProfileHealthCard() {
             </div>
           </div>
         )}
-        {signedIn && (
-          <>
-            {numberField(
-              'body-heightCm',
-              t.profileBody.height,
-              height,
-              setHeight,
-              prefs?.heightCm,
-              (n) => ({
-                heightCm: n,
-              }),
-            )}
-            {numberField(
-              'body-birthYear',
-              t.profileBody.birthYear,
-              birthYear,
-              setBirthYear,
-              prefs?.birthYear,
-              (n) => ({ birthYear: n }),
-            )}
-            <div className="space-y-1.5">
-              <Label htmlFor="body-sex" className="text-[0.8125rem] font-semibold">
-                {t.profileBody.sex}
-              </Label>
-              <NativeSelect
-                id="body-sex"
-                value={sex}
-                onChange={(e) => {
-                  const next = e.target.value as BiologicalSex | '';
-                  setSex(next);
-                  void persist({ sex: next || null }, t.profileBody.sex);
-                }}
-              >
-                <option value="">{t.profileBody.sexUnset}</option>
-                <option value="female">{t.profileBody.sexFemale}</option>
-                <option value="male">{t.profileBody.sexMale}</option>
-              </NativeSelect>
-            </div>
-            {numberField(
-              'body-bodyFatPct',
-              t.profileBody.bodyFat,
-              bodyFat,
-              setBodyFat,
-              prefs?.bodyFatPct,
-              (n) => ({ bodyFatPct: n }),
-            )}
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="body-activityLevel" className="text-[0.8125rem] font-semibold">
-                {t.profileBody.activityLevel}
-              </Label>
-              <NativeSelect
-                id="body-activityLevel"
-                value={activityLevel}
-                onChange={(e) => {
-                  const next = e.target.value as ActivityLevel | '';
-                  setActivityLevel(next);
-                  void persist({ activityLevel: next || null }, t.profileBody.activityLevel);
-                }}
-              >
-                <option value="">{t.profileBody.activityUnset}</option>
-                {ACTIVITY_LEVELS.map((level) => (
-                  <option key={level} value={level}>
-                    {t.profileBody.activityLevels[level]}
-                  </option>
-                ))}
-              </NativeSelect>
-            </div>
-          </>
+        {numberField(
+          'body-heightCm',
+          t.profileBody.height,
+          height,
+          setHeight,
+          prefs?.heightCm,
+          (n) => ({
+            heightCm: n,
+          }),
         )}
+        {numberField(
+          'body-birthYear',
+          t.profileBody.birthYear,
+          birthYear,
+          setBirthYear,
+          prefs?.birthYear,
+          (n) => ({ birthYear: n }),
+        )}
+        <div className="space-y-1.5">
+          <Label htmlFor="body-sex" className="text-[0.8125rem] font-semibold">
+            {t.profileBody.sex}
+          </Label>
+          <NativeSelect
+            id="body-sex"
+            value={sex}
+            onChange={(e) => {
+              const next = e.target.value as BiologicalSex | '';
+              setSex(next);
+              void persist({ sex: next || null }, t.profileBody.sex);
+            }}
+          >
+            <option value="">{t.profileBody.sexUnset}</option>
+            <option value="female">{t.profileBody.sexFemale}</option>
+            <option value="male">{t.profileBody.sexMale}</option>
+          </NativeSelect>
+        </div>
+        {numberField(
+          'body-bodyFatPct',
+          t.profileBody.bodyFat,
+          bodyFat,
+          setBodyFat,
+          prefs?.bodyFatPct,
+          (n) => ({ bodyFatPct: n }),
+        )}
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="body-activityLevel" className="text-[0.8125rem] font-semibold">
+            {t.profileBody.activityLevel}
+          </Label>
+          <NativeSelect
+            id="body-activityLevel"
+            value={activityLevel}
+            onChange={(e) => {
+              const next = e.target.value as ActivityLevel | '';
+              setActivityLevel(next);
+              void persist({ activityLevel: next || null }, t.profileBody.activityLevel);
+            }}
+          >
+            <option value="">{t.profileBody.activityUnset}</option>
+            {ACTIVITY_LEVELS.map((level) => (
+              <option key={level} value={level}>
+                {t.profileBody.activityLevels[level]}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
       </div>
 
-      {signedIn && (
-        <ul className="text-muted-foreground list-none space-y-1 text-[0.8125rem]">
-          <li>{t.profileBody.bodyFatHint}</li>
-          <li>{t.profileBody.activityHint}</li>
-        </ul>
-      )}
+      <ul className="text-muted-foreground list-none space-y-1 text-[0.8125rem]">
+        <li>{t.profileBody.bodyFatHint}</li>
+        <li>{t.profileBody.activityHint}</li>
+      </ul>
 
       <p
         role="status"
@@ -253,11 +247,10 @@ export function ProfileHealthCard() {
   );
 }
 
-/** Profile → Nutrition goals (signed-in users; goals are stored on the account). */
+/** Profile → Nutrition goals (on the account when signed in, on this device for guests). */
 export function ProfileNutritionGoalsCard() {
-  const { user, authMode } = useAuth();
+  const { user } = useAuth();
   const { t } = useLocale();
-  if (authMode !== 'AUTHENTICATED') return null;
   const prefs = user?.preferences;
   // Remount the form when the saved values change (e.g. after saving or on another device).
   const key = JSON.stringify([
