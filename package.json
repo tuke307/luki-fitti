@@ -53,6 +53,7 @@
   },
   "packageManager": "yarn@1.22.22",
   "resolutions": {
+    "sharp": "0.35.5",
     "typescript": "6.0.3"
   }
 }

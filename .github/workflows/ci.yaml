@@ -158,6 +158,9 @@ jobs:
           POSTGRES_DB=luki_fitti
           EOF
 
+      # The seed script imports the built workspace packages (logger, common, prisma client).
+      - run: yarn turbo run build --filter='./packages/*'
+
       - name: Run database migrations
         run: yarn workspace @luki-fitti/database db:deploy:local
 
