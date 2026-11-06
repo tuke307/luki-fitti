@@ -2,11 +2,11 @@ import SwiftUI
 import LukiFittiModels
 import LukiFittiDesign
 import LukiFittiDomain
-import LukiFittiAPI
 
 /// Re-use foods or whole entries from earlier meals. Stays open so several picks can be added.
 struct HistoryPickerSheet: View {
-    let api: APIClient
+    /// Server picks when signed in, picks from this device's entries otherwise.
+    let load: (String?) async throws -> NutritionHistoryPicksDto
     let onAdd: ([MealItemDto]) -> Void
 
     private enum Mode: Hashable { case entries, foods }
@@ -230,7 +230,7 @@ struct HistoryPickerSheet: View {
         do {
             if hasLoadedOnce { try await Task.sleep(for: .milliseconds(250)) }
             hasLoadedOnce = true
-            let fetched = try await api.fetchHistoryPicks(query: query.isEmpty ? nil : query)
+            let fetched = try await load(query.isEmpty ? nil : query)
             try Task.checkCancellation()
             if mode == nil { mode = fetched.entries.isEmpty ? .foods : .entries }
             picks = fetched

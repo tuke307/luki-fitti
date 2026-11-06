@@ -1060,6 +1060,7 @@ public struct LukiFittiIOSApp: App {
         WindowGroup {
             AppShellView(viewModel: viewModel)
                 .environment(\.lukiLocale, viewModel.locale)
+                .lukiAppearance(viewModel.store.preferences.theme)
                 .onChange(of: viewModel.store.activeSession, initial: true) {
                     viewModel.syncLiveActivity()
                 }
