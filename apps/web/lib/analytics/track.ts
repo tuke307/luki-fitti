@@ -3,7 +3,6 @@ import {
   stripUrlQuery,
   type AnalyticsEventName,
 } from '@luki-fitti/common/schemas';
-import { isAnalyticsOptedOut } from './opt-out';
 
 /**
  * Same-origin first-party collector (NestJS, see apps/api web-analytics module). The browser
@@ -61,7 +60,9 @@ export function buildPageviewPayload(
   if (url.length > ANALYTICS_MAX_URL_LENGTH || containsTokenLikeSegment(url)) return null;
 
   const safeReferrer = referrer ? sanitizeReferrer(referrer, currentOrigin) : undefined;
-  return safeReferrer ? { type: 'pageview', url, referrer: safeReferrer } : { type: 'pageview', url };
+  return safeReferrer
+    ? { type: 'pageview', url, referrer: safeReferrer }
+    : { type: 'pageview', url };
 }
 
 /** Builds the collector payload for a custom event (current path, undefined values dropped). */
@@ -81,14 +82,17 @@ export function buildEventPayload(
       typeof value === 'string' ? value.slice(0, 100) : value,
     ]);
   return entries.length > 0
-    ? { type: 'event', name, url: safeUrl.slice(0, ANALYTICS_MAX_URL_LENGTH), data: Object.fromEntries(entries) }
+    ? {
+        type: 'event',
+        name,
+        url: safeUrl.slice(0, ANALYTICS_MAX_URL_LENGTH),
+        data: Object.fromEntries(entries),
+      }
     : { type: 'event', name, url: safeUrl.slice(0, ANALYTICS_MAX_URL_LENGTH) };
 }
 
 function isTrackingEnabled(): boolean {
-  if (typeof window === 'undefined') return false;
-  if (process.env.NODE_ENV !== 'production') return false;
-  return !isAnalyticsOptedOut();
+  return typeof window !== 'undefined' && process.env.NODE_ENV === 'production';
 }
 
 function send(payload: PageviewPayload | EventPayload): void {
@@ -108,7 +112,7 @@ function send(payload: PageviewPayload | EventPayload): void {
 
 let hasTrackedFirstPageview = false;
 
-/** Sends an anonymous pageview. No-op on the server, outside production and when opted out. */
+/** Sends an anonymous pageview. No-op on the server and outside production. */
 export function trackPageview(path: string): void {
   if (!isTrackingEnabled()) return;
 
@@ -121,8 +125,8 @@ export function trackPageview(path: string): void {
 }
 
 /**
- * Sends an anonymous custom event (name must be in ANALYTICS_EVENT_NAMES). No-op on the server,
- * outside production and when opted out. Never pass PII or health/body data.
+ * Sends an anonymous custom event (name must be in ANALYTICS_EVENT_NAMES). No-op on the server
+ * and outside production. Never pass PII or health/body data.
  */
 export function trackEvent(name: AnalyticsEventName, data: AnalyticsEventData = {}): void {
   if (!isTrackingEnabled()) return;

@@ -586,6 +586,9 @@ export const deFeatures: Widen<typeof enFeatures> = {
     images: 'Bilder',
   },
   dataImport: {
+    signInHint: 'Melde dich an, um eine Datei zu importieren.',
+    guidesTitle: 'Von anderen Apps',
+    guidesFooter: 'Schritt-für-Schritt-Anleitungen, um deine Daten in LukiFitti zu übernehmen.',
     intro:
       'Importiere ein LukiFitti-Backup oder eine Datei aus einer der Umzugsanleitungen. Was schon in deinem Konto ist, wird übersprungen – dieselbe Datei zweimal zu importieren ändert nichts.',
     formatHelp: 'Welche Datei kann ich importieren?',

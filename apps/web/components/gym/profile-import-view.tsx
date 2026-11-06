@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   BookOpen,
@@ -50,11 +50,6 @@ import {
   requestWorkoutNotificationPermission,
   triggerWorkoutNotification,
 } from '@/lib/notifications/notification-manager';
-import {
-  isAnalyticsOptedOut,
-  setAnalyticsOptOut,
-  subscribeAnalyticsOptOut,
-} from '@/lib/analytics/opt-out';
 import { type LanguagePreference, WeightUnit } from '@luki-fitti/common/enums';
 import { ProfileHealthCard, ProfileNutritionGoalsCard } from './profile-body-card';
 import { AiUsageView } from './ai-usage/ai-usage-view';
@@ -101,7 +96,6 @@ const SETTINGS_PAGES = [
   'aiUsage',
   'export',
   'import',
-  'usage',
   'sources',
 ] as const;
 
@@ -112,7 +106,6 @@ const AUTH_ONLY_PAGES: ReadonlySet<SettingsPage> = new Set([
   'aiKey',
   'aiModels',
   'aiUsage',
-  'import',
 ]);
 
 const REST_OPTIONS = [60, 75, 90, 120, 150, 180] as const;
@@ -124,20 +117,6 @@ interface ProfileImportViewProps {
 }
 
 const HISTORY_KEY = 'profilePage';
-
-/** Step-by-step migration guides in the public repo. App names stay untranslated. */
-const IMPORT_GUIDES = [
-  {
-    name: 'GymLife',
-    url: 'https://github.com/tuke307/luki-fitti/blob/main/docs/gymlife-import.md',
-    testId: 'import-guide-gymlife',
-  },
-  {
-    name: 'Alpha Progression',
-    url: 'https://github.com/tuke307/luki-fitti/blob/main/docs/alpha-progression-import.md',
-    testId: 'import-guide-alpha-progression',
-  },
-] as const;
 
 function isSettingsPage(value: unknown): value is SettingsPage {
   return typeof value === 'string' && (SETTINGS_PAGES as readonly string[]).includes(value);
@@ -188,11 +167,6 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
   const headingRef = useRef<HTMLHeadingElement>(null);
   const lastOpened = useRef<SettingsPage | null>(null);
   const focusAfterChange = useRef(false);
-  const analyticsOptedOut = useSyncExternalStore(
-    subscribeAnalyticsOptOut,
-    isAnalyticsOptedOut,
-    () => false,
-  );
 
   const allTemplatesCount =
     folders.reduce((acc, f) => acc + f.templates.length, 0) + unfiledTemplates.length;
@@ -316,9 +290,8 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
     aiKey: t.profile.rowAiKey,
     aiModels: t.profile.rowAiModels,
     aiUsage: t.profile.rowAiUsage,
-    export: t.profile.rowExportBackup,
-    import: t.profile.rowImportFile,
-    usage: t.profile.rowUsageStats,
+    export: t.profile.rowDataExport,
+    import: t.profile.rowDataImport,
     sources: t.profile.rowDataSources,
   };
 
@@ -704,7 +677,7 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
           </Card>
         );
       case 'import':
-        return <ImportPage />;
+        return <ImportPage isAuthenticated={isAuthenticated} />;
       case 'export':
         return (
           <Card className="space-y-4 rounded-[1.25rem] p-5">
@@ -770,18 +743,6 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
               </Button>
             </div>
           </Card>
-        );
-      case 'usage':
-        return (
-          <SettingsSection footer={t.profile.usageStatsSub}>
-            {/* Anonymous usage statistics opt-out (device-local, stored in localStorage) */}
-            <SettingsSwitchRow
-              title={t.profile.usageStatsLabel}
-              checked={!analyticsOptedOut}
-              onCheckedChange={(checked) => setAnalyticsOptOut(!checked)}
-              data-testid="usage-stats-switch"
-            />
-          </SettingsSection>
         );
       case 'sources':
         return (
@@ -931,43 +892,20 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
               </SettingsSection>
             )}
 
-            <SettingsSection title={t.profile.dataSectionTitle} footer={t.profile.dataGuidesFooter}>
+            <SettingsSection title={t.profile.dataSectionTitle}>
+              <SettingsRow
+                onClick={() => openPage('import')}
+                data-testid="settings-row-import"
+                icon={Upload}
+                tone="stretch"
+                title={t.profile.rowDataImport}
+              />
               <SettingsRow
                 onClick={() => openPage('export')}
                 data-testid="settings-row-export"
                 icon={Download}
                 tone="stretch"
-                title={t.profile.rowExportBackup}
-              />
-              {isAuthenticated && (
-                <SettingsRow
-                  onClick={() => openPage('import')}
-                  data-testid="settings-row-import"
-                  icon={Upload}
-                  tone="stretch"
-                  title={t.profile.rowImportFile}
-                />
-              )}
-              {IMPORT_GUIDES.map((guide) => (
-                <SettingsRow
-                  key={guide.testId}
-                  onClick={() => window.open(guide.url, '_blank', 'noopener,noreferrer')}
-                  data-testid={guide.testId}
-                  icon={BookOpen}
-                  tone="muted"
-                  title={guide.name}
-                />
-              ))}
-            </SettingsSection>
-
-            <SettingsSection title={t.profile.aboutSectionTitle}>
-              <SettingsRow
-                onClick={() => openPage('usage')}
-                data-testid="settings-row-usage"
-                icon={ShieldCheck}
-                tone="muted"
-                title={t.profile.rowUsageStats}
-                value={analyticsOptedOut ? t.profile.disabledOption : t.profile.enabledOption}
+                title={t.profile.rowDataExport}
               />
               <SettingsRow
                 onClick={() => openPage('sources')}
