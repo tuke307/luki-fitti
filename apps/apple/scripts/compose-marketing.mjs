@@ -86,8 +86,29 @@ async function screenCutout(page, frameUri) {
   }, frameUri);
 }
 
+/**
+ * CSS iPad bezel used when no Apple frame file exists: dark graphite rounded rect,
+ * bezel ~2.2% of width, outer radius ~5.5%, screen clipped to the inner radius.
+ */
+function bezelComposite(srcUri, dims, width) {
+  const b = Math.round(width * 0.022);
+  const innerW = width - 2 * b;
+  const innerH = Math.round((innerW * dims.h) / dims.w);
+  const h = innerH + 2 * b;
+  const outerR = Math.round(width * 0.055);
+  return {
+    html: `<div style="width:${width}px;height:${h}px;box-sizing:border-box;background:#1c1c1e;border-radius:${outerR}px;padding:${b}px;box-shadow:0 0 0 1px rgba(255,255,255,0.09);">
+      <div style="width:100%;height:100%;border-radius:${outerR - b}px;overflow:hidden;">
+        <img src="${srcUri}" style="width:100%;height:100%;display:block;object-fit:cover;" />
+      </div>
+    </div>`,
+    w: width,
+    h,
+  };
+}
+
 /** Compose shot+frame in the page; returns cutout-aware <img> markup for the composite. */
-async function composite(page, { srcUri, frame, fallbackWidth = LAND_W * 1.6 }) {
+async function composite(page, { srcUri, frame, fallbackWidth = LAND_W * 1.6, bezel = false }) {
   if (!frame) {
     const dims = await page.evaluate(async (uri) => {
       const img = new Image();
@@ -96,6 +117,7 @@ async function composite(page, { srcUri, frame, fallbackWidth = LAND_W * 1.6 }) 
       return { w: img.naturalWidth, h: img.naturalHeight };
     }, srcUri);
     if (!dims.w) return null;
+    if (bezel) return bezelComposite(srcUri, dims, fallbackWidth);
     const h = Math.round((fallbackWidth * dims.h) / dims.w);
     return {
       html: `<img src="${srcUri}" style="width:${fallbackWidth}px;height:${h}px;border-radius:64px;display:block;object-fit:cover;" />`,
@@ -299,7 +321,8 @@ async function main() {
         const composed = await composite(page, {
           srcUri: dataUri(src),
           frame,
-          fallbackWidth: Math.round(canvasW * 0.8),
+          fallbackWidth: Math.round(canvasW * (device.bezel ? 1.0 : 0.8)),
+          bezel: device.bezel === true,
         });
         if (!composed) {
           console.warn(`skip ${lang} ${deviceId} ${shot.id} — screenshot failed to decode`);
@@ -308,21 +331,28 @@ async function main() {
 
         // Everything is derived from the canvas (no fixed px): the smaller iPhone
         // canvas is the 6.9" layout scaled down, so every size shows the same screen
-        // region with the same relative gaps.
+        // region with the same relative gaps. The device is positioned absolutely —
+        // centering an unscaled flex child made the 6.3 layout non-proportional.
         const s = canvasW / BASE_W;
         const padTop = Math.round(170 * s);
         const h1 = Math.round(88 * s);
         const sub = Math.round(46 * s);
         const gap = Math.round(26 * s);
-        const scale = Math.min((canvasW * 0.85) / composed.w, (canvasH * 0.8) / composed.h);
+        const frac = device.deviceFrac ?? 0.85;
+        const scale = Math.min((canvasW * frac) / composed.w, (canvasH * 1.1) / composed.h);
+        const visW = composed.w * scale;
+        const visH = composed.h * scale;
+        const bleed = Math.round(canvasH * 0.081);
+        const textBottom = padTop + Math.round(h1 * 1.25) + gap + Math.round(sub * 1.25);
+        const devTop = Math.max(canvasH - visH + bleed, textBottom + Math.round(canvasH * 0.03));
 
         await page.setViewportSize({ width: canvasW, height: canvasH });
         await page.setContent(
-          `<!doctype html><body style="margin:0;width:${canvasW}px;height:${canvasH}px;background:#0a0a0a;font-family:-apple-system,'SF Pro Display',system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;padding-top:${padTop}px;box-sizing:border-box;">
+          `<!doctype html><body style="margin:0;width:${canvasW}px;height:${canvasH}px;background:#0a0a0a;font-family:-apple-system,'SF Pro Display',system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;padding-top:${padTop}px;box-sizing:border-box;position:relative;">
           <h1 style="color:${ACCENT};font-size:${h1}px;font-weight:700;margin:0;text-align:center;letter-spacing:-0.5px;text-wrap:balance;">${shot.headline[lang]}</h1>
           <p style="color:#a0a0a0;font-size:${sub}px;margin:${gap}px 0 0;text-align:center;text-wrap:pretty;">${shot.subline[lang]}</p>
-          <div style="flex:1;display:flex;align-items:center;justify-content:center;">
-            <div style="transform:scale(${scale});transform-origin:center;">${composed.html}</div>
+          <div style="position:absolute;left:${Math.round((canvasW - visW) / 2)}px;top:${Math.round(devTop)}px;width:${Math.round(visW)}px;height:${Math.round(visH)}px;">
+            <div style="transform:scale(${scale});transform-origin:top left;">${composed.html}</div>
           </div>
         </body>`,
           { waitUntil: 'load' },
@@ -399,6 +429,7 @@ async function main() {
             srcUri: dataUri(ipadSrc),
             frame: ipadFrame,
             fallbackWidth: IPAD_LAND_W * 1.6,
+            bezel: ipadDevice.bezel === true,
           });
           if (ipadComposed) {
             const landDir = path.join(LANDING_DIR, lang, 'ipad');
@@ -452,7 +483,12 @@ async function main() {
         const frame = await frameFor(
           shot.frame && deviceId === 'watch' ? shot.frame : device.frame,
         );
-        composed[deviceId] = await composite(page, { srcUri: dataUri(src), frame });
+        composed[deviceId] = await composite(page, {
+          srcUri: dataUri(src),
+          frame,
+          fallbackWidth: 2000,
+          bezel: device.bezel === true,
+        });
       }
       if (missingIpad) console.warn(`creative ${lang}: no iPad raw — iPhone + Watch only`);
       if (!composed['iphone-6.9']) {
@@ -464,26 +500,31 @@ async function main() {
       const phoneC = composed['iphone-6.9'];
       const watchC = composed['watch'];
       const rightW = Math.round(contentW * 0.62);
-      const phoneH = Math.round(contentH * 0.96);
-      const ipadH = ipadC ? Math.round(contentH * 0.78) : 0;
-      const watchW = watchC ? Math.round(rightW * 0.3) : 0;
       const headFont = Math.round(ch * 0.065);
       const glowW = Math.round(rightW * 1.15);
 
-      const deviceDiv = (c, h, style) =>
+      // iPad centred at the back (≈78% of safe height), iPhone in front (≈70%)
+      // overlapping the iPad's left ~35%, Watch (≈28%) at its lower-right corner.
+      const place = (c, h, style) =>
         `<div style="position:absolute;${style}"><div style="transform:scale(${h / c.h});transform-origin:bottom left;">${c.html}</div></div>`;
-      const watchDiv = (c, w, style) =>
-        `<div style="position:absolute;${style}"><div style="transform:scale(${w / c.w});transform-origin:bottom left;">${c.html}</div></div>`;
+
+      const ipadH = ipadC ? Math.round(sh * 0.78) : 0;
+      const phoneH = Math.round(sh * 0.7);
+      const watchH = watchC ? Math.round(sh * 0.28) : 0;
+      const ipadW = ipadC ? Math.round((ipadC.w * ipadH) / ipadC.h) : 0;
+      const phoneW = Math.round((phoneC.w * phoneH) / phoneC.h);
+      const watchW = watchC ? Math.round((watchC.w * watchH) / watchC.h) : 0;
+
+      const ipadX = Math.round((rightW - ipadW) / 2);
+      const phoneX = ipadC
+        ? Math.max(0, Math.round(ipadX + ipadW * 0.35 - phoneW))
+        : Math.round((rightW - phoneW) / 2);
+      const watchX = ipadC ? Math.round(ipadX + ipadW - watchW * 0.6) : Math.round(rightW - watchW);
 
       let devicesHtml = '';
-      if (ipadC) devicesHtml += deviceDiv(ipadC, ipadH, 'left:0;bottom:0;');
-      devicesHtml += deviceDiv(
-        phoneC,
-        phoneH,
-        `left:${Math.round(rightW * (ipadC ? 0.32 : 0.2))};bottom:0;`,
-      );
-      if (watchC)
-        devicesHtml += watchDiv(watchC, watchW, `right:0;bottom:${Math.round(contentH * 0.06)};`);
+      if (ipadC) devicesHtml += place(ipadC, ipadH, `left:${ipadX}px;bottom:0;`);
+      devicesHtml += place(phoneC, phoneH, `left:${phoneX}px;bottom:0;`);
+      if (watchC) devicesHtml += place(watchC, watchH, `left:${watchX}px;bottom:0;z-index:3;`);
 
       const outDir = path.join(APPSTORE, LOCALE_DIR[lang], 'creative');
       fs.mkdirSync(outDir, { recursive: true });
