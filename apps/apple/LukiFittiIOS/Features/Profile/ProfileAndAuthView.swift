@@ -348,12 +348,12 @@ public struct ProfileAndAuthView: View {
             NavigationLink {
                 NutritionGoalsView(viewModel: viewModel)
             } label: {
-                SettingsRow(
-                    tr("Nutrition goals"),
-                    systemImage: "fork.knife",
-                    tint: LukiColors.success,
-                    value: prefs.dailyKcalGoal.map { tr("%d kcal", $0) } ?? tr("Not set")
-                )
+                let goalValue = prefs.dailyKcalGoal.map { tr("%d kcal", $0) } ?? tr("Not set")
+                // A long value ("Nicht angegeben") would hyphenate the title; then it moves under it.
+                ViewThatFits(in: .horizontal) {
+                    SettingsRow(tr("Nutrition goals"), systemImage: "fork.knife", tint: LukiColors.success, value: goalValue)
+                    SettingsRow(tr("Nutrition goals"), systemImage: "fork.knife", tint: LukiColors.success, subtitle: goalValue)
+                }
             }
             .accessibilityIdentifier("ios.profile.nutritionGoalsRow")
 
