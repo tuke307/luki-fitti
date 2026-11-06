@@ -160,8 +160,11 @@ jobs:
           POSTGRES_DB=luki_fitti
           EOF
 
-      # The seed script imports the built workspace packages (logger, common, prisma client).
-      - run: yarn turbo run build --filter='./packages/*'
+      # Builds everything but the Swift package: the seed script imports the built
+      # workspace packages, and the e2e job serves the production api, email-worker
+      # and web (`next start`) instead of `yarn dev`. Runs after the env files are
+      # written so `next build` picks up apps/web/.env.local.
+      - run: yarn turbo run build --filter='!@luki-fitti/apple'
 
       - name: Run database migrations
         run: yarn workspace @luki-fitti/database db:deploy:local
@@ -200,8 +203,20 @@ jobs:
       - name: Install Playwright browsers
         run: yarn workspace @luki-fitti/web playwright install --with-deps chromium
 
+      - name: Start reverse proxy
+        run: >-
+          docker run -d --name e2e-proxy --network host
+          -v "$PWD/Caddyfile.e2e:/etc/caddy/Caddyfile:ro"
+          caddy:2-alpine
+
       - name: Run Playwright e2e tests (chromium)
+        env:
+          PLAYWRIGHT_PROD_SERVER: '1'
         run: yarn workspace @luki-fitti/web test:e2e:chromium
+
+      - name: Dump proxy logs on failure
+        if: failure()
+        run: docker logs e2e-proxy || true
 
       - name: Upload Playwright artifacts
         if: failure()

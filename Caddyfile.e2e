@@ -1,0 +1,13 @@
+{
+	admin off
+	auto_https off
+}
+
+:3000 {
+	handle /api/* {
+		reverse_proxy localhost:3001
+	}
+	handle {
+		reverse_proxy localhost:3100
+	}
+}
