@@ -45,7 +45,10 @@ interface InSessionCase {
 
 /** Shared with the Swift port (`ProgressionInSessionTests.swift`). */
 const CASES: InSessionCase[] = JSON.parse(
-  readFileSync(new URL('./__fixtures__/progression-in-session-cases.json', import.meta.url), 'utf8'),
+  readFileSync(
+    new URL('./__fixtures__/progression-in-session-cases.json', import.meta.url),
+    'utf8',
+  ),
 );
 
 function buildHistorySession(

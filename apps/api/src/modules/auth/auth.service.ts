@@ -599,42 +599,46 @@ export class AuthService {
     };
   }
 
-  private formatUserDto(user: {
-    id: string;
-    email: string;
-    name: string | null;
-    emailVerified?: boolean;
-    lastLoginAt: Date | null;
-    createdAt: Date;
-    preferences?: {
+  private formatUserDto(
+    user: {
       id: string;
-      userId: string;
-      weightUnit: WeightUnit | `${WeightUnit}`;
-      distanceUnit: DistanceUnit | `${DistanceUnit}`;
-      defaultRestSeconds: number;
-      theme: string;
-      language?: string;
-      restTimerSound: boolean;
-      notificationsEnabled?: boolean;
-      exerciseSuggestionsEnabled?: boolean;
-      weeklyGoalSessions: number;
-      bodyWeightKg?: number | null;
-      heightCm?: number | null;
-      birthYear?: number | null;
-      sex?: string | null;
-      bodyFatPct?: number | null;
-      activityLevel?: string | null;
-      dailyKcalGoal?: number | null;
-      proteinGoalG?: number | null;
-      carbsGoalG?: number | null;
-      fatGoalG?: number | null;
-      weighInReminderEnabled?: boolean;
-      weighInReminderWeekday?: number;
-      weighInReminderMinutes?: number;
-      aiModels?: unknown;
-    } | null;
-    permissions?: string[];
-  }, features: FeatureGrant[] = [], aiKeyConfigured = false): UserDto {
+      email: string;
+      name: string | null;
+      emailVerified?: boolean;
+      lastLoginAt: Date | null;
+      createdAt: Date;
+      preferences?: {
+        id: string;
+        userId: string;
+        weightUnit: WeightUnit | `${WeightUnit}`;
+        distanceUnit: DistanceUnit | `${DistanceUnit}`;
+        defaultRestSeconds: number;
+        theme: string;
+        language?: string;
+        restTimerSound: boolean;
+        notificationsEnabled?: boolean;
+        exerciseSuggestionsEnabled?: boolean;
+        weeklyGoalSessions: number;
+        bodyWeightKg?: number | null;
+        heightCm?: number | null;
+        birthYear?: number | null;
+        sex?: string | null;
+        bodyFatPct?: number | null;
+        activityLevel?: string | null;
+        dailyKcalGoal?: number | null;
+        proteinGoalG?: number | null;
+        carbsGoalG?: number | null;
+        fatGoalG?: number | null;
+        weighInReminderEnabled?: boolean;
+        weighInReminderWeekday?: number;
+        weighInReminderMinutes?: number;
+        aiModels?: unknown;
+      } | null;
+      permissions?: string[];
+    },
+    features: FeatureGrant[] = [],
+    aiKeyConfigured = false,
+  ): UserDto {
     const rawLang = user.preferences?.language;
     const normalizedLang: LanguagePreference =
       rawLang === 'en' || rawLang === 'de' || rawLang === 'system' ? rawLang : 'system';
@@ -691,10 +695,7 @@ export class AuthService {
   /** Formats a user: enabled features (global switches) plus whether they have a usable key. */
   private async toUserDto(user: Parameters<AuthService['formatUserDto']>[0]): Promise<UserDto> {
     const [features, aiKeyConfigured] = this.appSettings
-      ? await Promise.all([
-          this.appSettings.enabledFeatures(),
-          this.appSettings.hasAiKey(user.id),
-        ])
+      ? await Promise.all([this.appSettings.enabledFeatures(), this.appSettings.hasAiKey(user.id)])
       : [[], false];
     return this.formatUserDto(user, features, aiKeyConfigured);
   }

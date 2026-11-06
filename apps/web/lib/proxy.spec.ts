@@ -22,7 +22,10 @@ function decision(res: { headers: Headers }): { kind: string; dest?: string } {
 
 test('site host: / rewrites to /site/de', async () => {
   const res = await proxy(req('luki-fitti.tony-luke.de', '/'));
-  assert.deepEqual(decision(res), { kind: 'rewrite', dest: 'https://luki-fitti.tony-luke.de/site/de' });
+  assert.deepEqual(decision(res), {
+    kind: 'rewrite',
+    dest: 'https://luki-fitti.tony-luke.de/site/de',
+  });
 });
 
 test('site host: legal paths rewrite to /site/*', async () => {

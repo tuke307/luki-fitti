@@ -74,7 +74,8 @@ export function estimateCostPerRun(
 ): number | null {
   if (!avg) return null;
   return (
-    (avg.promptTokens * pricing.promptPerMTokUsd + avg.completionTokens * pricing.completionPerMTokUsd) /
+    (avg.promptTokens * pricing.promptPerMTokUsd +
+      avg.completionTokens * pricing.completionPerMTokUsd) /
       1_000_000 +
     images * (pricing.imageUsd ?? 0)
   );
@@ -85,10 +86,16 @@ export function averageTokens(
 ): { promptTokens: number; completionTokens: number } | null {
   if (runs.length === 0) return null;
   const sum = runs.reduce(
-    (acc, r) => ({ promptTokens: acc.promptTokens + r.promptTokens, completionTokens: acc.completionTokens + r.completionTokens }),
+    (acc, r) => ({
+      promptTokens: acc.promptTokens + r.promptTokens,
+      completionTokens: acc.completionTokens + r.completionTokens,
+    }),
     { promptTokens: 0, completionTokens: 0 },
   );
-  return { promptTokens: sum.promptTokens / runs.length, completionTokens: sum.completionTokens / runs.length };
+  return {
+    promptTokens: sum.promptTokens / runs.length,
+    completionTokens: sum.completionTokens / runs.length,
+  };
 }
 
 /** Sorted by estimated cost (unknown last), then name. */
@@ -131,7 +138,10 @@ export class AiModelsService {
   ): Promise<string> {
     const choice = (await this.choices(userId))[skill];
     if (!choice || choice === defaultModel) return defaultModel;
-    const [{ models }, settings] = await Promise.all([this.catalog.catalog(), this.appSettings.get()]);
+    const [{ models }, settings] = await Promise.all([
+      this.catalog.catalog(),
+      this.appSettings.get(),
+    ]);
     return resolvePrimaryModel(
       choice,
       defaultModel,
@@ -174,7 +184,12 @@ export class AiModelsService {
           ...m,
           estimatedCostPerRunUsd: estimateCostPerRun(avg, m.pricing, imagesPerRun(skill)),
         });
-        const eligible = eligibleModels(catalog.models, skill, keySource, settings.userModelAllowlist);
+        const eligible = eligibleModels(
+          catalog.models,
+          skill,
+          keySource,
+          settings.userModelAllowlist,
+        );
         const defaultModel = defaultModelFor(skill, settings);
         const selectedModel = choices[skill] ?? null;
         const effectiveModel = resolvePrimaryModel(selectedModel, defaultModel, eligible);

@@ -1,10 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { resetOfflineStore } from './helpers/offline-store.js';
-import {
-  chooseFromAddMenu,
-  gotoWorkoutsTab,
-  startWorkoutByName,
-} from './helpers/workouts.js';
+import { chooseFromAddMenu, gotoWorkoutsTab, startWorkoutByName } from './helpers/workouts.js';
 
 const PUSH = 'Push — Chest, Shoulders & Triceps';
 

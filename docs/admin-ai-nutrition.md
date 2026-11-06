@@ -105,12 +105,12 @@ optional `mealType`, `hint`):
 
 ## Configuration
 
-| Variable                                                                                                                                | Description                                         |
-| :-------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------- |
+| Variable                                                                                                                                | Description                                                                                       |
+| :-------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------ |
 | `AI_KEY_ENCRYPTION_KEY`                                                                                                                 | 32-byte master key for per-user OpenRouter keys (`openssl rand -base64 32`); AI is off without it |
-| `AI_KEY_ENCRYPTION_KEY_PREVIOUS` / `AI_KEY_ENCRYPTION_KEY_VERSION`                                                                      | Rotation: old key + bumped version; keys are re-encrypted lazily |
-| `OPENROUTER_BASE_URL` / `OPENROUTER_TIMEOUT_MS`                                                                                         | Optional overrides (https only outside local tests) |
-| `SEAWEEDFS_ENDPOINT`, `SEAWEEDFS_PORT`, `SEAWEEDFS_USE_SSL`, `SEAWEEDFS_ACCESS_KEY_API`, `SEAWEEDFS_SECRET_KEY_API`, `SEAWEEDFS_BUCKET` | Meal photo storage (same names as kds/marienmuehle) |
+| `AI_KEY_ENCRYPTION_KEY_PREVIOUS` / `AI_KEY_ENCRYPTION_KEY_VERSION`                                                                      | Rotation: old key + bumped version; keys are re-encrypted lazily                                  |
+| `OPENROUTER_BASE_URL` / `OPENROUTER_TIMEOUT_MS`                                                                                         | Optional overrides (https only outside local tests)                                               |
+| `SEAWEEDFS_ENDPOINT`, `SEAWEEDFS_PORT`, `SEAWEEDFS_USE_SSL`, `SEAWEEDFS_ACCESS_KEY_API`, `SEAWEEDFS_SECRET_KEY_API`, `SEAWEEDFS_BUCKET` | Meal photo storage (same names as kds/marienmuehle)                                               |
 
 Models, switches, daily limit and photo retention are edited in **Admin → AI** (stored in
 `AppSettings`). Defaults: `openai/gpt-6.1-terra` for the workout builder and

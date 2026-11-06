@@ -23,10 +23,7 @@ async function exportOpenApiSpec() {
 
   const document = SwaggerModule.createDocument(app, config);
 
-  const outDir = path.resolve(
-    process.cwd(),
-    '../apple/Packages/LukiFittiKit/Sources/LukiFittiAPI',
-  );
+  const outDir = path.resolve(process.cwd(), '../apple/Packages/LukiFittiKit/Sources/LukiFittiAPI');
   await fs.mkdir(outDir, { recursive: true });
   const outFile = path.join(outDir, 'openapi.json');
   await fs.writeFile(outFile, JSON.stringify(document, null, 2), 'utf8');

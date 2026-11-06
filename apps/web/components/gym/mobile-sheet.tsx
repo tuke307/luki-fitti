@@ -115,9 +115,7 @@ export function MobileSheet({
         <DialogContent className={className} data-testid={rest['data-testid']}>
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
-            <DialogDescription className="sr-only">
-              {description ?? title}
-            </DialogDescription>
+            <DialogDescription className="sr-only">{description ?? title}</DialogDescription>
           </DialogHeader>
           {children}
           {(!hideCancel || confirm) && (

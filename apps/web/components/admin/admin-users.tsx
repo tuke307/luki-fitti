@@ -52,10 +52,7 @@ export function AdminUsers() {
       ? new Date(iso).toLocaleDateString(bcp47, { day: 'numeric', month: 'short', year: 'numeric' })
       : t.admin.never;
 
-  const update = async (
-    target: AdminUserDto,
-    patch: { permissions: AdminPermission[] },
-  ) => {
+  const update = async (target: AdminUserDto, patch: { permissions: AdminPermission[] }) => {
     const key = `${target.id}`;
     setPending(key);
     const previous = data;

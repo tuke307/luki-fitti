@@ -19,10 +19,10 @@ export class ToolRegistry {
     return names.map((name) => {
       const tool = this.tools.get(name);
       if (!tool) throw new Error(`Unknown AI tool: ${name}`);
-      const parameters = z.toJSONSchema(tool.input, { target: 'draft-7', unrepresentable: 'any' }) as Record<
-        string,
-        unknown
-      >;
+      const parameters = z.toJSONSchema(tool.input, {
+        target: 'draft-7',
+        unrepresentable: 'any',
+      }) as Record<string, unknown>;
       delete parameters.$schema;
       return { type: 'function', function: { name, description: tool.description, parameters } };
     });

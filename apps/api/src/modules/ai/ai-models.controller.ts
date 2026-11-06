@@ -13,7 +13,9 @@ export class AiModelsController {
   constructor(private readonly models: AiModelsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Eligible OpenRouter models per AI skill, with prices and cost estimates' })
+  @ApiOperation({
+    summary: 'Eligible OpenRouter models per AI skill, with prices and cost estimates',
+  })
   list(@CurrentUser() user: AuthenticatedUser): Promise<AiModelsDto> {
     return this.models.forUser(user.id);
   }

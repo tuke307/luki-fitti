@@ -24,7 +24,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** Muscles that are not trained on their own and should not be flagged as "weak". */
 const NON_TARGET_MUSCLES = new Set<MuscleGroup>([MuscleGroup.FULL_BODY, MuscleGroup.HIP_FLEXORS]);
 
-const tool = <T extends z.ZodType>(definition: AiTool<T>): AiTool => definition as unknown as AiTool;
+const tool = <T extends z.ZodType>(definition: AiTool<T>): AiTool =>
+  definition as unknown as AiTool;
 
 interface HistorySummary {
   weeks: number;
@@ -51,7 +52,11 @@ export class TrainingTools implements OnModuleInit {
         description:
           'Search the exercise catalog (English or German, typo tolerant). Returns ids you may use in the workout, with movement pattern and laterality (UNILATERAL = one side at a time, BILATERAL = both sides). Filter by muscle group, equipment and type.',
         input: z.object({
-          query: z.string().max(80).optional().describe('Free text, e.g. "incline press" or "Schrägbank"'),
+          query: z
+            .string()
+            .max(80)
+            .optional()
+            .describe('Free text, e.g. "incline press" or "Schrägbank"'),
           muscleGroup: z.enum(MuscleGroup).optional(),
           equipment: z.array(z.enum(EquipmentType)).max(6).optional(),
           exerciseType: z.enum(ExerciseType).default(ExerciseType.STRENGTH),
@@ -69,7 +74,7 @@ export class TrainingTools implements OnModuleInit {
       tool({
         name: 'get_training_history',
         description:
-          'The user\'s completed training over the last N weeks: working sets per muscle group, most used exercises with progress trend (progressing / plateau / grinding / regression), and recent workouts.',
+          "The user's completed training over the last N weeks: working sets per muscle group, most used exercises with progress trend (progressing / plateau / grinding / regression), and recent workouts.",
         input: z.object({ weeks: z.number().int().min(1).max(26).default(8) }),
         execute: (ctx, input) => this.trainingHistory(ctx, input.weeks),
       }),
@@ -89,7 +94,8 @@ export class TrainingTools implements OnModuleInit {
       }),
       tool({
         name: 'get_user_profile',
-        description: 'Training preferences: weight unit, default rest, weekly goal, saved workouts and equipment the user actually uses.',
+        description:
+          'Training preferences: weight unit, default rest, weekly goal, saved workouts and equipment the user actually uses.',
         input: z.object({}),
         execute: (ctx) => this.userProfile(ctx),
       }),
@@ -165,7 +171,11 @@ export class TrainingTools implements OnModuleInit {
       workoutsPerWeek: Math.round((summary.sessions.length / weeks) * 10) / 10,
       workingSetsPerMuscle: [...summary.muscleSets.entries()]
         .sort((a, b) => b[1] - a[1])
-        .map(([muscle, sets]) => ({ muscle, sets, setsPerWeek: Math.round((sets / weeks) * 10) / 10 })),
+        .map(([muscle, sets]) => ({
+          muscle,
+          sets,
+          setsPerWeek: Math.round((sets / weeks) * 10) / 10,
+        })),
       topExercises: [...summary.exercises.entries()]
         .sort((a, b) => b[1].sessions - a[1].sessions)
         .slice(0, 20)
@@ -189,11 +199,19 @@ export class TrainingTools implements OnModuleInit {
     const summary = await this.summarize(ctx.userId, weeks);
     const majors = Object.values(MuscleGroup).filter((m) => !NON_TARGET_MUSCLES.has(m));
     const volumes = majors.map((m) => ({ muscle: m, sets: summary.muscleSets.get(m) ?? 0 }));
-    const trained = volumes.filter((v) => v.sets > 0).map((v) => v.sets).sort((a, b) => a - b);
+    const trained = volumes
+      .filter((v) => v.sets > 0)
+      .map((v) => v.sets)
+      .sort((a, b) => a - b);
     const median = trained.length ? trained[Math.floor(trained.length / 2)]! : 0;
 
     const stalled = [...summary.exercises.entries()]
-      .map(([id, e]) => ({ id, name: e.name, muscle: e.muscle, ...this.trendFor(id, e.name, summary.allSessions) }))
+      .map(([id, e]) => ({
+        id,
+        name: e.name,
+        muscle: e.muscle,
+        ...this.trendFor(id, e.name, summary.allSessions),
+      }))
       .filter((e) => e.status !== 'PROGRESSING' && e.status !== 'NOT_ENOUGH_DATA');
 
     return {
@@ -201,7 +219,11 @@ export class TrainingTools implements OnModuleInit {
       hasEnoughData: summary.sessions.length >= 3,
       underTrainedMuscles: volumes
         .filter((v) => v.sets < median * 0.6)
-        .map((v) => ({ ...v, setsPerWeek: Math.round((v.sets / weeks) * 10) / 10, medianSets: median })),
+        .map((v) => ({
+          ...v,
+          setsPerWeek: Math.round((v.sets / weeks) * 10) / 10,
+          medianSets: median,
+        })),
       stalledExercises: stalled.slice(0, 10),
     };
   }
@@ -211,7 +233,12 @@ export class TrainingTools implements OnModuleInit {
     const [explicit, skipped, replaced] = await Promise.all([
       this.prisma.exerciseFeedback.findMany({
         where: { userId: ctx.userId },
-        select: { exerciseId: true, verdict: true, note: true, exercise: { select: { name: true } } },
+        select: {
+          exerciseId: true,
+          verdict: true,
+          note: true,
+          exercise: { select: { name: true } },
+        },
       }),
       this.prisma.sessionExercise.groupBy({
         by: ['exerciseId'],
@@ -227,15 +254,27 @@ export class TrainingTools implements OnModuleInit {
           replacedExerciseId: { not: null },
           session: { userId: ctx.userId, startedAt: { gte: since } },
         },
-        select: { replacedExerciseId: true, replacedExerciseName: true, exerciseId: true, exerciseNameSnapshot: true },
+        select: {
+          replacedExerciseId: true,
+          replacedExerciseName: true,
+          exerciseId: true,
+          exerciseNameSnapshot: true,
+        },
         take: 300,
       }),
     ]);
 
-    const swaps = new Map<string, { name: string; count: number; replacedWith: Map<string, string> }>();
+    const swaps = new Map<
+      string,
+      { name: string; count: number; replacedWith: Map<string, string> }
+    >();
     for (const r of replaced) {
       const id = r.replacedExerciseId as string;
-      const entry = swaps.get(id) ?? { name: r.replacedExerciseName ?? id, count: 0, replacedWith: new Map() };
+      const entry = swaps.get(id) ?? {
+        name: r.replacedExerciseName ?? id,
+        count: 0,
+        replacedWith: new Map(),
+      };
       entry.count += 1;
       if (r.exerciseId) entry.replacedWith.set(r.exerciseId, r.exerciseNameSnapshot);
       swaps.set(id, entry);
@@ -261,7 +300,11 @@ export class TrainingTools implements OnModuleInit {
       })),
       oftenSkipped: skipped
         .filter((s) => s.exerciseId && s._count._all >= 2)
-        .map((s) => ({ exerciseId: s.exerciseId, name: names.get(s.exerciseId as string) ?? null, timesSkipped: s._count._all })),
+        .map((s) => ({
+          exerciseId: s.exerciseId,
+          name: names.get(s.exerciseId as string) ?? null,
+          timesSkipped: s._count._all,
+        })),
       oftenSwappedOut: [...swaps.entries()]
         .filter(([, v]) => v.count >= 1)
         .sort((a, b) => b[1].count - a[1].count)
@@ -270,7 +313,9 @@ export class TrainingTools implements OnModuleInit {
           exerciseId,
           name: v.name,
           timesSwapped: v.count,
-          userPreferredInstead: [...v.replacedWith.entries()].slice(0, 3).map(([id, name]) => ({ id, name })),
+          userPreferredInstead: [...v.replacedWith.entries()]
+            .slice(0, 3)
+            .map(([id, name]) => ({ id, name })),
         })),
     };
   }
@@ -289,7 +334,10 @@ export class TrainingTools implements OnModuleInit {
         select: { name: true, _count: { select: { exercises: true } } },
       }),
       this.prisma.sessionExercise.findMany({
-        where: { session: { userId: ctx.userId, startedAt: { gte: since } }, exerciseId: { not: null } },
+        where: {
+          session: { userId: ctx.userId, startedAt: { gte: since } },
+          exerciseId: { not: null },
+        },
         select: { exercise: { select: { equipment: true } } },
         take: 1000,
       }),
@@ -321,7 +369,10 @@ export class TrainingTools implements OnModuleInit {
     const sessions = allSessions.filter((s) => Date.parse(s.startedAt) >= cutoff);
 
     const muscleSets = new Map<MuscleGroup, number>();
-    const exercises = new Map<string, { name: string; muscle: MuscleGroup; sessions: number; last: string }>();
+    const exercises = new Map<
+      string,
+      { name: string; muscle: MuscleGroup; sessions: number; last: string }
+    >();
     for (const session of sessions) {
       for (const ex of session.exercises) {
         if (ex.exerciseTypeSnapshot === ExerciseType.STRETCHING) continue;
@@ -329,7 +380,10 @@ export class TrainingTools implements OnModuleInit {
           (s) => s.completed && s.setType !== SetType.WARMUP && s.setType !== SetType.STRETCH,
         ).length;
         if (working === 0) continue;
-        muscleSets.set(ex.primaryMuscleSnapshot, (muscleSets.get(ex.primaryMuscleSnapshot) ?? 0) + working);
+        muscleSets.set(
+          ex.primaryMuscleSnapshot,
+          (muscleSets.get(ex.primaryMuscleSnapshot) ?? 0) + working,
+        );
         if (!ex.exerciseId) continue;
         const current = exercises.get(ex.exerciseId);
         exercises.set(ex.exerciseId, {
@@ -347,6 +401,9 @@ export class TrainingTools implements OnModuleInit {
     const history = extractGlobalExerciseHistory(exerciseId, name, sessions);
     if (history.length < 3) return { status: 'NOT_ENOUGH_DATA' as const, changePct: 0 };
     const trend = analyzeExerciseTrend(history);
-    return { status: classifyExerciseStall(trend) ?? ('PROGRESSING' as const), changePct: trend.changePct };
+    return {
+      status: classifyExerciseStall(trend) ?? ('PROGRESSING' as const),
+      changePct: trend.changePct,
+    };
   }
 }

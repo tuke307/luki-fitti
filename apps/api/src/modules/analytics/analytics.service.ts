@@ -74,10 +74,7 @@ export class AnalyticsService {
     let sumWorkoutAvgHr = 0;
     let countWorkoutAvgHr = 0;
 
-    const muscleStats = new Map<
-      MuscleGroup,
-      { completedSets: number; totalVolumeKg: number }
-    >();
+    const muscleStats = new Map<MuscleGroup, { completedSets: number; totalVolumeKg: number }>();
     const prMap = new Map<string, PersonalRecordDto>();
     const exerciseProgression: AnalyticsSummaryDto['exerciseProgression'] = [];
 
@@ -217,17 +214,13 @@ export class AnalyticsService {
           const curM = muscleStats.get(mGroup) ?? { completedSets: 0, totalVolumeKg: 0 };
           curM.completedSets += 1;
           if (!isStretchEx && set.setType !== SetType.WARMUP && set.weight && set.reps) {
-            const wKg =
-              set.weightUnit === WeightUnit.LBS ? set.weight * LBS_TO_KG : set.weight;
+            const wKg = set.weightUnit === WeightUnit.LBS ? set.weight * LBS_TO_KG : set.weight;
             curM.totalVolumeKg += wKg * set.reps;
           }
           muscleStats.set(mGroup, curM);
         }
 
-        if (
-          (!query.exerciseId || ex.exerciseId === query.exerciseId) &&
-          exMaxWeightKg > 0
-        ) {
+        if ((!query.exerciseId || ex.exerciseId === query.exerciseId) && exMaxWeightKg > 0) {
           exerciseProgression.push({
             date: s.startedAt.toISOString().slice(0, 10),
             workoutName: s.workoutNameSnapshot,

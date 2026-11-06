@@ -93,9 +93,7 @@ export function extractAuthLinkFromEmail(
   );
   const match = regex.exec(source);
   if (!match || !match[1]) {
-    throw new Error(
-      `Could not find /${routeSegment}?token=... link in email "${email.Subject}"`,
-    );
+    throw new Error(`Could not find /${routeSegment}?token=... link in email "${email.Subject}"`);
   }
   return `/${routeSegment}?token=${match[1]}`;
 }

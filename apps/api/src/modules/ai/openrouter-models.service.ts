@@ -37,7 +37,6 @@ const UpstreamModelSchema = z.object({
 
 const UpstreamListSchema = z.object({ data: z.array(z.unknown()) });
 
-
 const perMTok = (perToken: number) => Math.round(perToken * 1_000_000 * 1e6) / 1e6;
 
 /** Maps OpenRouter's `/models` JSON (untrusted) to catalog entries; malformed entries are dropped. */

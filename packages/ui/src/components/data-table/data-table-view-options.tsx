@@ -18,7 +18,9 @@ interface DataTableViewOptionsProps<TData extends RowData> {
   table: Table<typeof features, TData>;
 }
 
-export function DataTableViewOptions<TData extends RowData>({ table }: DataTableViewOptionsProps<TData>) {
+export function DataTableViewOptions<TData extends RowData>({
+  table,
+}: DataTableViewOptionsProps<TData>) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

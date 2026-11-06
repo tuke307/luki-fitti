@@ -47,7 +47,10 @@ export async function normalizeImage(input: Buffer): Promise<ProcessedImage> {
     throw new BadRequestException('Unsupported image type. Use JPEG, PNG or WebP.');
   }
   try {
-    const { data, info } = await sharp(input, { limitInputPixels: MAX_INPUT_PIXELS, failOn: 'error' })
+    const { data, info } = await sharp(input, {
+      limitInputPixels: MAX_INPUT_PIXELS,
+      failOn: 'error',
+    })
       .rotate()
       .resize({ width: MAX_EDGE_PX, height: MAX_EDGE_PX, fit: 'inside', withoutEnlargement: true })
       .jpeg({ quality: 82, mozjpeg: true })

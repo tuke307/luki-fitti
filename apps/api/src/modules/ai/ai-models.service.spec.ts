@@ -36,7 +36,8 @@ const catalog = [
 
 describe('eligibleModels', () => {
   it('own key: every capable model', () => {
-    const ids = (skill: AiSkillName) => eligibleModels(catalog, skill, AiKeySlot.USER, []).map((m) => m.id);
+    const ids = (skill: AiSkillName) =>
+      eligibleModels(catalog, skill, AiKeySlot.USER, []).map((m) => m.id);
     assert.deepEqual(ids(AiSkillName.WORKOUT_BUILDER), ['a/tools-text', 'b/tools-vision']);
     assert.deepEqual(ids(AiSkillName.MEAL_TEXT_ANALYZER), ['a/tools-text', 'b/tools-vision']);
     assert.deepEqual(ids(AiSkillName.MEAL_ANALYZER), ['b/tools-vision']);
@@ -48,7 +49,10 @@ describe('eligibleModels', () => {
       eligibleModels(catalog, AiSkillName.WORKOUT_BUILDER, AiKeySlot.ADMIN, allow).map((m) => m.id),
       ['a/tools-text'],
     );
-    assert.deepEqual(eligibleModels(catalog, AiSkillName.MEAL_ANALYZER, AiKeySlot.ADMIN, allow), []);
+    assert.deepEqual(
+      eligibleModels(catalog, AiSkillName.MEAL_ANALYZER, AiKeySlot.ADMIN, allow),
+      [],
+    );
   });
 
   it('no key: treated like the restricted allowlist', () => {
@@ -76,7 +80,11 @@ describe('cost estimate', () => {
     ]);
     assert.deepEqual(avg, { promptTokens: 4000, completionTokens: 1000 });
     // 4000 × $1/1M + 1000 × $4/1M = $0.008
-    const cost = estimateCostPerRun(avg, { promptPerMTokUsd: 1, completionPerMTokUsd: 4, imageUsd: null });
+    const cost = estimateCostPerRun(avg, {
+      promptPerMTokUsd: 1,
+      completionPerMTokUsd: 4,
+      imageUsd: null,
+    });
     assert.ok(Math.abs(cost! - 0.008) < 1e-12);
   });
 
@@ -85,20 +93,32 @@ describe('cost estimate', () => {
     const avg = { promptTokens: 4000, completionTokens: 1000 };
     assert.ok(Math.abs(estimateCostPerRun(avg, pricing, 1)! - 0.011) < 1e-12);
     assert.ok(Math.abs(estimateCostPerRun(avg, pricing)! - 0.008) < 1e-12);
-    assert.ok(Math.abs(estimateCostPerRun(avg, { ...pricing, imageUsd: null }, 1)! - 0.008) < 1e-12);
+    assert.ok(
+      Math.abs(estimateCostPerRun(avg, { ...pricing, imageUsd: null }, 1)! - 0.008) < 1e-12,
+    );
   });
 
   it('is null without history', () => {
     assert.equal(averageTokens([]), null);
-    assert.equal(estimateCostPerRun(null, { promptPerMTokUsd: 1, completionPerMTokUsd: 1, imageUsd: null }), null);
+    assert.equal(
+      estimateCostPerRun(null, { promptPerMTokUsd: 1, completionPerMTokUsd: 1, imageUsd: null }),
+      null,
+    );
   });
 
   it('sorts by estimated cost (unknown last), then name', () => {
-    const opt = (id: string, cost: number | null) => ({ ...model(id), estimatedCostPerRunUsd: cost });
+    const opt = (id: string, cost: number | null) => ({
+      ...model(id),
+      estimatedCostPerRunUsd: cost,
+    });
     assert.deepEqual(
-      sortOptions([opt('b/x', null), opt('c/x', 0.02), opt('b/y', 0.01), opt('a/x', 0.01), opt('a/y', null)]).map(
-        (m) => m.id,
-      ),
+      sortOptions([
+        opt('b/x', null),
+        opt('c/x', 0.02),
+        opt('b/y', 0.01),
+        opt('a/x', 0.01),
+        opt('a/y', null),
+      ]).map((m) => m.id),
       ['a/x', 'b/y', 'c/x', 'a/y', 'b/x'],
     );
   });
@@ -106,7 +126,9 @@ describe('cost estimate', () => {
 
 describe('parseChoices', () => {
   it('drops stored values that are not valid choices', () => {
-    assert.deepEqual(parseChoices({ 'workout-builder': 'a/tools-text' }), { 'workout-builder': 'a/tools-text' });
+    assert.deepEqual(parseChoices({ 'workout-builder': 'a/tools-text' }), {
+      'workout-builder': 'a/tools-text',
+    });
     assert.deepEqual(parseChoices({ 'workout-builder': 'not valid' }), {});
     assert.deepEqual(parseChoices('garbage'), {});
     assert.deepEqual(parseChoices(null), {});
@@ -153,7 +175,12 @@ describe('AiModelsService', () => {
     const choice = { 'workout-builder': 'a/tools-text', 'meal-analyzer': 'a/tools-text' };
     const { svc } = service({ aiModels: choice });
     assert.equal(
-      await svc.resolvePrimary('u', AiSkillName.WORKOUT_BUILDER, AiKeySlot.USER, 'x/default-workout'),
+      await svc.resolvePrimary(
+        'u',
+        AiSkillName.WORKOUT_BUILDER,
+        AiKeySlot.USER,
+        'x/default-workout',
+      ),
       'a/tools-text',
     );
     // a/tools-text cannot read photos.
@@ -163,15 +190,28 @@ describe('AiModelsService', () => {
     );
     // Admin key and not on the allowlist.
     assert.equal(
-      await svc.resolvePrimary('u', AiSkillName.WORKOUT_BUILDER, AiKeySlot.ADMIN, 'x/default-workout'),
+      await svc.resolvePrimary(
+        'u',
+        AiSkillName.WORKOUT_BUILDER,
+        AiKeySlot.ADMIN,
+        'x/default-workout',
+      ),
       'x/default-workout',
     );
   });
 
   it('resolvePrimary falls back to the default when the catalog is unavailable', async () => {
-    const { svc } = service({ aiModels: { 'workout-builder': 'a/tools-text' }, catalogAvailable: false });
+    const { svc } = service({
+      aiModels: { 'workout-builder': 'a/tools-text' },
+      catalogAvailable: false,
+    });
     assert.equal(
-      await svc.resolvePrimary('u', AiSkillName.WORKOUT_BUILDER, AiKeySlot.USER, 'x/default-workout'),
+      await svc.resolvePrimary(
+        'u',
+        AiSkillName.WORKOUT_BUILDER,
+        AiKeySlot.USER,
+        'x/default-workout',
+      ),
       'x/default-workout',
     );
   });
@@ -190,7 +230,10 @@ describe('AiModelsService', () => {
     assert.equal(workout.defaultModel, 'x/default-workout');
     assert.equal(workout.selectedModel, 'b/tools-vision');
     assert.equal(workout.effectiveModel, 'b/tools-vision');
-    assert.deepEqual(workout.models.map((m) => m.id), ['b/tools-vision']);
+    assert.deepEqual(
+      workout.models.map((m) => m.id),
+      ['b/tools-vision'],
+    );
     assert.ok(Math.abs(workout.models[0]!.estimatedCostPerRunUsd! - 0.002) < 1e-12);
     const mealText = dto.skills.find((s) => s.skill === AiSkillName.MEAL_TEXT_ANALYZER)!;
     assert.equal(mealText.defaultModel, 'x/default-meal');
@@ -205,7 +248,9 @@ describe('AiModelsService', () => {
   });
 
   it('forUser falls back to all users, then to no estimate', async () => {
-    const withGlobal = await service({ globalRuns: [{ promptTokens: 2000, completionTokens: 0 }] }).svc.forUser('u');
+    const withGlobal = await service({
+      globalRuns: [{ promptTokens: 2000, completionTokens: 0 }],
+    }).svc.forUser('u');
     assert.ok(Math.abs(withGlobal.skills[0]!.models[0]!.estimatedCostPerRunUsd! - 0.002) < 1e-12);
     const none = await service({}).svc.forUser('u');
     assert.equal(none.skills[0]!.models[0]!.estimatedCostPerRunUsd, null);

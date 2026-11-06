@@ -14,9 +14,9 @@ archived and uploaded by hand.
 
 One version for all platforms:
 
-| Where | Field |
-| :-- | :-- |
-| `apps/web/package.json` | `version` (shown in web settings) |
+| Where                    | Field                                                                                 |
+| :----------------------- | :------------------------------------------------------------------------------------ |
+| `apps/web/package.json`  | `version` (shown in web settings)                                                     |
 | `apps/apple/project.yml` | `MARKETING_VERSION` (same as web) and `CURRENT_PROJECT_VERSION` (+1 for every upload) |
 
 ## 2. Regenerate the marketing screenshots

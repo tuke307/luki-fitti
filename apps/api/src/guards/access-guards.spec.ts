@@ -74,14 +74,11 @@ describe('FeatureGuard', () => {
   it('denies an enabled feature without a key as AI_KEY_REQUIRED', async () => {
     const guard = new FeatureGuard(new Reflector(), settings([FeatureGrant.AI_MEAL_PHOTO], false));
     const ctx = contextWith({ id: 'u1' }, { [FEATURE_KEY]: FeatureGrant.AI_MEAL_PHOTO });
-    await assert.rejects(
-      guard.canActivate(ctx),
-      (err: ForbiddenException) => {
-        const body = err.getResponse() as { code?: string };
-        assert.equal(body.code, 'AI_KEY_REQUIRED');
-        return true;
-      },
-    );
+    await assert.rejects(guard.canActivate(ctx), (err: ForbiddenException) => {
+      const body = err.getResponse() as { code?: string };
+      assert.equal(body.code, 'AI_KEY_REQUIRED');
+      return true;
+    });
   });
 });
 

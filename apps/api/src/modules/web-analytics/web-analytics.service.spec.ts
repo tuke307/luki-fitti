@@ -37,7 +37,10 @@ describe('AnalyticsCollectSchema', () => {
     });
     assert.equal(parsed.type, 'pageview');
     assert.equal(parsed.url, '/reset-password');
-    assert.equal(parsed.type === 'pageview' ? parsed.referrer : undefined, 'https://other.example/page');
+    assert.equal(
+      parsed.type === 'pageview' ? parsed.referrer : undefined,
+      'https://other.example/page',
+    );
   });
 
   it('accepts allow-listed events with low-cardinality data', () => {
@@ -114,7 +117,10 @@ describe('WebAnalyticsService', () => {
     assert.equal(createService(false).buildUmamiRequest(pageview, context), null);
     const service = createService();
     assert.equal(service.buildUmamiRequest(pageview, { ...context, hostname: 'evil.test' }), null);
-    assert.equal(service.buildUmamiRequest(pageview, { ...context, fetchSite: 'cross-site' }), null);
+    assert.equal(
+      service.buildUmamiRequest(pageview, { ...context, fetchSite: 'cross-site' }),
+      null,
+    );
     assert.equal(service.buildUmamiRequest(pageview, { ...context, userAgent: undefined }), null);
   });
 

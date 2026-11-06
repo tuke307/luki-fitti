@@ -16,5 +16,6 @@ export const MEAL_ANALYZER_SKILL: AiSkill<typeof MealAnalysisSchema> = {
   // One answer plus one retry if the first answer fails validation.
   maxSteps: 2,
   maxTokens: 3000,
-  systemPrompt: (ctx) => renderPrompt(AiSkillName.MEAL_ANALYZER, { language: promptLanguage(ctx.locale) }),
+  systemPrompt: (ctx) =>
+    renderPrompt(AiSkillName.MEAL_ANALYZER, { language: promptLanguage(ctx.locale) }),
 };

@@ -26,6 +26,8 @@ jobs:
 
       - run: yarn install --frozen-lockfile
 
+      - run: yarn format:check
+
       # turbo `lint` only depends on ^lint, but apps/api `tsc --noEmit` needs the
       # built workspace packages (e.g. the generated Prisma client).
       - run: yarn turbo run build --filter='./packages/*'
