@@ -82,7 +82,14 @@ describe('goalProgress', () => {
 });
 
 describe('meal amount units', () => {
-  const tea = { grams: 500, amountUnit: MealAmountUnit.ML, kcal: 140, proteinG: 0, carbsG: 34, fatG: 0 };
+  const tea = {
+    grams: 500,
+    amountUnit: MealAmountUnit.ML,
+    kcal: 140,
+    proteinG: 0,
+    carbsG: 34,
+    fatG: 0,
+  };
 
   it('scales proportionally within the same unit', () => {
     const scaled = scaleFoodItemToAmount(tea, 250);
@@ -99,7 +106,10 @@ describe('meal amount units', () => {
   });
 
   it('defaults items without a unit to grams', () => {
-    const scaled = scaleFoodItemToAmount({ grams: 100, kcal: 200, proteinG: 10, carbsG: 0, fatG: 10 }, 50);
+    const scaled = scaleFoodItemToAmount(
+      { grams: 100, kcal: 200, proteinG: 10, carbsG: 0, fatG: 10 },
+      50,
+    );
     assert.equal(scaled.kcal, 100);
     assert.equal(scaled.amountUnit, MealAmountUnit.G);
   });

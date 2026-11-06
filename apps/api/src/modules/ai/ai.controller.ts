@@ -73,7 +73,9 @@ export class AiController {
   @Post('meal-text-analysis')
   @RequireFeature(FeatureGrant.AI_MEAL_PHOTO)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Propose foods, portions and nutrients from a written meal description' })
+  @ApiOperation({
+    summary: 'Propose foods, portions and nutrients from a written meal description',
+  })
   describeMeal(
     @CurrentUser() user: AuthenticatedUser,
     @RequestLocale() locale: SupportedLocale,

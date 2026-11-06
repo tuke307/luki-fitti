@@ -33,19 +33,33 @@ const toolCall = (id: string, name: string, args: unknown) => ({
   function: { name, arguments: JSON.stringify(args) },
 });
 
-const reply = (calls: ReturnType<typeof toolCall>[], content: string | null = null): ChatResponse => ({
+const reply = (
+  calls: ReturnType<typeof toolCall>[],
+  content: string | null = null,
+): ChatResponse => ({
   model: 'test/primary',
   message: { content, tool_calls: calls.length ? calls : undefined },
   finishReason: calls.length ? 'tool_calls' : 'stop',
   usage: { promptTokens: 10, completionTokens: 5, costUsd: 0.001 },
 });
 
-const ADMIN_KEY: ResolvedAiKey = { apiKey: 'sk-or-v1-FAKE-ADMIN-KEY-FOR-TESTING', source: AiKeySlot.ADMIN };
-const USER_KEY: ResolvedAiKey = { apiKey: 'sk-or-v1-FAKE-USER-KEY-FOR-TESTING', source: AiKeySlot.USER };
+const ADMIN_KEY: ResolvedAiKey = {
+  apiKey: 'sk-or-v1-FAKE-ADMIN-KEY-FOR-TESTING',
+  source: AiKeySlot.ADMIN,
+};
+const USER_KEY: ResolvedAiKey = {
+  apiKey: 'sk-or-v1-FAKE-USER-KEY-FOR-TESTING',
+  source: AiKeySlot.USER,
+};
 
 function setup(
   script: Array<ChatResponse | Error>,
-  opts: { runsToday?: number; limit?: number; key?: ResolvedAiKey | null; chosenModel?: string } = {},
+  opts: {
+    runsToday?: number;
+    limit?: number;
+    key?: ResolvedAiKey | null;
+    chosenModel?: string;
+  } = {},
 ) {
   const requests: ChatRequest[] = [];
   const apiKeys: string[] = [];
@@ -131,7 +145,10 @@ describe('AgentRunnerService', () => {
   });
 
   it('reports unknown cost as null when the provider omits it', async () => {
-    const noCost = (r: ChatResponse): ChatResponse => ({ ...r, usage: { ...r.usage, costUsd: null } });
+    const noCost = (r: ChatResponse): ChatResponse => ({
+      ...r,
+      usage: { ...r.usage, costUsd: null },
+    });
     const { runner, runs } = setup([noCost(reply([toolCall('c1', 'submit', { total: 1 })]))]);
     const result = await runner.run(skill, input);
     assert.deepEqual(result.usage, { promptTokens: 10, completionTokens: 5, costUsd: null });
@@ -169,7 +186,9 @@ describe('AgentRunnerService', () => {
     ]);
     await runner.run(skill, input);
     assert.equal(toolInputs.length, 0);
-    const toolMsgs = requests[1]!.messages.filter((m) => m.role === 'tool') as Array<{ content: string }>;
+    const toolMsgs = requests[1]!.messages.filter((m) => m.role === 'tool') as Array<{
+      content: string;
+    }>;
     assert.match(toolMsgs[0]!.content, /Unknown tool/);
     assert.match(toolMsgs[1]!.content, /Invalid arguments/);
   });
@@ -203,11 +222,19 @@ describe('AgentRunnerService', () => {
   });
 
   it('uses the resolved primary model and keeps the admin fallbacks', async () => {
-    const { runner, requests, resolveCalls } = setup([reply([toolCall('c1', 'submit', { total: 1 })])], {
-      chosenModel: 'test/chosen',
-    });
+    const { runner, requests, resolveCalls } = setup(
+      [reply([toolCall('c1', 'submit', { total: 1 })])],
+      {
+        chosenModel: 'test/chosen',
+      },
+    );
     await runner.run(skill, input);
-    assert.deepEqual(resolveCalls[0], ['user-1', AiSkillName.WORKOUT_BUILDER, AiKeySlot.ADMIN, 'test/primary']);
+    assert.deepEqual(resolveCalls[0], [
+      'user-1',
+      AiSkillName.WORKOUT_BUILDER,
+      AiKeySlot.ADMIN,
+      'test/primary',
+    ]);
     assert.equal(requests[0]!.model, 'test/chosen');
     assert.deepEqual(requests[0]!.fallbackModels, ['test/fallback']);
   });
@@ -218,7 +245,7 @@ describe('AgentRunnerService', () => {
     assert.match(JSON.stringify(countQueries[0]), /"keySource":"ADMIN"/);
   });
 
-  it('skips the daily limit for runs on the user\'s own key', async () => {
+  it("skips the daily limit for runs on the user's own key", async () => {
     const { runner, apiKeys, runs, countQueries } = setup(
       [reply([toolCall('c1', 'submit', { total: 1 })])],
       { runsToday: 99, limit: 5, key: USER_KEY },

@@ -179,7 +179,9 @@ export class ImportService {
       );
       if (error instanceof HttpException) throw error;
       // Database errors can quote the rows they failed on; keep file data out of logs and responses.
-      logger.error(`Import commit failed (${error instanceof Error ? error.name : 'unknown error'})`);
+      logger.error(
+        `Import commit failed (${error instanceof Error ? error.name : 'unknown error'})`,
+      );
       throw new InternalServerErrorException({ message: 'Import failed', code: 'IMPORT_FAILED' });
     }
   }

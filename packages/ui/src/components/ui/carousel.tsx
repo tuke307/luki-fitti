@@ -102,12 +102,15 @@ function Carousel({
 
   React.useEffect(() => {
     if (!api || !setApi) return;
-    setApi(api);
+    // Deferred: handing the api to the parent is a state update in the parent,
+    // which React forbids synchronously inside an effect.
+    queueMicrotask(() => setApi(api));
   }, [api, setApi]);
 
   React.useEffect(() => {
     if (!api) return;
-    onSelect(api);
+    // Deferred for the same reason as setApi above: onSelect updates state.
+    queueMicrotask(() => onSelect(api));
     api.on('reInit', onSelect);
     api.on('select', onSelect);
 

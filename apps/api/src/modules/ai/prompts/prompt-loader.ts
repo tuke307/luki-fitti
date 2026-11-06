@@ -24,7 +24,8 @@ const PROMPTS: Record<AiSkillName, string> = Object.fromEntries(
 export function renderPrompt(skill: AiSkillName, vars: Record<string, string>): string {
   return PROMPTS[skill].replace(/\{\{(\w+)\}\}/g, (_, name: string) => {
     const value = vars[name];
-    if (value === undefined) throw new Error(`Prompt ${skill} uses unknown placeholder {{${name}}}`);
+    if (value === undefined)
+      throw new Error(`Prompt ${skill} uses unknown placeholder {{${name}}}`);
     return value;
   });
 }

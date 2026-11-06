@@ -104,9 +104,7 @@ test.describe('Full Account Lifecycle via Mailpit Emails', () => {
     const deleteModal = page.getByRole('dialog');
     await expect(deleteModal).toBeVisible();
     await deleteModal.locator('#delete-account-password').fill(updatedPassword);
-    await deleteModal
-      .getByRole('button', { name: /Send Deletion Confirmation Email/i })
-      .click();
+    await deleteModal.getByRole('button', { name: /Send Deletion Confirmation Email/i }).click();
     await expect(deleteModal).not.toBeVisible({ timeout: 10_000 });
 
     // ── 8. Read Account Deletion email from Mailpit & permanently delete account ──
@@ -117,9 +115,7 @@ test.describe('Full Account Lifecycle via Mailpit Emails', () => {
     await expect(
       page.getByRole('heading', { name: 'Confirm Permanent Account Deletion' }),
     ).toBeVisible();
-    await page
-      .getByRole('button', { name: /Yes, Permanently Delete My Account/i })
-      .click();
+    await page.getByRole('button', { name: /Yes, Permanently Delete My Account/i }).click();
 
     await expect(page.getByRole('heading', { name: 'Account Permanently Deleted' })).toBeVisible({
       timeout: 10_000,

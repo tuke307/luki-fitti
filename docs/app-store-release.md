@@ -11,12 +11,12 @@ For the overall release flow, see [release.md](release.md).
 Registered in the [Apple Developer portal](https://developer.apple.com/account/resources/identifiers/list).
 The description is only an internal name and allows letters, numbers and spaces.
 
-| Identifier                      | Description           | Capabilities                                  |
-| :--                             | :--                   | :--                                           |
-| `com.lukifitti.app`             | `LukiFitti iOS`       | HealthKit (Background Delivery), App Groups   |
-| `com.lukifitti.app.watchkitapp` | `LukiFitti Watch`     | HealthKit (Background Delivery), App Groups   |
-| `com.lukifitti.app.widgets`     | `LukiFitti Widgets`   | App Groups                                    |
-| `group.com.lukifitti.shared`    | `LukiFitti App Group` | App Group, assigned to all three App IDs      |
+| Identifier                      | Description           | Capabilities                                |
+| :------------------------------ | :-------------------- | :------------------------------------------ |
+| `com.lukifitti.app`             | `LukiFitti iOS`       | HealthKit (Background Delivery), App Groups |
+| `com.lukifitti.app.watchkitapp` | `LukiFitti Watch`     | HealthKit (Background Delivery), App Groups |
+| `com.lukifitti.app.widgets`     | `LukiFitti Widgets`   | App Groups                                  |
+| `group.com.lukifitti.shared`    | `LukiFitti App Group` | App Group, assigned to all three App IDs    |
 
 The prefix and the App Group are set in `apps/apple/Config/Shared.xcconfig`. The bundle ID can't
 change once the app exists in App Store Connect. `group.com.lukifitti.app` was not available, which
@@ -26,14 +26,14 @@ is why the App Group doesn't follow the bundle ID.
 
 There is one app record, not three: the watch app and the widgets ship inside the iOS app.
 
-| Field            | Value                              |
-| :--              | :--                                |
-| Platform         | iOS                                |
-| Name             | `LukiFitti`                        |
-| Primary language | German                             |
-| Bundle ID        | `com.lukifitti.app`                |
-| SKU              | `lukifitti` (can't change later)   |
-| User access      | Full Access                        |
+| Field            | Value                            |
+| :--------------- | :------------------------------- |
+| Platform         | iOS                              |
+| Name             | `LukiFitti`                      |
+| Primary language | German                           |
+| Bundle ID        | `com.lukifitti.app`              |
+| SKU              | `lukifitti` (can't change later) |
+| User access      | Full Access                      |
 
 ## Signing setup
 
@@ -78,7 +78,7 @@ Create these after the App Group is assigned. Repeat the steps for each row of t
 5. **Generate**, download the file and rename it.
 
 | App ID                          | Profile name                  | File name                 |
-| :--                             | :--                           | :--                       |
+| :------------------------------ | :---------------------------- | :------------------------ |
 | `com.lukifitti.app`             | `LukiFitti iOS App Store`     | `ios.mobileprovision`     |
 | `com.lukifitti.app.watchkitapp` | `LukiFitti Watch App Store`   | `watch.mobileprovision`   |
 | `com.lukifitti.app.widgets`     | `LukiFitti Widgets App Store` | `widgets.mobileprovision` |
@@ -97,17 +97,17 @@ in App Store Connect. If it shows **Request Access**, the Account Holder has to 
 
 The workflow needs these secrets:
 
-| Secret                            | Content                                  |
-| :--                               | :--                                      |
-| `APPLE_TEAM_ID`                   | Team ID (portal → Membership)            |
-| `APPLE_DISTRIBUTION_P12_BASE64`   | The `.p12` file, base64 encoded          |
-| `APPLE_DISTRIBUTION_P12_PASSWORD` | Password of the `.p12` file              |
-| `APPLE_PROFILE_IOS_BASE64`        | iOS profile, base64 encoded              |
-| `APPLE_PROFILE_WATCH_BASE64`      | Watch profile, base64 encoded            |
-| `APPLE_PROFILE_WIDGETS_BASE64`    | Widgets profile, base64 encoded          |
-| `ASC_KEY_ID`                      | API key ID                               |
-| `ASC_ISSUER_ID`                   | API issuer ID                            |
-| `ASC_KEY_P8_BASE64`               | The `.p8` file, base64 encoded           |
+| Secret                            | Content                         |
+| :-------------------------------- | :------------------------------ |
+| `APPLE_TEAM_ID`                   | Team ID (portal → Membership)   |
+| `APPLE_DISTRIBUTION_P12_BASE64`   | The `.p12` file, base64 encoded |
+| `APPLE_DISTRIBUTION_P12_PASSWORD` | Password of the `.p12` file     |
+| `APPLE_PROFILE_IOS_BASE64`        | iOS profile, base64 encoded     |
+| `APPLE_PROFILE_WATCH_BASE64`      | Watch profile, base64 encoded   |
+| `APPLE_PROFILE_WIDGETS_BASE64`    | Widgets profile, base64 encoded |
+| `ASC_KEY_ID`                      | API key ID                      |
+| `ASC_ISSUER_ID`                   | API issuer ID                   |
+| `ASC_KEY_P8_BASE64`               | The `.p8` file, base64 encoded  |
 
 Any collaborator on this repository can set them with `gh`. Run this in your own terminal, from the
 folder with the files. Values entered at the prompt don't end up in the shell history, and the files

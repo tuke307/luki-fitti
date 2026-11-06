@@ -3,10 +3,6 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 import { JWT_SECRET, NODE_ENV } from './lib/config/env.config';
 
-
-
-
-
 /** Public marketing paths → internal /site routes on the site host. */
 const SITE_PATHS: Record<string, string> = {
   '/': '/site/de',
@@ -24,7 +20,10 @@ const PUBLIC_FILE =
 const PUBLIC_PREFIX = /^\/(_next|api|screens|images|fonts)\//;
 
 function hostOf(req: NextRequest): string {
-  return (req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? '').split(',')[0]?.trim() ?? '';
+  return (
+    (req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? '').split(',')[0]?.trim() ??
+    ''
+  );
 }
 
 function isSiteHost(host: string): boolean {
@@ -84,7 +83,10 @@ export async function proxy(req: NextRequest) {
     }
     if (pathname.startsWith('/site')) return NextResponse.next();
     // Anything else is an app path on the wrong host — move it permanently.
-    return NextResponse.redirect(new URL(pathname + req.nextUrl.search, APP_ORIGIN), REDIRECT_STATUS);
+    return NextResponse.redirect(
+      new URL(pathname + req.nextUrl.search, APP_ORIGIN),
+      REDIRECT_STATUS,
+    );
   }
 
   // App host (and everything else, e.g. localhost dev).

@@ -43,8 +43,7 @@ export class EmailTemplateRendererService {
     const compiled = this.getCompiledTemplate(templatePath);
     const rendered = compiled(data);
     const extension = path.extname(templatePath).toLowerCase();
-    const html =
-      extension === '.mjml' ? await this.renderMjml(rendered, templateFile) : rendered;
+    const html = extension === '.mjml' ? await this.renderMjml(rendered, templateFile) : rendered;
 
     return this.inlineHtml(html);
   }

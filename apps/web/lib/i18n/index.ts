@@ -61,10 +61,7 @@ export function resolveLocale(preference: LanguagePreference | undefined | null)
   return detectSystemLocale();
 }
 
-export function interpolate(
-  template: string,
-  params?: Record<string, string | number>,
-): string {
+export function interpolate(template: string, params?: Record<string, string | number>): string {
   if (!params) return template;
   return template.replace(/\{(\w+)\}/g, (_, key: string) =>
     params[key] !== undefined ? String(params[key]) : `{${key}}`,
@@ -92,7 +89,9 @@ export function getSetTypeLabel(setType: SetType, locale: SupportedLocale): stri
 }
 
 export function getSessionTypeLabel(sessionType: SessionType, locale: SupportedLocale): string {
-  return getDictionary(locale).enums.sessionTypes[sessionType] ?? en.enums.sessionTypes[sessionType];
+  return (
+    getDictionary(locale).enums.sessionTypes[sessionType] ?? en.enums.sessionTypes[sessionType]
+  );
 }
 
 export * from './types';

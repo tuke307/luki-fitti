@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { AnalyticsService } from './analytics.service';
+import type { PrismaService } from '../database/prisma.service';
 import {
   ExerciseType,
   MuscleGroup,
@@ -13,7 +14,7 @@ import {
 describe('AnalyticsService — Frequency, Volume, PRs & Stretching Separation', () => {
   it('computes strength volume, Epley 1RM personal records, muscle distribution, and separates stretching duration', async () => {
     const now = new Date();
-    const mockPrisma: any = {
+    const mockPrisma = {
       workoutSession: {
         findMany: async () => [
           {
@@ -85,7 +86,7 @@ describe('AnalyticsService — Frequency, Volume, PRs & Stretching Separation', 
       },
     };
 
-    const service = new AnalyticsService(mockPrisma);
+    const service = new AnalyticsService(mockPrisma as unknown as PrismaService);
     const summary = await service.getSummary('user-1', { period: 'month' });
 
     assert.equal(summary.totalSessionsCompleted, 2);

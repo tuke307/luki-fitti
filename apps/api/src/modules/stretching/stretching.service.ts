@@ -7,12 +7,27 @@ import {
   localizeStretchingRoutine,
   resolveExerciseMedia,
 } from '@luki-fitti/common/catalog';
-import { SUPPORTED_LOCALES, type SupportedLocale } from '@luki-fitti/common/enums';
+import {
+  SUPPORTED_LOCALES,
+  type EquipmentType,
+  type ExerciseCategory,
+  type ExerciseType,
+  type MuscleGroup,
+  type SupportedLocale,
+} from '@luki-fitti/common/enums';
 import type {
   CreateStretchingRoutineDto,
   UpdateStretchingRoutineDto,
   StretchingRoutineDto,
 } from '@luki-fitti/common/schemas';
+import type { Exercise, StretchingRoutine, StretchingRoutineExercise } from '@luki-fitti/database';
+
+type RoutineRecord = StretchingRoutine & {
+  exercises?: (StretchingRoutineExercise & { exercise?: Exercise | null })[];
+};
+
+const toIsoString = (value: Date | string): string =>
+  value instanceof Date ? value.toISOString() : value;
 
 @Injectable()
 export class StretchingService {
@@ -287,11 +302,11 @@ export class StretchingService {
     return { success: true };
   }
 
-  private mapRoutineDto(routine: any, locale: SupportedLocale): StretchingRoutineDto {
+  private mapRoutineDto(routine: RoutineRecord, locale: SupportedLocale): StretchingRoutineDto {
     return localizeStretchingRoutine(this.toRoutineDto(routine), locale);
   }
 
-  private toRoutineDto(routine: any): StretchingRoutineDto {
+  private toRoutineDto(routine: RoutineRecord): StretchingRoutineDto {
     return {
       id: routine.id,
       systemKey: routine.systemKey ?? null,
@@ -300,11 +315,9 @@ export class StretchingService {
       description: routine.description,
       targetArea: routine.targetArea,
       estimatedDurationSeconds: routine.estimatedDurationSeconds,
-      createdAt:
-        routine.createdAt instanceof Date ? routine.createdAt.toISOString() : routine.createdAt,
-      updatedAt:
-        routine.updatedAt instanceof Date ? routine.updatedAt.toISOString() : routine.updatedAt,
-      exercises: (routine.exercises ?? []).map((e: any) => ({
+      createdAt: toIsoString(routine.createdAt),
+      updatedAt: toIsoString(routine.updatedAt),
+      exercises: (routine.exercises ?? []).map((e) => ({
         id: e.id,
         routineId: e.routineId,
         exerciseId: e.exerciseId,
@@ -322,11 +335,11 @@ export class StretchingService {
               name: e.exercise.name,
               description: e.exercise.description,
               instructions: e.exercise.instructions ?? [],
-              category: e.exercise.category,
-              exerciseType: e.exercise.exerciseType,
-              primaryMuscleGroup: e.exercise.primaryMuscleGroup,
+              category: e.exercise.category as ExerciseCategory,
+              exerciseType: e.exercise.exerciseType as ExerciseType,
+              primaryMuscleGroup: e.exercise.primaryMuscleGroup as MuscleGroup,
               secondaryMuscleGroups: [],
-              equipment: e.exercise.equipment,
+              equipment: e.exercise.equipment as EquipmentType,
               recommendedDurationSeconds: e.exercise.recommendedDurationSeconds,
               tags: e.exercise.tags ?? [],
               isSystem: e.exercise.isSystem,
@@ -335,7 +348,7 @@ export class StretchingService {
                 id: e.exercise.id,
                 slug: e.exercise.slug,
                 name: e.exercise.name,
-                primaryMuscleGroup: e.exercise.primaryMuscleGroup,
+                primaryMuscleGroup: e.exercise.primaryMuscleGroup as MuscleGroup,
                 isSystem: e.exercise.isSystem,
               }),
             }

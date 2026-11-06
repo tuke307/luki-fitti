@@ -95,8 +95,8 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
           <section>
             <h2>AI features</h2>
             <p>
-              AI features run on your own OpenRouter key. Costs and OpenRouter's terms are your
-              responsibility.
+              AI features run on your own OpenRouter key. Costs and OpenRouter&rsquo;s terms are
+              your responsibility.
             </p>
           </section>
           <section>

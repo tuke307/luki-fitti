@@ -15,7 +15,8 @@ const MARKETING = path.join(ROOT, 'marketing');
 const RAW = path.join(MARKETING, 'raw');
 const APPSTORE = path.join(MARKETING, 'appstore');
 const FRAMES_DIR = path.join(MARKETING, 'frames');
-const LANDING_DIR = process.env.LANDING_OUT_DIR ?? path.join(ROOT, '..', 'web', 'public', 'screens');
+const LANDING_DIR =
+  process.env.LANDING_OUT_DIR ?? path.join(ROOT, '..', 'web', 'public', 'screens');
 const SHOTS = JSON.parse(fs.readFileSync(path.join(MARKETING, 'screenshots.json'), 'utf8'));
 
 const OUT_W = 1320;
@@ -27,9 +28,7 @@ const dataUri = (p) => `data:image/png;base64,${fs.readFileSync(p).toString('bas
 
 /** Ensure a frame is portrait; fail loudly otherwise. */
 function checkPortrait(file) {
-  const [w, h] = execSync(
-    `sips -g pixelWidth -g pixelHeight "${file}" | awk '/pixel/{print $2}'`,
-  )
+  const [w, h] = execSync(`sips -g pixelWidth -g pixelHeight "${file}" | awk '/pixel/{print $2}'`)
     .toString()
     .trim()
     .split('\n')
@@ -51,12 +50,16 @@ async function screenCutout(page, frameUri) {
     ctx.drawImage(img, 0, 0);
     const { data } = ctx.getImageData(0, 0, c.width, c.height);
     const alpha = (x, y) => data[(y * c.width + x) * 4 + 3];
-    const cx = Math.floor(c.width / 2), cy = Math.floor(c.height / 2);
+    const cx = Math.floor(c.width / 2),
+      cy = Math.floor(c.height / 2);
     if (alpha(cx, cy) > 10) return null;
     // Flood fill from centre over transparent pixels.
     const seen = new Uint8Array(c.width * c.height);
     const q = [[cx, cy]];
-    let minX = c.width, minY = c.height, maxX = 0, maxY = 0;
+    let minX = c.width,
+      minY = c.height,
+      maxX = 0,
+      maxY = 0;
     while (q.length) {
       const [x, y] = q.pop();
       const i = y * c.width + x;
@@ -94,7 +97,8 @@ async function composite(page, { srcUri, frame }) {
       const ctx = c.getContext('2d');
       // Cover-fit the screenshot into the cutout.
       const scale = Math.max(cut.w / shot.naturalWidth, cut.h / shot.naturalHeight);
-      const sw = shot.naturalWidth * scale, sh = shot.naturalHeight * scale;
+      const sw = shot.naturalWidth * scale,
+        sh = shot.naturalHeight * scale;
       ctx.drawImage(shot, (cut.w - sw) / 2, (cut.h - sh) / 2, sw, sh);
       return { dataUrl: c.toDataURL('image/png'), w: cut.fw, h: cut.fh };
     },
@@ -158,7 +162,8 @@ async function main() {
 
   const iphoneFrame = path.join(FRAMES_DIR, 'iphone-17-pro-max.png');
   const watchFrame = path.join(FRAMES_DIR, 'watch-ultra.png');
-  let iphoneCut = null, watchCut = null;
+  let iphoneCut = null,
+    watchCut = null;
   for (const [file, name] of [
     [iphoneFrame, 'iphone'],
     [watchFrame, 'watch'],
@@ -249,7 +254,8 @@ async function main() {
         if (!(v > 50)) throw new Error(`${label} ${file} looks blank (variance ${v})`);
         if (label === 'landing') {
           const { corners, centre } = alphaAt(file);
-          if (corners.some((a) => a > 0)) throw new Error(`${file} corner is opaque — the frame must be the edge`);
+          if (corners.some((a) => a > 0))
+            throw new Error(`${file} corner is opaque — the frame must be the edge`);
           if (centre < 200) throw new Error(`${file} centre is transparent`);
         }
         const hash = execSync(`md5 -q "${file}"`).toString().trim();

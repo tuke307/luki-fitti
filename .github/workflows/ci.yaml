@@ -1,0 +1,238 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - run: yarn install --frozen-lockfile
+
+      - run: yarn format:check
+
+      # turbo `lint` only depends on ^lint, but apps/api `tsc --noEmit` needs the
+      # built workspace packages (e.g. the generated Prisma client).
+      - run: yarn turbo run build --filter='./packages/*'
+
+      - run: yarn turbo run lint --filter='!@luki-fitti/apple'
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - run: yarn install --frozen-lockfile
+
+      - run: yarn turbo run build --filter='./packages/*'
+
+      - run: yarn turbo run test --filter='!@luki-fitti/apple'
+
+      - run: yarn test:import-scripts
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: luki_fitti
+          TZ: UTC
+          PGTZ: UTC
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      mailpit:
+        image: axllent/mailpit
+        ports:
+          - 1025:1025
+          - 8025:8025
+    env:
+      CI: true
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - run: yarn install --frozen-lockfile
+
+      - name: Write local env files
+        run: |
+          JWT_SECRET_VALUE="$(openssl rand -hex 32)"
+          JWT_REFRESH_SECRET_VALUE="$(openssl rand -hex 32)"
+
+          cat > apps/api/.env.local <<EOF
+          API_PORT=3001
+          NODE_ENV=development
+          BCRYPT_SALT_ROUNDS=10
+          JWT_SECRET=${JWT_SECRET_VALUE}
+          JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET_VALUE}
+          ACCESS_TOKEN_EXPIRY_MS=900000
+          REFRESH_TOKEN_EXPIRY_MS=7776000000
+          REFRESH_TOKEN_REUSE_GRACE_MS=30000
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/luki_fitti
+          FRONTEND_URL=http://localhost:3000
+          REDIS_URL=redis://localhost:6379
+          SMTP_HOST=localhost
+          SMTP_PORT=1025
+          SMTP_USER=
+          SMTP_PASS=
+          SMTP_REJECT_UNAUTHORIZED=false
+          EMAIL_FROM=noreply@lukifitti.app
+          EMAIL_MAX_ATTEMPTS=3
+          EMAIL_RETRY_DELAY_MS=5000
+          UMAMI_WEBSITE_ID=
+          UMAMI_ALLOWED_HOSTNAMES=
+          AI_KEY_ENCRYPTION_KEY=
+          AI_KEY_ENCRYPTION_KEY_PREVIOUS=
+          AI_KEY_ENCRYPTION_KEY_VERSION=1
+          SEAWEEDFS_ENDPOINT=
+          SEAWEEDFS_ACCESS_KEY_API=
+          SEAWEEDFS_SECRET_KEY_API=
+          SEAWEEDFS_USE_SSL=false
+          SEAWEEDFS_BUCKET=luki-fitti-meal-photos
+          EOF
+
+          cat > apps/web/.env.local <<EOF
+          NODE_ENV=development
+          NEXT_PUBLIC_SITE_URL=http://localhost:3000
+          JWT_SECRET=${JWT_SECRET_VALUE}
+          MAILPIT_URL=http://localhost:8025
+          EOF
+
+          cat > apps/email-worker/.env.local <<EOF
+          EMAIL_WORKER_PORT=3002
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/luki_fitti
+          REDIS_URL=redis://localhost:6379
+          SMTP_HOST=localhost
+          SMTP_PORT=1025
+          SMTP_USER=
+          SMTP_PASS=
+          SMTP_REJECT_UNAUTHORIZED=false
+          EMAIL_FROM=noreply@lukifitti.app
+          EOF
+
+          cat > packages/database/.env.local <<EOF
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/luki_fitti
+          POSTGRES_USER=postgres
+          POSTGRES_PASSWORD=postgres
+          POSTGRES_DB=luki_fitti
+          EOF
+
+      # Builds everything but the Swift package: the seed script imports the built
+      # workspace packages, and the e2e job serves the production api, email-worker
+      # and web (`next start`) instead of `yarn dev`. Runs after the env files are
+      # written so `next build` picks up apps/web/.env.local.
+      - run: yarn turbo run build --filter='!@luki-fitti/apple'
+
+      - name: Run database migrations
+        run: yarn workspace @luki-fitti/database db:deploy:local
+
+      - name: Seed database
+        run: yarn workspace @luki-fitti/database db:seed
+
+      - name: Create e2e test user
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/luki_fitti
+          TEST_USER_EMAIL: e2e.athlete@lukifitti.test
+          TEST_USER_NAME: E2E Athlete
+          TEST_USER_PASSWORD: FAKE-PASSWORD-FOR-TESTING-123!
+        run: |
+          node <<'NODE'
+          const { Client } = require('pg');
+          const bcrypt = require('bcrypt');
+
+          (async () => {
+            const passwordHash = bcrypt.hashSync(process.env.TEST_USER_PASSWORD, 10);
+            const client = new Client({ connectionString: process.env.DATABASE_URL });
+            await client.connect();
+            const res = await client.query(
+              `INSERT INTO "User" (id, email, name, "passwordHash", "emailVerified", "createdAt", "updatedAt")
+               VALUES (gen_random_uuid(), $1, $2, $3, true, now(), now())
+               ON CONFLICT (email) DO UPDATE
+                 SET "passwordHash" = EXCLUDED."passwordHash", "emailVerified" = true, "updatedAt" = now()
+               RETURNING id, email`,
+              [process.env.TEST_USER_EMAIL, process.env.TEST_USER_NAME, passwordHash],
+            );
+            console.log('e2e user ready:', res.rows[0].email);
+            await client.end();
+          })().catch((e) => { console.error(e); process.exit(1); });
+          NODE
+
+      - name: Install Playwright browsers
+        run: yarn workspace @luki-fitti/web playwright install --with-deps chromium
+
+      - name: Start reverse proxy
+        run: >-
+          docker run -d --name e2e-proxy --network host
+          -v "$PWD/Caddyfile.e2e:/etc/caddy/Caddyfile:ro"
+          caddy:2-alpine
+
+      - name: Run Playwright e2e tests (chromium)
+        env:
+          PLAYWRIGHT_PROD_SERVER: '1'
+        run: yarn workspace @luki-fitti/web test:e2e:chromium
+
+      - name: Dump proxy logs on failure
+        if: failure()
+        run: docker logs e2e-proxy || true
+
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+          if-no-files-found: ignore
+
+  apple:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v6
+
+      - run: swift build --package-path apps/apple/Packages/LukiFittiKit
+
+      - run: swift test --package-path apps/apple/Packages/LukiFittiKit

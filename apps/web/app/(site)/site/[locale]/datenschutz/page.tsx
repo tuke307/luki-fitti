@@ -100,7 +100,7 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
             <h2>AI features</h2>
             <p>
               Requests to OpenRouter (workout suggestions, meal analysis) are only sent when you use
-              an AI feature with your own key. OpenRouter's privacy policy applies.
+              an AI feature with your own key. OpenRouter&rsquo;s privacy policy applies.
             </p>
           </section>
           <section>

@@ -17,12 +17,29 @@ import type {
 import {
   EQUIPMENT_LABELS,
   MUSCLE_GROUP_LABELS,
+  type EquipmentType,
+  type ExerciseCategory,
+  type ExerciseType,
+  type Laterality,
+  type MovementPattern,
   type MuscleGroup,
   type SupportedLocale,
 } from '@luki-fitti/common/enums';
+import type {
+  Exercise,
+  ExerciseAlternative,
+  ExerciseMedia,
+  ExerciseMuscleGroup,
+} from '@luki-fitti/database';
 import { buildExerciseSearchIndex, searchExercises } from '@luki-fitti/common/utils';
 
 const CORE_EXERCISE_IDS = new Set(CORE_EXERCISE_CATALOG.map((e) => e.id));
+
+type ExerciseRecord = Exercise & {
+  muscleGroups?: ExerciseMuscleGroup[];
+  alternatives?: (ExerciseAlternative & { alternativeExercise: Exercise })[];
+  media?: ExerciseMedia[];
+};
 
 @Injectable()
 export class ExerciseService {
@@ -345,20 +362,20 @@ export class ExerciseService {
     return { success: true };
   }
 
-  private mapExerciseDto(record: any, locale: SupportedLocale): ExerciseDto {
+  private mapExerciseDto(record: ExerciseRecord, locale: SupportedLocale): ExerciseDto {
     const catalogFallback = ALL_SYSTEM_EXERCISES.find((c) => c.id === record.id);
     const secondaryFromDb = (record.muscleGroups ?? [])
-      .filter((m: any) => !m.isPrimary && m.muscleGroup !== record.primaryMuscleGroup)
-      .map((m: any) => m.muscleGroup as MuscleGroup);
+      .filter((m) => !m.isPrimary && m.muscleGroup !== record.primaryMuscleGroup)
+      .map((m) => m.muscleGroup as MuscleGroup);
 
     const secondaryMuscleGroups =
       secondaryFromDb.length > 0 ? secondaryFromDb : (catalogFallback?.secondaryMuscleGroups ?? []);
 
-    const alternativesFromDb = (record.alternatives ?? []).map((a: any) => ({
+    const alternativesFromDb = (record.alternatives ?? []).map((a) => ({
       id: a.alternativeExercise.id,
       name: a.alternativeExercise.name,
-      equipment: a.alternativeExercise.equipment,
-      primaryMuscleGroup: a.alternativeExercise.primaryMuscleGroup,
+      equipment: a.alternativeExercise.equipment as EquipmentType,
+      primaryMuscleGroup: a.alternativeExercise.primaryMuscleGroup as MuscleGroup,
       reason: a.reason,
     }));
 
@@ -368,7 +385,7 @@ export class ExerciseService {
       record.isSystem && catalogFallback
         ? catalogFallback.alternativeExerciseIds
         : alternativesFromDb.length > 0
-          ? alternativesFromDb.map((a: any) => a.id)
+          ? alternativesFromDb.map((a) => a.id)
           : (catalogFallback?.alternativeExerciseIds ?? []);
     const movement =
       record.isSystem && catalogFallback
@@ -379,9 +396,11 @@ export class ExerciseService {
             targetRegions: catalogFallback.targetRegions ?? [],
           }
         : {
-            movementPattern: record.movementPattern ?? null,
-            laterality: record.laterality ?? null,
-            mechanic: record.movementPattern ? movementMechanic(record.movementPattern) : null,
+            movementPattern: (record.movementPattern ?? null) as MovementPattern | null,
+            laterality: (record.laterality ?? null) as Laterality | null,
+            mechanic: record.movementPattern
+              ? movementMechanic(record.movementPattern as MovementPattern)
+              : null,
             targetRegions: [],
           };
 
@@ -393,11 +412,11 @@ export class ExerciseService {
         name: record.name,
         description: record.description,
         instructions: record.instructions ?? [],
-        category: record.category,
-        exerciseType: record.exerciseType,
-        primaryMuscleGroup: record.primaryMuscleGroup,
+        category: record.category as ExerciseCategory,
+        exerciseType: record.exerciseType as ExerciseType,
+        primaryMuscleGroup: record.primaryMuscleGroup as MuscleGroup,
         secondaryMuscleGroups,
-        equipment: record.equipment,
+        equipment: record.equipment as EquipmentType,
         recommendedDurationSeconds: record.recommendedDurationSeconds,
         tags: record.tags ?? [],
         isSystem: record.isSystem,
@@ -411,7 +430,7 @@ export class ExerciseService {
                 id: record.id,
                 slug: record.slug,
                 name: record.name,
-                primaryMuscleGroup: record.primaryMuscleGroup,
+                primaryMuscleGroup: record.primaryMuscleGroup as MuscleGroup,
                 isSystem: record.isSystem,
               }),
       },

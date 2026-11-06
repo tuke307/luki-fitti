@@ -15,9 +15,9 @@ archived and uploaded by the App Store workflow, which you start by hand
 
 One version for all platforms:
 
-| Where | Field |
-| :-- | :-- |
-| `apps/web/package.json` | `version` (shown in web settings) |
+| Where                    | Field                                                                                                                                               |
+| :----------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web/package.json`  | `version` (shown in web settings)                                                                                                                   |
 | `apps/apple/project.yml` | `MARKETING_VERSION` (same as web). The App Store workflow sets the build number itself; raise `CURRENT_PROJECT_VERSION` only for uploads from Xcode |
 
 ## 2. Regenerate the marketing screenshots

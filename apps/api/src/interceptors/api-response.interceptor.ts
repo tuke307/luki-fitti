@@ -7,7 +7,10 @@ import {
 } from '@nestjs/common';
 import type { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import type { ApiResponse, PageNumberPaginationMeta } from '@luki-fitti/common/api/responses/api.response';
+import type {
+  ApiResponse,
+  PageNumberPaginationMeta,
+} from '@luki-fitti/common/api/responses/api.response';
 
 type PaginationEnvelope<T> = {
   data?: T | null;

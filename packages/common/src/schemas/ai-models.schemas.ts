@@ -15,7 +15,8 @@ export const AI_PROMPT_FILES: Record<AiSkillName, string> = {
   [AiSkillName.MEAL_TEXT_ANALYZER]: 'apps/api/src/modules/ai/prompts/meal-text-analyzer.md',
 };
 
-export const aiPromptRawUrl = (skill: AiSkillName) => `${GITHUB_RAW_BASE}/${AI_PROMPT_FILES[skill]}`;
+export const aiPromptRawUrl = (skill: AiSkillName) =>
+  `${GITHUB_RAW_BASE}/${AI_PROMPT_FILES[skill]}`;
 export const aiPromptGithubUrl = (skill: AiSkillName) =>
   `${GITHUB_BLOB_BASE}/${AI_PROMPT_FILES[skill]}`;
 
