@@ -97,6 +97,13 @@ mci-app
 DerivedData/
 apps/apple/Config/Local.xcconfig
 
+# Apple signing material (public repository, these belong in GitHub secrets)
+*.p8
+*.p12
+*.cer
+*.certSigningRequest
+*.mobileprovision
+
 
 # SeaweedFS S3 credentials (copy from seaweedfs-s3.json.sample)
 seaweedfs-s3.json
