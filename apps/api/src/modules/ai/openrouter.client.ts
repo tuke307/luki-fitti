@@ -114,7 +114,9 @@ export class OpenRouterClient {
     const body = {
       ...(models.length > 1 ? { models } : { model: request.model }),
       messages: request.messages,
-      ...(request.tools?.length ? { tools: request.tools, tool_choice: request.toolChoice ?? 'auto' } : {}),
+      ...(request.tools?.length
+        ? { tools: request.tools, tool_choice: request.toolChoice ?? 'auto' }
+        : {}),
       temperature: request.temperature ?? 0.4,
       max_tokens: request.maxTokens ?? 4000,
       usage: { include: true },
@@ -158,7 +160,8 @@ export class OpenRouterClient {
     }
 
     const choice = json.choices?.[0];
-    if (!choice?.message) throw new AiProviderError('AI provider returned no answer', response.status);
+    if (!choice?.message)
+      throw new AiProviderError('AI provider returned no answer', response.status);
     return {
       model: json.model ?? request.model,
       message: { content: choice.message.content ?? null, tool_calls: choice.message.tool_calls },

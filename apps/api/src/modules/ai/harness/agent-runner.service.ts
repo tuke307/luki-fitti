@@ -113,7 +113,12 @@ export class AgentRunnerService {
     const settings = await this.appSettings.get();
     const defaults = skill.model(settings);
     // The user's choice only when it is currently eligible for their key; else the admin default.
-    const primary = await this.models.resolvePrimary(input.userId, skill.name, key.source, defaults.primary);
+    const primary = await this.models.resolvePrimary(
+      input.userId,
+      skill.name,
+      key.source,
+      defaults.primary,
+    );
     const { fallbacks } = defaults;
     const ctx: ToolContext = { userId: input.userId, locale: input.locale };
     const started = Date.now();
@@ -160,19 +165,22 @@ export class AgentRunnerService {
       while (steps < skill.maxSteps) {
         steps += 1;
         const isLastStep = steps === skill.maxSteps || skill.toolNames.length === 0;
-        const response = await this.client.chat({
-          model: primary,
-          fallbackModels: fallbacks,
-          messages,
-          tools: toolDefs,
-          // Force the answer on the last step so the loop always terminates with a result.
-          toolChoice: isLastStep
-            ? { type: 'function', function: { name: skill.answerTool.name } }
-            : 'auto',
-          temperature: skill.temperature,
-          maxTokens: skill.maxTokens,
-          user: userHash,
-        }, key.apiKey);
+        const response = await this.client.chat(
+          {
+            model: primary,
+            fallbackModels: fallbacks,
+            messages,
+            tools: toolDefs,
+            // Force the answer on the last step so the loop always terminates with a result.
+            toolChoice: isLastStep
+              ? { type: 'function', function: { name: skill.answerTool.name } }
+              : 'auto',
+            temperature: skill.temperature,
+            maxTokens: skill.maxTokens,
+            user: userHash,
+          },
+          key.apiKey,
+        );
         usedModel = response.model;
         usage.promptTokens += response.usage.promptTokens;
         usage.completionTokens += response.usage.completionTokens;
@@ -182,7 +190,11 @@ export class AgentRunnerService {
         }
 
         const calls = response.message.tool_calls ?? [];
-        messages.push({ role: 'assistant', content: response.message.content, tool_calls: calls.length ? calls : undefined });
+        messages.push({
+          role: 'assistant',
+          content: response.message.content,
+          tool_calls: calls.length ? calls : undefined,
+        });
 
         if (calls.length === 0) {
           messages.push({
@@ -215,14 +227,21 @@ export class AgentRunnerService {
               tool_call_id: c.id,
               content:
                 c.id === answerCall.id
-                  ? JSON.stringify({ error: 'Answer did not match the schema', issues: parsed.issues })
+                  ? JSON.stringify({
+                      error: 'Answer did not match the schema',
+                      issues: parsed.issues,
+                    })
                   : JSON.stringify({ skipped: true }),
             })),
           );
           continue;
         }
 
-        const results = await this.executeCalls(ctx, skill, calls.slice(0, MAX_PARALLEL_TOOL_CALLS));
+        const results = await this.executeCalls(
+          ctx,
+          skill,
+          calls.slice(0, MAX_PARALLEL_TOOL_CALLS),
+        );
         messages.push(...results);
         for (const extra of calls.slice(MAX_PARALLEL_TOOL_CALLS)) {
           messages.push({
@@ -241,7 +260,9 @@ export class AgentRunnerService {
             ? `PROVIDER_${err.status ?? 'ERROR'}`
             : 'INTERNAL';
       if (err instanceof AiProviderError) {
-        this.logger.warn(`AI provider error (${err.status ?? '-'}): ${err.upstreamMessage ?? err.message}`);
+        this.logger.warn(
+          `AI provider error (${err.status ?? '-'}): ${err.upstreamMessage ?? err.message}`,
+        );
       } else if (!(err instanceof RunAbort)) {
         this.logger.error(`AI run failed: ${String(err)}`);
       }
@@ -255,7 +276,10 @@ export class AgentRunnerService {
       }
       if (err instanceof AiProviderError && err.status === 402) {
         throw new HttpException(
-          { message: 'The OpenRouter account has insufficient credits.', code: 'AI_KEY_NO_CREDITS' },
+          {
+            message: 'The OpenRouter account has insufficient credits.',
+            code: 'AI_KEY_NO_CREDITS',
+          },
           HttpStatus.PAYMENT_REQUIRED,
         );
       }
@@ -278,7 +302,9 @@ export class AgentRunnerService {
       ? { success: true, data: result.data }
       : {
           success: false,
-          issues: result.error.issues.slice(0, 10).map((i) => ({ path: i.path.join('.'), message: i.message })),
+          issues: result.error.issues
+            .slice(0, 10)
+            .map((i) => ({ path: i.path.join('.'), message: i.message })),
         };
   }
 
@@ -294,7 +320,11 @@ export class AgentRunnerService {
           content = JSON.stringify({ error: `Unknown tool ${call.function.name}` });
         } else {
           try {
-            const output = await this.tools.execute(ctx, call.function.name, call.function.arguments);
+            const output = await this.tools.execute(
+              ctx,
+              call.function.name,
+              call.function.arguments,
+            );
             content = truncate(JSON.stringify(output ?? null), MAX_TOOL_RESULT_CHARS);
           } catch (err) {
             // Only validation/known messages go back to the model; never stack traces.
@@ -304,7 +334,8 @@ export class AgentRunnerService {
                 ? { issues: err.issues.slice(0, 5).map((i) => `${i.path.join('.')}: ${i.message}`) }
                 : {}),
             });
-            if (!(err instanceof z.ZodError)) this.logger.warn(`Tool ${call.function.name} failed: ${String(err)}`);
+            if (!(err instanceof z.ZodError))
+              this.logger.warn(`Tool ${call.function.name} failed: ${String(err)}`);
           }
         }
         return { role: 'tool', tool_call_id: call.id, content };

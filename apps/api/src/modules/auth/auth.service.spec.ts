@@ -129,13 +129,7 @@ function createMockPrisma() {
         users.set(id, user);
         return user;
       },
-      update: async ({
-        where,
-        data,
-      }: {
-        where: { id: string };
-        data: Partial<MockUserRecord>;
-      }) => {
+      update: async ({ where, data }: { where: { id: string }; data: Partial<MockUserRecord> }) => {
         const u = users.get(where.id);
         if (!u) throw new Error('Not found');
         Object.assign(u, data);

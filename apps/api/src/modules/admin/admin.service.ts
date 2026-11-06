@@ -116,22 +116,20 @@ export class AdminService {
       total,
       page: query.page,
       limit: query.limit,
-      items: users.map(
-        (u): AdminUserDto => ({
-          id: u.id,
-          email: u.email,
-          name: u.name,
-          emailVerified: u.emailVerified,
-          createdAt: u.createdAt.toISOString(),
-          lastLoginAt: u.lastLoginAt?.toISOString() ?? null,
-          permissions: u.permissions.filter(isAdminPermission),
-          completedSessions: u._count.workoutSessions,
-          mealEntries: u._count.mealEntries,
-          aiRunsLast30Days: runsByUser.get(u.id)?._count._all ?? 0,
-          aiCostUsdLast30Days: round6(runsByUser.get(u.id)?._sum.costUsd ?? 0),
-          aiKey: keysByUser.get(u.id) ?? { hasOwnKey: false, admin: null },
-        }),
-      ),
+      items: users.map((u): AdminUserDto => ({
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        emailVerified: u.emailVerified,
+        createdAt: u.createdAt.toISOString(),
+        lastLoginAt: u.lastLoginAt?.toISOString() ?? null,
+        permissions: u.permissions.filter(isAdminPermission),
+        completedSessions: u._count.workoutSessions,
+        mealEntries: u._count.mealEntries,
+        aiRunsLast30Days: runsByUser.get(u.id)?._count._all ?? 0,
+        aiCostUsdLast30Days: round6(runsByUser.get(u.id)?._sum.costUsd ?? 0),
+        aiKey: keysByUser.get(u.id) ?? { hasOwnKey: false, admin: null },
+      })),
     };
   }
 
@@ -263,6 +261,10 @@ export class AdminService {
       select: { id: true, email: true },
     });
     if (!user) throw new NotFoundException('User not found');
-    return { ...(await this.aiUsage.getUserUsage(user.id, days)), userId: user.id, email: user.email };
+    return {
+      ...(await this.aiUsage.getUserUsage(user.id, days)),
+      userId: user.id,
+      email: user.email,
+    };
   }
 }

@@ -83,13 +83,13 @@ Gotchas:
 
 ## 3. Map to the LukiFitti model
 
-| Alpha Progression                     | LukiFitti (`packages/database/prisma/schema.prisma`)                                          |
-| ------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Session header block                  | `WorkoutSession` (status `COMPLETED`, `startedAt` from the date, `activeDurationSeconds` from the duration) |
-| Exercise header (`Name · Equipment`)  | `SessionExercise` (`exerciseNameSnapshot`; use `Equipment` for catalog matching)               |
-| `WU<n>` entries                       | `SessionSet` with `setType = WARMUP`                                                          |
-| Set rows                              | `SessionSet` (`weight`, `reps`; RIR becomes RPE as `10 − RIR`)                                 |
-| Plans export                          | One `WorkoutFolder` per plan, one `WorkoutTemplate` per `Tag` (working sets with the rep target, 90 s rest) |
+| Alpha Progression                    | LukiFitti (`packages/database/prisma/schema.prisma`)                                                        |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| Session header block                 | `WorkoutSession` (status `COMPLETED`, `startedAt` from the date, `activeDurationSeconds` from the duration) |
+| Exercise header (`Name · Equipment`) | `SessionExercise` (`exerciseNameSnapshot`; use `Equipment` for catalog matching)                            |
+| `WU<n>` entries                      | `SessionSet` with `setType = WARMUP`                                                                        |
+| Set rows                             | `SessionSet` (`weight`, `reps`; RIR becomes RPE as `10 − RIR`)                                              |
+| Plans export                         | One `WorkoutFolder` per plan, one `WorkoutTemplate` per `Tag` (working sets with the rep target, 90 s rest) |
 
 Exercises: match each Alpha Progression exercise to the **global system catalog**
 (`INITIAL_EXERCISE_CATALOG` in `packages/common/src/catalog/data.ts`) by name, equipment and primary

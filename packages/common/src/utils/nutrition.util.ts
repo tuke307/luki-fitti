@@ -19,7 +19,8 @@ export const EMPTY_MACROS: MacroValues = { kcal: 0, proteinG: 0, carbsG: 0, fatG
 
 /** Sums macros; non-finite or negative values count as 0 so one bad item can't poison totals. */
 export function sumMacros(items: ReadonlyArray<Partial<MacroValues>>): MacroValues {
-  const safe = (v: number | undefined) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0);
+  const safe = (v: number | undefined) =>
+    typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0;
   const total = items.reduce<MacroValues>(
     (acc, item) => ({
       kcal: acc.kcal + safe(item.kcal),
@@ -46,7 +47,8 @@ export function scaleFoodItemToGrams<T extends ScalableFoodItem>(item: T, grams:
     return { ...item, grams };
   }
   const factor = grams / item.grams;
-  const scale = (v: number | null | undefined) => (v === null || v === undefined ? v : round1(v * factor));
+  const scale = (v: number | null | undefined) =>
+    v === null || v === undefined ? v : round1(v * factor);
   return {
     ...item,
     grams,
@@ -73,7 +75,8 @@ export function scaleFoodItemToAmount<T extends ScalableFoodItem & { amountUnit?
   amount: number,
   unit: MealAmountUnit = item.amountUnit ?? MealAmountUnit.G,
 ): T {
-  if ((item.amountUnit ?? MealAmountUnit.G) !== unit) return { ...item, grams: amount, amountUnit: unit };
+  if ((item.amountUnit ?? MealAmountUnit.G) !== unit)
+    return { ...item, grams: amount, amountUnit: unit };
   return { ...scaleFoodItemToGrams(item, amount), amountUnit: unit };
 }
 

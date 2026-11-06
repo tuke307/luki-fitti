@@ -12,7 +12,10 @@ import {
   DropdownMenuTrigger,
 } from '@luki-fitti/ui/components/ui/dropdown-menu';
 
-interface DataTableColumnHeaderProps<TData extends RowData, TValue> extends React.HTMLAttributes<HTMLDivElement> {
+interface DataTableColumnHeaderProps<
+  TData extends RowData,
+  TValue,
+> extends React.HTMLAttributes<HTMLDivElement> {
   column: Column<typeof features, TData, TValue>;
   title: string;
 }

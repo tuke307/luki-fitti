@@ -127,14 +127,14 @@ are `MIXED`, and other sessions use `STRENGTH`.
 The target tables are defined in
 [`schema.prisma`](../packages/database/prisma/schema.prisma):
 
-| Export content | LukiFitti |
-| --- | --- |
-| Plan and training day | `WorkoutFolder`, `WorkoutTemplate` |
-| Planned exercise and sets | `WorkoutTemplateExercise`, including the `sets` JSON |
-| Completed workout | `WorkoutSession` |
+| Export content            | LukiFitti                                               |
+| ------------------------- | ------------------------------------------------------- |
+| Plan and training day     | `WorkoutFolder`, `WorkoutTemplate`                      |
+| Planned exercise and sets | `WorkoutTemplateExercise`, including the `sets` JSON    |
+| Completed workout         | `WorkoutSession`                                        |
 | Exercise within a workout | `SessionExercise` with name, muscle, and type snapshots |
-| Individual set | `SessionSet` |
-| Personal exercise variant | `Exercise` and `ExerciseMuscleGroup` |
+| Individual set            | `SessionSet`                                            |
+| Personal exercise variant | `Exercise` and `ExerciseMuscleGroup`                    |
 
 Calculate session totals according to the app's rules: count completed sets and
 reps, but exclude warmup sets from strength volume. Leave missing RPE, calorie,

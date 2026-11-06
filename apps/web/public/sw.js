@@ -1,9 +1,5 @@
 const CACHE_NAME = 'luki-fitti-shell-v3';
-const STATIC_ASSETS = [
-  '/manifest.webmanifest',
-  '/icon-192.svg',
-  '/icon-512.svg',
-];
+const STATIC_ASSETS = ['/manifest.webmanifest', '/icon-192.svg', '/icon-512.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -17,13 +13,13 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((oldKey) => caches.delete(oldKey)),
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys.filter((key) => key !== CACHE_NAME).map((oldKey) => caches.delete(oldKey)),
+        ),
       ),
-    ),
   );
   self.clients.claim();
 });

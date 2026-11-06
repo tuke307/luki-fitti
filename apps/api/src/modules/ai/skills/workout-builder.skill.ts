@@ -22,5 +22,6 @@ export const WORKOUT_BUILDER_SKILL: AiSkill<typeof WorkoutProposalSchema> = {
   temperature: 0.4,
   maxSteps: 8,
   maxTokens: 4000,
-  systemPrompt: (ctx) => renderPrompt(AiSkillName.WORKOUT_BUILDER, { language: promptLanguage(ctx.locale) }),
+  systemPrompt: (ctx) =>
+    renderPrompt(AiSkillName.WORKOUT_BUILDER, { language: promptLanguage(ctx.locale) }),
 };

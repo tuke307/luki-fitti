@@ -13,12 +13,22 @@ const makeJpeg = (width: number, height: number) =>
 describe('image.util', () => {
   it('detects real types by magic bytes, not names', async () => {
     assert.equal(detectImageType(await makeJpeg(8, 8)), 'image/jpeg');
-    assert.equal(detectImageType(await sharp({ create: { width: 4, height: 4, channels: 3, background: '#000' } }).png().toBuffer()), 'image/png');
+    assert.equal(
+      detectImageType(
+        await sharp({ create: { width: 4, height: 4, channels: 3, background: '#000' } })
+          .png()
+          .toBuffer(),
+      ),
+      'image/png',
+    );
     assert.equal(detectImageType(Buffer.from('<svg onload="alert(1)"></svg>')), null);
   });
 
   it('rejects non-images', async () => {
-    await assert.rejects(normalizeImage(Buffer.from('<html><script>x</script></html>')), BadRequestException);
+    await assert.rejects(
+      normalizeImage(Buffer.from('<html><script>x</script></html>')),
+      BadRequestException,
+    );
   });
 
   it('bounds the size and strips EXIF metadata', async () => {

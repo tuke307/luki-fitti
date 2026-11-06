@@ -79,7 +79,10 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
       <main>
         {/* ---- hero ---------------------------------------------------- */}
         <section className="relative mx-auto grid min-h-[calc(100dvh-3.5rem)] max-w-[920px] items-center gap-12 px-4 pt-10 pb-16 sm:pt-12 lg:grid-cols-2 lg:gap-8 lg:py-12">
-          <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center lg:justify-end">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center lg:justify-end"
+          >
             <div className="h-[640px] w-[640px] rounded-full bg-[radial-gradient(closest-side,oklch(0.72_0.16_50/0.22),transparent)]" />
           </div>
           <div className="site-hero-in space-y-6">
@@ -142,7 +145,8 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
                 );
               }
               const shot = shots[feature.shotId] ?? hero;
-              const extra = 'extraShotId' in feature && feature.extraShotId ? shots[feature.extraShotId] : null;
+              const extra =
+                'extraShotId' in feature && feature.extraShotId ? shots[feature.extraShotId] : null;
               const flipped = i % 2 === 1;
               const isWatch = feature.shotId === 'watch';
               return (

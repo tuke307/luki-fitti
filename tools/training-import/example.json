@@ -5,9 +5,7 @@
       "days": [
         {
           "name": "Day A",
-          "exercises": [
-            { "name": "Example leg curl", "plannedSets": 2, "targetReps": 10 }
-          ]
+          "exercises": [{ "name": "Example leg curl", "plannedSets": 2, "targetReps": 10 }]
         }
       ]
     }
