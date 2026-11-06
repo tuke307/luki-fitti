@@ -43,189 +43,184 @@ async function main(): Promise<void> {
   );
 
   try {
-    await prisma.$transaction(async (tx) => {
-      // Seeded accounts are the project owners, so they get every permission and feature.
-      // Skipped in production so fixture credentials never reach a live database.
-      if (process.env.NODE_ENV !== 'production') {
-        for (const seedUser of seedUsers) {
-          const email = seedUser.email.toLowerCase();
-          const grants = {
-            permissions: [...ADMIN_PERMISSIONS],
-          };
-          await tx.user.upsert({
-            where: { email },
-            update: grants,
-            create: { email, name: seedUser.name, passwordHash: seedUser.passwordHash, ...grants },
-          });
-        }
-      }
-
-      for (const item of ALL_SYSTEM_EXERCISES) {
-        await tx.exercise.upsert({
-          where: { slug: item.slug },
-          update: {
-            name: item.name,
-            description: item.description,
-            instructions: item.instructions,
-            category: item.category,
-            exerciseType: item.exerciseType,
-            primaryMuscleGroup: item.primaryMuscleGroup,
-            equipment: item.equipment,
-            recommendedDurationSeconds: item.recommendedDurationSeconds,
-            tags: item.tags,
-            isSystem: true,
-          },
-          create: {
-            id: item.id,
-            slug: item.slug,
-            name: item.name,
-            description: item.description,
-            instructions: item.instructions,
-            category: item.category,
-            exerciseType: item.exerciseType,
-            primaryMuscleGroup: item.primaryMuscleGroup,
-            equipment: item.equipment,
-            recommendedDurationSeconds: item.recommendedDurationSeconds,
-            tags: item.tags,
-            isSystem: true,
-          },
-        });
-
-        await tx.exerciseMuscleGroup.deleteMany({ where: { exerciseId: item.id } });
-        await tx.exerciseMuscleGroup.create({
-          data: {
-            exerciseId: item.id,
-            muscleGroup: item.primaryMuscleGroup,
-            isPrimary: true,
-          },
-        });
-
-        for (const sec of item.secondaryMuscleGroups) {
-          if (sec !== item.primaryMuscleGroup) {
-            await tx.exerciseMuscleGroup.create({
-              data: {
-                exerciseId: item.id,
-                muscleGroup: sec,
-                isPrimary: false,
+    await prisma.$transaction(
+      async (tx) => {
+        // Seeded accounts are the project owners, so they get every permission and feature.
+        // Skipped in production so fixture credentials never reach a live database.
+        if (process.env.NODE_ENV !== 'production') {
+          for (const seedUser of seedUsers) {
+            const email = seedUser.email.toLowerCase();
+            const grants = {
+              permissions: [...ADMIN_PERMISSIONS],
+            };
+            await tx.user.upsert({
+              where: { email },
+              update: grants,
+              create: {
+                email,
+                name: seedUser.name,
+                passwordHash: seedUser.passwordHash,
+                ...grants,
               },
             });
           }
         }
-      }
 
-      for (const item of CORE_EXERCISE_CATALOG) {
-        await tx.exerciseAlternative.deleteMany({ where: { exerciseId: item.id } });
-        for (const altId of item.alternativeExerciseIds) {
-          await tx.exerciseAlternative.create({
-            data: {
+        for (const item of ALL_SYSTEM_EXERCISES) {
+          await tx.exercise.upsert({
+            where: { slug: item.slug },
+            update: {
+              name: item.name,
+              description: item.description,
+              instructions: item.instructions,
+              category: item.category,
+              exerciseType: item.exerciseType,
+              primaryMuscleGroup: item.primaryMuscleGroup,
+              equipment: item.equipment,
+              recommendedDurationSeconds: item.recommendedDurationSeconds,
+              tags: item.tags,
+              isSystem: true,
+            },
+            create: {
+              id: item.id,
+              slug: item.slug,
+              name: item.name,
+              description: item.description,
+              instructions: item.instructions,
+              category: item.category,
+              exerciseType: item.exerciseType,
+              primaryMuscleGroup: item.primaryMuscleGroup,
+              equipment: item.equipment,
+              recommendedDurationSeconds: item.recommendedDurationSeconds,
+              tags: item.tags,
+              isSystem: true,
+            },
+          });
+
+          await tx.exerciseMuscleGroup.deleteMany({ where: { exerciseId: item.id } });
+          await tx.exerciseMuscleGroup.createMany({
+            data: [
+              { exerciseId: item.id, muscleGroup: item.primaryMuscleGroup, isPrimary: true },
+              ...item.secondaryMuscleGroups
+                .filter((sec) => sec !== item.primaryMuscleGroup)
+                .map((sec) => ({ exerciseId: item.id, muscleGroup: sec, isPrimary: false })),
+            ],
+          });
+        }
+
+        for (const item of CORE_EXERCISE_CATALOG) {
+          await tx.exerciseAlternative.deleteMany({ where: { exerciseId: item.id } });
+          await tx.exerciseAlternative.createMany({
+            data: item.alternativeExerciseIds.map((altId) => ({
               exerciseId: item.id,
               alternativeExerciseId: altId,
               reason: exerciseAlternatives.reason,
-            },
+            })),
           });
         }
-      }
 
-      for (const { type, ...template } of emailTemplates) {
-        await tx.emailTemplate.upsert({
-          where: { type },
-          update: template,
-          create: { type, ...template },
-        });
-      }
+        for (const { type, ...template } of emailTemplates) {
+          await tx.emailTemplate.upsert({
+            where: { type },
+            update: template,
+            create: { type, ...template },
+          });
+        }
 
-      const seedEmails =
-        process.env.NODE_ENV !== 'production' ? seedUsers.map((u) => u.email.toLowerCase()) : [];
-      for (const email of seedEmails) {
-        const user = await tx.user.findUnique({ where: { email } });
-        if (user) {
-          for (const starterFolder of DEFAULT_STARTER_FOLDERS) {
-            const folder = await tx.workoutFolder.upsert({
-              where: { userId_name: { userId: user.id, name: starterFolder.name } },
-              update: { color: starterFolder.color },
-              create: {
-                userId: user.id,
-                systemKey: starterFolder.id,
-                name: starterFolder.name,
-                color: starterFolder.color,
-                sortOrder: starterFolder.sortOrder,
-              },
-            });
-
-            const folderTemplates = DEFAULT_STARTER_TEMPLATES.filter(
-              (t) => t.folderId === starterFolder.id,
-            );
-            for (const tpl of folderTemplates) {
-              const existingTpl = await tx.workoutTemplate.findFirst({
-                where: { userId: user.id, systemKey: tpl.id },
-              });
-              if (existingTpl) continue;
-              const createdTpl = await tx.workoutTemplate.create({
-                data: {
+        const seedEmails =
+          process.env.NODE_ENV !== 'production' ? seedUsers.map((u) => u.email.toLowerCase()) : [];
+        for (const email of seedEmails) {
+          const user = await tx.user.findUnique({ where: { email } });
+          if (user) {
+            for (const starterFolder of DEFAULT_STARTER_FOLDERS) {
+              const folder = await tx.workoutFolder.upsert({
+                where: { userId_name: { userId: user.id, name: starterFolder.name } },
+                update: { color: starterFolder.color },
+                create: {
                   userId: user.id,
-                  systemKey: tpl.id,
-                  folderId: folder.id,
-                  name: tpl.name,
-                  description: tpl.description,
-                  estimatedDurationMinutes: tpl.estimatedDurationMinutes,
-                  sortOrder: tpl.sortOrder,
+                  systemKey: starterFolder.id,
+                  name: starterFolder.name,
+                  color: starterFolder.color,
+                  sortOrder: starterFolder.sortOrder,
                 },
               });
 
-              for (const ex of tpl.exercises) {
-                await tx.workoutTemplateExercise.create({
+              const folderTemplates = DEFAULT_STARTER_TEMPLATES.filter(
+                (t) => t.folderId === starterFolder.id,
+              );
+              for (const tpl of folderTemplates) {
+                const existingTpl = await tx.workoutTemplate.findFirst({
+                  where: { userId: user.id, systemKey: tpl.id },
+                });
+                if (existingTpl) continue;
+                const createdTpl = await tx.workoutTemplate.create({
                   data: {
-                    templateId: createdTpl.id,
+                    userId: user.id,
+                    systemKey: tpl.id,
+                    folderId: folder.id,
+                    name: tpl.name,
+                    description: tpl.description,
+                    estimatedDurationMinutes: tpl.estimatedDurationMinutes,
+                    sortOrder: tpl.sortOrder,
+                  },
+                });
+
+                for (const ex of tpl.exercises) {
+                  await tx.workoutTemplateExercise.create({
+                    data: {
+                      templateId: createdTpl.id,
+                      exerciseId: ex.exerciseId,
+                      orderIndex: ex.orderIndex,
+                      plannedSets: ex.plannedSets,
+                      warmupSets: ex.warmupSets,
+                      targetRepsMin: ex.targetRepsMin,
+                      targetRepsMax: ex.targetRepsMax,
+                      targetWeight: ex.targetWeight,
+                      weightUnit: ex.weightUnit,
+                      restSeconds: ex.restSeconds,
+                      notes: ex.notes,
+                      alternativeExerciseIds: ex.alternativeExerciseIds,
+                    },
+                  });
+                }
+              }
+            }
+
+            for (const routine of DEFAULT_STRETCHING_ROUTINES) {
+              const existingRoutine = await tx.stretchingRoutine.findFirst({
+                where: { userId: user.id, systemKey: routine.id },
+              });
+              if (existingRoutine) continue;
+              const createdRoutine = await tx.stretchingRoutine.create({
+                data: {
+                  userId: user.id,
+                  systemKey: routine.id,
+                  name: routine.name,
+                  description: routine.description,
+                  targetArea: routine.targetArea,
+                  estimatedDurationSeconds: routine.estimatedDurationSeconds,
+                },
+              });
+              for (const ex of routine.exercises) {
+                await tx.stretchingRoutineExercise.create({
+                  data: {
+                    routineId: createdRoutine.id,
                     exerciseId: ex.exerciseId,
                     orderIndex: ex.orderIndex,
-                    plannedSets: ex.plannedSets,
-                    warmupSets: ex.warmupSets,
-                    targetRepsMin: ex.targetRepsMin,
-                    targetRepsMax: ex.targetRepsMax,
-                    targetWeight: ex.targetWeight,
-                    weightUnit: ex.weightUnit,
-                    restSeconds: ex.restSeconds,
+                    sets: ex.sets,
+                    durationSeconds: ex.durationSeconds,
+                    reps: ex.reps,
+                    transitionSeconds: ex.transitionSeconds,
                     notes: ex.notes,
-                    alternativeExerciseIds: ex.alternativeExerciseIds,
                   },
                 });
               }
             }
           }
-
-          for (const routine of DEFAULT_STRETCHING_ROUTINES) {
-            const existingRoutine = await tx.stretchingRoutine.findFirst({
-              where: { userId: user.id, systemKey: routine.id },
-            });
-            if (existingRoutine) continue;
-            const createdRoutine = await tx.stretchingRoutine.create({
-              data: {
-                userId: user.id,
-                systemKey: routine.id,
-                name: routine.name,
-                description: routine.description,
-                targetArea: routine.targetArea,
-                estimatedDurationSeconds: routine.estimatedDurationSeconds,
-              },
-            });
-            for (const ex of routine.exercises) {
-              await tx.stretchingRoutineExercise.create({
-                data: {
-                  routineId: createdRoutine.id,
-                  exerciseId: ex.exerciseId,
-                  orderIndex: ex.orderIndex,
-                  sets: ex.sets,
-                  durationSeconds: ex.durationSeconds,
-                  reps: ex.reps,
-                  transitionSeconds: ex.transitionSeconds,
-                  notes: ex.notes,
-                },
-              });
-            }
-          }
         }
-      }
-    });
+      },
+      { maxWait: 10_000, timeout: 120_000 },
+    );
 
     logger.info('LukiFitti exercise catalog and starter templates seeded successfully');
   } catch (error) {
