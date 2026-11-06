@@ -91,7 +91,7 @@ export function HeroDeviceSwitcher({
           );
         })}
       </div>
-      <div className="mt-6 flex justify-center">
+      <div className="mt-4 flex justify-center">
         <div
           role="tablist"
           aria-label={tablistLabel}
@@ -118,7 +118,7 @@ export function HeroDeviceSwitcher({
               className={`focus-visible:ring-ring h-11 rounded-full px-4 text-sm font-medium outline-none focus-visible:ring-2 ${
                 i === selected
                   ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
+                  : 'text-foreground/30 hover:text-foreground'
               }`}
             >
               {device.label}

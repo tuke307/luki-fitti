@@ -12,8 +12,8 @@ const GLANCE_ICONS = [WifiOff, TrendingUp, Watch] as const;
 
 /** Responsive display widths for the hero device images. */
 const HERO_DEVICE_WIDTHS: Record<string, string> = {
-  iphone: 'w-[300px] lg:w-[360px]',
-  ipad: 'w-[340px] lg:w-[440px]',
+  iphone: 'w-[300px]',
+  ipad: 'w-[340px] lg:w-[400px]',
   watch: 'w-[240px] lg:w-[260px]',
 };
 
