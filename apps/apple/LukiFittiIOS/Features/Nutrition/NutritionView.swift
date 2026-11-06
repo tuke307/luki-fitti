@@ -387,9 +387,22 @@ public struct NutritionView: View {
             .chartForegroundStyleScale([tr("Eaten"): LukiColors.accent, tr("Burned"): LukiColors.calories.opacity(0.55)])
             .chartXAxis { AxisMarks(values: .stride(by: .day)) { _ in AxisValueLabel(format: .dateTime.weekday(.narrow)) } }
             .frame(height: 180)
+            Text(Self.loggedDaysCaption(eaten: rows.map(\.eaten), tr: tr))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .accessibilityIdentifier("ios.nutrition.loggedDays")
         }
         .padding(18)
         .background(cardShape)
+    }
+
+    /// "3 of 7 days logged · Avg. 1850 kcal per logged day", like the web chart caption.
+    static func loggedDaysCaption(eaten: [Double], tr: SupportedLocale) -> String {
+        let logged = eaten.filter { $0 > 0 }
+        let caption = tr("%d of %d days logged", logged.count, eaten.count)
+        guard !logged.isEmpty else { return caption }
+        let average = Int((logged.reduce(0, +) / Double(logged.count)).rounded())
+        return "\(caption) · \(tr("Avg. %d kcal per logged day", average))"
     }
 
     // MARK: Helpers

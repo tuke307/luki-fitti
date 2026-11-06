@@ -304,6 +304,24 @@ public actor APIClient {
         try await request(path: "/api/stretching/routines", method: "GET")
     }
 
+    public func createExercise(_ body: CreateExerciseBodyDto) async throws -> ExerciseDto {
+        try await request(path: "/api/exercises", method: "POST", body: body)
+    }
+
+    public func createStretchingRoutine(_ body: StretchingRoutineUpsertDto) async throws -> StretchingRoutineDto {
+        try await request(path: "/api/stretching/routines", method: "POST", body: body)
+    }
+
+    public func updateStretchingRoutine(id: String, _ body: StretchingRoutineUpsertDto) async throws -> StretchingRoutineDto {
+        try await request(path: "/api/stretching/routines/\(Self.pathComponent(id))", method: "PUT", body: body)
+    }
+
+    public func deleteStretchingRoutine(id: String) async throws {
+        let _: IgnoredResponse = try await request(
+            path: "/api/stretching/routines/\(Self.pathComponent(id))", method: "DELETE"
+        )
+    }
+
     public func syncSession(_ payload: SyncSessionPayloadDto) async throws -> SyncSessionResponseDto {
         try await request(path: "/api/sessions/sync", method: "POST", body: payload)
     }

@@ -49,6 +49,9 @@ public struct SearchableExercisePickerSheet: View {
     public let exercises: [ExerciseDto]
     public let selectedExerciseId: String?
     public let suggestedSections: [ExercisePickerSection]
+    /// Shown in the info sheet's history; callers pass the store's, as this package has no store.
+    public let historySessions: [WorkoutSessionDto]
+    public let weightUnit: WeightUnit
     public let onSelect: (ExerciseDto) -> Void
     @Environment(\.dismiss) private var dismiss
     @Environment(\.lukiLocale) private var tr
@@ -56,18 +59,23 @@ public struct SearchableExercisePickerSheet: View {
     @State private var searchText: String = ""
     @State private var selectedMuscle: MuscleGroup?
     @State private var searchIndex: ExerciseSearchIndex?
+    @State private var guideExercise: ExerciseDto?
 
     public init(
         title: String = "Select Exercise",
         exercises: [ExerciseDto],
         selectedExerciseId: String? = nil,
         suggestedSections: [ExercisePickerSection] = [],
+        historySessions: [WorkoutSessionDto] = [],
+        weightUnit: WeightUnit = .KG,
         onSelect: @escaping (ExerciseDto) -> Void
     ) {
         self.title = title
         self.exercises = exercises
         self.selectedExerciseId = selectedExerciseId
         self.suggestedSections = suggestedSections.filter { !$0.items.isEmpty }
+        self.historySessions = historySessions
+        self.weightUnit = weightUnit
         self.onSelect = onSelect
     }
 
@@ -174,45 +182,50 @@ public struct SearchableExercisePickerSheet: View {
                         } else {
                             ForEach(filteredExercises) { ex in
                                 let isSelected = ex.id == selectedExerciseId
-                                Button {
-                                    onSelect(ex)
-                                    dismiss()
-                                } label: {
-                                    HStack(spacing: 12) {
-                                        ExerciseThumbnailView(
-                                            exercise: ex,
-                                            fallbackMuscle: ex.primaryMuscleGroup,
-                                            compact: true
-                                        )
+                                HStack(spacing: 0) {
+                                    Button {
+                                        onSelect(ex)
+                                        dismiss()
+                                    } label: {
+                                        HStack(spacing: 12) {
+                                            ExerciseThumbnailView(
+                                                exercise: ex,
+                                                fallbackMuscle: ex.primaryMuscleGroup,
+                                                compact: true
+                                            )
 
-                                        VStack(alignment: .leading, spacing: 3) {
-                                            Text(ex.name)
-                                                .font(.subheadline.bold())
-                                                .foregroundStyle(isSelected ? LukiColors.accent : .primary)
-                                                .multilineTextAlignment(.leading)
+                                            VStack(alignment: .leading, spacing: 3) {
+                                                Text(ex.name)
+                                                    .font(.subheadline.bold())
+                                                    .foregroundStyle(isSelected ? LukiColors.accent : .primary)
+                                                    .multilineTextAlignment(.leading)
 
-                                            HStack(spacing: 6) {
-                                                Text("\(LukiI18n.muscleLabel(ex.primaryMuscleGroup, locale: tr)) · \(LukiI18n.equipmentLabel(ex.equipment, locale: tr))")
-                                                    .font(.footnote)
-                                                    .foregroundStyle(.secondary)
-                                                LateralityBadge(ex.exerciseType == .STRETCHING ? nil : ex.laterality)
+                                                HStack(spacing: 6) {
+                                                    Text("\(LukiI18n.muscleLabel(ex.primaryMuscleGroup, locale: tr)) · \(LukiI18n.equipmentLabel(ex.equipment, locale: tr))")
+                                                        .font(.footnote)
+                                                        .foregroundStyle(.secondary)
+                                                    LateralityBadge(ex.exerciseType == .STRETCHING ? nil : ex.laterality)
+                                                }
+                                            }
+
+                                            Spacer()
+
+                                            if isSelected {
+                                                Image(systemName: "checkmark.circle.fill")
+                                                    .foregroundStyle(LukiColors.accent)
                                             }
                                         }
-
-                                        Spacer()
-
-                                        if isSelected {
-                                            Image(systemName: "checkmark.circle.fill")
-                                                .foregroundStyle(LukiColors.accent)
-                                        }
+                                        .padding(10)
+                                        .contentShape(Rectangle())
                                     }
-                                    .padding(10)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .fill(isSelected ? LukiColors.accent.opacity(0.14) : LukiColors.cardBackground)
-                                    )
+                                    .buttonStyle(.plain)
+
+                                    infoButton(ex)
                                 }
-                                .buttonStyle(.plain)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(isSelected ? LukiColors.accent.opacity(0.14) : LukiColors.cardBackground)
+                                )
                             }
                         }
                     }
@@ -228,7 +241,32 @@ public struct SearchableExercisePickerSheet: View {
             }
             // Build the search index once per catalog instead of on every keystroke.
             .task(id: exercises.count) { searchIndex = .catalogWithLabels(exercises) }
+            .sheet(item: $guideExercise) { exercise in
+                ExerciseGuideSheet(
+                    exercise: exercise,
+                    historySessions: historySessions,
+                    weightUnit: weightUnit,
+                    catalog: exercises
+                )
+            }
         }
+    }
+
+    /// Opens the exercise's guide (steps, muscles, history) without picking it.
+    private func infoButton(_ exercise: ExerciseDto) -> some View {
+        Button {
+            guideExercise = exercise
+        } label: {
+            Image(systemName: "info.circle")
+                .font(.title3)
+                .foregroundStyle(LukiColors.accent)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.trailing, 4)
+        .accessibilityLabel(tr("About %@", exercise.name))
+        .accessibilityIdentifier("ios.picker.info.\(exercise.id)")
     }
 
     private func sectionHeader(_ text: String, highlighted: Bool) -> some View {
@@ -244,32 +282,37 @@ public struct SearchableExercisePickerSheet: View {
         VStack(spacing: 8) {
             sectionHeader(section.title, highlighted: section.highlighted)
             ForEach(section.items) { item in
-                Button {
-                    onSelect(item.exercise)
-                    dismiss()
-                } label: {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(item.exercise.name)
-                            .font(.subheadline.bold())
-                            .foregroundStyle(.primary)
-                            .multilineTextAlignment(.leading)
-                        HStack(spacing: 6) {
-                            Text(item.detail)
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
+                HStack(spacing: 0) {
+                    Button {
+                        onSelect(item.exercise)
+                        dismiss()
+                    } label: {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(item.exercise.name)
+                                .font(.subheadline.bold())
+                                .foregroundStyle(.primary)
                                 .multilineTextAlignment(.leading)
-                            LateralityBadge(item.exercise.laterality)
+                            HStack(spacing: 6) {
+                                Text(item.detail)
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.leading)
+                                LateralityBadge(item.exercise.laterality)
+                            }
                         }
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                        .padding(10)
+                        .contentShape(Rectangle())
                     }
-                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                    .padding(10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(section.highlighted ? LukiColors.accent.opacity(0.14) : LukiColors.cardBackground)
-                    )
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("ios.picker.suggestion.\(item.exercise.id)")
+
+                    infoButton(item.exercise)
                 }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("ios.picker.suggestion.\(item.exercise.id)")
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(section.highlighted ? LukiColors.accent.opacity(0.14) : LukiColors.cardBackground)
+                )
             }
         }
         .accessibilityElement(children: .contain)

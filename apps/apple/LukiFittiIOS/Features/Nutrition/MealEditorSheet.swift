@@ -87,7 +87,7 @@ struct MealEditorSheet: View {
                 Text(tr("AI features run on your own OpenRouter API key. Add it in your profile to use them."))
             }
             .sheet(isPresented: $showsHistory) {
-                HistoryPickerSheet(api: viewModel.store.apiClient, onAdd: addFromHistory)
+                HistoryPickerSheet(load: historyPicks, onAdd: addFromHistory)
             }
             .fullScreenCover(isPresented: $showsCamera) {
                 CameraPicker { image in
@@ -107,6 +107,20 @@ struct MealEditorSheet: View {
                     onDelete: viewerDelete
                 )
             }
+    }
+
+    /// Guests (and signed-in people without a connection) pick from the entries on this device.
+    private var historyPicks: (String?) async throws -> NutritionHistoryPicksDto {
+        let local = viewModel.nutrition.entries
+        guard isSignedIn else { return { NutritionHistoryPicks.rank(local, query: $0) } }
+        let api = viewModel.store.apiClient
+        return { query in
+            do {
+                return try await api.fetchHistoryPicks(query: query)
+            } catch APIClientError.offline {
+                return NutritionHistoryPicks.rank(local, query: query)
+            }
+        }
     }
 
     private var viewerDelete: ((MealPhotoDto) async -> Bool)? {
@@ -197,14 +211,12 @@ struct MealEditorSheet: View {
                     } label: {
                         Label(tr("Add another"), systemImage: "plus")
                     }
-                    if isSignedIn {
-                        Button {
-                            showsHistory = true
-                        } label: {
-                            Label(tr("Add from history"), systemImage: "clock.arrow.circlepath")
-                        }
-                        .accessibilityIdentifier("ios.nutrition.historyButton")
+                    Button {
+                        showsHistory = true
+                    } label: {
+                        Label(tr("Add from history"), systemImage: "clock.arrow.circlepath")
                     }
+                    .accessibilityIdentifier("ios.nutrition.historyButton")
                 }
                 .disabled(analyzing)
 
