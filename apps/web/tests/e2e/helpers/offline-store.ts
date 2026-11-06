@@ -44,9 +44,7 @@ export async function resetOfflineStore(page: Page): Promise<void> {
     });
   });
   await page.reload();
-  await expect(page.getByRole('button', { name: 'LukiFitti Home' })).toBeVisible({
-    timeout: 15_000,
-  });
+  await expect(page.getByTestId('nav-profile')).toBeVisible({ timeout: 15_000 });
 }
 
 /**
@@ -96,9 +94,7 @@ export async function mockAuthenticatedSession(
   });
 
   await page.goto('/');
-  await expect(page.getByRole('button', { name: 'LukiFitti Home' })).toBeVisible({
-    timeout: 15_000,
-  });
+  await expect(page.getByTestId('nav-profile')).toBeVisible({ timeout: 15_000 });
 }
 
 /**
@@ -107,7 +103,7 @@ export async function mockAuthenticatedSession(
  */
 export async function gotoProfileTab(page: Page): Promise<void> {
   await navigateToTab(page, 'profile');
-  await expect(
-    page.getByRole('heading', { name: /Profile & Preferences|Profil & Einstellungen/i }),
-  ).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole('heading', { name: /^(Profile|Profil)$/ })).toBeVisible({
+    timeout: 10_000,
+  });
 }

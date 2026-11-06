@@ -14,7 +14,7 @@ import {
   Timer,
   CheckCircle2,
   Dumbbell,
-  Trophy,
+  BadgeCheck,
   AlertTriangle,
   Zap,
   Search,
@@ -33,7 +33,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@luki-fitti/ui/components/ui/alert-dialog';
-import { Badge } from '@luki-fitti/ui/components/ui/badge';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import { Card } from '@luki-fitti/ui/components/ui/card';
 import {
@@ -159,61 +158,61 @@ export function ActiveSessionView({
   );
 
   if (completedSummary) {
+    const showStretchTime =
+      completedSummary.totalStretchSeconds > 0 && completedSummary.totalVolumeKg === 0;
+    const stats = [
+      {
+        label: t.session.durationLabel,
+        value: `${Math.max(1, Math.round(completedSummary.activeDurationSeconds / 60))}m`,
+      },
+      { label: t.session.completedSetsLabel, value: String(completedSummary.totalSetsCompleted) },
+      {
+        label: showStretchTime ? t.session.stretchTimeLabel : t.session.totalVolumeLabel,
+        value: showStretchTime
+          ? `${Math.round(completedSummary.totalStretchSeconds / 60)}m`
+          : `${formatVolume(completedSummary.totalVolumeKg, completedSummary.weightUnit)} ${unitLabel(completedSummary.weightUnit)}`,
+      },
+    ];
     return (
-      <div className="mx-auto max-w-lg space-y-6 py-8 text-center">
-        <div className="bg-primary/12 text-primary mx-auto flex h-16 w-16 items-center justify-center rounded-full">
-          <Trophy className="h-8 w-8" />
-        </div>
-        <div>
-          <Badge variant="default" className="rounded-full px-3 py-1 text-xs">
-            {t.session.savedQueuedBadge}
-          </Badge>
-          <h1 className="font-display mt-3 text-3xl font-bold">
+      <div
+        data-testid="session-finish-summary"
+        className="animate-in fade-in zoom-in-95 mx-auto max-w-md space-y-6 py-8 text-center duration-300 motion-reduce:animate-none"
+      >
+        <BadgeCheck
+          aria-hidden="true"
+          className="fill-primary text-primary-foreground [&>path:first-child]:stroke-primary mx-auto size-20"
+          strokeWidth={1.75}
+        />
+        <div className="space-y-1">
+          <h1 className="text-[1.75rem] leading-tight font-bold">{t.session.savedQueuedBadge}</h1>
+          <h2 className="text-[1.0625rem] font-medium">
             {format(t.session.completeTitle, { name: completedSummary.workoutNameSnapshot })}
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm">{t.session.completeSub}</p>
+          </h2>
+          <p className="text-muted-foreground text-[0.9375rem]">{t.session.completeSub}</p>
         </div>
 
-        <Card className="grid grid-cols-3 gap-3 rounded-[1.25rem] p-5">
-          <div>
-            <p className="text-muted-foreground text-xs">{t.session.durationLabel}</p>
-            <p className="tabular-nums mt-1 text-xl font-bold">
-              {Math.max(1, Math.round(completedSummary.activeDurationSeconds / 60))}m
-            </p>
-          </div>
-          <div>
-            <p className="text-muted-foreground text-xs">{t.session.completedSetsLabel}</p>
-            <p className="tabular-nums text-primary mt-1 text-xl font-bold">
-              {completedSummary.totalSetsCompleted}
-            </p>
-          </div>
-          <div>
-            <p className="text-muted-foreground text-xs">
-              {completedSummary.totalStretchSeconds > 0 && completedSummary.totalVolumeKg === 0
-                ? t.session.stretchTimeLabel
-                : t.session.totalVolumeLabel}
-            </p>
-            <p className="tabular-nums mt-1 text-xl font-bold">
-              {completedSummary.totalStretchSeconds > 0 && completedSummary.totalVolumeKg === 0
-                ? `${Math.round(completedSummary.totalStretchSeconds / 60)}m`
-                : `${formatVolume(completedSummary.totalVolumeKg, completedSummary.weightUnit)} ${unitLabel(completedSummary.weightUnit)}`}
-            </p>
-          </div>
-        </Card>
+        <dl className="bg-card grid grid-cols-3 divide-x divide-border/60 rounded-[1.25rem] py-4">
+          {stats.map((stat) => (
+            <div key={stat.label} className="px-2">
+              <dt className="text-muted-foreground text-[0.8125rem]">{stat.label}</dt>
+              <dd className="font-rounded mt-0.5 text-[1.375rem] font-semibold tabular-nums">
+                {stat.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
 
-        <div className="flex justify-center gap-3">
-          <Button
-            type="button"
-            size="lg"
-            onClick={() => {
-              setCompletedSummary(null);
-              onNavigateToDiary();
-            }}
-            className="text-sm"
-          >
-            {t.session.viewInDiaryBtn}
-          </Button>
-        </div>
+        <Button
+          type="button"
+          size="lg"
+          onClick={() => {
+            setCompletedSummary(null);
+            onNavigateToDiary();
+          }}
+          className="h-12 w-full text-[1.0625rem]"
+        >
+          {t.session.viewInDiaryBtn}
+        </Button>
       </div>
     );
   }
@@ -770,7 +769,7 @@ export function ActiveSessionView({
   };
 
   return (
-    <div className="space-y-5 pb-36 md:pb-16">
+    <div className="space-y-5 pb-32 md:pb-16">
       <header className="space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 space-y-0.5">
@@ -971,7 +970,7 @@ export function ActiveSessionView({
                     }),
                     tag: 'luki-fitti-workout-complete',
                     playSound: user?.preferences?.restTimerSound ?? true,
-                    showToast: true,
+                    showToast: false,
                   });
                 }
               }
@@ -988,7 +987,7 @@ export function ActiveSessionView({
       {/* Floating rest timer: full controls while resting, a single preset row when idle */}
       <div
         data-testid="sticky-rest-timer-dock"
-        className="fixed inset-x-3 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-md md:sticky md:inset-x-auto md:bottom-6 md:max-w-none"
+        className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-md md:sticky md:inset-x-auto md:bottom-6 md:max-w-none"
       >
         <Card className="material-bar border-border/60 overflow-hidden rounded-[1.5rem] border px-3 py-2 shadow-[0_8px_30px_rgb(0_0_0/0.12)] sm:px-4">
           {(restInfo.isRunning || restInfo.isPaused) && restInfo.totalSeconds > 0 && (

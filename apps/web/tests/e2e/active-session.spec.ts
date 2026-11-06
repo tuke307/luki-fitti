@@ -39,19 +39,23 @@ test.describe('Active Session Execution & Rest Timer', () => {
     await expect(page.getByTestId('logged-set-summary-pill').first()).toContainText('82.5 kg × 10');
 
     // Completing a set with rest auto-starts the timer; otherwise start it from the dock presets.
-    // Either way the header rest timer pill appears.
+    // Either way the shell's rest timer pill appears once the workout is minimized, and opens it.
     const preset90 = page.getByRole('button', { name: '90s', exact: true });
     if (await preset90.isVisible()) {
       await preset90.click();
     }
+    const skipRest = page.getByRole('button', { name: 'Skip Rest' });
+    await expect(skipRest).toBeVisible();
+    await navigateToTab(page, 'home');
     const headerTimerPill = page.getByTestId('header-rest-timer-pill');
     await expect(headerTimerPill).toBeVisible();
+    await headerTimerPill.click();
 
     // Adjust (+15s / -15s), pause/resume, and skip rest timer
     await page.getByRole('button', { name: '+15s' }).click();
     await page.getByRole('button', { name: '-15s' }).click();
-    await page.getByRole('button', { name: 'Skip Rest' }).click();
-    await expect(headerTimerPill).not.toBeVisible();
+    await skipRest.click();
+    await expect(skipRest).not.toBeVisible();
 
     // Add an unplanned exercise to the session
     await page.getByRole('button', { name: /Add Exercise/i }).click();
