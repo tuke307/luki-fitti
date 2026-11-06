@@ -69,7 +69,9 @@ public struct ActiveSessionView: View {
                     title: tr("Replace %@", target.exerciseNameSnapshot),
                     exercises: viewModel.store.catalog,
                     selectedExerciseId: target.exerciseId,
-                    suggestedSections: ReplacementSuggestions.sections(for: target, store: viewModel.store, locale: tr)
+                    suggestedSections: ReplacementSuggestions.sections(for: target, store: viewModel.store, locale: tr),
+                    historySessions: viewModel.store.historySessions,
+                    weightUnit: viewModel.store.activeSession?.weightUnit ?? viewModel.store.preferences.weightUnit
                 ) { candidate in
                     viewModel.substituteExerciseInSession(clientExerciseId: target.clientExerciseId, with: candidate)
                     swapTargetId = nil
@@ -86,7 +88,8 @@ public struct ActiveSessionView: View {
                     fallbackName: target.exerciseNameSnapshot,
                     fallbackMuscle: target.primaryMuscleSnapshot,
                     historySessions: viewModel.store.historySessions,
-                    weightUnit: viewModel.store.activeSession?.weightUnit ?? viewModel.store.preferences.weightUnit
+                    weightUnit: viewModel.store.activeSession?.weightUnit ?? viewModel.store.preferences.weightUnit,
+                    catalog: viewModel.store.catalog
                 )
             }
         }
@@ -94,7 +97,9 @@ public struct ActiveSessionView: View {
             SearchableExercisePickerSheet(
                 title: tr("Add Exercise"),
                 exercises: viewModel.store.catalog,
-                selectedExerciseId: nil
+                selectedExerciseId: nil,
+                historySessions: viewModel.store.historySessions,
+                weightUnit: viewModel.store.activeSession?.weightUnit ?? viewModel.store.preferences.weightUnit
             ) { chosen in
                 viewModel.addUnplannedExerciseToSession(chosen)
                 showingAddExerciseSheet = false

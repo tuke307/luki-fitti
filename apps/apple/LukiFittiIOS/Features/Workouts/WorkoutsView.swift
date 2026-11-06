@@ -997,7 +997,9 @@ private struct TemplateBuilderSheetView: View {
                 SearchableExercisePickerSheet(
                     title: tr("Change Exercise"),
                     exercises: catalog,
-                    selectedExerciseId: currentExId
+                    selectedExerciseId: currentExId,
+                    historySessions: historySessions,
+                    weightUnit: defaultWeightUnit
                 ) { chosen in
                     if let idx = exercises.firstIndex(where: { $0.id == item.id }) {
                         exercises[idx].exerciseId = chosen.id
@@ -1008,13 +1010,15 @@ private struct TemplateBuilderSheetView: View {
                 }
             }
             .sheet(item: $guideExercise) { exercise in
-                ExerciseGuideSheet(exercise: exercise, historySessions: historySessions, weightUnit: defaultWeightUnit)
+                ExerciseGuideSheet(exercise: exercise, historySessions: historySessions, weightUnit: defaultWeightUnit, catalog: catalog)
             }
             .sheet(isPresented: $showingAddPickerSheet) {
                 SearchableExercisePickerSheet(
                     title: tr("Add Exercise"),
                     exercises: catalog,
-                    selectedExerciseId: nil
+                    selectedExerciseId: nil,
+                    historySessions: historySessions,
+                    weightUnit: defaultWeightUnit
                 ) { chosen in
                     exercises.append(
                         WorkoutTemplateExerciseDto(
