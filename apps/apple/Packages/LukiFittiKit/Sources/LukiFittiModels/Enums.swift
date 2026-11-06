@@ -232,6 +232,13 @@ public enum SessionSourceDevice: String, Codable, Sendable, CaseIterable, Equata
     case WEB
     case IPHONE
     case APPLE_WATCH
+    case IMPORT
+
+    /// Unknown future sources decode as `.WEB` (the server default) instead of failing the whole session.
+    public init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = SessionSourceDevice(rawValue: raw) ?? .WEB
+    }
 }
 
 public enum ProgressionPhase: String, Codable, Sendable, CaseIterable, Equatable, Hashable {

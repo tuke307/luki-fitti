@@ -1,15 +1,17 @@
 [
   {
-    "ID": 40,
+    "TrainingLogID": 40,
     "TrainingID": 11,
+    "Name": "",
     "Date": 1792774800.5,
     "Duration": 3600,
     "IsCompleted": 1,
     "Deleted": 0
   },
   {
-    "ID": 41,
+    "TrainingLogID": 41,
     "TrainingID": 11,
+    "Name": "Day 1",
     "Date": 1792861200,
     "Duration": 1800,
     "IsCompleted": 0,

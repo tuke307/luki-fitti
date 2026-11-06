@@ -1,0 +1,20 @@
+"Oberkörper A";"2026-01-12 18:00 Uhr";"1:05 Std."
+"1. Bankdrücken · Langhantel · 10 Wdh"
+#;KG;WDH
+1;60;10
+2;62,5;8
+3;-;-
+
+"2. Seitheben · Maschine · 12 Wdh"
+#;KG;WDH
+1;12,5;12
+
+"3. Laufband · Maschine"
+#;KM;MIN.
+1;1,5;10
+
+"Beine";"2026-03-29 07:30 Uhr";"45 Min."
+"1. Kniebeugen · Langhantel · 5 Wdh"
+#;KG;WDH
+1;100;5
+2;100;5

@@ -221,6 +221,7 @@ export enum SessionSourceDevice {
   WEB = 'WEB',
   IPHONE = 'IPHONE',
   APPLE_WATCH = 'APPLE_WATCH',
+  IMPORT = 'IMPORT',
 }
 
 export enum EmailTemplateType {

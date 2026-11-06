@@ -28,8 +28,17 @@
       "outputs": ["dist/**", ".next/**", "!.next/cache/**", "public/dist/**"],
       "dependsOn": ["^build"]
     },
+    "@luki-fitti/database#build": {
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**", "src/generated/**"],
+      "dependsOn": ["^build"]
+    },
     "db:generate": {
       "cache": false
+    },
+    "@luki-fitti/database#db:generate": {
+      "cache": false,
+      "dependsOn": ["^build", "build"]
     },
     "db:migrate": {
       "cache": false,

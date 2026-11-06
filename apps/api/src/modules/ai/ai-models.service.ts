@@ -26,6 +26,14 @@ export const SKILL_REQUIREMENTS: Record<AiSkillName, { tools: boolean; images: b
   [AiSkillName.MEAL_TEXT_ANALYZER]: { tools: true, images: false },
 };
 
+/**
+ * Images sent per run, for the per-image price. Runs don't record how many photos a meal had, so
+ * photo skills assume one (the common case); text-only skills send none.
+ */
+export const ASSUMED_IMAGES_PER_RUN = 1;
+export const imagesPerRun = (skill: AiSkillName) =>
+  SKILL_REQUIREMENTS[skill].images ? ASSUMED_IMAGES_PER_RUN : 0;
+
 /** Admin default per skill (the meal text skill shares the meal photo model). */
 export function defaultModelFor(skill: AiSkillName, s: AppSettingsRecord): string {
   return skill === AiSkillName.WORKOUT_BUILDER ? s.workoutBuilderModel : s.mealPhotoModel;
@@ -62,11 +70,13 @@ export function resolvePrimaryModel(
 export function estimateCostPerRun(
   avg: { promptTokens: number; completionTokens: number } | null,
   pricing: AiModelPricingDto,
+  images = 0,
 ): number | null {
   if (!avg) return null;
   return (
     (avg.promptTokens * pricing.promptPerMTokUsd + avg.completionTokens * pricing.completionPerMTokUsd) /
-    1_000_000
+      1_000_000 +
+    images * (pricing.imageUsd ?? 0)
   );
 }
 
@@ -162,7 +172,7 @@ export class AiModelsService {
         const avg = await this.averageFor(userId, skill);
         const option = (m: AiModelInfoDto): AiModelOptionDto => ({
           ...m,
-          estimatedCostPerRunUsd: estimateCostPerRun(avg, m.pricing),
+          estimatedCostPerRunUsd: estimateCostPerRun(avg, m.pricing, imagesPerRun(skill)),
         });
         const eligible = eligibleModels(catalog.models, skill, keySource, settings.userModelAllowlist);
         const defaultModel = defaultModelFor(skill, settings);

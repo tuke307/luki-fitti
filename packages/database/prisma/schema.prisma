@@ -150,6 +150,7 @@ enum SessionSourceDevice {
   WEB
   IPHONE
   APPLE_WATCH
+  IMPORT
 }
 
 model User {

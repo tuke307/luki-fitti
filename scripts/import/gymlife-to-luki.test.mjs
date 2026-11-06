@@ -35,17 +35,28 @@ describe('gymlife-to-luki', () => {
       [
         ['WARMUP', 40, 10],
         ['WORKING', 80, 8],
+        ['WORKING', 80, 8],
+        ['WORKING', 80, 8],
       ],
+      'sets follow the ids and NumberOfSets repeats a row',
     );
     assert.equal(file.sessions.length, 1, 'unfinished logs are skipped');
     const [session] = file.sessions;
     assert.equal(session.templateKey, 'gymlife:training:11');
-    assert.equal(session.workoutName, 'Day 1');
+    assert.equal(session.workoutName, 'Day 1', 'an empty log name falls back to the template');
     assert.equal(session.startedAt, '2026-10-23T17:00:00.500Z');
     assert.equal(session.completedAt, '2026-10-23T18:00:00.500Z');
     assert.deepEqual(
       session.exercises.map((e) => e.exercise.slug),
       ['barbell-bench-press-medium-grip', 'barbell-squat'],
+    );
+    assert.deepEqual(
+      session.exercises[0].sets.map((s) => [s.setNumber, s.setType, s.weight, s.reps]),
+      [
+        [1, 'WARMUP', 40, 10],
+        [2, 'WORKING', 80, 8],
+        [3, 'WORKING', 80, 8],
+      ],
     );
   });
 
