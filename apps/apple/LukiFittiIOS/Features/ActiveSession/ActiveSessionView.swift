@@ -166,8 +166,7 @@ public struct ActiveSessionView: View {
             }
 
             Button {
-                viewModel.completedSummarySession = nil
-                viewModel.selectedTab = .diary
+                viewModel.showSummaryInHistory()
             } label: {
                 Text(tr("View in History"))
                     .frame(maxWidth: .infinity)
