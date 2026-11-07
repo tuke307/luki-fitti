@@ -53,26 +53,43 @@ function usePromptText(skill: AiSkillName): PromptState {
 /** "?" button next to an AI action: model, prices, what is sent and the system prompt. */
 export function AiInfoButton({
   skill,
+  label,
   className = '',
 }: {
   skill: AiSkillName;
+  /** Renders a labeled pill instead of the plain icon button. */
+  label?: string;
   className?: string;
 }) {
   const { t } = useLocale();
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className={`text-muted-foreground h-11 w-11 shrink-0 rounded-full ${className}`}
-        aria-label={t.aiInfo.button}
-        title={t.aiInfo.button}
-        onClick={() => setOpen(true)}
-      >
-        <CircleHelp className="h-5 w-5" aria-hidden="true" />
-      </Button>
+      {label ? (
+        <Button
+          type="button"
+          variant="secondary"
+          size="xs"
+          className={`text-muted-foreground h-9 shrink-0 gap-1.5 px-3 ${className}`}
+          aria-label={`${t.aiInfo.button}: ${label}`}
+          title={`${t.aiInfo.button}: ${label}`}
+          onClick={() => setOpen(true)}
+        >
+          <CircleHelp className="h-4 w-4" aria-hidden="true" /> {label}
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className={`text-muted-foreground h-11 w-11 shrink-0 rounded-full ${className}`}
+          aria-label={t.aiInfo.button}
+          title={t.aiInfo.button}
+          onClick={() => setOpen(true)}
+        >
+          <CircleHelp className="h-5 w-5" aria-hidden="true" />
+        </Button>
+      )}
       <Dialog open={open} onOpenChange={setOpen}>
         {open && <AiInfoBody skill={skill} />}
       </Dialog>

@@ -7,6 +7,8 @@ import LukiFittiAPI
 struct AIInfoButton: View {
     let skill: AiSkillName
     let api: APIClient
+    /// Renders a labeled pill instead of the plain icon when set.
+    var title: String? = nil
 
     @Environment(\.lukiLocale) private var tr
     @State private var showsInfo = false
@@ -15,13 +17,23 @@ struct AIInfoButton: View {
         Button {
             showsInfo = true
         } label: {
-            Image(systemName: "questionmark.circle")
-                .font(.title3)
-                .frame(minWidth: 44, minHeight: 44)
+            if let title {
+                Label(title, systemImage: "questionmark.circle")
+                    .font(.caption.weight(.semibold))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(LukiColors.fill))
+            } else {
+                Image(systemName: "questionmark.circle")
+                    .font(.title3)
+                    .frame(minWidth: 44, minHeight: 44)
+            }
         }
         .buttonStyle(.borderless)
         .foregroundStyle(.secondary)
-        .accessibilityLabel(tr("How this works"))
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
+        .accessibilityLabel(title.map { "\(tr("How this works")): \($0)" } ?? tr("How this works"))
         .accessibilityIdentifier("ios.aiInfo.\(skill.rawValue)")
         .sheet(isPresented: $showsInfo) {
             AIInfoSheet(skill: skill, api: api)

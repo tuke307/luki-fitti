@@ -160,6 +160,8 @@ export const enFeatures = {
     deletePhoto: 'Delete photo',
     deletePhotoConfirm: 'This photo will be removed from the meal.',
     photoUnavailable: 'Photo no longer available',
+    aiInfoPhoto: 'Photo AI',
+    aiInfoText: 'Text AI',
   },
   aiBuilder: {
     entryButton: 'Plan with AI',

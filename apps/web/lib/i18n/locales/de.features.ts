@@ -163,6 +163,8 @@ export const deFeatures: Widen<typeof enFeatures> = {
     deletePhoto: 'Foto löschen',
     deletePhotoConfirm: 'Dieses Foto wird aus der Mahlzeit entfernt.',
     photoUnavailable: 'Foto nicht mehr verfügbar',
+    aiInfoPhoto: 'Foto-KI',
+    aiInfoText: 'Text-KI',
   },
   aiBuilder: {
     entryButton: 'Mit KI planen',

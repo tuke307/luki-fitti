@@ -176,11 +176,21 @@ export function MealPhotoSection({
   };
 
   return (
-    <section aria-labelledby="meal-photos" className="space-y-3" data-testid="meal-photo-section">
+    <section
+      aria-labelledby="meal-photos"
+      className="bg-secondary/40 space-y-4 rounded-2xl p-4"
+      data-testid="meal-photo-section"
+    >
       <AiKeyRequiredDialog open={keyRequiredOpen} onOpenChange={setKeyRequiredOpen} />
-      <h3 id="meal-photos" className="text-[0.8125rem] font-semibold">
-        {t.mealAi.sectionTitle}
-      </h3>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 id="meal-photos" className="text-[0.9375rem] font-semibold">
+          {t.mealAi.sectionTitle}
+        </h3>
+        <div className="flex gap-1.5">
+          <AiInfoButton skill={AiSkillName.MEAL_ANALYZER} label={t.mealAi.aiInfoPhoto} />
+          <AiInfoButton skill={AiSkillName.MEAL_TEXT_ANALYZER} label={t.mealAi.aiInfoText} />
+        </div>
+      </div>
       <input
         ref={galleryInput}
         type="file"
@@ -244,7 +254,7 @@ export function MealPhotoSection({
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
-          variant="secondary"
+          variant="outline"
           disabled={disabled || full}
           onClick={() => cameraInput.current?.click()}
         >
@@ -252,7 +262,7 @@ export function MealPhotoSection({
         </Button>
         <Button
           type="button"
-          variant="secondary"
+          variant="outline"
           disabled={disabled || full}
           onClick={() => galleryInput.current?.click()}
         >
@@ -266,7 +276,7 @@ export function MealPhotoSection({
         <p className="text-muted-foreground text-[0.8125rem]">{t.mealAi.reestimateHint}</p>
       )}
 
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         <Label htmlFor="meal-hint" className="text-[0.8125rem] font-semibold">
           {textOnly ? t.mealAi.describeLabel : t.mealAi.hintLabel}
         </Label>
@@ -279,6 +289,7 @@ export function MealPhotoSection({
           onChange={(e) => setHint(e.target.value)}
           placeholder={textOnly ? t.mealAi.describePlaceholder : t.mealAi.hintPlaceholder}
           aria-describedby={textOnly ? 'meal-hint-help' : undefined}
+          className="bg-background"
         />
         {textOnly && (
           <p id="meal-hint-help" className="text-muted-foreground text-[0.8125rem]">
@@ -288,27 +299,22 @@ export function MealPhotoSection({
       </div>
 
       {(!textOnly || description.length > 0) && (
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            onClick={() => void analyze()}
-            disabled={disabled || (textOnly && description.length < MEAL_DESCRIPTION_MIN_LENGTH)}
-            className="flex-1 sm:flex-none"
-          >
-            {busy ? (
-              <>
-                <Spinner /> {t.mealAi.analyzing}
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" /> {t.mealAi.estimate}
-              </>
-            )}
-          </Button>
-          <AiInfoButton
-            skill={textOnly ? AiSkillName.MEAL_TEXT_ANALYZER : AiSkillName.MEAL_ANALYZER}
-          />
-        </div>
+        <Button
+          type="button"
+          onClick={() => void analyze()}
+          disabled={disabled || (textOnly && description.length < MEAL_DESCRIPTION_MIN_LENGTH)}
+          className="w-full sm:w-auto"
+        >
+          {busy ? (
+            <>
+              <Spinner /> {t.mealAi.analyzing}
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-4 w-4" /> {t.mealAi.estimate}
+            </>
+          )}
+        </Button>
       )}
 
       {uncertaintyNote && (
