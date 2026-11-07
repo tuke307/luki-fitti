@@ -2,7 +2,7 @@
   "name": "@luki-fitti/api",
   "version": "1.0.0",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "AGPL-3.0-only",
   "author": "Tony Meissner",
   "type": "module",
   "exports": {

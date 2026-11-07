@@ -127,3 +127,33 @@ xcrun simctl pair <WATCH_SIM_UDID> <IPHONE_SIM_UDID>
   xcrun devicectl device process launch --terminate-existing --device <DEVICE_UDID> \
     "$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP/Info.plist")"
   ```
+
+---
+
+## License
+
+LukiFitti is licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0).
+
+The goal of the project is that nobody has to pay a subscription for a workout, progression or
+AI meal-tracking app. The license is chosen to protect that:
+
+- **You can** use, study, modify and self-host LukiFitti for free, also commercially.
+- **You must** publish the source code of your modified version under the AGPL-3.0 when you
+  distribute it (for example as an app) **or** let people use it over a network (for example as a
+  hosted service).
+- **Nobody can** take the code, close it and sell it as a paid, proprietary fitness app.
+
+### Why not another license?
+
+| License | Why not |
+|---|---|
+| **MIT** | Very simple and popular, but allows anyone to fork LukiFitti into a closed-source, paid subscription app as long as the copyright notice is kept. |
+| **Apache-2.0** | Same as MIT (plus an explicit patent grant): closed-source, paid forks are allowed. |
+| **GPL-3.0** | Protects distributed apps, but a modified server can be run as a paid service without ever sharing the changes, because running a server does not count as distribution. |
+| **AGPL-3.0** | Closes that gap: hosted versions must share their source too. Also used by Mastodon, Nextcloud, Bitwarden (server), Immich and wger. |
+
+### Contributing
+
+By contributing you agree that your contributions are licensed under the AGPL-3.0 and may be
+shipped in the official LukiFitti builds, including the App Store releases for iPhone and
+Apple Watch.
