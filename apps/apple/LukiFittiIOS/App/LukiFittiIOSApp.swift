@@ -581,6 +581,16 @@ public final class LukiAppViewModel {
         )
     }
 
+    /// Asks once on launch so the prompt doesn't interrupt the first rest timer mid-workout.
+    public func requestNotificationPermissionIfNeeded() async {
+        guard store.preferences.notificationsEnabled else { return }
+        guard !ProcessInfo.processInfo.arguments.contains("--uitesting") else { return }
+        let center = UNUserNotificationCenter.current()
+        guard await center.notificationSettings().authorizationStatus == .notDetermined else { return }
+        _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
+        rescheduleWeighInReminders()
+    }
+
     public func sendTestNotification() async -> Bool {
         let center = UNUserNotificationCenter.current()
         guard (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) == true else { return false }
@@ -1070,6 +1080,7 @@ public struct LukiFittiIOSApp: App {
                 .onAppear {
                     viewModel.pullFromWatchAndServer()
                 }
+                .task { await viewModel.requestNotificationPermissionIfNeeded() }
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
                         viewModel.pullFromWatchAndServer()
