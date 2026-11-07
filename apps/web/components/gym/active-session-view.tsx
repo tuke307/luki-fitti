@@ -20,6 +20,7 @@ import {
   Search,
   X,
   ChevronRight,
+  ChevronLeft,
   MoreHorizontal,
   BookOpen,
 } from 'lucide-react';
@@ -67,7 +68,7 @@ import {
 } from '@luki-fitti/common/utils/client';
 import { filterExercisesByQuery } from './exercise-picker';
 import { ExerciseVisual } from './exercise-visual';
-import { ExerciseGuideSheet } from './exercise-guide-sheet';
+import { ExerciseGuideContent, ExerciseGuideSheet } from './exercise-guide-sheet';
 import { LateralityBadge } from './laterality-badge';
 import { RainbowExerciseSuggestionCard } from './rainbow-suggestion-card';
 import { alignSetSuggestions, SessionSetRow } from './session-set-row';
@@ -82,7 +83,11 @@ import {
   SessionStatus,
   SetType,
 } from '@luki-fitti/common/enums';
-import type { SessionExerciseDto, WorkoutSessionDto } from '@luki-fitti/common/schemas';
+import type {
+  ExerciseDto,
+  SessionExerciseDto,
+  WorkoutSessionDto,
+} from '@luki-fitti/common/schemas';
 
 interface ActiveSessionViewProps {
   onNavigateToDiary: () => void;
@@ -122,6 +127,7 @@ export function ActiveSessionView({
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const [showSubstituteFor, setShowSubstituteFor] = useState<string | null>(null);
   const [substituteSearch, setSubstituteSearch] = useState('');
+  const [substituteGuide, setSubstituteGuide] = useState<ExerciseDto | null>(null);
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
   const [addExerciseSearch, setAddExerciseSearch] = useState('');
   const [addExerciseMuscle, setAddExerciseMuscle] = useState<MuscleGroup | 'ALL'>('ALL');
@@ -305,6 +311,7 @@ export function ActiveSessionView({
 
   const openSubstitute = (ex: SessionExerciseDto) => {
     setSubstituteSearch('');
+    setSubstituteGuide(null);
     setShowSubstituteFor(ex.clientExerciseId);
   };
 
@@ -1107,12 +1114,50 @@ export function ActiveSessionView({
       <Dialog
         open={Boolean(substituteTarget)}
         onOpenChange={(open) => {
-          if (!open) setShowSubstituteFor(null);
+          if (!open) {
+            setShowSubstituteFor(null);
+            setSubstituteGuide(null);
+          }
         }}
       >
-        <DialogContent className="max-h-[88dvh] overflow-hidden p-4 sm:max-w-md sm:p-5">
+        <DialogContent
+          onEscapeKeyDown={(event) => {
+            // Escape leaves the guide page first, like the back button.
+            if (!substituteGuide) return;
+            event.preventDefault();
+            setSubstituteGuide(null);
+          }}
+          className="max-h-[88dvh] overflow-hidden p-4 sm:max-w-md sm:p-5"
+        >
+          {substituteGuide && (
+            <div
+              data-testid="substitute-exercise-guide"
+              className="flex max-h-[calc(88dvh-2.5rem)] min-w-0 flex-col gap-3 overflow-hidden"
+            >
+              <DialogHeader className="shrink-0 space-y-1">
+                <button
+                  type="button"
+                  onClick={() => setSubstituteGuide(null)}
+                  className="text-primary -ml-1 flex min-h-11 w-fit items-center gap-0.5 text-[0.9375rem]"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                  {t.picker.backBtn}
+                </button>
+                <DialogTitle className="font-display text-base font-bold sm:text-lg">
+                  {t.session.showGuideBtn}
+                </DialogTitle>
+                <DialogDescription className="sr-only">{substituteGuide.name}</DialogDescription>
+              </DialogHeader>
+              <div className="min-h-0 flex-1 overflow-y-auto pr-0.5">
+                <ExerciseGuideContent exercise={substituteGuide} showEmptyState />
+              </div>
+            </div>
+          )}
           {substituteTarget && (
-            <div className="flex max-h-[calc(88dvh-2.5rem)] min-w-0 flex-col gap-3 overflow-hidden">
+            <div
+              hidden={Boolean(substituteGuide)}
+              className="flex max-h-[calc(88dvh-2.5rem)] min-w-0 flex-col gap-3 overflow-hidden"
+            >
               <DialogHeader className="shrink-0">
                 <DialogTitle className="font-display text-lg font-bold">
                   {format(t.session.replaceModalTitle, {
@@ -1157,7 +1202,9 @@ export function ActiveSessionView({
                   onSelect={async (exerciseId) => {
                     await substituteExercise(substituteTarget.clientExerciseId, exerciseId);
                     setShowSubstituteFor(null);
+                    setSubstituteGuide(null);
                   }}
+                  onShowGuide={setSubstituteGuide}
                 />
               </div>
             </div>

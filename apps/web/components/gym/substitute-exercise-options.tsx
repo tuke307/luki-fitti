@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import { Info } from 'lucide-react';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import { CORE_EXERCISE_CATALOG } from '@luki-fitti/common/catalog';
 import { Laterality } from '@luki-fitti/common/enums';
@@ -12,6 +13,7 @@ import type {
 import { rankAlternatives, type RankedAlternative } from '@luki-fitti/common/utils/client';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { filterExercisesByQuery } from './exercise-picker';
+import { ExerciseVisual } from './exercise-visual';
 import { LateralityBadge } from './laterality-badge';
 
 const CORE_EXERCISE_IDS = CORE_EXERCISE_CATALOG.map((e) => e.id);
@@ -26,6 +28,8 @@ interface SubstituteExerciseOptionsProps {
   historySessions: WorkoutSessionDto[];
   search: string;
   onSelect: (exerciseId: string) => void | Promise<void>;
+  /** Tapping the picture or the ⓘ button opens the guide instead of selecting. */
+  onShowGuide: (exercise: ExerciseDto) => void;
 }
 
 /**
@@ -39,6 +43,7 @@ export function SubstituteExerciseOptions({
   historySessions,
   search,
   onSelect,
+  onShowGuide,
 }: SubstituteExerciseOptionsProps) {
   const { t, format, muscleLabel, equipmentLabel } = useLocale();
   const [showAll, setShowAll] = useState(false);
@@ -90,6 +95,31 @@ export function SubstituteExerciseOptions({
       .filter(Boolean)
       .join(' · ');
 
+  /** Tapping the picture opens the how-to; it sits next to (never inside) the select button. */
+  const thumbnailButton = (ex: ExerciseDto) => (
+    <button
+      type="button"
+      data-testid="substitute-exercise-thumbnail"
+      aria-label={format(t.picker.exerciseInfoAria, { name: ex.name })}
+      onClick={() => onShowGuide(ex)}
+      className="focus-visible:ring-ring/50 flex shrink-0 items-center justify-center rounded-lg outline-hidden focus-visible:ring-[3px] active:opacity-70"
+    >
+      <ExerciseVisual exercise={ex} variant="thumbnail" className="h-9 w-11" />
+    </button>
+  );
+
+  const infoButton = (ex: ExerciseDto) => (
+    <button
+      type="button"
+      data-testid="substitute-exercise-info"
+      aria-label={format(t.picker.exerciseInfoAria, { name: ex.name })}
+      onClick={() => onShowGuide(ex)}
+      className="text-muted-foreground hover:text-primary focus-visible:ring-ring/50 flex size-11 shrink-0 items-center justify-center rounded-full outline-hidden focus-visible:ring-[3px]"
+    >
+      <Info className="h-5 w-5" />
+    </button>
+  );
+
   return (
     <>
       {!searching && target.alternativeExerciseIds.length > 0 && (
@@ -99,16 +129,22 @@ export function SubstituteExerciseOptions({
             const alt = catalog.find((c) => c.id === altId);
             if (!alt) return null;
             return (
-              <Button
+              <div
                 key={alt.id}
-                type="button"
-                variant="outline"
-                onClick={() => onSelect(alt.id)}
-                className="bg-primary/12 border-primary/40 hover:bg-primary/12 flex h-auto w-full items-center justify-between rounded-2xl p-3.5 text-left text-xs font-bold"
+                className="bg-primary/12 border-primary/40 flex w-full items-center gap-1 rounded-2xl border p-3.5 text-xs font-bold"
               >
-                <span>{alt.name}</span>
-                <span className="text-primary text-xs">{t.session.useBackupBtn}</span>
-              </Button>
+                {thumbnailButton(alt)}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => onSelect(alt.id)}
+                  className="h-auto min-w-0 flex-1 items-center justify-between p-0 text-left text-xs font-bold hover:bg-transparent"
+                >
+                  <span className="min-w-0 truncate">{alt.name}</span>
+                  <span className="text-primary text-xs">{t.session.useBackupBtn}</span>
+                </Button>
+                {infoButton(alt)}
+              </div>
             );
           })}
         </div>
@@ -124,22 +160,28 @@ export function SubstituteExerciseOptions({
               <div key={group.id} className="space-y-2 pt-1" data-testid={`substitute-${group.id}`}>
                 <p className="text-foreground text-xs font-bold">{group.title}</p>
                 {group.matches.map((match) => (
-                  <Button
+                  <div
                     key={match.exercise.id}
-                    type="button"
-                    variant="secondary"
-                    onClick={() => onSelect(match.exercise.id)}
-                    className="flex h-auto w-full flex-col items-start gap-0.5 rounded-xl p-3 text-left text-xs font-medium"
+                    className="bg-secondary flex w-full items-center gap-1 rounded-xl p-3 text-xs font-medium"
                   >
-                    <span>{match.exercise.name}</span>
-                    <span className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-[11px] font-normal">
-                      {reasonLine(match)}
-                      <LateralityBadge
-                        laterality={match.exercise.laterality}
-                        className="px-1.5 text-[11px]"
-                      />
-                    </span>
-                  </Button>
+                    {thumbnailButton(match.exercise)}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => onSelect(match.exercise.id)}
+                      className="h-auto min-w-0 flex-1 flex-col items-start gap-0.5 p-0 text-left text-xs font-medium hover:bg-transparent"
+                    >
+                      <span>{match.exercise.name}</span>
+                      <span className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-[11px] font-normal">
+                        {reasonLine(match)}
+                        <LateralityBadge
+                          laterality={match.exercise.laterality}
+                          className="px-1.5 text-[11px]"
+                        />
+                      </span>
+                    </Button>
+                    {infoButton(match.exercise)}
+                  </div>
                 ))}
               </div>
             ),
@@ -159,16 +201,22 @@ export function SubstituteExerciseOptions({
             search,
             searching ? 'ALL' : target.primaryMuscleSnapshot,
           ).map((alt) => (
-            <Button
+            <div
               key={alt.id}
-              type="button"
-              variant="secondary"
-              onClick={() => onSelect(alt.id)}
-              className="flex h-auto w-full items-center justify-between rounded-xl p-3 text-left text-xs font-medium"
+              className="bg-secondary flex w-full items-center gap-1 rounded-xl p-3 text-xs font-medium"
             >
-              <span>{alt.name}</span>
-              <span className="text-muted-foreground text-xs">{equipmentLabel(alt.equipment)}</span>
-            </Button>
+              {thumbnailButton(alt)}
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => onSelect(alt.id)}
+                className="h-auto min-w-0 flex-1 items-center justify-between p-0 text-left text-xs font-medium hover:bg-transparent"
+              >
+                <span className="min-w-0 truncate">{alt.name}</span>
+                <span className="text-muted-foreground text-xs">{equipmentLabel(alt.equipment)}</span>
+              </Button>
+              {infoButton(alt)}
+            </div>
           ))}
         </div>
       ) : (
