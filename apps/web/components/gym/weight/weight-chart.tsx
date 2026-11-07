@@ -210,9 +210,7 @@ export function WeightChart({ entries, unit, latest }: WeightChartProps) {
           </ResponsiveContainer>
         </div>
       )}
-      {noneBefore && (
-        <p className="text-muted-foreground text-[0.8125rem]">{noneBefore}</p>
-      )}
+      {noneBefore && <p className="text-muted-foreground text-[0.8125rem]">{noneBefore}</p>}
       {points.length > 0 && (
         <p
           id="weight-chart-summary"
