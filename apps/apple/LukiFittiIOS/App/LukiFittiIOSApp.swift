@@ -34,6 +34,8 @@ public final class LukiAppViewModel {
     public let workoutExport: WorkoutHealthExport
     public let healthCoordinator: HealthKitWorkoutCoordinator
     public let watchSyncCoordinator: WatchSyncCoordinator
+    /// Anonymous screen/event analytics; disabled in DEBUG and UI-test runs.
+    public let analytics: AnalyticsClient
     private let watchAuthHandoff = WatchAuthHandoffProvider()
     private let liveActivity = WorkoutLiveActivityController()
 
@@ -67,6 +69,18 @@ public final class LukiAppViewModel {
         self.workoutExport = workoutExport
         self.healthCoordinator = healthCoordinator
         self.watchSyncCoordinator = watchSyncCoordinator
+
+        #if DEBUG
+        let analyticsEnabled = false
+        #else
+        let analyticsEnabled = !ProcessInfo.processInfo.arguments.contains("--uitesting")
+        #endif
+        self.analytics = AnalyticsClient(
+            baseURL: store.apiClient.baseURL,
+            enabled: analyticsEnabled,
+            userAgent: Self.analyticsUserAgent(),
+            language: { Locale.preferredLanguages.first }
+        )
 
         self.store.onOverviewOrAuthChanged = { [weak self] in
             self?.pushContextToWatch()
@@ -270,7 +284,17 @@ public final class LukiAppViewModel {
         }
     }
 
+    /// Safari-shaped UA so Umami classifies OS/device instead of dropping the hit as a bot.
+    private static func analyticsUserAgent() -> String {
+        let device = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
+        let osName = UIDevice.current.userInterfaceIdiom == .pad ? "OS" : "iPhone OS"
+        let version = UIDevice.current.systemVersion.replacingOccurrences(of: ".", with: "_")
+        let shortVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
+        return "Mozilla/5.0 (\(device); CPU \(osName) \(version) like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 LukiFitti/\(shortVersion)"
+    }
+
     public func startSession(from template: WorkoutTemplateDto, sourceDevice: SessionSourceDevice = .IPHONE) {
+        analytics.event(.workoutStart, ["source": .string("template")])
         let session = SessionCalculator.createOfflineSessionFromTemplate(
             template: template,
             catalog: store.catalog,
@@ -291,6 +315,7 @@ public final class LukiAppViewModel {
     }
 
     public func startStretchingSession(from routine: StretchingRoutineDto, sourceDevice: SessionSourceDevice = .IPHONE) {
+        analytics.event(.workoutStart, ["source": .string("stretching")])
         let session = SessionCalculator.createOfflineSessionFromStretchingRoutine(
             routine: routine,
             catalog: store.catalog,
@@ -581,6 +606,16 @@ public final class LukiAppViewModel {
         )
     }
 
+    /// Asks once on launch so the prompt doesn't interrupt the first rest timer mid-workout.
+    public func requestNotificationPermissionIfNeeded() async {
+        guard store.preferences.notificationsEnabled else { return }
+        guard !ProcessInfo.processInfo.arguments.contains("--uitesting") else { return }
+        let center = UNUserNotificationCenter.current()
+        guard await center.notificationSettings().authorizationStatus == .notDetermined else { return }
+        _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
+        rescheduleWeighInReminders()
+    }
+
     public func sendTestNotification() async -> Bool {
         let center = UNUserNotificationCenter.current()
         guard (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) == true else { return false }
@@ -722,6 +757,7 @@ public final class LukiAppViewModel {
     /// replacement's sets from global history.
     public func substituteExerciseInSession(clientExerciseId: String, with replacement: ExerciseDto) {
         guard let session = store.activeSession else { return }
+        analytics.event(.exerciseSwap)
         let updated = SessionCalculator.substituteExerciseInSession(
             session: session,
             clientExerciseId: clientExerciseId,
@@ -794,6 +830,11 @@ public final class LukiAppViewModel {
         session.version += 1
 
         let finalized = SessionCalculator.recalculateSessionTotals(SessionCalculator.finalizeExerciseStatuses(session))
+        analytics.event(.workoutComplete, [
+            "type": .string(finalized.sessionType.rawValue.lowercased()),
+            "duration_bucket": .string(AnalyticsClient.durationBucket(seconds: finalized.activeDurationSeconds)),
+            "sets_bucket": .string(AnalyticsClient.countBucket(finalized.totalSetsCompleted)),
+        ])
         applyFinishedSessionToTemplate(finalized)
         store.setDismissedSuggestions(nil, clientSessionId: finalized.clientSessionId)
         store.setFocusedExerciseId(nil, clientSessionId: finalized.clientSessionId)
@@ -873,6 +914,7 @@ public final class LukiAppViewModel {
 
     public func abandonActiveSession() {
         guard let session = store.activeSession else { return }
+        analytics.event(.workoutAbandon, ["type": .string(session.sessionType.rawValue.lowercased())])
         store.saveActiveSession(nil)
         store.setDismissedSuggestions(nil, clientSessionId: session.clientSessionId)
         store.setFocusedExerciseId(nil, clientSessionId: session.clientSessionId)
@@ -1070,6 +1112,7 @@ public struct LukiFittiIOSApp: App {
                 .onAppear {
                     viewModel.pullFromWatchAndServer()
                 }
+                .task { await viewModel.requestNotificationPermissionIfNeeded() }
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
                         viewModel.pullFromWatchAndServer()
@@ -1155,6 +1198,18 @@ public struct AppShellView: View {
                 viewModel.selectedTab = newTab
             }
         }
+        .onChange(of: contentTab, initial: true) { _, newTab in
+            viewModel.analytics.screen(Self.screenPath(for: newTab))
+        }
+        .onChange(of: isSessionPresented) { _, presented in
+            if presented { viewModel.analytics.screen("/session") }
+        }
+        .onChange(of: isProfilePresented) { _, presented in
+            if presented { viewModel.analytics.screen("/profile") }
+        }
+        .onChange(of: viewModel.isWeightPresented) { _, presented in
+            if presented { viewModel.analytics.screen("/weight") }
+        }
         .alert(
             tr("Workout changed on another device"),
             isPresented: Binding(
@@ -1195,6 +1250,20 @@ public struct AppShellView: View {
     private static func conflictTime(_ iso: String?) -> String {
         guard let iso, let date = ISO8601DateFormatter.lukiParse(iso) else { return "–" }
         return date.formatted(date: .omitted, time: .shortened)
+    }
+
+    /// Stable analytics screen paths per tab (kept separate from route() so a .session or
+    /// .profile selection is reported by its own presented-state onChange instead).
+    private static func screenPath(for tab: LukiMainTab) -> String {
+        switch tab {
+        case .home: return "/"
+        case .workouts: return "/workouts"
+        case .nutrition: return "/nutrition"
+        case .diary: return "/history"
+        case .exercises: return "/library"
+        case .session: return "/session"
+        case .profile: return "/profile"
+        }
     }
 
     /// Bridges the view model's single `selectedTab` (still used by feature views) onto the

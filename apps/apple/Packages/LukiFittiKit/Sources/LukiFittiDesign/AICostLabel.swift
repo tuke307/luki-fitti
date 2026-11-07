@@ -31,6 +31,11 @@ public enum AICostFormat {
         return "\(line(usage, tr)) · \(tr("Model: %@", model))"
     }
 
+    /// "$2.50 / 1M tokens" — a single per-1M price for labeled rows.
+    public static func perMillion(_ value: Double, _ tr: SupportedLocale) -> String {
+        tr("%@ / 1M tokens", usd(value, locale: tr))
+    }
+
     /// "$2.50 per 1M input tokens · $10.00 per 1M output tokens".
     public static func pricing(_ pricing: AiModelPricingDto, _ tr: SupportedLocale) -> String {
         tr(

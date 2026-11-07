@@ -2,6 +2,7 @@ import SwiftUI
 import LukiFittiModels
 import LukiFittiDesign
 import LukiFittiDomain
+import LukiFittiAPI
 
 public struct WorkoutsView: View {
     @Bindable public var viewModel: LukiAppViewModel
@@ -191,6 +192,7 @@ public struct WorkoutsView: View {
                 historySessions: viewModel.store.historySessions,
                 suggestionsEnabled: viewModel.store.preferences.exerciseSuggestionsEnabled,
                 defaultWeightUnit: viewModel.store.preferences.weightUnit,
+                analytics: viewModel.analytics,
                 onCancel: {
                     activeBuilderContext = nil
                 },
@@ -542,6 +544,7 @@ public struct WorkoutsView: View {
                         locale: tr,
                         compact: true,
                         onAdd: {
+                            viewModel.analytics.event(.suggestionAccept, ["action": .string("add"), "context": .string("template")])
                             updateTemplateExercises(template.id) {
                                 $0.append(WorkoutTemplateExerciseDto(
                                     suggestion: suggestion,
@@ -552,9 +555,13 @@ public struct WorkoutsView: View {
                             }
                         },
                         onReplace: {
+                            viewModel.analytics.event(.suggestionAccept, ["action": .string("swap"), "context": .string("template")])
                             updateTemplateExercises(template.id) { $0.replaceStalling(with: suggestion) }
                         },
-                        onDismiss: { dismissedSuggestionTemplateIds.insert(template.id) }
+                        onDismiss: {
+                            viewModel.analytics.event(.suggestionDismiss, ["context": .string("template")])
+                            dismissedSuggestionTemplateIds.insert(template.id)
+                        }
                     )
                     .accessibilityIdentifier("ios.workouts.rainbowSuggestion.\(template.id)")
                 }
@@ -745,6 +752,7 @@ private struct TemplateBuilderSheetView: View {
     let historySessions: [WorkoutSessionDto]
     let suggestionsEnabled: Bool
     let defaultWeightUnit: WeightUnit
+    let analytics: AnalyticsClient
     let onCancel: () -> Void
     let onSave: (String, String, String, Int, [WorkoutTemplateExerciseDto]) -> Void
 
@@ -770,6 +778,7 @@ private struct TemplateBuilderSheetView: View {
         historySessions: [WorkoutSessionDto],
         suggestionsEnabled: Bool,
         defaultWeightUnit: WeightUnit,
+        analytics: AnalyticsClient,
         onCancel: @escaping () -> Void,
         onSave: @escaping (String, String, String, Int, [WorkoutTemplateExerciseDto]) -> Void
     ) {
@@ -779,6 +788,7 @@ private struct TemplateBuilderSheetView: View {
         self.historySessions = historySessions
         self.suggestionsEnabled = suggestionsEnabled
         self.defaultWeightUnit = defaultWeightUnit
+        self.analytics = analytics
         self.onCancel = onCancel
         self.onSave = onSave
         self._name = State(initialValue: context.initialName)
@@ -1061,6 +1071,7 @@ private struct TemplateBuilderSheetView: View {
                 suggestion: suggestion,
                 locale: tr,
                 onAdd: {
+                    analytics.event(.suggestionAccept, ["action": .string("add"), "context": .string("builder")])
                     exercises.append(WorkoutTemplateExerciseDto(
                         suggestion: suggestion,
                         templateId: context.editingTemplateId ?? "new",
@@ -1068,8 +1079,14 @@ private struct TemplateBuilderSheetView: View {
                         weightUnit: defaultWeightUnit
                     ))
                 },
-                onReplace: { exercises.replaceStalling(with: suggestion) },
-                onDismiss: { suggestionDismissed = true }
+                onReplace: {
+                    analytics.event(.suggestionAccept, ["action": .string("swap"), "context": .string("builder")])
+                    exercises.replaceStalling(with: suggestion)
+                },
+                onDismiss: {
+                    analytics.event(.suggestionDismiss, ["context": .string("builder")])
+                    suggestionDismissed = true
+                }
             )
             .accessibilityIdentifier("ios.templateBuilder.rainbowSuggestion")
         }

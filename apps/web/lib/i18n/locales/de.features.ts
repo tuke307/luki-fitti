@@ -163,6 +163,8 @@ export const deFeatures: Widen<typeof enFeatures> = {
     deletePhoto: 'Foto löschen',
     deletePhotoConfirm: 'Dieses Foto wird aus der Mahlzeit entfernt.',
     photoUnavailable: 'Foto nicht mehr verfügbar',
+    aiInfoPhoto: 'Foto-KI',
+    aiInfoText: 'Text-KI',
   },
   aiBuilder: {
     entryButton: 'Mit KI planen',
@@ -285,6 +287,7 @@ export const deFeatures: Widen<typeof enFeatures> = {
       '{count} Einträge vom {from} bis {to}. Niedrigster {min}, höchster {max}, aktuell {latest} {unit}.',
     chartSummaryOne: 'Ein Eintrag am {date}: {weight} {unit}.',
     noneInRange: 'Keine Einträge in diesem Zeitraum.',
+    noneBefore: 'Keine Einträge vor dem {date} in diesem Zeitraum',
     emptyTitle: 'Noch keine Einträge',
     emptyHint:
       'Trag dein Gewicht ein, um einen Verlauf zu starten. Am besten wiegst du dich immer zur selben Tageszeit.',
@@ -520,11 +523,12 @@ export const deFeatures: Widen<typeof enFeatures> = {
     title: 'So funktioniert das',
     modelTitle: 'Modell',
     modelDefault: 'Standard',
-    modelChosen: 'deine Wahl',
+    modelChosen: 'Deine Wahl',
     modelLoading: 'Modell wird geladen…',
     modelUnavailable: 'Modelldetails sind gerade nicht verfügbar.',
-    pricingInput: '{input} pro 1 Mio. Eingabe-Tokens',
-    pricingOutput: '{output} pro 1 Mio. Ausgabe-Tokens',
+    priceInputLabel: 'Eingabe',
+    priceOutputLabel: 'Ausgabe',
+    pricePerMTok: '{price} / 1 Mio. Tokens',
     changeModel: 'Das Modell kannst du unter Profil → KI-Modelle ändern.',
     dataTitle: 'Was gesendet wird',
     data: {

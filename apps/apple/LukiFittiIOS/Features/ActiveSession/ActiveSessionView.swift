@@ -3,6 +3,7 @@ import LukiFittiModels
 import LukiFittiDesign
 import LukiFittiDomain
 import LukiFittiHealth
+import LukiFittiAPI
 
 public struct ActiveSessionView: View {
     @Bindable public var viewModel: LukiAppViewModel
@@ -1154,11 +1155,13 @@ public struct ActiveSessionView: View {
                 suggestion: suggestion,
                 locale: tr,
                 onAdd: {
+                    viewModel.analytics.event(.suggestionAccept, ["action": .string("add"), "context": .string("session")])
                     dismiss(suggestion, in: session)
                     viewModel.addUnplannedExerciseToSession(suggestion.suggestedExercise)
                 },
                 onReplace: stallingExercise.map { target in
                     {
+                        viewModel.analytics.event(.suggestionAccept, ["action": .string("swap"), "context": .string("session")])
                         dismiss(suggestion, in: session)
                         viewModel.substituteExerciseInSession(
                             clientExerciseId: target.clientExerciseId,
@@ -1167,7 +1170,10 @@ public struct ActiveSessionView: View {
                         viewModel.focusExercise(clientExerciseId: target.clientExerciseId)
                     }
                 },
-                onDismiss: { dismiss(suggestion, in: session) }
+                onDismiss: {
+                    viewModel.analytics.event(.suggestionDismiss, ["context": .string("session")])
+                    dismiss(suggestion, in: session)
+                }
             )
             .accessibilityIdentifier("ios.session.rainbowSuggestion")
         }

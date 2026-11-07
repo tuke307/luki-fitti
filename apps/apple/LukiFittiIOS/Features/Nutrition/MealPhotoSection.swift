@@ -86,21 +86,18 @@ struct MealPhotoSection: View {
             .accessibilityLabel(textOnly ? tr("Describe your meal") : tr("Anything to add? (optional)"))
             .accessibilityIdentifier("ios.nutrition.photoHint")
             if !textOnly || !trimmedHint.isEmpty {
-                HStack(spacing: 4) {
-                    Button {
-                        Task { await estimate() }
-                    } label: {
-                        HStack {
-                            if busy { ProgressView() } else { Image(systemName: "sparkles") }
-                            Text(busy ? tr("Looking at your meal…") : tr("Estimate with AI"))
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 44)
+                Button {
+                    Task { await estimate() }
+                } label: {
+                    HStack {
+                        if busy { ProgressView() } else { Image(systemName: "sparkles") }
+                        Text(busy ? tr("Looking at your meal…") : tr("Estimate with AI"))
                     }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!canEstimate)
-                    .accessibilityIdentifier("ios.nutrition.estimateButton")
-                    AIInfoButton(skill: textOnly ? .mealTextAnalyzer : .mealAnalyzer, api: api)
+                    .frame(maxWidth: .infinity, minHeight: 44)
                 }
+                .buttonStyle(.borderedProminent)
+                .disabled(!canEstimate)
+                .accessibilityIdentifier("ios.nutrition.estimateButton")
             }
             if let note {
                 Text(note).font(.footnote).foregroundStyle(.secondary)
@@ -126,7 +123,25 @@ struct MealPhotoSection: View {
                 Text(message).font(.footnote).foregroundStyle(LukiColors.destructive)
             }
         } header: {
-            Text(tr("Photos or description"))
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 6) {
+                    Text(tr("Photos or description"))
+                    Spacer(minLength: 8)
+                    infoPills
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(tr("Photos or description"))
+                    infoPills
+                }
+            }
+            .textCase(nil)
+        }
+    }
+
+    private var infoPills: some View {
+        HStack(spacing: 6) {
+            AIInfoButton(skill: .mealAnalyzer, api: api, title: tr("Photo AI"))
+            AIInfoButton(skill: .mealTextAnalyzer, api: api, title: tr("Text AI"))
         }
     }
 

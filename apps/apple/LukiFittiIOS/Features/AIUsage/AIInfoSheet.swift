@@ -7,6 +7,8 @@ import LukiFittiAPI
 struct AIInfoButton: View {
     let skill: AiSkillName
     let api: APIClient
+    /// Renders a labeled pill instead of the plain icon when set.
+    var title: String? = nil
 
     @Environment(\.lukiLocale) private var tr
     @State private var showsInfo = false
@@ -15,13 +17,23 @@ struct AIInfoButton: View {
         Button {
             showsInfo = true
         } label: {
-            Image(systemName: "questionmark.circle")
-                .font(.title3)
-                .frame(minWidth: 44, minHeight: 44)
+            if let title {
+                Label(title, systemImage: "questionmark.circle")
+                    .font(.caption.weight(.semibold))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(LukiColors.fill))
+            } else {
+                Image(systemName: "questionmark.circle")
+                    .font(.title3)
+                    .frame(minWidth: 44, minHeight: 44)
+            }
         }
         .buttonStyle(.borderless)
         .foregroundStyle(.secondary)
-        .accessibilityLabel(tr("How this works"))
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
+        .accessibilityLabel(title.map { "\(tr("How this works")): \($0)" } ?? tr("How this works"))
         .accessibilityIdentifier("ios.aiInfo.\(skill.rawValue)")
         .sheet(isPresented: $showsInfo) {
             AIInfoSheet(skill: skill, api: api)
@@ -46,25 +58,33 @@ struct AIInfoSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                Section(tr("Model")) { modelSection }
-                Section(tr("What gets sent")) {
+                Section {
+                    modelSection
+                } header: {
+                    Label(tr("Model"), systemImage: "cpu")
+                } footer: {
+                    if models != nil {
+                        Text(tr("You can change the model under Profile → AI models."))
+                    }
+                }
+                Section {
                     Text(Self.dataSent(skill, tr))
-                    Text(tr("Your name, email and account id are never sent. OpenRouter forwards the request to the model provider."))
+                    Label(tr("Your name, email and account id are never sent. OpenRouter forwards the request to the model provider."), systemImage: "checkmark.shield")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                } header: {
+                    Label(tr("What gets sent"), systemImage: "paperplane")
                 }
                 Section {
                     promptSection
-                } header: {
-                    Text(tr("Instructions for the model"))
-                } footer: {
                     if let url = AIPromptFiles.githubURL(skill) {
                         Link(destination: url) {
                             Label(tr("View on GitHub"), systemImage: "arrow.up.right.square")
                         }
-                        .font(.footnote)
                         .frame(minHeight: 44)
                     }
+                } header: {
+                    Label(tr("Instructions for the model"), systemImage: "doc.text")
                 }
             }
             .listStyle(.insetGrouped)
@@ -84,23 +104,27 @@ struct AIInfoSheet: View {
     private var modelSection: some View {
         if let models {
             let info = models.effectiveModelInfo
-            VStack(alignment: .leading, spacing: 4) {
-                Text(info?.name ?? models.effectiveModel).font(.body.weight(.semibold))
-                Text(models.activeChoice != nil ? tr("Your choice") : tr("Default"))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(info?.name ?? models.effectiveModel).font(.title3.weight(.semibold))
+                    Spacer(minLength: 8)
+                    Text(models.activeChoice != nil ? tr("Your choice") : tr("Default"))
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(LukiColors.fill))
+                }
                 if let info {
-                    Text(info.id).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
-                    Text(AICostFormat.pricing(info.pricing, tr))
-                        .font(.footnote)
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
+                    Text(info.id).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
                 }
             }
             .accessibilityElement(children: .combine)
-            Text(tr("You can change the model under Profile → AI models."))
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            if let info {
+                LabeledContent(tr("Input"), value: AICostFormat.perMillion(info.pricing.promptPerMTokUsd, tr))
+                    .monospacedDigit()
+                LabeledContent(tr("Output"), value: AICostFormat.perMillion(info.pricing.completionPerMTokUsd, tr))
+                    .monospacedDigit()
+            }
         } else if modelsFailed {
             Text(tr("Model details are unavailable right now.")).foregroundStyle(.secondary)
         } else {
@@ -114,6 +138,10 @@ struct AIInfoSheet: View {
             Text(prompt)
                 .font(.system(.footnote, design: .monospaced))
                 .textSelection(.enabled)
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color(.tertiarySystemFill)))
+                .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
                 .accessibilityIdentifier("ios.aiInfo.prompt")
         } else if promptFailed {
             Text(tr("Couldn’t load the instructions. You can read them on GitHub."))

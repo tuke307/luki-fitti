@@ -44,6 +44,14 @@ struct WeightChartData: Equatable {
         return "Ø \(value) \(LukiFormat.unitLabel(unit)) · \(span)"
     }
 
+    /// First point's date when the chart begins more than a week after `start` — used to hint
+    /// that the range contains a leading gap with no weigh-ins.
+    func leadingGap(from start: Date?) -> Date? {
+        guard let start, let first = points.first,
+              first.date.timeIntervalSince(start) > 7 * 24 * 60 * 60 else { return nil }
+        return first.date
+    }
+
     func nearest(to date: Date?) -> WeightChartPoint? {
         guard let date else { return nil }
         return points.min { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) }
@@ -55,9 +63,19 @@ struct WeightTrendChart: View {
     let points: [WeightChartPoint]
     var selected: WeightChartPoint?
     var compact = false
+    /// Fixed x-axis domain so the range start is visible even with a leading data gap.
+    var xDomain: ClosedRange<Date>?
     @Environment(\.lukiLocale) private var tr
 
     var body: some View {
+        if let xDomain {
+            chart.chartXScale(domain: xDomain)
+        } else {
+            chart
+        }
+    }
+
+    @ViewBuilder private var chart: some View {
         let values = points.flatMap { [$0.value, $0.average] }
         let padding = compact ? 0.5 : 1
         let low = (values.min() ?? 0) - padding

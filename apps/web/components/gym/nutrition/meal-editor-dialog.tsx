@@ -443,7 +443,7 @@ function MealEditorBody({
 
   return (
     <>
-      <form id={FORM_ID} onSubmit={submit} className="min-w-0 space-y-5">
+      <form id={FORM_ID} onSubmit={submit} className="min-w-0 space-y-6">
         {canUsePhotos && (
           <MealPhotoSection
             savedPhotos={serverEntry?.photos ?? []}
@@ -462,9 +462,9 @@ function MealEditorBody({
           />
         )}
 
-        <fieldset disabled={analyzing} className="min-w-0 space-y-5">
+        <fieldset disabled={analyzing} className="min-w-0 space-y-6">
           <fieldset>
-            <legend className="mb-2 text-[0.8125rem] font-semibold">
+            <legend className="mb-3 text-[0.9375rem] font-semibold">
               {t.nutrition.mealTypeLabel}
             </legend>
             <div
@@ -492,7 +492,7 @@ function MealEditorBody({
           </fieldset>
 
           <div className="grid grid-cols-[1fr_auto] gap-3">
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label htmlFor="meal-label" className="text-[0.8125rem] font-semibold">
                 {t.nutrition.customLabel}
               </Label>
@@ -504,7 +504,7 @@ function MealEditorBody({
                 placeholder={t.nutrition.customLabelPlaceholder}
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label htmlFor="meal-time" className="text-[0.8125rem] font-semibold">
                 {t.nutrition.timeLabel}
               </Label>

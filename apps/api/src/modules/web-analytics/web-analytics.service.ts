@@ -104,6 +104,7 @@ export class WebAnalyticsService {
               ? { referrer: hit.referrer ?? '' }
               : { name: hit.name, ...(hit.data ? { data: hit.data } : {}) }),
             ...(language ? { language } : {}),
+            ...(hit.platform ? { tag: hit.platform } : {}),
           },
         }),
         signal: AbortSignal.timeout(config.timeoutMs),

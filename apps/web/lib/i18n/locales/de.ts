@@ -842,7 +842,7 @@ export const de = {
         },
         {
           q: 'Was passiert mit meinen Daten?',
-          a: 'Deine Daten liegen auf unserem Server in Deutschland. OpenRouter-Schlüssel werden verschlüsselt gespeichert. Es gibt keine Werbung und kein Tracking — nur datenschutzfreundliche, aggregierte Seitenaufrufe über Umami.',
+          a: 'Deine Daten liegen auf unserem Server in Deutschland. OpenRouter-Schlüssel werden verschlüsselt gespeichert. Es gibt keine Werbung und kein Tracking — nur datenschutzfreundliche, aggregierte Seitenaufrufe und anonyme Nutzungsereignisse über Umami.',
         },
         {
           q: 'Wie kann ich ein Feature wünschen?',

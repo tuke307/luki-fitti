@@ -53,8 +53,11 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
           <section>
             <h2>Analyse</h2>
             <p>
-              Wir verwenden Umami für aggregierte Seitenaufrufe — cookielos und ohne
-              personenbezogene Profile. Keine Werbung, kein Verkauf von Daten.
+              Wir verwenden Umami in der Web-App und in der iOS-App für aggregierte Seitenaufrufe
+              und anonyme Nutzungsereignisse (z. B. „Workout gestartet“ oder „Workout beendet“) —
+              cookielos, ohne personenbezogene Profile und ohne Gerätekennungen. Die IP-Adresse wird
+              von Umami nur genutzt, um Land und einen rotierenden Hash abzuleiten, und danach
+              verworfen. Keine Werbung, kein Verkauf von Daten.
             </p>
           </section>
           <section>
@@ -110,8 +113,10 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
           <section>
             <h2>Analytics</h2>
             <p>
-              We use Umami for aggregated page views — cookieless and without personal profiles. No
-              advertising, no sale of data.
+              We use Umami in the web app and the iOS app for aggregated page and screen views and
+              anonymous usage events (e.g. workout started or finished) — cookieless and without
+              personal profiles or device identifiers. Umami only uses the IP address to derive the
+              country and a rotating hash, then discards it. No advertising, no sale of data.
             </p>
           </section>
           <section>

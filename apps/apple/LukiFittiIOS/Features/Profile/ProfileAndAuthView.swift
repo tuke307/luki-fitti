@@ -288,18 +288,30 @@ public struct ProfileAndAuthView: View {
             Task {
                 do {
                     if authMode == "login" {
-                        let user = try await viewModel.store.apiClient.login(email: email, password: password)
-                        viewModel.store.saveAuthenticatedUser(user)
-                        await viewModel.store.refreshFromServerAfterAuth()
-                        await viewModel.syncBodyWeight()
+                        do {
+                            let user = try await viewModel.store.apiClient.login(email: email, password: password)
+                            viewModel.analytics.event(.login, ["status": .string("success")])
+                            viewModel.store.saveAuthenticatedUser(user)
+                            await viewModel.store.refreshFromServerAfterAuth()
+                            await viewModel.syncBodyWeight()
+                        } catch {
+                            viewModel.analytics.event(.login, ["status": .string("error")])
+                            throw error
+                        }
                     } else {
-                        let user = try await viewModel.store.apiClient.register(
-                            email: email,
-                            password: password,
-                            name: name.isEmpty ? nil : name,
-                            weightUnit: viewModel.store.preferences.weightUnit
-                        )
-                        statusMessage = user.message ?? tr("Account created. Check your email to confirm it.")
+                        do {
+                            let user = try await viewModel.store.apiClient.register(
+                                email: email,
+                                password: password,
+                                name: name.isEmpty ? nil : name,
+                                weightUnit: viewModel.store.preferences.weightUnit
+                            )
+                            viewModel.analytics.event(.signup, ["status": .string(user.message == nil ? "success" : "pending_confirmation")])
+                            statusMessage = user.message ?? tr("Account created. Check your email to confirm it.")
+                        } catch {
+                            viewModel.analytics.event(.signup, ["status": .string("error")])
+                            throw error
+                        }
                     }
                 } catch {
                     statusMessage = error.localizedDescription
@@ -318,6 +330,7 @@ public struct ProfileAndAuthView: View {
         if authMode == "login" {
             Button(tr("Forgot password?")) {
                 Task {
+                    viewModel.analytics.event(.passwordResetRequest)
                     do {
                         try await viewModel.store.apiClient.forgotPassword(email: email)
                         statusMessage = tr("If an account exists for this email, we’ve sent a reset link.")
@@ -543,6 +556,7 @@ private struct AccountSettingsPage: View {
 
                         Button(role: .destructive) {
                             Task {
+                                viewModel.analytics.event(.accountDeleteRequest)
                                 do {
                                     try await viewModel.store.apiClient.requestAccountDeletion(
                                         password: deleteAccountPassword

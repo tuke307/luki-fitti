@@ -19,6 +19,7 @@ export interface PageviewPayload {
   type: 'pageview';
   url: string;
   referrer?: string;
+  platform: 'web';
 }
 
 /** Event data: low-cardinality values only — never PII, weights, heart rate or body data. */
@@ -29,6 +30,7 @@ export interface EventPayload {
   name: AnalyticsEventName;
   url: string;
   data?: Record<string, string | number | boolean>;
+  platform: 'web';
 }
 
 export function containsTokenLikeSegment(path: string): boolean {
@@ -61,8 +63,8 @@ export function buildPageviewPayload(
 
   const safeReferrer = referrer ? sanitizeReferrer(referrer, currentOrigin) : undefined;
   return safeReferrer
-    ? { type: 'pageview', url, referrer: safeReferrer }
-    : { type: 'pageview', url };
+    ? { type: 'pageview', url, referrer: safeReferrer, platform: 'web' }
+    : { type: 'pageview', url, platform: 'web' };
 }
 
 /** Builds the collector payload for a custom event (current path, undefined values dropped). */
@@ -87,8 +89,9 @@ export function buildEventPayload(
         name,
         url: safeUrl.slice(0, ANALYTICS_MAX_URL_LENGTH),
         data: Object.fromEntries(entries),
+        platform: 'web',
       }
-    : { type: 'event', name, url: safeUrl.slice(0, ANALYTICS_MAX_URL_LENGTH) };
+    : { type: 'event', name, url: safeUrl.slice(0, ANALYTICS_MAX_URL_LENGTH), platform: 'web' };
 }
 
 function isTrackingEnabled(): boolean {
