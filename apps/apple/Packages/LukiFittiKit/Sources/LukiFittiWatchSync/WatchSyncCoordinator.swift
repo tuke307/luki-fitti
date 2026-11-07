@@ -297,29 +297,31 @@ public final class WatchSyncCoordinator: NSObject {
         #if canImport(WatchConnectivity)
         if WCSession.isSupported() {
             let proxy = WCSessionDelegateProxy(
-                onReceiveContext: { [weak self] contextDict in
+                onReceiveContext: { @Sendable [weak self] contextDict in
+                    let boxed = UncheckedSendableBox(contextDict)
                     Task { @MainActor in
-                        self?.handleIncomingDictionary(contextDict)
+                        self?.handleIncomingDictionary(boxed.value)
                     }
                 },
-                onReceiveMessageData: { [weak self] data in
+                onReceiveMessageData: { @Sendable [weak self] data in
                     Task { @MainActor in
                         self?.handleIncomingData(data)
                     }
                 },
-                onReceiveFile: { [weak self] data, metadata in
+                onReceiveFile: { @Sendable [weak self] data, metadata in
+                    let boxed = UncheckedSendableBox(metadata)
                     Task { @MainActor in
-                        self?.handleIncomingFile(data, metadata: metadata)
+                        self?.handleIncomingFile(data, metadata: boxed.value)
                     }
                 },
-                onActivated: { [weak self] error in
+                onActivated: { @Sendable [weak self] error in
                     Task { @MainActor in
                         self?.refreshStatus()
                         if let error { self?.status.lastError = error }
                         self?.onActivated?()
                     }
                 },
-                onStateChanged: { [weak self] in
+                onStateChanged: { @Sendable [weak self] in
                     Task { @MainActor in
                         self?.refreshStatus()
                     }
@@ -402,7 +404,7 @@ public final class WatchSyncCoordinator: NSObject {
                 watchSyncLog.error("Application context update failed: \(error.localizedDescription, privacy: .public)")
             }
             if WCSession.default.isReachable {
-                WCSession.default.sendMessage([Self.authContextKey: authData], replyHandler: nil) { error in
+                WCSession.default.sendMessage([Self.authContextKey: authData], replyHandler: nil) { @Sendable error in
                     watchSyncLog.error("Live sign-in message failed: \(error.localizedDescription, privacy: .public)")
                 }
             }
@@ -429,10 +431,11 @@ public final class WatchSyncCoordinator: NSObject {
         status.isWaitingForCompanion = true
         status.lastSentAt = Date()
         status.lastError = nil
-        WCSession.default.sendMessageData(data, replyHandler: nil) { error in
+        WCSession.default.sendMessageData(data, replyHandler: nil) { @Sendable [weak self] error in
+            let nsError = error as NSError
             Task { @MainActor in
-                self.status.isWaitingForCompanion = false
-                self.status.lastError = watchSyncMessage(for: error)
+                self?.status.isWaitingForCompanion = false
+                self?.status.lastError = watchSyncMessage(for: nsError)
             }
         }
         Task { @MainActor [weak self] in
@@ -469,7 +472,7 @@ public final class WatchSyncCoordinator: NSObject {
             queue()
             return
         }
-        WCSession.default.sendMessageData(data, replyHandler: nil) { error in
+        WCSession.default.sendMessageData(data, replyHandler: nil) { @Sendable error in
             watchSyncLog.error("Sign-in request failed: \(error.localizedDescription, privacy: .public)")
             queue()
         }
@@ -713,6 +716,13 @@ public final class WatchSyncCoordinator: NSObject {
         WCSession.default.transferUserInfo(["completed_session": data])
         #endif
     }
+}
+
+/// Hops non-Sendable WatchConnectivity payloads ([String: Any] dictionaries) onto the main actor;
+/// WatchConnectivity hands each dictionary to the delegate once and never touches it afterwards.
+private struct UncheckedSendableBox<T>: @unchecked Sendable {
+    let value: T
+    init(_ value: T) { self.value = value }
 }
 
 #if canImport(WatchConnectivity)
