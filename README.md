@@ -145,12 +145,12 @@ AI meal-tracking app. The license is chosen to protect that:
 
 ### Why not another license?
 
-| License | Why not |
-|---|---|
-| **MIT** | Very simple and popular, but allows anyone to fork LukiFitti into a closed-source, paid subscription app as long as the copyright notice is kept. |
-| **Apache-2.0** | Same as MIT (plus an explicit patent grant): closed-source, paid forks are allowed. |
-| **GPL-3.0** | Protects distributed apps, but a modified server can be run as a paid service without ever sharing the changes, because running a server does not count as distribution. |
-| **AGPL-3.0** | Closes that gap: hosted versions must share their source too. Also used by Mastodon, Nextcloud, Bitwarden (server), Immich and wger. |
+| License        | Why not                                                                                                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **MIT**        | Very simple and popular, but allows anyone to fork LukiFitti into a closed-source, paid subscription app as long as the copyright notice is kept.                        |
+| **Apache-2.0** | Same as MIT (plus an explicit patent grant): closed-source, paid forks are allowed.                                                                                      |
+| **GPL-3.0**    | Protects distributed apps, but a modified server can be run as a paid service without ever sharing the changes, because running a server does not count as distribution. |
+| **AGPL-3.0**   | Closes that gap: hosted versions must share their source too. Also used by Mastodon, Nextcloud, Bitwarden (server), Immich and wger.                                     |
 
 ### Contributing
 
