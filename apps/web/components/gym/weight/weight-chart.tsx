@@ -17,6 +17,7 @@ import type { BodyWeightEntryDto } from '@luki-fitti/common/schemas';
 import { unitLabel } from '@/lib/format/weight';
 import {
   buildWeightChart,
+  rangeStartMs,
   WEIGHT_RANGES,
   type WeightChartPoint,
   type WeightRange,
@@ -49,8 +50,10 @@ export function WeightChart({ entries, unit, latest }: WeightChartProps) {
     [entries, range, unit, nowMs],
   );
 
-  const { xDomain, yDomain, summary } = useMemo(() => {
-    if (points.length === 0) return { xDomain: [0, 1], yDomain: [0, 1], summary: '' };
+  const { xDomain, yDomain, summary, noneBefore } = useMemo(() => {
+    if (points.length === 0)
+      return { xDomain: [0, 1], yDomain: [0, 1], summary: '', noneBefore: '' };
+    const start = rangeStartMs(range, new Date(nowMs));
     const first = points[0] as WeightChartPoint;
     const last = points[points.length - 1] as WeightChartPoint;
     const values = points.flatMap((p) => [p.weight, p.avg]);
@@ -76,11 +79,20 @@ export function WeightChart({ entries, unit, latest }: WeightChartProps) {
             unit: unitText,
           });
     return {
-      xDomain: first.t === last.t ? [first.t - DAY_MS, last.t + DAY_MS] : [first.t, last.t],
+      xDomain:
+        start !== null
+          ? [start, nowMs]
+          : first.t === last.t
+            ? [first.t - DAY_MS, last.t + DAY_MS]
+            : [first.t, last.t],
       yDomain: [Math.floor(min - pad), Math.ceil(max + pad)],
       summary: text,
+      noneBefore:
+        start !== null && first.t - start > 7 * DAY_MS
+          ? format(t.weight.noneBefore, { date: formatWeighInDate(first.t, bcp47) })
+          : '',
     };
-  }, [points, latest, format, t, bcp47, unitText]);
+  }, [points, latest, format, t, bcp47, unitText, range, nowMs]);
 
   const longRange = range === '1y' || range === 'all';
   const tickFormat = (ms: number) =>
@@ -197,6 +209,9 @@ export function WeightChart({ entries, unit, latest }: WeightChartProps) {
             </LineChart>
           </ResponsiveContainer>
         </div>
+      )}
+      {noneBefore && (
+        <p className="text-muted-foreground text-[0.8125rem]">{noneBefore}</p>
       )}
       {points.length > 0 && (
         <p

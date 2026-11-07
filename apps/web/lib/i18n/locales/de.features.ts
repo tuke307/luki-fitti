@@ -285,6 +285,7 @@ export const deFeatures: Widen<typeof enFeatures> = {
       '{count} Einträge vom {from} bis {to}. Niedrigster {min}, höchster {max}, aktuell {latest} {unit}.',
     chartSummaryOne: 'Ein Eintrag am {date}: {weight} {unit}.',
     noneInRange: 'Keine Einträge in diesem Zeitraum.',
+    noneBefore: 'Keine Einträge vor dem {date} in diesem Zeitraum',
     emptyTitle: 'Noch keine Einträge',
     emptyHint:
       'Trag dein Gewicht ein, um einen Verlauf zu starten. Am besten wiegst du dich immer zur selben Tageszeit.',

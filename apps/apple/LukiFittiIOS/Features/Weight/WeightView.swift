@@ -78,6 +78,7 @@ struct WeightView: View {
     @State private var editing: WeightEditorContext?
     @State private var offlineNote = false
     @State private var chart = WeightChartData()
+    @State private var chartXDomain: ClosedRange<Date>?
     @State private var trend = WeightTrend()
     @State private var monthGroups: [MonthGroup] = []
     @State private var pendingDeletion: BodyWeightEntryDto?
@@ -160,7 +161,10 @@ struct WeightView: View {
     }
 
     private func recompute() {
-        chart = WeightChartData(store.points, from: range.start(), unit: display.unit)
+        let now = Date()
+        let start = range.start(now: now)
+        chart = WeightChartData(store.points, from: start, unit: display.unit)
+        chartXDomain = start.map { $0...now }
         trend = store.trend()
         let calendar = Calendar.current
         let grouped = Dictionary(grouping: store.entries.reversed()) { entry -> Date in
@@ -306,7 +310,7 @@ struct WeightView: View {
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, minHeight: 180)
             } else {
-                WeightTrendChart(points: chart.points, selected: selected)
+                WeightTrendChart(points: chart.points, selected: selected, xDomain: chartXDomain)
                     .chartXSelection(value: $selectedDate)
                     .frame(height: 220)
                     .accessibilityChartDescriptor(WeightChartDescriptor(
@@ -320,6 +324,13 @@ struct WeightView: View {
                 Text(tr("Dashed line: 7-day average"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                if let gapDate = chart.leadingGap(from: chartXDomain?.lowerBound) {
+                    Text(tr("No weigh-ins before %@ in this range", gapDate.formatted(
+                        .dateTime.day().month(.abbreviated).locale(Locale(identifier: tr.rawValue))
+                    )))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .padding(18)

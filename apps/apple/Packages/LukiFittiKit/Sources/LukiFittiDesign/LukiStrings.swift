@@ -467,6 +467,7 @@ public enum LukiStrings {
         "Log weight": "Gewicht eintragen",
         "Log your weight for a better estimate.": "Trag dein Gewicht ein, um genauer zu schätzen.",
         "Log your weight once a week, ideally in the morning. Weigh-ins from Apple Health appear here too.": "Trag dein Gewicht einmal pro Woche ein, am besten morgens. Messungen aus Apple Health erscheinen hier auch.",
+        "No weigh-ins before %@ in this range": "Keine Einträge vor dem %@ in diesem Zeitraum",
         "No weigh-ins in this period.": "Keine Einträge in diesem Zeitraum.",
         "No weigh-ins yet.": "Noch kein Gewicht eingetragen.",
         "Not enough data": "Zu wenige Daten",

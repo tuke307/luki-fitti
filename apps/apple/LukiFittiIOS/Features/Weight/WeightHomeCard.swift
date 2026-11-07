@@ -12,6 +12,7 @@ struct WeightHomeCard: View {
     @State private var isLogging = false
     @State private var savedCount = 0
     @State private var chart = WeightChartData()
+    @State private var chartXDomain: ClosedRange<Date>?
     @State private var trend = WeightTrend()
 
     private var display: WeightDisplay { WeightDisplay(unit: viewModel.store.preferences.weightUnit, locale: tr) }
@@ -39,7 +40,7 @@ struct WeightHomeCard: View {
                     if let latest = trend.latestKg {
                         summary(latest)
                         if chart.points.count >= 2 {
-                            WeightTrendChart(points: chart.points, compact: true)
+                            WeightTrendChart(points: chart.points, compact: true, xDomain: chartXDomain)
                                 .frame(height: 120)
                                 .accessibilityHidden(true)
                         }
@@ -67,8 +68,10 @@ struct WeightHomeCard: View {
         .padding(18)
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
         .onChange(of: DerivedKey(points: viewModel.bodyWeight.points, unit: display.unit), initial: true) {
-            let monthAgo = Calendar.current.date(byAdding: .day, value: -30, to: Date())
+            let now = Date()
+            let monthAgo = Calendar.current.date(byAdding: .day, value: -30, to: now)
             chart = WeightChartData(viewModel.bodyWeight.points, from: monthAgo, unit: display.unit)
+            chartXDomain = monthAgo.map { $0...now }
             trend = viewModel.bodyWeight.trend()
         }
         .sensoryFeedback(.success, trigger: savedCount)

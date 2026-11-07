@@ -280,6 +280,7 @@ export const enFeatures = {
       '{count} weigh-ins from {from} to {to}. Lowest {min}, highest {max}, latest {latest} {unit}.',
     chartSummaryOne: 'One weigh-in on {date}: {weight} {unit}.',
     noneInRange: 'No weigh-ins in this range.',
+    noneBefore: 'No weigh-ins before {date} in this range',
     emptyTitle: 'No weigh-ins yet',
     emptyHint: 'Log your weight to start a trend. Weighing in at the same time of day works best.',
     historyTitle: 'History',
