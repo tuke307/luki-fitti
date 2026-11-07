@@ -1035,7 +1035,7 @@ public struct ActiveSessionView: View {
                             onMinus: { update(max(0, currentWeight - step), nil) },
                             onPlus: { update(currentWeight + step, nil) },
                             onSubmit: { text in
-                                if let weight = parseDecimal(text) { update(max(0, weight), nil) }
+                                if let weight = LukiFormat.parseDecimal(text) { update(max(0, weight), nil) }
                             }
                         )
                         .layoutPriority(1)
@@ -1125,11 +1125,6 @@ public struct ActiveSessionView: View {
         .accessibilityLabel(tr("Effort, set %d: %@", n, LukiI18n.effortLabel(rpe: set.rpe, locale: tr)))
         .accessibilityHint(tr("Change effort"))
         .accessibilityIdentifier("ios.session.effort.\(n)")
-    }
-
-    /// Accepts both "22,5" and "22.5" regardless of the keyboard's decimal separator.
-    private func parseDecimal(_ text: String) -> Double? {
-        Double(text.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: "."))
     }
 
     // MARK: - Suggestion

@@ -55,6 +55,14 @@ struct HistorySessionEditorSheet: View {
                     }
                     .accessibilityIdentifier("ios.diary.saveButton")
                 }
+                // Number pads have no return key; Done ends typing and commits the value.
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button(tr("Done")) {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+                    .fontWeight(.semibold)
+                }
             }
         }
     }
@@ -154,16 +162,30 @@ struct HistorySessionEditorSheet: View {
                     unit: LukiFormat.unitLabel(set.weightUnit),
                     minusLabel: tr("Decrease weight by %@, set %d", LukiFormat.weight(step), n),
                     plusLabel: tr("Increase weight by %@, set %d", LukiFormat.weight(step), n),
+                    editLabel: tr("Weight, set %d", n),
+                    keyboard: .decimal,
                     onMinus: { updateSet(ex, set.clientSetId) { $0.weight = max(0, weight - step) } },
-                    onPlus: { updateSet(ex, set.clientSetId) { $0.weight = weight + step } }
+                    onPlus: { updateSet(ex, set.clientSetId) { $0.weight = weight + step } },
+                    onSubmit: { text in
+                        if let v = LukiFormat.parseDecimal(text) {
+                            updateSet(ex, set.clientSetId) { $0.weight = max(0, v) }
+                        }
+                    }
                 )
                 let repsStepper = LukiValueStepper(
                     value: "\(reps)",
                     unit: tr("reps"),
                     minusLabel: tr("Decrease reps, set %d", n),
                     plusLabel: tr("Increase reps, set %d", n),
+                    editLabel: tr("Reps, set %d", n),
+                    keyboard: .integer,
                     onMinus: { updateSet(ex, set.clientSetId) { $0.reps = max(0, reps - 1) } },
-                    onPlus: { updateSet(ex, set.clientSetId) { $0.reps = reps + 1 } }
+                    onPlus: { updateSet(ex, set.clientSetId) { $0.reps = reps + 1 } },
+                    onSubmit: { text in
+                        if let v = Int(text.trimmingCharacters(in: .whitespaces)) {
+                            updateSet(ex, set.clientSetId) { $0.reps = max(0, v) }
+                        }
+                    }
                 )
                 // Accessibility sizes stack the steppers; side by side the reps keep a fixed share so
                 // the weight stepper can't squeeze the count away.
