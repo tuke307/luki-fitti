@@ -1,14 +1,25 @@
 import Image from 'next/image';
-import { ChevronDown, Smartphone, TrendingUp, Watch, WifiOff } from 'lucide-react';
+import { SiGithub } from '@icons-pack/react-simple-icons';
+import {
+  ChevronDown,
+  HeartHandshake,
+  KeyRound,
+  TrendingUp,
+  Users,
+  Watch,
+  WifiOff,
+} from 'lucide-react';
 
 import { SiteHeader } from './SiteHeader';
 import { SiteFooter } from './SiteFooter';
+import { AppStoreBadge } from './AppStoreBadge';
 import { HeroDeviceSwitcher } from './HeroDeviceSwitcher';
-import { APP_ORIGIN, TESTFLIGHT_URL, type SiteLocale } from '@/lib/site/config';
+import { APP_ORIGIN, GITHUB_URL, TESTFLIGHT_URL, type SiteLocale } from '@/lib/site/config';
 import { featureRequestHref, getSiteCopy, HERO_DEVICES, SCREENSHOTS } from '@/lib/site/content';
 import { shotFile, shotInfo } from '@/lib/site/screens';
 
 const GLANCE_ICONS = [WifiOff, TrendingUp, Watch] as const;
+const OPEN_SOURCE_ICONS = [HeartHandshake, Users, KeyRound] as const;
 
 /** Responsive display widths for the hero device images. */
 const HERO_DEVICE_WIDTHS: Record<string, string> = {
@@ -29,22 +40,17 @@ function OpenAppCta({ label, className }: { label: string; className: string }) 
   );
 }
 
-function DownloadNote({ label, soonLabel }: { label: string; soonLabel: string }) {
-  if (TESTFLIGHT_URL) {
-    return (
-      <a
-        href={TESTFLIGHT_URL}
-        className="bg-secondary text-foreground inline-flex h-12 items-center justify-center rounded-full px-7 text-base font-medium transition-[filter] hover:brightness-110"
-      >
-        {label}
-      </a>
-    );
+function DownloadNote({ label }: { label: string }) {
+  if (!TESTFLIGHT_URL) {
+    return null;
   }
   return (
-    <p className="text-muted-foreground flex items-center gap-2 text-sm">
-      <Smartphone size={16} aria-hidden />
-      {soonLabel}
-    </p>
+    <a
+      href={TESTFLIGHT_URL}
+      className="bg-secondary text-foreground inline-flex h-12 items-center justify-center rounded-full px-7 text-base font-medium transition-[filter] hover:brightness-110"
+    >
+      {label}
+    </a>
   );
 }
 
@@ -116,9 +122,10 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
             <p className="text-muted-foreground max-w-[34ch] text-lg text-pretty sm:text-xl">
               {t.hero.sub}
             </p>
-            <div className="flex flex-wrap items-center gap-5 pt-2">
+            <div className="flex flex-wrap items-center gap-4 pt-2">
               <OpenAppCta label={t.hero.openApp} className="h-12 px-7 text-base" />
-              <DownloadNote label={t.hero.download} soonLabel={t.hero.downloadSoon} />
+              <DownloadNote label={t.hero.download} />
+              <AppStoreBadge small={t.appStore.small} big={t.appStore.big} soon={t.appStore.soon} />
             </div>
           </div>
           <div className="site-hero-device mx-auto">
@@ -202,6 +209,40 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
           </div>
         </section>
 
+        {/* ---- open source ---------------------------------------------- */}
+        <section id="open-source" className="mx-auto max-w-5xl scroll-mt-16 px-4 py-20">
+          <h2 className="text-center text-3xl font-semibold tracking-[-0.02em] sm:text-4xl">
+            {t.openSource.title}
+          </h2>
+          <p className="text-muted-foreground mx-auto mt-4 max-w-[52ch] text-center text-lg">
+            {t.openSource.lead}
+          </p>
+          <div className="mt-10 grid gap-4 sm:grid-cols-3">
+            {t.openSource.items.map((item, i) => {
+              const Icon = OPEN_SOURCE_ICONS[i] ?? HeartHandshake;
+              return (
+                <div key={item.title} className="bg-card space-y-2 rounded-2xl p-6">
+                  <Icon size={20} className="text-primary" aria-hidden />
+                  <h3 className="text-base font-semibold">{item.title}</h3>
+                  <p className="text-muted-foreground text-sm">{item.body}</p>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-10 flex justify-center">
+            <a
+              href={GITHUB_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-secondary text-foreground inline-flex h-12 items-center gap-2 rounded-full px-7 font-medium transition-[filter] hover:brightness-110"
+              data-testid="open-source-github"
+            >
+              <SiGithub size={18} aria-hidden />
+              {t.openSource.cta}
+            </a>
+          </div>
+        </section>
+
         {/* ---- faq ------------------------------------------------------ */}
         <section id="faq" className="mx-auto max-w-3xl scroll-mt-16 px-4 py-20">
           <h2 className="text-3xl font-semibold tracking-[-0.02em]">{t.faq.title}</h2>
@@ -244,9 +285,10 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
         {/* ---- final cta ------------------------------------------------ */}
         <section className="mx-auto max-w-5xl px-4 py-28 text-center">
           <h2 className="text-4xl font-semibold tracking-[-0.03em] sm:text-5xl">{t.cta.title}</h2>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-5">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
             <OpenAppCta label={t.cta.openApp} className="h-12 px-7 text-base" />
-            <DownloadNote label={t.hero.download} soonLabel={t.hero.downloadSoon} />
+            <DownloadNote label={t.hero.download} />
+            <AppStoreBadge small={t.appStore.small} big={t.appStore.big} soon={t.appStore.soon} />
           </div>
         </section>
       </main>

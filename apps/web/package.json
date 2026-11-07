@@ -2,7 +2,7 @@
   "name": "@luki-fitti/web",
   "version": "1.0.0",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "author": "Tony Meissner",
   "scripts": {

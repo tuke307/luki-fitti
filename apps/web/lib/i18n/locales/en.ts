@@ -766,6 +766,8 @@ export const en = {
       faq: 'FAQ',
       openApp: 'Open app',
       download: 'Download',
+      github: 'LukiFitti on GitHub',
+      openSource: 'Community',
       switchTo: 'Deutsch',
       switchHref: '/',
     },
@@ -774,7 +776,6 @@ export const en = {
       sub: 'The workout tracker for iPhone, Apple Watch and the web — fully usable offline, no fluff.',
       openApp: 'Open app',
       download: 'Join the TestFlight beta',
-      downloadSoon: 'Coming soon to the App Store',
       heroAlt: 'LukiFitti active workout on iPhone',
       deviceLabel: 'Device',
     },
@@ -836,11 +837,11 @@ export const en = {
         },
         {
           q: 'What does it cost?',
-          a: 'The app is free. AI features (workout planning, meal analysis) use your own OpenRouter key — you pay OpenRouter directly and only for what you use.',
+          a: 'Nothing. LukiFitti is completely free and open source — no subscription, no ads. AI features (workout planning, meal analysis) use your own OpenRouter key — you pay OpenRouter directly and only for what you use.',
         },
         {
           q: 'What happens to my data?',
-          a: 'Your data is stored on our server in Germany. OpenRouter keys are stored encrypted. No ads, no tracking — only privacy-friendly, aggregated page views and anonymous usage events via Umami.',
+          a: 'Your data is stored on our server in Germany. OpenRouter keys are stored AES-256-GCM encrypted and never sent back to your device. No ads, no tracking — only privacy-friendly, aggregated page views and anonymous usage events via Umami.',
         },
         {
           q: 'How do I request a feature?',
@@ -848,6 +849,26 @@ export const en = {
         },
       ],
       requestLink: 'Request a feature',
+    },
+    appStore: { small: 'Download on the', big: 'App Store', soon: 'Coming soon' },
+    openSource: {
+      title: 'Built by the community. Free for everyone.',
+      lead: 'Nobody should have to pay a subscription to track workouts, progress or meals. LukiFitti is a community project: free, open source and transparent — every line of code, including the AI prompts, is public on GitHub.',
+      items: [
+        {
+          title: 'Free for everyone',
+          body: 'No subscription, no paywall, no ads, no in-app purchases. Progression tracking and AI meal analysis included.',
+        },
+        {
+          title: 'Open source & community-driven',
+          body: 'App, server and Watch app are fully open source. Suggest features, report bugs, or contribute code — the roadmap is shaped by the people who use it.',
+        },
+        {
+          title: 'Your key, kept safe',
+          body: 'AI runs on your own OpenRouter key (bring your own key). It is stored AES-256-GCM encrypted on the server and only ever shown as its last 4 characters.',
+        },
+      ],
+      cta: 'Join on GitHub',
     },
     cta: { title: 'Start your next workout.', openApp: 'Open app' },
     footer: {

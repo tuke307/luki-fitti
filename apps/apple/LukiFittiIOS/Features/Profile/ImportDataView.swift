@@ -30,6 +30,7 @@ struct ImportDataView: View {
     private static let importGuides: [(name: String, docFile: String, accessibilityId: String)] = [
         ("GymLife", "gymlife-import", "ios.profile.row.import.gymlife"),
         ("Alpha Progression", "alpha-progression-import", "ios.profile.row.import.alphaProgression"),
+        ("MCI", "mci-import", "ios.profile.row.import.mci"),
     ]
 
     var body: some View {

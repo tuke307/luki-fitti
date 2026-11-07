@@ -5,7 +5,8 @@ format. You get one by:
 
 - **exporting a backup** from LukiFitti (Profile → Data → Export Backup, web or iPhone), or
 - **converting another app's export** with one of the guides:
-  [GymLife](gymlife-import.md), [Alpha Progression](alpha-progression-import.md).
+  [GymLife](gymlife-import.md), [Alpha Progression](alpha-progression-import.md)
+  (an [MCI](mci-import.md) import is not possible yet).
 
 Upload it in the app under **Profile → Data → Import file**. The app first shows a preview (what is
 new, what is already there, unknown exercises) and only imports after you confirm. Nobody needs
