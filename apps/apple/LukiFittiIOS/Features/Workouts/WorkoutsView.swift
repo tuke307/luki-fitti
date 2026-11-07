@@ -897,6 +897,8 @@ private struct TemplateBuilderSheetView: View {
                                         Label(tr("How to do it"), systemImage: "book")
                                             .font(.subheadline.weight(.semibold))
                                             .foregroundStyle(LukiColors.accent)
+                                            .lineLimit(1)
+                                            .fixedSize()
                                             .padding(.horizontal, 12)
                                             .frame(minHeight: 44)
                                             .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.fill))
@@ -904,7 +906,6 @@ private struct TemplateBuilderSheetView: View {
                                     .buttonStyle(.plain)
                                     .accessibilityLabel(tr("How to do %@", resolvedEx.name))
                                     .accessibilityIdentifier("ios.templateBuilder.guideButton.\(idx + 1)")
-                                    LateralityBadge(resolvedEx.laterality)
                                 }
 
                                 Spacer()
