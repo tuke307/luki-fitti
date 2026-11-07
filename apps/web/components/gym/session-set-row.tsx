@@ -159,7 +159,7 @@ export function SessionSetRow({
         data-testid={testId ?? `session-set-row-${sIdx + 1}`}
         data-set-logged={set.completed ? 'true' : 'false'}
         data-set-type={set.setType}
-        className="py-1.5"
+        className="px-1 py-1.5"
       >
         {contextLabel && (
           <p className="text-muted-foreground mb-1 ml-11 truncate text-[0.75rem] font-medium">
