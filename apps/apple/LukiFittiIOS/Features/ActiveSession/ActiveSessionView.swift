@@ -972,6 +972,8 @@ public struct ActiveSessionView: View {
                         .font(.caption.weight(.medium))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                        .padding(.horizontal, 10)
+                        .padding(.top, 4)
                 }
 
                 HStack(spacing: 8) {
