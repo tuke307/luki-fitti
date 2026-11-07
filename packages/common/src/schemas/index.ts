@@ -742,6 +742,11 @@ export const ANALYTICS_EVENT_NAMES = [
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENT_NAMES)[number];
 
+/** Client platform tag so iOS and web traffic can be told apart in Umami. */
+export const ANALYTICS_PLATFORMS = ['web', 'ios'] as const;
+
+export type AnalyticsPlatform = (typeof ANALYTICS_PLATFORMS)[number];
+
 const analyticsUrlSchema = z
   .string()
   .max(ANALYTICS_MAX_URL_LENGTH)
@@ -760,12 +765,14 @@ export const AnalyticsCollectSchema = z.discriminatedUnion('type', [
     type: z.literal('pageview'),
     url: analyticsUrlSchema,
     referrer: z.string().max(ANALYTICS_MAX_URL_LENGTH).transform(stripUrlQuery).optional(),
+    platform: z.enum(ANALYTICS_PLATFORMS).optional(),
   }),
   z.strictObject({
     type: z.literal('event'),
     name: z.enum(ANALYTICS_EVENT_NAMES),
     url: analyticsUrlSchema,
     data: analyticsEventDataSchema.optional(),
+    platform: z.enum(ANALYTICS_PLATFORMS).optional(),
   }),
 ]);
 

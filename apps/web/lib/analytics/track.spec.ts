@@ -14,6 +14,7 @@ describe('analytics track helpers', () => {
     assert.deepEqual(buildPageviewPayload('/reset-password?token=FAKE-TOKEN', undefined, ORIGIN), {
       type: 'pageview',
       url: '/reset-password',
+      platform: 'web',
     });
   });
 
@@ -45,12 +46,14 @@ describe('analytics track helpers', () => {
         name: 'login',
         url: '/login',
         data: { status: 'success' },
+        platform: 'web',
       },
     );
     assert.deepEqual(buildEventPayload('pwa_installed', {}, '/x/abcdefghijklmnopqrstuvwxyz0123'), {
       type: 'event',
       name: 'pwa_installed',
       url: '/',
+      platform: 'web',
     });
   });
 });

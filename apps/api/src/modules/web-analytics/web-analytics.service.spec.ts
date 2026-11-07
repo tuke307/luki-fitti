@@ -66,6 +66,8 @@ describe('AnalyticsCollectSchema', () => {
       { type: 'pageview', url: '/', name: 'login' },
       { type: 'pageview', url: '/', screen: '1920x1080' },
       { type: 'pageview', url: `/${'a'.repeat(500)}` },
+      { type: 'pageview', url: '/', platform: 'android' },
+      { type: 'event', name: 'login', url: '/', platform: 'android' },
     ];
     for (const body of invalid) {
       assert.equal(AnalyticsCollectSchema.safeParse(body).success, false, JSON.stringify(body));
@@ -110,6 +112,22 @@ describe('WebAnalyticsService', () => {
       data: { status: 'success' },
       language: 'de-DE',
     });
+  });
+
+  it('tags hits by platform and leaves the tag out when absent', () => {
+    const service = createService();
+    const iosPageview = service.buildUmamiRequest(
+      { type: 'pageview', url: '/', platform: 'ios' },
+      context,
+    );
+    assert.equal(JSON.parse(String(iosPageview?.init.body)).payload.tag, 'ios');
+    const webEvent = service.buildUmamiRequest(
+      { type: 'event', name: 'login', url: '/profile', platform: 'web' },
+      context,
+    );
+    assert.equal(JSON.parse(String(webEvent?.init.body)).payload.tag, 'web');
+    const untagged = service.buildUmamiRequest({ type: 'pageview', url: '/' }, context);
+    assert.equal('tag' in JSON.parse(String(untagged?.init.body)).payload, false);
   });
 
   it('drops pageviews when disabled, for foreign hosts, cross-site requests or missing UA', () => {
