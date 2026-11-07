@@ -41,6 +41,9 @@ public final class LukiAppViewModel {
 
     public var selectedTab: LukiMainTab = .home
     public var completedSummarySession: WorkoutSessionDto?
+    /// Set by "View in History": the summary is cleared only after the session cover finished
+    /// dismissing, so it doesn't animate out as a blank screen.
+    public var clearsSummaryOnDismiss = false
     public var showSyncConflictDialog: Bool = false
     public var deepLinkTokenType: String?
     public var deepLinkToken: String?
@@ -291,6 +294,13 @@ public final class LukiAppViewModel {
         let version = UIDevice.current.systemVersion.replacingOccurrences(of: ".", with: "_")
         let shortVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
         return "Mozilla/5.0 (\(device); CPU \(osName) \(version) like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 LukiFitti/\(shortVersion)"
+    }
+
+    /// "View in History" on the summary card: switches to the diary and lets the cover's
+    /// onDismiss clear the summary once it has finished animating out.
+    public func showSummaryInHistory() {
+        clearsSummaryOnDismiss = true
+        selectedTab = .diary
     }
 
     public func startSession(from template: WorkoutTemplateDto, sourceDevice: SessionSourceDevice = .IPHONE) {
@@ -1160,7 +1170,13 @@ public struct AppShellView: View {
         .modifier(SessionAccessoryModifier(isEnabled: hasSession) {
             SessionAccessoryView(viewModel: viewModel) { isSessionPresented = true }
         })
-        .fullScreenCover(isPresented: $isSessionPresented, onDismiss: syncSelectionFromContent) {
+        .fullScreenCover(isPresented: $isSessionPresented) {
+            syncSelectionFromContent()
+            if viewModel.clearsSummaryOnDismiss {
+                viewModel.clearsSummaryOnDismiss = false
+                viewModel.completedSummarySession = nil
+            }
+        } content: {
             NavigationStack {
                 ActiveSessionView(viewModel: viewModel)
                     .toolbar {

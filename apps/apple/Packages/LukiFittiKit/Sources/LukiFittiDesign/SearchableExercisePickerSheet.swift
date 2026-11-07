@@ -183,17 +183,12 @@ public struct SearchableExercisePickerSheet: View {
                             ForEach(filteredExercises) { ex in
                                 let isSelected = ex.id == selectedExerciseId
                                 HStack(spacing: 0) {
+                                    thumbnailButton(ex)
                                     Button {
                                         onSelect(ex)
                                         dismiss()
                                     } label: {
                                         HStack(spacing: 12) {
-                                            ExerciseThumbnailView(
-                                                exercise: ex,
-                                                fallbackMuscle: ex.primaryMuscleGroup,
-                                                compact: true
-                                            )
-
                                             VStack(alignment: .leading, spacing: 3) {
                                                 Text(ex.name)
                                                     .font(.subheadline.bold())
@@ -269,6 +264,23 @@ public struct SearchableExercisePickerSheet: View {
         .accessibilityIdentifier("ios.picker.info.\(exercise.id)")
     }
 
+    /// Tapping the picture opens the exercise guide (same as the ⓘ button), not the selection.
+    private func thumbnailButton(_ exercise: ExerciseDto) -> some View {
+        Button {
+            guideExercise = exercise
+        } label: {
+            ExerciseThumbnailView(
+                exercise: exercise,
+                fallbackMuscle: exercise.primaryMuscleGroup,
+                compact: true
+            )
+        }
+        .buttonStyle(.plain)
+        .padding(.leading, 10)
+        .accessibilityLabel(tr("About %@", exercise.name))
+        .accessibilityIdentifier("ios.picker.thumbnail.\(exercise.id)")
+    }
+
     private func sectionHeader(_ text: String, highlighted: Bool) -> some View {
         Text(text)
             .font(.footnote.bold())
@@ -283,6 +295,7 @@ public struct SearchableExercisePickerSheet: View {
             sectionHeader(section.title, highlighted: section.highlighted)
             ForEach(section.items) { item in
                 HStack(spacing: 0) {
+                    thumbnailButton(item.exercise)
                     Button {
                         onSelect(item.exercise)
                         dismiss()

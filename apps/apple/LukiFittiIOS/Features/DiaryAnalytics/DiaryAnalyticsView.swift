@@ -622,22 +622,40 @@ public struct DiaryAnalyticsView: View {
                 .font(.caption2.monospacedDigit())
                 .foregroundStyle(.secondary)
 
-            HStack(spacing: 12) {
-                Label(tr("%d min", max(1, Int((Double(session.activeDurationSeconds) / 60).rounded()))), systemImage: "clock")
-                    .accessibilityLabel(tr("Duration"))
-                    .accessibilityValue(tr("%d min", max(1, Int((Double(session.activeDurationSeconds) / 60).rounded()))))
-                Text(setCountText(session.totalSetsCompleted))
-                Text(LukiFormat.volume(kg: session.totalVolumeKg, unit: session.weightUnit))
-                if notDone > 0 {
-                    Text(tr("%d not done", notDone))
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 12) {
+                    Label(tr("%d min", max(1, Int((Double(session.activeDurationSeconds) / 60).rounded()))), systemImage: "clock")
+                        .accessibilityLabel(tr("Duration"))
+                        .accessibilityValue(tr("%d min", max(1, Int((Double(session.activeDurationSeconds) / 60).rounded()))))
+                        .lineLimit(1)
+                        .fixedSize()
+                    Text(setCountText(session.totalSetsCompleted))
+                        .lineLimit(1)
+                        .fixedSize()
+                    Text(LukiFormat.volume(kg: session.totalVolumeKg, unit: session.weightUnit))
+                        .lineLimit(1)
+                        .fixedSize()
                 }
-                if let kcal = session.activeCaloriesKcal, kcal > 0 {
-                    Label("\(Int(kcal)) kcal", systemImage: "flame.fill")
-                        .foregroundStyle(LukiColors.calories)
-                }
-                if let avgHr = session.avgHeartRateBpm {
-                    Label(tr("%d bpm avg", avgHr), systemImage: "heart.fill")
-                        .foregroundStyle(LukiColors.heartRate)
+                if notDone > 0 || (session.activeCaloriesKcal ?? 0) > 0 || session.avgHeartRateBpm != nil {
+                    HStack(spacing: 12) {
+                        if notDone > 0 {
+                            Text(tr("%d not done", notDone))
+                                .lineLimit(1)
+                                .fixedSize()
+                        }
+                        if let kcal = session.activeCaloriesKcal, kcal > 0 {
+                            Label("\(Int(kcal)) kcal", systemImage: "flame.fill")
+                                .foregroundStyle(LukiColors.calories)
+                                .lineLimit(1)
+                                .fixedSize()
+                        }
+                        if let avgHr = session.avgHeartRateBpm {
+                            Label(tr("%d bpm avg", avgHr), systemImage: "heart.fill")
+                                .foregroundStyle(LukiColors.heartRate)
+                                .lineLimit(1)
+                                .fixedSize()
+                        }
+                    }
                 }
             }
             .font(.caption.monospacedDigit())

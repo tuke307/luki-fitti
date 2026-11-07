@@ -200,6 +200,12 @@ test.describe('Active Session — set types, supersets & exercise actions', () =
     await expect(bestMatches).not.toContainText(/gorilla/i);
     await expect(bestMatches).not.toContainText(/lat pulldown/i);
 
+    // The ⓘ button on a match opens the guide page inside the same dialog.
+    await bestMatches.getByTestId('substitute-exercise-info').first().click();
+    await expect(replaceDialog.getByTestId('substitute-exercise-guide')).toBeVisible();
+    await replaceDialog.getByRole('button', { name: /Back|Zurück/ }).click();
+    await expect(replaceDialog.getByTestId('substitute-best-matches')).toBeVisible();
+
     // The full same-muscle list stays one tap away.
     await replaceDialog.getByTestId('substitute-show-all').click();
     await expect(replaceDialog.getByText(/^Same muscle/)).toBeVisible();

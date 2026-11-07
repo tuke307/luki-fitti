@@ -158,14 +158,15 @@ public struct ActiveSessionView: View {
                     .foregroundStyle(.secondary)
             }
 
-            ViewThatFits {
-                HStack(spacing: 12) { summaryStats(session) }
-                VStack(spacing: 8) { summaryStats(session) }
+            LazyVGrid(
+                columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)],
+                spacing: 8
+            ) {
+                summaryStats(session)
             }
 
             Button {
-                viewModel.completedSummarySession = nil
-                viewModel.selectedTab = .diary
+                viewModel.showSummaryInHistory()
             } label: {
                 Text(tr("View in History"))
                     .frame(maxWidth: .infinity)
@@ -203,6 +204,7 @@ public struct ActiveSessionView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
         .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.fill))
         .accessibilityElement(children: .combine)
     }
@@ -970,6 +972,8 @@ public struct ActiveSessionView: View {
                         .font(.caption.weight(.medium))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                        .padding(.horizontal, 10)
+                        .padding(.top, 4)
                 }
 
                 HStack(spacing: 8) {
@@ -1031,7 +1035,7 @@ public struct ActiveSessionView: View {
                             onMinus: { update(max(0, currentWeight - step), nil) },
                             onPlus: { update(currentWeight + step, nil) },
                             onSubmit: { text in
-                                if let weight = parseDecimal(text) { update(max(0, weight), nil) }
+                                if let weight = LukiFormat.parseDecimal(text) { update(max(0, weight), nil) }
                             }
                         )
                         .layoutPriority(1)
@@ -1121,11 +1125,6 @@ public struct ActiveSessionView: View {
         .accessibilityLabel(tr("Effort, set %d: %@", n, LukiI18n.effortLabel(rpe: set.rpe, locale: tr)))
         .accessibilityHint(tr("Change effort"))
         .accessibilityIdentifier("ios.session.effort.\(n)")
-    }
-
-    /// Accepts both "22,5" and "22.5" regardless of the keyboard's decimal separator.
-    private func parseDecimal(_ text: String) -> Double? {
-        Double(text.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: "."))
     }
 
     // MARK: - Suggestion

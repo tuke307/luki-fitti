@@ -29,6 +29,11 @@ public enum LukiFormat {
         String(format: "%g", value)
     }
 
+    /// Accepts both "22,5" and "22.5" regardless of the keyboard's decimal separator.
+    public static func parseDecimal(_ text: String) -> Double? {
+        Double(text.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: "."))
+    }
+
     /// "1:30" or "1:02:03".
     public static func clock(_ seconds: Int) -> String {
         let s = max(0, seconds)
