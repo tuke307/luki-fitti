@@ -840,7 +840,7 @@ export const en = {
         },
         {
           q: 'What happens to my data?',
-          a: 'Your data is stored on our server in Germany. OpenRouter keys are stored encrypted. No ads, no tracking — only privacy-friendly, aggregated page views via Umami.',
+          a: 'Your data is stored on our server in Germany. OpenRouter keys are stored encrypted. No ads, no tracking — only privacy-friendly, aggregated page views and anonymous usage events via Umami.',
         },
         {
           q: 'How do I request a feature?',

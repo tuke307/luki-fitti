@@ -272,6 +272,9 @@ struct DataExportView: View {
                 ShareLink(item: backup, preview: SharePreview(backup.fileName)) {
                     SettingsRow(tr("Export Backup"), systemImage: "square.and.arrow.up", tint: LukiColors.setStretch)
                 }
+                .simultaneousGesture(TapGesture().onEnded {
+                    viewModel.analytics.event(.dataExport, ["format": .string("json")])
+                })
                 .accessibilityIdentifier("ios.profile.row.exportBackup")
 
                 let workoutLog = WorkoutLogExportFile(
@@ -281,6 +284,9 @@ struct DataExportView: View {
                 ShareLink(item: workoutLog, preview: SharePreview(workoutLog.fileName)) {
                     SettingsRow(tr("Workout Log (CSV)"), systemImage: "tablecells", tint: LukiColors.setStretch)
                 }
+                .simultaneousGesture(TapGesture().onEnded {
+                    viewModel.analytics.event(.dataExport, ["format": .string("csv")])
+                })
                 .accessibilityIdentifier("ios.profile.row.exportCsv")
             }
         }
