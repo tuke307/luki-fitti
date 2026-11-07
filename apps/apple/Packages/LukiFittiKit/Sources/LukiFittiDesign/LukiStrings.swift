@@ -709,6 +709,7 @@ public enum LukiStrings {
         // AI transparency + model choice
         "%@ in · %@ out per 1M tokens": "%@ Eingabe · %@ Ausgabe pro 1 Mio. Tokens",
         "%@ isn’t available anymore, so the default is used.": "%@ ist nicht mehr verfügbar, daher wird der Standard verwendet.",
+        "%@ / 1M tokens": "%@ / 1 Mio. Tokens",
         "%@ per 1M input tokens · %@ per 1M output tokens": "%@ pro 1 Mio. Eingabe-Tokens · %@ pro 1 Mio. Ausgabe-Tokens",
         "Add your OpenRouter API key to use AI features and choose models.": "Hinterlege deinen OpenRouter-API-Schlüssel, um KI-Funktionen zu nutzen und Modelle zu wählen.",
         "Choose the OpenRouter model for each AI feature. Prices are per 1M tokens as listed by OpenRouter; the estimate is based on your recent requests.": "Wähle das OpenRouter-Modell für jede KI-Funktion. Preise pro 1 Mio. Tokens laut OpenRouter; die Schätzung basiert auf deinen letzten Anfragen.",
@@ -718,6 +719,7 @@ public enum LukiStrings {
         "Default": "Standard",
         "Default (%@)": "Standard (%@)",
         "How this works": "So funktioniert das",
+        "Input": "Eingabe",
         "Instructions for the model": "Anweisungen an das Modell",
         "Loading instructions…": "Anweisungen werden geladen…",
         "Loading models…": "Modelle werden geladen…",
@@ -727,6 +729,7 @@ public enum LukiStrings {
         "Model: %@": "Modell: %@",
         "No estimate yet": "Noch keine Schätzung",
         "No models match your search.": "Keine Modelle passen zu deiner Suche.",
+        "Output": "Ausgabe",
         "Search models": "Modelle suchen",
         "Selected": "Ausgewählt",
         "The model list from OpenRouter is unavailable right now. The default models are used.": "Die Modellliste von OpenRouter ist gerade nicht verfügbar. Es werden die Standardmodelle verwendet.",
