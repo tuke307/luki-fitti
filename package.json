@@ -1,7 +1,7 @@
 {
   "name": "luki-fitti",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "AGPL-3.0-only",
   "workspaces": [
     "apps/*",
     "packages/*"

@@ -1,4 +1,6 @@
-import type { SiteLocale } from '@/lib/site/config';
+import { SiGithub } from '@icons-pack/react-simple-icons';
+
+import { GITHUB_URL, type SiteLocale } from '@/lib/site/config';
 import type { getSiteCopy } from '@/lib/site/content';
 
 export function SiteFooter({
@@ -28,8 +30,23 @@ export function SiteFooter({
           <a href={`${base || '/'}#features`} className="hover:text-foreground transition-colors">
             {t.nav.features}
           </a>
+          <a
+            href={`${base || '/'}#open-source`}
+            className="hover:text-foreground transition-colors"
+          >
+            {t.nav.openSource}
+          </a>
           <a href={`${base || '/'}#faq`} className="hover:text-foreground transition-colors">
             {t.nav.faq}
+          </a>
+          <a
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground inline-flex items-center gap-1.5 transition-colors"
+          >
+            <SiGithub size={14} aria-hidden />
+            GitHub
           </a>
           {legal.map(([href, label]) => (
             <a key={href} href={href} className="hover:text-foreground transition-colors">

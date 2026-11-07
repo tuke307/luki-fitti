@@ -768,6 +768,8 @@ export const de = {
       faq: 'FAQ',
       openApp: 'App öffnen',
       download: 'Download',
+      github: 'LukiFitti auf GitHub',
+      openSource: 'Community',
       switchTo: 'English',
       switchHref: '/en',
     },
@@ -776,7 +778,6 @@ export const de = {
       sub: 'Der Workout-Tracker für iPhone, Apple Watch und Web — offline nutzbar, ohne Schnickschnack.',
       openApp: 'App öffnen',
       download: 'TestFlight-Beta beitreten',
-      downloadSoon: 'Bald im App Store',
       heroAlt: 'LukiFitti aktives Training auf dem iPhone',
       deviceLabel: 'Gerät',
     },
@@ -838,11 +839,11 @@ export const de = {
         },
         {
           q: 'Was kostet LukiFitti?',
-          a: 'Die App ist kostenlos. KI-Funktionen (Workout-Planung, Essensanalyse) nutzen deinen eigenen OpenRouter-Schlüssel — du zahlst OpenRouter direkt und nur für deine Nutzung.',
+          a: 'Nichts. LukiFitti ist komplett kostenlos und Open Source — kein Abo, keine Werbung. KI-Funktionen (Workout-Planung, Essensanalyse) nutzen deinen eigenen OpenRouter-Schlüssel — du zahlst OpenRouter direkt und nur für deine Nutzung.',
         },
         {
           q: 'Was passiert mit meinen Daten?',
-          a: 'Deine Daten liegen auf unserem Server in Deutschland. OpenRouter-Schlüssel werden verschlüsselt gespeichert. Es gibt keine Werbung und kein Tracking — nur datenschutzfreundliche, aggregierte Seitenaufrufe und anonyme Nutzungsereignisse über Umami.',
+          a: 'Deine Daten liegen auf unserem Server in Deutschland. OpenRouter-Schlüssel werden mit AES-256-GCM verschlüsselt gespeichert und nie wieder an dein Gerät zurückgegeben. Es gibt keine Werbung und kein Tracking — nur datenschutzfreundliche, aggregierte Seitenaufrufe und anonyme Nutzungsereignisse über Umami.',
         },
         {
           q: 'Wie kann ich ein Feature wünschen?',
@@ -850,6 +851,26 @@ export const de = {
         },
       ],
       requestLink: 'Feature wünschen',
+    },
+    appStore: { small: 'Laden im', big: 'App Store', soon: 'Bald' },
+    openSource: {
+      title: 'Von der Community. Kostenlos für alle.',
+      lead: 'Niemand sollte ein Abo bezahlen müssen, um Training, Fortschritt oder Mahlzeiten zu tracken. LukiFitti ist ein Community-Projekt: kostenlos, Open Source und transparent — jede Zeile Code, auch die KI-Prompts, ist öffentlich auf GitHub.',
+      items: [
+        {
+          title: 'Kostenlos für alle',
+          body: 'Kein Abo, keine Paywall, keine Werbung, keine In-App-Käufe. Progressions-Tracking und KI-Essensanalyse inklusive.',
+        },
+        {
+          title: 'Open Source & Community-getrieben',
+          body: 'App, Server und Watch-App sind komplett Open Source. Features vorschlagen, Bugs melden oder Code beitragen — die Roadmap gestalten die, die sie nutzen.',
+        },
+        {
+          title: 'Dein Schlüssel, sicher verwahrt',
+          body: 'KI läuft über deinen eigenen OpenRouter-Schlüssel (Bring Your Own Key). Er wird auf dem Server mit AES-256-GCM verschlüsselt gespeichert und nur mit den letzten 4 Zeichen angezeigt.',
+        },
+      ],
+      cta: 'Auf GitHub mitmachen',
     },
     cta: { title: 'Starte dein nächstes Workout.', openApp: 'App öffnen' },
     footer: {

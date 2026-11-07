@@ -2,7 +2,7 @@
   "name": "@luki-fitti/database",
   "version": "1.0.0",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "main": "./dist/client.js",
   "types": "./dist/client.d.ts",

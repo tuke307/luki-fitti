@@ -2,7 +2,7 @@
   "name": "@luki-fitti/apple",
   "version": "1.0.0",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "AGPL-3.0-only",
   "scripts": {
     "build": "swift build --package-path Packages/LukiFittiKit",
     "test": "swift test --package-path Packages/LukiFittiKit",

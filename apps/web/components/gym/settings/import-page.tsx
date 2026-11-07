@@ -42,6 +42,11 @@ const IMPORT_GUIDES = [
     url: 'https://github.com/tuke307/luki-fitti/blob/main/docs/alpha-progression-import.md',
     testId: 'import-guide-alpha-progression',
   },
+  {
+    name: 'MCI',
+    url: 'https://github.com/tuke307/luki-fitti/blob/main/docs/mci-import.md',
+    testId: 'import-guide-mci',
+  },
 ] as const;
 
 export function ImportPage({ isAuthenticated }: { isAuthenticated: boolean }) {

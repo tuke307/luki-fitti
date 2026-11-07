@@ -2,7 +2,7 @@
   "name": "@luki-fitti/ui",
   "version": "1.0.0",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "AGPL-3.0-only",
   "exports": {
     "./postcss.config": "./postcss.config.mjs",
     "./globals.css": "./src/globals.css",
