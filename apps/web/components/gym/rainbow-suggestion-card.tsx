@@ -144,7 +144,7 @@ export function RainbowExerciseSuggestionCard({
               {evidenceText && (
                 <span
                   data-testid={`${testId}-evidence`}
-                  className="bg-secondary/60 text-muted-foreground tabular-nums inline-block rounded-full px-2 py-0.5 text-[0.75rem] font-medium"
+                  className="bg-secondary/60 text-muted-foreground tabular-nums inline-block max-w-full rounded-full px-2 py-0.5 text-[0.75rem] font-medium"
                 >
                   {evidenceText}
                 </span>
@@ -152,7 +152,7 @@ export function RainbowExerciseSuggestionCard({
             </div>
           </div>
 
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
             <Button
               type="button"
               size="sm"
@@ -171,13 +171,16 @@ export function RainbowExerciseSuggestionCard({
                 variant="secondary"
                 size="sm"
                 data-testid={`${testId}-swap-btn`}
+                className="h-auto min-h-9 max-w-full py-2 text-left whitespace-normal"
                 onClick={() => {
                   trackEvent('suggestion_accept', { action: 'swap', context });
                   onSwap(suggestion);
                 }}
               >
                 <ArrowRightLeft className="h-4 w-4" />
-                {format(t.workouts.swapSuggestedBtn, { name: stallingExerciseName })}
+                <span className="line-clamp-2 min-w-0">
+                  {format(t.workouts.swapSuggestedBtn, { name: stallingExerciseName })}
+                </span>
               </Button>
             )}
           </div>
