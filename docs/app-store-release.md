@@ -136,7 +136,11 @@ Then move the files to a password manager and delete the folder.
 
 ## Running the pipeline
 
-`.github/workflows/app-store.yaml` runs by hand, from `main` only:
+`.github/workflows/app-store.yaml` runs on every push to `main` that changes `apps/apple/**` (or
+the workflow itself) and then always uploads, like the Coolify deploy for the server apps. Pushes
+that arrive while a run is busy wait in the queue; only the newest one is kept.
+
+It can also run by hand, from `main` only:
 
 ```bash
 gh workflow run app-store.yaml --repo tuke307/luki-fitti --ref main -f upload=false

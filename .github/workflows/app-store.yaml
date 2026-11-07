@@ -7,6 +7,13 @@ name: App Store
 # do not add a pull_request trigger or upload artifacts: artifacts are public as well.
 
 on:
+  # Like the Coolify deploy: every push to main that touches the Apple apps ships a build.
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/apple/**'
+      - '.github/workflows/app-store.yaml'
   workflow_dispatch:
     inputs:
       upload:
@@ -124,7 +131,8 @@ jobs:
             -exportOptionsPlist Config/ExportOptions-AppStore.plist
 
       - name: Upload to App Store Connect
-        if: inputs.upload
+        # Pushes have no inputs, so they always upload.
+        if: github.event_name == 'push' || inputs.upload
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
