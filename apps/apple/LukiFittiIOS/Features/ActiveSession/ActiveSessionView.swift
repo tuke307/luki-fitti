@@ -158,9 +158,11 @@ public struct ActiveSessionView: View {
                     .foregroundStyle(.secondary)
             }
 
-            ViewThatFits {
-                HStack(spacing: 12) { summaryStats(session) }
-                VStack(spacing: 8) { summaryStats(session) }
+            LazyVGrid(
+                columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)],
+                spacing: 8
+            ) {
+                summaryStats(session)
             }
 
             Button {
@@ -203,6 +205,7 @@ public struct ActiveSessionView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
         .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.fill))
         .accessibilityElement(children: .combine)
     }
