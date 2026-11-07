@@ -137,6 +137,7 @@ test.describe('PWA Shell, Navigation & Preferences', () => {
     await expect(page.getByTestId('import-sign-in-hint')).toBeVisible();
     await expect(page.getByTestId('import-guide-gymlife')).toBeVisible();
     await expect(page.getByTestId('import-guide-alpha-progression')).toBeVisible();
+    await expect(page.getByTestId('import-guide-mci')).toBeVisible();
     await expect(page.getByTestId('import-page')).toHaveCount(0);
   });
 });
