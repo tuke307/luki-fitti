@@ -1,4 +1,6 @@
-import { APP_ORIGIN, TESTFLIGHT_URL } from '@/lib/site/config';
+import { SiGithub } from '@icons-pack/react-simple-icons';
+
+import { APP_ORIGIN, GITHUB_URL, TESTFLIGHT_URL } from '@/lib/site/config';
 import { type getSiteCopy } from '@/lib/site/content';
 
 export function SiteHeader({ t }: { t: ReturnType<typeof getSiteCopy> }) {
@@ -15,11 +17,23 @@ export function SiteHeader({ t }: { t: ReturnType<typeof getSiteCopy> }) {
           <a href="#features" className="hover:text-foreground transition-colors">
             {t.nav.features}
           </a>
+          <a href="#open-source" className="hover:text-foreground transition-colors">
+            {t.nav.openSource}
+          </a>
           <a href="#faq" className="hover:text-foreground transition-colors">
             {t.nav.faq}
           </a>
         </nav>
         <div className="ml-auto flex items-center gap-4">
+          <a
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={t.nav.github}
+            className="text-muted-foreground hover:text-foreground flex h-9 w-9 items-center justify-center rounded-full transition-colors"
+          >
+            <SiGithub size={18} aria-hidden />
+          </a>
           <a
             href={t.nav.switchHref}
             className="text-muted-foreground hover:text-foreground text-sm transition-colors"
