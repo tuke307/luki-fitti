@@ -213,7 +213,9 @@ export function SubstituteExerciseOptions({
                 className="h-auto min-w-0 flex-1 items-center justify-between p-0 text-left text-xs font-medium hover:bg-transparent"
               >
                 <span className="min-w-0 truncate">{alt.name}</span>
-                <span className="text-muted-foreground text-xs">{equipmentLabel(alt.equipment)}</span>
+                <span className="text-muted-foreground text-xs">
+                  {equipmentLabel(alt.equipment)}
+                </span>
               </Button>
               {infoButton(alt)}
             </div>

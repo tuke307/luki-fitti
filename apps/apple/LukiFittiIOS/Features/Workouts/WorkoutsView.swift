@@ -542,6 +542,9 @@ public struct WorkoutsView: View {
                     SuggestionCardView(
                         suggestion: suggestion,
                         locale: tr,
+                        historySessions: viewModel.store.historySessions,
+                        weightUnit: weightUnit,
+                        catalog: viewModel.store.catalog,
                         compact: true,
                         onAdd: {
                             viewModel.analytics.event(.suggestionAccept, ["action": .string("add"), "context": .string("template")])
@@ -1071,6 +1074,9 @@ private struct TemplateBuilderSheetView: View {
             SuggestionCardView(
                 suggestion: suggestion,
                 locale: tr,
+                historySessions: historySessions,
+                weightUnit: defaultWeightUnit,
+                catalog: catalog,
                 onAdd: {
                     analytics.event(.suggestionAccept, ["action": .string("add"), "context": .string("builder")])
                     exercises.append(WorkoutTemplateExerciseDto(

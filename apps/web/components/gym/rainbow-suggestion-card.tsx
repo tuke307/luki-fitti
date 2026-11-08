@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Sparkles, Plus, ArrowRightLeft, X } from 'lucide-react';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import { trackEvent } from '@/lib/analytics/track';
@@ -8,6 +8,7 @@ import { useLocale } from '@/providers/i18n/locale-context';
 import type { WorkoutExerciseSuggestion } from '@luki-fitti/common/utils/client';
 import type { WeightUnit } from '@luki-fitti/common/enums';
 import { ExerciseVisual } from './exercise-visual';
+import { ExerciseGuideSheet } from './exercise-guide-sheet';
 import { LateralityBadge } from './laterality-badge';
 
 interface RainbowExerciseSuggestionCardProps {
@@ -33,6 +34,7 @@ export function RainbowExerciseSuggestionCard({
   analyticsContext: context = 'session',
 }: RainbowExerciseSuggestionCardProps) {
   const { t, format, muscleLabel } = useLocale();
+  const [guideOpen, setGuideOpen] = useState(false);
   const {
     suggestedExercise,
     targetMuscle,
@@ -120,16 +122,28 @@ export function RainbowExerciseSuggestionCard({
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
-            <ExerciseVisual
-              exercise={suggestedExercise}
-              variant="thumbnail"
-              className="h-12 w-14 shrink-0"
-            />
+            <button
+              type="button"
+              data-testid={`${testId}-guide-btn`}
+              aria-label={format(t.picker.exerciseInfoAria, { name: suggestedExercise.name })}
+              onClick={() => setGuideOpen(true)}
+              className="focus-visible:ring-ring/50 shrink-0 rounded-lg outline-hidden focus-visible:ring-[3px] active:opacity-70"
+            >
+              <ExerciseVisual
+                exercise={suggestedExercise}
+                variant="thumbnail"
+                className="h-12 w-14 shrink-0"
+              />
+            </button>
             <div className="min-w-0 space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="truncate text-[0.9375rem] font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setGuideOpen(true)}
+                  className="truncate text-left text-[0.9375rem] font-semibold hover:underline"
+                >
                   {suggestedExercise.name}
-                </span>
+                </button>
                 {suggestion.unilateralVariant && (
                   <LateralityBadge laterality={suggestedExercise.laterality} />
                 )}
@@ -186,6 +200,12 @@ export function RainbowExerciseSuggestionCard({
           </div>
         </div>
       </div>
+      <ExerciseGuideSheet
+        exercise={suggestedExercise}
+        open={guideOpen}
+        onOpenChange={setGuideOpen}
+        showEmptyState
+      />
     </div>
   );
 }

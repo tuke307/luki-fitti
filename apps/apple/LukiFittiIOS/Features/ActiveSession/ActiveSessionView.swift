@@ -1153,6 +1153,9 @@ public struct ActiveSessionView: View {
             SuggestionCardView(
                 suggestion: suggestion,
                 locale: tr,
+                historySessions: viewModel.store.historySessions,
+                weightUnit: session.weightUnit,
+                catalog: viewModel.store.catalog,
                 onAdd: {
                     viewModel.analytics.event(.suggestionAccept, ["action": .string("add"), "context": .string("session")])
                     dismiss(suggestion, in: session)

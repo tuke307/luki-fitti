@@ -8,24 +8,44 @@ import LukiFittiDomain
 struct SuggestionCardView: View {
     let suggestion: WorkoutExerciseSuggestion
     let locale: SupportedLocale
+    let historySessions: [WorkoutSessionDto]
+    let weightUnit: WeightUnit
+    let catalog: [ExerciseDto]
     var compact = false
     var onAdd: (() -> Void)?
     /// Only offered for stall reasons, where the suggestion targets an existing exercise.
     var onReplace: (() -> Void)?
     var onDismiss: (() -> Void)?
 
+    @State private var showingGuide = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: compact ? 8 : 10) {
-                Image(systemName: "sparkles")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
+                Button {
+                    showingGuide = true
+                } label: {
+                    ExerciseThumbnailView(exercise: suggestion.suggestedExercise, compact: true)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(locale("How to do %@", suggestion.suggestedExercise.name))
+                .accessibilityIdentifier("suggestion.guide")
                 VStack(alignment: .leading, spacing: compact ? 2 : 4) {
                     HStack(spacing: 6) {
-                        Text("\(SuggestionReasonFormatter.badge(locale: locale)) · \(suggestion.suggestedExercise.name)")
-                            .font(compact ? .footnote : .subheadline.weight(.semibold))
+                        Image(systemName: "sparkles")
+                            .font(.caption.weight(.semibold))
                             .foregroundStyle(.primary)
-                            .lineLimit(1)
+                        Button {
+                            showingGuide = true
+                        } label: {
+                            Text("\(SuggestionReasonFormatter.badge(locale: locale)) · \(suggestion.suggestedExercise.name)")
+                                .font(compact ? .footnote : .subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint(locale("How to do it"))
                         // Like the web card: the side chip only when a one-sided variant was picked.
                         if suggestion.unilateralVariant {
                             LateralityBadge(suggestion.suggestedExercise.laterality)
@@ -94,6 +114,14 @@ struct SuggestionCardView: View {
                         .stroke(LukiColors.separator, lineWidth: 1.5)
                 )
         )
+        .sheet(isPresented: $showingGuide) {
+            ExerciseGuideSheet(
+                exercise: suggestion.suggestedExercise,
+                historySessions: historySessions,
+                weightUnit: weightUnit,
+                catalog: catalog
+            )
+        }
     }
 
     private var showsReplace: Bool {

@@ -33,6 +33,12 @@ test.describe('Active Session Execution & Rest Timer', () => {
     await expect(page.getByTestId('sticky-rest-timer-dock')).toBeVisible();
     await expect(page.getByTestId('session-rainbow-suggestion')).toBeVisible();
 
+    // The suggestion card's photo opens the exercise guide (instructions + history).
+    await page.getByTestId('session-rainbow-suggestion-guide-btn').click();
+    await expect(page.getByTestId('exercise-guide-sheet')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('exercise-guide-sheet')).toBeHidden();
+
     // Update Set 1 weight and reps, then mark complete and verify logged prescription pill
     await updateSetWeightAndReps(page, 1, '82.5', '10');
     await toggleCompleteSetRow(page, 1);
