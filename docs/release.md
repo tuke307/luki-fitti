@@ -3,7 +3,8 @@
 Web, API and email worker deploy automatically: every push to `main` builds the changed images
 and deploys them to Coolify (`.github/workflows/production.yaml`). Database migrations run in
 the `luki-fitti-db-migrate` container before the API starts. The iOS and watchOS apps are
-archived and uploaded by the App Store workflow, which you start by hand
+archived and uploaded by the App Store workflow, which runs automatically on every push to
+`main` that changes `apps/apple/**`
 (`.github/workflows/app-store.yaml`, see [app-store-release.md](app-store-release.md)).
 
 > Until the first App Store release the version stays at **1.0.0** (only the build number goes
@@ -39,7 +40,7 @@ This writes:
 Open a few images before committing. Captions live in `apps/apple/marketing/screenshots.json`;
 change them there, never in the images.
 
-`TESTFLIGHT_URL` is a constant in `apps/web/lib/site/config.ts` — set it once the TestFlight/App Store link exists; no env var needed.
+`TESTFLIGHT_URL` and `APP_STORE_URL` are constants in `apps/web/lib/site/config.ts`; set `APP_STORE_URL` once the App Store listing is live.
 
 ## 3. Check
 
@@ -57,9 +58,10 @@ Production workflow. Check the version footer in web settings after the deploy.
 
 ## 5. iOS and watchOS
 
-1. Run the App Store workflow on `main`: `gh workflow run app-store.yaml --ref main`. It archives
-   the `LukiFittiIOS` scheme and uploads it to App Store Connect; the watch app ships inside it.
-   Setup and secrets are described in [app-store-release.md](app-store-release.md).
+1. Merging to `main` triggers the App Store workflow: it archives the `LukiFittiIOS` scheme and
+   uploads it to App Store Connect; the watch app ships inside it. A manual run
+   (`gh workflow run app-store.yaml --ref main`, `-f upload=false` to only check signing) is
+   optional. Setup and secrets are described in [app-store-release.md](app-store-release.md).
 2. In App Store Connect: add the build to TestFlight, and for an App Store release upload the
    screenshots from `apps/apple/marketing/appstore/` (English and German) and write the release
    notes.

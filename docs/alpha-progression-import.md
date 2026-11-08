@@ -92,7 +92,7 @@ Gotchas:
 | Plans export                         | One `WorkoutFolder` per plan, one `WorkoutTemplate` per `Tag` (working sets with the rep target, 90 s rest) |
 
 Exercises: match each Alpha Progression exercise to the **global system catalog**
-(`INITIAL_EXERCISE_CATALOG` in `packages/common/src/catalog/data.ts`) by name, equipment and primary
+(`CORE_EXERCISE_CATALOG` in `packages/common/src/catalog/data.ts`, extended datasets in `packages/common/src/catalog/extended/`) by name, equipment and primary
 muscle; see [finding catalog slugs](import-format.md#finding-catalog-slugs). Exercises that don't
 exist in the catalog can be included in the import file as `customExercises` (they become your own
 custom exercises). Adding new **system** exercises to the catalog is a separate maintainer task

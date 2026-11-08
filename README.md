@@ -1,6 +1,6 @@
 # LukiFitti
 
-Offline-first gym workout tracker, progressive overload engine, and stretching studio for **Web (PWA)**, **iPhone (iOS 18+)**, and **Apple Watch (watchOS 11+)**.
+Offline-first gym workout tracker, progressive overload engine, and stretching studio for **Web (PWA)**, **iPhone (iOS 26+)**, and **Apple Watch (watchOS 26+)**.
 
 ---
 
@@ -8,10 +8,10 @@ Offline-first gym workout tracker, progressive overload engine, and stretching s
 
 - **Offline-First Workout Execution:** Start, pause, swap backup exercises, and log sets without an internet connection on Web (`IndexedDB`) or Apple devices (`LukiFittiStore`).
 - **Statistical Progressive Overload:** Blended Epley + Brzycki 1RM estimation, EWMA smoothing, OLS trend slope, and inline set progression suggestions (`+2.5 kg`, `+1 rep`) with Apple Watch Heart Rate Recovery fatigue detection.
-- **Native Apple Watch & HealthKit Telemetry:** Standalone and companion watchOS 11 workout execution (`HKWorkoutSession`), 1 Hz optical heart rate curves, active/total calorie tracking, per-set peak & recovery BPM, and iOS 18 Dynamic Island Live Activities.
+- **Native Apple Watch & HealthKit Telemetry:** Standalone and companion watchOS 26 workout execution (`HKWorkoutSession`), 1 Hz optical heart rate curves, active/total calorie tracking, per-set peak & recovery BPM, and iOS 26 Dynamic Island Live Activities.
 - **Guided Stretching & Mobility Studio:** Timed stretching routines with transition bells and anatomical start/finish posture illustrations.
 - **Calorie & Macro Tracking:** Log meals by hand (offline-capable), daily goals, intake vs. estimated workout burn, 7-day trend.
-- **Admin Portal & Opt-in AI:** `/admin` for user access and AI settings; AI workout planner and meal-photo calorie estimates for everyone with an OpenRouter key. See [docs/admin-ai-nutrition.md](docs/admin-ai-nutrition.md). Roadmap ideas: [docs/possible-features.md](docs/possible-features.md).
+- **Admin Portal & Opt-in AI:** `/admin` for user access and AI settings; AI workout planner and meal-photo and meal-text calorie estimates for everyone with an OpenRouter key. See [docs/admin-ai-nutrition.md](docs/admin-ai-nutrition.md). Roadmap ideas: [docs/possible-features.md](docs/possible-features.md).
 - **Bilingual (`EN` / `DE`):** Full English and German interface and exercise search aliases.
 
 ---
@@ -24,7 +24,7 @@ luki-fitti/
 │   ├── web/            # Next.js 16 + React 19 + Tailwind CSS v4 PWA
 │   ├── api/            # NestJS 12 REST API (Express 5, Swagger, Cookie + Bearer Auth)
 │   ├── email-worker/   # BullMQ transactional email worker (MJML templates)
-│   └── apple/          # Native Swift 6 workspace (iOS 18, watchOS 11, WidgetKit)
+│   └── apple/          # Native Swift 6 workspace (iOS 26, watchOS 26, WidgetKit)
 └── packages/
     ├── common/         # Shared Zod schemas, DTOs, enums, starter catalog & 1RM math
     ├── database/       # Prisma 7 PostgreSQL schema, migrations & seed script
@@ -40,33 +40,34 @@ luki-fitti/
 
 - **Node.js** `>= 22` and **Yarn** `1.22+`
 - **PostgreSQL** and **Redis** (for API & email worker)
-- **Xcode 16+ / Swift 6+** (optional, for building `apps/apple`)
+- **Xcode 26+ / Swift 6.2+** (optional, for building `apps/apple`)
 
 ### 2. Environment Setup
 
-Copy the sample environment files in `packages/database`, `apps/api`, and `apps/web` to `.env.local`:
+Copy the sample environment files in `packages/database`, `apps/api`, `apps/web`, and `apps/email-worker` to `.env.local`:
 
 ```bash
 cp packages/database/.env.sample packages/database/.env.local
 cp apps/api/.env.sample apps/api/.env.local
 cp apps/web/.env.sample apps/web/.env.local
+cp apps/email-worker/.env.sample apps/email-worker/.env.local
 ```
 
-| Variable                                                                                                                                | Workspace             | Description                                                                                                        |
-| :-------------------------------------------------------------------------------------------------------------------------------------- | :-------------------- | :----------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                                                                                                                          | `database`, `api`     | PostgreSQL connection URL                                                                                          |
-| `REDIS_URL`                                                                                                                             | `api`, `email-worker` | Redis URL for BullMQ and access-token revocation                                                                   |
-| `JWT_SECRET`                                                                                                                            | `api`, `web`          | Access token signing secret (`>= 32` chars in production)                                                          |
-| `JWT_REFRESH_SECRET`                                                                                                                    | `api`                 | Refresh token signing secret (`>= 32` chars in production)                                                         |
-| `FRONTEND_URL`                                                                                                                          | `api`                 | Allowed CORS origin — the app host `https://app.luki-fitti.tony-luke.de` (default `http://localhost:3000`)         |
-| `API_PORT`                                                                                                                              | `api`, `web`          | Backend port (default `3001`)                                                                                      |
-| `UMAMI_URL`                                                                                                                             | `api`                 | Self-hosted Umami base URL (default `https://umami.tony-luke.de`)                                                  |
-| `UMAMI_WEBSITE_ID`                                                                                                                      | `api`                 | Umami website ID; pageview forwarding is off when unset or outside production                                      |
-| `UMAMI_ALLOWED_HOSTNAMES`                                                                                                               | `api`                 | Comma-separated hostnames to forward pageviews for (default `luki-fitti.tony-luke.de,app.luki-fitti.tony-luke.de`) |
-| `TESTFLIGHT_URL` (constant in `lib/site/config.ts`)                                                                                     | `web`                 | TestFlight/App Store link for the landing Download button; set it once the link exists                             |
-| `NEXT_PUBLIC_SITE_URL`                                                                                                                  | `web`                 | Public app origin baked at build time (`https://app.luki-fitti.tony-luke.de`)                                      |
-| `AI_KEY_ENCRYPTION_KEY`                                                                                                                 | `api`                 | 32-byte master key (`openssl rand -base64 32`) encrypting per-user OpenRouter keys; AI stays off when unset        |
-| `SEAWEEDFS_ENDPOINT`, `SEAWEEDFS_PORT`, `SEAWEEDFS_USE_SSL`, `SEAWEEDFS_ACCESS_KEY_API`, `SEAWEEDFS_SECRET_KEY_API`, `SEAWEEDFS_BUCKET` | `api`                 | Private SeaweedFS storage for meal photos; optional. `SEAWEEDFS_ENDPOINT` is a host; TLS on 443 is the default     |
+| Variable                                                                                                                                | Workspace             | Description                                                                                                                         |
+| :-------------------------------------------------------------------------------------------------------------------------------------- | :-------------------- | :---------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                                                                                          | `database`, `api`     | PostgreSQL connection URL                                                                                                           |
+| `REDIS_URL`                                                                                                                             | `api`, `email-worker` | Redis URL for BullMQ and access-token revocation                                                                                    |
+| `JWT_SECRET`                                                                                                                            | `api`, `web`          | Access token signing secret (`>= 32` chars in production)                                                                           |
+| `JWT_REFRESH_SECRET`                                                                                                                    | `api`                 | Refresh token signing secret (`>= 32` chars in production)                                                                          |
+| `FRONTEND_URL`                                                                                                                          | `api`                 | Allowed CORS origin — the app host `https://app.luki-fitti.tony-luke.de` (default `http://localhost:3000`)                          |
+| `API_PORT`                                                                                                                              | `api`, `web`          | Backend port (default `3001`)                                                                                                       |
+| `UMAMI_URL`                                                                                                                             | `api`                 | Self-hosted Umami base URL (default `https://umami.tony-luke.de`)                                                                   |
+| `UMAMI_WEBSITE_ID`                                                                                                                      | `api`                 | Umami website ID; pageview forwarding is off when unset or outside production                                                       |
+| `UMAMI_ALLOWED_HOSTNAMES`                                                                                                               | `api`                 | Comma-separated hostnames to forward pageviews for (default `luki-fitti.tony-luke.de,app.luki-fitti.tony-luke.de`)                  |
+| `TESTFLIGHT_URL`, `APP_STORE_URL` (constants in `lib/site/config.ts`)                                                                   | `web`                 | TestFlight link for the landing Download button; set `APP_STORE_URL` once the App Store listing is live (shows the App Store badge) |
+| `NEXT_PUBLIC_SITE_URL`                                                                                                                  | `web`                 | Public app origin baked at build time (`https://app.luki-fitti.tony-luke.de`)                                                       |
+| `AI_KEY_ENCRYPTION_KEY`                                                                                                                 | `api`                 | 32-byte master key (`openssl rand -base64 32`) encrypting per-user OpenRouter keys; AI stays off when unset                         |
+| `SEAWEEDFS_ENDPOINT`, `SEAWEEDFS_PORT`, `SEAWEEDFS_USE_SSL`, `SEAWEEDFS_ACCESS_KEY_API`, `SEAWEEDFS_SECRET_KEY_API`, `SEAWEEDFS_BUCKET` | `api`                 | Private SeaweedFS storage for meal photos; optional. `SEAWEEDFS_ENDPOINT` is a host; TLS on 443 is the default                      |
 
 ### 3. Install, Migrate & Run
 
@@ -84,14 +85,14 @@ yarn dev
 
 ## Common Scripts
 
-| Command                              | Description                                                             |
-| :----------------------------------- | :---------------------------------------------------------------------- |
-| `yarn dev`                           | Start development servers across workspaces                             |
-| `yarn build`                         | Build all packages and applications                                     |
-| `yarn test`                          | Run unit and integration tests (`api`, `web`, and Swift `LukiFittiKit`) |
-| `yarn lint`                          | Run TypeScript and ESLint checks                                        |
-| `yarn db:migrate -- <name>`          | Create and apply a new Prisma migration                                 |
-| `yarn --cwd apps/api openapi:export` | Export Swagger OpenAPI spec to `apps/apple`                             |
+| Command                              | Description                                                                       |
+| :----------------------------------- | :-------------------------------------------------------------------------------- |
+| `yarn dev`                           | Start development servers across workspaces                                       |
+| `yarn build`                         | Build all packages and applications                                               |
+| `yarn test`                          | Run unit and integration tests (`api`, `web`, `common`, and Swift `LukiFittiKit`) |
+| `yarn lint`                          | Run TypeScript and ESLint checks                                                  |
+| `yarn db:migrate -- <name>`          | Create and apply a new Prisma migration                                           |
+| `yarn --cwd apps/api openapi:export` | Export Swagger OpenAPI spec to `apps/apple`                                       |
 
 Releasing: see [docs/release.md](docs/release.md).
 
@@ -99,7 +100,7 @@ Releasing: see [docs/release.md](docs/release.md).
 
 ## Native Apple App (`apps/apple`)
 
-The native iOS 18, watchOS 11, and Dynamic Island Widget targets share business logic via the `LukiFittiKit` Swift Package (`apps/apple/Packages/LukiFittiKit`).
+The native iOS 26, watchOS 26, and Dynamic Island Widget targets share business logic via the `LukiFittiKit` Swift Package (`apps/apple/Packages/LukiFittiKit`).
 
 ```bash
 # Run Swift package unit tests
@@ -113,7 +114,7 @@ xcrun simctl pair <WATCH_SIM_UDID> <IPHONE_SIM_UDID>
 ```
 
 - **Environment Switching:** `Config/Debug.xcconfig` defaults to `http://localhost:3001` and `Config/Release.xcconfig` defaults to `https://app.luki-fitti.tony-luke.de`. You can override the API URL in Xcode under **Edit Scheme (`⌘<`) → Run → Environment Variables → `LUKIFITTI_API_BASE_URL`**.
-- **Physical iPhone builds must use the prod URL:** On a real device `localhost` is the phone itself, so a plain Debug build can't reach the API or S3 storage. The scheme environment variable only applies to launches from Xcode, so override the build setting instead. Don't switch to Release for personal-team builds, because it resets the bundle ID prefix from `Local.xcconfig`.
+- **Physical iPhone builds must use the prod URL:** On a real device `localhost` is the phone itself, so a plain Debug build can't reach the API or S3 storage. The scheme environment variable only applies to launches from Xcode, so override the build setting instead.
 
   ```bash
   cd apps/apple && xcodegen generate

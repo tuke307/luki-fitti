@@ -1,7 +1,11 @@
 # Import training data from other apps into LukiFitti
 
 This guide covers exporting workout plans and training history from another
-fitness app and importing them into LukiFitti. The
+fitness app and importing them into LukiFitti.
+
+The normal way to import is the in-app import of a `luki-fitti-import@1` file
+(see [import-format.md](import-format.md)). The Python tooling below is the
+operator path with direct database access: the
 [import script](../tools/training-import/import_training.py) reads a shared JSON
 structure and writes to PostgreSQL. Other export formats require an adapter;
 there is no CSV import interface in the app.
@@ -163,7 +167,7 @@ or agreed values and document the assumption.
 Assign all personal folders, templates, and exercises to the target account.
 Personal imports do not belong in global starter plans or schema migrations.
 Keep a local import report with source hashes, inserted IDs, and results.
-The current schema has no `ImportJob` table.
+Each committed import is recorded as an `ImportJob` audit row with per-kind counts.
 
 ## 4. Add missing workouts later
 

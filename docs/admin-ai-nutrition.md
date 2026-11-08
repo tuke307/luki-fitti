@@ -36,8 +36,9 @@ without a session to `/login?redirect=…`; authorization itself is always enfor
 
 ## Calorie tracking (everyone)
 
-- `MealEntry` (meal type, optional label, time) with `MealItem`s (grams, kcal, protein, carbs,
-  fat, optional fiber/sugar, `source` MANUAL | AI, `confidence`).
+- `MealEntry` (meal type, optional label, time) with `MealItem`s (amount in `amountUnit` —
+  grams for solids, millilitres for drinks — kcal, protein, carbs, fat, optional fiber/sugar,
+  `source` MANUAL | AI, `confidence`).
 - `PUT /api/nutrition/entries` is an idempotent upsert keyed by `clientEntryId`, so web
   (IndexedDB outbox) and iOS (`NutritionStore` outbox) can queue changes offline and replay them.
 - `GET /api/nutrition/summary?from=YYYY-MM-DD&to=YYYY-MM-DD&tz=Europe/Berlin` buckets intake and
@@ -69,8 +70,16 @@ without a session to `/login?redirect=…`; authorization itself is always enfor
   self-correction. The answer is forced on the last step. Every run is metered in `AiRun`
   (tokens, cost, duration, error code) without prompt or photo content. The daily run limit is
   enforced per user.
-- `skills/*.skill.ts`: system prompt, allowed tools, output schema, model selection. New AI
-  features are new skills.
+- `skills/*.skill.ts`: allowed tools, output schema, model selection. The system prompts live in
+  `apps/api/src/modules/ai/prompts/*.md` and are loaded per skill. New AI features are new
+  skills.
+- Every AI response returns token usage and cost (metered per run in `AiRun`). Users see their
+  own numbers via `GET /api/ai/usage/me`; admins get totals and per-user numbers via
+  `GET /api/admin/ai-usage` and `GET /api/admin/ai-usage/users/:userId`.
+- Users pick the model per skill themselves (Settings → AI models, `GET /api/ai/models` lists
+  eligible models with OpenRouter pricing and an estimated cost per run). A missing or
+  ineligible choice falls back to the admin default from Admin → AI; users on an admin-assigned
+  key can only choose from `AppSettings.userModelAllowlist`, own-key users any capable model.
 
 ### Skill `workout-builder`
 
@@ -102,6 +111,16 @@ optional `mealType`, `hint`):
 - kcal that deviates > 25 % from the 4/4/9 macro value is replaced by the macro value. AI items
   replace earlier AI items on the entry; manual items are kept.
 - Without storage configured, photos are analysed but not kept.
+
+### Skill `meal-text-analyzer`
+
+`POST /api/ai/meal-text-analysis` (JSON: `description` 3–500 chars, optional `mealType`):
+
+- The written meal description is sent as data (quoted in the prompt, never as instructions)
+  and the model returns the same `MealAnalysisSchema` as the photo skill: proposed items with
+  portions and nutrients as a draft the client adds to the editor — nothing is saved.
+- Shares the `AI_MEAL_PHOTO` feature switch and the meal-photo model setting (primary +
+  fallbacks) with `meal-analyzer`; no tools, no photos, so no storage needed.
 
 ## Configuration
 
