@@ -6,4 +6,8 @@ license: MIT
 type: instructions
 target: claude,copilot
 dependencies:
-  apm: []
+  apm:
+    - nextlevelbuilder/ui-ux-pro-max-skill/.claude/skills/ui-ux-pro-max#65e23199492fa911af32d9078e627ab4de01f4c8
+    - pbakaus/impeccable/.claude/skills/impeccable#92d6141cdf61f9943dfc8e2e46870e54e46d8641
+    - dickwu/apple-design-skill#914b6a377c22755597e4405e54911b996de822d7
+    - ehmo/platform-design-skills/skills/watchos#dc2be825d8b439caea78e9eaa8fb3ac23b0ff3e9

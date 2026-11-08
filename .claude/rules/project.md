@@ -7,13 +7,14 @@ paths:
 
 ## What this is
 
-Personal gym and workout management Progressive Web App (`luki-fitti`), optimized for iPhone and Safari with durable IndexedDB offline workout execution, timestamp-based rest timers, stretching & mobility routines, training diary analytics, and Gymlife / Apple Health export migration.
+Offline-first workout tracker (`luki-fitti`) for Web (PWA), iPhone and Apple Watch: workouts with a rest timer and progression suggestions, stretching routines, a training diary, calorie tracking with opt-in AI (OpenRouter), an admin portal, and data import (`luki-fitti-import@1`, GymLife / Alpha Progression converters).
 
 ## Monorepo map
 
-- `apps/api` (`@luki-fitti/api`) — NestJS 12 REST API (Express 5). Domain modules under `src/modules/` (`auth`, `exercise`, `workout`, `session`, `stretching`, `analytics`, `import`, `database`, `health`). Listens on port 3001.
+- `apps/api` (`@luki-fitti/api`) — NestJS 12 REST API (Express 5). Domain modules under `src/modules/` (`activity`, `admin`, `ai`, `analytics`, `app-settings`, `auth`, `body-weight`, `bullmq`, `database`, `email`, `email-template`, `exercise`, `health`, `import`, `nutrition`, `session`, `storage`, `stretching`, `web-analytics`, `workout`). Listens on port 3001.
 - `apps/web` (`@luki-fitti/web`) — Next.js 16 App Router PWA (`app/`): main PWA shell (`components/gym/`), IndexedDB offline store (`lib/offline/offline-store.ts`), Service Worker (`public/sw.js`), Web App Manifest (`app/manifest.ts`), and components from `@luki-fitti/ui`.
 - `apps/apple` (`@luki-fitti/apple`) — Native Swift 6 workspace (`LukiFittiIOS`, `LukiFittiWatch`, `LukiFittiWidgets`, and shared `Packages/LukiFittiKit`).
+- `apps/email-worker` (`@luki-fitti/email-worker`) — BullMQ transactional email worker (MJML templates).
 - `packages/common` (`@luki-fitti/common`) — shared Zod schemas (single source of truth), DTOs, enums, initial exercise catalog (`src/catalog/`), and utilities.
 - `packages/database` (`@luki-fitti/database`) — Prisma 7 schema, SQL migrations, client, and seed script (PostgreSQL).
 - `packages/logger` (`@luki-fitti/logger`) — Winston wrapper; log via `@luki-fitti/logger`, never `console.log`.
@@ -26,7 +27,7 @@ Personal gym and workout management Progressive Web App (`luki-fitti`), optimize
 - Node ≥ 22, TypeScript strict, pure ESM (`"type": "module"`).
 - `@luki-fitti/api` builds via `nestgo`; `common`, `database`, `logger` build via `tsc` + `tsc-alias`.
 - `@luki-fitti/common` and `@luki-fitti/database` are consumed from `dist/` — after changing them, rebuild before dependents consume them (`yarn workspace @luki-fitti/common build`, `yarn workspace @luki-fitti/database build`). Otherwise API/web tests and type checks see stale exports or Prisma enums.
-- The `.lintstagedrc` globs start with `/` and match nothing, so the pre-commit hook does not format code. Run `npx prettier --write <changed files>` yourself before committing.
+- The `.lintstagedrc` globs start with `/` and match nothing, so the pre-commit hook does not format code. Run `npx prettier --write <changed files>` yourself before committing — CI enforces `prettier --check` on PRs (`yarn format:check` in `.github/workflows/ci.yaml`).
 - Commit bodies go through commitlint: a body line that starts with `word:` is read as a footer token and causes a `footer-leading-blank` warning.
 
 ## Commands (repo root)
@@ -37,10 +38,10 @@ Personal gym and workout management Progressive Web App (`luki-fitti`), optimize
 
 ## Local environment
 
-- `docker compose -f compose.dev.yml up -d` starts the stack: `db`, `redis`, `caddy`, `web`, `api`, `db-migrate`.
+- `docker compose -f compose.dev.yml up -d` starts the stack: `db`, `db-migrate`, `caddy`, `web`, `api`, `email-worker`, `mailpit`, `redis`, `seaweedfs`, `seaweedfs-admin`.
 - Env files per app: `<app>/.env.local` (samples in `<app>/.env.sample`). Never commit `.env*.local`.
 - Inside docker, services reach each other by **service name** (`db`, `redis`, `api`), not `localhost`.
-- Next.js server-side fetch needs the **absolute** API URL — set `SERVER_API_URL=http://api:3001/api` (mirrors `API_URL`).
+- Next.js server-side fetch needs the **absolute** API URL — set `API_URL` (e.g. `http://api:3001/api` in docker). `SERVER_API_URL` in `apps/web/lib/config/env.config.ts` is derived from `API_URL` → `NEXT_PUBLIC_DIRECT_API_URL` → `http://localhost:${API_PORT}/api`.
 
 ## Native Apple Workspace (`apps/apple`)
 
@@ -58,7 +59,6 @@ Personal gym and workout management Progressive Web App (`luki-fitti`), optimize
 - **Deploy to a physical iPhone (always use the prod URL):**
   - A Debug build bakes `http://localhost:3001` into `Info.plist`. On a real device `localhost` is the phone itself, so the app cannot reach the API or S3 storage. Always pass the prod URL when building for a device.
   - The scheme environment variable only applies when launching from Xcode, not when the app is opened from the home screen. Use the build setting override instead.
-  - Do not use the Release configuration for personal-team device builds: `Release.xcconfig` resets `LUKIFITTI_BUNDLE_ID_PREFIX` to `com.lukifitti`, which overrides `Local.xcconfig` and breaks signing.
   - Find the device ID: `xcrun devicectl list devices` (use the `physical` entry).
   - Build: `cd apps/apple && xcodegen generate && xcodebuild -project LukiFitti.xcodeproj -scheme LukiFittiIOS -configuration Debug -destination 'id=<DEVICE_UDID>' -derivedDataPath build/DerivedData -allowProvisioningUpdates 'LUKIFITTI_API_BASE_URL=https:/$()/app.luki-fitti.tony-luke.de' build`
   - Verify: `/usr/libexec/PlistBuddy -c 'Print LUKIFITTI_API_BASE_URL' build/DerivedData/Build/Products/Debug-iphoneos/LukiFittiIOS.app/Info.plist` must print `https://app.luki-fitti.tony-luke.de`.
@@ -84,6 +84,6 @@ Personal gym and workout management Progressive Web App (`luki-fitti`), optimize
 ## Agent Instructions (APM)
 
 - This repository manages agent instructions with [APM](https://microsoft.github.io/apm/) (`apm.yml`). Do not edit generated files directly — they are overwritten on every `apm install` / `apm compile`.
-- Always-on rules live in `.claude/rules/` and `AGENTS.md` (repo root).
-- All authoring happens in `.apm/` (instructions in `.apm/instructions/*.instructions.md`, skills in `.apm/skills/`). After any change run `apm install && apm compile` and commit `.apm/` sources and generated outputs together.
+- Instructions are authored in `.apm/instructions/*.instructions.md` and compiled into `AGENTS.md`, `.github/instructions/` and `.claude/rules/`, which are committed. After any change run `apm install && apm compile` and commit sources and generated outputs together.
+- Skills are APM dependencies in `apm.yml` (pinned by commit SHA) and are installed by `apm install` into `.claude/skills/` and `.agents/skills/` — those folders (and `.github/skills/`) are gitignored. Run `apm install` after cloning or pulling.
 

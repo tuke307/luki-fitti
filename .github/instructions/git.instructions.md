@@ -151,15 +151,16 @@ configured git identity (`git config user.name` / `git config user.email`).
 
 ## Pre-commit: lint-staged
 
-The `pre-commit` hook runs lint-staged on staged files before the commit is created.
+The `pre-commit` hook runs lint-staged on staged files before the commit is created. The
+`.lintstagedrc` globs for `apps/` and `packages/` start with `/` and currently match nothing,
+so only root `*.json` files get formatted. Run `npx prettier --write <changed files>` yourself
+before committing — CI checks formatting (`yarn format:check`).
 
 | Glob | Commands run |
 |------|-------------|
-| `apps/**/*.{js,ts,tsx}` | `prettier --write .` then `eslint --fix` |
-| `packages/**/*.{js,ts,tsx}` | `prettier --write .` then `eslint --fix` |
 | `*.json` | `prettier --write .` |
 
-**Always stage specific files** (`git add path/to/file`) rather than `git add -A` to avoid accidentally staging unrelated changes that then fail linting.
+**Always stage specific files** (`git add path/to/file`) rather than `git add -A` to avoid accidentally staging unrelated changes.
 
 ---
 

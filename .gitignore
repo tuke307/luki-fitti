@@ -116,3 +116,8 @@ apps/apple/marketing/.xcresults/
 
 # Private training exports, backups and import reports
 .training-import/
+
+# installed by `apm install`
+.claude/skills/
+.agents/skills/
+.github/skills/
