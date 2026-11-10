@@ -340,3 +340,31 @@ export type BiologicalSex = (typeof BIOLOGICAL_SEX_VALUES)[number];
 /** Everyday movement outside workouts; only used when no Apple Health activity is synced. */
 export const ACTIVITY_LEVELS = ['SEDENTARY', 'LIGHT', 'ACTIVE', 'VERY_ACTIVE'] as const;
 export type ActivityLevel = (typeof ACTIVITY_LEVELS)[number];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Progress tracking
+// ─────────────────────────────────────────────────────────────────────────────
+
+export enum BodyGoal {
+  BUILD_MUSCLE = 'BUILD_MUSCLE',
+  LOSE_FAT = 'LOSE_FAT',
+  RECOMP = 'RECOMP',
+  MAINTAIN = 'MAINTAIN',
+}
+
+export const BODY_GOALS: BodyGoal[] = Object.values(BodyGoal);
+
+export enum ProgressPose {
+  FRONT = 'FRONT',
+  SIDE = 'SIDE',
+  BACK = 'BACK',
+}
+
+export const PROGRESS_POSES: ProgressPose[] = Object.values(ProgressPose);
+
+export enum ProgressPhotoKind {
+  PHOTO = 'PHOTO',
+  AI_TARGET = 'AI_TARGET',
+}
+
+export const PROGRESS_PHOTO_KINDS: ProgressPhotoKind[] = Object.values(ProgressPhotoKind);

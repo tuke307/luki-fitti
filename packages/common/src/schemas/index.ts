@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { DEFAULT_FOLDER_COLOR } from '../utils/folder-color.util';
 import {
   ACTIVITY_LEVELS,
+  BODY_GOALS,
   AdminPermission,
   BIOLOGICAL_SEX_VALUES,
   DistanceUnit,
@@ -139,6 +140,9 @@ export const UpdatePreferencesSchema = z.object({
   weighInReminderEnabled: z.boolean().optional(),
   weighInReminderWeekday: z.number().int().min(1).max(7).optional(),
   weighInReminderMinutes: z.number().int().min(0).max(1439).optional(),
+  bodyGoal: z.enum(BODY_GOALS).nullable().optional(),
+  goalHorizonMonths: z.union([z.literal(3), z.literal(6), z.literal(12)]).nullable().optional(),
+  progressPhotoCloudBackup: z.boolean().optional(),
   /** Per-skill model choice; replaces the stored map (null clears every choice). */
   aiModels: AiModelChoicesSchema.nullable().optional(),
 });
@@ -169,6 +173,10 @@ export const UserPreferencesSchema = z.object({
   weighInReminderWeekday: z.number().default(2).optional(),
   weighInReminderMinutes: z.number().default(450).optional(),
   aiModels: z.record(z.string(), z.string()).nullable().optional(),
+  bodyGoal: z.enum(BODY_GOALS).nullable().optional(),
+  goalHorizonMonths: z.number().int().nullable().optional(),
+  progressPhotoCloudBackup: z.boolean().default(false).optional(),
+  progressAiConsentAt: z.string().nullable().optional(),
 });
 
 export const UserSchema = z.object({
@@ -833,6 +841,7 @@ export * from './admin.schemas';
 export * from './nutrition.schemas';
 export * from './body-weight.schemas';
 export * from './activity.schemas';
+export * from './progress.schemas';
 export * from './ai.schemas';
 export * from './ai-models.schemas';
 export * from './import';
