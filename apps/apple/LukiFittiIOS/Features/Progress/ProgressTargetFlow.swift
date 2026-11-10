@@ -135,13 +135,13 @@ public struct ProgressTargetFlowView: View {
     @State private var slider: CGFloat = 0.5
     @State private var error: String? = nil
     @State private var consentBusy = false
+    @State private var showsAiKeyAlert = false
 
     public init(viewModel: LukiAppViewModel) {
         self.viewModel = viewModel
         let prefs = viewModel.store.preferences
         _goal = State(initialValue: prefs.bodyGoal)
         _horizon = State(initialValue: prefs.goalHorizonMonths)
-        _step = State(initialValue: prefs.progressAiConsentAt != nil ? .intro : .intro)
     }
 
     public var body: some View {
@@ -163,6 +163,15 @@ public struct ProgressTargetFlowView: View {
                 }
             }
         }
+        .alert(tr("OpenRouter key required"), isPresented: $showsAiKeyAlert) {
+            Button(tr("Add key")) {
+                dismiss()
+                viewModel.selectedTab = .profile
+            }
+            Button(tr("Cancel"), role: .cancel) {}
+        } message: {
+            Text(tr("AI features run on your own OpenRouter API key. Add it in your profile to use them."))
+        }
         .accessibilityIdentifier("ios.progress.targetFlow")
     }
 
@@ -176,7 +185,13 @@ public struct ProgressTargetFlowView: View {
             }
             Section {
                 Button(tr("Continue")) {
-                    step = viewModel.store.preferences.progressAiConsentAt != nil ? .photo : .consent
+                    Task {
+                        guard await viewModel.ensureAiKeyConfigured() else {
+                            showsAiKeyAlert = true
+                            return
+                        }
+                        step = viewModel.store.preferences.progressAiConsentAt != nil ? .photo : .consent
+                    }
                 }
                 .accessibilityIdentifier("ios.progress.targetContinue")
             }
@@ -198,8 +213,8 @@ public struct ProgressTargetFlowView: View {
                             prefs.progressAiConsentAt = stamp
                             viewModel.store.savePreferences(prefs)
                             step = .photo
-                        } catch {
-                            self.error = tr("Could not save consent. Please try again.")
+                        } catch let consentError {
+                            self.error = friendly(consentError, fallback: tr("Could not save consent. Please try again."))
                         }
                         consentBusy = false
                     }
@@ -380,13 +395,16 @@ public struct ProgressTargetFlowView: View {
             let scale = maxEdge / longest
             size = CGSize(width: size.width * scale, height: size.height * scale)
         }
-        let rendered = UIGraphicsImageRenderer(size: size).image { _ in
+        // Scale 1: the default renderer scale is the screen's (3x), which would triple the pixels.
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let rendered = UIGraphicsImageRenderer(size: size, format: format).image { _ in
             image.draw(in: CGRect(origin: .zero, size: size))
         }
         return rendered.jpegData(compressionQuality: 0.85)
     }
 
-    private func friendly(_ err: Error) -> String {
+    private func friendly(_ err: Error, fallback: String? = nil) -> String {
         let text = String(describing: err)
         if text.contains("AI_KEY_REQUIRED") || text.contains("AI_KEY_MISSING") { return tr("Add your OpenRouter key in the profile first.") }
         if text.contains("AGE_RESTRICTED") { return tr("This feature is only available to adults.") }
@@ -394,6 +412,6 @@ public struct ProgressTargetFlowView: View {
         if text.contains("FEATURE_DISABLED") || text.contains("AI_PROGRESS_TARGET") { return tr("This feature is currently disabled.") }
         if text.contains("AI_KEY_INVALID") { return tr("OpenRouter rejected the API key. Check it in your profile.") }
         if text.contains("AI_KEY_NO_CREDITS") { return tr("The OpenRouter account has insufficient credits.") }
-        return tr("Could not create the target image. Please try again.")
+        return fallback ?? tr("Could not create the target image. Please try again.")
     }
 }
