@@ -53,6 +53,11 @@ public final class ProgressPhotoStore {
 
     // MARK: Queries
 
+    /// Check-ins on the dated timeline: everything except the pinned AI target entry.
+    public var datedCheckIns: [ProgressCheckInDto] {
+        checkIns.filter { $0.clientEntryId != Self.targetClientEntryId }
+    }
+
     public func checkIn(clientEntryId: String) -> ProgressCheckInDto? {
         checkIns.first { $0.clientEntryId == clientEntryId }
     }

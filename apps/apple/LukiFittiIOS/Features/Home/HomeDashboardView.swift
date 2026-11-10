@@ -32,7 +32,7 @@ public struct HomeDashboardView: View {
                 }
 
                 WeightHomeCard(viewModel: viewModel)
-                if !viewModel.progress.checkIns.isEmpty {
+                if !viewModel.progress.datedCheckIns.isEmpty {
                     NavigationLink {
                         ProgressListView(viewModel: viewModel)
                     } label: {
@@ -43,7 +43,7 @@ public struct HomeDashboardView: View {
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.primary)
                             Spacer()
-                            Text("\(viewModel.progress.checkIns.count)")
+                            Text("\(viewModel.progress.datedCheckIns.count)")
                                 .font(.caption.monospacedDigit())
                                 .foregroundStyle(.secondary)
                             Image(systemName: "chevron.right")

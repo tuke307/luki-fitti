@@ -35,6 +35,9 @@ function PoseThumb({ photo, alt }: { photo: ProgressPhotoDto | undefined; alt: s
   );
 }
 
+/** The pinned AI target entry the iOS app creates (see ProgressPhotoStore.targetClientEntryId). */
+const isTarget = (c: ProgressCheckInDto) => c.clientEntryId === 'ai-progress-target';
+
 export function ProgressSection() {
   const { t, format, bcp47 } = useLocale();
   const { authMode } = useAuth();
@@ -49,7 +52,11 @@ export function ProgressSection() {
     progress
       .listCheckIns()
       .then((res) => {
-        if (alive) setCheckIns(res.data ?? []);
+        // The pinned AI target goes first; it is not a dated check-in.
+        if (alive)
+          setCheckIns(
+            [...(res.data ?? [])].sort((x, y) => Number(isTarget(y)) - Number(isTarget(x))),
+          );
       })
       .catch(() => {
         if (alive) setCheckIns([]);
@@ -62,6 +69,7 @@ export function ProgressSection() {
   const poseLabel = (pose: ProgressPose) => t.progress.poses[pose];
   const dateLabel = (iso: string) => formatWeighInDate(iso, bcp47);
 
+  const dated = useMemo(() => (checkIns ?? []).filter((c) => !isTarget(c)), [checkIns]);
   const a = useMemo(() => checkIns?.find((c) => c.id === compareA), [checkIns, compareA]);
   const b = useMemo(() => checkIns?.find((c) => c.id === compareB), [checkIns, compareB]);
   const photoFor = (c: ProgressCheckInDto | undefined, pose: ProgressPose) =>
@@ -90,7 +98,9 @@ export function ProgressSection() {
                 className="border-border space-y-2 rounded-[0.875rem] border p-3"
                 data-testid={`progress-checkin-${c.id}`}
               >
-                <p className="text-[0.9375rem] font-semibold">{dateLabel(c.takenAt)}</p>
+                <p className="text-[0.9375rem] font-semibold">
+                  {isTarget(c) ? t.progress.aiTargetBadge : dateLabel(c.takenAt)}
+                </p>
                 <div className="grid grid-cols-3 gap-2">
                   {PROGRESS_POSES.map((pose) => (
                     <PoseThumb
@@ -107,7 +117,7 @@ export function ProgressSection() {
             ))}
           </ul>
 
-          {checkIns.length >= 2 && (
+          {dated.length >= 2 && (
             <div className="space-y-2">
               <p className="text-[0.9375rem] font-semibold">{t.progress.compareTitle}</p>
               <div className="grid grid-cols-3 gap-2">
@@ -117,7 +127,7 @@ export function ProgressSection() {
                   onChange={(e) => setCompareA(e.target.value)}
                 >
                   <option value="">{t.progress.compareA}</option>
-                  {checkIns.map((c) => (
+                  {dated.map((c) => (
                     <option key={c.id} value={c.id}>
                       {dateLabel(c.takenAt)}
                     </option>
@@ -129,7 +139,7 @@ export function ProgressSection() {
                   onChange={(e) => setCompareB(e.target.value)}
                 >
                   <option value="">{t.progress.compareB}</option>
-                  {checkIns
+                  {dated
                     .filter((c) => c.id !== compareA)
                     .map((c) => (
                       <option key={c.id} value={c.id}>

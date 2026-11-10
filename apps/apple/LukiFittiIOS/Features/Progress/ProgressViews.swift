@@ -18,7 +18,7 @@ public struct ProgressListView: View {
         self.viewModel = viewModel
     }
 
-    private var checkIns: [ProgressCheckInDto] { viewModel.progress.checkIns }
+    private var checkIns: [ProgressCheckInDto] { viewModel.progress.datedCheckIns }
 
     public var body: some View {
         List {
@@ -420,7 +420,7 @@ public struct ProgressCompareView: View {
                 .pickerStyle(.segmented)
                 Picker(tr("Compare with"), selection: $secondId) {
                     Text(tr("Choose a check-in")).tag(String?.none)
-                    ForEach(viewModel.progress.checkIns.filter { $0.clientEntryId != first.clientEntryId }) { c in
+                    ForEach(viewModel.progress.datedCheckIns.filter { $0.clientEntryId != first.clientEntryId }) { c in
                         Text(LukiDate.parseISO(c.takenAt).map {
                             $0.formatted(.dateTime.day().month(.abbreviated).year().locale(Locale(identifier: tr.rawValue)))
                         } ?? c.takenAt).tag(String?.some(c.clientEntryId))
