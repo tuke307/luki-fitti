@@ -108,6 +108,17 @@ struct WeightView: View {
                 if showsHealthPrompt {
                     healthCard
                 }
+                NavigationLink {
+                    ProgressListView(viewModel: viewModel)
+                } label: {
+                    Label(tr("Progress Photos"), systemImage: "camera.on.rectangle")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(14)
+                        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(LukiColors.cardBackground))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("ios.weight.progressRow")
                 if store.entries.isEmpty {
                     emptyCard
                 } else {

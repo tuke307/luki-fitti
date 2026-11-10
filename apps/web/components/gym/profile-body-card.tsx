@@ -10,9 +10,11 @@ import { Label } from '@luki-fitti/ui/components/ui/label';
 import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
 import {
   ACTIVITY_LEVELS,
+  BODY_GOALS,
   WeightUnit,
   type ActivityLevel,
   type BiologicalSex,
+  type BodyGoal,
 } from '@luki-fitti/common/enums';
 import { UpdatePreferencesSchema, type UpdatePreferencesDto } from '@luki-fitti/common/schemas';
 import { useAuth } from '@/providers/auth/auth-context';
@@ -34,7 +36,7 @@ const toNumber = (v: string) => (v.trim() === '' ? null : Number(v.replace(',', 
  */
 export function ProfileHealthCard() {
   const { user, authMode, updatePreferences } = useAuth();
-  const { t, bcp47 } = useLocale();
+  const { t, bcp47, format } = useLocale();
   const { latest } = useBodyWeight();
   const prefs = user?.preferences;
   const unit = prefs?.weightUnit ?? WeightUnit.KG;
@@ -48,6 +50,10 @@ export function ProfileHealthCard() {
   const [bodyFat, setBodyFat] = useState(prefs?.bodyFatPct == null ? '' : String(prefs.bodyFatPct));
   const [activityLevel, setActivityLevel] = useState<ActivityLevel | ''>(
     prefs?.activityLevel ?? '',
+  );
+  const [bodyGoal, setBodyGoal] = useState<BodyGoal | ''>(prefs?.bodyGoal ?? '');
+  const [goalHorizon, setGoalHorizon] = useState<string>(
+    prefs?.goalHorizonMonths == null ? '' : String(prefs.goalHorizonMonths),
   );
   const [status, setStatus] = useState<SaveStatus>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -199,6 +205,51 @@ export function ProfileHealthCard() {
           prefs?.bodyFatPct,
           (n) => ({ bodyFatPct: n }),
         )}
+        <div className="space-y-1.5">
+          <Label htmlFor="body-goal" className="text-[0.8125rem] font-semibold">
+            {t.profileBody.goal}
+          </Label>
+          <NativeSelect
+            id="body-goal"
+            value={bodyGoal}
+            onChange={(e) => {
+              const next = e.target.value as BodyGoal | '';
+              setBodyGoal(next);
+              void persist({ bodyGoal: next || null }, t.profileBody.goal);
+            }}
+          >
+            <option value="">{t.profileBody.goalUnset}</option>
+            {BODY_GOALS.map((goal) => (
+              <option key={goal} value={goal}>
+                {t.profileBody.goals[goal]}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="body-goalHorizon" className="text-[0.8125rem] font-semibold">
+            {t.profileBody.goalHorizon}
+          </Label>
+          <NativeSelect
+            id="body-goalHorizon"
+            value={goalHorizon}
+            onChange={(e) => {
+              const next = e.target.value;
+              setGoalHorizon(next);
+              void persist(
+                { goalHorizonMonths: next === '' ? null : (Number(next) as 3 | 6 | 12) },
+                t.profileBody.goalHorizon,
+              );
+            }}
+          >
+            <option value="">{t.profileBody.goalHorizonUnset}</option>
+            {[3, 6, 12].map((n) => (
+              <option key={n} value={n}>
+                {format(t.profileBody.goalHorizonMonths, { n })}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
         <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="body-activityLevel" className="text-[0.8125rem] font-semibold">
             {t.profileBody.activityLevel}

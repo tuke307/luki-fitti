@@ -14,10 +14,13 @@ const CACHE_TTL_MS = 10_000;
 export interface AppSettingsRecord {
   aiWorkoutBuilderEnabled: boolean;
   aiMealPhotoEnabled: boolean;
+  aiProgressTargetEnabled: boolean;
   workoutBuilderModel: string;
   workoutBuilderFallbacks: string[];
   mealPhotoModel: string;
   mealPhotoFallbacks: string[];
+  progressTargetModel: string;
+  progressTargetFallbacks: string[];
   aiDailyRunLimit: number;
   mealPhotoRetentionDays: number | null;
   userModelAllowlist: string[];
@@ -32,13 +35,17 @@ export interface AppSettingsRecord {
  * Exported for unit tests.
  */
 export function resolveActiveFeatures(
-  settings: Pick<AppSettingsRecord, 'aiWorkoutBuilderEnabled' | 'aiMealPhotoEnabled'>,
+  settings: Pick<
+    AppSettingsRecord,
+    'aiWorkoutBuilderEnabled' | 'aiMealPhotoEnabled' | 'aiProgressTargetEnabled'
+  >,
   keySource: AiKeySlot | null,
 ): FeatureGrant[] {
   if (!keySource) return [];
   const switches: Record<FeatureGrant, boolean> = {
     [FeatureGrant.AI_WORKOUT_BUILDER]: settings.aiWorkoutBuilderEnabled,
     [FeatureGrant.AI_MEAL_PHOTO]: settings.aiMealPhotoEnabled,
+    [FeatureGrant.AI_PROGRESS_TARGET]: settings.aiProgressTargetEnabled,
   };
   return FEATURE_GRANTS.filter((grant) => switches[grant]);
 }
@@ -115,12 +122,14 @@ export class AppSettingsService {
         ...dto,
         workoutBuilderFallbacks: dedupe(dto.workoutBuilderFallbacks),
         mealPhotoFallbacks: dedupe(dto.mealPhotoFallbacks),
+        progressTargetFallbacks: dedupe(dto.progressTargetFallbacks),
         userModelAllowlist: dedupe(dto.userModelAllowlist),
       },
       update: {
         ...dto,
         workoutBuilderFallbacks: dedupe(dto.workoutBuilderFallbacks),
         mealPhotoFallbacks: dedupe(dto.mealPhotoFallbacks),
+        progressTargetFallbacks: dedupe(dto.progressTargetFallbacks),
         userModelAllowlist: dedupe(dto.userModelAllowlist),
       },
     });
@@ -140,6 +149,9 @@ export class AppSettingsService {
       workoutBuilderFallbacks: value.workoutBuilderFallbacks,
       mealPhotoModel: value.mealPhotoModel,
       mealPhotoFallbacks: value.mealPhotoFallbacks,
+      aiProgressTargetEnabled: value.aiProgressTargetEnabled,
+      progressTargetModel: value.progressTargetModel,
+      progressTargetFallbacks: value.progressTargetFallbacks,
       aiDailyRunLimit: value.aiDailyRunLimit,
       mealPhotoRetentionDays: value.mealPhotoRetentionDays,
       userModelAllowlist: value.userModelAllowlist,

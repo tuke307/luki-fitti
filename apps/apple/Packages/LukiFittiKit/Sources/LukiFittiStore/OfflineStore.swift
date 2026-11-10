@@ -69,12 +69,16 @@ public final class OfflineStore {
 
     private let storageDirectory: URL
     public let apiClient: APIClient
+    /// The device this store runs on. Only the device that owns a shared active session uploads
+    /// its in-progress states to the server; mirrors forward them over WatchConnectivity instead.
+    public let localDevice: SessionSourceDevice
     /// Where this store persists its files; companion stores (e.g. nutrition) share it.
     public var storageDirectoryURL: URL { storageDirectory }
 
     public init(
         storageDirectory: URL? = nil,
-        apiClient: APIClient = APIClient()
+        apiClient: APIClient = APIClient(),
+        localDevice: SessionSourceDevice = .IPHONE
     ) {
         if let storageDirectory {
             self.storageDirectory = storageDirectory
@@ -84,6 +88,7 @@ public final class OfflineStore {
             self.storageDirectory = fallbackURL
         }
         self.apiClient = apiClient
+        self.localDevice = localDevice
         try? FileManager.default.createDirectory(at: self.storageDirectory, withIntermediateDirectories: true)
         loadFromDiskOrSeedStarterCatalog()
     }
@@ -260,6 +265,23 @@ public final class OfflineStore {
 
     @discardableResult
     public func enqueueSessionSync(_ session: WorkoutSessionDto, forceOverwrite: Bool = false) -> QueuedSessionSyncItem {
+        var forceOverwrite = forceOverwrite
+        let owner = session.sourceDevice ?? .IPHONE
+        // A mirrored iPhone/Watch workout uploads its running states only from the device that
+        // owns it — two writers with different device ids would read as a sync conflict. The
+        // device that finished the workout still uploads the merged final state, forcefully.
+        if (owner == .IPHONE || owner == .APPLE_WATCH) && owner != localDevice {
+            if session.status != .COMPLETED {
+                syncQueue.removeAll { $0.clientSessionId == session.clientSessionId }
+                writeJSON(syncQueue, to: "sync_queue.json")
+                updateSyncStateBadge()
+                return QueuedSessionSyncItem(
+                    clientSessionId: session.clientSessionId,
+                    payload: SyncSessionPayloadDto(from: session, forceOverwrite: forceOverwrite)
+                )
+            }
+            forceOverwrite = true
+        }
         let payload = SyncSessionPayloadDto(from: session, forceOverwrite: forceOverwrite)
         let item = QueuedSessionSyncItem(clientSessionId: session.clientSessionId, payload: payload)
         guard !isDeleted(session) else { return item }
@@ -319,9 +341,10 @@ public final class OfflineStore {
                         response.session.status == .COMPLETED ? nil : response.serverVersion
                     if response.session.status == .COMPLETED {
                         saveHistorySession(response.session)
-                    } else if activeSession?.clientSessionId == response.session.clientSessionId {
-                        saveActiveSession(response.session)
                     }
+                    // An in-progress session keeps its local copy: the server bumps the version
+                    // on every write, so adopting `response.session` would inflate the local
+                    // version and make the companion drop newer snapshots from the other device.
                 }
             } catch APIClientError.unauthorized {
                 syncState = .AUTH_EXPIRED

@@ -131,6 +131,14 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return prisma.bodyWeightEntry;
   }
 
+  get progressCheckIn(): typeof prisma.progressCheckIn {
+    return prisma.progressCheckIn;
+  }
+
+  get progressPhoto(): typeof prisma.progressPhoto {
+    return prisma.progressPhoto;
+  }
+
   get healthDailyEnergy(): typeof prisma.healthDailyEnergy {
     return prisma.healthDailyEnergy;
   }

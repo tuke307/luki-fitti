@@ -24,6 +24,7 @@ import type {
   NutritionHistoryPicksDto,
   NutritionSummaryDto,
   NutritionSummaryQueryDto,
+  ProgressCheckInDto,
   UpdateAiSettingsDto,
   UpdateUserAccessDto,
   UpsertBodyWeightEntryDto,
@@ -300,6 +301,16 @@ export const nutrition = {
     }),
 };
 
+export const progress = {
+  listCheckIns: (range?: { from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (range?.from) qs.set('from', range.from);
+    if (range?.to) qs.set('to', range.to);
+    const queryStr = qs.toString();
+    return apiFetch<ProgressCheckInDto[]>(`/progress/check-ins${queryStr ? `?${queryStr}` : ''}`);
+  },
+};
+
 export const bodyWeight = {
   listEntries: (range?: BodyWeightRangeQueryDto) => {
     const qs = new URLSearchParams();
@@ -415,6 +426,7 @@ export const api = {
   analytics,
   nutrition,
   bodyWeight,
+  progress,
   activity,
   ai,
   exerciseFeedback,

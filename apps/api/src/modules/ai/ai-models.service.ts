@@ -19,11 +19,16 @@ const GLOBAL_HISTORY_RUNS = 200;
 /**
  * What each skill needs from a model. Every skill finishes by calling its answer tool
  * (function calling), so all need tools; the meal photo skill also sends images.
+ * `imageOutput` marks generation skills that produce images (their own OpenRouter catalog).
  */
-export const SKILL_REQUIREMENTS: Record<AiSkillName, { tools: boolean; images: boolean }> = {
+export const SKILL_REQUIREMENTS: Record<
+  AiSkillName,
+  { tools: boolean; images: boolean; imageOutput?: boolean }
+> = {
   [AiSkillName.WORKOUT_BUILDER]: { tools: true, images: false },
   [AiSkillName.MEAL_ANALYZER]: { tools: true, images: true },
   [AiSkillName.MEAL_TEXT_ANALYZER]: { tools: true, images: false },
+  [AiSkillName.PROGRESS_TARGET]: { tools: false, images: true, imageOutput: true },
 };
 
 /**
@@ -36,7 +41,9 @@ export const imagesPerRun = (skill: AiSkillName) =>
 
 /** Admin default per skill (the meal text skill shares the meal photo model). */
 export function defaultModelFor(skill: AiSkillName, s: AppSettingsRecord): string {
-  return skill === AiSkillName.WORKOUT_BUILDER ? s.workoutBuilderModel : s.mealPhotoModel;
+  if (skill === AiSkillName.WORKOUT_BUILDER) return s.workoutBuilderModel;
+  if (skill === AiSkillName.PROGRESS_TARGET) return s.progressTargetModel;
+  return s.mealPhotoModel;
 }
 
 export function isCapable(model: AiModelInfoDto, skill: AiSkillName): boolean {
@@ -169,27 +176,53 @@ export class AiModelsService {
     );
   }
 
+  /** Average recorded cost per model for an image skill, over the last 90 days. */
+  private async recordedImageCosts(skill: AiSkillName): Promise<Map<string, number>> {
+    const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+    const runs = await this.prisma.aiRun.findMany({
+      where: {
+        skill,
+        status: AiRunStatus.SUCCESS,
+        createdAt: { gte: since },
+        costUsd: { not: null },
+      },
+      select: { model: true, costUsd: true },
+    });
+    const sums = new Map<string, { sum: number; n: number }>();
+    for (const r of runs) {
+      if (r.costUsd === null || r.model === null) continue;
+      const e = sums.get(r.model) ?? { sum: 0, n: 0 };
+      e.sum += Number(r.costUsd);
+      e.n += 1;
+    }
+    const out = new Map<string, number>();
+    for (const [id, v] of sums) out.set(id, v.sum / v.n);
+    return out;
+  }
+
   async forUser(userId: string): Promise<AiModelsDto> {
-    const [catalog, settings, keySource, choices] = await Promise.all([
+    const [catalog, imageCatalog, settings, keySource, choices] = await Promise.all([
       this.catalog.catalog(),
+      this.catalog.imageCatalog(),
       this.appSettings.get(),
       this.appSettings.keySource(userId),
       this.choices(userId),
     ]);
-    const byId = new Map(catalog.models.map((m) => [m.id, m]));
+    const byId = new Map([...catalog.models, ...imageCatalog.models].map((m) => [m.id, m]));
     const skills = await Promise.all(
       Object.values(AiSkillName).map(async (skill): Promise<AiSkillModelsDto> => {
-        const avg = await this.averageFor(userId, skill);
+        const imageOutput = SKILL_REQUIREMENTS[skill].imageOutput === true;
+        const pool = imageOutput ? imageCatalog.models : catalog.models;
+        // Image skills have no token pricing: the estimate is the recorded average run cost.
+        const imageCosts = imageOutput ? await this.recordedImageCosts(skill) : null;
+        const avg = imageOutput ? null : await this.averageFor(userId, skill);
         const option = (m: AiModelInfoDto): AiModelOptionDto => ({
           ...m,
-          estimatedCostPerRunUsd: estimateCostPerRun(avg, m.pricing, imagesPerRun(skill)),
+          estimatedCostPerRunUsd: imageOutput
+            ? (imageCosts?.get(m.id) ?? null)
+            : estimateCostPerRun(avg, m.pricing, imagesPerRun(skill)),
         });
-        const eligible = eligibleModels(
-          catalog.models,
-          skill,
-          keySource,
-          settings.userModelAllowlist,
-        );
+        const eligible = eligibleModels(pool, skill, keySource, settings.userModelAllowlist);
         const defaultModel = defaultModelFor(skill, settings);
         const selectedModel = choices[skill] ?? null;
         const effectiveModel = resolvePrimaryModel(selectedModel, defaultModel, eligible);

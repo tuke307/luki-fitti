@@ -36,7 +36,7 @@ final class LukiFittiStoreTests: XCTestCase {
             catalog: store.catalog,
             userId: "user-1",
             weightUnit: .KG,
-            sourceDevice: .APPLE_WATCH
+            sourceDevice: .IPHONE
         )
 
         let firstEx = session.exercises[0]

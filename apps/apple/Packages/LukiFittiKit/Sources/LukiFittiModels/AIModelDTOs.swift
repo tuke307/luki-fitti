@@ -8,6 +8,7 @@ public enum AiSkillName: String, Codable, Sendable, CaseIterable, Hashable, Iden
     case workoutBuilder = "workout-builder"
     case mealAnalyzer = "meal-analyzer"
     case mealTextAnalyzer = "meal-text-analyzer"
+    case progressTarget = "progress-target"
 
     public var id: String { rawValue }
 }
@@ -21,6 +22,7 @@ public enum AIPromptFiles {
         .workoutBuilder: "apps/api/src/modules/ai/prompts/workout-builder.md",
         .mealAnalyzer: "apps/api/src/modules/ai/prompts/meal-analyzer.md",
         .mealTextAnalyzer: "apps/api/src/modules/ai/prompts/meal-text-analyzer.md",
+        .progressTarget: "apps/api/src/modules/ai/prompts/progress-target.md",
     ]
 
     public static func rawURL(_ skill: AiSkillName) -> URL? {

@@ -128,6 +128,7 @@ extension LukiAppViewModel {
     /// Forgets weigh-ins and reminders on sign-out / account deletion.
     func clearBodyWeightData() {
         bodyWeight.clear()
+        progress.clear()
         bodyMassSync.resetImportAnchor()
         clearHealthActivityData()
         rescheduleWeighInReminders()

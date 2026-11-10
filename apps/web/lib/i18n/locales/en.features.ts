@@ -336,6 +336,17 @@ export const enFeatures = {
     },
     activityHint:
       'Everyday activity means outside workouts. It’s only used without Apple Health; workouts are always added on top.',
+    goal: 'Goal',
+    goalUnset: 'Not set',
+    goalHorizon: 'Horizon',
+    goalHorizonUnset: 'Not set',
+    goalHorizonMonths: '{n} months',
+    goals: {
+      BUILD_MUSCLE: 'Build muscle',
+      LOSE_FAT: 'Lose fat',
+      RECOMP: 'Recomp',
+      MAINTAIN: 'Maintain',
+    },
     suggest: 'Suggest from my details',
     suggestHint:
       'Add weight, height, year of birth and sex (or weight and body fat) to get a suggestion.',
@@ -503,6 +514,7 @@ export const enFeatures = {
       'workout-builder': 'Workout builder',
       'meal-analyzer': 'Meal photo',
       'meal-text-analyzer': 'Meal description',
+      'progress-target': 'AI progress target',
     },
     adminCost: 'AI cost (30 days)',
     adminDetailTitle: 'AI usage · {email}',
@@ -526,6 +538,8 @@ export const enFeatures = {
         'Your request text and, through tools the model may call, your training data: profile and goals, exercise feedback, weak points, recent workouts and exercise catalog searches.',
       'meal-analyzer': 'The photos and your hint. Nothing else about you.',
       'meal-text-analyzer': 'Your meal description and the selected meal. Nothing else about you.',
+      'progress-target':
+        'Your front photo, goal, horizon, height, weight, body fat, sex and age. The generated image is not stored on the server.',
     },
     dataNote:
       'Your name, email and account id are never sent. OpenRouter forwards the request to the model provider.',
@@ -542,7 +556,9 @@ export const enFeatures = {
       'workout-builder': 'Workout planner',
       'meal-analyzer': 'Meal photo',
       'meal-text-analyzer': 'Meal description',
+      'progress-target': 'AI progress target',
     },
+    costAfterFirstRun: 'Cost shown after the first run',
     defaultChoice: 'Default ({model})',
     useDefault: 'Use default',
     restricted: 'Your AI key is provided by the admin, so you can choose from an approved list.',
@@ -609,5 +625,23 @@ export const enFeatures = {
     rateLimited: 'Too many imports. Please try again in an hour.',
     networkError: 'Couldn’t reach the server. Check your connection and try again.',
     genericError: 'The import failed. Nothing was changed. Please try again.',
+  },
+  progress: {
+    title: 'Progress photos',
+    sub: 'Backed-up check-ins from the app.',
+    emptyHint: 'Turn on cloud backup in the iOS app to see your progress photos here.',
+    noPhoto: 'No photo',
+    photoAlt: '{pose} photo, {date}',
+    compareTitle: 'Compare two check-ins',
+    compareA: 'First check-in',
+    compareB: 'Second check-in',
+    poseLabel: 'Pose',
+    aiTargetBadge: 'AI target',
+    aiTargetAlt: 'AI target, {date}',
+    poses: {
+      FRONT: 'Front',
+      SIDE: 'Side',
+      BACK: 'Back',
+    },
   },
 };

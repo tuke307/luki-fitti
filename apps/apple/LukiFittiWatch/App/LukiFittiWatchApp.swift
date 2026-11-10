@@ -25,7 +25,7 @@ public final class WatchWorkoutViewModel {
     public var isSyncing: Bool { isRefreshingFromServer || watchSyncCoordinator.status.isWaitingForCompanion }
 
     public init(
-        store: OfflineStore = OfflineStore(),
+        store: OfflineStore = OfflineStore(localDevice: .APPLE_WATCH),
         healthCoordinator: HealthKitWorkoutCoordinator = HealthKitWorkoutCoordinator(),
         watchSyncCoordinator: WatchSyncCoordinator = WatchSyncCoordinator()
     ) {
@@ -58,6 +58,14 @@ public final class WatchWorkoutViewModel {
                 lastAppliedTimestamps: &self.watchSyncCoordinator.lastAppliedTimestamps
             )
             self.store.saveActiveSession(merged)
+            let followed = SessionCalculator.followedExerciseIndex(
+                previous: active,
+                incoming: merged,
+                currentIndex: self.currentExerciseIndex
+            )
+            if followed != self.currentExerciseIndex {
+                self.currentExerciseIndex = followed
+            }
             self.scheduleRestEndHaptic(endsAt: merged.restTimerEndsAt)
         }
         self.watchSyncCoordinator.onCompletedSessionReceived = { [weak self] completed in
@@ -165,20 +173,14 @@ public final class WatchWorkoutViewModel {
 
     // MARK: - Home
 
-    /// The workout to suggest on the home screen: the one after the last completed workout in its
-    /// folder (wrapping around), otherwise the first workout.
+    /// The workout to suggest on the home screen — the same rule as the iOS Home tab
+    /// (least recently trained, via WorkoutRotation).
     public var nextUpTemplate: WorkoutTemplateDto? {
-        let groups = store.folders.map(\.templates).filter { !$0.isEmpty }
-            + (store.unfiledTemplates.isEmpty ? [] : [store.unfiledTemplates])
-        guard let first = groups.first?.first else { return nil }
-        let last = store.historySessions.first { $0.status == .COMPLETED && $0.templateId != nil }
-        guard let lastId = last?.templateId else { return first }
-        for group in groups {
-            if let idx = group.firstIndex(where: { $0.id == lastId }) {
-                return group[(idx + 1) % group.count]
-            }
-        }
-        return first
+        WorkoutRotation.nextUp(
+            folders: store.folders,
+            unfiledTemplates: store.unfiledTemplates,
+            historySessions: store.historySessions
+        )?.template
     }
 
     // MARK: - Summary
@@ -240,11 +242,19 @@ public final class WatchWorkoutViewModel {
            current.version > incoming.version {
             return
         }
-        let previousStatus = store.activeSession?.clientSessionId == incoming.clientSessionId
-            ? store.activeSession?.status
+        let previous = store.activeSession?.clientSessionId == incoming.clientSessionId
+            ? store.activeSession
             : nil
         store.saveActiveSession(incoming)
-        syncHealthSession(with: incoming, previousStatus: previousStatus)
+        let followed = SessionCalculator.followedExerciseIndex(
+            previous: previous,
+            incoming: incoming,
+            currentIndex: currentExerciseIndex
+        )
+        if followed != currentExerciseIndex {
+            currentExerciseIndex = followed
+        }
+        syncHealthSession(with: incoming, previousStatus: previous?.status)
         scheduleRestEndHaptic(endsAt: incoming.restTimerEndsAt)
     }
 
@@ -255,6 +265,8 @@ public final class WatchWorkoutViewModel {
         let endedMirror = store.activeSession?.clientSessionId == completed.clientSessionId
         if endedMirror {
             store.saveActiveSession(nil)
+            // A queued in-progress copy of a mirrored workout must not upload after completion.
+            store.removeFromSyncQueue(clientSessionId: completed.clientSessionId)
         }
         if !store.isDeleted(clientSessionId: completed.clientSessionId) {
             store.saveHistorySession(completed)
@@ -575,7 +587,7 @@ public final class WatchWorkoutViewModel {
         }
         let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("LukiFittiWatchUITest-\(UUID().uuidString)", isDirectory: true)
-        let store = OfflineStore(storageDirectory: tempDir)
+        let store = OfflineStore(storageDirectory: tempDir, localDevice: .APPLE_WATCH)
         let vm = WatchWorkoutViewModel(store: store)
 
         if args.contains("--uitesting-seed-active-session") || args.contains("--uitesting-marketing"),

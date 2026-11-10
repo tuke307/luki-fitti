@@ -27,6 +27,7 @@ public final class LukiAppViewModel {
     public let store: OfflineStore
     public let nutrition: NutritionStore
     public let bodyWeight: BodyWeightStore
+    public let progress: ProgressPhotoStore
     public let bodyMassSync: BodyMassHealthSync
     /// Apple Health activity (daily active energy + workouts from other apps) for the Food tab.
     public let activity: HealthActivityStore
@@ -47,6 +48,8 @@ public final class LukiAppViewModel {
     public var showSyncConflictDialog: Bool = false
     public var deepLinkTokenType: String?
     public var deepLinkToken: String?
+    /// Set by lukifitti://workouts?template=<id>: the Workouts tab expands that template.
+    public var pendingTemplateId: String?
     /// Pushes the weight screen on the Today tab (card, deep link, reminder tap).
     public var isWeightPresented = false
     /// Serializes weigh-in reminder rescheduling so overlapping calls can't interleave.
@@ -66,6 +69,8 @@ public final class LukiAppViewModel {
         self.store = store
         self.nutrition = NutritionStore(apiClient: store.apiClient, storageDirectory: store.storageDirectoryURL)
         self.bodyWeight = BodyWeightStore(apiClient: store.apiClient, storageDirectory: store.storageDirectoryURL)
+        self.progress = ProgressPhotoStore(apiClient: store.apiClient, storageDirectory: store.storageDirectoryURL)
+        self.progress.cloudBackupEnabled = store.preferences.progressPhotoCloudBackup
         self.bodyMassSync = bodyMassSync
         self.activity = HealthActivityStore(apiClient: store.apiClient, storageDirectory: store.storageDirectoryURL)
         self.activitySync = activitySync
@@ -169,7 +174,18 @@ public final class LukiAppViewModel {
             }
             await syncBodyWeight()
             await syncHealthActivity()
+            await progress.refresh(isSignedIn: isSignedIn)
         }
+    }
+
+    /// Turns progress-photo cloud backup on/off. `deleteRemote` also removes the stored copies.
+    public func setProgressCloudBackup(_ enabled: Bool, deleteRemote: Bool = false) async {
+        var prefs = store.preferences
+        prefs.progressPhotoCloudBackup = enabled
+        var dto = UpdatePreferencesDto()
+        dto.progressPhotoCloudBackup = enabled
+        _ = await savePreferences(prefs, server: dto)
+        await progress.setCloudBackup(enabled, deleteRemote: deleteRemote, isSignedIn: isSignedIn)
     }
 
     private func mergeIncomingWatchActiveSession(_ incoming: WorkoutSessionDto?) {
@@ -254,10 +270,26 @@ public final class LukiAppViewModel {
     }
 
     public func handleUniversalLink(_ url: URL) {
-        // lukifitti://weight opens the weigh-in screen.
-        if url.scheme?.lowercased() == "lukifitti", url.host?.lowercased() == "weight" {
-            openWeight()
-            return
+        if url.scheme?.lowercased() == "lukifitti" {
+            switch url.host?.lowercased() {
+            case "weight":
+                openWeight()
+                return
+            case "nutrition":
+                selectedTab = .nutrition
+                return
+            case "workouts":
+                selectedTab = .workouts
+                if let templateId = URLComponents(url: url, resolvingAgainstBaseURL: true)?
+                    .queryItems?.first(where: { $0.name == "template" })?.value,
+                    store.folders.flatMap(\.templates).contains(where: { $0.id == templateId })
+                        || store.unfiledTemplates.contains(where: { $0.id == templateId }) {
+                    pendingTemplateId = templateId
+                }
+                return
+            default:
+                break
+            }
         }
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: true),
               let token = components.queryItems?.first(where: { $0.name == "token" })?.value else {
@@ -1127,7 +1159,16 @@ public struct LukiFittiIOSApp: App {
                     if newPhase == .active {
                         viewModel.pullFromWatchAndServer()
                     }
+                    if newPhase == .background {
+                        WidgetSnapshotWriter.publish(from: viewModel)
+                    }
                 }
+                // Publish the home-widget snapshot whenever a source of it changes.
+                .onChange(of: viewModel.store.historySessions) { WidgetSnapshotWriter.publish(from: viewModel) }
+                .onChange(of: viewModel.store.folders) { WidgetSnapshotWriter.publish(from: viewModel) }
+                .onChange(of: viewModel.store.unfiledTemplates) { WidgetSnapshotWriter.publish(from: viewModel) }
+                .onChange(of: viewModel.store.preferences) { WidgetSnapshotWriter.publish(from: viewModel) }
+                .onChange(of: viewModel.nutrition.entries) { WidgetSnapshotWriter.publish(from: viewModel) }
         }
     }
 }

@@ -525,6 +525,16 @@ public struct DiaryAnalyticsView: View {
         .accessibilityIdentifier("ios.diary.musclesCard")
     }
 
+    /// "18. Dez." in the app language; the year is appended when it isn't the current one.
+    private func bestDateText(_ iso: String) -> String {
+        guard let date = LukiISODate.parse(iso) else { return "" }
+        let locale = Locale(identifier: tr.rawValue)
+        if Calendar.current.isDate(date, equalTo: Date(), toGranularity: .year) {
+            return date.formatted(.dateTime.day().month(.abbreviated).locale(locale))
+        }
+        return date.formatted(.dateTime.day().month(.abbreviated).year().locale(locale))
+    }
+
     private func personalBestsCard(_ bests: [HistoryInsights.PersonalBest]) -> some View {
         let unitText = LukiFormat.unitLabel(unit)
         return VStack(alignment: .leading, spacing: 12) {
@@ -539,29 +549,37 @@ public struct DiaryAnalyticsView: View {
                     .padding(.vertical, 8)
             }
             ForEach(bests.prefix(6)) { best in
-                let date = LukiISODate.parse(best.startedAt)?.formatted(.dateTime.day().month(.abbreviated)) ?? ""
-                HStack(alignment: .top, spacing: 10) {
+                let date = bestDateText(best.startedAt)
+                let muscle = LukiI18n.muscleLabel(best.muscle, locale: tr)
+                let weight = "\(displayWeight(best.maxWeightKg)) \(unitText) × \(best.reps)"
+                let estMax = "\(displayWeight(best.est1RM)) \(unitText)"
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(best.exerciseName)
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.primary)
-                        Text("\(LukiI18n.muscleLabel(best.muscle, locale: tr)) · \(date)")
+                            .lineLimit(2)
+                        Text("\(muscle) · \(date)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                            .lineLimit(1)
                     }
-                    Spacer(minLength: 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .layoutPriority(1)
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text("\(displayWeight(best.maxWeightKg)) \(unitText) × \(best.reps)")
+                        Text(weight)
                             .font(.subheadline.weight(.semibold).monospacedDigit())
                             .foregroundStyle(LukiColors.accent)
-                        Text(tr("Est. max: %@", "\(displayWeight(best.est1RM)) \(unitText)"))
+                        Text(tr("Max ≈ %@", estMax))
                             .font(.caption.monospacedDigit())
                             .foregroundStyle(.secondary)
                     }
+                    .fixedSize()
                 }
-                .padding(12)
+                .padding(14)
                 .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(LukiColors.fill))
                 .accessibilityElement(children: .combine)
+                .accessibilityLabel("\(best.exerciseName), \(muscle), \(date), \(weight), \(tr("Estimated max %@", estMax))")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -28,16 +28,53 @@ const UpstreamModelSchema = z.object({
     completion: PriceSchema,
     image: PriceSchema.nullable().optional(),
   }),
-  supported_parameters: z.array(z.string()).nullable().optional(),
+  supported_parameters: z
+    .union([
+      z.array(z.string()),
+      // The /images/models endpoint reports a capability map, e.g. input_references.max.
+      z.record(z.string(), z.object({ max: z.number().int().nullable().optional() }).loose()),
+    ])
+    .nullable()
+    .optional(),
   architecture: z
     .object({ input_modalities: z.array(z.string()).nullable().optional() })
     .nullable()
     .optional(),
 });
 
+const takesImageReferences = (m: z.infer<typeof UpstreamModelSchema>) => {
+  const params = m.supported_parameters;
+  if (Array.isArray(params)) {
+    return params.includes('input_references');
+  }
+  const max = params?.input_references?.max;
+  return typeof max === 'number' ? max >= 1 : true;
+};
+
+const acceptsImageInput = (m: z.infer<typeof UpstreamModelSchema>) =>
+  takesImageReferences(m) || (m.architecture?.input_modalities ?? []).includes('image');
+
 const UpstreamListSchema = z.object({ data: z.array(z.unknown()) });
 
 const perMTok = (perToken: number) => Math.round(perToken * 1_000_000 * 1e6) / 1e6;
+
+function toModelInfo(m: z.infer<typeof UpstreamModelSchema>, imageOnly: boolean): AiModelInfoDto {
+  return {
+    id: m.id,
+    name: (m.name ?? m.id).trim() || m.id,
+    contextLength: m.context_length ?? null,
+    pricing: {
+      // Image skills don't price per endpoint; the estimate comes from recorded runs.
+      promptPerMTokUsd: imageOnly ? 0 : perMTok(m.pricing.prompt),
+      completionPerMTokUsd: imageOnly ? 0 : perMTok(m.pricing.completion),
+      imageUsd: imageOnly ? null : (m.pricing.image ?? null),
+    },
+    supportsTools: imageOnly
+      ? false
+      : Array.isArray(m.supported_parameters) && m.supported_parameters.includes('tools'),
+    supportsImages: acceptsImageInput(m),
+  };
+}
 
 /** Maps OpenRouter's `/models` JSON (untrusted) to catalog entries; malformed entries are dropped. */
 export function parseOpenRouterModels(json: unknown): AiModelInfoDto[] {
@@ -52,18 +89,25 @@ export function parseOpenRouterModels(json: unknown): AiModelInfoDto[] {
     // Same shape users may save (`AiModelIdSchema`), so every catalog id is also a valid choice.
     if (m.id.length > 100 || !AI_MODEL_ID_PATTERN.test(m.id) || seen.has(m.id)) continue;
     seen.add(m.id);
-    models.push({
-      id: m.id,
-      name: (m.name ?? m.id).trim() || m.id,
-      contextLength: m.context_length ?? null,
-      pricing: {
-        promptPerMTokUsd: perMTok(m.pricing.prompt),
-        completionPerMTokUsd: perMTok(m.pricing.completion),
-        imageUsd: m.pricing.image ? m.pricing.image : null,
-      },
-      supportsTools: (m.supported_parameters ?? []).includes('tools'),
-      supportsImages: (m.architecture?.input_modalities ?? []).includes('image'),
-    });
+    models.push(toModelInfo(m, false));
+  }
+  return models;
+}
+
+/** The /images/models list: only models that accept image input are useful for image skills. */
+export function parseOpenRouterImageModels(json: unknown): AiModelInfoDto[] {
+  const list = UpstreamListSchema.safeParse(json);
+  if (!list.success) throw new Error('Unexpected /images/models response shape');
+  const seen = new Set<string>();
+  const models: AiModelInfoDto[] = [];
+  for (const raw of list.data.data.slice(0, MAX_MODELS)) {
+    const parsed = UpstreamModelSchema.safeParse(raw);
+    if (!parsed.success) continue;
+    const m = parsed.data;
+    if (m.id.length > 100 || !AI_MODEL_ID_PATTERN.test(m.id) || seen.has(m.id)) continue;
+    if (!acceptsImageInput(m)) continue;
+    seen.add(m.id);
+    models.push(toModelInfo(m, true));
   }
   return models;
 }
@@ -84,6 +128,9 @@ export class OpenRouterModelsService {
   private cache: { models: AiModelInfoDto[]; byId: Map<string, AiModelInfoDto> } | null = null;
   private refreshAt = 0;
   private inflight: Promise<void> | null = null;
+  private imageCache: { models: AiModelInfoDto[]; byId: Map<string, AiModelInfoDto> } | null = null;
+  private imageRefreshAt = 0;
+  private imageInflight: Promise<void> | null = null;
 
   /** Overridable in tests. */
   protected async fetchJson(): Promise<unknown> {
@@ -97,6 +144,45 @@ export class OpenRouterModelsService {
       throw new Error(`OpenRouter /models returned ${response.status}`);
     }
     return response.json();
+  }
+
+  /** Overridable in tests: the image-generation catalog, same caching semantics. */
+  protected async fetchImageJson(): Promise<unknown> {
+    const response = await fetch(`${OPENROUTER_BASE_URL}/images/models`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(MODELS_TIMEOUT_MS),
+    });
+    if (!response.ok) {
+      await response.arrayBuffer().catch(() => undefined);
+      throw new Error(`OpenRouter /images/models returned ${response.status}`);
+    }
+    return response.json();
+  }
+
+  /** The image-model catalog (skills with `imageOutput`), cached alongside the chat list. */
+  async imageCatalog(): Promise<ModelCatalog> {
+    if (Date.now() >= this.imageRefreshAt) {
+      const refresh = this.refreshImages();
+      if (!this.imageCache) await refresh;
+    }
+    return { available: this.imageCache !== null, models: this.imageCache?.models ?? [] };
+  }
+
+  private refreshImages(): Promise<void> {
+    this.imageInflight ??= (async () => {
+      try {
+        const models = parseOpenRouterImageModels(await this.fetchImageJson());
+        this.imageCache = { models, byId: new Map(models.map((m) => [m.id, m])) };
+        this.imageRefreshAt = Date.now() + CACHE_TTL_MS;
+      } catch (err) {
+        this.logger.warn(`Could not load the OpenRouter image model catalog: ${String(err)}`);
+        this.imageRefreshAt = Date.now() + RETRY_AFTER_FAILURE_MS;
+      } finally {
+        this.imageInflight = null;
+      }
+    })();
+    return this.imageInflight;
   }
 
   async catalog(): Promise<ModelCatalog> {

@@ -27,8 +27,12 @@ struct HistorySessionEditorSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text(tr("Fix the set type, weight or reps, then save."))
-                        .font(.subheadline)
+                    Text(draft.workoutNameSnapshot)
+                        .font(.title3.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(subtitleText)
+                        .font(.caption)
+                        .monospacedDigit()
                         .foregroundStyle(.secondary)
 
                     heartRateCard
@@ -42,9 +46,15 @@ struct HistorySessionEditorSheet: View {
                 .padding(16)
             }
             .background(LukiColors.groupedBackground)
-            .navigationTitle(draft.workoutNameSnapshot)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text(draft.workoutNameSnapshot)
+                        .font(.headline)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.6)
+                }
                 ToolbarItem(placement: .cancellationAction) {
                     Button(tr("Cancel")) { dismiss() }
                 }
@@ -69,24 +79,96 @@ struct HistorySessionEditorSheet: View {
 
     private var doneExercises: [SessionExerciseDto] { draft.exercises.filter(\.hasLoggedSet) }
 
+    /// "May 1, 2026 at 10:24 · Fix the set type…" — same line as the web dialog subtitle.
+    private var subtitleText: String {
+        let desc = tr("Fix the set type, weight or reps, then save.")
+        guard let started = LukiDate.parseISO(draft.startedAt) else { return desc }
+        let locale = Locale(identifier: tr.rawValue)
+        let stamp = started.formatted(
+            .dateTime.day().month(.abbreviated).year().hour().minute().locale(locale)
+        )
+        return "\(stamp) · \(desc)"
+    }
+
     @ViewBuilder
     private var heartRateCard: some View {
-        if let samples = draft.heartRateSamples, samples.count > 1 {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(tr("Heart rate"))
-                    .font(.headline)
-                    .foregroundStyle(LukiColors.heartRate)
-                Chart(samples, id: \.offsetSec) { pt in
-                    LineMark(
-                        x: .value("Sec", pt.offsetSec),
-                        y: .value("BPM", pt.bpm)
-                    )
-                    .foregroundStyle(LukiColors.heartRate)
+        let samples = draft.heartRateSamples ?? []
+        if draft.activeCaloriesKcal != nil || draft.avgHeartRateBpm != nil || !samples.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Label {
+                    Text(tr("Heart rate"))
+                } icon: {
+                    Image(systemName: "heart.fill")
                 }
-                .frame(height: 150)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(LukiColors.heartRate)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        heartRateChips
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        heartRateChips
+                    }
+                }
+                .font(.caption.weight(.bold))
+                .monospacedDigit()
+
+                if samples.count > 1 {
+                    let bpms = samples.map(\.bpm)
+                    let domainMin = (bpms.min() ?? 40) - 10
+                    Chart(samples, id: \.offsetSec) { pt in
+                        AreaMark(
+                            x: .value("Time", pt.offsetSec),
+                            yStart: .value("BPM", domainMin),
+                            yEnd: .value("BPM", pt.bpm)
+                        )
+                        .foregroundStyle(LinearGradient(
+                            colors: [LukiColors.heartRate.opacity(0.55), LukiColors.heartRate.opacity(0.05)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ))
+                        LineMark(
+                            x: .value("Time", pt.offsetSec),
+                            y: .value("BPM", pt.bpm)
+                        )
+                        .foregroundStyle(LukiColors.heartRate)
+                    }
+                    .chartYScale(domain: (bpms.min() ?? 40) - 10 ... (bpms.max() ?? 200) + 10)
+                    .chartXAxis {
+                        AxisMarks { value in
+                            AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [3, 3]))
+                                .foregroundStyle(.secondary.opacity(0.3))
+                            AxisValueLabel {
+                                if let sec = value.as(Int.self) {
+                                    Text(LukiFormat.clock(sec))
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                    .chartYAxis {
+                        AxisMarks { _ in
+                            AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [3, 3]))
+                                .foregroundStyle(.secondary.opacity(0.3))
+                            AxisValueLabel()
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .chartPlotStyle { $0.clipped() }
+                    .frame(height: 150)
+                }
             }
             .padding(14)
-            .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(LukiColors.heartRate.opacity(0.05))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .strokeBorder(LukiColors.heartRate.opacity(0.3))
+                    )
+            )
         }
     }
 
@@ -114,8 +196,14 @@ struct HistorySessionEditorSheet: View {
     private func exerciseCard(_ ex: SessionExerciseDto, number: Int) -> some View {
         let labels = LukiI18n.setBadgeLabels(ex.sets.map(\.setType))
         return VStack(alignment: .leading, spacing: 8) {
-            Text(ex.exerciseNameSnapshot)
-                .font(.headline)
+            HStack(alignment: .firstTextBaseline) {
+                Text("\(number). \(ex.exerciseNameSnapshot)")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text(LukiI18n.muscleLabel(ex.primaryMuscleSnapshot, locale: tr))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             ForEach(Array(ex.sets.enumerated()), id: \.element.clientSetId) { sIdx, set in
                 setRow(exercise: ex, set: set, badgeLabel: labels[sIdx], id: "\(number).\(sIdx + 1)")
             }
@@ -131,78 +219,147 @@ struct HistorySessionEditorSheet: View {
         let step = LukiFormat.weightStep(set.weightUnit)
         let isStretch = set.setType == .STRETCH || ex.exerciseTypeSnapshot == .STRETCHING
 
-        return HStack(spacing: 8) {
+        let setLabel = set.setType == .WORKING
+            ? tr("Set %@", badgeLabel)
+            : LukiI18n.setTypeLabel(set.setType, locale: tr)
+
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                if isStretch {
+                    SetTypeBadge(setType: set.setType, label: badgeLabel, completed: set.completed)
+                        .frame(minWidth: 44, minHeight: 44)
+                } else {
+                    setTypeMenu(exercise: ex, set: set, badgeLabel: badgeLabel, id: id, number: n)
+                }
+                Text(setLabel)
+                    .font(.subheadline.weight(.bold))
+                    .monospacedDigit()
+                    .foregroundStyle(LukiColors.setTypeColor(set.setType) ?? Color.primary)
+                if set.peakHeartRateBpm != nil || set.restEndHeartRateBpm != nil {
+                    Label(setHeartRateText(set), systemImage: "heart.fill")
+                        .font(.caption2.weight(.semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(LukiColors.heartRate)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(LukiColors.heartRate.opacity(0.15), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                }
+                Spacer(minLength: 0)
+            }
             if isStretch {
-                SetTypeBadge(setType: set.setType, label: badgeLabel, completed: set.completed)
-                    .frame(minWidth: 44, minHeight: 44)
                 Text("\(set.durationSeconds ?? 0) s")
                     .font(.body.monospacedDigit())
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                Menu {
-                    Picker(tr("Set type"), selection: Binding(
-                        get: { set.setType },
-                        set: { changeSetType(exercise: ex, clientSetId: set.clientSetId, to: $0) }
-                    )) {
-                        ForEach(Self.strengthSetTypes, id: \.self) { type in
-                            Text(LukiI18n.setTypeLabel(type, locale: tr)).tag(type)
-                        }
-                    }
-                } label: {
-                    SetTypeBadge(setType: set.setType, label: badgeLabel, completed: set.completed)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(Rectangle())
-                }
-                .accessibilityLabel(tr("Set %d: %@", n, LukiI18n.setTypeLabel(set.setType, locale: tr)))
-                .accessibilityIdentifier("ios.diary.setType.\(id)")
+                strengthSteppers(exercise: ex, set: set, weight: weight, reps: reps, step: step, n: n)
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("ios.diary.setRow.\(id)")
+    }
 
-                let weightStepper = LukiValueStepper(
-                    value: LukiFormat.weight(weight),
-                    unit: LukiFormat.unitLabel(set.weightUnit),
-                    minusLabel: tr("Decrease weight by %@, set %d", LukiFormat.weight(step), n),
-                    plusLabel: tr("Increase weight by %@, set %d", LukiFormat.weight(step), n),
-                    editLabel: tr("Weight, set %d", n),
-                    keyboard: .decimal,
-                    onMinus: { updateSet(ex, set.clientSetId) { $0.weight = max(0, weight - step) } },
-                    onPlus: { updateSet(ex, set.clientSetId) { $0.weight = weight + step } },
-                    onSubmit: { text in
-                        if let v = LukiFormat.parseDecimal(text) {
-                            updateSet(ex, set.clientSetId) { $0.weight = max(0, v) }
-                        }
-                    }
-                )
-                let repsStepper = LukiValueStepper(
-                    value: "\(reps)",
-                    unit: tr("reps"),
-                    minusLabel: tr("Decrease reps, set %d", n),
-                    plusLabel: tr("Increase reps, set %d", n),
-                    editLabel: tr("Reps, set %d", n),
-                    keyboard: .integer,
-                    onMinus: { updateSet(ex, set.clientSetId) { $0.reps = max(0, reps - 1) } },
-                    onPlus: { updateSet(ex, set.clientSetId) { $0.reps = reps + 1 } },
-                    onSubmit: { text in
-                        if let v = Int(text.trimmingCharacters(in: .whitespaces)) {
-                            updateSet(ex, set.clientSetId) { $0.reps = max(0, v) }
-                        }
-                    }
-                )
-                // Accessibility sizes stack the steppers; side by side the reps keep a fixed share so
-                // the weight stepper can't squeeze the count away.
-                if dynamicTypeSize.isAccessibilitySize {
-                    VStack(spacing: 8) {
-                        weightStepper
-                        repsStepper
-                    }
-                } else {
+    @ViewBuilder
+    private var heartRateChips: some View {
+        if let kcal = draft.activeCaloriesKcal {
+            Text("\(Int(kcal.rounded())) kcal")
+                .foregroundStyle(LukiColors.warning)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 2)
+                .background(LukiColors.warning.opacity(0.15), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+        }
+        if let avg = draft.avgHeartRateBpm {
+            Text(tr("Avg HR: %d bpm", avg))
+                .foregroundStyle(LukiColors.heartRate)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 2)
+                .background(LukiColors.heartRate.opacity(0.15), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+        }
+        if let maxHr = draft.maxHeartRateBpm {
+            Text(tr("Max HR: %d bpm", maxHr))
+                .foregroundStyle(LukiColors.heartRate)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 2)
+                .background(LukiColors.heartRate.opacity(0.15), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+        }
+    }
+
+    /// "142 bpm peak · 118 bpm recovery" — same copy as the web chip.
+    private func setHeartRateText(_ set: SessionSetDto) -> String {
+        var text = set.peakHeartRateBpm.map { "\($0) bpm peak" }
+            ?? "\(set.avgHeartRateBpm.map { "\($0)" } ?? "-") bpm"
+        if let restEnd = set.restEndHeartRateBpm {
+            text += " · \(restEnd) bpm recovery"
+        }
+        return text
+    }
+
+    private func setTypeMenu(exercise ex: SessionExerciseDto, set: SessionSetDto, badgeLabel: String, id: String, number n: Int) -> some View {
+        Menu {
+            Picker(tr("Set type"), selection: Binding(
+                get: { set.setType },
+                set: { changeSetType(exercise: ex, clientSetId: set.clientSetId, to: $0) }
+            )) {
+                ForEach(Self.strengthSetTypes, id: \.self) { type in
+                    Text(LukiI18n.setTypeLabel(type, locale: tr)).tag(type)
+                }
+            }
+        } label: {
+            SetTypeBadge(setType: set.setType, label: badgeLabel, completed: set.completed)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel(tr("Set %d: %@", n, LukiI18n.setTypeLabel(set.setType, locale: tr)))
+        .accessibilityIdentifier("ios.diary.setType.\(id)")
+    }
+
+    private func strengthSteppers(exercise ex: SessionExerciseDto, set: SessionSetDto, weight: Double, reps: Int, step: Double, n: Int) -> some View {
+        let weightStepper = LukiValueStepper(
+            value: LukiFormat.weight(weight),
+            unit: LukiFormat.unitLabel(set.weightUnit),
+            minusLabel: tr("Decrease weight by %@, set %d", LukiFormat.weight(step), n),
+            plusLabel: tr("Increase weight by %@, set %d", LukiFormat.weight(step), n),
+            editLabel: tr("Weight, set %d", n),
+            keyboard: .decimal,
+            onMinus: { updateSet(ex, set.clientSetId) { $0.weight = max(0, weight - step) } },
+            onPlus: { updateSet(ex, set.clientSetId) { $0.weight = weight + step } },
+            onSubmit: { text in
+                if let v = LukiFormat.parseDecimal(text) {
+                    updateSet(ex, set.clientSetId) { $0.weight = max(0, v) }
+                }
+            }
+        )
+        let repsStepper = LukiValueStepper(
+            value: "\(reps)",
+            unit: tr("reps"),
+            minusLabel: tr("Decrease reps, set %d", n),
+            plusLabel: tr("Increase reps, set %d", n),
+            editLabel: tr("Reps, set %d", n),
+            keyboard: .integer,
+            onMinus: { updateSet(ex, set.clientSetId) { $0.reps = max(0, reps - 1) } },
+            onPlus: { updateSet(ex, set.clientSetId) { $0.reps = reps + 1 } },
+            onSubmit: { text in
+                if let v = Int(text.trimmingCharacters(in: .whitespaces)) {
+                    updateSet(ex, set.clientSetId) { $0.reps = max(0, v) }
+                }
+            }
+        )
+        // Accessibility sizes stack the steppers; side by side the reps keep a fixed share so
+        // the weight stepper can't squeeze the count away.
+        return Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(spacing: 8) {
+                    weightStepper
+                    repsStepper
+                }
+            } else {
+                HStack(spacing: 8) {
                     weightStepper
                     repsStepper
                         .frame(minWidth: min(repsMinWidth, 160), maxWidth: 160)
                 }
             }
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("ios.diary.setRow.\(id)")
     }
 
     private func updateExercise(_ clientExerciseId: String, _ change: (inout SessionExerciseDto) -> Void) {
