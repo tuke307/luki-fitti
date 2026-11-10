@@ -7,14 +7,15 @@
     "build": "swift build --package-path Packages/LukiFittiKit",
     "test": "swift test --package-path Packages/LukiFittiKit",
     "xcodegen": "xcodegen generate",
-    "test:e2e:ios": "xcodegen generate && xcodebuild test -project LukiFitti.xcodeproj -scheme LukiFittiIOS -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:LukiFittiIOSUITests -skip-testing:LukiFittiIOSUITests/MarketingScreenshotsUITests CODE_SIGNING_ALLOWED=NO",
+    "test:e2e:ios": "xcodegen generate && xcodebuild test -project LukiFitti.xcodeproj -scheme LukiFittiIOS -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:LukiFittiIOSUITests -skip-testing:LukiFittiIOSUITests/MarketingScreenshotsUITests -skip-testing:LukiFittiIOSUITests/AppReviewWalkthroughUITests CODE_SIGNING_ALLOWED=NO",
     "test:e2e:watch": "xcodegen generate && xcodebuild test -project LukiFitti.xcodeproj -scheme LukiFittiWatch -destination 'platform=watchOS Simulator,name=Apple Watch Ultra 4 (49mm)' -only-testing:LukiFittiWatchUITests -skip-testing:LukiFittiWatchUITests/MarketingScreenshotsUITests CODE_SIGNING_ALLOWED=NO",
     "lint": "swift build --package-path Packages/LukiFittiKit",
     "clean": "swift package --package-path Packages/LukiFittiKit clean",
     "catalog:export": "node --import tsx scripts/export-starter-catalog.ts",
     "catalog:check": "node --import tsx scripts/export-starter-catalog.ts --check",
     "marketing:screenshots": "./scripts/marketing-screenshots.sh",
-    "marketing:check": "bash -c 'v=$(grep -m1 MARKETING_VERSION project.yml | sed -E \"s/.*\\\"([0-9.]+)\\\".*/\\1/\"); g=$(cat marketing/VERSION 2>/dev/null || echo none); [ \"$v\" = \"$g\" ] || { echo \"Marketing screenshots were generated for $g, app version is $v \u2014 run yarn workspace @luki-fitti/apple marketing:screenshots\" >&2; exit 1; }; echo \"marketing images are for version $v\"' "
+    "marketing:check": "bash -c 'v=$(grep -m1 MARKETING_VERSION project.yml | sed -E \"s/.*\\\"([0-9.]+)\\\".*/\\1/\"); g=$(cat marketing/VERSION 2>/dev/null || echo none); [ \"$v\" = \"$g\" ] || { echo \"Marketing screenshots were generated for $g, app version is $v \u2014 run yarn workspace @luki-fitti/apple marketing:screenshots\" >&2; exit 1; }; echo \"marketing images are for version $v\"' ",
+    "review:video": "./scripts/app-review-video.sh"
   },
   "type": "module",
   "devDependencies": {

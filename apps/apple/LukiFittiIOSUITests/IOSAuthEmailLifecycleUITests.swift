@@ -58,7 +58,7 @@ final class IOSAuthEmailLifecycleUITests: XCTestCase {
         XCTAssertTrue(signOutButton.waitForExistence(timeout: 5))
         signOutButton.tap()
 
-        let signInSegment = app.buttons["Sign In"]
+        let signInSegment = app.segmentedControls.firstMatch.buttons["Sign In"]
         XCTAssertTrue(signInSegment.waitForExistence(timeout: 8))
         signInSegment.tap()
 

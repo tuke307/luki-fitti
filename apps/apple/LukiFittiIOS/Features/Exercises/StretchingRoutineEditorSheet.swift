@@ -38,7 +38,7 @@ struct StretchingRoutineEditorSheet: View {
         self.onSave = onSave
         self.onDelete = onDelete
         _name = State(initialValue: routine?.name ?? "")
-        _targetArea = State(initialValue: routine?.targetArea ?? "Full Body & Mobility")
+        _targetArea = State(initialValue: routine?.targetArea ?? "")
         _details = State(initialValue: routine?.description ?? "")
         // A new routine starts with one stretch, like the web.
         let first = catalog.first { $0.exerciseType == .STRETCHING }
@@ -78,7 +78,7 @@ struct StretchingRoutineEditorSheet: View {
                         .textInputAutocapitalization(.sentences)
                         .accessibilityLabel(tr("Name"))
                         .accessibilityIdentifier("ios.routineEditor.name")
-                    TextField(tr("Hips & Lower Back"), text: $targetArea)
+                    TextField(tr("Full Body & Mobility"), text: $targetArea)
                         .accessibilityLabel(tr("Target Area"))
                         .accessibilityIdentifier("ios.routineEditor.targetArea")
                     TextField(tr("Description (optional)"), text: $details, axis: .vertical)
@@ -222,7 +222,7 @@ struct StretchingRoutineEditorSheet: View {
         let trimmedArea = targetArea.trimmingCharacters(in: .whitespacesAndNewlines)
         var next = routine ?? StretchingRoutineDto(name: trimmedName)
         next.name = String(trimmedName.prefix(100))
-        next.targetArea = trimmedArea.isEmpty ? "Full Body" : String(trimmedArea.prefix(80))
+        next.targetArea = trimmedArea.isEmpty ? "Full Body & Mobility" : String(trimmedArea.prefix(80))
         next.description = trimmedDetails.isEmpty ? nil : String(trimmedDetails.prefix(500))
         next.exercises = items
         onSave(next)

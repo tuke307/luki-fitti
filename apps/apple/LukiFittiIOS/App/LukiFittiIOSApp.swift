@@ -269,6 +269,53 @@ public final class LukiAppViewModel {
         )
     }
 
+#if DEBUG
+    /// --uitesting only: polls Mailpit (`LUKIFITTI_MAILPIT_URL`, default localhost:8025)
+    /// for a message to `to` whose body contains a `<route>?token=…` link (newest
+    /// first — locale-independent, no subject matching) and follows it.
+    /// --uitesting-review only: kick off a poll after the action that sends
+    /// the mail (register / delete-email); the runner never leaves the app.
+    func pollMailpitForReview(to: String, route: String) {
+        guard ProcessInfo.processInfo.arguments.contains("--uitesting-review") else { return }
+        Task { await self.pollMailpitAndFollow(to: to, route: route) }
+    }
+
+    private func pollMailpitAndFollow(to: String, route: String) async {
+        guard let mailpit = URL(string: ProcessInfo.processInfo.environment["LUKIFITTI_MAILPIT_URL"]
+                ?? "http://localhost:8025"),
+              let regex = try? NSRegularExpression(
+                  pattern: "\(NSRegularExpression.escapedPattern(for: route))\\?token=([a-fA-F0-9]+)",
+                  options: [.caseInsensitive])
+        else { return }
+        struct Summary: Decodable { let ID: String }
+        struct Result: Decodable { let messages: [Summary]? }
+        struct Detail: Decodable { let HTML: String; let Text: String }
+
+        var search = URLComponents(url: mailpit.appendingPathComponent("/api/v1/search"), resolvingAgainstBaseURL: false)!
+        search.queryItems = [URLQueryItem(name: "query", value: "to:\(to)")]
+        let deadline = Date().addingTimeInterval(30)
+        while Date() < deadline, !Task.isCancelled {
+            if let (data, _) = try? await URLSession.shared.data(from: search.url!),
+               let result = try? JSONDecoder().decode(Result.self, from: data) {
+                for message in (result.messages ?? []).reversed() {
+                    guard let (detailData, _) = try? await URLSession.shared.data(
+                            from: mailpit.appendingPathComponent("/api/v1/message/\(message.ID)")),
+                          let detail = try? JSONDecoder().decode(Detail.self, from: detailData)
+                    else { continue }
+                    let combined = "\(detail.HTML)\n\(detail.Text)"
+                    if let tokenMatch = regex.firstMatch(
+                        in: combined, range: NSRange(combined.startIndex..<combined.endIndex, in: combined)),
+                       let tokenRange = Range(tokenMatch.range(at: 1), in: combined) {
+                        handleUniversalLink(URL(string: "lukifitti://\(route)?token=\(combined[tokenRange])")!)
+                        return
+                    }
+                }
+            }
+            try? await Task.sleep(nanoseconds: 400_000_000)
+        }
+    }
+#endif
+
     public func handleUniversalLink(_ url: URL) {
         if url.scheme?.lowercased() == "lukifitti" {
             switch url.host?.lowercased() {
@@ -304,6 +351,11 @@ public final class LukiAppViewModel {
                 if let user = try? await store.apiClient.verifyEmail(token: token) {
                     store.saveAuthenticatedUser(user)
                     await store.refreshFromServerAfterAuth()
+                    #if DEBUG
+                    if ProcessInfo.processInfo.arguments.contains("--uitesting-review") {
+                        LukiAppViewModel.seedDemoMeal(vm: self, store: store)
+                    }
+                    #endif
                     deepLinkTokenType = nil
                     deepLinkToken = nil
                 }
@@ -679,6 +731,9 @@ public final class LukiAppViewModel {
     /// Strings and preferences are resolved on the main actor before the authorization callback.
     private func scheduleNotification(identifier: String, title: String, body: String, after interval: TimeInterval) {
         let playSound = store.preferences.restTimerSound
+        // The launch-time ask is skipped under --uitesting; don't let the first
+        // rest timer pop the permission alert mid-test on a fresh install.
+        guard !ProcessInfo.processInfo.arguments.contains("--uitesting") else { return }
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
             guard granted else { return }
             let content = UNMutableNotificationContent()
@@ -1009,6 +1064,17 @@ public final class LukiAppViewModel {
             seedMarketingContent(vm: vm, store: store, args: args)
         }
 
+        // App Review walkthrough: same language override, but only the AI demo meal —
+        // everything else is produced live on camera.
+        if args.contains("--uitesting-review") {
+            if ProcessInfo.processInfo.environment["LUKIFITTI_MARKETING_LANG"] == "de" {
+                store.preferences.language = .de
+            }
+            // The App Review video is recorded in dark mode only.
+            store.preferences.theme = "dark"
+            seedDemoMeal(vm: vm, store: store)
+        }
+
         if args.contains("--uitesting-seed-conflict"),
            let firstTemplate = store.folders.first?.templates.first {
             let localSession = SessionCalculator.createOfflineSessionFromTemplate(
@@ -1104,19 +1170,32 @@ public final class LukiAppViewModel {
         vm.healthCoordinator.currentHeartRateBpm = 128
         vm.healthCoordinator.activeCaloriesKcal = 214
 
-        // Demo meal with AI-tagged items (no OpenRouter call happens).
+        seedDemoMeal(vm: vm, store: store)
+    }
+
+    /// Demo meal with AI-tagged items (no OpenRouter call happens). Shared by the marketing
+    /// and App Review seeds. The photo is primed into `MealPhotoCache` so it shows without
+    /// any server round-trip — on the simulator the UI test passes the absolute host path
+    /// (`LUKIFITTI_MARKETING_MEAL_PHOTO`); on a physical device that path is unreadable, so
+    /// the test sends the JPEG base64-encoded (`LUKIFITTI_REVIEW_MEAL_PHOTO_B64`).
+    static func seedDemoMeal(vm: LukiAppViewModel, store: OfflineStore) {
+        let iso = ISO8601DateFormatter()
         let mealItems = [
             MealItemDto(name: "Chicken breast", grams: 150, kcal: 248, proteinG: 46.5, carbsG: 0, fatG: 5.4, source: .AI, confidence: 0.92),
             MealItemDto(name: "Rice", grams: 200, kcal: 260, proteinG: 5.4, carbsG: 56, fatG: 0.6, source: .AI, confidence: 0.88),
             MealItemDto(name: "Broccoli", grams: 120, kcal: 41, proteinG: 3.4, carbsG: 8, fatG: 0.4, source: .AI, confidence: 0.85),
         ]
-        // The UI test passes the absolute host path of marketing/assets/demo-meal.jpg; the
-        // photo is primed into MealPhotoCache so it shows without any server round-trip.
+        let env = ProcessInfo.processInfo.environment
+        var photoData: Data?
+        if let photoPath = env["LUKIFITTI_MARKETING_MEAL_PHOTO"] {
+            photoData = try? Data(contentsOf: URL(fileURLWithPath: photoPath))
+        } else if let b64 = env["LUKIFITTI_REVIEW_MEAL_PHOTO_B64"] {
+            photoData = Data(base64Encoded: b64, options: .ignoreUnknownCharacters)
+        }
         var photos: [MealPhotoDto] = []
-        if let photoPath = ProcessInfo.processInfo.environment["LUKIFITTI_MARKETING_MEAL_PHOTO"],
-           let data = try? Data(contentsOf: URL(fileURLWithPath: photoPath)) {
+        if let photoData {
             photos = [MealPhotoDto(id: "marketing-photo", mimeType: "image/jpeg")]
-            MealPhotoCache.shared.store(data, for: "marketing-photo")
+            MealPhotoCache.shared.store(photoData, for: "marketing-photo")
         }
 
         var meal = MealEntryDto(
@@ -1144,7 +1223,10 @@ public struct LukiFittiIOSApp: App {
         WindowGroup {
             AppShellView(viewModel: viewModel)
                 .environment(\.lukiLocale, viewModel.locale)
-                .lukiAppearance(viewModel.store.preferences.theme)
+                // The App Review video is recorded in dark mode — the verify flow
+                // pulls the server's preferences over the seed, so pin it here too.
+                .lukiAppearance(ProcessInfo.processInfo.arguments.contains("--uitesting-review")
+                    ? "dark" : viewModel.store.preferences.theme)
                 .onChange(of: viewModel.store.activeSession, initial: true) {
                     viewModel.syncLiveActivity()
                 }

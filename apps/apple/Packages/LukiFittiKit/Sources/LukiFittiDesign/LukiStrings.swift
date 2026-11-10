@@ -944,6 +944,7 @@ public enum LukiStrings {
         "Evening Hip Mobility": "Abendliche Hüftmobilität",
         "Target Area": "Zielbereich",
         "Hips & Lower Back": "Hüfte & Unterer Rücken",
+        "Full Body & Mobility": "Ganzkörper & Mobilität",
         "Description (optional)": "Beschreibung (optional)",
         "Build a stretching routine with timed holds.": "Erstelle eine Dehnroutine mit getimten Positionen.",
         "Add Stretch": "Dehnübung hinzufügen",

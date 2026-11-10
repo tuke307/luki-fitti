@@ -119,19 +119,6 @@ public struct ActiveSessionView: View {
                 showingAddExerciseSheet = false
             }
         }
-        .confirmationDialog(
-            tr("Discard this workout?"),
-            isPresented: $showingDiscardConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button(tr("Discard Workout"), role: .destructive) {
-                viewModel.abandonActiveSession()
-            }
-            .accessibilityIdentifier("ios.session.confirmDiscardButton")
-            Button(tr("Keep Training"), role: .cancel) {}
-        } message: {
-            Text(tr("It won’t be saved to your history. Your plan stays the same."))
-        }
     }
 
     private var unit: WeightUnit {
@@ -1222,6 +1209,20 @@ public struct ActiveSessionView: View {
             .tint(LukiColors.destructive)
             .controlSize(.large)
             .accessibilityIdentifier("ios.session.abandonButton")
+            // Attached to the button so the iOS 26 popover points at it, not the screen top.
+            .confirmationDialog(
+                tr("Discard this workout?"),
+                isPresented: $showingDiscardConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button(tr("Discard Workout"), role: .destructive) {
+                    viewModel.abandonActiveSession()
+                }
+                .accessibilityIdentifier("ios.session.confirmDiscardButton")
+                Button(tr("Keep Training"), role: .cancel) {}
+            } message: {
+                Text(tr("It won’t be saved to your history. Your plan stays the same."))
+            }
         }
     }
 }

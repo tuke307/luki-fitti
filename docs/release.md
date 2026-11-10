@@ -40,6 +40,24 @@ This writes:
 Open a few images before committing. Captions live in `apps/apple/marketing/screenshots.json`;
 change them there, never in the images.
 
+### Device frames
+
+The device bezels around the screenshots are Apple's PNGs from
+[Apple Design Resources](https://developer.apple.com/design/resources/) (Product Bezels). Apple
+doesn't allow redistributing them, so `apps/apple/marketing/frames/` is gitignored and every
+machine that composes screenshots needs them once:
+
+| File in `apps/apple/marketing/frames/` | Source DMG                           | PNG to copy                    |
+| :------------------------------------- | :----------------------------------- | :----------------------------- |
+| `iphone-17-pro-max.png`                | `Bezel-iPhone-17.dmg`                | an iPhone 17 Pro Max, portrait |
+| `watch-ultra.png`                      | `Bezel-Apple-Watch-Ultra-3-2025.dmg` | an Apple Watch Ultra, portrait |
+| `ipad-pro-13.png` (optional)           | the iPad Pro 13″ bezel DMG           | an iPad Pro 13″, portrait      |
+
+Open the DMG, copy the PNG and rename it as shown. The frame must be portrait with a
+transparent screen area; `compose-marketing.mjs` finds the screen cutout itself. Without a
+frame the script prints `warn: no … frame` and falls back to a rounded screenshot (iPhone,
+Watch) or a drawn graphite bezel (iPad, the current default).
+
 `TESTFLIGHT_URL` and `APP_STORE_URL` are constants in `apps/web/lib/site/config.ts`; set `APP_STORE_URL` once the App Store listing is live.
 
 ## 3. Check

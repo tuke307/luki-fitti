@@ -38,6 +38,18 @@ targets:
         CODE_SIGN_ENTITLEMENTS: LukiFittiIOS/LukiFittiIOS.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_VERSION: "6.0"
+    postBuildScripts:
+      # Debug only: let the Debug build reach the plain-http dev API on the LAN and
+      # trigger the Local Network prompt (physical iPhone, e.g. the App Review
+      # video). Release keeps the plain Info.plist untouched.
+      - name: Debug LAN Info.plist keys
+        script: |
+          [ "$CONFIGURATION" = "Debug" ] || exit 0
+          PLIST="$TARGET_BUILD_DIR/$INFOPLIST_PATH"
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity dict" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :NSAppTransportSecurity:NSAllowsLocalNetworking bool true" "$PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSAllowsLocalNetworking true" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSLocalNetworkUsageDescription string 'LukiFitti connects to the development server on your local network.'" "$PLIST" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSLocalNetworkUsageDescription 'LukiFitti connects to the development server on your local network.'" "$PLIST"
+        basedOnDependencyAnalysis: false
     dependencies:
       - package: LukiFittiKit
         product: LukiFittiKit
@@ -93,6 +105,9 @@ targets:
     deploymentTarget: "26.0"
     sources:
       - path: LukiFittiIOSUITests
+      # Bundled so AppReviewWalkthroughUITests can base64 it into the app's launch
+      # environment — host paths are unreadable on a physical device.
+      - path: marketing/assets/demo-meal.jpg
     dependencies:
       - target: LukiFittiIOS
     settings:

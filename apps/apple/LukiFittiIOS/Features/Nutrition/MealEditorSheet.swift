@@ -475,8 +475,10 @@ struct LiveNumberField: View {
         _lastWritten = State(initialValue: value.wrappedValue)
     }
 
+    /// nil and 0 both render empty — a literal "0" would read as real input and make
+    /// typed digits append ("190" → "0190") instead of replacing the placeholder.
     static func format(_ v: Double?, fractionDigits: Int = 1) -> String {
-        guard let v else { return "" }
+        guard let v, v != 0 else { return "" }
         guard v.rounded() != v else { return String(Int(v)) }
         let text = String(format: "%.\(fractionDigits)f", v)
         return fractionDigits > 1 && text.contains(".")
