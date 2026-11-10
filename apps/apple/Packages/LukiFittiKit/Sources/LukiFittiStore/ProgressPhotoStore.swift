@@ -236,7 +236,13 @@ public final class ProgressPhotoStore {
                 } else { done = false }
             case .deleteCheckIn:
                 if let id = item.serverId {
-                    done = (try? await api.deleteProgressCheckIn(id: id)) != nil
+                    // Photos that only live as remote downloads get a real local file first,
+                    // otherwise resetting to local-only ids would make them unreadable.
+                    if await localizePhotos(for: item.clientEntryId, isSignedIn: isSignedIn) {
+                        done = (try? await api.deleteProgressCheckIn(id: id)) != nil
+                    } else {
+                        done = false
+                    }
                     // The cloud copy is gone: make the check-in local-only again so turning
                     // backup back on re-uploads it instead of skipping "synced" rows.
                     if done, var local = checkIn(clientEntryId: item.clientEntryId) {
@@ -293,6 +299,30 @@ public final class ProgressPhotoStore {
     }
 
     // MARK: Helpers
+
+    /// Gives every photo of the check-in a real file on disk: move the downloaded
+    /// `remote-<id>.jpg` cache to `<clientPhotoId>.jpg` and set `localFile`, or download it
+    /// first when nothing is cached. Returns false when any photo can't be localized.
+    private func localizePhotos(for clientEntryId: String, isSignedIn: Bool) async -> Bool {
+        guard var checkIn = checkIn(clientEntryId: clientEntryId) else { return true }
+        var changed = false
+        for index in checkIn.photos.indices where checkIn.photos[index].localFile == nil {
+            let photo = checkIn.photos[index]
+            let cacheFile = directory.appendingPathComponent("remote-\(photo.id).jpg")
+            let destFile = "\(photo.clientPhotoId).jpg"
+            if let data = try? Data(contentsOf: cacheFile) {
+                try? data.write(to: directory.appendingPathComponent(destFile), options: .atomic)
+            } else {
+                guard let bytes = await photoData(photo, isSignedIn: isSignedIn),
+                      (try? bytes.write(to: directory.appendingPathComponent(destFile), options: .atomic)) != nil
+                else { return false }
+            }
+            checkIn.photos[index].localFile = destFile
+            changed = true
+        }
+        if changed { replace(checkIn) }
+        return true
+    }
 
     private func removePhotoFiles(_ photo: ProgressPhotoDto) {
         if let file = photoFileURL(photo) { try? FileManager.default.removeItem(at: file) }

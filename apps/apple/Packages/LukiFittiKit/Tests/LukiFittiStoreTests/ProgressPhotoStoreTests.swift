@@ -77,3 +77,136 @@ final class ProgressPhotoStoreTests: XCTestCase {
         XCTAssertGreaterThan(out.count, 0)
     }
 }
+
+private final class ProgressMemoryTokenStore: TokenStoring, @unchecked Sendable {
+    private let tokens = AuthTokensDto(accessToken: "FAKE-ACC", refreshToken: "FAKE-REF", expiresAt: "2099-01-01T00:00:00Z")
+    func saveTokens(_ tokens: AuthTokensDto, userId: String?) throws {}
+    func loadTokens() -> AuthTokensDto? { tokens }
+    func loadUserId() -> String? { "u1" }
+    func clearTokens() {}
+}
+
+/// Records progress endpoint calls and answers with canned envelope responses.
+private final class FakeProgressServer: @unchecked Sendable {
+    var paths: [(String, String)] = []
+    func respond(to request: URLRequest) -> (Int, Data)? {
+        let path = request.url?.path ?? ""
+        paths.append((request.httpMethod ?? "", path))
+        if path.hasPrefix("/api/progress/photos/") && request.httpMethod == "GET" {
+            return (200, Data([0xFF, 0xD8, 0xFF, 0xE0, 0x01, 0x02])) // jpeg magic bytes
+        }
+        return (200, Data(#"{"success":true,"data":{}}"#.utf8))
+    }
+}
+
+private final class ProgressURLProtocol: URLProtocol, @unchecked Sendable {
+    nonisolated(unsafe) static var servers: [String: FakeProgressServer] = [:]
+    static let lock = NSLock()
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        let host = request.url?.host ?? ""
+        let server = Self.lock.withLock { Self.servers[host] }
+        guard let (status, body) = server?.respond(to: request) else {
+            client?.urlProtocol(self, didFailWithError: URLError(.notConnectedToInternet))
+            return
+        }
+        client?.urlProtocol(self, didReceive: HTTPURLResponse(
+            url: request.url!, statusCode: status, httpVersion: nil,
+            headerFields: ["Content-Type": "application/json"]
+        )!, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: body)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
+}
+
+@MainActor
+private func makeProgressStore(server: FakeProgressServer) -> ProgressPhotoStore {
+    let host = "progress-\(UUID().uuidString.lowercased()).test"
+    ProgressURLProtocol.lock.withLock { ProgressURLProtocol.servers[host] = server }
+    let config = URLSessionConfiguration.ephemeral
+    config.protocolClasses = [ProgressURLProtocol.self]
+    let api = APIClient(
+        baseURL: URL(string: "https://\(host)")!,
+        tokenStore: ProgressMemoryTokenStore(),
+        session: URLSession(configuration: config)
+    )
+    let dir = FileManager.default.temporaryDirectory.appendingPathComponent("progress-\(UUID().uuidString)")
+    ProgressPhotoStoreTests.lastDir = dir.path
+    return ProgressPhotoStore(apiClient: api, storageDirectory: dir)
+}
+
+extension ProgressPhotoStoreTests {
+    @MainActor
+    func testBackupOffDeleteCallsServerAndResetsLocalIds() async throws {
+        let server = FakeProgressServer()
+        let store = makeProgressStore(server: server)
+        store.cloudBackupEnabled = true
+        var checkIn = ProgressCheckInDto()
+        checkIn.id = "srv-1"
+        await store.save(checkIn, isSignedIn: true)
+        await store.setCloudBackup(false, deleteRemote: true, isSignedIn: true)
+        XCTAssertTrue(server.paths.contains { $0.0 == "DELETE" && $0.1.contains("srv-1") })
+        XCTAssertEqual(store.checkIn(clientEntryId: checkIn.clientEntryId)?.id,
+                       "local-\(checkIn.clientEntryId)")
+    }
+
+    @MainActor
+    func testBackupOffThenOnReuploadsPhotos() async throws {
+        let server = FakeProgressServer()
+        let store = makeProgressStore(server: server)
+        store.cloudBackupEnabled = true
+        var checkIn = ProgressCheckInDto()
+        checkIn.id = "srv-1"
+        checkIn.photos = [ProgressPhotoDto(id: "srv-ph", clientPhotoId: "cp1", pose: .FRONT, localFile: "cp1.jpg")]
+        try Data([0xFF, 0xD8]).write(to: store.photoFileURL(checkIn.photos[0])!)
+        await store.save(checkIn, isSignedIn: true)
+        await store.setCloudBackup(false, deleteRemote: true, isSignedIn: true)
+        server.paths = []
+        await store.setCloudBackup(true, deleteRemote: false, isSignedIn: true)
+        XCTAssertTrue(server.paths.contains { $0.0 == "POST" && $0.1.contains("photos") })
+    }
+
+    @MainActor
+    func testRemoteOnlyPhotoGetsLocalFileBeforeDelete() async throws {
+        let server = FakeProgressServer()
+        let store = makeProgressStore(server: server)
+        store.cloudBackupEnabled = true
+        var checkIn = ProgressCheckInDto()
+        checkIn.id = "srv-1"
+        checkIn.photos = [ProgressPhotoDto(id: "srv-ph", clientPhotoId: "cp9", pose: .SIDE, url: "/api/progress/photos/srv-ph")]
+        await store.save(checkIn, isSignedIn: true)
+        // Backup off + delete: the photo is remote-only (no localFile, no cache) -> downloaded first.
+        await store.setCloudBackup(false, deleteRemote: true, isSignedIn: true)
+        XCTAssertTrue(server.paths.contains { $0.0 == "GET" && $0.1 == "/api/progress/photos/srv-ph" })
+        XCTAssertTrue(server.paths.contains { $0.0 == "DELETE" && $0.1.contains("srv-1") })
+        XCTAssertEqual(store.checkIn(clientEntryId: checkIn.clientEntryId)?.photos.first?.localFile, "cp9.jpg")
+    }
+
+    @MainActor
+    func testClearEmptiesDirectory() async throws {
+        let server = FakeProgressServer()
+        let store = makeProgressStore(server: server)
+        var checkIn = ProgressCheckInDto()
+        checkIn.photos = [ProgressPhotoDto(clientPhotoId: "c1", pose: .FRONT, localFile: "c1.jpg")]
+        try Data([1, 2, 3]).write(to: store.photoFileURL(checkIn.photos[0])!)
+        await store.save(checkIn, isSignedIn: false)
+        store.clear()
+        XCTAssertTrue(store.checkIns.isEmpty)
+        let files = try FileManager.default.contentsOfDirectory(atPath: storeDirectory(store))
+        XCTAssertEqual(files.filter { $0.hasSuffix(".jpg") }.count, 0)
+    }
+
+    @MainActor
+    private func storeDirectory(_ store: ProgressPhotoStore) -> String {
+        // The temp dir is created per store; derive it via a probe file URL is not public,
+        // so track the last-allocated directory instead.
+        ProgressPhotoStoreTests.lastDir ?? ""
+    }
+
+    nonisolated(unsafe) static var lastDir: String? = nil
+}
