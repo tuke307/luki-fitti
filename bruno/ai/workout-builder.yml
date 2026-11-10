@@ -11,7 +11,8 @@ http:
     data: |-
       {
         "prompt": "Chest workout, my upper chest is my weak point",
-        "durationMinutes": 60
+        "durationMinutes": 60,
+        "equipment": ["BARBELL", "DUMBBELL"]
       }
   auth: inherit
 

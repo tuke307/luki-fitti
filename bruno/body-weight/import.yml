@@ -1,0 +1,28 @@
+info:
+  name: import
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/body-weight/import"
+  body:
+    type: json
+    data: |-
+      {
+        "samples": [
+          {
+            "healthKitUuid": "hk-bw-sample-001",
+            "measuredAt": "2026-10-31T07:30:00Z",
+            "weightKg": 82.1
+          }
+        ],
+        "deletedHealthKitUuids": []
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

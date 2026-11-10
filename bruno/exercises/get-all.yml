@@ -23,6 +23,18 @@ http:
       value: "BARBELL"
       type: query
       disabled: true
+    - name: category
+      value: "COMPOUND"
+      type: query
+      disabled: true
+    - name: page
+      value: "1"
+      type: query
+      disabled: true
+    - name: limit
+      value: "100"
+      type: query
+      disabled: true
   auth: inherit
 
 settings:

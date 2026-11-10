@@ -1,0 +1,15 @@
+info:
+  name: get-ai-model-catalog
+  type: http
+  seq: 11
+
+http:
+  method: GET
+  url: "{{API_URL}}:{{API_PORT}}/api/admin/settings/ai/models"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

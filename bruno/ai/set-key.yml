@@ -1,0 +1,21 @@
+info:
+  name: set-key
+  type: http
+  seq: 8
+
+http:
+  method: PUT
+  url: "{{API_URL}}:{{API_PORT}}/api/ai/key"
+  body:
+    type: json
+    data: |-
+      {
+        "apiKey": "sk-or-v1-FAKE-KEY-FOR-TESTING-REPLACE-ME"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

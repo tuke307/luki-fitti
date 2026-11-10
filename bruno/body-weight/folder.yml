@@ -1,0 +1,7 @@
+info:
+  name: body-weight
+  type: folder
+  seq: 11
+
+request:
+  auth: inherit

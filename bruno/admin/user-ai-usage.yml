@@ -5,8 +5,11 @@ info:
 
 http:
   method: GET
-  url: "{{API_URL}}:{{API_PORT}}/api/admin/ai-usage/users/{{USER_ID}}"
+  url: "{{API_URL}}:{{API_PORT}}/api/admin/ai-usage/users/:userId"
   params:
+    - name: userId
+      value: "USER-ID"
+      type: path
     - name: days
       value: "30"
       type: query

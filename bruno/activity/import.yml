@@ -1,0 +1,36 @@
+info:
+  name: import
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/activity/import"
+  body:
+    type: json
+    data: |-
+      {
+        "days": [
+          { "day": "2026-10-31", "activeKcal": 450 }
+        ],
+        "workouts": [
+          {
+            "healthKitUuid": "3f8b2c1d-9a4e-4f6b-8c2d-1e5f7a9b0c1d",
+            "activityType": "running",
+            "sourceName": "Apple Watch",
+            "isOwn": false,
+            "startedAt": "2026-10-31T17:00:00+01:00",
+            "endedAt": "2026-10-31T17:45:00+01:00",
+            "activeKcal": 380,
+            "distanceMeters": 5200
+          }
+        ],
+        "deletedWorkoutUuids": []
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
