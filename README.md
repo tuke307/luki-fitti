@@ -155,6 +155,9 @@ AI meal-tracking app. The license is chosen to protect that:
 
 ### Contributing
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, commit conventions, how to become a contributor
+(with access to the KPI dashboard and analytics), and why we collect anonymous usage data.
+
 By contributing you agree that your contributions are licensed under the AGPL-3.0 and may be
 shipped in the official LukiFitti builds, including the App Store releases for iPhone and
 Apple Watch.
