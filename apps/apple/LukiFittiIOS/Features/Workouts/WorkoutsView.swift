@@ -170,6 +170,16 @@ public struct WorkoutsView: View {
                 .accessibilityIdentifier("ios.workouts.addMenu")
             }
         }
+        .onChange(of: viewModel.pendingTemplateId, initial: true) { _, pending in
+            guard let pending else { return }
+            expandedTemplateIds.insert(pending)
+            if let folder = viewModel.store.folders.first(where: { $0.templates.contains { $0.id == pending } }) {
+                expandedFolderIds.insert(folder.id)
+            } else {
+                expandedFolderIds.insert("__unfiled__")
+            }
+            viewModel.pendingTemplateId = nil
+        }
         .sheet(isPresented: $showingFolderModal) {
             folderEditorSheet
         }

@@ -173,20 +173,14 @@ public final class WatchWorkoutViewModel {
 
     // MARK: - Home
 
-    /// The workout to suggest on the home screen: the one after the last completed workout in its
-    /// folder (wrapping around), otherwise the first workout.
+    /// The workout to suggest on the home screen — the same rule as the iOS Home tab
+    /// (least recently trained, via WorkoutRotation).
     public var nextUpTemplate: WorkoutTemplateDto? {
-        let groups = store.folders.map(\.templates).filter { !$0.isEmpty }
-            + (store.unfiledTemplates.isEmpty ? [] : [store.unfiledTemplates])
-        guard let first = groups.first?.first else { return nil }
-        let last = store.historySessions.first { $0.status == .COMPLETED && $0.templateId != nil }
-        guard let lastId = last?.templateId else { return first }
-        for group in groups {
-            if let idx = group.firstIndex(where: { $0.id == lastId }) {
-                return group[(idx + 1) % group.count]
-            }
-        }
-        return first
+        WorkoutRotation.nextUp(
+            folders: store.folders,
+            unfiledTemplates: store.unfiledTemplates,
+            historySessions: store.historySessions
+        )?.template
     }
 
     // MARK: - Summary

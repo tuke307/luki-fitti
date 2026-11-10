@@ -9,5 +9,7 @@ public struct LukiFittiWidgetBundle: WidgetBundle {
         #if canImport(ActivityKit)
         RestTimerLiveActivity()
         #endif
+        NextWorkoutWidget()
+        NutritionWidget()
     }
 }

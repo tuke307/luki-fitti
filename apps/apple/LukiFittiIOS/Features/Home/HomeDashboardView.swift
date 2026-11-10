@@ -130,15 +130,11 @@ public struct HomeDashboardView: View {
     }
 
     private var suggestedTemplate: (template: WorkoutTemplateDto, lastDate: Date?)? {
-        let templates = viewModel.store.folders.flatMap(\.templates) + viewModel.store.unfiledTemplates
-        guard !templates.isEmpty else { return nil }
-        func lastDate(_ tpl: WorkoutTemplateDto) -> Date? {
-            viewModel.store.historySessions
-                .first { $0.templateId == tpl.id || $0.workoutNameSnapshot.caseInsensitiveCompare(tpl.name) == .orderedSame }
-                .map { parseDate($0.startedAt) }
-        }
-        let sorted = templates.sorted { (lastDate($0) ?? .distantPast) < (lastDate($1) ?? .distantPast) }
-        return sorted.first.map { ($0, lastDate($0)) }
+        WorkoutRotation.nextUp(
+            folders: viewModel.store.folders,
+            unfiledTemplates: viewModel.store.unfiledTemplates,
+            historySessions: viewModel.store.historySessions
+        )
     }
 
     // MARK: Weekly goal
@@ -150,8 +146,7 @@ public struct HomeDashboardView: View {
     }
 
     private var sessionsThisWeek: Int {
-        guard let weekStart = Self.isoCalendar.dateInterval(of: .weekOfYear, for: Date())?.start else { return 0 }
-        return viewModel.store.historySessions.filter { parseDate($0.startedAt) >= weekStart }.count
+        WorkoutRotation.sessionsDoneThisWeek(historySessions: viewModel.store.historySessions).done
     }
 
     private var weekCard: some View {
