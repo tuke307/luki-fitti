@@ -415,7 +415,7 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
   const fieldClass =
     'h-11 rounded-none border-0 bg-transparent px-4 text-[1.0625rem] shadow-none focus-visible:ring-0 dark:bg-transparent';
   const fieldItemClass =
-    'focus-within:ring-ring relative focus-within:ring-2 focus-within:ring-inset not-first:before:bg-border not-first:before:absolute not-first:before:top-0 not-first:before:right-0 not-first:before:left-4 not-first:before:h-px';
+    'focus-within:ring-ring relative focus-within:ring-2 focus-within:ring-inset first:rounded-t-[1.25rem] last:rounded-b-[1.25rem] not-first:before:bg-border not-first:before:absolute not-first:before:top-0 not-first:before:right-0 not-first:before:left-4 not-first:before:h-px';
 
   /** Guest sign-in / register, laid out like the iOS Account section. */
   const guestAccountBlock = (
