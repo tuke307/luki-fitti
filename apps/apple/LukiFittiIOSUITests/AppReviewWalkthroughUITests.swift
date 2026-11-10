@@ -57,6 +57,23 @@ final class AppReviewWalkthroughUITests: XCTestCase {
         }
     }
 
+    /// iOS offers to save the password after sign-up / sign-in ("Save Password?").
+    /// Left open, it swallows the next tap — decline it.
+    private func dismissSavePasswordPrompt(timeout: TimeInterval = 4) {
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let labels = ["Not Now", "Nicht jetzt"]
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            for host in [app!, springboard] {
+                for label in labels {
+                    let button = host.buttons[label].firstMatch
+                    if button.exists { button.tap(); return }
+                }
+            }
+            Thread.sleep(forTimeInterval: 0.3)
+        }
+    }
+
     /// Blocking sweep for the few places a system prompt can actually appear:
     /// the first API call and the first Mailpit deep link.
     private func waitForSystemAlert() {
@@ -192,15 +209,25 @@ final class AppReviewWalkthroughUITests: XCTestCase {
         step("email confirmed")
         // The app's own Mailpit poll has a 30 s window; give it room plus slack.
         XCTAssertTrue(accountRow.waitForExistence(timeout: 45), "account row missing")
-        accountRow.tap()
+        // iOS may raise "Save Password?" right after sign-up; it swallows the next tap.
         let badge = app.staticTexts["ios.profile.authenticatedBadge"]
-        XCTAssertTrue(badge.waitForExistence(timeout: 10), "authenticated badge missing")
+        for _ in 0..<3 {
+            dismissSavePasswordPrompt(timeout: 2)
+            if accountRow.exists { accountRow.tap() }
+            if badge.waitForExistence(timeout: 4) { break }
+        }
+        XCTAssertTrue(badge.waitForExistence(timeout: 5), "authenticated badge missing")
+        dismissSavePasswordPrompt(timeout: 1)
         step("authenticated")
 
         // 2. Sign Out → Sign In with the same credentials (explicit login flow).
         let signOut = app.buttons["ios.profile.signOutButton"]
         XCTAssertTrue(signOut.waitForExistence(timeout: 8), "sign out button missing")
         signOut.tap()
+        if !app.buttons[signInSegment].waitForExistence(timeout: 3) {
+            dismissSavePasswordPrompt(timeout: 2)
+            if signOut.exists { signOut.tap() }
+        }
         step("signed out")
 
         let signIn = app.buttons[signInSegment]
@@ -219,6 +246,7 @@ final class AppReviewWalkthroughUITests: XCTestCase {
         waitForSystemAlert()
         // Signing in returns to the Profile overview with the account row.
         XCTAssertTrue(accountRow.waitForExistence(timeout: 20), "not authenticated after sign in")
+        dismissSavePasswordPrompt()
         step("signed in")
 
         let done = app.navigationBars.buttons[lang == "de" ? "Fertig" : "Done"].firstMatch

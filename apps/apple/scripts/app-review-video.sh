@@ -206,22 +206,19 @@ PY
 # screen. Cut them so the video starts just before the app's launch animation
 # (Apple requires it to "begin with launching the app").
 TRIM_START_SECONDS="${TRIM_START_SECONDS:-4.0}"
-# avconvert rejects some output basenames inside build/ — work through /tmp.
+# avconvert needs a .mp4 source and rejects some basenames inside build/ — work in /tmp.
 trim_video() {
-  local video="$1" tmp_trim
-  tmp_trim="$(mktemp -t review-trim).mp4"
-  cp "$video" "$tmp_trim.src"
-  local raw_dur trimmed_dur
-  raw_dur=$(afinfo "$tmp_trim.src" 2>/dev/null | awk '/estimated duration/{print $3}')
-  if avconvert -s "$tmp_trim.src" -p PresetHighestQuality -o "$tmp_trim" --replace --start "$TRIM_START_SECONDS" >/dev/null 2>&1 \
-     && [ -s "$tmp_trim" ]; then
-    mv -f "$tmp_trim" "$video"
-    trimmed_dur=$(afinfo "$video" 2>/dev/null | awk '/estimated duration/{print $3}')
-    echo "trimmed $(basename "$video"): ${raw_dur:-?}s -> ${trimmed_dur:-?}s"
+  local video="$1" dir
+  dir=$(mktemp -d)
+  cp "$video" "$dir/src.mp4"
+  if avconvert -s "$dir/src.mp4" -p PresetHighestQuality -o "$dir/out.mp4" --replace --start "$TRIM_START_SECONDS" >/dev/null 2>&1 \
+     && [ -s "$dir/out.mp4" ]; then
+    mv -f "$dir/out.mp4" "$video"
+    echo "trimmed $(basename "$video"): first ${TRIM_START_SECONDS}s removed"
   else
     echo "note: trim failed for $(basename "$video") — keeping untrimmed file"
   fi
-  rm -f "$tmp_trim.src" "$tmp_trim"
+  rm -rf "$dir"
 }
 
 # The App Review attachment next to the App Store screenshots gets a compressed
