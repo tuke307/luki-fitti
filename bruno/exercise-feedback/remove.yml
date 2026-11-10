@@ -5,7 +5,11 @@ info:
 
 http:
   method: DELETE
-  url: "{{API_URL}}:{{API_PORT}}/api/exercise-feedback/ex-pushups"
+  url: "{{API_URL}}:{{API_PORT}}/api/exercise-feedback/:exerciseId"
+  params:
+    - name: exerciseId
+      value: "ex-pushups"
+      type: path
   auth: inherit
 
 settings:

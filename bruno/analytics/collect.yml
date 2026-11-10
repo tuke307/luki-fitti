@@ -1,0 +1,22 @@
+info:
+  name: collect
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/analytics/collect"
+  body:
+    type: json
+    data: |-
+      {
+        "type": "pageview",
+        "url": "/workouts",
+        "platform": "web"
+      }
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,22 @@
+info:
+  name: meal-text-analysis
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/ai/meal-text-analysis"
+  body:
+    type: json
+    data: |-
+      {
+        "description": "Muesli, about 100 g, with oat milk and a banana",
+        "mealType": "BREAKFAST"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

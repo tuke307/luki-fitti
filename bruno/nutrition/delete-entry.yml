@@ -5,7 +5,11 @@ info:
 
 http:
   method: DELETE
-  url: "{{API_URL}}:{{API_PORT}}/api/nutrition/entries/{{MEAL_ENTRY_ID}}"
+  url: "{{API_URL}}:{{API_PORT}}/api/nutrition/entries/:id"
+  params:
+    - name: id
+      value: "MEAL-ENTRY-ID"
+      type: path
   auth: inherit
 
 settings:

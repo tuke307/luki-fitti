@@ -18,6 +18,10 @@ http:
           {
             "exerciseId": "ex-leg-extensions",
             "orderIndex": 0,
+            "sets": [
+              { "setType": "WARMUP", "weight": 60, "reps": 12 },
+              { "setType": "WORKING", "weight": 140, "reps": 12 }
+            ],
             "plannedSets": 5,
             "warmupSets": 0,
             "targetRepsMin": 11,

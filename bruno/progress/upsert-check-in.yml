@@ -1,0 +1,24 @@
+info:
+  name: upsert-check-in
+  type: http
+  seq: 2
+
+http:
+  method: PUT
+  url: "{{API_URL}}:{{API_PORT}}/api/progress/check-ins"
+  body:
+    type: json
+    data: |-
+      {
+        "clientEntryId": "checkin-bruno-01",
+        "takenAt": "2026-11-01T08:00:00Z",
+        "note": "Monthly check-in",
+        "bodyWeightClientEntryId": "bw-bruno-0001"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

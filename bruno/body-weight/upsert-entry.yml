@@ -1,0 +1,24 @@
+info:
+  name: upsert-entry
+  type: http
+  seq: 2
+
+http:
+  method: PUT
+  url: "{{API_URL}}:{{API_PORT}}/api/body-weight/entries"
+  body:
+    type: json
+    data: |-
+      {
+        "clientEntryId": "bw-bruno-0001",
+        "measuredAt": "2026-11-01T07:30:00Z",
+        "weightKg": 82.4,
+        "note": "Morning weigh-in"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

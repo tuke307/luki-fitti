@@ -1,0 +1,19 @@
+info:
+  name: delete-photo
+  type: http
+  seq: 9
+
+http:
+  method: DELETE
+  url: "{{API_URL}}:{{API_PORT}}/api/nutrition/photos/:id"
+  params:
+    - name: id
+      value: "MEAL-PHOTO-ID"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

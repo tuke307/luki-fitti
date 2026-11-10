@@ -1,0 +1,36 @@
+info:
+  name: upload-photo
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/progress/check-ins/:clientEntryId/photos"
+  params:
+    - name: clientEntryId
+      value: "checkin-bruno-01"
+      type: path
+  body:
+    type: multipart-form
+    data:
+      - name: photo
+        type: file
+        value:
+          - /path/to/progress-photo.jpg
+        contentType: image/jpeg
+      - name: clientPhotoId
+        type: text
+        value: "photo-bruno-0001"
+      - name: pose
+        type: text
+        value: "FRONT"
+      - name: kind
+        type: text
+        value: "PHOTO"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

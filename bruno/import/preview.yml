@@ -1,0 +1,91 @@
+info:
+  name: preview
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/import/preview"
+  body:
+    type: json
+    data: |-
+      {
+        "format": "luki-fitti-import@1",
+        "exportedAt": "2026-11-01T09:00:00.000Z",
+        "source": { "app": "Example" },
+        "customExercises": [
+          {
+            "key": "landmine-press",
+            "name": "Landmine Press",
+            "primaryMuscleGroup": "SHOULDERS",
+            "equipment": "BARBELL",
+            "exerciseType": "STRENGTH"
+          }
+        ],
+        "folders": [{ "key": "push-pull", "name": "Push / Pull" }],
+        "templates": [
+          {
+            "key": "push",
+            "folderKey": "push-pull",
+            "name": "Push Day",
+            "exercises": [
+              {
+                "exercise": { "slug": "barbell-bench-press-medium-grip" },
+                "orderIndex": 0,
+                "restSeconds": 120,
+                "sets": [
+                  { "setType": "WARMUP", "weight": 40, "reps": 10 },
+                  { "setType": "WORKING", "weight": 80, "reps": 8 }
+                ]
+              }
+            ]
+          }
+        ],
+        "sessions": [
+          {
+            "key": "2026-10-30-push",
+            "workoutName": "Push Day",
+            "templateKey": "push",
+            "startedAt": "2026-10-30T17:00:00Z",
+            "completedAt": "2026-10-30T18:02:00Z",
+            "exercises": [
+              {
+                "exercise": { "slug": "barbell-bench-press-medium-grip" },
+                "orderIndex": 0,
+                "sets": [
+                  {
+                    "setNumber": 1,
+                    "setType": "WORKING",
+                    "weight": 80,
+                    "weightUnit": "KG",
+                    "reps": 8,
+                    "rpe": 8,
+                    "completed": true
+                  }
+                ]
+              },
+              {
+                "exercise": { "customKey": "landmine-press" },
+                "orderIndex": 1,
+                "sets": [
+                  {
+                    "setNumber": 1,
+                    "setType": "WORKING",
+                    "weight": 25,
+                    "weightUnit": "KG",
+                    "reps": 10,
+                    "completed": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,35 @@
+info:
+  name: meal-analysis
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/ai/meal-analysis"
+  body:
+    type: multipart-form
+    data:
+      - name: photos
+        type: file
+        value:
+          - /path/to/meal-photo.jpg
+        contentType: image/jpeg
+      - name: clientEntryId
+        type: text
+        value: "meal-ai-bruno-01"
+      - name: eatenAt
+        type: text
+        value: "2026-11-01T12:30:00+01:00"
+      - name: mealType
+        type: text
+        value: "LUNCH"
+      - name: hint
+        type: text
+        value: "Rice bowl with chicken and veggies"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

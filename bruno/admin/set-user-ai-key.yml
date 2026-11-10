@@ -1,0 +1,25 @@
+info:
+  name: set-user-ai-key
+  type: http
+  seq: 9
+
+http:
+  method: PUT
+  url: "{{API_URL}}:{{API_PORT}}/api/admin/users/:id/ai-key"
+  params:
+    - name: id
+      value: "USER-ID"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "apiKey": "sk-or-v1-FAKE-KEY-FOR-TESTING-REPLACE-ME"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

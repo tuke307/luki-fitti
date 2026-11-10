@@ -8,7 +8,6 @@ config:
     config:
       protocol: http
       hostname: ""
-      port: ""
       auth:
         username: ""
         password: ""

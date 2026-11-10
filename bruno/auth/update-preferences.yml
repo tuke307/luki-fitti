@@ -12,9 +12,15 @@ http:
       {
         "name": "Tony",
         "weightUnit": "KG",
+        "distanceUnit": "KM",
         "defaultRestSeconds": 90,
         "theme": "dark",
-        "weeklyGoalSessions": 4
+        "language": "en",
+        "weeklyGoalSessions": 4,
+        "dailyKcalGoal": 2800,
+        "proteinGoalG": 180,
+        "weighInReminderEnabled": true,
+        "progressPhotoCloudBackup": false
       }
   auth: inherit
 

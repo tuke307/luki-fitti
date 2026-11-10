@@ -5,12 +5,16 @@ info:
 
 http:
   method: PATCH
-  url: "{{API_URL}}:{{API_PORT}}/api/admin/users/{{USER_ID}}/access"
+  url: "{{API_URL}}:{{API_PORT}}/api/admin/users/:id/access"
+  params:
+    - name: id
+      value: "USER-ID"
+      type: path
   body:
     type: json
     data: |-
       {
-        "featureGrants": ["AI_WORKOUT_BUILDER", "AI_MEAL_PHOTO"]
+        "permissions": ["DASHBOARD_VIEW", "USERS_MANAGE"]
       }
   auth: inherit
 

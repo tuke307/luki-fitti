@@ -16,8 +16,12 @@ http:
         "workoutBuilderFallbacks": ["google/gemini-3.8-flash"],
         "mealPhotoModel": "google/gemini-3.8-flash",
         "mealPhotoFallbacks": ["openai/gpt-6.1-terra"],
+        "aiProgressTargetEnabled": true,
+        "progressTargetModel": "google/gemini-3.8-flash",
+        "progressTargetFallbacks": ["openai/gpt-6.1-terra"],
         "aiDailyRunLimit": 30,
-        "mealPhotoRetentionDays": null
+        "mealPhotoRetentionDays": null,
+        "userModelAllowlist": []
       }
   auth: inherit
 

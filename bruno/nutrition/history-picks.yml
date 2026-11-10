@@ -1,0 +1,20 @@
+info:
+  name: history-picks
+  type: http
+  seq: 7
+
+http:
+  method: GET
+  url: "{{API_URL}}:{{API_PORT}}/api/nutrition/history-picks"
+  params:
+    - name: q
+      value: "chicken"
+      type: query
+      disabled: true
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
