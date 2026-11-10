@@ -251,6 +251,18 @@ public struct ProfileAndAuthView: View {
 
     // MARK: - Account
 
+    /// Top/bottom corner of the visible field block — the section's first/last rows
+    /// are the transparent picker and button, so the filled rows round themselves.
+    private func fieldRowBackground(top: Bool = false, bottom: Bool = false) -> some View {
+        UnevenRoundedRectangle(
+            topLeadingRadius: top ? 10 : 0,
+            bottomLeadingRadius: bottom ? 10 : 0,
+            bottomTrailingRadius: bottom ? 10 : 0,
+            topTrailingRadius: top ? 10 : 0
+        )
+        .fill(Color(.secondarySystemGroupedBackground))
+    }
+
     @ViewBuilder
     private var guestAuthRows: some View {
         Picker(tr("Mode"), selection: $authMode) {
@@ -265,6 +277,7 @@ public struct ProfileAndAuthView: View {
             TextField(tr("Your name"), text: $name)
                 .textContentType(.name)
                 .autocorrectionDisabled()
+                .listRowBackground(fieldRowBackground(top: true))
                 .accessibilityIdentifier("ios.profile.nameField")
         }
         TextField(tr("Email address"), text: $email)
@@ -272,15 +285,24 @@ public struct ProfileAndAuthView: View {
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
             .keyboardType(.emailAddress)
+            .listRowBackground(fieldRowBackground(top: authMode == "login"))
             .accessibilityIdentifier("ios.profile.emailField")
         SecureField(tr("Password"), text: $password)
-            .textContentType(authMode == "login" ? .password : .newPassword)
+            // The strong-password AutoFill panel hides the keyboard — suppressed in the
+            // App Review walkthrough so the UI test can type a password.
+            .textContentType(
+                authMode == "login" || ProcessInfo.processInfo.arguments.contains("--uitesting-review")
+                    ? .password
+                    : .newPassword
+            )
+            .listRowBackground(fieldRowBackground(bottom: statusMessage == nil))
             .accessibilityIdentifier("ios.profile.passwordField")
 
         if let statusMessage {
             Text(statusMessage)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+                .listRowBackground(fieldRowBackground(bottom: true))
                 .accessibilityIdentifier("ios.profile.statusMessage")
         }
 
@@ -293,6 +315,11 @@ public struct ProfileAndAuthView: View {
                             viewModel.analytics.event(.login, ["status": .string("success")])
                             viewModel.store.saveAuthenticatedUser(user)
                             await viewModel.store.refreshFromServerAfterAuth()
+                            #if DEBUG
+                            if ProcessInfo.processInfo.arguments.contains("--uitesting-review") {
+                                LukiAppViewModel.seedDemoMeal(vm: viewModel, store: viewModel.store)
+                            }
+                            #endif
                             await viewModel.syncBodyWeight()
                         } catch {
                             viewModel.analytics.event(.login, ["status": .string("error")])
@@ -307,7 +334,10 @@ public struct ProfileAndAuthView: View {
                                 weightUnit: viewModel.store.preferences.weightUnit
                             )
                             viewModel.analytics.event(.signup, ["status": .string(user.message == nil ? "success" : "pending_confirmation")])
-                            statusMessage = user.message ?? tr("Account created. Check your email to confirm it.")
+                            statusMessage = tr("Account created. Check your email to confirm it.")
+                            #if DEBUG
+                            viewModel.pollMailpitForReview(to: email, route: "verify-email")
+                            #endif
                         } catch {
                             viewModel.analytics.event(.signup, ["status": .string("error")])
                             throw error
@@ -564,6 +594,9 @@ private struct AccountSettingsPage: View {
                                     showingDeleteRequestField = false
                                     deleteAccountPassword = ""
                                     statusMessage = tr("Check your email to confirm the deletion.")
+                                    #if DEBUG
+                                    viewModel.pollMailpitForReview(to: user.email, route: "delete-account")
+                                    #endif
                                 } catch {
                                     statusMessage = error.localizedDescription
                                 }

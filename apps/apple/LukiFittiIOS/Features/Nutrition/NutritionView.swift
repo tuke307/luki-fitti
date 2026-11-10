@@ -75,6 +75,13 @@ public struct NutritionView: View {
         }
         .task {
             await nutrition.refresh(isSignedIn: isSignedIn, force: false)
+            #if DEBUG
+            // App Review walkthrough: the server refresh replaces local entries, so put the
+            // seeded AI demo meal back afterwards.
+            if ProcessInfo.processInfo.arguments.contains("--uitesting-review") {
+                LukiAppViewModel.seedDemoMeal(vm: viewModel, store: viewModel.store)
+            }
+            #endif
             await viewModel.activity.refresh(isSignedIn: isSignedIn, force: false)
         }
         .task(id: visibleWeek) {
