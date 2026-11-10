@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { ConflictException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import sharp from 'sharp';
 import { ProgressPhotoKind, ProgressPose } from '@luki-fitti/common/enums';
 import { UpdatePreferencesSchema } from '@luki-fitti/common/schemas';
@@ -118,32 +118,80 @@ describe('ProgressService.upsertCheckIn', () => {
 });
 
 describe('ProgressService photos', () => {
-  it('re-uploading a clientPhotoId deletes the replaced object', async () => {
-    const photoDeleteIds: string[] = [];
+  it('re-uploading a clientPhotoId replaces the row and deletes the old object', async () => {
+    const updateCalls: object[] = [];
     const prisma = fakePrisma({
       progressPhoto: {
         findUnique: async () => ({ id: 'old-ph', checkInId: 'ci-1', storageKey: 'old-key' }),
-        create: async ({ data }: { data: object }) => ({
-          id: 'new-ph',
-          createdAt: new Date(),
-          ...data,
-        }),
-        delete: async ({ where }: { where: { id: string } }) => {
-          photoDeleteIds.push(where.id);
-          return null;
+        update: async ({ where, data }: { where: object; data: object }) => {
+          updateCalls.push(where);
+          return { id: 'old-ph', createdAt: new Date(), ...data };
+        },
+        create: async () => {
+          // Models the @unique clientPhotoId constraint.
+          throw new Error('Unique constraint failed on clientPhotoId');
         },
       },
     });
     const storage = fakeStorage();
     const service = new ProgressService(prisma, storage);
-    await service.attachPhoto(
+    const dto = await service.attachPhoto(
       'u1',
       'client-ci-1',
       { clientPhotoId: 'photo-1', pose: ProgressPose.FRONT, kind: ProgressPhotoKind.PHOTO },
       { buffer: await tinyJpeg() },
     );
-    assert.deepEqual(photoDeleteIds, ['old-ph']);
+    assert.equal(updateCalls.length, 1);
     assert.deepEqual(storage.deleted, ['old-key']);
+    assert.equal(dto.id, 'old-ph');
+  });
+
+  it('returns 409 and touches nothing when the clientPhotoId belongs to another user', async () => {
+    const storage = fakeStorage();
+    const prisma = fakePrisma({
+      progressPhoto: {
+        findUnique: async () => ({ id: 'their-ph', checkInId: 'foreign-ci', storageKey: 'k' }),
+        delete: async () => {
+          throw new Error('must not delete');
+        },
+      },
+    });
+    const service = new ProgressService(prisma, storage);
+    const buffer = await tinyJpeg();
+    await assert.rejects(
+      () =>
+        service.attachPhoto(
+          'u1',
+          'client-ci-1',
+          { clientPhotoId: 'stolen-id', pose: ProgressPose.FRONT, kind: ProgressPhotoKind.PHOTO },
+          { buffer },
+        ),
+      ConflictException,
+    );
+    assert.deepEqual(storage.deleted, []);
+  });
+
+  it('returns 409 when the clientPhotoId is on a different check-in of the same user', async () => {
+    const prisma = fakePrisma({
+      progressPhoto: {
+        findUnique: async () => ({ id: 'ph-9', checkInId: 'ci-2', storageKey: 'k' }),
+        delete: async () => {
+          throw new Error('must not delete');
+        },
+      },
+    });
+    const service = new ProgressService(prisma, fakeStorage());
+    const buffer = await tinyJpeg();
+    await assert.rejects(
+      () =>
+        service.attachPhoto(
+          'u1',
+          'client-ci-1',
+          { clientPhotoId: 'dup-id', pose: ProgressPose.BACK, kind: ProgressPhotoKind.PHOTO },
+          { buffer },
+        ),
+      ConflictException,
+    );
   });
 
   it('returns 503 when storage is not configured', async () => {

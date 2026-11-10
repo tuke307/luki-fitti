@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -102,15 +103,32 @@ export class ProgressService {
       where: { clientPhotoId: dto.clientPhotoId },
       select: { id: true, checkInId: true, storageKey: true },
     });
-    // Same photo id pointing at a different check-in is a bug or an attack — treat as gone.
+    // Same photo id on a different check-in (yours or someone else's) is a conflict,
+    // never a silent delete.
     if (previous && previous.checkInId !== checkIn.id) {
-      await this.prisma.progressPhoto.delete({ where: { id: previous.id } });
-      await this.storage.deleteMany([previous.storageKey]);
+      throw new ConflictException('clientPhotoId already belongs to another check-in');
     }
 
     const key = `progress/${userId}/${checkIn.id}/${crypto.randomUUID()}.jpg`;
     await this.storage.put(key, image.buffer, image.mimeType);
     try {
+      if (previous) {
+        // Re-upload replaces the row in place (clientPhotoId stays unique) and the old object.
+        const photo = await this.prisma.progressPhoto.update({
+          where: { id: previous.id },
+          data: {
+            storageKey: key,
+            pose: dto.pose,
+            kind: dto.kind,
+            mimeType: image.mimeType,
+            sizeBytes: image.buffer.length,
+            width: image.width,
+            height: image.height,
+          },
+        });
+        await this.storage.deleteMany([previous.storageKey]);
+        return this.toPhotoDto(photo);
+      }
       const photo = await this.prisma.progressPhoto.create({
         data: {
           clientPhotoId: dto.clientPhotoId,
@@ -124,10 +142,6 @@ export class ProgressService {
           height: image.height,
         },
       });
-      if (previous) {
-        await this.prisma.progressPhoto.delete({ where: { id: previous.id } });
-        await this.storage.deleteMany([previous.storageKey]);
-      }
       return this.toPhotoDto(photo);
     } catch (err) {
       await this.storage.deleteMany([key]);

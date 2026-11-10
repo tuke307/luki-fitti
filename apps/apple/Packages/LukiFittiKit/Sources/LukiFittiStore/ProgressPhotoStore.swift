@@ -64,12 +64,11 @@ public final class ProgressPhotoStore {
         if let file = photo.localFile, let data = try? Data(contentsOf: photoFileURL(photo)!) {
             return data
         }
+        let cache = directory.appendingPathComponent("remote-\(photo.id).jpg")
+        if let data = try? Data(contentsOf: cache) { return data }
         guard isSignedIn, let path = photo.url, path.hasPrefix("/api/") else { return nil }
         guard let data = try? await api.fetchData(path: path) else { return nil }
-        // Cache the download under the remote photo id so thumbnails stay offline-friendly.
-        let file = "remote-\(photo.id).jpg"
-        try? data.write(to: directory.appendingPathComponent(file), options: .atomic)
-        _ = file
+        try? data.write(to: cache, options: .atomic)
         return data
     }
 
@@ -85,7 +84,7 @@ public final class ProgressPhotoStore {
     public func remove(_ checkIn: ProgressCheckInDto, isSignedIn: Bool) async {
         checkIns.removeAll { $0.clientEntryId == checkIn.clientEntryId }
         for photo in checkIn.photos {
-            if let file = photoFileURL(photo) { try? FileManager.default.removeItem(at: file) }
+            removePhotoFiles(photo)
         }
         persistCheckIns()
         let localOnly = checkIn.id.hasPrefix("local-")
@@ -119,7 +118,7 @@ public final class ProgressPhotoStore {
         photo.sizeBytes = jpeg.count
         // One photo per pose: replacing drops the previous local file.
         if let old = checkIn.photos.first(where: { $0.pose == pose && $0.kind == .PHOTO }) {
-            if let oldFile = photoFileURL(old) { try? FileManager.default.removeItem(at: oldFile) }
+            removePhotoFiles(old)
             checkIn.photos.removeAll { $0.id == old.id }
             if !old.id.hasPrefix("local-") {
                 enqueue(.init(kind: .deletePhoto, clientEntryId: checkInClientEntryId, serverId: old.id))
@@ -135,7 +134,7 @@ public final class ProgressPhotoStore {
 
     public func removePhoto(_ photo: ProgressPhotoDto, from checkInClientEntryId: String, isSignedIn: Bool) async {
         guard var checkIn = checkIn(clientEntryId: checkInClientEntryId) else { return }
-        if let file = photoFileURL(photo) { try? FileManager.default.removeItem(at: file) }
+        removePhotoFiles(photo)
         checkIn.photos.removeAll { $0.id == photo.id }
         replace(checkIn)
         outbox.removeAll { $0.clientPhotoId == photo.clientPhotoId }
@@ -210,7 +209,16 @@ public final class ProgressPhotoStore {
     }
 
     public func flush(isSignedIn: Bool) async {
-        guard isSignedIn, cloudBackupEnabled, !flushing, !outbox.isEmpty else { return }
+        guard isSignedIn, !flushing, !outbox.isEmpty else { return }
+        // While backup is off, only remote deletes still drain; pending upserts/uploads are dropped.
+        if !cloudBackupEnabled {
+            let stale = outbox.filter { $0.kind == .upsertCheckIn || $0.kind == .photo }
+            if !stale.isEmpty {
+                outbox.removeAll { $0.kind == .upsertCheckIn || $0.kind == .photo }
+                persistOutbox()
+            }
+            guard outbox.contains(where: { $0.kind == .deleteCheckIn || $0.kind == .deletePhoto }) else { return }
+        }
         flushing = true
         defer { flushing = false }
         var index = 0
@@ -229,6 +237,18 @@ public final class ProgressPhotoStore {
             case .deleteCheckIn:
                 if let id = item.serverId {
                     done = (try? await api.deleteProgressCheckIn(id: id)) != nil
+                    // The cloud copy is gone: make the check-in local-only again so turning
+                    // backup back on re-uploads it instead of skipping "synced" rows.
+                    if done, var local = checkIn(clientEntryId: item.clientEntryId) {
+                        local.id = "local-\(local.clientEntryId)"
+                        local.photos = local.photos.map {
+                            var p = $0
+                            p.id = "local-\(p.clientPhotoId)"
+                            p.url = nil
+                            return p
+                        }
+                        replace(local)
+                    }
                 } else { done = true }
             case .photo:
                 guard let clientPhotoId = item.clientPhotoId, let pose = item.pose,
@@ -268,11 +288,16 @@ public final class ProgressPhotoStore {
     public func clear() {
         checkIns = []
         outbox = []
-        try? FileManager.default.removeItem(at: directory.appendingPathComponent(Self.checkInsFile))
-        try? FileManager.default.removeItem(at: directory.appendingPathComponent(Self.outboxFile))
+        try? FileManager.default.removeItem(at: directory)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     }
 
     // MARK: Helpers
+
+    private func removePhotoFiles(_ photo: ProgressPhotoDto) {
+        if let file = photoFileURL(photo) { try? FileManager.default.removeItem(at: file) }
+        try? FileManager.default.removeItem(at: directory.appendingPathComponent("remote-\(photo.id).jpg"))
+    }
 
     private func replace(_ checkIn: ProgressCheckInDto) {
         if let idx = checkIns.firstIndex(where: { $0.clientEntryId == checkIn.clientEntryId }) {
