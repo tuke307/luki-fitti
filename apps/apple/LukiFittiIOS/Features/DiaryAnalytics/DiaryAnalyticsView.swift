@@ -564,6 +564,7 @@ public struct DiaryAnalyticsView: View {
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .layoutPriority(1)
                     VStack(alignment: .trailing, spacing: 2) {
                         Text(weight)

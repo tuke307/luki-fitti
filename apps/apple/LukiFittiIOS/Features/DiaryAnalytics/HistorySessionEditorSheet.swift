@@ -27,6 +27,9 @@ struct HistorySessionEditorSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    Text(draft.workoutNameSnapshot)
+                        .font(.title3.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
                     Text(subtitleText)
                         .font(.caption)
                         .monospacedDigit()
@@ -112,10 +115,12 @@ struct HistorySessionEditorSheet: View {
 
                 if samples.count > 1 {
                     let bpms = samples.map(\.bpm)
+                    let domainMin = (bpms.min() ?? 40) - 10
                     Chart(samples, id: \.offsetSec) { pt in
                         AreaMark(
                             x: .value("Time", pt.offsetSec),
-                            y: .value("BPM", pt.bpm)
+                            yStart: .value("BPM", domainMin),
+                            yEnd: .value("BPM", pt.bpm)
                         )
                         .foregroundStyle(LinearGradient(
                             colors: [LukiColors.heartRate.opacity(0.55), LukiColors.heartRate.opacity(0.05)],
@@ -151,6 +156,7 @@ struct HistorySessionEditorSheet: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
+                    .chartPlotStyle { $0.clipped() }
                     .frame(height: 150)
                 }
             }
