@@ -53,6 +53,41 @@ public enum SessionCalculator {
         } ?? 0
     }
 
+    /// Where a mirrored workout should scroll to after a merged update from the other device:
+    /// the exercise whose set was just completed remotely (advancing past it when it is done),
+    /// or the current index when nothing new was completed.
+    public static func followedExerciseIndex(
+        previous: WorkoutSessionDto?,
+        incoming: WorkoutSessionDto,
+        currentIndex: Int
+    ) -> Int {
+        let clamped = incoming.exercises.isEmpty ? 0
+            : min(max(0, currentIndex), incoming.exercises.count - 1)
+        var previouslyCompleted = Set<String>()
+        if let previous, previous.clientSessionId == incoming.clientSessionId {
+            previouslyCompleted = Set(previous.exercises.flatMap(\.sets)
+                .filter(\.completed).map(\.clientSetId))
+        }
+        var target: Int?
+        var latestCompletedAt = ""
+        for (idx, exercise) in incoming.exercises.enumerated() {
+            for set in exercise.sets where set.completed && !previouslyCompleted.contains(set.clientSetId) {
+                let completedAt = set.completedAt ?? ""
+                if completedAt >= latestCompletedAt {
+                    latestCompletedAt = completedAt
+                    target = idx
+                }
+            }
+        }
+        guard let target else { return clamped }
+        let exercise = incoming.exercises[target]
+        if !exercise.sets.isEmpty, exercise.sets.allSatisfy(\.completed),
+           target + 1 < incoming.exercises.count {
+            return target + 1
+        }
+        return target
+    }
+
     /// Changes one set's type. Warm-ups always come first, so a set switched to warm-up moves to
     /// the top; set numbers follow the new order.
     public static func changingSetType(_ sets: [SessionSetDto], clientSetId: String, to setType: SetType) -> [SessionSetDto] {
