@@ -102,10 +102,27 @@ public enum SharedSnapshotStore {
         fileManager: FileManager = .default,
         bundle: Bundle = .main
     ) -> Bool {
-        guard let url = containerURL(fileManager: fileManager, bundle: bundle)?
-            .appendingPathComponent(fileName) else { return false }
+        guard let directory = containerURL(fileManager: fileManager, bundle: bundle) else { return false }
+        return write(snapshot, to: directory, fileManager: fileManager)
+    }
+
+    /// Writes under an explicit directory — used by tests and non-app-group callers.
+    /// `generatedAt` is a fresh timestamp on every publish, so it is excluded from the comparison;
+    /// otherwise every call would look like a change and burn the widget-reload budget.
+    @discardableResult
+    public static func write(
+        _ snapshot: HomeWidgetSnapshot,
+        to directory: URL,
+        fileManager: FileManager = .default
+    ) -> Bool {
+        let url = directory.appendingPathComponent(fileName)
         guard let data = try? JSONEncoder().encode(snapshot) else { return false }
-        if let existing = try? Data(contentsOf: url), existing == data { return false }
+        if let existing = try? Data(contentsOf: url),
+           let decoded = try? JSONDecoder().decode(HomeWidgetSnapshot.self, from: existing) {
+            var candidate = decoded
+            candidate.generatedAt = snapshot.generatedAt
+            if candidate == snapshot { return false }
+        }
         do {
             try fileManager.createDirectory(
                 at: url.deletingLastPathComponent(), withIntermediateDirectories: true

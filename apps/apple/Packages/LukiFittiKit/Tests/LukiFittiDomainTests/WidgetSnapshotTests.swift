@@ -118,6 +118,25 @@ final class WidgetSnapshotTests: XCTestCase {
         )
     }
 
+    // MARK: - SharedSnapshotStore.write
+
+    func testWriteSkipsWhenOnlyGeneratedAtDiffers() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("widgets-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        var snapshot = HomeWidgetSnapshot(
+            generatedAt: "t1", locale: .en, weekStartISO: "w1",
+            nutrition: .init(day: "d", kcalEaten: 100, proteinG: 10)
+        )
+        XCTAssertTrue(SharedSnapshotStore.write(snapshot, to: dir))
+        snapshot.generatedAt = "t2"
+        // Same content, new timestamp → no write, no widget reload needed.
+        XCTAssertFalse(SharedSnapshotStore.write(snapshot, to: dir))
+        snapshot.nutrition?.kcalEaten = 250
+        // A real change → write.
+        XCTAssertTrue(SharedSnapshotStore.write(snapshot, to: dir))
+    }
+
     // MARK: - sessionsDoneThisWeek
 
     func testSessionsDoneThisWeekCountsOnlyCurrentWeek() {
