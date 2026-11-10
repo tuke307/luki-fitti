@@ -524,6 +524,7 @@ export const deFeatures: Widen<typeof enFeatures> = {
       'workout-builder': 'Workout-Planer',
       'meal-analyzer': 'Mahlzeitenfoto',
       'meal-text-analyzer': 'Mahlzeitenbeschreibung',
+      'progress-target': 'KI-Fortschrittsziel',
     },
     adminCost: 'KI-Kosten (30 Tage)',
     adminDetailTitle: 'KI-Nutzung · {email}',
@@ -548,6 +549,8 @@ export const deFeatures: Widen<typeof enFeatures> = {
       'meal-analyzer': 'Die Fotos und dein Hinweis. Sonst nichts über dich.',
       'meal-text-analyzer':
         'Deine Mahlzeitbeschreibung und die gewählte Mahlzeit. Sonst nichts über dich.',
+      'progress-target':
+        'Dein Frontfoto, Ziel, Zeitraum, Größe, Gewicht, Körperfett, Geschlecht und Alter. Das generierte Bild wird nicht auf dem Server gespeichert.',
     },
     dataNote:
       'Name, E-Mail und Konto-ID werden nie gesendet. OpenRouter leitet die Anfrage an den Modellanbieter weiter.',
@@ -564,7 +567,9 @@ export const deFeatures: Widen<typeof enFeatures> = {
       'workout-builder': 'Workout-Planer',
       'meal-analyzer': 'Mahlzeitfoto',
       'meal-text-analyzer': 'Mahlzeitenbeschreibung',
+      'progress-target': 'KI-Fortschrittsziel',
     },
+    costAfterFirstRun: 'Kosten werden nach dem ersten Durchlauf gezeigt',
     defaultChoice: 'Standard ({model})',
     useDefault: 'Standard verwenden',
     restricted:
@@ -647,6 +652,8 @@ export const deFeatures: Widen<typeof enFeatures> = {
     compareA: 'Erster Check-in',
     compareB: 'Zweiter Check-in',
     poseLabel: 'Pose',
+    aiTargetBadge: 'KI-Ziel',
+    aiTargetAlt: 'KI-Ziel, {date}',
     poses: {
       FRONT: 'Vorne',
       SIDE: 'Seite',

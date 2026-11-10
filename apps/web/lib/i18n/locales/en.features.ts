@@ -514,6 +514,7 @@ export const enFeatures = {
       'workout-builder': 'Workout builder',
       'meal-analyzer': 'Meal photo',
       'meal-text-analyzer': 'Meal description',
+      'progress-target': 'AI progress target',
     },
     adminCost: 'AI cost (30 days)',
     adminDetailTitle: 'AI usage · {email}',
@@ -537,6 +538,8 @@ export const enFeatures = {
         'Your request text and, through tools the model may call, your training data: profile and goals, exercise feedback, weak points, recent workouts and exercise catalog searches.',
       'meal-analyzer': 'The photos and your hint. Nothing else about you.',
       'meal-text-analyzer': 'Your meal description and the selected meal. Nothing else about you.',
+      'progress-target':
+        'Your front photo, goal, horizon, height, weight, body fat, sex and age. The generated image is not stored on the server.',
     },
     dataNote:
       'Your name, email and account id are never sent. OpenRouter forwards the request to the model provider.',
@@ -553,7 +556,9 @@ export const enFeatures = {
       'workout-builder': 'Workout planner',
       'meal-analyzer': 'Meal photo',
       'meal-text-analyzer': 'Meal description',
+      'progress-target': 'AI progress target',
     },
+    costAfterFirstRun: 'Cost shown after the first run',
     defaultChoice: 'Default ({model})',
     useDefault: 'Use default',
     restricted: 'Your AI key is provided by the admin, so you can choose from an approved list.',
@@ -631,6 +636,8 @@ export const enFeatures = {
     compareA: 'First check-in',
     compareB: 'Second check-in',
     poseLabel: 'Pose',
+    aiTargetBadge: 'AI target',
+    aiTargetAlt: 'AI target, {date}',
     poses: {
       FRONT: 'Front',
       SIDE: 'Side',

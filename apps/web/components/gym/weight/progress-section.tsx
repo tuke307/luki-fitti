@@ -16,8 +16,15 @@ function PoseThumb({ photo, alt }: { photo: ProgressPhotoDto | undefined; alt: s
   return (
     <div className="bg-secondary aspect-[2/3] w-full overflow-hidden rounded-[0.625rem]">
       {photo?.url ? (
-        // eslint-disable-next-line @next/next/no-img-element -- authenticated same-origin API image
-        <img src={photo.url} alt={alt} className="h-full w-full object-cover" />
+        <span className="relative block h-full w-full">
+          {/* eslint-disable-next-line @next/next/no-img-element -- authenticated same-origin API image */}
+          <img src={photo.url} alt={alt} className="h-full w-full object-cover" />
+          {photo.kind === 'AI_TARGET' && (
+            <span className="bg-primary text-primary-foreground absolute top-1 left-1 rounded px-1 text-[0.625rem] font-semibold">
+              {t.progress.aiTargetBadge}
+            </span>
+          )}
+        </span>
       ) : (
         <div className="text-muted-foreground flex h-full items-center justify-center">
           <Camera className="h-4 w-4" aria-hidden="true" />

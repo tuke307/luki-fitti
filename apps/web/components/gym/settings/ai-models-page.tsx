@@ -17,6 +17,7 @@ import { toast } from '@luki-fitti/ui/components/ui/sonner';
 import { AiKeySlot, AiSkillName } from '@luki-fitti/common/enums';
 import type { AiModelOptionDto, AiSkillModelsDto } from '@luki-fitti/common/schemas';
 import { api } from '@/lib/api';
+import { Sparkles } from 'lucide-react';
 import { formatUsd } from '@/lib/ai/ai-cost';
 import { filterModels, nextModelChoices } from '@/lib/ai/ai-models';
 import { useAiModels } from '@/lib/ai/use-ai-models';
@@ -27,6 +28,7 @@ const SKILL_ICONS: Record<AiSkillName, LucideIcon> = {
   [AiSkillName.WORKOUT_BUILDER]: Dumbbell,
   [AiSkillName.MEAL_ANALYZER]: Camera,
   [AiSkillName.MEAL_TEXT_ANALYZER]: MessageSquareText,
+  [AiSkillName.PROGRESS_TARGET]: Sparkles,
 };
 
 export function AiModelsPage() {
