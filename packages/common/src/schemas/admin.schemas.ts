@@ -32,6 +32,9 @@ export const UpdateAiSettingsSchema = z.object({
   workoutBuilderFallbacks: z.array(OpenRouterModelIdSchema).max(3).optional(),
   mealPhotoModel: OpenRouterModelIdSchema.optional(),
   mealPhotoFallbacks: z.array(OpenRouterModelIdSchema).max(3).optional(),
+  aiProgressTargetEnabled: z.boolean().optional(),
+  progressTargetModel: OpenRouterModelIdSchema.optional(),
+  progressTargetFallbacks: z.array(OpenRouterModelIdSchema).max(3).optional(),
   aiDailyRunLimit: z.number().int().min(0).max(1000).optional(),
   mealPhotoRetentionDays: z.number().int().min(1).max(3650).nullable().optional(),
   /** Models users on an admin-assigned key may choose from. */
@@ -85,6 +88,9 @@ export interface AiSettingsDto {
   workoutBuilderFallbacks: string[];
   mealPhotoModel: string;
   mealPhotoFallbacks: string[];
+  aiProgressTargetEnabled: boolean;
+  progressTargetModel: string;
+  progressTargetFallbacks: string[];
   aiDailyRunLimit: number;
   mealPhotoRetentionDays: number | null;
   userModelAllowlist: string[];

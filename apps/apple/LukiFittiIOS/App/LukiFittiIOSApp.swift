@@ -27,6 +27,7 @@ public final class LukiAppViewModel {
     public let store: OfflineStore
     public let nutrition: NutritionStore
     public let bodyWeight: BodyWeightStore
+    public let progress: ProgressPhotoStore
     public let bodyMassSync: BodyMassHealthSync
     /// Apple Health activity (daily active energy + workouts from other apps) for the Food tab.
     public let activity: HealthActivityStore
@@ -68,6 +69,8 @@ public final class LukiAppViewModel {
         self.store = store
         self.nutrition = NutritionStore(apiClient: store.apiClient, storageDirectory: store.storageDirectoryURL)
         self.bodyWeight = BodyWeightStore(apiClient: store.apiClient, storageDirectory: store.storageDirectoryURL)
+        self.progress = ProgressPhotoStore(apiClient: store.apiClient, storageDirectory: store.storageDirectoryURL)
+        self.progress.cloudBackupEnabled = store.preferences.progressPhotoCloudBackup
         self.bodyMassSync = bodyMassSync
         self.activity = HealthActivityStore(apiClient: store.apiClient, storageDirectory: store.storageDirectoryURL)
         self.activitySync = activitySync
@@ -171,7 +174,18 @@ public final class LukiAppViewModel {
             }
             await syncBodyWeight()
             await syncHealthActivity()
+            await progress.refresh(isSignedIn: isSignedIn)
         }
+    }
+
+    /// Turns progress-photo cloud backup on/off. `deleteRemote` also removes the stored copies.
+    public func setProgressCloudBackup(_ enabled: Bool, deleteRemote: Bool = false) async {
+        var prefs = store.preferences
+        prefs.progressPhotoCloudBackup = enabled
+        var dto = UpdatePreferencesDto()
+        dto.progressPhotoCloudBackup = enabled
+        _ = await savePreferences(prefs, server: dto)
+        await progress.setCloudBackup(enabled, deleteRemote: deleteRemote, isSignedIn: isSignedIn)
     }
 
     private func mergeIncomingWatchActiveSession(_ incoming: WorkoutSessionDto?) {

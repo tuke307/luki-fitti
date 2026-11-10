@@ -25,6 +25,7 @@ import { MobileSheet } from '../mobile-sheet';
 import { PageTitle } from '../page-title';
 import { WeightChart } from './weight-chart';
 import { WeightEntryForm } from './weight-entry-form';
+import { ProgressSection } from './progress-section';
 import {
   consumeWeightFocusRequest,
   focusWeightInput,
@@ -326,6 +327,8 @@ export function WeightView({ variant = 'section', onBack, logOnOpen = false }: W
           </>
         )}
 
+        <ProgressSection />
+
         <MobileSheet
           open={sheetOpen}
           onOpenChange={(open) => {
@@ -383,6 +386,8 @@ export function WeightView({ variant = 'section', onBack, logOnOpen = false }: W
           {historyEl}
         </>
       )}
+
+      <ProgressSection />
 
       {deleteDialog}
     </Card>

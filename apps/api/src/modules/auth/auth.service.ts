@@ -19,6 +19,7 @@ import { PrismaService } from '../database/prisma.service';
 import { EmailService } from '../email/email.service';
 import { AppSettingsService } from '../app-settings/app-settings.service';
 import { BodyWeightService } from '../body-weight/body-weight.service';
+import { StorageService } from '../storage/storage.service';
 import {
   DEFAULT_STARTER_FOLDERS,
   DEFAULT_STARTER_TEMPLATES,
@@ -30,6 +31,8 @@ import {
   type ActivityLevel,
   type AdminPermission,
   type BiologicalSex,
+  BODY_GOALS,
+  type BodyGoal,
   DistanceUnit,
   type FeatureGrant,
   isAdminPermission,
@@ -54,6 +57,7 @@ export class AuthService {
     @Optional() private readonly emailService?: EmailService,
     @Optional() private readonly appSettings?: AppSettingsService,
     @Optional() private readonly bodyWeight?: BodyWeightService,
+    @Optional() private readonly storage?: StorageService,
   ) {}
 
   private hashToken(rawToken: string): string {
@@ -440,6 +444,8 @@ export class AuthService {
           'proteinGoalG',
           'carbsGoalG',
           'fatGoalG',
+          'bodyGoal',
+          'goalHorizonMonths',
         ] as const
       )
         .filter((key) => prefFields[key] !== undefined)
@@ -470,6 +476,7 @@ export class AuthService {
               notificationsEnabled: prefFields.notificationsEnabled ?? true,
               exerciseSuggestionsEnabled: prefFields.exerciseSuggestionsEnabled ?? true,
               weeklyGoalSessions: prefFields.weeklyGoalSessions ?? 4,
+              progressPhotoCloudBackup: prefFields.progressPhotoCloudBackup ?? false,
               ...nullableFields,
               ...reminderFields,
               ...aiModelFields,
@@ -496,6 +503,9 @@ export class AuthService {
                 : {}),
               ...(prefFields.weeklyGoalSessions !== undefined
                 ? { weeklyGoalSessions: prefFields.weeklyGoalSessions }
+                : {}),
+              ...(prefFields.progressPhotoCloudBackup !== undefined
+                ? { progressPhotoCloudBackup: prefFields.progressPhotoCloudBackup }
                 : {}),
               ...reminderFields,
               ...aiModelFields,
@@ -590,7 +600,16 @@ export class AuthService {
       );
     }
 
+    // Stored progress photos have no DB cascade in S3: collect keys before the rows go.
+    const progressKeys = (
+      await this.prisma.progressPhoto.findMany({
+        where: { checkIn: { userId: user.id } },
+        select: { storageKey: true },
+      })
+    ).map((p) => p.storageKey);
+
     await this.prisma.user.delete({ where: { id: user.id } });
+    await this.storage?.deleteMany(progressKeys);
 
     return {
       success: true,
@@ -633,6 +652,10 @@ export class AuthService {
         weighInReminderWeekday?: number;
         weighInReminderMinutes?: number;
         aiModels?: unknown;
+        bodyGoal?: string | null;
+        goalHorizonMonths?: number | null;
+        progressPhotoCloudBackup?: boolean;
+        progressAiConsentAt?: Date | null;
       } | null;
       permissions?: string[];
     },
@@ -684,6 +707,12 @@ export class AuthService {
             weighInReminderWeekday: user.preferences.weighInReminderWeekday ?? 2,
             weighInReminderMinutes: user.preferences.weighInReminderMinutes ?? 450,
             aiModels: AiModelChoicesSchema.safeParse(user.preferences.aiModels ?? {}).data ?? {},
+            bodyGoal: (BODY_GOALS as readonly string[]).includes(user.preferences.bodyGoal ?? '')
+              ? (user.preferences.bodyGoal as BodyGoal)
+              : null,
+            goalHorizonMonths: user.preferences.goalHorizonMonths ?? null,
+            progressPhotoCloudBackup: user.preferences.progressPhotoCloudBackup ?? false,
+            progressAiConsentAt: user.preferences.progressAiConsentAt?.toISOString() ?? null,
           }
         : null,
       permissions: (user.permissions ?? []).filter(isAdminPermission) as AdminPermission[],

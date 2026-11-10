@@ -13,6 +13,8 @@ struct HealthDetailsView: View {
     @State private var birthYear: Int?
     @State private var sex: String
     @State private var bodyFatPct: Double?
+    @State private var bodyGoal: BodyGoal?
+    @State private var goalHorizonMonths: Int?
     @State private var activityLevel: ActivityLevel?
     @State private var autosave = PreferencesAutosaver()
     @State private var isConnectingHealth = false
@@ -29,6 +31,8 @@ struct HealthDetailsView: View {
         _birthYear = State(initialValue: p.birthYear)
         _sex = State(initialValue: p.sex ?? "")
         _bodyFatPct = State(initialValue: p.bodyFatPct)
+        _bodyGoal = State(initialValue: p.bodyGoal)
+        _goalHorizonMonths = State(initialValue: p.goalHorizonMonths)
         _activityLevel = State(initialValue: p.activityLevel)
     }
 
@@ -39,6 +43,8 @@ struct HealthDetailsView: View {
         let sex: String
         let bodyFatPct: Double?
         let activityLevel: ActivityLevel?
+        let bodyGoal: BodyGoal?
+        let goalHorizonMonths: Int?
     }
 
     private var heightValid: Bool { heightCm.map(Self.heightRange.contains) ?? true }
@@ -121,6 +127,22 @@ struct HealthDetailsView: View {
                     }
                 }
                 .accessibilityIdentifier("ios.profile.activityLevelPicker")
+                Picker(tr("Goal"), selection: $bodyGoal) {
+                    Text(tr("Not set")).tag(BodyGoal?.none)
+                    ForEach(BodyGoal.allCases, id: \.self) { goal in
+                        Text(goalLabel(goal)).tag(Optional(goal))
+                    }
+                }
+                .accessibilityIdentifier("ios.profile.bodyGoalPicker")
+                if bodyGoal != nil {
+                    Picker(tr("Horizon"), selection: $goalHorizonMonths) {
+                        Text(tr("Not set")).tag(Int?.none)
+                        Text(tr("3 months")).tag(Optional(3))
+                        Text(tr("6 months")).tag(Optional(6))
+                        Text(tr("12 months")).tag(Optional(12))
+                    }
+                    .accessibilityIdentifier("ios.profile.goalHorizonPicker")
+                }
             } footer: {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(tr("Optional. Body fat, for example from a smart scale, makes calorie and protein estimates more accurate."))
@@ -137,7 +159,7 @@ struct HealthDetailsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: Values(
             unit: unit, heightCm: heightCm, birthYear: birthYear, sex: sex,
-            bodyFatPct: bodyFatPct, activityLevel: activityLevel
+            bodyFatPct: bodyFatPct, activityLevel: activityLevel, bodyGoal: bodyGoal, goalHorizonMonths: goalHorizonMonths
         )) {
             guard heightValid, birthYearValid, bodyFatValid else { return }
             autosave.schedule { await save() }
@@ -182,6 +204,15 @@ struct HealthDetailsView: View {
         }
     }
 
+    private func goalLabel(_ goal: BodyGoal) -> String {
+        switch goal {
+        case .BUILD_MUSCLE: return tr("Build muscle")
+        case .LOSE_FAT: return tr("Lose fat")
+        case .RECOMP: return tr("Recomp")
+        case .MAINTAIN: return tr("Maintain")
+        }
+    }
+
     private func hint(_ text: String) -> some View {
         Text(text)
             .font(.footnote)
@@ -196,6 +227,8 @@ struct HealthDetailsView: View {
         prefs.sex = sex.isEmpty ? nil : sex
         prefs.bodyFatPct = bodyFatPct
         prefs.activityLevel = activityLevel
+        prefs.bodyGoal = bodyGoal
+        prefs.goalHorizonMonths = goalHorizonMonths
         var dto = UpdatePreferencesDto()
         dto.weightUnit = unit
         // Empty fields are sent as null so clearing them also clears them on the server.
@@ -204,6 +237,8 @@ struct HealthDetailsView: View {
         dto.setOrClear(\.sex, prefs.sex, key: .sex)
         dto.setOrClear(\.bodyFatPct, bodyFatPct, key: .bodyFatPct)
         dto.setOrClear(\.activityLevel, activityLevel, key: .activityLevel)
+        dto.setOrClear(\.bodyGoal, bodyGoal, key: .bodyGoal)
+        dto.setOrClear(\.goalHorizonMonths, goalHorizonMonths, key: .goalHorizonMonths)
         let error = await viewModel.savePreferences(prefs, server: dto)
         viewModel.rescheduleWeighInReminders()
         return error

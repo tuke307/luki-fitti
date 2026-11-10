@@ -32,6 +32,29 @@ public struct HomeDashboardView: View {
                 }
 
                 WeightHomeCard(viewModel: viewModel)
+                if !viewModel.progress.datedCheckIns.isEmpty {
+                    NavigationLink {
+                        ProgressListView(viewModel: viewModel)
+                    } label: {
+                        HStack {
+                            Image(systemName: "camera.on.rectangle")
+                                .foregroundStyle(LukiColors.accent)
+                            Text(tr("Progress Photos"))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Text("\(viewModel.progress.datedCheckIns.count)")
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(14)
+                        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
+                    }
+                    .buttonStyle(.plain)
+                }
                 weekCard
                 weeklyVolumeCard
                 musclesCard

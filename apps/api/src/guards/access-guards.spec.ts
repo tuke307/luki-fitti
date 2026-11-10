@@ -83,26 +83,30 @@ describe('FeatureGuard', () => {
 });
 
 describe('resolveActiveFeatures', () => {
-  const on = { aiWorkoutBuilderEnabled: true, aiMealPhotoEnabled: true };
+  const on = { aiWorkoutBuilderEnabled: true, aiMealPhotoEnabled: true, aiProgressTargetEnabled: true };
   const { USER, ADMIN } = AiKeySlot;
 
   it('any usable key enables every globally switched-on feature', () => {
     assert.deepEqual(resolveActiveFeatures(on, USER), [
       FeatureGrant.AI_WORKOUT_BUILDER,
       FeatureGrant.AI_MEAL_PHOTO,
+      FeatureGrant.AI_PROGRESS_TARGET,
     ]);
     assert.deepEqual(resolveActiveFeatures(on, ADMIN), [
       FeatureGrant.AI_WORKOUT_BUILDER,
       FeatureGrant.AI_MEAL_PHOTO,
+      FeatureGrant.AI_PROGRESS_TARGET,
     ]);
   });
 
   it('respects the global switches', () => {
     assert.deepEqual(resolveActiveFeatures({ ...on, aiMealPhotoEnabled: false }, USER), [
       FeatureGrant.AI_WORKOUT_BUILDER,
+      FeatureGrant.AI_PROGRESS_TARGET,
     ]);
     assert.deepEqual(resolveActiveFeatures({ ...on, aiWorkoutBuilderEnabled: false }, ADMIN), [
       FeatureGrant.AI_MEAL_PHOTO,
+      FeatureGrant.AI_PROGRESS_TARGET,
     ]);
   });
 

@@ -13,6 +13,7 @@ export const AI_PROMPT_FILES: Record<AiSkillName, string> = {
   [AiSkillName.WORKOUT_BUILDER]: 'apps/api/src/modules/ai/prompts/workout-builder.md',
   [AiSkillName.MEAL_ANALYZER]: 'apps/api/src/modules/ai/prompts/meal-analyzer.md',
   [AiSkillName.MEAL_TEXT_ANALYZER]: 'apps/api/src/modules/ai/prompts/meal-text-analyzer.md',
+  [AiSkillName.PROGRESS_TARGET]: 'apps/api/src/modules/ai/prompts/progress-target.md',
 };
 
 export const aiPromptRawUrl = (skill: AiSkillName) =>
@@ -38,6 +39,7 @@ export const AiModelChoicesSchema = z
     [AiSkillName.WORKOUT_BUILDER]: AiModelIdSchema.optional(),
     [AiSkillName.MEAL_ANALYZER]: AiModelIdSchema.optional(),
     [AiSkillName.MEAL_TEXT_ANALYZER]: AiModelIdSchema.optional(),
+    [AiSkillName.PROGRESS_TARGET]: AiModelIdSchema.optional(),
   })
   .strict();
 

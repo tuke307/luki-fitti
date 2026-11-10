@@ -78,6 +78,40 @@ export function redactKeys(text: string): string {
 
 export type KeyVerification = 'valid' | 'invalid' | 'unknown';
 
+export interface ImageGenerationRequest {
+  model: string;
+  /** Tried in order only on provider-side failures (5xx or an unavailable-model 4xx). */
+  fallbackModels?: string[];
+  prompt: string;
+  referenceImageDataUrl: string;
+  aspectRatio?: string;
+  /** End-user id hash for provider-side abuse detection (never the raw id/email). */
+  user?: string;
+}
+
+export interface ImageGenerationResponse {
+  model: string;
+  imageBase64: string;
+  mimeType: string;
+  costUsd: number | null;
+}
+
+interface OpenRouterImageRawResponse {
+  model?: string;
+  data?: Array<{ b64_json?: string; media_type?: string }>;
+  usage?: { cost?: number };
+  error?: { message?: string; code?: number };
+}
+
+/** A 4xx that means "this model can't do it", so the next fallback is worth a try. */
+const isModelUnavailableError = (err: AiProviderError) => {
+  if (err.status === undefined) return true;
+  if (err.status === 401 || err.status === 402 || err.status === 429) return false;
+  if (err.status === 404) return true;
+  if (err.status === 400) return /model|unavailable/i.test(err.upstreamMessage ?? '');
+  return err.status >= 500;
+};
+
 /**
  * Stateless OpenRouter client. The API key is passed per call (per-user keys); it is only
  * ever placed in the Authorization header and never logged or echoed.
@@ -171,6 +205,91 @@ export class OpenRouterClient {
         completionTokens: json.usage?.completion_tokens ?? 0,
         costUsd: typeof json.usage?.cost === 'number' ? json.usage.cost : null,
       },
+    };
+  }
+
+  /**
+   * Image generation (`POST /images`). Unlike chat, the endpoint takes exactly one model per
+   * call, so fallbacks are retried here — but never on client-side failures (401/402/429).
+   */
+  async generateImage(request: ImageGenerationRequest, apiKey: string): Promise<ImageGenerationResponse> {
+    if (!apiKey) throw new AiProviderError('AI provider key missing');
+    const models = [request.model, ...(request.fallbackModels ?? [])].filter(
+      (m, i, all) => all.indexOf(m) === i,
+    );
+    let lastError: AiProviderError | null = null;
+    for (const model of models) {
+      try {
+        return await this.callImagesApi(request, model, apiKey);
+      } catch (err) {
+        const wrapped = err instanceof AiProviderError ? err : new AiProviderError(String(err));
+        if (!isModelUnavailableError(wrapped)) throw wrapped;
+        lastError = wrapped;
+      }
+    }
+    throw lastError ?? new AiProviderError('AI provider request failed');
+  }
+
+  private async callImagesApi(
+    request: ImageGenerationRequest,
+    model: string,
+    apiKey: string,
+  ): Promise<ImageGenerationResponse> {
+    const body = {
+      model,
+      prompt: request.prompt,
+      input_references: [
+        { type: 'image_url', image_url: { url: request.referenceImageDataUrl } },
+      ],
+      aspect_ratio: request.aspectRatio ?? '2:3',
+      n: 1,
+      output_format: 'jpeg',
+      ...(request.user ? { user: request.user } : {}),
+    };
+    let response: Response;
+    try {
+      response = await fetch(`${OPENROUTER_BASE_URL}/images`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': FRONTEND_URL,
+          'X-Title': 'LukiFitti',
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(OPENROUTER_TIMEOUT_MS),
+      });
+    } catch (err) {
+      throw new AiProviderError('AI provider request failed', undefined, redactKeys(String(err)));
+    }
+
+    const text = await response.text();
+    let json: OpenRouterImageRawResponse;
+    try {
+      json = JSON.parse(text) as OpenRouterImageRawResponse;
+    } catch {
+      throw new AiProviderError(
+        'AI provider returned an invalid response',
+        response.status,
+        redactKeys(text.slice(0, 500)),
+      );
+    }
+    if (!response.ok || json.error) {
+      throw new AiProviderError(
+        'AI provider returned an error',
+        json.error?.code ?? response.status,
+        redactKeys(json.error?.message ?? text.slice(0, 500)),
+      );
+    }
+    const image = json.data?.[0];
+    if (!image?.b64_json) {
+      throw new AiProviderError('AI provider returned no image', response.status);
+    }
+    return {
+      model: json.model ?? model,
+      imageBase64: image.b64_json,
+      mimeType: image.media_type ?? 'image/jpeg',
+      costUsd: typeof json.usage?.cost === 'number' ? json.usage.cost : null,
     };
   }
 }

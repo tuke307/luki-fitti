@@ -159,6 +159,8 @@ struct AIInfoSheet: View {
             return tr("The photos and your hint. Nothing else about you.")
         case .mealTextAnalyzer:
             return tr("Your meal description and the selected meal. Nothing else about you.")
+        case .progressTarget:
+            return tr("Your front photo, goal, horizon, height, weight, body fat, sex and age. The generated image is not stored on the server.")
         }
     }
 

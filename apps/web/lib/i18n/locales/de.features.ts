@@ -342,6 +342,17 @@ export const deFeatures: Widen<typeof enFeatures> = {
     },
     activityHint:
       'Alltagsaktivität heißt außerhalb des Trainings. Sie zählt nur ohne Apple Health; Trainings kommen immer dazu.',
+    goal: 'Ziel',
+    goalUnset: 'Nicht gesetzt',
+    goalHorizon: 'Zeitraum',
+    goalHorizonUnset: 'Nicht gesetzt',
+    goalHorizonMonths: '{n} Monate',
+    goals: {
+      BUILD_MUSCLE: 'Muskeln aufbauen',
+      LOSE_FAT: 'Fett abnehmen',
+      RECOMP: 'Recomp',
+      MAINTAIN: 'Halten',
+    },
     suggest: 'Aus meinen Angaben vorschlagen',
     suggestHint:
       'Gib Gewicht, Größe, Geburtsjahr und Geschlecht (oder Gewicht und Körperfett) an, um einen Vorschlag zu bekommen.',
@@ -513,6 +524,7 @@ export const deFeatures: Widen<typeof enFeatures> = {
       'workout-builder': 'Workout-Planer',
       'meal-analyzer': 'Mahlzeitenfoto',
       'meal-text-analyzer': 'Mahlzeitenbeschreibung',
+      'progress-target': 'KI-Fortschrittsziel',
     },
     adminCost: 'KI-Kosten (30 Tage)',
     adminDetailTitle: 'KI-Nutzung · {email}',
@@ -537,6 +549,8 @@ export const deFeatures: Widen<typeof enFeatures> = {
       'meal-analyzer': 'Die Fotos und dein Hinweis. Sonst nichts über dich.',
       'meal-text-analyzer':
         'Deine Mahlzeitbeschreibung und die gewählte Mahlzeit. Sonst nichts über dich.',
+      'progress-target':
+        'Dein Frontfoto, Ziel, Zeitraum, Größe, Gewicht, Körperfett, Geschlecht und Alter. Das generierte Bild wird nicht auf dem Server gespeichert.',
     },
     dataNote:
       'Name, E-Mail und Konto-ID werden nie gesendet. OpenRouter leitet die Anfrage an den Modellanbieter weiter.',
@@ -553,7 +567,9 @@ export const deFeatures: Widen<typeof enFeatures> = {
       'workout-builder': 'Workout-Planer',
       'meal-analyzer': 'Mahlzeitfoto',
       'meal-text-analyzer': 'Mahlzeitenbeschreibung',
+      'progress-target': 'KI-Fortschrittsziel',
     },
+    costAfterFirstRun: 'Kosten werden nach dem ersten Durchlauf gezeigt',
     defaultChoice: 'Standard ({model})',
     useDefault: 'Standard verwenden',
     restricted:
@@ -624,5 +640,24 @@ export const deFeatures: Widen<typeof enFeatures> = {
     networkError: 'Server nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.',
     genericError:
       'Der Import ist fehlgeschlagen. Es wurde nichts geändert. Bitte versuche es erneut.',
+  },
+  progress: {
+    title: 'Fortschrittsfotos',
+    sub: 'Gesicherte Check-ins aus der App.',
+    emptyHint:
+      'Aktiviere in der iOS-App das Cloud-Backup, um deine Fortschrittsfotos hier zu sehen.',
+    noPhoto: 'Kein Foto',
+    photoAlt: '{pose}-Foto, {date}',
+    compareTitle: 'Zwei Check-ins vergleichen',
+    compareA: 'Erster Check-in',
+    compareB: 'Zweiter Check-in',
+    poseLabel: 'Pose',
+    aiTargetBadge: 'KI-Ziel',
+    aiTargetAlt: 'KI-Ziel, {date}',
+    poses: {
+      FRONT: 'Vorne',
+      SIDE: 'Seite',
+      BACK: 'Hinten',
+    },
   },
 };

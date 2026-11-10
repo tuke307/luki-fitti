@@ -190,6 +190,7 @@ model User {
   /// Encrypted OpenRouter keys (never select with the user; see UserAiKey).
   aiKeys             UserAiKey[]
   importJobs         ImportJob[]
+  progressCheckIns   ProgressCheckIn[]
 }
 
 model UserPreferences {
@@ -222,6 +223,14 @@ model UserPreferences {
   weighInReminderWeekday     Int          @default(2)
   /// Minutes after local midnight for the weekly weigh-in reminder (450 = 07:30).
   weighInReminderMinutes     Int          @default(450)
+  /// Body goal driving progress tracking (part of the goal section).
+  bodyGoal                   BodyGoal?
+  /// 3, 6 or 12 — validated in the zod schema.
+  goalHorizonMonths          Int?
+  /// Opt-in cloud backup of progress photos (device-only by default).
+  progressPhotoCloudBackup   Boolean      @default(false)
+  /// Consent timestamp for AI target-image generation (part B).
+  progressAiConsentAt        DateTime?
   /// Per-skill OpenRouter model choice: Partial<Record<AiSkillName, modelId>>; null = defaults.
   aiModels                   Json?
   createdAt                  DateTime     @default(now())
@@ -556,6 +565,10 @@ model AppSettings {
   mealPhotoRetentionDays  Int?
   /// Models users on an admin-assigned key may choose from (own-key users may pick any capable model).
   userModelAllowlist      String[] @default([])
+  /// AI "target photo" for progress tracking (part B).
+  aiProgressTargetEnabled Boolean  @default(true)
+  progressTargetModel     String   @default("google/gemini-nano-banana-2.1")
+  progressTargetFallbacks String[] @default(["bytedance-seed/seedream-5-0-flash"])
   updatedAt               DateTime @updatedAt
 }
 
@@ -771,6 +784,68 @@ model Email {
   @@index([emailTemplateId])
   @@index([userId])
   @@index([status, scheduledAt])
+}
+
+enum BodyGoal {
+  BUILD_MUSCLE
+  LOSE_FAT
+  RECOMP
+  MAINTAIN
+}
+
+enum ProgressPose {
+  FRONT
+  SIDE
+  BACK
+}
+
+enum ProgressPhotoKind {
+  PHOTO
+  AI_TARGET
+}
+
+/// A dated progress check-in: up to three pose photos, an optional note and an optional
+/// weigh-in. Photos live on the device by default; cloud backup is the user's opt-in.
+model ProgressCheckIn {
+  id                      String   @id @default(uuid())
+  /// Client-generated id so offline-created check-ins sync idempotently.
+  clientEntryId           String   @unique
+  userId                  String
+  takenAt                 DateTime
+  note                    String?
+  /// The BodyWeightEntry created for this check-in's weight; the weight itself isn't stored here.
+  bodyWeightClientEntryId String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  photos ProgressPhoto[]
+
+  @@index([userId, takenAt])
+}
+
+model ProgressPhoto {
+  id              String            @id @default(uuid())
+  /// Client-generated id so re-uploads replace, never duplicate.
+  clientPhotoId   String            @unique
+  checkInId       String
+  pose            ProgressPose
+  kind            ProgressPhotoKind @default(PHOTO)
+  /// Server-generated storage path `progress/<userId>/<checkInId>/<uuid>.jpg`.
+  storageKey      String            @unique
+  mimeType        String
+  sizeBytes       Int
+  width           Int?
+  height          Int?
+  /// AI generation metadata for kind = AI_TARGET (part B).
+  aiModel         String?
+  aiGoal          BodyGoal?
+  aiHorizonMonths Int?
+  createdAt       DateTime          @default(now())
+
+  checkIn ProgressCheckIn @relation(fields: [checkInId], references: [id], onDelete: Cascade)
+
+  @@index([checkInId])
 }
 
 enum BodyWeightSource {

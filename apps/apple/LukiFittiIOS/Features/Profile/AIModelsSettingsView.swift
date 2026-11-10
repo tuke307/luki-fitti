@@ -87,6 +87,7 @@ struct AIModelsSettingsView: View {
         case .workoutBuilder: return tr("Workout planner")
         case .mealAnalyzer: return tr("Meal photo")
         case .mealTextAnalyzer: return tr("Meal description")
+        case .progressTarget: return tr("AI progress target")
         }
     }
 
@@ -95,6 +96,7 @@ struct AIModelsSettingsView: View {
         case .workoutBuilder: return "dumbbell.fill"
         case .mealAnalyzer: return "camera.fill"
         case .mealTextAnalyzer: return "text.bubble.fill"
+        case .progressTarget: return "sparkles"
         }
     }
 
