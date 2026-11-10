@@ -10,11 +10,14 @@ import {
   MEAL_PHOTO_MIME_TYPES,
   MealAnalysisRequestSchema,
   MealTextAnalysisRequestSchema,
+  ProgressTargetRequestSchema,
   WorkoutBuilderRequestSchema,
   type MealAnalysisRequestDto,
   type MealAnalysisResponseDto,
   type MealTextAnalysisRequestDto,
   type MealTextAnalysisResponseDto,
+  type ProgressTargetRequestDto,
+  type ProgressTargetResponseDto,
   type WorkoutBuilderRequestDto,
   type WorkoutBuilderResponseDto,
 } from '@luki-fitti/common/schemas';
@@ -26,6 +29,7 @@ import { CurrentUser, type AuthenticatedUser } from '@/decorators/current-user.d
 import { RequestLocale } from '@/decorators/request-locale.decorator';
 import { ZodValidationPipe } from '@/pipes/zod-validation.pipe';
 import { AiService } from './ai.service';
+import { ProgressTargetService } from './progress-target.service';
 
 const ALLOWED_UPLOAD_TYPES = new Set<string>(MEAL_PHOTO_MIME_TYPES);
 
@@ -34,7 +38,10 @@ const ALLOWED_UPLOAD_TYPES = new Set<string>(MEAL_PHOTO_MIME_TYPES);
 @Controller('ai')
 @UseGuards(AuthGuard, CsrfGuard, FeatureGuard)
 export class AiController {
-  constructor(private readonly aiService: AiService) {}
+  constructor(
+    private readonly aiService: AiService,
+    private readonly progressTargetService: ProgressTargetService,
+  ) {}
 
   @Post('workout-builder')
   @RequireFeature(FeatureGrant.AI_WORKOUT_BUILDER)
@@ -82,5 +89,25 @@ export class AiController {
     @Body(new ZodValidationPipe(MealTextAnalysisRequestSchema)) body: MealTextAnalysisRequestDto,
   ): Promise<MealTextAnalysisResponseDto> {
     return this.aiService.describeMeal(user.id, locale, body);
+  }
+
+  @Post('progress-target')
+  @RequireFeature(FeatureGrant.AI_PROGRESS_TARGET)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Generate an AI-edited progress target image' })
+  progressTarget(
+    @CurrentUser() user: AuthenticatedUser,
+    @RequestLocale() locale: SupportedLocale,
+    @Body(new ZodValidationPipe(ProgressTargetRequestSchema)) body: ProgressTargetRequestDto,
+  ): Promise<ProgressTargetResponseDto> {
+    return this.progressTargetService.generate(user.id, locale, body);
+  }
+
+  @Post('progress-target/consent')
+  @RequireFeature(FeatureGrant.AI_PROGRESS_TARGET)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Consent to sending body details to the AI model' })
+  progressTargetConsent(@CurrentUser() user: AuthenticatedUser) {
+    return this.progressTargetService.grantConsent(user.id);
   }
 }

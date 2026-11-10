@@ -124,6 +124,9 @@ export class ProgressService {
             sizeBytes: image.buffer.length,
             width: image.width,
             height: image.height,
+            aiModel: dto.aiModel ?? null,
+            aiGoal: dto.aiGoal ?? null,
+            aiHorizonMonths: dto.aiHorizonMonths ?? null,
           },
         });
         await this.storage.deleteMany([previous.storageKey]);
@@ -140,6 +143,9 @@ export class ProgressService {
           sizeBytes: image.buffer.length,
           width: image.width,
           height: image.height,
+          aiModel: dto.aiModel ?? null,
+          aiGoal: dto.aiGoal ?? null,
+          aiHorizonMonths: dto.aiHorizonMonths ?? null,
         },
       });
       return this.toPhotoDto(photo);

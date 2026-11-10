@@ -264,6 +264,7 @@ export const ADMIN_PERMISSION_LABELS: Record<AdminPermission, { en: string; de: 
 export enum FeatureGrant {
   AI_WORKOUT_BUILDER = 'AI_WORKOUT_BUILDER',
   AI_MEAL_PHOTO = 'AI_MEAL_PHOTO',
+  AI_PROGRESS_TARGET = 'AI_PROGRESS_TARGET',
 }
 
 export const FEATURE_GRANTS: FeatureGrant[] = Object.values(FeatureGrant);
@@ -271,6 +272,7 @@ export const FEATURE_GRANTS: FeatureGrant[] = Object.values(FeatureGrant);
 export const FEATURE_GRANT_LABELS: Record<FeatureGrant, { en: string; de: string }> = {
   [FeatureGrant.AI_WORKOUT_BUILDER]: { en: 'AI workout builder', de: 'KI-Workout-Planer' },
   [FeatureGrant.AI_MEAL_PHOTO]: { en: 'AI meal estimate', de: 'KI-Mahlzeitenschätzung' },
+  [FeatureGrant.AI_PROGRESS_TARGET]: { en: 'AI progress target', de: 'KI-Fortschrittsziel' },
 };
 
 export const isAdminPermission = (value: string): value is AdminPermission =>
@@ -283,6 +285,7 @@ export enum AiSkillName {
   WORKOUT_BUILDER = 'workout-builder',
   MEAL_ANALYZER = 'meal-analyzer',
   MEAL_TEXT_ANALYZER = 'meal-text-analyzer',
+  PROGRESS_TARGET = 'progress-target',
 }
 
 /** Who provided the OpenRouter key: the user themselves (BYOK) or an admin for that user. */

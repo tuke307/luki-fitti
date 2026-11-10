@@ -27,10 +27,13 @@ const splitList = (value: string) =>
 interface FormState {
   aiWorkoutBuilderEnabled: boolean;
   aiMealPhotoEnabled: boolean;
+  aiProgressTargetEnabled: boolean;
   workoutBuilderModel: string;
   workoutBuilderFallbacks: string;
   mealPhotoModel: string;
   mealPhotoFallbacks: string;
+  progressTargetModel: string;
+  progressTargetFallbacks: string;
   aiDailyRunLimit: string;
   mealPhotoRetentionDays: string;
   userModelAllowlist: string[];
@@ -39,10 +42,13 @@ interface FormState {
 const toForm = (s: AiSettingsDto): FormState => ({
   aiWorkoutBuilderEnabled: s.aiWorkoutBuilderEnabled,
   aiMealPhotoEnabled: s.aiMealPhotoEnabled,
+  aiProgressTargetEnabled: s.aiProgressTargetEnabled,
   workoutBuilderModel: s.workoutBuilderModel,
   workoutBuilderFallbacks: s.workoutBuilderFallbacks.join(', '),
   mealPhotoModel: s.mealPhotoModel,
   mealPhotoFallbacks: s.mealPhotoFallbacks.join(', '),
+  progressTargetModel: s.progressTargetModel,
+  progressTargetFallbacks: s.progressTargetFallbacks.join(', '),
   aiDailyRunLimit: String(s.aiDailyRunLimit),
   mealPhotoRetentionDays: s.mealPhotoRetentionDays === null ? '' : String(s.mealPhotoRetentionDays),
   userModelAllowlist: s.userModelAllowlist,
@@ -92,6 +98,9 @@ function AiSettingsForm({
       workoutBuilderFallbacks: splitList(form.workoutBuilderFallbacks),
       mealPhotoModel: form.mealPhotoModel.trim(),
       mealPhotoFallbacks: splitList(form.mealPhotoFallbacks),
+      aiProgressTargetEnabled: form.aiProgressTargetEnabled,
+      progressTargetModel: form.progressTargetModel.trim(),
+      progressTargetFallbacks: splitList(form.progressTargetFallbacks),
       aiDailyRunLimit: Number(form.aiDailyRunLimit),
       mealPhotoRetentionDays: form.mealPhotoRetentionDays.trim()
         ? Number(form.mealPhotoRetentionDays)
@@ -183,6 +192,7 @@ function AiSettingsForm({
             [
               [FeatureGrant.AI_WORKOUT_BUILDER, 'aiWorkoutBuilderEnabled'],
               [FeatureGrant.AI_MEAL_PHOTO, 'aiMealPhotoEnabled'],
+              [FeatureGrant.AI_PROGRESS_TARGET, 'aiProgressTargetEnabled'],
             ] as const
           ).map(([grant, key]) => (
             <label
@@ -226,6 +236,19 @@ function AiSettingsForm({
                 autoCapitalize: 'off',
               })}
               {field('mealPhotoFallbacks', t.admin.fallbackModels, {
+                spellCheck: false,
+                autoCapitalize: 'off',
+              })}
+            </div>
+            <div className="space-y-3">
+              <p className="text-[0.9375rem] font-semibold">
+                {FEATURE_GRANT_LABELS[FeatureGrant.AI_PROGRESS_TARGET][locale]}
+              </p>
+              {field('progressTargetModel', t.admin.primaryModel, {
+                spellCheck: false,
+                autoCapitalize: 'off',
+              })}
+              {field('progressTargetFallbacks', t.admin.fallbackModels, {
                 spellCheck: false,
                 autoCapitalize: 'off',
               })}

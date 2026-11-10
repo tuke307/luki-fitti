@@ -143,6 +143,8 @@ export const UpdatePreferencesSchema = z.object({
   bodyGoal: z.enum(BODY_GOALS).nullable().optional(),
   goalHorizonMonths: z.union([z.literal(3), z.literal(6), z.literal(12)]).nullable().optional(),
   progressPhotoCloudBackup: z.boolean().optional(),
+  /** Withdraw AI consent; only null is accepted (granting goes through the consent endpoint). */
+  progressAiConsentAt: z.null().optional(),
   /** Per-skill model choice; replaces the stored map (null clears every choice). */
   aiModels: AiModelChoicesSchema.nullable().optional(),
 });

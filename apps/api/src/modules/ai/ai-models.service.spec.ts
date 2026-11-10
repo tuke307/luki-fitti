@@ -166,6 +166,7 @@ function service(opts: {
       available: opts.catalogAvailable ?? true,
       models: opts.catalogAvailable === false ? [] : catalog,
     }),
+    imageCatalog: async () => ({ available: true, models: [] }),
   } as unknown as OpenRouterModelsService;
   return { svc: new AiModelsService(prisma, settings, models), runQueries };
 }
