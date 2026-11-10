@@ -336,6 +336,17 @@ export const enFeatures = {
     },
     activityHint:
       'Everyday activity means outside workouts. It’s only used without Apple Health; workouts are always added on top.',
+    goal: 'Goal',
+    goalUnset: 'Not set',
+    goalHorizon: 'Horizon',
+    goalHorizonUnset: 'Not set',
+    goalHorizonMonths: '{n} months',
+    goals: {
+      BUILD_MUSCLE: 'Build muscle',
+      LOSE_FAT: 'Lose fat',
+      RECOMP: 'Recomp',
+      MAINTAIN: 'Maintain',
+    },
     suggest: 'Suggest from my details',
     suggestHint:
       'Add weight, height, year of birth and sex (or weight and body fat) to get a suggestion.',
@@ -609,5 +620,21 @@ export const enFeatures = {
     rateLimited: 'Too many imports. Please try again in an hour.',
     networkError: 'Couldn’t reach the server. Check your connection and try again.',
     genericError: 'The import failed. Nothing was changed. Please try again.',
+  },
+  progress: {
+    title: 'Progress photos',
+    sub: 'Backed-up check-ins from the app.',
+    emptyHint: 'Turn on cloud backup in the iOS app to see your progress photos here.',
+    noPhoto: 'No photo',
+    photoAlt: '{pose} photo, {date}',
+    compareTitle: 'Compare two check-ins',
+    compareA: 'First check-in',
+    compareB: 'Second check-in',
+    poseLabel: 'Pose',
+    poses: {
+      FRONT: 'Front',
+      SIDE: 'Side',
+      BACK: 'Back',
+    },
   },
 };
