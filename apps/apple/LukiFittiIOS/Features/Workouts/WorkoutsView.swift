@@ -68,7 +68,7 @@ public struct WorkoutsView: View {
                     EmptyView()
                 } header: {
                     HStack {
-                        Text(tr("Your plans, grouped by split."))
+                        Text(tr("Your workouts, in folders you name and order."))
                             .textCase(nil)
                         Spacer()
                         Button(areAllExpanded ? tr("Collapse All") : tr("Expand All")) {

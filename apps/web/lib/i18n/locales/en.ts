@@ -251,7 +251,7 @@ export const en = {
   },
   workouts: {
     title: 'Workouts',
-    subtitle: 'Your plans, grouped by split.',
+    subtitle: 'Your workouts, in folders you name and order.',
     newFolder: 'New Folder',
     newWorkout: 'New Workout',
     totalLabel: 'Total:',

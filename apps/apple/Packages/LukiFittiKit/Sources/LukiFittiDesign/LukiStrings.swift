@@ -316,7 +316,7 @@ public enum LukiStrings {
         "Your alternatives": "Deine Alternativen",
         "Your name": "Dein Name",
         "Your password has been reset. Sign in with the new one.": "Dein Passwort wurde zurückgesetzt. Melde dich mit dem neuen an.",
-        "Your plans, grouped by split.": "Deine Pläne, nach Split sortiert.",
+        "Your workouts, in folders you name and order.": "Deine Workouts, in Ordnern, die du selbst benennst und sortierst.",
         "e.g. Push A — Chest, Shoulders & Triceps": "z. B. Push A — Brust, Schultern & Trizeps",
         "reps": "Wdh.",
         "sec": "Sek.",

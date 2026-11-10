@@ -57,7 +57,9 @@ test.describe('PWA Shell, Navigation & Preferences', () => {
 
     // Navigate to Workouts and confirm German headings render
     await navigateToTab(page, 'workouts');
-    await expect(page.getByText('Deine Pläne, nach Split sortiert.')).toBeVisible();
+    await expect(
+      page.getByText('Deine Workouts, in Ordnern, die du selbst benennst und sortierst.'),
+    ).toBeVisible();
 
     // Switch back to English
     await navigateToTab(page, 'profile');

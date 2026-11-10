@@ -252,7 +252,7 @@ export const de = {
   },
   workouts: {
     title: 'Workouts',
-    subtitle: 'Deine Pläne, nach Split sortiert.',
+    subtitle: 'Deine Workouts, in Ordnern, die du selbst benennst und sortierst.',
     newFolder: 'Neuer Ordner',
     newWorkout: 'Neues Workout',
     totalLabel: 'Gesamt:',
