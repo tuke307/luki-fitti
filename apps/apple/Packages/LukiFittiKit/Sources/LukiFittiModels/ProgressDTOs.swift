@@ -90,3 +90,24 @@ public struct UpsertProgressCheckInDto: Codable, Sendable, Equatable, Hashable {
         self.bodyWeightClientEntryId = bodyWeightClientEntryId
     }
 }
+
+public struct ProgressTargetRequestDto: Encodable, Sendable {
+    public var imageBase64: String
+    public var goal: BodyGoal
+    public var horizonMonths: Int
+    public var pose: ProgressPose = .FRONT
+
+    public init(imageBase64: String, goal: BodyGoal, horizonMonths: Int) {
+        self.imageBase64 = imageBase64
+        self.goal = goal
+        self.horizonMonths = horizonMonths
+    }
+}
+
+public struct ProgressTargetResponseDto: Codable, Sendable, Equatable {
+    public var imageBase64: String
+    public var mimeType: String
+    public var model: String
+    public var costUsd: Double?
+    public var runId: String
+}

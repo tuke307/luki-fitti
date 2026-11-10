@@ -22,6 +22,8 @@ public struct ProgressListView: View {
 
     public var body: some View {
         List {
+            ProgressTargetCard(viewModel: viewModel)
+            ProgressTargetSection(viewModel: viewModel)
             if checkIns.isEmpty {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {

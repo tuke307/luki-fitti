@@ -531,6 +531,9 @@ public actor APIClient {
         clientPhotoId: String,
         pose: ProgressPose,
         kind: ProgressPhotoKind,
+        aiModel: String? = nil,
+        aiGoal: BodyGoal? = nil,
+        aiHorizonMonths: Int? = nil,
         jpeg: Data
     ) async throws -> ProgressPhotoDto {
         let boundary = "LukiFitti-\(UUID().uuidString)"
@@ -541,6 +544,9 @@ public actor APIClient {
         field("clientPhotoId", clientPhotoId)
         field("pose", pose.rawValue)
         field("kind", kind.rawValue)
+        if let aiModel { field("aiModel", aiModel) }
+        if let aiGoal { field("aiGoal", aiGoal.rawValue) }
+        if let aiHorizonMonths { field("aiHorizonMonths", String(aiHorizonMonths)) }
         body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"photo.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n".utf8))
         body.append(jpeg)
         body.append(Data("\r\n--\(boundary)--\r\n".utf8))
@@ -551,6 +557,24 @@ public actor APIClient {
             contentType: "multipart/form-data; boundary=\(boundary)"
         )
         return try Self.decodeEnvelope(data)
+    }
+
+    /// One-time consent for the AI progress target.
+    @discardableResult
+    public func grantProgressTargetConsent() async throws -> String {
+        struct Resp: Decodable { let progressAiConsentAt: String }
+        let res: Resp = try await request(path: "/api/ai/progress-target/consent", method: "POST")
+        return res.progressAiConsentAt
+    }
+
+    /// AI progress target generation; the image comes back base64 and is never stored server-side.
+    public func generateProgressTarget(
+        imageBase64: String,
+        goal: BodyGoal,
+        horizonMonths: Int
+    ) async throws -> ProgressTargetResponseDto {
+        let dto = ProgressTargetRequestDto(imageBase64: imageBase64, goal: goal, horizonMonths: horizonMonths)
+        return try await request(path: "/api/ai/progress-target", method: "POST", body: dto)
     }
 
     public func deleteProgressPhoto(id: String) async throws {

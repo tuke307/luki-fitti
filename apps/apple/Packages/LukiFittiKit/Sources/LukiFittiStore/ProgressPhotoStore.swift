@@ -16,6 +16,9 @@ public struct ProgressOutboxItem: Codable, Sendable, Equatable {
     public var clientPhotoId: String?
     public var pose: ProgressPose?
     public var photoKind: ProgressPhotoKind?
+    public var aiModel: String?
+    public var aiGoal: BodyGoal?
+    public var aiHorizonMonths: Int?
     public var serverId: String?
 }
 
@@ -130,6 +133,42 @@ public final class ProgressPhotoStore {
         enqueue(.init(kind: .photo, clientEntryId: checkInClientEntryId, clientPhotoId: clientPhotoId, pose: pose, photoKind: .PHOTO))
         await flush(isSignedIn: isSignedIn)
         return photo
+    }
+
+    /// The pinned "target" entry holding AI_TARGET photos (never in the dated timeline).
+    public static let targetClientEntryId = "ai-progress-target"
+
+    /// Saves a generated image as an AI_TARGET photo on the pinned target entry and queues the
+    /// upload with its AI provenance when backup is on.
+    public func addTargetPhoto(
+        data: Data,
+        aiModel: String,
+        aiGoal: BodyGoal,
+        aiHorizonMonths: Int,
+        isSignedIn: Bool
+    ) async -> ProgressPhotoDto? {
+        guard let jpeg = Self.normalizedJpeg(data) else { return nil }
+        var checkIn = checkIn(clientEntryId: Self.targetClientEntryId)
+            ?? ProgressCheckInDto(clientEntryId: Self.targetClientEntryId)
+        let clientPhotoId = UUID().uuidString
+        let file = "\(clientPhotoId).jpg"
+        do {
+            try jpeg.write(to: directory.appendingPathComponent(file), options: .atomic)
+        } catch { return nil }
+        var photo = ProgressPhotoDto(
+            clientPhotoId: clientPhotoId, pose: .FRONT, kind: .AI_TARGET, localFile: file
+        )
+        photo.sizeBytes = jpeg.count
+        checkIn.photos.append(photo)
+        replace(checkIn)
+        enqueue(.init(kind: .photo, clientEntryId: checkIn.clientEntryId, clientPhotoId: clientPhotoId, pose: .FRONT, photoKind: .AI_TARGET, aiModel: aiModel, aiGoal: aiGoal, aiHorizonMonths: aiHorizonMonths))
+        await flush(isSignedIn: isSignedIn)
+        return photo
+    }
+
+    /// AI_TARGET photos live on the pinned target entry, newest first.
+    public var targetPhotos: [ProgressPhotoDto] {
+        (checkIn(clientEntryId: Self.targetClientEntryId)?.photos ?? []).reversed()
     }
 
     public func removePhoto(_ photo: ProgressPhotoDto, from checkInClientEntryId: String, isSignedIn: Bool) async {
@@ -267,6 +306,9 @@ public final class ProgressPhotoStore {
                     clientPhotoId: clientPhotoId,
                     pose: pose,
                     kind: item.photoKind ?? .PHOTO,
+                    aiModel: item.aiModel,
+                    aiGoal: item.aiGoal,
+                    aiHorizonMonths: item.aiHorizonMonths,
                     jpeg: jpeg
                 ) {
                     var remote = uploaded
