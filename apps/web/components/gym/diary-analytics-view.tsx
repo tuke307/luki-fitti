@@ -15,6 +15,8 @@ import {
   Watch,
   Smartphone,
   ChevronRight,
+  Minus,
+  Plus,
 } from 'lucide-react';
 import {
   Area,
@@ -60,9 +62,10 @@ import { MobileSheet } from './mobile-sheet';
 import { PageTitle } from './page-title';
 import { ConfirmDestructiveDialog } from './confirm-destructive-dialog';
 import { NumberInput } from './number-input';
-import { bigVolume, formatVolume, unitLabel, weightInUnit } from '@/lib/format/weight';
+import { bigVolume, formatVolume, unitLabel, weightInUnit, weightStep } from '@/lib/format/weight';
 import { getSetBadgeLabels, SET_TYPE_TEXT_CLASS, SetTypeBadge } from './set-type-badge';
 import { SetTypeMenu, STRENGTH_SET_TYPES } from './set-type-menu';
+import { stepperBtnClass } from './session-set-row';
 
 const LBS_TO_KG = 0.45359237;
 
@@ -108,6 +111,28 @@ export function DiaryAnalyticsView() {
                     sets: orderWarmupsFirst(
                       ex.sets.map((s) => (s.clientSetId === clientSetId ? { ...s, setType } : s)),
                     ).map((s, idx) => ({ ...s, setNumber: idx + 1 })),
+                  }
+                : ex,
+            ),
+          }
+        : null,
+    );
+  const patchInspectedSet = (
+    clientExerciseId: string,
+    clientSetId: string,
+    changes: Partial<{ weight: number | null; reps: number | null }>,
+  ) =>
+    setInspectingSession((prev) =>
+      prev
+        ? {
+            ...prev,
+            exercises: prev.exercises.map((ex) =>
+              ex.clientExerciseId === clientExerciseId
+                ? {
+                    ...ex,
+                    sets: ex.sets.map((s) =>
+                      s.clientSetId === clientSetId ? { ...s, ...changes } : s,
+                    ),
                   }
                 : ex,
             ),
@@ -1234,61 +1259,134 @@ export function DiaryAnalyticsView() {
                           )}
                         </div>
                         <div className="ml-auto flex shrink-0 items-center gap-2">
-                          <Label className="text-muted-foreground text-xs">{weightUnit}</Label>
-                          <NumberInput
-                            allowNull
-                            step="0.5"
-                            min={0}
-                            value={set.weight}
-                            onValueChange={(val) => {
-                              setInspectingSession((prev) => {
-                                if (!prev) return null;
-                                return {
-                                  ...prev,
-                                  exercises: prev.exercises.map((item) =>
-                                    item.clientExerciseId === ex.clientExerciseId
-                                      ? {
-                                          ...item,
-                                          sets: item.sets.map((st) =>
-                                            st.clientSetId === set.clientSetId
-                                              ? { ...st, weight: val }
-                                              : st,
-                                          ),
-                                        }
-                                      : item,
-                                  ),
-                                };
-                              });
-                            }}
-                            className="bg-secondary tabular-nums h-8 w-16 px-2 text-center text-xs sm:h-7"
-                          />
-                          <Label className="text-muted-foreground text-xs">{t.common.reps}</Label>
-                          <NumberInput
-                            allowNull
-                            min={0}
-                            value={set.reps}
-                            onValueChange={(val) => {
-                              setInspectingSession((prev) => {
-                                if (!prev) return null;
-                                return {
-                                  ...prev,
-                                  exercises: prev.exercises.map((item) =>
-                                    item.clientExerciseId === ex.clientExerciseId
-                                      ? {
-                                          ...item,
-                                          sets: item.sets.map((st) =>
-                                            st.clientSetId === set.clientSetId
-                                              ? { ...st, reps: val }
-                                              : st,
-                                          ),
-                                        }
-                                      : item,
-                                  ),
-                                };
-                              });
-                            }}
-                            className="bg-secondary tabular-nums h-8 w-14 px-2 text-center text-xs sm:h-7"
-                          />
+                          {/* Compact inline inputs on md+; −/+ steppers on touch/narrow screens. */}
+                          <div className="hidden items-center gap-2 md:flex">
+                            <Label className="text-muted-foreground text-xs">{weightUnit}</Label>
+                            <NumberInput
+                              allowNull
+                              step="0.5"
+                              min={0}
+                              value={set.weight}
+                              onValueChange={(val) =>
+                                patchInspectedSet(ex.clientExerciseId, set.clientSetId, {
+                                  weight: val,
+                                })
+                              }
+                              className="bg-secondary tabular-nums h-8 w-16 px-2 text-center text-xs sm:h-7"
+                            />
+                            <Label className="text-muted-foreground text-xs">{t.common.reps}</Label>
+                            <NumberInput
+                              allowNull
+                              min={0}
+                              value={set.reps}
+                              onValueChange={(val) =>
+                                patchInspectedSet(ex.clientExerciseId, set.clientSetId, {
+                                  reps: val,
+                                })
+                              }
+                              className="bg-secondary tabular-nums h-8 w-14 px-2 text-center text-xs sm:h-7"
+                            />
+                          </div>
+                          <div className="flex items-center gap-1.5 md:hidden">
+                            <div className="bg-secondary flex h-11 min-w-[6.5rem] items-center rounded-xl px-0">
+                              <button
+                                type="button"
+                                data-testid={`diary-weight-minus-${exIdx + 1}-${sIdx + 1}`}
+                                aria-label={format(t.a11y.decreaseWeight, {
+                                  step: weightStep(set.weightUnit),
+                                  n: sIdx + 1,
+                                })}
+                                onClick={() =>
+                                  patchInspectedSet(ex.clientExerciseId, set.clientSetId, {
+                                    weight: Math.max(
+                                      0,
+                                      (set.weight ?? 0) - weightStep(set.weightUnit),
+                                    ),
+                                  })
+                                }
+                                className={stepperBtnClass}
+                              >
+                                <Minus className="h-4 w-4" />
+                              </button>
+                              <div className="flex min-w-0 flex-1 items-baseline justify-center gap-0.5">
+                                <NumberInput
+                                  variant="bare"
+                                  allowNull
+                                  min={0}
+                                  aria-label={format(t.a11y.setWeight, { n: sIdx + 1 })}
+                                  value={set.weight}
+                                  onValueChange={(val) =>
+                                    patchInspectedSet(ex.clientExerciseId, set.clientSetId, {
+                                      weight: val,
+                                    })
+                                  }
+                                  placeholder="0"
+                                  className="font-rounded w-full min-w-10 bg-transparent text-center text-sm font-semibold outline-none"
+                                />
+                                <span className="text-muted-foreground text-[0.8125rem]">
+                                  {unit}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                data-testid={`diary-weight-plus-${exIdx + 1}-${sIdx + 1}`}
+                                aria-label={format(t.a11y.increaseWeight, {
+                                  step: weightStep(set.weightUnit),
+                                  n: sIdx + 1,
+                                })}
+                                onClick={() =>
+                                  patchInspectedSet(ex.clientExerciseId, set.clientSetId, {
+                                    weight: (set.weight ?? 0) + weightStep(set.weightUnit),
+                                  })
+                                }
+                                className={stepperBtnClass}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </button>
+                            </div>
+                            <div className="bg-secondary flex h-11 min-w-[6rem] items-center rounded-xl px-0">
+                              <button
+                                type="button"
+                                data-testid={`diary-reps-minus-${exIdx + 1}-${sIdx + 1}`}
+                                aria-label={format(t.a11y.decreaseReps, { n: sIdx + 1 })}
+                                onClick={() =>
+                                  patchInspectedSet(ex.clientExerciseId, set.clientSetId, {
+                                    reps: Math.max(0, (set.reps ?? 0) - 1),
+                                  })
+                                }
+                                className={stepperBtnClass}
+                              >
+                                <Minus className="h-4 w-4" />
+                              </button>
+                              <NumberInput
+                                variant="bare"
+                                allowNull
+                                min={0}
+                                aria-label={format(t.a11y.setReps, { n: sIdx + 1 })}
+                                value={set.reps}
+                                onValueChange={(val) =>
+                                  patchInspectedSet(ex.clientExerciseId, set.clientSetId, {
+                                    reps: val,
+                                  })
+                                }
+                                placeholder="0"
+                                className="font-rounded w-full min-w-8 bg-transparent text-center text-sm font-semibold outline-none"
+                              />
+                              <button
+                                type="button"
+                                data-testid={`diary-reps-plus-${exIdx + 1}-${sIdx + 1}`}
+                                aria-label={format(t.a11y.increaseReps, { n: sIdx + 1 })}
+                                onClick={() =>
+                                  patchInspectedSet(ex.clientExerciseId, set.clientSetId, {
+                                    reps: (set.reps ?? 0) + 1,
+                                  })
+                                }
+                                className={stepperBtnClass}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     ))}

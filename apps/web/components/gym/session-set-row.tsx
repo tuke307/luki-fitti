@@ -21,6 +21,10 @@ import { SET_TYPE_TEXT_CLASS } from './set-type-badge';
 import { SetTypeMenu } from './set-type-menu';
 import { SwipeRow } from './swipe-row';
 
+/** Shared −/+ stepper button look (also used by the diary editor on narrow screens). */
+export const stepperBtnClass =
+  'text-foreground/70 hover:text-foreground flex h-11 w-8 shrink-0 items-center justify-center rounded-lg transition-colors active:bg-background/70';
+
 /** Aligns progression suggestions to sets: only working-type sets get one (warm-ups/stretches don't). */
 export function alignSetSuggestions(
   exercise: SessionExerciseDto,
@@ -138,8 +142,7 @@ export function SessionSetRow({
     ((weightBadgeLabel && setSuggestion.suggestedWeight !== null) ||
       (repsBadgeLabel && setSuggestion.suggestedReps !== null));
 
-  const stepperBtn =
-    'text-foreground/70 hover:text-foreground flex h-11 w-8 shrink-0 items-center justify-center rounded-lg transition-colors active:bg-background/70';
+  const stepperBtn = stepperBtnClass;
   const isSpecialType = set.setType !== SetType.WORKING;
 
   return (
