@@ -92,41 +92,23 @@ struct HistorySessionEditorSheet: View {
         let samples = draft.heartRateSamples ?? []
         if draft.activeCaloriesKcal != nil || draft.avgHeartRateBpm != nil || !samples.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Label {
-                        Text(tr("Heart rate"))
-                    } icon: {
-                        Image(systemName: "heart.fill")
-                    }
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(LukiColors.heartRate)
-                    Spacer()
-                    HStack(spacing: 8) {
-                        if let kcal = draft.activeCaloriesKcal {
-                            Text("\(Int(kcal.rounded())) kcal")
-                                .foregroundStyle(LukiColors.warning)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 2)
-                                .background(LukiColors.warning.opacity(0.15), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-                        }
-                        if let avg = draft.avgHeartRateBpm {
-                            Text(tr("Avg HR: %d bpm", avg))
-                                .foregroundStyle(LukiColors.heartRate)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 2)
-                                .background(LukiColors.heartRate.opacity(0.15), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-                        }
-                        if let maxHr = draft.maxHeartRateBpm {
-                            Text(tr("Max HR: %d bpm", maxHr))
-                                .foregroundStyle(LukiColors.heartRate)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 2)
-                                .background(LukiColors.heartRate.opacity(0.15), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-                        }
-                    }
-                    .font(.caption.weight(.bold))
-                    .monospacedDigit()
+                Label {
+                    Text(tr("Heart rate"))
+                } icon: {
+                    Image(systemName: "heart.fill")
                 }
+                .font(.caption.weight(.bold))
+                .foregroundStyle(LukiColors.heartRate)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        heartRateChips
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        heartRateChips
+                    }
+                }
+                .font(.caption.weight(.bold))
+                .monospacedDigit()
 
                 if samples.count > 1 {
                     let bpms = samples.map(\.bpm)
@@ -269,6 +251,31 @@ struct HistorySessionEditorSheet: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("ios.diary.setRow.\(id)")
+    }
+
+    @ViewBuilder
+    private var heartRateChips: some View {
+        if let kcal = draft.activeCaloriesKcal {
+            Text("\(Int(kcal.rounded())) kcal")
+                .foregroundStyle(LukiColors.warning)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 2)
+                .background(LukiColors.warning.opacity(0.15), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+        }
+        if let avg = draft.avgHeartRateBpm {
+            Text(tr("Avg HR: %d bpm", avg))
+                .foregroundStyle(LukiColors.heartRate)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 2)
+                .background(LukiColors.heartRate.opacity(0.15), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+        }
+        if let maxHr = draft.maxHeartRateBpm {
+            Text(tr("Max HR: %d bpm", maxHr))
+                .foregroundStyle(LukiColors.heartRate)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 2)
+                .background(LukiColors.heartRate.opacity(0.15), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+        }
     }
 
     /// "142 bpm peak · 118 bpm recovery" — same copy as the web chip.
