@@ -8,8 +8,9 @@
 // Landing: the same framed device WITHOUT text — iPhone/Watch shots at 660px, the iPad
 // shot at 880px under screens/<lang>/ipad/. App Store outputs are flattened (no alpha —
 // App Store rejects transparency); landing images keep theirs.
-// Frames are Apple bezel PNGs in marketing/frames/ (gitignored; extract from Apple's
-// design-resource DMGs once via scripts/fetch-frames.sh or manually).
+// Frames are Apple bezel PNGs in marketing/frames/ (gitignored, Apple-owned; how to get
+// them: docs/release.md → "Device frames"). A missing frame falls back to a rounded
+// screenshot, or to the CSS bezel for devices with "bezel": true (iPad).
 import { chromium } from 'playwright';
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';

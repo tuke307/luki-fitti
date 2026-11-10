@@ -175,6 +175,38 @@ After the upload, App Store Connect processes the build, and then it shows up un
 | Produktseite Kopfzeile                 | `creative/universal.png` |
 | Suchergebnisse                         | `creative/universal.png` |
 
+## App Review video
+
+Apple may ask for a screen recording that shows the app running on a real device,
+including account creation and deletion. `AppReviewWalkthroughUITests` performs the
+whole walkthrough (workout → history → library → food → register → verify email →
+delete account) and Xcode records it as a video per language.
+
+Prereqs:
+
+- Local dev stack running: `docker compose up -d` plus `yarn workspace @luki-fitti/api dev`
+  and `yarn workspace @luki-fitti/email-worker dev` (leave them running).
+- A physical iPhone, unlocked, on the same Wi-Fi as the Mac, with Developer Mode and
+  **Settings › Developer › Enable UI Automation** turned on, paired/trusted to the Mac.
+- `Config/Local.xcconfig` signing set up (already the case for development).
+- On the first run iOS asks LukiFitti for Local Network access (dev API + Mailpit) —
+  allow it. If it was denied before, re-enable it in
+  **Settings › Privacy & Security › Local Network**.
+
+```bash
+yarn workspace @luki-fitti/apple review:video
+```
+
+The script picks the first paired iPhone (override `DEVICE_UDID`), makes sure the API is
+reachable from the phone over LAN (`HOST_IP` override; falls back to a local relay port
+when the Mac firewall blocks the dev server), records one test per language and exports
+the videos to `apps/apple/build/app-review/LukiFitti-<version>-<en|de>.mp4`
+(the folder is gitignored). Attach the full-res
+file under **App Review Information › Anhang** in App Store Connect. A compressed
+720p copy (macOS `avconvert`, `Preset1280x720`) additionally lands in
+`apps/apple/marketing/appstore/<en-US|de-DE>/app-walkthrough/LukiFitti.mp4` when it
+comes out under 20 MB — that one is for the repo/landing, not for upload.
+
 ## Security
 
 - **Repo secrets:** Every workflow can read them, and anyone with write access can push a workflow.
