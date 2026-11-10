@@ -160,6 +160,9 @@ function createMockPrisma() {
     refreshToken: {
       deleteMany: async () => ({ count: refreshTokens.length }),
     },
+    progressPhoto: {
+      findMany: async () => [],
+    },
     $transaction: async <T>(fn: (tx: unknown) => Promise<T>) => fn(prisma),
   };
 

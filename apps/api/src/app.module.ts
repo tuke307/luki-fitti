@@ -19,6 +19,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { NutritionModule } from './modules/nutrition/nutrition.module';
 import { BodyWeightModule } from './modules/body-weight/body-weight.module';
+import { ProgressModule } from './modules/progress/progress.module';
 import { ActivityModule } from './modules/activity/activity.module';
 import { AiModule } from './modules/ai/ai.module';
 import { ImportModule } from './modules/import/import.module';
@@ -52,6 +53,7 @@ import { NODE_ENV } from './config/env.config';
     AdminModule,
     NutritionModule,
     BodyWeightModule,
+    ProgressModule,
     ActivityModule,
     AiModule,
     ImportModule,
