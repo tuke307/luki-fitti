@@ -31,4 +31,26 @@ final class IOSExercisesAndStretchingUITests: XCTestCase {
             XCTAssertTrue(app.buttons["ios.session.completeSet.1"].waitForExistence(timeout: 8))
         }
     }
+
+    /// A new routine must start with an empty target area — the placeholder
+    /// "Full Body & Mobility" is a hint, not a saved default.
+    func testNewRoutineTargetAreaShowsPlaceholderOnly() {
+        let app = IOSUITestHelpers.launchApp()
+        IOSUITestHelpers.navigateToTab(app, label: "Library")
+
+        let stretching = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Stretching'")).firstMatch
+        XCTAssertTrue(stretching.waitForExistence(timeout: 8))
+        stretching.tap()
+
+        let add = app.buttons["ios.library.addRoutineButton"]
+        XCTAssertTrue(add.waitForExistence(timeout: 5))
+        add.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["ios.routineEditor.sheet"].waitForExistence(timeout: 5))
+
+        let targetArea = app.textFields["ios.routineEditor.targetArea"]
+        XCTAssertTrue(targetArea.waitForExistence(timeout: 5))
+        // XCUI reports the placeholder as an empty field's value — the marker that
+        // matters is that "Full Body & Mobility" is the placeholder, not stored text.
+        XCTAssertEqual(targetArea.placeholderValue as? String, "Full Body & Mobility")
+    }
 }

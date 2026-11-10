@@ -27,6 +27,33 @@ final class IOSNutritionUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["190"].exists)
     }
 
+    /// LiveNumberField must show an empty placeholder for a new item — a literal "0"
+    /// made typed digits append instead of replace.
+    @MainActor
+    func testNewItemNumericFieldsStartEmptyAndKeepTypedDecimals() {
+        let app = IOSUITestHelpers.launchApp()
+        IOSUITestHelpers.navigateToTab(app, label: "Food")
+        app.buttons["ios.nutrition.addMealButton"].tap()
+
+        let kcal = app.textFields["ios.nutrition.item.kcal"].firstMatch
+        XCTAssertTrue(kcal.waitForExistence(timeout: 5))
+        // Empty field: XCUI reports the placeholder as the value.
+        XCTAssertEqual(kcal.placeholderValue as? String, "0")
+        XCTAssertFalse(kcal.value as? String == "0" && kcal.placeholderValue == nil)
+        kcal.tap()
+        kcal.typeText("190")
+        XCTAssertEqual(kcal.value as? String, "190")
+
+        // Typing a decimal must not be reset while typing.
+        let fat = app.textFields["ios.nutrition.item.fat"].firstMatch
+        for _ in 0..<4 where !fat.isHittable { app.swipeUp() }
+        XCTAssertTrue(fat.waitForExistence(timeout: 5))
+        fat.tap()
+        fat.typeText("0.5")
+        let typed = fat.value as? String
+        XCTAssertTrue(typed == "0.5" || typed == "0,5", "expected typed decimal kept, got \(typed ?? "nil")")
+    }
+
     @MainActor
     func testSingleAddMealButtonAndDrinkInMillilitres() {
         let app = IOSUITestHelpers.launchApp()
