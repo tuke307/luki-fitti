@@ -327,6 +327,8 @@ export function WeightView({ variant = 'section', onBack, logOnOpen = false }: W
           </>
         )}
 
+        <ProgressSection />
+
         <MobileSheet
           open={sheetOpen}
           onOpenChange={(open) => {
