@@ -10,7 +10,7 @@ import type { PrismaService } from '../database/prisma.service';
 import type { EmailService } from '../email/email.service';
 import type { BodyWeightService } from '../body-weight/body-weight.service';
 import { EmailTemplateService } from '../email-template/email-template.service';
-import { DistanceUnit, EmailTemplateType, WeightUnit } from '@luki-fitti/common/enums';
+import { BodyGoal, DistanceUnit, EmailTemplateType, WeightUnit } from '@luki-fitti/common/enums';
 
 interface MockUserRecord {
   id: string;
@@ -471,6 +471,20 @@ describe('AuthService.updatePreferences — weigh-in reminder & legacy body weig
     // Untouched fields stay out of the update.
     await service.updatePreferences('user-1', { weeklyGoalSessions: 3 });
     assert.equal('weighInReminderEnabled' in calls[1]!.update, false);
+  });
+
+  it('returns the body goal, horizon, backup and consent fields it stores', async () => {
+    const { prisma } = createPreferencesPrisma();
+    const service = new AuthService(prisma);
+    const result = await service.updatePreferences('user-1', {
+      bodyGoal: BodyGoal.BUILD_MUSCLE,
+      goalHorizonMonths: 6,
+      progressPhotoCloudBackup: true,
+    });
+    assert.equal(result.preferences?.bodyGoal, BodyGoal.BUILD_MUSCLE);
+    assert.equal(result.preferences?.goalHorizonMonths, 6);
+    assert.equal(result.preferences?.progressPhotoCloudBackup, true);
+    assert.equal(result.preferences?.progressAiConsentAt, null);
   });
 
   it('records a weigh-in when a legacy client sets bodyWeightKg', async () => {

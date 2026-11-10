@@ -31,6 +31,8 @@ import {
   type ActivityLevel,
   type AdminPermission,
   type BiologicalSex,
+  BODY_GOALS,
+  type BodyGoal,
   DistanceUnit,
   type FeatureGrant,
   isAdminPermission,
@@ -650,6 +652,10 @@ export class AuthService {
         weighInReminderWeekday?: number;
         weighInReminderMinutes?: number;
         aiModels?: unknown;
+        bodyGoal?: string | null;
+        goalHorizonMonths?: number | null;
+        progressPhotoCloudBackup?: boolean;
+        progressAiConsentAt?: Date | null;
       } | null;
       permissions?: string[];
     },
@@ -701,6 +707,12 @@ export class AuthService {
             weighInReminderWeekday: user.preferences.weighInReminderWeekday ?? 2,
             weighInReminderMinutes: user.preferences.weighInReminderMinutes ?? 450,
             aiModels: AiModelChoicesSchema.safeParse(user.preferences.aiModels ?? {}).data ?? {},
+            bodyGoal: (BODY_GOALS as readonly string[]).includes(user.preferences.bodyGoal ?? '')
+              ? (user.preferences.bodyGoal as BodyGoal)
+              : null,
+            goalHorizonMonths: user.preferences.goalHorizonMonths ?? null,
+            progressPhotoCloudBackup: user.preferences.progressPhotoCloudBackup ?? false,
+            progressAiConsentAt: user.preferences.progressAiConsentAt?.toISOString() ?? null,
           }
         : null,
       permissions: (user.permissions ?? []).filter(isAdminPermission) as AdminPermission[],
