@@ -1000,6 +1000,14 @@ private struct TemplateBuilderSheetView: View {
                         onSave(name, desc, folderId, durationMin, exercises)
                     }
                 }
+                // Number pads have no return key; Done ends typing and commits the value.
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button(tr("Done")) {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+                    .fontWeight(.semibold)
+                }
             }
             .sheet(
                 item: Binding<PickingSlotItem?>(
@@ -1145,6 +1153,9 @@ private struct TemplateSetsEditorView: View {
     @Binding var slot: WorkoutTemplateExerciseDto
     let weightUnit: WeightUnit
     @Environment(\.lukiLocale) private var tr
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    /// Keeps "12 reps" readable: the reps stepper never shrinks below this share of the row.
+    @ScaledMetric(relativeTo: .body) private var repsMinWidth: CGFloat = 108
 
     private var sets: [TemplateSetDto] { TemplateSets.resolve(slot) }
 
@@ -1173,23 +1184,39 @@ private struct TemplateSetsEditorView: View {
                     }
                     .accessibilityLabel(tr("Set %d: %@", idx + 1, LukiI18n.setTypeLabel(set.setType, locale: tr)))
 
-                    stepper(
-                        text: set.weight.map { String(format: "%g", $0) } ?? "–",
+                    let step = LukiFormat.weightStep(weightUnit)
+                    let weightStepper = LukiValueStepper(
+                        value: set.weight.map { LukiFormat.weight($0) } ?? "–",
                         unit: LukiFormat.unitLabel(weightUnit),
+                        minusLabel: tr("Decrease weight by %@, set %d", LukiFormat.weight(step), idx + 1),
+                        plusLabel: tr("Increase weight by %@, set %d", LukiFormat.weight(step), idx + 1),
+                        editLabel: tr("Weight, set %d", idx + 1),
+                        keyboard: .decimal,
                         onMinus: {
                             var next = current
-                            next[idx].weight = max(0, (set.weight ?? 0) - LukiFormat.weightStep(weightUnit))
+                            next[idx].weight = max(0, (set.weight ?? 0) - step)
                             commit(next)
                         },
                         onPlus: {
                             var next = current
-                            next[idx].weight = (set.weight ?? 0) + LukiFormat.weightStep(weightUnit)
+                            next[idx].weight = (set.weight ?? 0) + step
                             commit(next)
+                        },
+                        onSubmit: { text in
+                            if let v = LukiFormat.parseDecimal(text) {
+                                var next = current
+                                next[idx].weight = max(0, v)
+                                commit(next)
+                            }
                         }
                     )
-                    stepper(
-                        text: set.reps.map(String.init) ?? "–",
+                    let repsStepper = LukiValueStepper(
+                        value: set.reps.map(String.init) ?? "–",
                         unit: tr("reps"),
+                        minusLabel: tr("Decrease reps, set %d", idx + 1),
+                        plusLabel: tr("Increase reps, set %d", idx + 1),
+                        editLabel: tr("Reps, set %d", idx + 1),
+                        keyboard: .integer,
                         onMinus: {
                             var next = current
                             next[idx].reps = max(0, (set.reps ?? 0) - 1)
@@ -1199,8 +1226,28 @@ private struct TemplateSetsEditorView: View {
                             var next = current
                             next[idx].reps = (set.reps ?? 0) + 1
                             commit(next)
+                        },
+                        onSubmit: { text in
+                            if let v = Int(text.trimmingCharacters(in: .whitespaces)) {
+                                var next = current
+                                next[idx].reps = max(0, v)
+                                commit(next)
+                            }
                         }
                     )
+                    // Accessibility sizes stack the steppers; otherwise the reps stepper keeps a
+                    // fixed share so weight can't squeeze the count away.
+                    if dynamicTypeSize.isAccessibilitySize {
+                        VStack(spacing: 8) {
+                            weightStepper
+                            repsStepper
+                        }
+                        .frame(maxWidth: .infinity)
+                    } else {
+                        weightStepper
+                        repsStepper
+                            .frame(minWidth: min(repsMinWidth, 120), maxWidth: 120)
+                    }
 
                     Button(role: .destructive) {
                         var next = current
@@ -1230,28 +1277,6 @@ private struct TemplateSetsEditorView: View {
         }
     }
 
-    private func stepper(text: String, unit: String, onMinus: @escaping () -> Void, onPlus: @escaping () -> Void) -> some View {
-        HStack(spacing: 2) {
-            Button(action: onMinus) {
-                Image(systemName: "minus").font(.caption.weight(.bold)).frame(minWidth: 32, minHeight: 44).contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(tr("Decrease %@", unit))
-            HStack(alignment: .firstTextBaseline, spacing: 2) {
-                Text(text).font(.subheadline.weight(.semibold).monospacedDigit())
-                Text(unit).font(.caption2).foregroundStyle(.secondary)
-            }
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
-            .frame(minWidth: 34)
-            Button(action: onPlus) {
-                Image(systemName: "plus").font(.caption.weight(.bold)).frame(minWidth: 32, minHeight: 44).contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(tr("Increase %@", unit))
-        }
-        .background(RoundedRectangle(cornerRadius: 10).fill(LukiColors.fill))
-    }
 }
 
 private extension WorkoutTemplateExerciseDto {
