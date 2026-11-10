@@ -302,3 +302,21 @@ public enum ExerciseFeedbackVerdict: String, Codable, Sendable, CaseIterable, Eq
     case PAIN
     case DISLIKE
 }
+
+public enum BodyGoal: String, Codable, Sendable, CaseIterable, Equatable, Hashable {
+    case BUILD_MUSCLE
+    case LOSE_FAT
+    case RECOMP
+    case MAINTAIN
+}
+
+public enum ProgressPose: String, Codable, Sendable, CaseIterable, Equatable, Hashable {
+    case FRONT
+    case SIDE
+    case BACK
+}
+
+public enum ProgressPhotoKind: String, Codable, Sendable, CaseIterable, Equatable, Hashable {
+    case PHOTO
+    case AI_TARGET
+}

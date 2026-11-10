@@ -47,6 +47,12 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
     public var weighInReminderMinutes: Int = 450
     /// Per-skill OpenRouter model choice keyed by `AiSkillName` raw value; missing = admin default.
     public var aiModels: [String: String]? = nil
+    public var bodyGoal: BodyGoal? = nil
+    /// 3, 6 or 12 months.
+    public var goalHorizonMonths: Int? = nil
+    /// Opt-in cloud backup of progress photos (device-only by default).
+    public var progressPhotoCloudBackup: Bool = false
+    public var progressAiConsentAt: String? = nil
 
     public init(
         id: String = "pref-local",
@@ -81,6 +87,7 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
         case dailyKcalGoal, proteinGoalG, carbsGoalG, fatGoalG
         case weighInReminderEnabled, weighInReminderWeekday, weighInReminderMinutes
         case aiModels
+        case bodyGoal, goalHorizonMonths, progressPhotoCloudBackup, progressAiConsentAt
     }
 
     public init(from decoder: Decoder) throws {
@@ -111,6 +118,10 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
         self.weighInReminderWeekday = try c.decodeIfPresent(Int.self, forKey: .weighInReminderWeekday) ?? 2
         self.weighInReminderMinutes = try c.decodeIfPresent(Int.self, forKey: .weighInReminderMinutes) ?? 450
         self.aiModels = (try? c.decodeIfPresent([String: String].self, forKey: .aiModels)).flatMap { $0 }
+        self.bodyGoal = (try? c.decodeIfPresent(String.self, forKey: .bodyGoal)).flatMap { $0 }.flatMap(BodyGoal.init(rawValue:))
+        self.goalHorizonMonths = try c.decodeIfPresent(Int.self, forKey: .goalHorizonMonths)
+        self.progressPhotoCloudBackup = try c.decodeIfPresent(Bool.self, forKey: .progressPhotoCloudBackup) ?? false
+        self.progressAiConsentAt = try c.decodeIfPresent(String.self, forKey: .progressAiConsentAt)
     }
 }
 
@@ -204,6 +215,9 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
     public var weighInReminderMinutes: Int? = nil
     /// Replaces the stored per-skill model choices (an empty map clears them all).
     public var aiModels: [String: String]? = nil
+    public var bodyGoal: BodyGoal? = nil
+    public var goalHorizonMonths: Int? = nil
+    public var progressPhotoCloudBackup: Bool? = nil
     /// Fields sent as JSON `null` so the server clears them. A `nil` property is otherwise left
     /// out of the request, which leaves the server value unchanged.
     public var clearedFields: Set<CodingKeys> = []
@@ -239,6 +253,7 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
         case dailyKcalGoal, proteinGoalG, carbsGoalG, fatGoalG
         case weighInReminderEnabled, weighInReminderWeekday, weighInReminderMinutes
         case aiModels
+        case bodyGoal, goalHorizonMonths, progressPhotoCloudBackup
     }
 
     /// Sets `value` for the request, or marks the field to be cleared on the server when `nil`.
@@ -307,6 +322,9 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
         try put(weighInReminderWeekday, forKey: .weighInReminderWeekday)
         try put(weighInReminderMinutes, forKey: .weighInReminderMinutes)
         try put(aiModels, forKey: .aiModels)
+        try put(bodyGoal, forKey: .bodyGoal)
+        try put(goalHorizonMonths, forKey: .goalHorizonMonths)
+        try put(progressPhotoCloudBackup, forKey: .progressPhotoCloudBackup)
         // Sorted so the request body is stable (Set order isn't).
         for key in clearedFields.sorted(by: { $0.rawValue < $1.rawValue }) where !sent.contains(key) {
             try c.encodeNil(forKey: key)

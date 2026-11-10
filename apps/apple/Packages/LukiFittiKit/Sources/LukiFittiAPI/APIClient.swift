@@ -505,6 +505,59 @@ public actor APIClient {
         try await request(path: "/api/ai/meal-text-analysis", method: "POST", body: dto)
     }
 
+    // MARK: - Progress check-ins
+
+    public func fetchProgressCheckIns(from: Date? = nil, to: Date? = nil) async throws -> [ProgressCheckInDto] {
+        var path = "/api/progress/check-ins"
+        var params: [String] = []
+        if let from { params.append("from=\(ISO8601DateFormatter().string(from: from))") }
+        if let to { params.append("to=\(ISO8601DateFormatter().string(from: to))") }
+        if !params.isEmpty { path += "?" + params.joined(separator: "&") }
+        return try await request(path: path, method: "GET")
+    }
+
+    public func upsertProgressCheckIn(_ dto: UpsertProgressCheckInDto) async throws -> ProgressCheckInDto {
+        try await request(path: "/api/progress/check-ins", method: "PUT", body: dto)
+    }
+
+    public func deleteProgressCheckIn(id: String) async throws {
+        struct Resp: Decodable {}
+        let _: Resp = try await request(path: "/api/progress/check-ins/\(Self.pathComponent(id))", method: "DELETE")
+    }
+
+    /// Uploads one JPEG for a check-in pose (multipart/form-data, idempotent on clientPhotoId).
+    public func uploadProgressPhoto(
+        checkInClientEntryId: String,
+        clientPhotoId: String,
+        pose: ProgressPose,
+        kind: ProgressPhotoKind,
+        jpeg: Data
+    ) async throws -> ProgressPhotoDto {
+        let boundary = "LukiFitti-\(UUID().uuidString)"
+        var body = Data()
+        func field(_ name: String, _ value: String) {
+            body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(name)\"\r\n\r\n\(value)\r\n".utf8))
+        }
+        field("clientPhotoId", clientPhotoId)
+        field("pose", pose.rawValue)
+        field("kind", kind.rawValue)
+        body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"photo.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n".utf8))
+        body.append(jpeg)
+        body.append(Data("\r\n--\(boundary)--\r\n".utf8))
+        let data = try await send(
+            path: "/api/progress/check-ins/\(Self.pathComponent(checkInClientEntryId))/photos",
+            method: "POST",
+            body: body,
+            contentType: "multipart/form-data; boundary=\(boundary)"
+        )
+        return try Self.decodeEnvelope(data)
+    }
+
+    public func deleteProgressPhoto(id: String) async throws {
+        struct Resp: Decodable {}
+        let _: Resp = try await request(path: "/api/progress/photos/\(Self.pathComponent(id))", method: "DELETE")
+    }
+
     /// Raw bytes of an authenticated API resource (e.g. a meal photo URL path).
     public func fetchData(path: String) async throws -> Data {
         try await send(path: path, method: "GET", body: nil, contentType: nil)
