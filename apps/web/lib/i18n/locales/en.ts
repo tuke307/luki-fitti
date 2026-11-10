@@ -526,7 +526,7 @@ export const en = {
     deleteWorkoutDesc:
       '{name} will be removed from your history on all your devices. This can’t be undone.',
     deleteWorkoutBtn: 'Delete Workout',
-    estMaxLabel: 'Est. max',
+    estMaxLabel: 'Max ≈',
     // Wave 2 w3b
     workoutCountOne: '1 workout',
     workoutCountOther: '{count} workouts',

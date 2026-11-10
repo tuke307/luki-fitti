@@ -904,7 +904,7 @@ export function DiaryAnalyticsView() {
                       {weightInUnit(pr.maxWeightKg, weightUnit)} {unit} × {pr.reps}
                     </p>
                     <p className="text-muted-foreground tabular-nums text-xs">
-                      {t.diary.estMaxLabel}: {weightInUnit(pr.est1RM, weightUnit)} {unit}
+                      {t.diary.estMaxLabel} {weightInUnit(pr.est1RM, weightUnit)} {unit}
                     </p>
                   </div>
                 </div>

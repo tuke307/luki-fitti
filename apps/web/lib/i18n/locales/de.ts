@@ -527,7 +527,7 @@ export const de = {
     deleteWorkoutDesc:
       '{name} wird auf allen deinen Geräten aus deinem Verlauf entfernt. Das lässt sich nicht rückgängig machen.',
     deleteWorkoutBtn: 'Training löschen',
-    estMaxLabel: 'Geschätztes Max.',
+    estMaxLabel: 'Max. ≈',
     // Wave 2 w3b
     workoutCountOne: '1 Training',
     workoutCountOther: '{count} Trainings',
