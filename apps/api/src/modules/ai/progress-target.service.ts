@@ -7,13 +7,11 @@ import {
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import {
-  AiRunStatus,
-  AiSkillName,
-  BodyGoal,
-  type SupportedLocale,
-} from '@luki-fitti/common/enums';
-import type { ProgressTargetRequestDto, ProgressTargetResponseDto } from '@luki-fitti/common/schemas';
+import { AiRunStatus, AiSkillName, BodyGoal, type SupportedLocale } from '@luki-fitti/common/enums';
+import type {
+  ProgressTargetRequestDto,
+  ProgressTargetResponseDto,
+} from '@luki-fitti/common/schemas';
 import { PrismaService } from '../database/prisma.service';
 import { AppSettingsService } from '../app-settings/app-settings.service';
 import { AiKeyService } from './ai-key.service';
@@ -50,11 +48,18 @@ export class ProgressTargetService {
     return { progressAiConsentAt: value.progressAiConsentAt!.toISOString() };
   }
 
-  async generate(userId: string, locale: SupportedLocale, dto: ProgressTargetRequestDto): Promise<ProgressTargetResponseDto> {
+  async generate(
+    userId: string,
+    locale: SupportedLocale,
+    dto: ProgressTargetRequestDto,
+  ): Promise<ProgressTargetResponseDto> {
     const prefs = await this.prisma.userPreferences.findUnique({ where: { userId } });
     if (!prefs?.progressAiConsentAt) {
       throw new HttpException(
-        { message: 'Consent for the AI progress target is required first.', code: 'AI_CONSENT_REQUIRED' },
+        {
+          message: 'Consent for the AI progress target is required first.',
+          code: 'AI_CONSENT_REQUIRED',
+        },
         HttpStatus.PRECONDITION_FAILED,
       );
     }
@@ -136,7 +141,8 @@ export class ProgressTargetService {
         runId,
       };
     } catch (err) {
-      const code = err instanceof AiProviderError ? `PROVIDER_${err.status ?? 'ERROR'}` : 'INTERNAL';
+      const code =
+        err instanceof AiProviderError ? `PROVIDER_${err.status ?? 'ERROR'}` : 'INTERNAL';
       if (err instanceof AiProviderError) {
         this.logger.warn(
           `AI provider error (${err.status ?? '-'}): ${err.upstreamMessage ?? err.message}`,
@@ -154,7 +160,10 @@ export class ProgressTargetService {
       }
       if (err instanceof AiProviderError && err.status === 402) {
         throw new HttpException(
-          { message: 'The OpenRouter account has insufficient credits.', code: 'AI_KEY_NO_CREDITS' },
+          {
+            message: 'The OpenRouter account has insufficient credits.',
+            code: 'AI_KEY_NO_CREDITS',
+          },
           HttpStatus.PAYMENT_REQUIRED,
         );
       }
@@ -188,9 +197,10 @@ export class ProgressTargetService {
       sex: prefs?.sex ?? 'unknown',
       age: age ? String(age) : 'unknown',
       heightCm: prefs?.heightCm != null ? `${prefs.heightCm} cm` : 'unknown',
-      weightKg: latestWeight?.weightKg ?? prefs?.bodyWeightKg
-        ? `${latestWeight?.weightKg ?? prefs?.bodyWeightKg} kg`
-        : 'unknown',
+      weightKg:
+        (latestWeight?.weightKg ?? prefs?.bodyWeightKg)
+          ? `${latestWeight?.weightKg ?? prefs?.bodyWeightKg} kg`
+          : 'unknown',
       bodyFatPct: prefs?.bodyFatPct != null ? `${prefs.bodyFatPct}%` : 'unknown',
       sessionsPerWeek: String(Math.round((sessions / TRAINING_WEEKS) * 10) / 10),
     };

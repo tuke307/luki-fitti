@@ -141,7 +141,10 @@ export const UpdatePreferencesSchema = z.object({
   weighInReminderWeekday: z.number().int().min(1).max(7).optional(),
   weighInReminderMinutes: z.number().int().min(0).max(1439).optional(),
   bodyGoal: z.enum(BODY_GOALS).nullable().optional(),
-  goalHorizonMonths: z.union([z.literal(3), z.literal(6), z.literal(12)]).nullable().optional(),
+  goalHorizonMonths: z
+    .union([z.literal(3), z.literal(6), z.literal(12)])
+    .nullable()
+    .optional(),
   progressPhotoCloudBackup: z.boolean().optional(),
   /** Withdraw AI consent; only null is accepted (granting goes through the consent endpoint). */
   progressAiConsentAt: z.null().optional(),

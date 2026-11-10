@@ -93,7 +93,11 @@ async function jpeg(): Promise<string> {
   return buf.toString('base64');
 }
 
-const REQ = { goal: BodyGoal.BUILD_MUSCLE, horizonMonths: 6 as const, pose: ProgressPose.FRONT as ProgressPose.FRONT };
+const REQ = {
+  goal: BodyGoal.BUILD_MUSCLE,
+  horizonMonths: 6 as const,
+  pose: ProgressPose.FRONT as ProgressPose.FRONT,
+};
 
 describe('ProgressTargetService', () => {
   it('requires consent (412 AI_CONSENT_REQUIRED)', async () => {
@@ -101,8 +105,7 @@ describe('ProgressTargetService', () => {
     await assert.rejects(
       () => service.generate('u1', 'en', { ...REQ, imageBase64: '' }),
       (e: HttpException) =>
-        e.getStatus() === 412 &&
-        JSON.stringify(e.getResponse()).includes('AI_CONSENT_REQUIRED'),
+        e.getStatus() === 412 && JSON.stringify(e.getResponse()).includes('AI_CONSENT_REQUIRED'),
     );
   });
 
@@ -148,17 +151,33 @@ describe('ProgressTargetService', () => {
 describe('progress attach metadata', () => {
   it('rejects ai fields on kind=PHOTO uploads', async () => {
     const { AttachProgressPhotoSchema } = await import('@luki-fitti/common/schemas');
-    assert.ok(!AttachProgressPhotoSchema.safeParse({
-      clientPhotoId: 'abcdef123', pose: 'FRONT', kind: 'PHOTO', aiModel: 'm',
-    }).success);
-    assert.ok(AttachProgressPhotoSchema.safeParse({
-      clientPhotoId: 'abcdef123', pose: 'FRONT', kind: 'AI_TARGET',
-      aiModel: 'm', aiGoal: 'RECOMP', aiHorizonMonths: 6,
-    }).success);
+    assert.ok(
+      !AttachProgressPhotoSchema.safeParse({
+        clientPhotoId: 'abcdef123',
+        pose: 'FRONT',
+        kind: 'PHOTO',
+        aiModel: 'm',
+      }).success,
+    );
+    assert.ok(
+      AttachProgressPhotoSchema.safeParse({
+        clientPhotoId: 'abcdef123',
+        pose: 'FRONT',
+        kind: 'AI_TARGET',
+        aiModel: 'm',
+        aiGoal: 'RECOMP',
+        aiHorizonMonths: 6,
+      }).success,
+    );
     // horizon must be 3/6/12
-    assert.ok(!AttachProgressPhotoSchema.safeParse({
-      clientPhotoId: 'abcdef123', pose: 'FRONT', kind: 'AI_TARGET', aiHorizonMonths: 9,
-    }).success);
+    assert.ok(
+      !AttachProgressPhotoSchema.safeParse({
+        clientPhotoId: 'abcdef123',
+        pose: 'FRONT',
+        kind: 'AI_TARGET',
+        aiHorizonMonths: 9,
+      }).success,
+    );
   });
 });
 
@@ -167,15 +186,27 @@ describe('image-model eligibility', () => {
     const mod = await import('./openrouter-models.service');
     const models = mod.parseOpenRouterImageModels({
       data: [
-        { id: 'a/img-refs', pricing: { prompt: '0.1', completion: '0.2' },
-          supported_parameters: { input_references: { max: 3 } } },
-        { id: 'b/img-modality', pricing: { prompt: '0.1', completion: '0.2' },
-          architecture: { input_modalities: ['image'] } },
-        { id: 'c/text-only', pricing: { prompt: '0.1', completion: '0.2' },
-          supported_parameters: { input_references: { max: 0 } } },
+        {
+          id: 'a/img-refs',
+          pricing: { prompt: '0.1', completion: '0.2' },
+          supported_parameters: { input_references: { max: 3 } },
+        },
+        {
+          id: 'b/img-modality',
+          pricing: { prompt: '0.1', completion: '0.2' },
+          architecture: { input_modalities: ['image'] },
+        },
+        {
+          id: 'c/text-only',
+          pricing: { prompt: '0.1', completion: '0.2' },
+          supported_parameters: { input_references: { max: 0 } },
+        },
       ],
     });
-    assert.deepEqual(models.map((m) => m.id), ['a/img-refs', 'b/img-modality']);
+    assert.deepEqual(
+      models.map((m) => m.id),
+      ['a/img-refs', 'b/img-modality'],
+    );
     // Image-skill pricing: token prices zeroed, image price null (estimate comes from runs).
     assert.equal(models[0]?.pricing.imageUsd, null);
     assert.equal(models[0]?.pricing.promptPerMTokUsd, 0);
@@ -192,10 +223,19 @@ describe('OpenRouterClient.generateImage fallbacks', () => {
       const next = statuses[Math.min(idx, statuses.length - 1)]!;
       return new Response(JSON.stringify(next.body ?? {}), { status: next.status });
     };
-    return { calls, restore: () => { globalThis.fetch = orig; } };
+    return {
+      calls,
+      restore: () => {
+        globalThis.fetch = orig;
+      },
+    };
   }
 
-  const imgOk = { model: 'm2', data: [{ b64_json: 'eGk=', media_type: 'image/jpeg' }], usage: { cost: 0.03 } };
+  const imgOk = {
+    model: 'm2',
+    data: [{ b64_json: 'eGk=', media_type: 'image/jpeg' }],
+    usage: { cost: 0.03 },
+  };
 
   it('sends the input_references payload shape', async () => {
     const { calls, restore } = fakeFetch([{ status: 200, body: imgOk }]);

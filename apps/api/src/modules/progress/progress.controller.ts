@@ -46,7 +46,8 @@ export class ProgressController {
   @ApiOperation({ summary: 'List progress check-ins taken in [from, to)' })
   listCheckIns(
     @CurrentUser() user: AuthenticatedUser,
-    @Query(new ZodValidationPipe(ProgressCheckInRangeQuerySchema)) query: ProgressCheckInRangeQueryDto,
+    @Query(new ZodValidationPipe(ProgressCheckInRangeQuerySchema))
+    query: ProgressCheckInRangeQueryDto,
   ) {
     return this.progressService.listCheckIns(user.id, query.from, query.to);
   }

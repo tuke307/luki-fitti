@@ -214,10 +214,7 @@ describe('ProgressService photos', () => {
       progressCheckIn: {
         findUnique: async () =>
           checkIn({
-            photos: [
-              { storageKey: 'k1' },
-              { storageKey: 'k2' },
-            ],
+            photos: [{ storageKey: 'k1' }, { storageKey: 'k2' }],
           }),
         delete: async () => checkIn(),
       },

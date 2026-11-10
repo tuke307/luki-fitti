@@ -83,7 +83,11 @@ describe('FeatureGuard', () => {
 });
 
 describe('resolveActiveFeatures', () => {
-  const on = { aiWorkoutBuilderEnabled: true, aiMealPhotoEnabled: true, aiProgressTargetEnabled: true };
+  const on = {
+    aiWorkoutBuilderEnabled: true,
+    aiMealPhotoEnabled: true,
+    aiProgressTargetEnabled: true,
+  };
   const { USER, ADMIN } = AiKeySlot;
 
   it('any usable key enables every globally switched-on feature', () => {

@@ -72,18 +72,16 @@ export type ProgressCheckInDto = z.infer<typeof ProgressCheckInDtoSchema>;
 const MAX_TARGET_IMAGE_BYTES = 6 * 1024 * 1024;
 
 export const ProgressTargetRequestSchema = z.object({
-  imageBase64: z
-    .string()
-    .refine(
-      (v) => {
-        try {
-          return Buffer.from(v, 'base64').length <= MAX_TARGET_IMAGE_BYTES;
-        } catch {
-          return false;
-        }
-      },
-      { message: 'imageBase64 must be base64-encoded JPEG under 6 MB' },
-    ),
+  imageBase64: z.string().refine(
+    (v) => {
+      try {
+        return Buffer.from(v, 'base64').length <= MAX_TARGET_IMAGE_BYTES;
+      } catch {
+        return false;
+      }
+    },
+    { message: 'imageBase64 must be base64-encoded JPEG under 6 MB' },
+  ),
   goal: z.enum(BODY_GOALS),
   horizonMonths: z.union([z.literal(3), z.literal(6), z.literal(12)]),
   /** FRONT only for now; kept in the schema so other poses can come later. */

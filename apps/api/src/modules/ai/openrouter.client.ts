@@ -212,7 +212,10 @@ export class OpenRouterClient {
    * Image generation (`POST /images`). Unlike chat, the endpoint takes exactly one model per
    * call, so fallbacks are retried here — but never on client-side failures (401/402/429).
    */
-  async generateImage(request: ImageGenerationRequest, apiKey: string): Promise<ImageGenerationResponse> {
+  async generateImage(
+    request: ImageGenerationRequest,
+    apiKey: string,
+  ): Promise<ImageGenerationResponse> {
     if (!apiKey) throw new AiProviderError('AI provider key missing');
     const models = [request.model, ...(request.fallbackModels ?? [])].filter(
       (m, i, all) => all.indexOf(m) === i,
@@ -238,9 +241,7 @@ export class OpenRouterClient {
     const body = {
       model,
       prompt: request.prompt,
-      input_references: [
-        { type: 'image_url', image_url: { url: request.referenceImageDataUrl } },
-      ],
+      input_references: [{ type: 'image_url', image_url: { url: request.referenceImageDataUrl } }],
       aspect_ratio: request.aspectRatio ?? '2:3',
       n: 1,
       output_format: 'jpeg',

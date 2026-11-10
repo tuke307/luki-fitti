@@ -69,7 +69,9 @@ function toModelInfo(m: z.infer<typeof UpstreamModelSchema>, imageOnly: boolean)
       completionPerMTokUsd: imageOnly ? 0 : perMTok(m.pricing.completion),
       imageUsd: imageOnly ? null : (m.pricing.image ?? null),
     },
-    supportsTools: imageOnly ? false : (Array.isArray(m.supported_parameters) && m.supported_parameters.includes('tools')),
+    supportsTools: imageOnly
+      ? false
+      : Array.isArray(m.supported_parameters) && m.supported_parameters.includes('tools'),
     supportsImages: acceptsImageInput(m),
   };
 }

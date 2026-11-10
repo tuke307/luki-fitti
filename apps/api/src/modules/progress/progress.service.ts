@@ -199,7 +199,9 @@ export class ProgressService {
     return checkIn;
   }
 
-  private toPhotoDto(photo: Prisma.ProgressPhotoGetPayload<Record<string, never>>): ProgressPhotoDto {
+  private toPhotoDto(
+    photo: Prisma.ProgressPhotoGetPayload<Record<string, never>>,
+  ): ProgressPhotoDto {
     return {
       id: photo.id,
       clientPhotoId: photo.clientPhotoId,

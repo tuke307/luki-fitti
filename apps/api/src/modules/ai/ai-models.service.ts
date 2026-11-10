@@ -180,7 +180,12 @@ export class AiModelsService {
   private async recordedImageCosts(skill: AiSkillName): Promise<Map<string, number>> {
     const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
     const runs = await this.prisma.aiRun.findMany({
-      where: { skill, status: AiRunStatus.SUCCESS, createdAt: { gte: since }, costUsd: { not: null } },
+      where: {
+        skill,
+        status: AiRunStatus.SUCCESS,
+        createdAt: { gte: since },
+        costUsd: { not: null },
+      },
       select: { model: true, costUsd: true },
     });
     const sums = new Map<string, { sum: number; n: number }>();
@@ -217,12 +222,7 @@ export class AiModelsService {
             ? (imageCosts?.get(m.id) ?? null)
             : estimateCostPerRun(avg, m.pricing, imagesPerRun(skill)),
         });
-        const eligible = eligibleModels(
-          pool,
-          skill,
-          keySource,
-          settings.userModelAllowlist,
-        );
+        const eligible = eligibleModels(pool, skill, keySource, settings.userModelAllowlist);
         const defaultModel = defaultModelFor(skill, settings);
         const selectedModel = choices[skill] ?? null;
         const effectiveModel = resolvePrimaryModel(selectedModel, defaultModel, eligible);

@@ -69,7 +69,7 @@ public final class ProgressPhotoStore {
 
     /// Local bytes for a stored photo (used for thumbnails; remote photos are fetched lazily).
     public func photoData(_ photo: ProgressPhotoDto, isSignedIn: Bool) async -> Data? {
-        if let file = photo.localFile, let data = try? Data(contentsOf: photoFileURL(photo)!) {
+        if let url = photoFileURL(photo), let data = try? Data(contentsOf: url) {
             return data
         }
         let cache = directory.appendingPathComponent("remote-\(photo.id).jpg")
