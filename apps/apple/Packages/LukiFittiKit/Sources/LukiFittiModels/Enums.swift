@@ -262,6 +262,7 @@ public enum SyncState: String, Codable, Sendable, CaseIterable, Equatable, Hasha
 public enum FeatureGrant: String, Codable, Sendable, CaseIterable, Equatable, Hashable {
     case AI_WORKOUT_BUILDER
     case AI_MEAL_PHOTO
+    case AI_PROGRESS_TARGET
 }
 
 public enum MealType: String, Codable, Sendable, CaseIterable, Equatable, Hashable {

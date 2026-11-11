@@ -163,14 +163,9 @@ public struct ProgressTargetFlowView: View {
                 }
             }
         }
-        .alert(tr("OpenRouter key required"), isPresented: $showsAiKeyAlert) {
-            Button(tr("Add key")) {
-                dismiss()
-                viewModel.selectedTab = .profile
-            }
-            Button(tr("Cancel"), role: .cancel) {}
-        } message: {
-            Text(tr("AI features run on your own OpenRouter API key. Add it in your profile to use them."))
+        .aiAccessAlert(isPresented: $showsAiKeyAlert, isSignedIn: viewModel.isSignedIn) {
+            dismiss()
+            viewModel.selectedTab = .profile
         }
         .accessibilityIdentifier("ios.progress.targetFlow")
     }
@@ -186,7 +181,7 @@ public struct ProgressTargetFlowView: View {
             Section {
                 Button(tr("Continue")) {
                     Task {
-                        guard await viewModel.ensureAiKeyConfigured() else {
+                        guard viewModel.isSignedIn, await viewModel.ensureAiKeyConfigured() else {
                             showsAiKeyAlert = true
                             return
                         }

@@ -641,6 +641,8 @@ public enum LukiStrings {
         "OpenRouter key required": "OpenRouter-Schlüssel erforderlich",
         "AI features run on your own OpenRouter API key. Add it in your profile to use them.": "KI-Funktionen laufen mit deinem eigenen OpenRouter-API-Schlüssel. Hinterlege ihn in deinem Profil, um sie zu nutzen.",
         "Add key": "Schlüssel hinzufügen",
+        "Sign in required": "Anmeldung erforderlich",
+        "AI features need an account and your own OpenRouter API key. Sign in, then add the key in your profile.": "KI-Funktionen brauchen ein Konto und deinen eigenen OpenRouter-API-Schlüssel. Melde dich an und hinterlege den Schlüssel dann in deinem Profil.",
         "By feature": "Nach Funktion",
         "Cost": "Kosten",
         "Cost not available": "Kosten nicht verfügbar",

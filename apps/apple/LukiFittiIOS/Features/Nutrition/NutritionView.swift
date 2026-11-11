@@ -22,7 +22,6 @@ public struct NutritionView: View {
     private var nutrition: NutritionStore { viewModel.nutrition }
     private var prefs: UserPreferencesDto { viewModel.store.preferences }
     private var isSignedIn: Bool { viewModel.store.currentUser != nil }
-    private var canUsePhotos: Bool { viewModel.store.currentUser?.hasFeature(.AI_MEAL_PHOTO) ?? false }
     private var isToday: Bool { Calendar.current.isDateInToday(day) }
 
     private var dayEntries: [MealEntryDto] { nutrition.entries(on: day) }
