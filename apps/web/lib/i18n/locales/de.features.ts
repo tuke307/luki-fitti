@@ -200,6 +200,9 @@ export const deFeatures: Widen<typeof enFeatures> = {
     keyRequiredBody:
       'KI-Funktionen laufen mit deinem eigenen OpenRouter-API-Schlüssel. Hinterlege ihn in deinem Profil, um sie zu nutzen.',
     keyRequiredAction: 'Schlüssel hinzufügen',
+    signInRequiredTitle: 'Anmeldung erforderlich',
+    signInRequiredBody:
+      'KI-Funktionen brauchen ein Konto und deinen eigenen OpenRouter-API-Schlüssel. Melde dich an und hinterlege den Schlüssel dann in deinem Profil.',
   },
   feedback: {
     menuLabel: 'Funktioniert nicht für mich',

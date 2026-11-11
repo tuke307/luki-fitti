@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import {
   Dialog,
@@ -10,9 +11,14 @@ import {
   DialogTitle,
 } from '@luki-fitti/ui/components/ui/dialog';
 import { openAiKeySettings } from '@/lib/ai/ai-key-required';
+import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 
-/** "An OpenRouter key is required" — shown when an AI entry point is tapped without a key. */
+/**
+ * Shown when an AI entry point is tapped without access: signed in without a key →
+ * "OpenRouter key required" (opens profile → AI key settings); guest → "Sign in required"
+ * (goes to the sign-in page).
+ */
 export function AiKeyRequiredDialog({
   open,
   onOpenChange,
@@ -21,12 +27,18 @@ export function AiKeyRequiredDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useLocale();
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{t.aiErrors.keyRequiredTitle}</DialogTitle>
-          <DialogDescription>{t.aiErrors.keyRequiredBody}</DialogDescription>
+          <DialogTitle>
+            {isAuthenticated ? t.aiErrors.keyRequiredTitle : t.aiErrors.signInRequiredTitle}
+          </DialogTitle>
+          <DialogDescription>
+            {isAuthenticated ? t.aiErrors.keyRequiredBody : t.aiErrors.signInRequiredBody}
+          </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
@@ -36,10 +48,11 @@ export function AiKeyRequiredDialog({
             type="button"
             onClick={() => {
               onOpenChange(false);
-              openAiKeySettings();
+              if (isAuthenticated) openAiKeySettings();
+              else router.push('/login');
             }}
           >
-            {t.aiErrors.keyRequiredAction}
+            {isAuthenticated ? t.aiErrors.keyRequiredAction : t.auth.signInBtn}
           </Button>
         </DialogFooter>
       </DialogContent>
