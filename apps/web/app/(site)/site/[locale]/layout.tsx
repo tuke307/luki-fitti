@@ -3,25 +3,15 @@ import '@luki-fitti/ui/globals.css';
 import '../site.css';
 import { notFound } from 'next/navigation';
 import { APP_STORE_ID, SITE_LOCALES, type SiteLocale } from '@/lib/site/config';
-import { shotFile } from '@/lib/site/screens';
+import { SITE_PUBLIC_ORIGIN } from '@/lib/site/seo';
 
 export const dynamic = 'force-dynamic';
 
-export const viewport: Viewport = { width: 'device-width', initialScale: 1 };
-
-const META: Record<SiteLocale, { title: string; description: string; canonical: string }> = {
-  de: {
-    title: 'LukiFitti — Workout-Tracker',
-    description:
-      'Plane deine Workouts, protokolliere jeden Satz und sieh deinen Fortschritt. Funktioniert offline auf iPhone, Apple Watch und im Web.',
-    canonical: '/',
-  },
-  en: {
-    title: 'LukiFitti — Workout Tracker',
-    description:
-      'Plan your workouts, log every set and watch your progress. Works offline on iPhone, Apple Watch and the web.',
-    canonical: '/en',
-  },
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#000000',
+  colorScheme: 'dark',
 };
 
 export async function generateMetadata({
@@ -31,20 +21,20 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   if (!SITE_LOCALES.includes(locale as SiteLocale)) notFound();
-  const lang = locale as SiteLocale;
-  const meta = META[lang];
   return {
-    metadataBase: new URL('https://luki-fitti.tony-luke.de'),
-    title: meta.title,
-    description: meta.description,
-    alternates: { canonical: meta.canonical, languages: { de: '/', en: '/en' } },
+    metadataBase: new URL(SITE_PUBLIC_ORIGIN),
+    applicationName: 'LukiFitti',
+    authors: [{ name: 'Tony Meißner' }],
+    creator: 'Tony Meißner',
+    category: 'health',
     itunes: { appId: APP_STORE_ID },
-    openGraph: {
-      title: meta.title,
-      description: meta.description,
-      images: [shotFile(lang, '01-active-workout.png')],
-      type: 'website',
+    icons: { icon: '/icon.svg', apple: '/images/apple-touch-icon.png' },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
     },
+    formatDetection: { telephone: false, address: false, email: false },
   };
 }
 
