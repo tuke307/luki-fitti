@@ -66,7 +66,7 @@ struct MealEditorSheet: View {
     private var timeLabel: String {
         eatenAt.formatted(Date.FormatStyle(date: .omitted, time: .shortened).locale(locale))
     }
-    private var canUsePhotos: Bool { viewModel.store.currentUser?.hasFeature(.AI_MEAL_PHOTO) ?? false }
+    private var canUsePhotos: Bool { viewModel.showsAiFeature(.AI_MEAL_PHOTO) }
     private var totals: NutritionTotalsDto { NutritionMath.sum(items) }
     private var locale: Locale { Locale(identifier: tr.rawValue) }
     private var eatenAt: Date {
@@ -77,14 +77,9 @@ struct MealEditorSheet: View {
 
     var body: some View {
         editor
-            .alert(tr("OpenRouter key required"), isPresented: $showsAiKeyAlert) {
-                Button(tr("Add key")) {
-                    dismiss()
-                    viewModel.selectedTab = .profile
-                }
-                Button(tr("Cancel"), role: .cancel) {}
-            } message: {
-                Text(tr("AI features run on your own OpenRouter API key. Add it in your profile to use them."))
+            .aiAccessAlert(isPresented: $showsAiKeyAlert, isSignedIn: isSignedIn) {
+                dismiss()
+                viewModel.selectedTab = .profile
             }
             .sheet(isPresented: $showsHistory) {
                 HistoryPickerSheet(load: historyPicks, onAdd: addFromHistory)

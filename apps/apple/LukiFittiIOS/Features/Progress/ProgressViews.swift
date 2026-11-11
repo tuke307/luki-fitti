@@ -22,7 +22,9 @@ public struct ProgressListView: View {
 
     public var body: some View {
         List {
-            ProgressTargetCard(viewModel: viewModel)
+            if viewModel.showsAiFeature(.AI_PROGRESS_TARGET) {
+                ProgressTargetCard(viewModel: viewModel)
+            }
             ProgressTargetSection(viewModel: viewModel)
             if checkIns.isEmpty {
                 Section {
@@ -70,10 +72,12 @@ public struct ProgressListView: View {
                 } label: { Image(systemName: "plus") }
                 .accessibilityIdentifier("ios.progress.addCheckIn")
             }
-            ToolbarItem(placement: .topBarLeading) {
-                Button { showsAiInfo = true } label: { Image(systemName: "questionmark.circle") }
-                    .accessibilityLabel(tr("How this works"))
-                    .accessibilityIdentifier("ios.aiInfo.progressTarget")
+            if viewModel.showsAiFeature(.AI_PROGRESS_TARGET) {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { showsAiInfo = true } label: { Image(systemName: "questionmark.circle") }
+                        .accessibilityLabel(tr("How this works"))
+                        .accessibilityIdentifier("ios.aiInfo.progressTarget")
+                }
             }
         }
         .alert(tr("Turn off cloud backup?"), isPresented: $askDeleteRemote) {
