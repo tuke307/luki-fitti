@@ -772,8 +772,8 @@ export const en = {
       switchHref: '/',
     },
     hero: {
-      headline: 'Train. Log. Get stronger.',
-      sub: 'The workout tracker for iPhone, Apple Watch and the web — fully usable offline, no fluff.',
+      headline: 'Train. Eat well. Get stronger.',
+      sub: 'Track workouts and meals on iPhone, Apple Watch and the web, with optional AI. Free, open source and works offline.',
       openApp: 'Open app',
       heroAlt: 'LukiFitti active workout on iPhone',
       deviceLabel: 'Device',
