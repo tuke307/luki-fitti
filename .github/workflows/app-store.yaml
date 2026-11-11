@@ -7,13 +7,9 @@ name: App Store
 # do not add a pull_request trigger or upload artifacts: artifacts are public as well.
 
 on:
-  # Like the Coolify deploy: every push to main that touches the Apple apps ships a build.
-  push:
-    branches:
-      - main
-    paths:
-      - 'apps/apple/**'
-      - '.github/workflows/app-store.yaml'
+  # Ships a build only when a GitHub release is published from a version tag.
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       upload:
@@ -34,7 +30,9 @@ defaults:
 
 jobs:
   release:
-    if: github.ref == 'refs/heads/main'
+    # Releases ship from their tag; manual runs may also build the next
+    # unreleased version from develop (TestFlight).
+    if: github.ref_type == 'tag' || github.ref == 'refs/heads/develop'
     runs-on: macos-26
     timeout-minutes: 60
     environment: app-store
@@ -45,6 +43,17 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Verify the tag matches the repo version
+        if: github.ref_type == 'tag'
+        run: |
+          ref_name="${{ github.ref_name }}"
+          version="$(grep -m1 MARKETING_VERSION apps/apple/project.yml | sed -E 's/.*"([0-9.]+)".*/\1/')"
+          if [ "$ref_name" != "v$version" ]; then
+            echo "::error::Tag $ref_name does not match MARKETING_VERSION v$version — release the tag created by tag.yaml."
+            exit 1
+          fi
+          echo "building $version from tag $ref_name"
 
       - name: Check secrets
         env:
@@ -131,8 +140,8 @@ jobs:
             -exportOptionsPlist Config/ExportOptions-AppStore.plist
 
       - name: Upload to App Store Connect
-        # Pushes have no inputs, so they always upload.
-        if: github.event_name == 'push' || inputs.upload
+        # Published releases always upload; manual runs upload only with upload=true.
+        if: github.event_name == 'release' || inputs.upload
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}

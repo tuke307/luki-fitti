@@ -1,0 +1,45 @@
+name: Tag release
+
+# Every merge into main is a release. This workflow tags the merge commit with
+# the version from scripts/version.mjs (`v1.0.1`). Pushes made with GITHUB_TOKEN
+# do not trigger other workflows, so the tag alone deploys nothing — the
+# production and App Store workflows only start when a GitHub release is
+# published from the tag.
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tag
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Fetch tags
+        run: git fetch --tags --force
+
+      - name: Create and push the version tag
+        run: |
+          node scripts/version.mjs check
+          version="$(node scripts/version.mjs get)"
+          tag="v$version"
+          if git ls-remote --tags origin "$tag" | grep -q .; then
+            echo "::notice::Tag $tag already exists on origin — nothing to do."
+            exit 0
+          fi
+          git -c user.name=github-actions[bot] \
+            -c user.email=41898282+github-actions[bot]@users.noreply.github.com \
+            tag -a "$tag" -m "LukiFitti $version"
+          git push origin "$tag"
+          echo "Tagged $tag on $(git rev-parse HEAD)."
