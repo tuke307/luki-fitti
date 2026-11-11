@@ -11,6 +11,7 @@ import { HttpExceptionFilter } from './filters/http-exception.filter';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { ApiResponseInterceptor } from './interceptors/api-response.interceptor';
 import { registerImportBodyParser } from './modules/import/import-body-parser';
+import { registerProgressTargetBodyParser } from './modules/ai/progress-target-body-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -53,8 +54,10 @@ async function bootstrap() {
   // Cookie parser
   app.use(cookieParser());
 
-  // 10 MB JSON limit for the file import routes only; must precede Nest's global parser.
+  // Raised JSON limits for the file import and progress-target photo routes only; must
+  // precede Nest's global parser.
   registerImportBodyParser(app);
+  registerProgressTargetBodyParser(app);
 
   // Global pipes, filters, and interceptors
   app.useGlobalPipes(new ZodValidationPipe());
