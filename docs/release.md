@@ -7,10 +7,9 @@ archived and uploaded by the App Store workflow, which runs automatically on eve
 `main` that changes `apps/apple/**`
 (`.github/workflows/app-store.yaml`, see [app-store-release.md](app-store-release.md)).
 
-> Until the first App Store release the version stays at **1.0.0** (only the build number goes
-> up for TestFlight uploads). Until then, regenerate the marketing screenshots whenever the
-> UI changes noticeably; from the first App Store release on, regenerate them with every
-> version bump.
+> Since the first App Store release (1.0.0, November 2026), raise the version for every App
+> Store release and regenerate the marketing screenshots with every version bump.
+> TestFlight-only uploads just raise the build number.
 
 ## 1. Bump the version
 
@@ -58,7 +57,7 @@ transparent screen area; `compose-marketing.mjs` finds the screen cutout itself.
 frame the script prints `warn: no … frame` and falls back to a rounded screenshot (iPhone,
 Watch) or a drawn graphite bezel (iPad, the current default).
 
-`TESTFLIGHT_URL` and `APP_STORE_URL` are constants in `apps/web/lib/site/config.ts`; set `APP_STORE_URL` once the App Store listing is live.
+`APP_STORE_ID` and `APP_STORE_URL` are constants in `apps/web/lib/site/config.ts`.
 
 ## 3. Check
 

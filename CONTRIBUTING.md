@@ -38,6 +38,13 @@ The [`bruno/`](bruno) folder contains a [Bruno](https://www.usebruno.com/) colle
 `local` environment, and run `auth/login` first. It stores the CSRF token that the other
 requests need.
 
+## Testing beta builds
+
+Every push to `main` that changes `apps/apple/**` uploads a new iPhone and Apple Watch build to
+App Store Connect (see [docs/release.md](docs/release.md)). Join the
+[TestFlight beta](https://testflight.apple.com/join/3agxtuUt) to try those builds before they
+reach the [App Store](https://apps.apple.com/app/lukifitti/id6831508360).
+
 ## Become a contributor
 
 If you want to get closer to the project, for example to help shape the roadmap, review pull

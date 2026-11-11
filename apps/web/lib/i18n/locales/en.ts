@@ -775,7 +775,6 @@ export const en = {
       headline: 'Train. Log. Get stronger.',
       sub: 'The workout tracker for iPhone, Apple Watch and the web — fully usable offline, no fluff.',
       openApp: 'Open app',
-      download: 'Join the TestFlight beta',
       heroAlt: 'LukiFitti active workout on iPhone',
       deviceLabel: 'Device',
     },
@@ -850,7 +849,7 @@ export const en = {
       ],
       requestLink: 'Request a feature',
     },
-    appStore: { small: 'Download on the', big: 'App Store', soon: 'Coming soon' },
+    appStore: { small: 'Download on the', big: 'App Store' },
     openSource: {
       title: 'Built by the community. Free for everyone.',
       lead: 'Nobody should have to pay a subscription to track workouts, progress or meals. LukiFitti is a community project: free, open source and transparent — every line of code, including the AI prompts, is public on GitHub.',

@@ -1,6 +1,6 @@
 import { SiGithub } from '@icons-pack/react-simple-icons';
 
-import { APP_ORIGIN, GITHUB_URL, TESTFLIGHT_URL } from '@/lib/site/config';
+import { APP_ORIGIN, APP_STORE_URL, GITHUB_URL } from '@/lib/site/config';
 import { type getSiteCopy } from '@/lib/site/content';
 
 export function SiteHeader({ t }: { t: ReturnType<typeof getSiteCopy> }) {
@@ -40,14 +40,14 @@ export function SiteHeader({ t }: { t: ReturnType<typeof getSiteCopy> }) {
           >
             {t.nav.switchTo}
           </a>
-          {TESTFLIGHT_URL && (
-            <a
-              href={TESTFLIGHT_URL}
-              className="text-muted-foreground hover:text-foreground hidden text-sm sm:inline"
-            >
-              {t.nav.download}
-            </a>
-          )}
+          <a
+            href={APP_STORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-muted-foreground hover:text-foreground hidden text-sm sm:inline"
+          >
+            {t.nav.download}
+          </a>
           <a
             href={APP_ORIGIN}
             className="bg-primary text-primary-foreground flex h-9 items-center rounded-full px-4 text-sm font-medium transition-[filter] hover:brightness-110"

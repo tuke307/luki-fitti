@@ -14,7 +14,7 @@ import { SiteHeader } from './SiteHeader';
 import { SiteFooter } from './SiteFooter';
 import { AppStoreBadge } from './AppStoreBadge';
 import { HeroDeviceSwitcher } from './HeroDeviceSwitcher';
-import { APP_ORIGIN, GITHUB_URL, TESTFLIGHT_URL, type SiteLocale } from '@/lib/site/config';
+import { APP_ORIGIN, GITHUB_URL, type SiteLocale } from '@/lib/site/config';
 import { featureRequestHref, getSiteCopy, HERO_DEVICES, SCREENSHOTS } from '@/lib/site/content';
 import { shotFile, shotInfo } from '@/lib/site/screens';
 
@@ -34,20 +34,6 @@ function OpenAppCta({ label, className }: { label: string; className: string }) 
       href={APP_ORIGIN}
       className={`bg-primary text-primary-foreground inline-flex items-center justify-center rounded-full font-medium transition-[filter] hover:brightness-110 ${className}`}
       data-testid="hero-open-app"
-    >
-      {label}
-    </a>
-  );
-}
-
-function DownloadNote({ label }: { label: string }) {
-  if (!TESTFLIGHT_URL) {
-    return null;
-  }
-  return (
-    <a
-      href={TESTFLIGHT_URL}
-      className="bg-secondary text-foreground inline-flex h-12 items-center justify-center rounded-full px-7 text-base font-medium transition-[filter] hover:brightness-110"
     >
       {label}
     </a>
@@ -124,8 +110,7 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
             </p>
             <div className="flex flex-wrap items-center gap-4 pt-2">
               <OpenAppCta label={t.hero.openApp} className="h-12 px-7 text-base" />
-              <DownloadNote label={t.hero.download} />
-              <AppStoreBadge small={t.appStore.small} big={t.appStore.big} soon={t.appStore.soon} />
+              <AppStoreBadge small={t.appStore.small} big={t.appStore.big} />
             </div>
           </div>
           <div className="site-hero-device mx-auto">
@@ -287,8 +272,7 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
           <h2 className="text-4xl font-semibold tracking-[-0.03em] sm:text-5xl">{t.cta.title}</h2>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
             <OpenAppCta label={t.cta.openApp} className="h-12 px-7 text-base" />
-            <DownloadNote label={t.hero.download} />
-            <AppStoreBadge small={t.appStore.small} big={t.appStore.big} soon={t.appStore.soon} />
+            <AppStoreBadge small={t.appStore.small} big={t.appStore.big} />
           </div>
         </section>
       </main>

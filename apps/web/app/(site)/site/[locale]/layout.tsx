@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import '@luki-fitti/ui/globals.css';
 import '../site.css';
 import { notFound } from 'next/navigation';
-import { SITE_LOCALES, type SiteLocale } from '@/lib/site/config';
+import { APP_STORE_ID, SITE_LOCALES, type SiteLocale } from '@/lib/site/config';
 import { shotFile } from '@/lib/site/screens';
 
 export const dynamic = 'force-dynamic';
@@ -38,6 +38,7 @@ export async function generateMetadata({
     title: meta.title,
     description: meta.description,
     alternates: { canonical: meta.canonical, languages: { de: '/', en: '/en' } },
+    itunes: { appId: APP_STORE_ID },
     openGraph: {
       title: meta.title,
       description: meta.description,
