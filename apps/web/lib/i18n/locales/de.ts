@@ -774,8 +774,8 @@ export const de = {
       switchHref: '/en',
     },
     hero: {
-      headline: 'Trainiere. Protokolliere. Werde stärker.',
-      sub: 'Der Workout-Tracker für iPhone, Apple Watch und Web — offline nutzbar, ohne Schnickschnack.',
+      headline: 'Trainiere. Iss besser. Werde stärker.',
+      sub: 'Tracke Workouts und Mahlzeiten auf iPhone, Apple Watch und im Web, auf Wunsch mit KI. Kostenlos, Open Source und offline nutzbar.',
       openApp: 'App öffnen',
       heroAlt: 'LukiFitti aktives Training auf dem iPhone',
       deviceLabel: 'Gerät',
