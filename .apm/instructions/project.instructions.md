@@ -41,6 +41,7 @@ Offline-first workout tracker (`luki-fitti`) for Web (PWA), iPhone and Apple Wat
 - `docker compose -f compose.dev.yml up -d` starts the stack: `db`, `db-migrate`, `caddy`, `web`, `api`, `email-worker`, `mailpit`, `redis`, `seaweedfs`, `seaweedfs-admin`.
 - Env files per app: `<app>/.env.local` (samples in `<app>/.env.sample`). Never commit `.env*.local`.
 - Inside docker, services reach each other by **service name** (`db`, `redis`, `api`), not `localhost`.
+- Never prefix shell commands with inline env assignments (e.g. `DATABASE_URL=... npx prisma migrate deploy`) — permission rules match on the command prefix, so these trigger an approval prompt every time. Prefer the existing `*:local` scripts (e.g. `yarn workspace @luki-fitti/database db:deploy:local`), or load the env file with `npx dotenv -e .env.local -- <cmd>`; otherwise pass variables via the exec tool's `env` parameter so the command starts with the real program.
 - Next.js server-side fetch needs the **absolute** API URL — set `API_URL` (e.g. `http://api:3001/api` in docker). `SERVER_API_URL` in `apps/web/lib/config/env.config.ts` is derived from `API_URL` → `NEXT_PUBLIC_DIRECT_API_URL` → `http://localhost:${API_PORT}/api`.
 
 ## Native Apple Workspace (`apps/apple`)
