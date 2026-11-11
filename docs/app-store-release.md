@@ -167,14 +167,17 @@ After the upload, App Store Connect processes the build, and then it shows up un
 - Fill in the App Store listing, App Privacy and the privacy policy URL. Screenshots are in
   `apps/apple/marketing/appstore/<locale>/<device>/`:
 
-| App Store Connect slot                 | Folder                   |
-| :------------------------------------- | :----------------------- |
-| iPhone "mittleres Display" (6.1″/6.3″) | `iphone-6.3`             |
-| iPhone "großes Display" (6.5″–6.9″)    | `iphone-6.9`             |
-| iPad 13″                               | `ipad-13`                |
-| Apple Watch Ultra                      | `watch`                  |
-| Produktseite Kopfzeile                 | `creative/universal.png` |
-| Suchergebnisse                         | `creative/universal.png` |
+| App Store Connect slot                 | Folder                |
+| :------------------------------------- | :-------------------- |
+| iPhone "mittleres Display" (6.1″/6.3″) | `iphone-6.3`          |
+| iPhone "großes Display" (6.5″–6.9″)    | `iphone-6.9`          |
+| iPad 13″                               | `ipad-13`             |
+| Apple Watch Ultra                      | `watch`               |
+| Produktseite Kopfzeile                 | `creative/header.png` |
+| Suchergebnisse                         | `creative/search.png` |
+
+The two creative PNGs are separate assets: upload `header.png` to the product
+page header slot and `search.png` to the search-results slot.
 
 ## App Review video
 
