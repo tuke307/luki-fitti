@@ -210,51 +210,42 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
           <p className="text-muted-foreground mx-auto mt-4 max-w-[52ch] text-center text-lg">
             {t.switch.lead}
           </p>
-          <div className="mt-10 grid gap-4 lg:grid-cols-2 lg:items-start">
-            <div className="bg-card divide-white/10 divide-y rounded-2xl">
-              {SWITCH_APPS.map((app) => (
-                <div key={app.name} className="flex items-center justify-between gap-4 px-5 py-4">
-                  <span className="font-medium">{app.name}</span>
-                  <a
-                    href={app.guideUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`text-sm underline underline-offset-4 ${
-                      app.importable ? 'text-primary font-medium' : 'text-muted-foreground'
-                    }`}
-                  >
-                    {app.importable ? t.switch.guide : t.switch.notYet}
-                  </a>
-                </div>
-              ))}
-            </div>
-            <div className="bg-card overflow-x-auto rounded-2xl p-5">
-              <table className="w-full text-sm">
-                <caption className="sr-only">{t.switch.compareLabel}</caption>
-                <thead>
-                  <tr className="border-white/10 border-b">
-                    <th scope="col" className="py-2 pr-4 text-left font-medium" />
-                    <th scope="col" className="text-primary py-2 pr-4 text-left font-semibold">
-                      {t.switch.compareUs}
+          <ul className="mt-8 flex flex-wrap justify-center gap-2">
+            {SWITCH_APPS.map((app) => (
+              <li key={app} className="bg-card rounded-full px-4 py-1.5 text-sm font-medium">
+                {app}
+              </li>
+            ))}
+          </ul>
+          <div className="mx-auto mt-12 max-w-2xl overflow-x-auto">
+            <table className="w-full text-sm">
+              <caption className="sr-only">{t.switch.compareLabel}</caption>
+              <thead>
+                <tr>
+                  <th scope="col" className="pb-3 pr-4 text-left font-medium" />
+                  <th scope="col" className="text-primary pb-3 pr-4 text-left font-semibold">
+                    {t.switch.compareUs}
+                  </th>
+                  <th scope="col" className="text-muted-foreground pb-3 text-left font-medium">
+                    {t.switch.compareThem}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {t.switch.rows.map((row) => (
+                  <tr key={row.label} className="border-white/10 border-t">
+                    <th
+                      scope="row"
+                      className="text-muted-foreground py-3 pr-4 text-left font-normal"
+                    >
+                      {row.label}
                     </th>
-                    <th scope="col" className="text-muted-foreground py-2 text-left font-medium">
-                      {t.switch.compareThem}
-                    </th>
+                    <td className="py-3 pr-4">{row.us}</td>
+                    <td className="text-muted-foreground py-3">{row.them}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {t.switch.rows.map((row) => (
-                    <tr key={row.label} className="border-white/10 border-b last:border-0">
-                      <th scope="row" className="py-3 pr-4 text-left font-medium">
-                        {row.label}
-                      </th>
-                      <td className="py-3 pr-4">{row.us}</td>
-                      <td className="text-muted-foreground py-3">{row.them}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
         </section>
 
