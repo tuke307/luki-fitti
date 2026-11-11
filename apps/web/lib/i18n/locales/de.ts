@@ -857,9 +857,7 @@ export const de = {
     },
     switch: {
       title: 'Du kommst von einer anderen App?',
-      lead: 'Nimm deinen Trainingsverlauf mit. Anleitungen für weitere Apps folgen.',
-      guide: 'Import-Anleitung',
-      notYet: 'Import noch nicht möglich',
+      lead: 'Eine App für Training und Ernährung. Deinen Trainingsverlauf aus GymLife und Alpha Progression kannst du importieren.',
       compareLabel: 'Vergleich',
       compareUs: 'LukiFitti',
       compareThem: 'Typische Abo-Apps',
