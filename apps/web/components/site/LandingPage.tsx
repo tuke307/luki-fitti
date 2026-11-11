@@ -14,8 +14,15 @@ import { SiteHeader } from './SiteHeader';
 import { SiteFooter } from './SiteFooter';
 import { AppStoreBadge } from './AppStoreBadge';
 import { HeroDeviceSwitcher } from './HeroDeviceSwitcher';
-import { APP_ORIGIN, GITHUB_URL, TESTFLIGHT_URL, type SiteLocale } from '@/lib/site/config';
-import { featureRequestHref, getSiteCopy, HERO_DEVICES, SCREENSHOTS } from '@/lib/site/content';
+import { StructuredData } from './StructuredData';
+import { APP_ORIGIN, GITHUB_URL, type SiteLocale } from '@/lib/site/config';
+import {
+  featureRequestHref,
+  getSiteCopy,
+  HERO_DEVICES,
+  SCREENSHOTS,
+  SWITCH_APPS,
+} from '@/lib/site/content';
 import { shotFile, shotInfo } from '@/lib/site/screens';
 
 const GLANCE_ICONS = [WifiOff, TrendingUp, Watch] as const;
@@ -34,20 +41,6 @@ function OpenAppCta({ label, className }: { label: string; className: string }) 
       href={APP_ORIGIN}
       className={`bg-primary text-primary-foreground inline-flex items-center justify-center rounded-full font-medium transition-[filter] hover:brightness-110 ${className}`}
       data-testid="hero-open-app"
-    >
-      {label}
-    </a>
-  );
-}
-
-function DownloadNote({ label }: { label: string }) {
-  if (!TESTFLIGHT_URL) {
-    return null;
-  }
-  return (
-    <a
-      href={TESTFLIGHT_URL}
-      className="bg-secondary text-foreground inline-flex h-12 items-center justify-center rounded-full px-7 text-base font-medium transition-[filter] hover:brightness-110"
     >
       {label}
     </a>
@@ -106,6 +99,7 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
   return (
     <>
       <SiteHeader t={t} />
+      <StructuredData locale={locale} />
       <main>
         {/* ---- hero ---------------------------------------------------- */}
         <section className="relative mx-auto grid min-h-[calc(100dvh-3.5rem)] max-w-[920px] items-center gap-12 px-4 pt-10 pb-16 sm:pt-12 lg:grid-cols-2 lg:gap-8 lg:py-12">
@@ -124,8 +118,7 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
             </p>
             <div className="flex flex-wrap items-center gap-4 pt-2">
               <OpenAppCta label={t.hero.openApp} className="h-12 px-7 text-base" />
-              <DownloadNote label={t.hero.download} />
-              <AppStoreBadge small={t.appStore.small} big={t.appStore.big} soon={t.appStore.soon} />
+              <AppStoreBadge small={t.appStore.small} big={t.appStore.big} />
             </div>
           </div>
           <div className="site-hero-device mx-auto">
@@ -209,6 +202,62 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
           </div>
         </section>
 
+        {/* ---- switching from another app ------------------------------- */}
+        <section id="switch" className="mx-auto max-w-5xl scroll-mt-16 px-4 py-20">
+          <h2 className="text-center text-3xl font-semibold tracking-[-0.02em] sm:text-4xl">
+            {t.switch.title}
+          </h2>
+          <p className="text-muted-foreground mx-auto mt-4 max-w-[52ch] text-center text-lg">
+            {t.switch.lead}
+          </p>
+          <div className="mt-10 grid gap-4 lg:grid-cols-2 lg:items-start">
+            <div className="bg-card divide-white/10 divide-y rounded-2xl">
+              {SWITCH_APPS.map((app) => (
+                <div key={app.name} className="flex items-center justify-between gap-4 px-5 py-4">
+                  <span className="font-medium">{app.name}</span>
+                  <a
+                    href={app.guideUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`text-sm underline underline-offset-4 ${
+                      app.importable ? 'text-primary font-medium' : 'text-muted-foreground'
+                    }`}
+                  >
+                    {app.importable ? t.switch.guide : t.switch.notYet}
+                  </a>
+                </div>
+              ))}
+            </div>
+            <div className="bg-card overflow-x-auto rounded-2xl p-5">
+              <table className="w-full text-sm">
+                <caption className="sr-only">{t.switch.compareLabel}</caption>
+                <thead>
+                  <tr className="border-white/10 border-b">
+                    <th scope="col" className="py-2 pr-4 text-left font-medium" />
+                    <th scope="col" className="text-primary py-2 pr-4 text-left font-semibold">
+                      {t.switch.compareUs}
+                    </th>
+                    <th scope="col" className="text-muted-foreground py-2 text-left font-medium">
+                      {t.switch.compareThem}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {t.switch.rows.map((row) => (
+                    <tr key={row.label} className="border-white/10 border-b last:border-0">
+                      <th scope="row" className="py-3 pr-4 text-left font-medium">
+                        {row.label}
+                      </th>
+                      <td className="py-3 pr-4">{row.us}</td>
+                      <td className="text-muted-foreground py-3">{row.them}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
         {/* ---- open source ---------------------------------------------- */}
         <section id="open-source" className="mx-auto max-w-5xl scroll-mt-16 px-4 py-20">
           <h2 className="text-center text-3xl font-semibold tracking-[-0.02em] sm:text-4xl">
@@ -247,7 +296,7 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
         <section id="faq" className="mx-auto max-w-3xl scroll-mt-16 px-4 py-20">
           <h2 className="text-3xl font-semibold tracking-[-0.02em]">{t.faq.title}</h2>
           <div className="bg-card divide-white/10 mt-8 divide-y rounded-2xl">
-            {t.faq.items.slice(0, 4).map((item) => (
+            {t.faq.items.slice(0, -1).map((item) => (
               <details key={item.q} className="group">
                 <summary className="flex min-h-14 cursor-pointer items-center justify-between px-5 font-medium marker:content-none">
                   {item.q}
@@ -262,7 +311,7 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
             ))}
             <details className="group">
               <summary className="flex min-h-14 cursor-pointer items-center justify-between px-5 font-medium marker:content-none">
-                {t.faq.items[4]!.q}
+                {t.faq.items[t.faq.items.length - 1]!.q}
                 <ChevronDown
                   size={18}
                   className="text-muted-foreground shrink-0 transition-transform group-open:rotate-180"
@@ -270,7 +319,7 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
                 />
               </summary>
               <p className="text-muted-foreground px-5 pb-5">
-                {t.faq.items[4]!.a}{' '}
+                {t.faq.items[t.faq.items.length - 1]!.a}{' '}
                 <a
                   href={featureRequestHref(locale)}
                   className="text-primary font-medium underline underline-offset-4"
@@ -287,8 +336,7 @@ export function LandingPage({ locale }: { locale: SiteLocale }) {
           <h2 className="text-4xl font-semibold tracking-[-0.03em] sm:text-5xl">{t.cta.title}</h2>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
             <OpenAppCta label={t.cta.openApp} className="h-12 px-7 text-base" />
-            <DownloadNote label={t.hero.download} />
-            <AppStoreBadge small={t.appStore.small} big={t.appStore.big} soon={t.appStore.soon} />
+            <AppStoreBadge small={t.appStore.small} big={t.appStore.big} />
           </div>
         </section>
       </main>
