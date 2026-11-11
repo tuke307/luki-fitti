@@ -22,7 +22,6 @@ public struct WorkoutsView: View {
     // Workout Template Builder Modal State
     @State private var activeBuilderContext: TemplateBuilderContext?
     @State private var showingAIBuilder = false
-    @State private var showsAiKeyAlert = false
 
     fileprivate struct TemplateBuilderContext: Identifiable {
         let id: String
@@ -151,13 +150,7 @@ public struct WorkoutsView: View {
                     .accessibilityIdentifier("ios.workouts.newFolderButton")
                     if viewModel.showsAiFeature(.AI_WORKOUT_BUILDER) {
                         Button {
-                            Task {
-                                if await viewModel.ensureAiKeyConfigured() {
-                                    showingAIBuilder = true
-                                } else {
-                                    showsAiKeyAlert = true
-                                }
-                            }
+                            showingAIBuilder = true
                         } label: {
                             Label(tr("Plan with AI"), systemImage: "sparkles")
                         }
@@ -182,9 +175,6 @@ public struct WorkoutsView: View {
         }
         .sheet(isPresented: $showingFolderModal) {
             folderEditorSheet
-        }
-        .aiAccessAlert(isPresented: $showsAiKeyAlert, isSignedIn: viewModel.isSignedIn) {
-            viewModel.selectedTab = .profile
         }
         .sheet(isPresented: $showingAIBuilder) {
             AIWorkoutBuilderSheet(viewModel: viewModel) { _ in

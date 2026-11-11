@@ -180,13 +180,7 @@ public struct ProgressTargetFlowView: View {
             }
             Section {
                 Button(tr("Continue")) {
-                    Task {
-                        guard viewModel.isSignedIn, await viewModel.ensureAiKeyConfigured() else {
-                            showsAiKeyAlert = true
-                            return
-                        }
-                        step = viewModel.store.preferences.progressAiConsentAt != nil ? .photo : .consent
-                    }
+                    step = viewModel.store.preferences.progressAiConsentAt != nil ? .photo : .consent
                 }
                 .accessibilityIdentifier("ios.progress.targetContinue")
             }
@@ -202,14 +196,20 @@ public struct ProgressTargetFlowView: View {
                 Button {
                     consentBusy = true
                     Task {
-                        do {
-                            let stamp = try await viewModel.store.apiClient.grantProgressTargetConsent()
-                            var prefs = viewModel.store.preferences
-                            prefs.progressAiConsentAt = stamp
-                            viewModel.store.savePreferences(prefs)
+                        // Consent lives on the account; guests and keyless users skip it and
+                        // get the access prompt at the generate step instead.
+                        if viewModel.isSignedIn, await viewModel.ensureAiKeyConfigured() {
+                            do {
+                                let stamp = try await viewModel.store.apiClient.grantProgressTargetConsent()
+                                var prefs = viewModel.store.preferences
+                                prefs.progressAiConsentAt = stamp
+                                viewModel.store.savePreferences(prefs)
+                                step = .photo
+                            } catch let consentError {
+                                self.error = friendly(consentError, fallback: tr("Could not save consent. Please try again."))
+                            }
+                        } else {
                             step = .photo
-                        } catch let consentError {
-                            self.error = friendly(consentError, fallback: tr("Could not save consent. Please try again."))
                         }
                         consentBusy = false
                     }
@@ -347,6 +347,14 @@ public struct ProgressTargetFlowView: View {
     }
 
     private func generate() async {
+        guard viewModel.isSignedIn, await viewModel.ensureAiKeyConfigured() else {
+            showsAiKeyAlert = true
+            return
+        }
+        if viewModel.store.preferences.progressAiConsentAt == nil {
+            step = .consent
+            return
+        }
         guard let photo = refPhoto, let goal, let horizon else { return }
         if refImage == nil { await loadRef() }
         guard let refImage,
