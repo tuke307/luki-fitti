@@ -178,7 +178,7 @@ export const OPENROUTER_BASE_URL = (() => {
 })();
 export const OPENROUTER_TIMEOUT_MS = Number(process.env.OPENROUTER_TIMEOUT_MS) || 60_000;
 
-// Object storage for meal photos (SeaweedFS, S3-compatible; same variables as kds/marienmuehle).
+// Object storage for meal photos (SeaweedFS, S3-compatible).
 // Photos are optional: without storage, analysis still works but photos are not kept.
 // TODO: Configure SEAWEEDFS_* in your environment / secret store.
 export const SEAWEEDFS_ENDPOINT = (process.env.SEAWEEDFS_ENDPOINT ?? '')
