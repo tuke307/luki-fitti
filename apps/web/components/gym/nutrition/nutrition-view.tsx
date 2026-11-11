@@ -35,6 +35,7 @@ import {
   weekDays,
   weekStartKey,
 } from '@/lib/nutrition/nutrition-day';
+import { showsAiFeature } from '@/lib/ai/ai-access';
 import { useNutrition } from '@/lib/nutrition/use-nutrition';
 import { useBodyWeight } from '@/lib/body-weight/use-body-weight';
 import { useHealthActivity } from '@/lib/activity/use-health-activity';
@@ -96,7 +97,7 @@ export function NutritionView({ onNavigate }: { onNavigate: (tab: NavTab) => voi
 
   const prefs = user?.preferences;
   const kcalGoal = prefs?.dailyKcalGoal ?? null;
-  const canUsePhotos = user?.features?.includes(FeatureGrant.AI_MEAL_PHOTO) ?? false;
+  const canUsePhotos = showsAiFeature(user, FeatureGrant.AI_MEAL_PHOTO);
 
   const day = useMemo(
     () => buildDay(selected, entries, historySessions, weighIns, prefs?.bodyWeightKg, activity),
