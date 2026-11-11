@@ -19,10 +19,13 @@ public struct ProgressListView: View {
     }
 
     private var checkIns: [ProgressCheckInDto] { viewModel.progress.datedCheckIns }
+    private var canUseAiTarget: Bool { viewModel.store.currentUser?.hasFeature(.AI_PROGRESS_TARGET) ?? false }
 
     public var body: some View {
         List {
-            ProgressTargetCard(viewModel: viewModel)
+            if canUseAiTarget {
+                ProgressTargetCard(viewModel: viewModel)
+            }
             ProgressTargetSection(viewModel: viewModel)
             if checkIns.isEmpty {
                 Section {
@@ -70,10 +73,12 @@ public struct ProgressListView: View {
                 } label: { Image(systemName: "plus") }
                 .accessibilityIdentifier("ios.progress.addCheckIn")
             }
-            ToolbarItem(placement: .topBarLeading) {
-                Button { showsAiInfo = true } label: { Image(systemName: "questionmark.circle") }
-                    .accessibilityLabel(tr("How this works"))
-                    .accessibilityIdentifier("ios.aiInfo.progressTarget")
+            if canUseAiTarget {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { showsAiInfo = true } label: { Image(systemName: "questionmark.circle") }
+                        .accessibilityLabel(tr("How this works"))
+                        .accessibilityIdentifier("ios.aiInfo.progressTarget")
+                }
             }
         }
         .alert(tr("Turn off cloud backup?"), isPresented: $askDeleteRemote) {
