@@ -843,11 +843,29 @@ export const en = {
           a: 'Your data is stored on our server in Germany. OpenRouter keys are stored AES-256-GCM encrypted and never sent back to your device. No ads, no tracking — only privacy-friendly, aggregated page views and anonymous usage events via Umami.',
         },
         {
+          q: 'Can I switch from GymLife, Alpha Progression or MCI?',
+          a: 'For GymLife and Alpha Progression, yes: a step-by-step guide turns your data into a LukiFitti import file that you upload under Profile → Data → Data import (GymLife goes through an iPhone backup and is a bit technical). MCI offers no export, so an import is not possible yet.',
+        },
+        {
           q: 'How do I request a feature?',
           a: 'Just write to us — we are happy to hear your ideas.',
         },
       ],
       requestLink: 'Request a feature',
+    },
+    switch: {
+      title: 'Coming from another app?',
+      lead: 'Bring your training history with you. Guides for more apps are on the way.',
+      guide: 'Import guide',
+      notYet: 'Import not possible yet',
+      compareLabel: 'Comparison',
+      compareUs: 'LukiFitti',
+      compareThem: 'Typical subscription apps',
+      rows: [
+        { label: 'Price', us: 'Free, no subscription', them: 'Monthly or yearly subscription' },
+        { label: 'Source code', us: 'Open source (AGPL-3.0)', them: 'Closed' },
+        { label: 'Your data', us: 'Export and import anytime', them: 'Often no export' },
+      ],
     },
     appStore: { small: 'Download on the', big: 'App Store' },
     openSource: {

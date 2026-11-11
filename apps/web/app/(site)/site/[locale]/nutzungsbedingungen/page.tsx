@@ -1,8 +1,32 @@
 // TODO(legal): draft only — needs legal review before going public.
+import type { Metadata } from 'next';
 import { SITE_LOCALES, type SiteLocale } from '@/lib/site/config';
 import { notFound } from 'next/navigation';
 import { LegalPage } from '@/components/site/LegalPage';
 import { getSiteCopy } from '@/lib/site/content';
+import { buildSiteMetadata } from '@/lib/site/seo';
+
+const DESCRIPTIONS: Record<SiteLocale, string> = {
+  de: 'Nutzungsbedingungen für die LukiFitti-App und -Website.',
+  en: 'Terms of use for the LukiFitti app and website.',
+};
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  if (!SITE_LOCALES.includes(locale as SiteLocale)) notFound();
+  const lang = locale as SiteLocale;
+  const t = getSiteCopy(lang);
+  return buildSiteMetadata({
+    locale: lang,
+    page: 'nutzungsbedingungen',
+    title: `${t.legal.nutzungsbedingungenTitle} — LukiFitti`,
+    description: DESCRIPTIONS[lang],
+  });
+}
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
