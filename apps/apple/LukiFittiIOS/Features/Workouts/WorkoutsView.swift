@@ -189,6 +189,7 @@ public struct WorkoutsView: View {
                 historySessions: viewModel.store.historySessions,
                 suggestionsEnabled: viewModel.store.preferences.exerciseSuggestionsEnabled,
                 defaultWeightUnit: viewModel.store.preferences.weightUnit,
+                defaultRestSeconds: viewModel.store.preferences.defaultRestSeconds,
                 analytics: viewModel.analytics,
                 onCancel: {
                     activeBuilderContext = nil
@@ -672,7 +673,7 @@ public struct WorkoutsView: View {
                     targetRepsMax: nil,
                     targetWeight: 60,
                     weightUnit: viewModel.store.preferences.weightUnit,
-                    restSeconds: 90,
+                    restSeconds: viewModel.store.preferences.defaultRestSeconds,
                     alternativeExerciseIds: Array(firstEx.alternativeExerciseIds.prefix(2)),
                     exercise: firstEx
                 )
@@ -752,6 +753,7 @@ private struct TemplateBuilderSheetView: View {
     let historySessions: [WorkoutSessionDto]
     let suggestionsEnabled: Bool
     let defaultWeightUnit: WeightUnit
+    let defaultRestSeconds: Int
     let analytics: AnalyticsClient
     let onCancel: () -> Void
     let onSave: (String, String, String, Int, [WorkoutTemplateExerciseDto]) -> Void
@@ -778,6 +780,7 @@ private struct TemplateBuilderSheetView: View {
         historySessions: [WorkoutSessionDto],
         suggestionsEnabled: Bool,
         defaultWeightUnit: WeightUnit,
+        defaultRestSeconds: Int,
         analytics: AnalyticsClient,
         onCancel: @escaping () -> Void,
         onSave: @escaping (String, String, String, Int, [WorkoutTemplateExerciseDto]) -> Void
@@ -788,6 +791,7 @@ private struct TemplateBuilderSheetView: View {
         self.historySessions = historySessions
         self.suggestionsEnabled = suggestionsEnabled
         self.defaultWeightUnit = defaultWeightUnit
+        self.defaultRestSeconds = defaultRestSeconds
         self.analytics = analytics
         self.onCancel = onCancel
         self.onSave = onSave
@@ -963,7 +967,7 @@ private struct TemplateBuilderSheetView: View {
 
                             if idx < exercises.count - 1 {
                                 Button {
-                                    slot.restSeconds = isSupersetWithNext ? 90 : 0
+                                    slot.restSeconds = isSupersetWithNext ? defaultRestSeconds : 0
                                 } label: {
                                     Label(
                                         isSupersetWithNext
@@ -1050,7 +1054,7 @@ private struct TemplateBuilderSheetView: View {
                             targetRepsMax: nil,
                             targetWeight: 40,
                             weightUnit: defaultWeightUnit,
-                            restSeconds: 90,
+                            restSeconds: defaultRestSeconds,
                             alternativeExerciseIds: Array(chosen.alternativeExerciseIds.prefix(2)),
                             exercise: chosen
                         )

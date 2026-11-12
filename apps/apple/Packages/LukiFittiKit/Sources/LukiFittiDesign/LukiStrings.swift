@@ -954,6 +954,8 @@ public enum LukiStrings {
         // Settings and export
         "Rest timer": "Pausentimer",
         "Starts after each set": "Startet nach jedem Satz",
+        "Default rest": "Standard-Pause",
+        "For new exercises. Each exercise can set its own rest.": "Für neue Übungen. Jede Übung kann ihre eigene Pause haben.",
         "Appearance": "Darstellung",
         "Light": "Hell",
         "Dark": "Dunkel",
