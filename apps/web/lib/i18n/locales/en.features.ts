@@ -197,6 +197,9 @@ export const enFeatures = {
     keyRequiredBody:
       'AI features run on your own OpenRouter API key. Add it in your profile to use them.',
     keyRequiredAction: 'Add key',
+    signInRequiredTitle: 'Sign in required',
+    signInRequiredBody:
+      'AI features need an account and your own OpenRouter API key. Sign in, then add the key in your profile.',
   },
   feedback: {
     menuLabel: 'Doesn’t work for me',

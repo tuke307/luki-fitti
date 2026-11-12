@@ -18,6 +18,7 @@ import { api } from '@/lib/api';
 import { aiErrorMessage } from '@/lib/ai/ai-errors';
 import { isAiKeyRequiredError } from '@/lib/ai/ai-key-required';
 import { AiKeyRequiredDialog } from './ai-key-required-dialog';
+import { useAuth } from '@/providers/auth/auth-context';
 import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { AiCostLabel } from './ai-usage/ai-cost-label';
@@ -73,6 +74,7 @@ export function AiWorkoutBuilderDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { t, format, muscleLabel } = useLocale();
+  const { isAuthenticated, user } = useAuth();
   const { createTemplate, isOnline } = useGym();
   // The prompt survives closing (handy for tweaking it); the result does not.
   const [prompt, setPrompt] = useState('');
@@ -94,6 +96,10 @@ export function AiWorkoutBuilderDialog({
   };
 
   const generate = async () => {
+    if (!isAuthenticated || !user?.aiKeyConfigured) {
+      setKeyRequiredOpen(true);
+      return;
+    }
     if (!isOnline) {
       setError(t.aiBuilder.offline);
       return;
