@@ -12,6 +12,7 @@
 // them: docs/release.md → "Device frames"). A missing frame falls back to a rounded
 // screenshot, or to the CSS bezel for devices with "bezel": true (iPad).
 import { chromium } from 'playwright';
+import sharp from 'sharp';
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -169,17 +170,15 @@ function pngInfo(file) {
 }
 
 /** App Store rejects transparent PNGs: composite onto an opaque background. */
-function flattenPng(file) {
-  execSync(
-    `python3 -c "
-from PIL import Image
-im = Image.open('${file}')
-if im.mode in ('RGBA', 'LA') or (im.mode == 'P' and 'transparency' in im.info):
-    bg = Image.new('RGB', im.size, (10, 10, 10))
-    bg.paste(im.convert('RGBA'), mask=im.convert('RGBA').split()[-1])
-    bg.save('${file}')
-"`,
-  );
+async function flattenPng(file) {
+  const meta = await sharp(file).metadata();
+  if (!meta.hasAlpha) return;
+  const tmp = `${file}.flat.png`;
+  await sharp(file)
+    .flatten({ background: { r: 10, g: 10, b: 10 } })
+    .png()
+    .toFile(tmp);
+  fs.renameSync(tmp, file);
 }
 
 /** Fail loudly unless the output matches its device canvas and carries no alpha. */
@@ -192,39 +191,34 @@ function checkAppStoreOutput(file, canvas) {
 }
 
 /** Corner/centre alpha check for landing images. */
-function alphaAt(file) {
-  const out = execSync(
-    `python3 -c "
-from PIL import Image
-im = Image.open('${file}').convert('RGBA')
-w, h = im.size
-px = im.load()
-corners = [px[2, 2][3], px[w - 3, 2][3], px[2, h - 3][3], px[w - 3, h - 3][3]]
-centre = px[w // 2, h // 2][3]
-print(','.join(str(a) for a in corners) + '|' + str(centre))
-"`,
-    { encoding: 'utf8' },
-  ).trim();
-  const [corners, centre] = out.split('|');
-  return { corners: corners.split(',').map(Number), centre: Number(centre) };
+async function alphaAt(file) {
+  const { data, info } = await sharp(file)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const a = (x, y) => data[(y * info.width + x) * 4 + 3];
+  const w = info.width;
+  const h = info.height;
+  return {
+    corners: [a(2, 2), a(w - 3, 2), a(2, h - 3), a(w - 3, h - 3)],
+    centre: a(Math.floor(w / 2), Math.floor(h / 2)),
+  };
 }
 
-function pixelVariance(file) {
-  const out = execSync(
-    `python3 -c "
-from PIL import Image
-import sys
-src = Image.open('${file}').convert('RGBA')
-im = Image.new('RGB', src.size, (0, 0, 0))
-im.paste(src, mask=src.split()[3])
-im = im.convert('L').resize((64, 64))
-px = list(im.getdata())
-m = sum(px) / len(px)
-print(round(sum((p - m) ** 2 for p in px) / len(px), 1))
-"`,
-    { encoding: 'utf8' },
-  ).trim();
-  return Number(out);
+async function pixelVariance(file) {
+  const { data } = await sharp(file)
+    .flatten({ background: { r: 0, g: 0, b: 0 } })
+    .greyscale()
+    .resize(64, 64)
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const n = data.length;
+  let m = 0;
+  for (const p of data) m += p;
+  m /= n;
+  let v = 0;
+  for (const p of data) v += (p - m) ** 2;
+  return Math.round((v / n) * 10) / 10;
 }
 
 async function decodeImages(page) {
@@ -311,7 +305,7 @@ async function main() {
           // Watch: the capture ships as-is — the store renders its own outline and
           // there is no room for text at 422×514.
           fs.copyFileSync(src, appFile);
-          flattenPng(appFile);
+          await flattenPng(appFile);
           checkAppStoreOutput(appFile, device.canvas);
           console.log(`${lang} ${deviceId} ${shot.id} ✓ (raw ${device.canvas.join('x')})`);
           continue;
@@ -360,10 +354,10 @@ async function main() {
         );
         await decodeImages(page);
         await page.screenshot({ path: appFile, type: 'png' });
-        flattenPng(appFile);
+        await flattenPng(appFile);
         checkAppStoreOutput(appFile, device.canvas);
 
-        const v = pixelVariance(appFile);
+        const v = await pixelVariance(appFile);
         if (!(v > 50)) throw new Error(`appstore ${appFile} looks blank (variance ${v})`);
         const hash = execSync(`md5 -q "${appFile}"`).toString().trim();
         // Different shots in the SAME language+device must differ; en↔de may legitimately
@@ -399,9 +393,9 @@ async function main() {
           );
           if (await decodeImages(page)) {
             await page.screenshot({ path: landFile, type: 'png', omitBackground: true });
-            const v = pixelVariance(landFile);
+            const v = await pixelVariance(landFile);
             if (!(v > 50)) throw new Error(`landing ${landFile} looks blank (variance ${v})`);
-            const { corners, centre } = alphaAt(landFile);
+            const { corners, centre } = await alphaAt(landFile);
             if (corners.some((a) => a > 0))
               throw new Error(`${landFile} corner is opaque — the frame must be the edge`);
             if (centre < 200) throw new Error(`${landFile} centre is transparent`);
@@ -445,7 +439,7 @@ async function main() {
             );
             if (await decodeImages(page)) {
               await page.screenshot({ path: landFile, type: 'png', omitBackground: true });
-              const v = pixelVariance(landFile);
+              const v = await pixelVariance(landFile);
               if (!(v > 50)) throw new Error(`landing ${landFile} looks blank (variance ${v})`);
               console.log(`${lang} ipad landing ${shot.id} ✓`);
             }
@@ -455,13 +449,16 @@ async function main() {
     }
   }
 
-  // ---- Creatives: universal 16:9 asset for header + search results ----------
-  // Center-cropped downstream to 21:9 (header) and 3:2 (search), so everything
-  // that matters stays inside the centered `safe` intersection, with ~4% margin.
+  // ---- Creatives: dedicated header (21:9) + search-results (3:2) assets ----
+  // The canvas is the size Apple expects; the centered `safe` rect is what stays
+  // visible on real devices, so headline + iPhone live inside it while iPad and
+  // Watch may bleed past as decoration. The background runs edge to edge.
   for (const creative of CONFIG.creatives ?? []) {
     const [cw, ch] = creative.canvas;
     const [sw, sh] = creative.safe;
-    const margin = Math.round(Math.min(sw, sh) * 0.04);
+    const safeX = Math.round((cw - sw) / 2);
+    const safeY = Math.round((ch - sh) / 2);
+    const margin = Math.round(Math.min(sw, sh) * 0.05);
     const contentW = sw - margin * 2;
     const contentH = sh - margin * 2;
     const shot = SHOTS.find((s) => s.id === creative.shot);
@@ -500,32 +497,47 @@ async function main() {
       const ipadC = composed['ipad-13'];
       const phoneC = composed['iphone-6.9'];
       const watchC = composed['watch'];
-      const rightW = Math.round(contentW * 0.62);
-      const headFont = Math.round(ch * 0.065);
-      const glowW = Math.round(rightW * 1.15);
 
-      // iPad centred at the back (≈78% of safe height), iPhone in front (≈70%)
-      // overlapping the iPad's left ~35%, Watch (≈28%) at its lower-right corner.
+      // Inside the safe rect: headline column on the left ending `gap` px before
+      // the iPhone's left edge, the device column on the right. Only the iPhone
+      // is constrained to the safe rect; the iPad sits behind it offset to the
+      // right (never left of the phone's left edge) and may bleed off canvas.
+      const gap = Math.round(sw * 0.04);
+      const glowW = Math.round(sw * 1.1);
+
+      const phoneH = contentH;
+      const phoneW = Math.round((phoneC.w * phoneH) / phoneC.h);
+      const phoneLeft = contentW - phoneW; // phone is right-aligned in content
+      const headW = phoneLeft - gap;
+      if (headW <= 0) throw new Error(`creative ${creative.id}: no room for headline`);
+      const devW = contentW - headW;
+      const phoneX = devW - phoneW;
+      const ipadH = ipadC ? Math.round(contentH * 1.2) : 0;
+      const ipadW = ipadC ? Math.round((ipadC.w * ipadH) / ipadC.h) : 0;
+      const ipadX = ipadC ? Math.round(phoneX + phoneW * 0.55) : 0;
+      const ipadBottom = Math.round((contentH - ipadH) / 2);
+      const watchH = watchC ? Math.round(contentH * 0.45) : 0;
+      const watchW = watchC ? Math.round((watchC.w * watchH) / watchC.h) : 0;
+      const watchX = Math.max(0, Math.round(phoneX - watchW * 0.55));
+      const watchBottom = Math.round(contentH * 0.1);
+
       const place = (c, h, style) =>
         `<div style="position:absolute;${style}"><div style="transform:scale(${h / c.h});transform-origin:bottom left;">${c.html}</div></div>`;
 
-      const ipadH = ipadC ? Math.round(sh * 0.78) : 0;
-      const phoneH = Math.round(sh * 0.7);
-      const watchH = watchC ? Math.round(sh * 0.28) : 0;
-      const ipadW = ipadC ? Math.round((ipadC.w * ipadH) / ipadC.h) : 0;
-      const phoneW = Math.round((phoneC.w * phoneH) / phoneC.h);
-      const watchW = watchC ? Math.round((watchC.w * watchH) / watchC.h) : 0;
-
-      const ipadX = Math.round((rightW - ipadW) / 2);
-      const phoneX = ipadC
-        ? Math.max(0, Math.round(ipadX + ipadW * 0.35 - phoneW))
-        : Math.round((rightW - phoneW) / 2);
-      const watchX = ipadC ? Math.round(ipadX + ipadW - watchW * 0.6) : Math.round(rightW - watchW);
-
       let devicesHtml = '';
-      if (ipadC) devicesHtml += place(ipadC, ipadH, `left:${ipadX}px;bottom:0;`);
+      if (ipadC) devicesHtml += place(ipadC, ipadH, `left:${ipadX}px;bottom:${ipadBottom}px;`);
       devicesHtml += place(phoneC, phoneH, `left:${phoneX}px;bottom:0;`);
-      if (watchC) devicesHtml += place(watchC, watchH, `left:${watchX}px;bottom:0;z-index:3;`);
+      if (watchC)
+        devicesHtml += place(watchC, watchH, `left:${watchX}px;bottom:${watchBottom}px;z-index:3;`);
+
+      // Headline: one nowrap block per sentence, periods kept. Font size is
+      // fitted in the page so all lines stay inside the safe content rect.
+      const headlineLines = (
+        creative.headline[lang].match(/[^.]+\./g) ?? [creative.headline[lang]]
+      ).map((l) => l.trim());
+      const headlineHtml = headlineLines
+        .map((l) => `<div style="white-space:nowrap;width:max-content">${l}</div>`)
+        .join('');
 
       const outDir = path.join(APPSTORE, LOCALE_DIR[lang], 'creative');
       fs.mkdirSync(outDir, { recursive: true });
@@ -534,52 +546,98 @@ async function main() {
       await page.setViewportSize({ width: cw, height: ch });
       await page.setContent(
         `<!doctype html><body style="margin:0;width:${cw}px;height:${ch}px;background:#0a0a0a;font-family:-apple-system,'SF Pro Display',system-ui,sans-serif;position:relative;overflow:hidden;">
-        <div style="position:absolute;right:${Math.round((cw - sw) / 2 - glowW * 0.15)}px;top:50%;transform:translateY(-50%);width:${glowW}px;height:${glowW}px;border-radius:50%;background:radial-gradient(closest-side, ${ACCENT}55, transparent);"></div>
-        <div style="position:absolute;left:${Math.round((cw - sw) / 2 + margin)}px;top:50%;transform:translateY(-50%);width:${contentW}px;height:${contentH}px;">
-          <div style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:${Math.round(contentW * 0.36)}px;">
-            <h1 style="color:${ACCENT};font-size:${headFont}px;font-weight:700;line-height:1.08;margin:0;letter-spacing:-1px;text-wrap:balance;">${creative.headline[lang]}</h1>
+        <div style="position:absolute;left:${Math.round(safeX + (sw - glowW) / 2)}px;top:${Math.round(safeY + (sh - glowW) / 2)}px;width:${glowW}px;height:${glowW}px;border-radius:50%;background:radial-gradient(closest-side, ${ACCENT}55, transparent);"></div>
+        <div style="position:absolute;left:${safeX + margin}px;top:${safeY + margin}px;width:${contentW}px;height:${contentH}px;">
+          <div style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:${headW}px;">
+            <h1 id="headline" style="color:${ACCENT};font-size:100px;font-weight:700;line-height:1.0;margin:0;letter-spacing:-0.02em;">${headlineHtml}</h1>
           </div>
-          <div style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:${rightW}px;height:${contentH}px;">
+          <div style="position:absolute;right:0;top:0;width:${devW}px;height:${contentH}px;">
             ${devicesHtml}
           </div>
         </div>
       </body>`,
         { waitUntil: 'load' },
       );
+      // Fit the headline: largest font size where the widest line (real text
+      // width — lines are width:max-content) fits the headline column and the
+      // whole block fits the safe content height.
+      const { headFont, measured } = await page.evaluate(
+        ({ maxW, maxH }) => {
+          const el = document.getElementById('headline');
+          const lines = [...el.children];
+          const fit = (px) => {
+            el.style.fontSize = `${px}px`;
+            const widest = Math.max(...lines.map((l) => l.getBoundingClientRect().width));
+            return widest <= maxW && el.getBoundingClientRect().height <= maxH;
+          };
+          let lo = 10;
+          let hi = 2000;
+          while (hi - lo > 1) {
+            const mid = Math.floor((lo + hi) / 2);
+            if (fit(mid)) lo = mid;
+            else hi = mid;
+          }
+          el.style.fontSize = `${lo}px`;
+          const r = el.getBoundingClientRect();
+          const widest = Math.max(...lines.map((l) => l.getBoundingClientRect().width));
+          return {
+            headFont: lo,
+            measured: { widest, top: r.top, bottom: r.bottom, left: r.left },
+          };
+        },
+        { maxW: headW, maxH: contentH },
+      );
+      // Hard assert: headline right edge stops at least `gap` before the
+      // iPhone's left edge, and the block is fully inside the safe rect.
+      const phoneAbsLeft = safeX + margin + phoneLeft;
+      const headAbsRight = safeX + margin + measured.widest;
+      if (
+        headAbsRight > phoneAbsLeft - gap ||
+        measured.top < safeY ||
+        measured.bottom > safeY + sh ||
+        measured.left < safeX
+      ) {
+        throw new Error(
+          `creative ${creative.id} ${lang}: headline out of safe rect ` +
+            `(right ${Math.round(headAbsRight)} > ${phoneAbsLeft - gap} phone-left-minus-gap, ` +
+            `top ${Math.round(measured.top)} bottom ${Math.round(measured.bottom)} safe-y ${safeY}..${safeY + sh})`,
+        );
+      }
       await decodeImages(page);
       await page.screenshot({ path: outFile, type: 'png' });
-      flattenPng(outFile);
+      await flattenPng(outFile);
       checkAppStoreOutput(outFile, creative.canvas);
-      const v = pixelVariance(outFile);
+      const v = await pixelVariance(outFile);
       if (!(v > 50)) throw new Error(`creative ${outFile} looks blank (variance ${v})`);
-      console.log(`${lang} creative ${creative.id} ✓ (var ${v})`);
+      console.log(`${lang} creative ${creative.id} ✓ (var ${v}, headline ${headFont}px)`);
 
       // ---- review previews (gitignored) ------------------------------------
       const previewDir = path.join(MARKETING, '.preview', LOCALE_DIR[lang]);
       fs.mkdirSync(previewDir, { recursive: true });
-      const sx = Math.round((cw - 4425) / 2);
-      const sy = Math.round((ch - 2247) / 2);
-      const hx = Math.round((cw - 5244) / 2);
-      const hy = Math.round((ch - 2247) / 2);
-      execSync(`python3 - <<'PY'
-from PIL import Image, ImageDraw
-im = Image.open('${outFile}').convert('RGB')
-W, H = im.size
-# 21:9 header crop (centered), 3:2 search crop (centered), safe rect
-hdr = im.crop((0, ${hy}, 5244, ${hy} + 2247))
-hdr.save('${previewDir}/header-crop.png')
-srch = im.crop((${sx}, 0, ${sx} + 4425, 2950))
-srch.save('${previewDir}/search-crop.png')
-g = im.copy()
-d = ImageDraw.Draw(g)
-d.rectangle([0, ${hy}, 5243, ${hy} + 2246], outline=(255, 0, 0), width=10)
-d.rectangle([${sx}, 0, ${sx} + 4424, 2949], outline=(0, 90, 255), width=10)
-d.rectangle([${sx}, ${sy}, ${sx} + 4424, ${sy} + 2246], outline=(0, 200, 0), width=10)
-g.save('${previewDir}/universal-guides.png')
-PY`);
+      const cropX = Math.round(cw * 0.079);
+      const guides = [
+        // green: real safe rect (what Apple keeps visible)
+        `<rect x="${safeX}" y="${safeY}" width="${sw}" height="${sh}" fill="none" stroke="rgb(0,200,0)" stroke-width="10"/>`,
+      ];
+      if (creative.id === 'header') {
+        // red: approximate iPhone crop (7.9% hidden each side)
+        guides.push(
+          `<rect x="${cropX}" y="0" width="${cw - 2 * cropX}" height="${ch}" fill="none" stroke="rgb(255,0,0)" stroke-width="10"/>`,
+        );
+        await sharp(outFile)
+          .extract({ left: cropX, top: 0, width: cw - 2 * cropX, height: ch })
+          .png()
+          .toFile(path.join(previewDir, 'header-iphone-crop.png'));
+      }
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${cw}" height="${ch}">${guides.join('')}</svg>`;
+      await sharp(outFile)
+        .composite([{ input: Buffer.from(svg) }])
+        .png()
+        .toFile(path.join(previewDir, `${creative.id}-guides.png`));
       console.log(`${lang} previews → ${previewDir}`);
     }
   }
+
   await browser.close();
 }
 
