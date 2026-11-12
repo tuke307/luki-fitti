@@ -79,7 +79,7 @@ public struct ExerciseHistorySection: View {
     }
 
     private var summary: some View {
-        HStack(spacing: 8) {
+        HStack(alignment: .top, spacing: 8) {
             ForEach(summaryItems, id: \.label) { item in
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.label)
@@ -92,12 +92,13 @@ public struct ExerciseHistorySection: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .padding(10)
                 .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(LukiColors.cardBackground))
                 .accessibilityElement(children: .combine)
             }
         }
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: - Chart
@@ -108,6 +109,13 @@ public struct ExerciseHistorySection: View {
 
     private var chartTitle: String {
         log.metric == .REPS ? tr("Most reps over time") : tr("Estimated 1RM over time")
+    }
+
+    /// True when the trend covers more than ~12 months, so month labels would repeat.
+    private func spansMultipleYears(_ points: [ChartPoint]) -> Bool {
+        let dates = points.map(\.date)
+        guard let first = dates.min(), let last = dates.max() else { return false }
+        return last.timeIntervalSince(first) > 366 * 24 * 60 * 60
     }
 
     @ViewBuilder
@@ -131,8 +139,15 @@ public struct ExerciseHistorySection: View {
                 }
                 .chartYScale(domain: ((values.min() ?? 0) - pad)...((values.max() ?? 1) + pad))
                 .chartXAxis {
-                    AxisMarks(values: .automatic(desiredCount: 3)) {
-                        AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                    // Multi-year spans get one yearly mark instead of repeating month labels.
+                    if spansMultipleYears(points) {
+                        AxisMarks(values: .stride(by: .year)) { _ in
+                            AxisValueLabel(format: .dateTime.year())
+                        }
+                    } else {
+                        AxisMarks(values: .automatic(desiredCount: 3)) {
+                            AxisValueLabel(format: .dateTime.day().month(.abbreviated))
+                        }
                     }
                 }
                 .frame(height: 120)
