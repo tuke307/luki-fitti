@@ -10,7 +10,7 @@ public struct ProgressListView: View {
     @Bindable public var viewModel: LukiAppViewModel
     @Environment(\.lukiLocale) private var tr
     @State private var editorDraft: ProgressCheckInDto? = nil
-    @State private var showGuide = false
+    @State private var showsAiInfo = false
     @State private var compareCheckIn: ProgressCheckInDto? = nil
     @State private var askDeleteRemote = false
 
@@ -71,8 +71,9 @@ public struct ProgressListView: View {
                 .accessibilityIdentifier("ios.progress.addCheckIn")
             }
             ToolbarItem(placement: .topBarLeading) {
-                Button { showGuide = true } label: { Image(systemName: "questionmark.circle") }
-                    .accessibilityLabel(tr("How to take the right photo"))
+                Button { showsAiInfo = true } label: { Image(systemName: "questionmark.circle") }
+                    .accessibilityLabel(tr("How this works"))
+                    .accessibilityIdentifier("ios.aiInfo.progressTarget")
             }
         }
         .alert(tr("Turn off cloud backup?"), isPresented: $askDeleteRemote) {
@@ -86,7 +87,7 @@ public struct ProgressListView: View {
         } message: {
             Text(tr("Photos stay on this device. Do you also want to delete the copies already backed up?"))
         }
-        .sheet(isPresented: $showGuide) { ProgressGuideSheet() }
+        .sheet(isPresented: $showsAiInfo) { AIInfoSheet(skill: .progressTarget, api: viewModel.store.apiClient) }
         .sheet(item: $editorDraft) { draft in
             CheckInEditorView(viewModel: viewModel, existing: draft)
         }
@@ -353,44 +354,6 @@ public struct CheckInEditorView: View {
 }
 
 
-/// "How to take the right photo" — the short tips sheet.
-public struct ProgressGuideSheet: View {
-    @Environment(\.lukiLocale) private var tr
-    @Environment(\.dismiss) private var dismiss
-
-    private var tips: [String] {
-        [
-            tr("Same spot and light every time"),
-            tr("Same time of day — morning, before eating"),
-            tr("Phone at chest height or on a timer"),
-            tr("Relaxed stance, fitted clothing"),
-            tr("Take all 3 poses: front, side, back"),
-        ]
-    }
-
-    public init() {}
-
-    public var body: some View {
-        NavigationStack {
-            List {
-                ForEach(tips, id: \.self) { tip in
-                    Label(tip, systemImage: "checkmark.circle.fill")
-                        .font(.subheadline)
-                        .foregroundStyle(.primary)
-                }
-            }
-            .navigationTitle(tr("How to take the right photo"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(tr("Done")) { dismiss() }
-                }
-            }
-        }
-        .presentationDetents([.medium])
-        .accessibilityIdentifier("ios.progress.guideSheet")
-    }
-}
 
 /// Pick a second check-in and a pose, then compare them side-by-side or with a drag slider.
 public struct ProgressCompareView: View {
