@@ -66,7 +66,7 @@ struct MealEditorSheet: View {
     private var timeLabel: String {
         eatenAt.formatted(Date.FormatStyle(date: .omitted, time: .shortened).locale(locale))
     }
-    private var canUsePhotos: Bool { viewModel.store.currentUser?.hasFeature(.AI_MEAL_PHOTO) ?? false }
+    private var canUsePhotos: Bool { viewModel.showsAiFeature(.AI_MEAL_PHOTO) }
     private var totals: NutritionTotalsDto { NutritionMath.sum(items) }
     private var locale: Locale { Locale(identifier: tr.rawValue) }
     private var eatenAt: Date {
@@ -77,14 +77,9 @@ struct MealEditorSheet: View {
 
     var body: some View {
         editor
-            .alert(tr("OpenRouter key required"), isPresented: $showsAiKeyAlert) {
-                Button(tr("Add key")) {
-                    dismiss()
-                    viewModel.selectedTab = .profile
-                }
-                Button(tr("Cancel"), role: .cancel) {}
-            } message: {
-                Text(tr("AI features run on your own OpenRouter API key. Add it in your profile to use them."))
+            .aiAccessAlert(isPresented: $showsAiKeyAlert, isSignedIn: isSignedIn) {
+                dismiss()
+                viewModel.selectedTab = .profile
             }
             .sheet(isPresented: $showsHistory) {
                 HistoryPickerSheet(load: historyPicks, onAdd: addFromHistory)
@@ -136,7 +131,7 @@ struct MealEditorSheet: View {
                         savedPhotos: serverEntry?.photos ?? [],
                         mealLabel: mealLabel,
                         timeLabel: timeLabel,
-                        isOnline: isSignedIn,
+                        isOnline: true,
                         busy: analyzing,
                         api: viewModel.store.apiClient,
                         onEstimate: estimate,
@@ -145,23 +140,6 @@ struct MealEditorSheet: View {
                         showsCamera: $showsCamera,
                         viewerStart: $photoViewerStart
                     )
-                    .overlay {
-                        // Without a key the section stays visible but every entry point
-                        // (camera, picker, estimate) warns first. A stale cached flag is
-                        // checked live once; when a key turns out to exist the overlay
-                        // disappears and the real controls take the tap.
-                        if viewModel.store.currentUser?.aiKeyConfigured != true {
-                            Color.clear
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    Task {
-                                        if await !viewModel.ensureAiKeyConfigured() {
-                                            showsAiKeyAlert = true
-                                        }
-                                    }
-                                }
-                        }
-                    }
                 }
 
                 Section {
@@ -360,7 +338,10 @@ struct MealEditorSheet: View {
     }
 
     private func estimate(_ images: [UIImage], _ hint: String) async -> MealPhotoSection.EstimateResult {
-        guard isSignedIn else { return .init(message: tr("You need to be online to estimate with AI."), success: false) }
+        guard isSignedIn, await viewModel.ensureAiKeyConfigured() else {
+            showsAiKeyAlert = true
+            return .init(success: false)
+        }
         analyzing = true
         defer { analyzing = false }
         if images.isEmpty { return await describe(hint) }

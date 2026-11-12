@@ -81,7 +81,7 @@ import { RainbowExerciseSuggestionCard } from './rainbow-suggestion-card';
 import { SwipeRow } from './swipe-row';
 import { TemplateSetsEditor } from './template-sets-editor';
 import { AiWorkoutBuilderDialog } from './ai-workout-builder-dialog';
-import { AiKeyRequiredDialog } from './ai-key-required-dialog';
+import { showsAiFeature } from '@/lib/ai/ai-access';
 import { MobileSheet } from './mobile-sheet';
 import { PageTitle } from './page-title';
 import type {
@@ -117,11 +117,9 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
   const { user } = useAuth();
   const { t, format, muscleLabel } = useLocale();
   const suggestionsEnabled = user?.preferences?.exerciseSuggestionsEnabled ?? true;
-  const canPlanWithAi = user?.features?.includes(FeatureGrant.AI_WORKOUT_BUILDER) ?? false;
+  const canPlanWithAi = showsAiFeature(user, FeatureGrant.AI_WORKOUT_BUILDER);
   const [aiBuilderOpen, setAiBuilderOpen] = useState(false);
-  const [aiKeyWarnOpen, setAiKeyWarnOpen] = useState(false);
-  const openAiBuilder = () =>
-    user?.aiKeyConfigured ? setAiBuilderOpen(true) : setAiKeyWarnOpen(true);
+  const openAiBuilder = () => setAiBuilderOpen(true);
 
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Record<string, boolean>>({});
   const [builderSuggestionDismissed, setBuilderSuggestionDismissed] = useState(false);
@@ -995,7 +993,6 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
           </span>
         </button>
       )}
-      <AiKeyRequiredDialog open={aiKeyWarnOpen} onOpenChange={setAiKeyWarnOpen} />
       <AiWorkoutBuilderDialog open={aiBuilderOpen} onOpenChange={setAiBuilderOpen} />
 
       <div className="space-y-4">
