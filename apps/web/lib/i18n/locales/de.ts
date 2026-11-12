@@ -774,8 +774,8 @@ export const de = {
       switchHref: '/en',
     },
     hero: {
-      headline: 'Trainiere. Protokolliere. Werde stärker.',
-      sub: 'Der Workout-Tracker für iPhone, Apple Watch und Web — offline nutzbar, ohne Schnickschnack.',
+      headline: 'Trainiere. Tracke dein Essen. Werde stärker.',
+      sub: 'Tracke Workouts und Mahlzeiten auf iPhone, Apple Watch und im Web, auf Wunsch mit KI. Kostenlos, Open Source und offline nutzbar.',
       openApp: 'App öffnen',
       heroAlt: 'LukiFitti aktives Training auf dem iPhone',
       deviceLabel: 'Gerät',
@@ -857,9 +857,7 @@ export const de = {
     },
     switch: {
       title: 'Du kommst von einer anderen App?',
-      lead: 'Nimm deinen Trainingsverlauf mit. Anleitungen für weitere Apps folgen.',
-      guide: 'Import-Anleitung',
-      notYet: 'Import noch nicht möglich',
+      lead: 'Eine App für Training und Ernährung. Deinen Trainingsverlauf aus GymLife und Alpha Progression kannst du importieren.',
       compareLabel: 'Vergleich',
       compareUs: 'LukiFitti',
       compareThem: 'Typische Abo-Apps',
