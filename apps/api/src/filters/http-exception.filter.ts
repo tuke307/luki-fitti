@@ -45,8 +45,20 @@ export class HttpExceptionFilter implements ExceptionFilter {
         }
       }
     } else if (exception instanceof Error) {
-      // Handle known error patterns
-      if (exception.name === 'ValidationError') {
+      // http-errors-style client errors thrown outside Nest (e.g. body-parser's
+      // entity.too.large / entity.parse.failed) carry their own status and a message
+      // that is safe to expose.
+      const httpErrorStatus = (exception as { status?: unknown }).status;
+      const expose = (exception as { expose?: unknown }).expose;
+      if (
+        typeof httpErrorStatus === 'number' &&
+        httpErrorStatus >= 400 &&
+        httpErrorStatus < 500 &&
+        expose === true
+      ) {
+        status = httpErrorStatus;
+        message = exception.message;
+      } else if (exception.name === 'ValidationError') {
         status = HttpStatus.BAD_REQUEST;
         message = 'Validation Error';
       } else if (exception.name === 'UnauthorizedError') {

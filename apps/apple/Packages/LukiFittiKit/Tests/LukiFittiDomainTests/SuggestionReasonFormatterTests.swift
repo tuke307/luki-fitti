@@ -59,7 +59,7 @@ final class SuggestionReasonFormatterTests: XCTestCase {
         oneSided.unilateralVariant = true
         XCTAssertEqual(
             SuggestionReasonFormatter.reason(for: oneSided, locale: .de),
-            "Probier es einseitig – jede Seite einzeln trainieren kann neuen Fortschritt bringen."
+            "Shoulder Press stagniert. Probier es einseitig – jede Seite einzeln kann neuen Fortschritt bringen."
         )
         XCTAssertEqual(
             SuggestionReasonFormatter.evidence(for: oneSided, locale: .en),
@@ -70,8 +70,8 @@ final class SuggestionReasonFormatterTests: XCTestCase {
     func testButtonsAndEffortLabels() {
         XCTAssertEqual(SuggestionReasonFormatter.badge(locale: .de), "Vorschlag")
         XCTAssertEqual(SuggestionReasonFormatter.addButton(locale: .de), "Hinzufügen")
-        XCTAssertEqual(SuggestionReasonFormatter.replaceButton("Shoulder Press", locale: .de), "Shoulder Press ersetzen")
-        XCTAssertEqual(SuggestionReasonFormatter.replaceButton("Shoulder Press", locale: .en), "Replace Shoulder Press")
+        XCTAssertEqual(SuggestionReasonFormatter.replaceButton(locale: .de), "Ersetzen")
+        XCTAssertEqual(SuggestionReasonFormatter.replaceButton(locale: .en), "Replace")
 
         XCTAssertEqual(LukiI18n.effortLabel(rpe: nil, locale: .de), "Intensität")
         XCTAssertEqual(LukiI18n.effortLabel(rpe: 7, locale: .de), "Leicht")

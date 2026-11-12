@@ -22,6 +22,7 @@ import { aiErrorMessage } from '@/lib/ai/ai-errors';
 import { isAiKeyRequiredError } from '@/lib/ai/ai-key-required';
 import { AiKeyRequiredDialog } from '../ai-key-required-dialog';
 import { prepareImageForUpload } from '@/lib/images/prepare-image';
+import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { AiCostLabel } from '@/components/gym/ai-usage/ai-cost-label';
 import { AiInfoButton } from '@/components/gym/ai-usage/ai-info-button';
@@ -62,6 +63,7 @@ export function MealPhotoSection({
   onDeleteSaved,
 }: MealPhotoSectionProps) {
   const { t, format } = useLocale();
+  const { isAuthenticated, user } = useAuth();
   const [picked, setPicked] = useState<PickedPhoto[]>([]);
   const [hint, setHint] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -129,6 +131,10 @@ export function MealPhotoSection({
   };
 
   const analyze = async () => {
+    if (!isAuthenticated || !user?.aiKeyConfigured) {
+      setKeyRequiredOpen(true);
+      return;
+    }
     if (!isOnline) {
       setError(t.mealAi.offline);
       return;
@@ -298,24 +304,22 @@ export function MealPhotoSection({
         )}
       </div>
 
-      {(!textOnly || description.length > 0) && (
-        <Button
-          type="button"
-          onClick={() => void analyze()}
-          disabled={disabled || (textOnly && description.length < MEAL_DESCRIPTION_MIN_LENGTH)}
-          className="w-full sm:w-auto"
-        >
-          {busy ? (
-            <>
-              <Spinner /> {t.mealAi.analyzing}
-            </>
-          ) : (
-            <>
-              <Sparkles className="h-4 w-4" /> {t.mealAi.estimate}
-            </>
-          )}
-        </Button>
-      )}
+      <Button
+        type="button"
+        onClick={() => void analyze()}
+        disabled={disabled || (textOnly && description.length < MEAL_DESCRIPTION_MIN_LENGTH)}
+        className="w-full sm:w-auto"
+      >
+        {busy ? (
+          <>
+            <Spinner /> {t.mealAi.analyzing}
+          </>
+        ) : (
+          <>
+            <Sparkles className="h-4 w-4" /> {t.mealAi.estimate}
+          </>
+        )}
+      </Button>
 
       {uncertaintyNote && (
         <p className="text-muted-foreground text-[0.8125rem]">{uncertaintyNote}</p>

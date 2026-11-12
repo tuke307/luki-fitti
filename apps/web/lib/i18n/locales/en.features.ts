@@ -197,6 +197,9 @@ export const enFeatures = {
     keyRequiredBody:
       'AI features run on your own OpenRouter API key. Add it in your profile to use them.',
     keyRequiredAction: 'Add key',
+    signInRequiredTitle: 'Sign in required',
+    signInRequiredBody:
+      'AI features need an account and your own OpenRouter API key. Sign in, then add the key in your profile.',
   },
   feedback: {
     menuLabel: 'Doesn’t work for me',
@@ -218,6 +221,8 @@ export const enFeatures = {
     oneSideGroup: 'One side at a time',
     suggestionReason:
       'Try one side at a time — training each arm or leg separately can restart progress.',
+    suggestionReasonStalled:
+      '{stalling} has stalled. Try one side at a time — training each side separately can restart progress.',
   },
   exerciseHistory: {
     title: 'History',

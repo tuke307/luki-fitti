@@ -29,6 +29,7 @@ struct MealPhotoSection: View {
     @State private var lastUsage: AiRunUsageDto?
     @State private var lastModel: String?
     @State private var note: String?
+    @State private var infoSkill: AiSkillName?
 
     struct EstimateResult {
         var message: String?
@@ -72,7 +73,7 @@ struct MealPhotoSection: View {
                 textOnly ? tr("Describe your meal") : tr("Anything to add? (optional)"),
                 text: $hint,
                 prompt: Text(textOnly
-                    ? tr("e.g. muesli for breakfast, about 100 g, with 1/4 scoop protein powder, oat milk and a cappuccino")
+                    ? tr("e.g. muesli with oat milk, about 100 g")
                     : tr("Anything to add? (optional)")),
                 axis: .vertical
             )
@@ -85,20 +86,18 @@ struct MealPhotoSection: View {
             }
             .accessibilityLabel(textOnly ? tr("Describe your meal") : tr("Anything to add? (optional)"))
             .accessibilityIdentifier("ios.nutrition.photoHint")
-            if !textOnly || !trimmedHint.isEmpty {
-                Button {
-                    Task { await estimate() }
-                } label: {
-                    HStack {
-                        if busy { ProgressView() } else { Image(systemName: "sparkles") }
-                        Text(busy ? tr("Looking at your meal…") : tr("Estimate with AI"))
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 44)
+            Button {
+                Task { await estimate() }
+            } label: {
+                HStack {
+                    if busy { ProgressView() } else { Image(systemName: "sparkles") }
+                    Text(busy ? tr("Looking at your meal…") : tr("Estimate with AI"))
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(!canEstimate)
-                .accessibilityIdentifier("ios.nutrition.estimateButton")
+                .frame(maxWidth: .infinity, minHeight: 44)
             }
+            .buttonStyle(.borderedProminent)
+            .disabled(!canEstimate)
+            .accessibilityIdentifier("ios.nutrition.estimateButton")
             if let note {
                 Text(note).font(.footnote).foregroundStyle(.secondary)
             }
@@ -106,42 +105,42 @@ struct MealPhotoSection: View {
                 AICostLabel(usage: lastUsage, model: lastModel)
                     .accessibilityIdentifier("ios.nutrition.aiCostLabel")
             }
-            if !isOnline {
-                Text(tr("You need to be online to estimate with AI."))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            } else if textOnly && savedPhotos.isEmpty {
-                Text(tr("Without photos, AI suggests foods from your description. You can edit them before saving."))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            } else if !savedPhotos.isEmpty && picked.isEmpty {
-                Text(tr("New photos re-estimate the meal. Foods you added yourself are kept."))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
             if let message {
                 Text(message).font(.footnote).foregroundStyle(LukiColors.destructive)
             }
         } header: {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 6) {
-                    Text(tr("Photos or description"))
-                    Spacer(minLength: 8)
-                    infoPills
+            HStack(spacing: 6) {
+                Text(tr("Photos or description"))
+                Spacer(minLength: 8)
+                Menu {
+                    Button { infoSkill = .mealAnalyzer } label: {
+                        Label(tr("Photo AI"), systemImage: "camera")
+                    }
+                    Button { infoSkill = .mealTextAnalyzer } label: {
+                        Label(tr("Text AI"), systemImage: "text.quote")
+                    }
+                } label: {
+                    Image(systemName: "questionmark.circle")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(tr("Photos or description"))
-                    infoPills
-                }
+                .accessibilityLabel(tr("How this works"))
+                .accessibilityIdentifier("ios.nutrition.aiInfo")
             }
             .textCase(nil)
+        } footer: {
+            if !isOnline {
+                Text(tr("You need to be online to estimate with AI."))
+            } else if textOnly && savedPhotos.isEmpty {
+                Text(tr("Without photos, AI suggests foods from your description. You can edit them before saving."))
+            } else if !savedPhotos.isEmpty && picked.isEmpty {
+                Text(tr("New photos re-estimate the meal. Foods you added yourself are kept."))
+            }
         }
-    }
-
-    private var infoPills: some View {
-        HStack(spacing: 6) {
-            AIInfoButton(skill: .mealAnalyzer, api: api, title: tr("Photo AI"))
-            AIInfoButton(skill: .mealTextAnalyzer, api: api, title: tr("Text AI"))
+        .sheet(item: $infoSkill) { skill in
+            AIInfoSheet(skill: skill, api: api)
         }
     }
 
@@ -185,19 +184,23 @@ struct MealPhotoSection: View {
             Button {
                 showsCamera = true
             } label: {
-                Label(tr("Take photo"), systemImage: "camera").frame(minHeight: 44)
+                Label(tr("Camera"), systemImage: "camera")
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, minHeight: 44)
             }
             .buttonStyle(.bordered)
             .disabled(busy || isFull || !isOnline)
             .accessibilityIdentifier("ios.nutrition.takePhotoButton")
         }
-        let chooseTitle = savedPhotos.isEmpty ? tr("Choose photos") : tr("Add photo")
+        let chooseTitle = savedPhotos.isEmpty ? tr("Photos") : tr("Add photo")
         PhotosPicker(
             selection: $pickerItems,
             maxSelectionCount: max(1, MealPhotoSheet.maxPhotos - picked.count),
             matching: .images
         ) {
-            Label(chooseTitle, systemImage: "photo.on.rectangle").frame(minHeight: 44)
+            Label(chooseTitle, systemImage: "photo.on.rectangle")
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, minHeight: 44)
         }
         .buttonStyle(.bordered)
         .disabled(busy || isFull || !isOnline)

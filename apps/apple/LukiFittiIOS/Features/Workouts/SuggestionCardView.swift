@@ -33,36 +33,38 @@ struct SuggestionCardView: View {
                 .accessibilityIdentifier("suggestion.guide")
                 VStack(alignment: .leading, spacing: compact ? 2 : 4) {
                     HStack(spacing: 6) {
-                        Image(systemName: "sparkles")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.primary)
-                        Button {
-                            showingGuide = true
-                        } label: {
-                            Text("\(SuggestionReasonFormatter.badge(locale: locale)) · \(suggestion.suggestedExercise.name)")
-                                .font(compact ? .footnote : .subheadline.weight(.semibold))
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
+                        Label {
+                            Text(SuggestionReasonFormatter.badge(locale: locale))
+                        } icon: {
+                            Image(systemName: "sparkles")
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityHint(locale("How to do it"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                         // Like the web card: the side chip only when a one-sided variant was picked.
                         if suggestion.unilateralVariant {
                             LateralityBadge(suggestion.suggestedExercise.laterality)
                                 .environment(\.lukiLocale, locale)
                         }
                     }
+                    Button {
+                        showingGuide = true
+                    } label: {
+                        Text(suggestion.suggestedExercise.name)
+                            .font(compact ? .footnote.weight(.semibold) : .subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint(locale("How to do it"))
                     Text(SuggestionReasonFormatter.reason(for: suggestion, locale: locale))
                         .font(compact ? .caption2 : .footnote)
                         .foregroundStyle(.secondary)
                         .lineLimit(compact ? 2 : nil)
                     if let evidence = SuggestionReasonFormatter.evidence(for: suggestion, locale: locale) {
                         Text(evidence)
-                            .font(.caption2.weight(.medium).monospacedDigit())
+                            .font(.caption.monospacedDigit())
                             .foregroundStyle(.secondary)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(LukiColors.fill))
                             .accessibilityIdentifier("suggestion.evidence")
                     }
                 }
@@ -87,15 +89,16 @@ struct SuggestionCardView: View {
                 HStack(spacing: 8) {
                     if let onAdd {
                         actionButton(
-                            "+ \(SuggestionReasonFormatter.addButton(locale: locale))",
+                            SuggestionReasonFormatter.addButton(locale: locale),
+                            systemImage: "plus",
                             prominent: true,
                             action: onAdd
                         )
                         .accessibilityIdentifier("suggestion.add")
                     }
-                    if showsReplace, let onReplace, let stalling = suggestion.stallingExerciseName {
+                    if showsReplace, let onReplace {
                         actionButton(
-                            SuggestionReasonFormatter.replaceButton(stalling, locale: locale),
+                            SuggestionReasonFormatter.replaceButton(locale: locale),
                             systemImage: "arrow.triangle.swap",
                             prominent: false,
                             action: onReplace
@@ -139,11 +142,13 @@ struct SuggestionCardView: View {
                 if let systemImage { Image(systemName: systemImage) }
                 Text(title).lineLimit(1)
             }
-            .font(.subheadline.weight(.semibold))
+            .font(.footnote.weight(.semibold))
             .foregroundStyle(prominent ? LukiColors.accentForeground : .primary)
             .padding(.horizontal, 12)
-            .frame(minHeight: 44)
+            .frame(minHeight: 34)
             .background(Capsule().fill(prominent ? LukiColors.accent : LukiColors.fill))
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

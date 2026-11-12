@@ -1,6 +1,7 @@
 {
   "name": "luki-fitti",
   "private": true,
+  "version": "1.0.1",
   "license": "AGPL-3.0-only",
   "workspaces": [
     "apps/*",
@@ -32,6 +33,9 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "test:import-scripts": "node --test 'scripts/import/*.test.mjs'",
+    "test:version": "node --test 'scripts/version.test.mjs'",
+    "version:set": "node scripts/version.mjs set",
+    "version:check": "node scripts/version.mjs check",
     "prepare": "husky",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

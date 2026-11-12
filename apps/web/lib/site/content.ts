@@ -1,8 +1,10 @@
 import { buildFeatureRequestMailto } from '@luki-fitti/common/utils';
 
+import pkg from '../../package.json';
+
 import { de } from '@/lib/i18n/locales/de';
 import { en } from '@/lib/i18n/locales/en';
-import { GITHUB_URL, type SiteLocale } from './config';
+import type { SiteLocale } from './config';
 
 export interface ScreenShot {
   id: string;
@@ -69,15 +71,7 @@ export const HERO_DEVICES = [
 ] as const;
 
 /** Apps people switch from; add new ones here. App names stay untranslated. */
-export const SWITCH_APPS = [
-  { name: 'GymLife', guideUrl: `${GITHUB_URL}/blob/main/docs/gymlife-import.md`, importable: true },
-  {
-    name: 'Alpha Progression',
-    guideUrl: `${GITHUB_URL}/blob/main/docs/alpha-progression-import.md`,
-    importable: true,
-  },
-  { name: 'MCI', guideUrl: `${GITHUB_URL}/blob/main/docs/mci-import.md`, importable: false },
-] as const;
+export const SWITCH_APPS = ['GymLife', 'Alpha Progression', 'MCI', 'YAZIO'] as const;
 
 /** Server-side site copy straight from the app dictionaries (no client locale context). */
 export function getSiteCopy(locale: SiteLocale) {
@@ -85,5 +79,5 @@ export function getSiteCopy(locale: SiteLocale) {
 }
 
 export function featureRequestHref(locale: SiteLocale): string {
-  return buildFeatureRequestMailto({ locale, appVersion: '1.0.0', platform: 'Web' });
+  return buildFeatureRequestMailto({ locale, appVersion: pkg.version, platform: 'Web' });
 }

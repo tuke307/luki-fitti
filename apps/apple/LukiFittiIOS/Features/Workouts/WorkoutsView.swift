@@ -22,7 +22,6 @@ public struct WorkoutsView: View {
     // Workout Template Builder Modal State
     @State private var activeBuilderContext: TemplateBuilderContext?
     @State private var showingAIBuilder = false
-    @State private var showsAiKeyAlert = false
 
     fileprivate struct TemplateBuilderContext: Identifiable {
         let id: String
@@ -149,15 +148,9 @@ public struct WorkoutsView: View {
                         Label(tr("New Folder"), systemImage: "folder.badge.plus")
                     }
                     .accessibilityIdentifier("ios.workouts.newFolderButton")
-                    if viewModel.store.currentUser?.hasFeature(.AI_WORKOUT_BUILDER) == true {
+                    if viewModel.showsAiFeature(.AI_WORKOUT_BUILDER) {
                         Button {
-                            Task {
-                                if await viewModel.ensureAiKeyConfigured() {
-                                    showingAIBuilder = true
-                                } else {
-                                    showsAiKeyAlert = true
-                                }
-                            }
+                            showingAIBuilder = true
                         } label: {
                             Label(tr("Plan with AI"), systemImage: "sparkles")
                         }
@@ -183,12 +176,6 @@ public struct WorkoutsView: View {
         .sheet(isPresented: $showingFolderModal) {
             folderEditorSheet
         }
-        .alert(tr("OpenRouter key required"), isPresented: $showsAiKeyAlert) {
-            Button(tr("Add key")) { viewModel.selectedTab = .profile }
-            Button(tr("Cancel"), role: .cancel) {}
-        } message: {
-            Text(tr("AI features run on your own OpenRouter API key. Add it in your profile to use them."))
-        }
         .sheet(isPresented: $showingAIBuilder) {
             AIWorkoutBuilderSheet(viewModel: viewModel) { _ in
                 expandedFolderIds.insert("__unfiled__")
@@ -202,6 +189,7 @@ public struct WorkoutsView: View {
                 historySessions: viewModel.store.historySessions,
                 suggestionsEnabled: viewModel.store.preferences.exerciseSuggestionsEnabled,
                 defaultWeightUnit: viewModel.store.preferences.weightUnit,
+                defaultRestSeconds: viewModel.store.preferences.defaultRestSeconds,
                 analytics: viewModel.analytics,
                 onCancel: {
                     activeBuilderContext = nil
@@ -685,7 +673,7 @@ public struct WorkoutsView: View {
                     targetRepsMax: nil,
                     targetWeight: 60,
                     weightUnit: viewModel.store.preferences.weightUnit,
-                    restSeconds: 90,
+                    restSeconds: viewModel.store.preferences.defaultRestSeconds,
                     alternativeExerciseIds: Array(firstEx.alternativeExerciseIds.prefix(2)),
                     exercise: firstEx
                 )
@@ -765,6 +753,7 @@ private struct TemplateBuilderSheetView: View {
     let historySessions: [WorkoutSessionDto]
     let suggestionsEnabled: Bool
     let defaultWeightUnit: WeightUnit
+    let defaultRestSeconds: Int
     let analytics: AnalyticsClient
     let onCancel: () -> Void
     let onSave: (String, String, String, Int, [WorkoutTemplateExerciseDto]) -> Void
@@ -791,6 +780,7 @@ private struct TemplateBuilderSheetView: View {
         historySessions: [WorkoutSessionDto],
         suggestionsEnabled: Bool,
         defaultWeightUnit: WeightUnit,
+        defaultRestSeconds: Int,
         analytics: AnalyticsClient,
         onCancel: @escaping () -> Void,
         onSave: @escaping (String, String, String, Int, [WorkoutTemplateExerciseDto]) -> Void
@@ -801,6 +791,7 @@ private struct TemplateBuilderSheetView: View {
         self.historySessions = historySessions
         self.suggestionsEnabled = suggestionsEnabled
         self.defaultWeightUnit = defaultWeightUnit
+        self.defaultRestSeconds = defaultRestSeconds
         self.analytics = analytics
         self.onCancel = onCancel
         self.onSave = onSave
@@ -976,7 +967,7 @@ private struct TemplateBuilderSheetView: View {
 
                             if idx < exercises.count - 1 {
                                 Button {
-                                    slot.restSeconds = isSupersetWithNext ? 90 : 0
+                                    slot.restSeconds = isSupersetWithNext ? defaultRestSeconds : 0
                                 } label: {
                                     Label(
                                         isSupersetWithNext
@@ -1063,7 +1054,7 @@ private struct TemplateBuilderSheetView: View {
                             targetRepsMax: nil,
                             targetWeight: 40,
                             weightUnit: defaultWeightUnit,
-                            restSeconds: 90,
+                            restSeconds: defaultRestSeconds,
                             alternativeExerciseIds: Array(chosen.alternativeExerciseIds.prefix(2)),
                             exercise: chosen
                         )

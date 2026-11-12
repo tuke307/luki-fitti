@@ -120,10 +120,19 @@ struct AIInfoSheet: View {
             }
             .accessibilityElement(children: .combine)
             if let info {
-                LabeledContent(tr("Input"), value: AICostFormat.perMillion(info.pricing.promptPerMTokUsd, tr))
+                if skill == .progressTarget {
+                    // Image models bill per image; the API zeroes their token prices.
+                    LabeledContent(
+                        tr("Per image"),
+                        value: info.estimatedCostPerRunUsd.map { "≈ \(AICostFormat.usd($0, locale: tr))" } ?? tr("Not known yet")
+                    )
                     .monospacedDigit()
-                LabeledContent(tr("Output"), value: AICostFormat.perMillion(info.pricing.completionPerMTokUsd, tr))
-                    .monospacedDigit()
+                } else {
+                    LabeledContent(tr("Input"), value: AICostFormat.perMillion(info.pricing.promptPerMTokUsd, tr))
+                        .monospacedDigit()
+                    LabeledContent(tr("Output"), value: AICostFormat.perMillion(info.pricing.completionPerMTokUsd, tr))
+                        .monospacedDigit()
+                }
             }
         } else if modelsFailed {
             Text(tr("Model details are unavailable right now.")).foregroundStyle(.secondary)

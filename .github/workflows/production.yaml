@@ -1,80 +1,47 @@
 name: Production
 
+# Deploys only happen when a GitHub release is published from a version tag
+# (or manually via workflow_dispatch against a tag). Pushes to main deploy
+# nothing — tag.yaml creates the tag, a published release triggers this.
+
 on:
-  push:
-    branches:
-      - main
+  release:
+    types: [published]
   workflow_dispatch:
 
 concurrency:
-  group: production-${{ github.ref }}
+  group: production
   cancel-in-progress: false
 
 jobs:
-  changes:
+  # A release must be built from the tag matching the version in the repo.
+  verify:
     runs-on: ubuntu-latest
     outputs:
-      api: ${{ steps.decide.outputs.api }}
-      web: ${{ steps.decide.outputs.web }}
-      email-worker: ${{ steps.decide.outputs['email-worker'] }}
-      db-migrate: ${{ steps.decide.outputs['db-migrate'] }}
+      version: ${{ steps.v.outputs.version }}
     steps:
       - uses: actions/checkout@v6
-
-      - id: filter
-        uses: dorny/paths-filter@v4
         with:
-          filters: |
-            api:
-              - '*'
-              - '.*'
-              - 'apps/api/**'
-              - 'packages/common/**'
-              - 'packages/database/**'
-              - 'packages/eslint-config/**'
-              - 'packages/logger/**'
-              - 'packages/typescript-config/**'
-            web:
-              - '*'
-              - '.*'
-              - 'apps/web/**'
-              - 'packages/common/**'
-              - 'packages/ui/**'
-              - 'packages/eslint-config/**'
-              - 'packages/logger/**'
-              - 'packages/typescript-config/**'
-            email-worker:
-              - '*'
-              - '.*'
-              - 'apps/api/**'
-              - 'apps/email-worker/**'
-              - 'packages/common/**'
-              - 'packages/database/**'
-              - 'packages/eslint-config/**'
-              - 'packages/logger/**'
-              - 'packages/typescript-config/**'
-            db-migrate:
-              - '*'
-              - '.*'
-              - 'packages/database/**'
+          ref: ${{ github.ref_name }}
 
-      - id: decide
+      - id: v
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "api=true" >> "$GITHUB_OUTPUT"
-            echo "web=true" >> "$GITHUB_OUTPUT"
-            echo "email-worker=true" >> "$GITHUB_OUTPUT"
-            echo "db-migrate=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "api=${{ steps.filter.outputs.api }}" >> "$GITHUB_OUTPUT"
-            echo "web=${{ steps.filter.outputs.web }}" >> "$GITHUB_OUTPUT"
-            echo "email-worker=${{ steps.filter.outputs['email-worker'] }}" >> "$GITHUB_OUTPUT"
-            echo "db-migrate=${{ steps.filter.outputs['db-migrate'] }}" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.ref_type }}" != "tag" ]; then
+            echo "::error::Production deploys run from a version tag — pick a v* tag (current ref: ${{ github.ref }})."
+            exit 1
           fi
+          ref_name="${{ github.ref_name }}"
+          version="$(node scripts/version.mjs get)"
+          node scripts/version.mjs check
+          if [ "$ref_name" != "v$version" ]; then
+            echo "::error::Tag $ref_name does not match the repo version v$version — release the tag created by tag.yaml."
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "deploying $version from tag $ref_name"
 
   build-api:
-    needs: changes
-    if: needs.changes.outputs.api == 'true'
+    needs: verify
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -106,10 +73,10 @@ jobs:
           cache-to: type=gha,mode=max,scope=build-api
           tags: |
             ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.version }}
 
   build-web:
-    needs: changes
-    if: needs.changes.outputs.web == 'true'
+    needs: verify
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -144,10 +111,10 @@ jobs:
             GIT_SHA=${{ github.sha }}
           tags: |
             ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.version }}
 
   build-email-worker:
-    needs: changes
-    if: needs.changes.outputs['email-worker'] == 'true'
+    needs: verify
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -179,10 +146,10 @@ jobs:
           cache-to: type=gha,mode=max,scope=build-email-worker
           tags: |
             ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.version }}
 
   build-db-migrate:
-    needs: changes
-    if: needs.changes.outputs['db-migrate'] == 'true'
+    needs: verify
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -214,6 +181,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=build-db-migrate
           tags: |
             ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.version }}
 
   deploy:
     needs: [build-api, build-web, build-email-worker, build-db-migrate]

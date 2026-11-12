@@ -1,8 +1,7 @@
 /**
  * Shared infrastructure for the documentation screenshot specs.
  *
- * Mirrors `marienmuehle` and `kds-werkzeugbau`: waits for network idle,
- * hides the Next.js dev overlay, and captures clean viewport screenshots.
+ * Waits for network idle, hides the Next.js dev overlay, and captures clean viewport screenshots.
  */
 import fs from 'fs';
 import path from 'path';

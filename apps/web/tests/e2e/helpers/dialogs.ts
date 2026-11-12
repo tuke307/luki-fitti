@@ -1,6 +1,5 @@
 /**
- * Shared dialog & alert-dialog helpers modeled after `helpers/table.ts` in
- * `marienmuehle` and `kds-werkzeugbau`.
+ * Shared dialog & alert-dialog helpers.
  */
 import { expect, type Page } from '@playwright/test';
 

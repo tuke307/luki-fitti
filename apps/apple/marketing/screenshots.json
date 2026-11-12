@@ -33,14 +33,25 @@
   ],
   "creatives": [
     {
-      "id": "universal",
-      "canvas": [5244, 2950],
-      "safe": [4425, 2247],
+      "id": "header",
+      "canvas": [3840, 1646],
+      "safe": [1646, 661],
       "shot": "active-workout",
-      "devices": ["ipad-13", "iphone-6.9", "watch"],
+      "devices": ["ipad-13", "iphone-6.9"],
       "headline": {
-        "en": "Train. Log. Get stronger.",
-        "de": "Trainiere. Protokolliere. Werde stärker."
+        "en": "Train. Eat well. Get stronger.",
+        "de": "Trainiere. Tracke dein Essen. Werde stärker."
+      }
+    },
+    {
+      "id": "search",
+      "canvas": [3840, 2560],
+      "safe": [2168, 1030],
+      "shot": "active-workout",
+      "devices": ["ipad-13", "iphone-6.9"],
+      "headline": {
+        "en": "Train. Eat well. Get stronger.",
+        "de": "Trainiere. Tracke dein Essen. Werde stärker."
       }
     }
   ],

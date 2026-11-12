@@ -15,6 +15,7 @@ struct AIWorkoutBuilderSheet: View {
     @State private var result: WorkoutBuilderResponseDto?
     @State private var busy = false
     @State private var error: String?
+    @State private var showsAiKeyAlert = false
 
     private var examples: [String] {
         [
@@ -77,6 +78,10 @@ struct AIWorkoutBuilderSheet: View {
                 }
             }
         }
+        .aiAccessAlert(isPresented: $showsAiKeyAlert, isSignedIn: viewModel.isSignedIn) {
+            dismiss()
+            viewModel.selectedTab = .profile
+        }
     }
 
     @ViewBuilder
@@ -136,6 +141,10 @@ struct AIWorkoutBuilderSheet: View {
     }
 
     private func generate() async {
+        guard viewModel.isSignedIn, await viewModel.ensureAiKeyConfigured() else {
+            showsAiKeyAlert = true
+            return
+        }
         busy = true
         error = nil
         defer { busy = false }
