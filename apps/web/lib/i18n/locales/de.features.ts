@@ -224,6 +224,8 @@ export const deFeatures: Widen<typeof enFeatures> = {
     oneSideGroup: 'Eine Seite nach der anderen',
     suggestionReason:
       'Probier es einseitig – jede Seite einzeln trainieren kann neuen Fortschritt bringen.',
+    suggestionReasonStalled:
+      '{stalling} stagniert. Probier es einseitig – jede Seite einzeln kann neuen Fortschritt bringen.',
   },
   exerciseHistory: {
     title: 'Verlauf',

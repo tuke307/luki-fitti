@@ -15,8 +15,8 @@ public enum SuggestionReasonFormatter {
         locale == .de ? "Hinzufügen" : "Add"
     }
 
-    public static func replaceButton(_ name: String, locale: SupportedLocale) -> String {
-        locale == .de ? "\(name) ersetzen" : "Replace \(name)"
+    public static func replaceButton(locale: SupportedLocale) -> String {
+        locale == .de ? "Ersetzen" : "Replace"
     }
 
     public static func reason(for suggestion: WorkoutExerciseSuggestion, locale: SupportedLocale) -> String {
@@ -26,6 +26,11 @@ public enum SuggestionReasonFormatter {
         let split = suggestion.splitArchetype.rawValue.replacingOccurrences(of: "_", with: " ")
 
         if suggestion.unilateralVariant {
+            if let stalling = suggestion.stallingExerciseName {
+                return locale == .de
+                    ? "\(stalling) stagniert. Probier es einseitig – jede Seite einzeln kann neuen Fortschritt bringen."
+                    : "\(stalling) has stalled. Try one side at a time — training each side separately can restart progress."
+            }
             return locale == .de
                 ? "Probier es einseitig – jede Seite einzeln trainieren kann neuen Fortschritt bringen."
                 : "Try one side at a time — training each arm or leg separately can restart progress."

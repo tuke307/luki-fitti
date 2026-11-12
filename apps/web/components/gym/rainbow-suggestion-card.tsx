@@ -52,7 +52,9 @@ export function RainbowExerciseSuggestionCard({
     LOW_VOLUME: t.workouts.suggestionReasonLowVolume,
   };
   const reasonText = suggestion.unilateralVariant
-    ? t.laterality.suggestionReason
+    ? stallingExerciseName
+      ? format(t.laterality.suggestionReasonStalled, { stalling: stallingExerciseName })
+      : t.laterality.suggestionReason
     : format(reasonTemplates[reasonType], {
         stalling: stallingExerciseName ?? '',
         name: suggestedExercise.name,
@@ -98,10 +100,13 @@ export function RainbowExerciseSuggestionCard({
     >
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-primary flex items-center gap-1.5 text-[0.8125rem] font-semibold">
+          <p className="text-muted-foreground flex items-center gap-1.5 text-[0.75rem]">
             <Sparkles className="h-3.5 w-3.5" />
             {t.workouts.smartSuggestionBadge}
-            <span className="text-muted-foreground font-medium">· {muscleLabel(targetMuscle)}</span>
+            <span className="font-medium">· {muscleLabel(targetMuscle)}</span>
+            {suggestion.unilateralVariant && (
+              <LateralityBadge laterality={suggestedExercise.laterality} />
+            )}
           </p>
 
           {onDismiss && (
@@ -140,13 +145,10 @@ export function RainbowExerciseSuggestionCard({
                 <button
                   type="button"
                   onClick={() => setGuideOpen(true)}
-                  className="truncate text-left text-[0.9375rem] font-semibold hover:underline"
+                  className="line-clamp-2 text-left text-[0.9375rem] font-semibold hover:underline"
                 >
                   {suggestedExercise.name}
                 </button>
-                {suggestion.unilateralVariant && (
-                  <LateralityBadge laterality={suggestedExercise.laterality} />
-                )}
                 <span className="bg-secondary text-secondary-foreground tabular-nums rounded-full px-2.5 py-0.5 text-[0.8125rem] font-medium">
                   {suggestion.recommendedSets}×{repRangeText}
                   {suggestion.recommendedWeight
@@ -158,7 +160,7 @@ export function RainbowExerciseSuggestionCard({
               {evidenceText && (
                 <span
                   data-testid={`${testId}-evidence`}
-                  className="bg-secondary/60 text-muted-foreground tabular-nums inline-block max-w-full rounded-full px-2 py-0.5 text-[0.75rem] font-medium"
+                  className="text-muted-foreground tabular-nums inline-block max-w-full text-[0.75rem]"
                 >
                   {evidenceText}
                 </span>
@@ -185,16 +187,14 @@ export function RainbowExerciseSuggestionCard({
                 variant="secondary"
                 size="sm"
                 data-testid={`${testId}-swap-btn`}
-                className="h-auto min-h-9 max-w-full py-2 text-left whitespace-normal"
+                className="h-8 max-w-full whitespace-nowrap"
                 onClick={() => {
                   trackEvent('suggestion_accept', { action: 'swap', context });
                   onSwap(suggestion);
                 }}
               >
                 <ArrowRightLeft className="h-4 w-4" />
-                <span className="line-clamp-2 min-w-0">
-                  {format(t.workouts.swapSuggestedBtn, { name: stallingExerciseName })}
-                </span>
+                {t.workouts.swapSuggestedBtn}
               </Button>
             )}
           </div>

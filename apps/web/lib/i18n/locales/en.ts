@@ -335,7 +335,7 @@ export const en = {
     suggestionChipRegression: '{change}% over last {window} sessions',
     suggestionChipSets: '{sets} of {total} sets',
     addSuggestedBtn: 'Add',
-    swapSuggestedBtn: 'Replace {name}',
+    swapSuggestedBtn: 'Replace',
     dismissSuggestionTitle: 'Dismiss suggestion',
     exerciseCount: '{count} exercises',
     exerciseCountOne: '1 exercise',

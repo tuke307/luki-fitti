@@ -240,7 +240,7 @@ final class SuggestionEngineParityTests: XCTestCase {
         XCTAssertTrue(suggestion.unilateralVariant)
         XCTAssertEqual(
             SuggestionReasonFormatter.reason(for: suggestion, locale: .en),
-            "Try one side at a time — training each arm or leg separately can restart progress."
+            "Barbell Row (Underhand) has stalled. Try one side at a time — training each side separately can restart progress."
         )
     }
 
