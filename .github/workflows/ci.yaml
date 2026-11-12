@@ -3,6 +3,7 @@ name: CI
 on:
   pull_request:
     branches:
+      - develop
       - main
   workflow_dispatch:
 
@@ -14,6 +15,50 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Every merge into main is a release: it must carry a version bump past the
+  # newest v* tag, all version locations must agree, and the marketing
+  # screenshots must match the new version. Only runs on PRs targeting main.
+  version:
+    if: github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Fetch tags
+        run: git fetch --tags --force
+
+      - name: All version locations agree
+        run: node scripts/version.mjs check
+
+      - name: Version is bumped past the newest tag
+        run: |
+          version="$(node scripts/version.mjs get)"
+          latest="$(git tag -l 'v*' | sort -V | tail -1)"
+          echo "head version: $version — newest tag: ${latest:-none}"
+          if [ -n "$latest" ]; then
+            highest="$(printf '%s\n%s\n' "${latest#v}" "$version" | sort -V | tail -1)"
+            if [ "$highest" != "$version" ] || [ "$version" = "${latest#v}" ]; then
+              echo "::error::Version $version is not greater than the newest tag $latest — run \`yarn version:set x.y.z\` on this branch."
+              exit 1
+            fi
+          fi
+          if git tag -l "v$version" | grep -q .; then
+            echo "::error::Tag v$version already exists — bump the version with \`yarn version:set x.y.z\`."
+            exit 1
+          fi
+
+      - name: Marketing screenshots match the version
+        run: |
+          v=$(grep -m1 MARKETING_VERSION apps/apple/project.yml | sed -E 's/.*"([0-9.]+)".*/\1/')
+          g=$(cat apps/apple/marketing/VERSION 2>/dev/null || echo none)
+          if [ "$v" != "$g" ]; then
+            echo "::error::Marketing screenshots were generated for $g, version is $v — run \`yarn workspace @luki-fitti/apple marketing:screenshots\`."
+            exit 1
+          fi
+          echo "marketing images are for version $v"
+
   lint:
     runs-on: ubuntu-latest
     steps:

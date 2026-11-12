@@ -1,24 +1,59 @@
 # Release flow
 
-Web, API and email worker deploy automatically: every push to `main` builds the changed images
-and deploys them to Coolify (`.github/workflows/production.yaml`). Database migrations run in
-the `luki-fitti-db-migrate` container before the API starts. The iOS and watchOS apps are
-archived and uploaded by the App Store workflow, which runs automatically on every push to
-`main` that changes `apps/apple/**`
-(`.github/workflows/app-store.yaml`, see [app-store-release.md](app-store-release.md)).
+```
+feature branch ──squash PR──▶ develop ──release PR (version bump)──▶ main
+                                                              │
+                                        tag.yaml on push to main ┘
+                                              │  creates tag v<x.y.z>
+                                              ▼
+                            publish a GitHub release from the tag
+                                              │
+                          ┌───────────────────┴───────────────────┐
+                          ▼                                       ▼
+                  production.yaml                          app-store.yaml
+             (builds + deploys to Coolify)          (archives + uploads to ASC)
+```
 
-> Since the first App Store release (1.0.0, November 2026), raise the version for every App
-> Store release and regenerate the marketing screenshots with every version bump.
-> TestFlight-only uploads just raise the build number.
+- **Everyday work**: feature branches go into `develop` as squash PRs. Nothing deploys.
+- **Release**: a release PR `develop` → `main` (merge commit, not squash) carries the version
+  bump. CI's `version` job requires the version to be higher than the newest `v*` tag and the
+  marketing screenshots to match it.
+- **Tag**: on every push to `main`, `.github/workflows/tag.yaml` creates the annotated tag
+  `v<version>` (e.g. `v1.0.1`). The tag alone deploys nothing — GITHUB_TOKEN pushes trigger no
+  other workflows.
+- **Deploy**: publishing a GitHub release from the tag (Releases → Draft new release → choose
+  the existing tag → "Generate release notes" → Publish) starts `production.yaml` (web, API,
+  email worker, db-migrate images → Coolify) and `app-store.yaml` (archive + upload to App
+  Store Connect). Database migrations run in the `luki-fitti-db-migrate` container before the
+  API starts. `workflow_dispatch` runs of either workflow work the same way when started from
+  a tag — that is how you redeploy an old version: run `production.yaml` against the old tag.
+- **TestFlight builds between releases**: `app-store.yaml` can also be run by hand from
+  `develop` (`gh workflow run app-store.yaml --ref develop`) to push the next unreleased
+  version to TestFlight.
+- **Hotfix**: branch from `main`, PR back into `main` with a version bump
+  (`yarn version:set`), then merge `main` back into `develop` afterwards.
+
+> Since the first App Store release (1.0.0, November 2026), every iOS upload needs a new
+> version. Once a version is released, App Store Connect closes it: new builds with that
+> version are rejected and its builds can no longer be submitted for external TestFlight
+> testing. Raise the version (`1.0.1` for fixes, `1.1.0` for features) in the release PR, and
+> regenerate the marketing screenshots with every version bump.
 
 ## 1. Bump the version
 
-One version for all platforms:
+One version for all platforms, written everywhere by a single command:
 
-| Where                    | Field                                                                                                                                               |
-| :----------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/web/package.json`  | `version` (shown in web settings)                                                                                                                   |
-| `apps/apple/project.yml` | `MARKETING_VERSION` (same as web). The App Store workflow sets the build number itself; raise `CURRENT_PROJECT_VERSION` only for uploads from Xcode |
+```bash
+yarn version:set 1.0.2      # writes package.json files, project.yml, LukiFittiKitVersion.swift
+yarn version:check          # fails unless all locations agree (CI runs this on PRs to main)
+```
+
+`version:set` covers the `version` field of every workspace package.json (the web settings
+footer reads it via `NEXT_PUBLIC_APP_VERSION`), `MARKETING_VERSION` in
+`apps/apple/project.yml` and `LukiFittiKitVersion.current` in LukiFittiKit. It does not touch
+`apps/apple/marketing/VERSION` — that file records which version the screenshots were
+generated for (see below). The App Store workflow sets the iOS build number itself
+(`GITHUB_RUN_NUMBER`); raise `CURRENT_PROJECT_VERSION` only for uploads straight from Xcode.
 
 ## 2. Regenerate the marketing screenshots
 
@@ -62,23 +97,33 @@ Watch) or a drawn graphite bezel (iPad, the current default).
 ## 3. Check
 
 ```bash
+yarn version:check
 yarn lint
 yarn test
 yarn workspace @luki-fitti/apple catalog:check
 yarn workspace @luki-fitti/apple marketing:check
 ```
 
-## 4. Merge to `main`
+## 4. Merge the release PR to `main`
 
-Open a PR with the version bump and the regenerated screenshots, merge it, and watch the
-Production workflow. Check the version footer in web settings after the deploy.
+Open the release PR `develop` → `main` with the version bump and the regenerated screenshots
+and merge it with a **merge commit** (not squash — it keeps `develop` and `main` aligned).
+`tag.yaml` then creates the `v<version>` tag automatically.
 
-## 5. iOS and watchOS
+## 5. Publish the GitHub release
 
-1. Merging to `main` triggers the App Store workflow: it archives the `LukiFittiIOS` scheme and
-   uploads it to App Store Connect; the watch app ships inside it. A manual run
-   (`gh workflow run app-store.yaml --ref main`, `-f upload=false` to only check signing) is
-   optional. Setup and secrets are described in [app-store-release.md](app-store-release.md).
+Releases → Draft new release → choose the tag `tag.yaml` just created → "Generate release
+notes" → Publish. This starts `production.yaml` and `app-store.yaml`; check the version footer
+in web settings after the deploy.
+
+## 6. iOS and watchOS
+
+1. Publishing the release triggers the App Store workflow: it verifies the tag matches
+   `MARKETING_VERSION`, archives the `LukiFittiIOS` scheme and uploads it to App Store
+   Connect; the watch app ships inside it. Manual runs work from a tag (deploy that version)
+   or from `develop` (TestFlight build of the next unreleased version), with `-f upload=false`
+   to only check signing. Setup and secrets are described in
+   [app-store-release.md](app-store-release.md).
 2. In App Store Connect: add the build to TestFlight, and for an App Store release upload the
    screenshots from `apps/apple/marketing/appstore/` (English and German) and write the release
    notes.

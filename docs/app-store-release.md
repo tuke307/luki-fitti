@@ -136,14 +136,15 @@ Then move the files to a password manager and delete the folder.
 
 ## Running the pipeline
 
-`.github/workflows/app-store.yaml` runs on every push to `main` that changes `apps/apple/**` (or
-the workflow itself) and then always uploads, like the Coolify deploy for the server apps. Pushes
-that arrive while a run is busy wait in the queue; only the newest one is kept.
+`.github/workflows/app-store.yaml` runs when a GitHub release is published — the run verifies
+the tag matches `MARKETING_VERSION` and then always uploads. Concurrent runs queue up; only the
+newest one is kept.
 
-It can also run by hand, from `main` only:
+It can also run by hand, from a version tag (ships that version) or from `develop` (TestFlight
+build of the next unreleased version):
 
 ```bash
-gh workflow run app-store.yaml --repo tuke307/luki-fitti --ref main -f upload=false
+gh workflow run app-store.yaml --repo tuke307/luki-fitti --ref develop -f upload=false
 ```
 
 - With `upload=false` it only archives and exports, which checks the signing setup.

@@ -7,7 +7,7 @@ Thanks for your interest in LukiFitti! Bug reports, ideas, and pull requests are
 1. Follow the [Quick Start](README.md#quick-start) in the README to set up the monorepo
    (API, web app, database) locally. The native iPhone and Apple Watch app lives in
    [`apps/apple`](README.md#native-apple-app-appsapple).
-2. Create a feature branch from `main`.
+2. Create a feature branch from `develop`.
 3. Before opening a pull request, run the same checks as CI:
 
    ```bash
@@ -16,7 +16,7 @@ Thanks for your interest in LukiFitti! Bug reports, ideas, and pull requests are
    yarn test
    ```
 
-4. Open a pull request against `main` and describe **why** the change is needed.
+4. Open a pull request against `develop` and describe **why** the change is needed.
 
 ## Commit messages
 
@@ -40,8 +40,10 @@ requests need.
 
 ## Testing beta builds
 
-Every push to `main` that changes `apps/apple/**` uploads a new iPhone and Apple Watch build to
-App Store Connect (see [docs/release.md](docs/release.md)). Join the
+Publishing a GitHub release uploads a new iPhone and Apple Watch build to App Store Connect;
+between releases, maintainers can also run the App Store workflow by hand from `develop` for
+TestFlight builds. Each upload needs a version higher than the last App Store release (see
+[docs/release.md](docs/release.md)). Join the
 [TestFlight beta](https://testflight.apple.com/join/3agxtuUt) to try those builds before they
 reach the [App Store](https://apps.apple.com/app/lukifitti/id6831508360).
 
