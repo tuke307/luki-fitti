@@ -1,0 +1,26 @@
+name: Feature request
+description: Suggest an idea for LukiFitti
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like to do?
+      description: Describe the problem or the situation, not only the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: How could LukiFitti help with that?
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      multiple: true
+      options:
+        - iPhone
+        - Apple Watch
+        - iPad
+        - Web

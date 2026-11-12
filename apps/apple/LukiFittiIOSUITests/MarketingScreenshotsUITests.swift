@@ -81,6 +81,47 @@ final class MarketingScreenshotsUITests: XCTestCase {
             app.swipeUp()
         }
         XCTAssertTrue(card.waitForExistence(timeout: 10), "suggestion card must be visible")
+        // The card grew taller (eyebrow + wrapped name + buttons): keep scrolling until the
+        // lowest of the card's buttons (all carry the card's identifier) sits fully above
+        // the rest dock — a bottom safe-area inset, so the list can always scroll clear.
+        let restDock = app.descendants(matching: .any)["ios.session.restDock"].firstMatch
+        XCTAssertTrue(restDock.waitForExistence(timeout: 5), "rest dock must be on screen")
+        func cardBottom() -> CGFloat {
+            app.buttons.matching(identifier: "ios.session.rainbowSuggestion")
+                .allElementsBoundByIndex.map(\.frame.maxY).max() ?? .greatestFiniteMagnitude
+        }
+        for _ in 0..<12 where cardBottom() > restDock.frame.minY {
+            app.swipeUp()
+            usleep(300_000)
+        }
+        // That overscrolls past the set rows this shot is about — pull back down in slow,
+        // measured drags until a "Try X kg (+2.5)" hint is visible again, keeping the card
+        // above the dock. Slow velocity avoids the momentum that makes plain drags fling.
+        let hints = app.staticTexts.matching(NSPredicate(format: "label CONTAINS '+2.5'"))
+        func hintVisible() -> Bool {
+            hints.allElementsBoundByIndex.contains { $0.isHittable }
+        }
+        let height = app.frame.height
+        func drag(_ points: CGFloat) {
+            let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            let to = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5 + points / height))
+            from.press(forDuration: 0.05, thenDragTo: to, withVelocity: 10, thenHoldForDuration: 0)
+            usleep(300_000)
+        }
+        for _ in 0..<40 {
+            if hintVisible() || cardBottom() > restDock.frame.minY - 30 { break }
+            drag(40)
+        }
+        // The last drag may still push the card under the dock — nudge it back above.
+        for _ in 0..<20 where hintVisible() {
+            if cardBottom() <= restDock.frame.minY { break }
+            drag(-min(cardBottom() - restDock.frame.minY, 20))
+        }
+        XCTAssertTrue(hintVisible(), "a set suggestion hint must be visible at the top")
+        XCTAssertLessThanOrEqual(
+            cardBottom(), restDock.frame.minY,
+            "suggestion card incl. its buttons must sit fully above the rest dock"
+        )
         save("02-suggestion")
     }
 

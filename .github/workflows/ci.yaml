@@ -53,11 +53,11 @@ jobs:
         run: |
           v=$(grep -m1 MARKETING_VERSION apps/apple/project.yml | sed -E 's/.*"([0-9.]+)".*/\1/')
           g=$(cat apps/apple/marketing/VERSION 2>/dev/null || echo none)
-          if [ "$v" != "$g" ]; then
-            echo "::error::Marketing screenshots were generated for $g, version is $v — run \`yarn workspace @luki-fitti/apple marketing:screenshots\`."
+          if [ "${v%.*}" != "${g%.*}" ]; then
+            echo "::error::Marketing screenshots were generated for $g, version is $v — minor and major releases need new screenshots: run \`yarn workspace @luki-fitti/apple marketing:screenshots\`."
             exit 1
           fi
-          echo "marketing images are for version $v"
+          echo "marketing images are for $g (version $v)"
 
   lint:
     runs-on: ubuntu-latest
