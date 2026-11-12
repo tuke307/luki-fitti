@@ -136,6 +136,7 @@ public struct ProfileAndAuthView: View {
         let restTimerSound: Bool
         let defaultRestSeconds: Int
         let theme: String
+        let trainingGoal: TrainingGoal?
 
         init(_ p: UserPreferencesDto) {
             language = p.language
@@ -146,6 +147,7 @@ public struct ProfileAndAuthView: View {
             restTimerSound = p.restTimerSound
             defaultRestSeconds = p.defaultRestSeconds
             theme = p.theme
+            trainingGoal = p.trainingGoal
         }
     }
 
@@ -173,6 +175,7 @@ public struct ProfileAndAuthView: View {
         dto.weightUnit = values.weightUnit
         dto.defaultRestSeconds = values.defaultRestSeconds
         dto.theme = values.theme
+        dto.setOrClear(\.trainingGoal, values.trainingGoal, key: .trainingGoal)
         return await viewModel.savePreferences(viewModel.store.preferences, server: dto)
     }
 
@@ -628,6 +631,23 @@ private struct TrainingSettingsPage: View {
         @Bindable var store = viewModel.store
         return List {
             Section {
+                Picker(selection: $store.preferences.trainingGoal) {
+                    Text(tr("Not set")).tag(TrainingGoal?.none)
+                    ForEach(TrainingGoal.allCases, id: \.self) { goal in
+                        Text(TrainingGoalLabels.name(goal, tr)).tag(TrainingGoal?.some(goal))
+                    }
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(tr("Training goal"))
+                        Text(store.preferences.trainingGoal
+                            .map { TrainingGoalLabels.caption($0, tr) }
+                            ?? tr("Default rep ranges and rest times"))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .accessibilityIdentifier("ios.profile.trainingGoalPicker")
+
                 Picker(selection: $store.preferences.defaultRestSeconds) {
                     ForEach(Self.restOptions(current: store.preferences.defaultRestSeconds), id: \.self) { seconds in
                         Text(tr("%d s", seconds)).tag(seconds)

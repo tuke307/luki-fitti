@@ -183,6 +183,15 @@ export const EQUIPMENT_LABELS: Record<EquipmentType, string> = {
   [EquipmentType.OTHER]: 'Other',
 };
 
+/** User-selectable training goal driving rep bands, rest and progression behaviour. */
+export enum TrainingGoal {
+  STRENGTH = 'STRENGTH',
+  HYPERTROPHY = 'HYPERTROPHY',
+  ENDURANCE = 'ENDURANCE',
+}
+
+export const TRAINING_GOALS: TrainingGoal[] = Object.values(TrainingGoal);
+
 export enum SessionStatus {
   PLANNED = 'PLANNED',
   IN_PROGRESS = 'IN_PROGRESS',

@@ -383,10 +383,13 @@ public enum ProgressionEngine {
         targetRepsMax: Int? = 12,
         targetWeight: Double? = nil,
         weightUnit: WeightUnit = .KG,
-        currentSets: [SessionSetDto]? = nil
+        currentSets: [SessionSetDto]? = nil,
+        trainingGoal: TrainingGoal? = nil
     ) -> ExerciseProgressionInsight {
-        let repMin = targetRepsMin ?? 8
-        let repMax = targetRepsMax ?? max(repMin + 2, 12)
+        let goalProfile = trainingGoal.flatMap { TrainingGoalProfiles.profiles[$0] }
+        let goalBand = trainingGoal.map { TrainingGoalProfiles.repRange(for: $0, exercise: catalogExercise) }
+        let repMin = goalBand?.min ?? targetRepsMin ?? 8
+        let repMax = goalBand?.max ?? targetRepsMax ?? max(repMin + 2, 12)
 
         let history = extractGlobalExerciseHistory(
             exerciseId: exerciseId,
@@ -436,7 +439,8 @@ public enum ProgressionEngine {
                     repMin: repMin,
                     repMax: repMax,
                     weightUnit: weightUnit,
-                    catalogExercise: catalogExercise
+                    catalogExercise: catalogExercise,
+                    trainingGoal: trainingGoal
                 ),
                 elevatedSystemicFatigueFromHR: false
             )
@@ -444,11 +448,17 @@ public enum ProgressionEngine {
 
         let lastWorkingSets = lastSession.workingSets
         let primaryLastWeight = lastWorkingSets.first?.weightNormalized ?? 0
+        let barbellStepMultiplier: Double =
+            goalProfile != nil &&
+            catalogExercise?.category != .ISOLATION &&
+            catalogExercise?.equipment == .BARBELL
+                ? goalProfile!.barbellCompoundStepMultiplier
+                : 1
         let stepIncrement = getStandardWeightIncrement(
             unit: weightUnit,
             exercise: catalogExercise,
             currentWeight: primaryLastWeight
-        )
+        ) * barbellStepMultiplier
 
         // Cardiovascular fatigue detection from Apple Watch HR recovery (< 15 BPM drop after rest)
         let elevatedSystemicFatigueFromHR: Bool = if lastSession.avgRpe == nil,
@@ -465,15 +475,35 @@ public enum ProgressionEngine {
             lastSession.bestEstimated1RM < (prevSession?.bestEstimated1RM ?? 0) * 0.96 &&
             (majoritySetsBelowMin || maxEffortLast)
 
+        // Goal rules can veto a session-level weight bump: strength goals don't reward max
+        // effort, endurance goals only add weight while effort stays below the cap.
+        let sessionBumpAllowed =
+            goalProfile == nil ||
+            ((goalProfile!.maxEffortEarnsWeight || !maxEffortLast) &&
+                (goalProfile!.increaseWeightMaxRpe.map { (lastSession.avgRpe ?? 8.0) < $0 } ?? true))
+
+        // A per-set bump follows the same goal rules, judged on that set's RPE.
+        func setBumpAllowed(_ rpe: Double?) -> Bool {
+            guard let goalProfile else { return true }
+            return (goalProfile.maxEffortEarnsWeight || (rpe ?? 8.0) < ProgressionEngine.maxEffortRpe) &&
+                (goalProfile.increaseWeightMaxRpe.map { (rpe ?? 8.0) < $0 } ?? true)
+        }
+
+        // With a goal, a suppressed bump holds the weight and clamps reps into the band.
+        func maintainReps(_ reps: Int) -> Int {
+            goalProfile != nil ? max(repMin, min(repMax, reps)) : reps
+        }
+
         // Max effort is a normal training outcome: topping out the rep band still earns
         // more weight, and only a max effort below the top holds the prescription.
         // Watch HR recovery fatigue (no effort logged) still holds the weight.
         let overallPhase: ProgressionPhase
         if consecutiveRegression || (majoritySetsBelowMin && maxEffortLast) {
             overallPhase = .DELOAD
-        } else if allSetsHitTopOfBand && !elevatedSystemicFatigueFromHR && primaryLastWeight > 0 {
+        } else if allSetsHitTopOfBand && !elevatedSystemicFatigueFromHR && primaryLastWeight > 0 && sessionBumpAllowed {
             overallPhase = .INCREASE_WEIGHT
-        } else if maxEffortLast && !majoritySetsBelowMin {
+        } else if (maxEffortLast && !majoritySetsBelowMin) ||
+            (goalProfile != nil && allSetsHitTopOfBand && !sessionBumpAllowed) {
             overallPhase = .MAINTAIN
         } else {
             overallPhase = .INCREASE_REPS
@@ -507,7 +537,7 @@ public enum ProgressionEngine {
                 suggestedWeight = roundToGymStep(reduced, step: 0.5)
                 suggestedReps = max(repMin, min(repMax, lastR))
                 setPhase = .DELOAD
-            } else if lastR >= repMax && lastW > 0 && !elevatedSystemicFatigueFromHR {
+            } else if lastR >= repMax && lastW > 0 && !elevatedSystemicFatigueFromHR && setBumpAllowed(lastRpe) {
                 // Individual set topped out rep range even if later sets didn't -> suggest micro weight bump
                 suggestedWeight = roundToGymStep(lastW + stepIncrement, step: 0.5)
                 suggestedReps = repMin
@@ -519,12 +549,12 @@ public enum ProgressionEngine {
                     setPhase = .INCREASE_REPS
                 } else {
                     suggestedWeight = lastW > 0 ? lastW : targetWeight
-                    suggestedReps = lastR
+                    suggestedReps = maintainReps(lastR)
                     setPhase = .MAINTAIN
                 }
             } else {
                 suggestedWeight = lastW > 0 ? lastW : targetWeight
-                suggestedReps = lastR
+                suggestedReps = maintainReps(lastR)
                 setPhase = .MAINTAIN
             }
 
@@ -574,7 +604,8 @@ public enum ProgressionEngine {
                 repMin: repMin,
                 repMax: repMax,
                 weightUnit: weightUnit,
-                catalogExercise: catalogExercise
+                catalogExercise: catalogExercise,
+                trainingGoal: trainingGoal
             ),
             elevatedSystemicFatigueFromHR: elevatedSystemicFatigueFromHR
         )
@@ -590,10 +621,18 @@ public enum ProgressionEngine {
         repMin: Int,
         repMax: Int,
         weightUnit: WeightUnit,
-        catalogExercise: ExerciseDto?
+        catalogExercise: ExerciseDto?,
+        trainingGoal: TrainingGoal? = nil
     ) -> [SetProgressionSuggestion] {
         guard let currentSets, !currentSets.isEmpty else { return setSuggestions }
         let currentWorkingSets = currentSets.filter { $0.setType != .WARMUP && $0.setType != .STRETCH }
+        let goalProfile = trainingGoal.flatMap { TrainingGoalProfiles.profiles[$0] }
+        let barbellStepMultiplier: Double =
+            goalProfile != nil &&
+            catalogExercise?.category != .ISOLATION &&
+            catalogExercise?.equipment == .BARBELL
+                ? goalProfile!.barbellCompoundStepMultiplier
+                : 1
 
         return setSuggestions.enumerated().map { i, suggestion in
             guard i < currentWorkingSets.count, !currentWorkingSets[i].completed else { return suggestion }
@@ -619,8 +658,12 @@ public enum ProgressionEngine {
             let suggestedWeight: Double
             let suggestedReps: Int
             let phase: ProgressionPhase
-            if r0 >= repMax && (rpe0 ?? 8.0) < maxEffortRpe {
+            // Goal rules can veto an in-session bump the same way they veto a session bump.
+            let rpeBelowGoalCap =
+                goalProfile?.increaseWeightMaxRpe.map { (rpe0 ?? 8.0) < $0 } ?? true
+            if r0 >= repMax && (rpe0 ?? 8.0) < maxEffortRpe && rpeBelowGoalCap {
                 let step = getStandardWeightIncrement(unit: weightUnit, exercise: catalogExercise, currentWeight: w0)
+                    * barbellStepMultiplier
                 suggestedWeight = roundToGymStep(w0 + step, step: 0.5)
                 suggestedReps = repMin
                 phase = .INCREASE_WEIGHT
@@ -653,7 +696,8 @@ public enum ProgressionEngine {
         _ sessionExercise: SessionExerciseDto,
         historySessions: [WorkoutSessionDto],
         catalogExercise: ExerciseDto? = nil,
-        weightUnit: WeightUnit = .KG
+        weightUnit: WeightUnit = .KG,
+        trainingGoal: TrainingGoal? = nil
     ) -> SessionExerciseDto {
         if sessionExercise.exerciseTypeSnapshot == .STRETCHING {
             return sessionExercise
@@ -669,7 +713,8 @@ public enum ProgressionEngine {
             targetRepsMax: sessionExercise.targetRepsMax,
             targetWeight: sessionExercise.targetWeight,
             weightUnit: weightUnit,
-            currentSets: sessionExercise.sets
+            currentSets: sessionExercise.sets,
+            trainingGoal: trainingGoal
         )
 
         guard let lastSession = insight.lastSession else {
@@ -952,7 +997,8 @@ public enum ProgressionEngine {
         catalog: [ExerciseDto],
         historySessions: [WorkoutSessionDto],
         weightUnit: WeightUnit = .KG,
-        dismissed: [DismissedWorkoutSuggestion] = []
+        dismissed: [DismissedWorkoutSuggestion] = [],
+        trainingGoal: TrainingGoal? = nil
     ) -> WorkoutExerciseSuggestion? {
         let strengthCatalog = catalog.filter { $0.exerciseType == .STRENGTH }
         guard !strengthCatalog.isEmpty else { return nil }
@@ -1127,15 +1173,17 @@ public enum ProgressionEngine {
         let stallingExerciseName = picked.reason.stallingExerciseName
         let trend = picked.reason.trend
 
+        let suggestedBand = trainingGoal.map { TrainingGoalProfiles.repRange(for: $0, exercise: chosen) }
         let chosenInsight = computeExerciseProgression(
             exerciseId: chosen.id,
             exerciseName: chosen.name,
             historySessions: historySessions,
             catalogExercise: chosen,
             plannedSets: 3,
-            targetRepsMin: 10,
-            targetRepsMax: 14,
-            weightUnit: weightUnit
+            targetRepsMin: suggestedBand?.min ?? 10,
+            targetRepsMax: suggestedBand?.max ?? 14,
+            weightUnit: weightUnit,
+            trainingGoal: trainingGoal
         )
         let isSmallMuscle = [.SHOULDERS, .BICEPS, .TRICEPS].contains(chosen.primaryMuscleGroup)
         let defaultWeight = chosenInsight.setSuggestions.first?.suggestedWeight
@@ -1159,10 +1207,11 @@ public enum ProgressionEngine {
                 setsTotal: setsTotal
             ),
             recommendedSets: 3,
-            recommendedRepsMin: chosen.category == .COMPOUND ? 8 : 10,
-            recommendedRepsMax: chosen.category == .COMPOUND ? 12 : 15,
+            recommendedRepsMin: suggestedBand?.min ?? (chosen.category == .COMPOUND ? 8 : 10),
+            recommendedRepsMax: suggestedBand?.max ?? (chosen.category == .COMPOUND ? 12 : 15),
             recommendedWeight: defaultWeight,
-            recommendedRestSeconds: chosen.category == .COMPOUND ? 90 : 60
+            recommendedRestSeconds: trainingGoal.map { TrainingGoalProfiles.profiles[$0]!.restSeconds }
+                ?? (chosen.category == .COMPOUND ? 90 : 60)
         )
     }
 }

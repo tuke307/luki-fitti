@@ -178,14 +178,23 @@ public enum SessionCalculator {
         userId: String = "local-user",
         weightUnit: WeightUnit = .KG,
         sourceDevice: SessionSourceDevice = .IPHONE,
-        historySessions: [WorkoutSessionDto] = []
+        historySessions: [WorkoutSessionDto] = [],
+        profileGoal: TrainingGoal? = nil
     ) -> WorkoutSessionDto {
         let catalogMap = Dictionary(uniqueKeysWithValues: catalog.map { ($0.id, $0) })
         let clientSessionId = "sess-\(UUID().uuidString.lowercased())"
         let nowIso = ISO8601DateFormatter().string(from: Date())
+        // Snapshot the resolved goal: the template override wins over the profile default.
+        let goal = TrainingGoalProfiles.resolve(templateGoal: template.trainingGoal, profileGoal: profileGoal)
 
         let exercises: [SessionExerciseDto] = template.exercises.enumerated().map { idx, te in
             let exInfo = te.exercise ?? catalogMap[te.exerciseId]
+            let hasExplicitPlan = !(te.sets?.isEmpty ?? true)
+            let isStretching = exInfo?.exerciseType == .STRETCHING
+            let band = (!isStretching ? goal : nil).map { TrainingGoalProfiles.repRange(for: $0, exercise: exInfo) }
+            let resolvedRest = (!isStretching && goal != nil)
+                ? TrainingGoalProfiles.resolveRestSeconds(te.restSeconds, goal: goal)
+                : te.restSeconds
             let clientExerciseId = "sex-\(UUID().uuidString.lowercased())"
             let sets: [SessionSetDto] = TemplateSets.resolve(te).enumerated().map { sIdx, planned in
                 SessionSetDto(
@@ -194,7 +203,8 @@ public enum SessionCalculator {
                     setType: planned.setType,
                     weight: planned.weight,
                     weightUnit: te.weightUnit,
-                    reps: planned.reps,
+                    // Without an explicit per-set plan the goal band min plans the reps.
+                    reps: (!hasExplicitPlan ? band?.min : nil) ?? planned.reps,
                     durationSeconds: planned.durationSeconds ?? te.targetDurationSeconds,
                     distanceMeters: planned.setType == .WARMUP ? nil : te.targetDistanceMeters
                 )
@@ -213,11 +223,11 @@ public enum SessionCalculator {
                 orderIndex: idx,
                 plannedSets: te.plannedSets,
                 plannedWarmupSets: te.warmupSets,
-                targetRepsMin: te.targetRepsMin,
-                targetRepsMax: te.targetRepsMax,
+                targetRepsMin: band?.min ?? te.targetRepsMin,
+                targetRepsMax: band?.max ?? te.targetRepsMax,
                 targetWeight: te.targetWeight,
                 targetDurationSeconds: te.targetDurationSeconds,
-                restSeconds: te.restSeconds,
+                restSeconds: resolvedRest,
                 alternativeExerciseIds: !te.alternativeExerciseIds.isEmpty
                     ? te.alternativeExerciseIds
                     : (exInfo?.alternativeExerciseIds ?? []),
@@ -231,7 +241,8 @@ public enum SessionCalculator {
                 baseEx,
                 historySessions: historySessions,
                 catalogExercise: exInfo,
-                weightUnit: te.weightUnit
+                weightUnit: te.weightUnit,
+                trainingGoal: isStretching ? nil : goal
             )
         }
 
@@ -248,6 +259,7 @@ public enum SessionCalculator {
             sourceDevice: sourceDevice,
             version: 1,
             lastSyncedAt: nowIso,
+            trainingGoalSnapshot: goal,
             exercises: exercises
         )
     }

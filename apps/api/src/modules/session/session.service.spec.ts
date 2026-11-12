@@ -605,3 +605,121 @@ describe('SessionService — running workouts on other devices', () => {
     assert.equal(calls[0]?.updatedAt, undefined);
   });
 });
+
+describe('SessionService — training goal snapshot', () => {
+  it('starts a template session on the goal band/rest and snapshots the resolved goal', async () => {
+    const sessions = new Map<string, MockRow>();
+    const exercises = new Map<string, MockRow>();
+    const sets = new Map<string, MockRow>();
+
+    const buildFullSession = (s: MockRow | null | undefined) => {
+      if (!s) return null;
+      const exList = Array.from(exercises.values())
+        .filter((e) => e.sessionId === s.id)
+        .sort((a, b) => (a.orderIndex as number) - (b.orderIndex as number))
+        .map((e) => ({
+          ...e,
+          sets: Array.from(sets.values())
+            .filter((st) => st.sessionExerciseId === e.id)
+            .sort((a, b) => (a.setNumber as number) - (b.setNumber as number)),
+        }));
+      return { ...s, exercises: exList };
+    };
+
+    const template = {
+      id: 'tpl-1',
+      userId: 'user-a',
+      name: 'Strength Push',
+      systemKey: null,
+      folderId: null,
+      // The template override must beat the profile goal below.
+      trainingGoal: 'STRENGTH',
+      exercises: [
+        {
+          exerciseId: 'ex-bench',
+          orderIndex: 0,
+          plannedSets: 3,
+          warmupSets: 0,
+          targetRepsMin: 8,
+          targetRepsMax: 12,
+          targetWeight: 80,
+          weightUnit: 'KG',
+          restSeconds: 90,
+          targetDurationSeconds: null,
+          alternativeExerciseIds: [],
+          notes: null,
+          sets: null,
+          exercise: {
+            id: 'ex-bench',
+            name: 'Bench Press',
+            isSystem: false,
+            exerciseType: 'STRENGTH',
+            primaryMuscleGroup: 'CHEST',
+            category: 'COMPOUND',
+          },
+        },
+      ],
+    };
+
+    const prisma = {
+      userPreferences: {
+        findUnique: async () => ({ trainingGoal: 'ENDURANCE' }),
+      },
+      workoutTemplate: {
+        findUnique: async () => template,
+      },
+      sessionExercise: {
+        findMany: async () => [],
+        create: async ({ data }: { data: Record<string, unknown> }) => {
+          const ex = { id: `db-ex-${exercises.size + 1}`, ...data };
+          exercises.set(ex.id as string, ex);
+          return ex;
+        },
+      },
+      sessionSet: {
+        create: async ({ data }: { data: Record<string, unknown> }) => {
+          const st = { id: `db-set-${sets.size + 1}`, ...data };
+          sets.set(st.id as string, st);
+          return st;
+        },
+      },
+      workoutSession: {
+        findUnique: async ({ where }: { where: MockWhere }) => {
+          if (where.clientSessionId) {
+            return buildFullSession(
+              Array.from(sessions.values()).find(
+                (s) => s.clientSessionId === where.clientSessionId,
+              ),
+            );
+          }
+          return buildFullSession(sessions.get(where.id as string));
+        },
+        findUniqueOrThrow: async ({ where }: { where: MockWhere }) =>
+          buildFullSession(sessions.get(where.id as string)),
+        create: async ({ data }: { data: Record<string, unknown> }) => {
+          const s = { id: 'db-sess-1', ...data };
+          sessions.set(s.id as string, s);
+          return s;
+        },
+      },
+      $transaction: async (fn: (tx: unknown) => unknown) => fn(prisma),
+    };
+    const service = new SessionService(prisma as unknown as PrismaService);
+
+    const session = await service.startSession(
+      'user-a',
+      { clientSessionId: 'sess-goal-1', templateId: 'tpl-1' },
+      'en',
+    );
+
+    assert.equal(session.trainingGoalSnapshot, 'STRENGTH');
+    const ex = session.exercises[0]!;
+    // STRENGTH compound band 3–6 and 180 s rest replace the template's 8–12 / 90 s.
+    assert.equal(ex.targetRepsMin, 3);
+    assert.equal(ex.targetRepsMax, 6);
+    assert.equal(ex.restSeconds, 180);
+    for (const set of ex.sets) {
+      assert.equal(set.reps, 3);
+    }
+  });
+});

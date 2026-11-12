@@ -8,6 +8,7 @@ import {
   SessionStatus,
   SessionType,
   SetType,
+  TrainingGoal,
   WeightUnit,
 } from '../enums';
 import type {
@@ -261,6 +262,46 @@ describe('buildTemplateExercisesFromSession', () => {
     ]);
     assert.equal(buildTemplateExercisesFromSession(tpl, same), null);
     assert.equal(buildTemplateExercisesFromSession(tpl, { ...same, templateId: 'other' }), null);
+  });
+
+  it('writes back 90 s when a goal snapshot only expanded the legacy rest', () => {
+    const tpl = template([templateExercise('te-press', 'press')]);
+    const strengthSession = {
+      ...session([
+        sessionExercise('press', [
+          set(SetType.WORKING, 60, 8),
+          set(SetType.WORKING, 60, 8),
+          set(SetType.WORKING, 60, 8),
+        ]),
+      ]),
+      trainingGoalSnapshot: TrainingGoal.STRENGTH,
+    };
+    // Session exercises rested 180 s purely because of the strength goal; the template
+    // keeps its legacy 90 s default, so nothing changed and no update is produced.
+    const withGoalRest = {
+      ...strengthSession,
+      exercises: strengthSession.exercises.map((e) => ({ ...e, restSeconds: 180 })),
+    };
+    assert.equal(buildTemplateExercisesFromSession(tpl, withGoalRest), null);
+  });
+
+  it('keeps a real rest change even under a goal snapshot', () => {
+    const tpl = template([templateExercise('te-press', 'press')]);
+    const changed = {
+      ...session([sessionExercise('press', [set(SetType.WORKING, 60, 8)], { restSeconds: 120 })]),
+      trainingGoalSnapshot: TrainingGoal.STRENGTH,
+    };
+    const result = buildTemplateExercisesFromSession(tpl, changed);
+    assert.equal(result![0]!.restSeconds, 120);
+  });
+
+  it('writes a derived rest back verbatim without a goal snapshot', () => {
+    const tpl = template([templateExercise('te-press', 'press')]);
+    const noGoal = session([
+      sessionExercise('press', [set(SetType.WORKING, 60, 8)], { restSeconds: 180 }),
+    ]);
+    const result = buildTemplateExercisesFromSession(tpl, noGoal);
+    assert.equal(result![0]!.restSeconds, 180);
   });
 
   it('never leaves a superset link on the last exercise', () => {

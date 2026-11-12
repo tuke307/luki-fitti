@@ -395,7 +395,8 @@ public final class LukiAppViewModel {
             userId: store.currentUser?.id ?? "local-user",
             weightUnit: store.preferences.weightUnit,
             sourceDevice: sourceDevice,
-            historySessions: store.historySessions
+            historySessions: store.historySessions,
+            profileGoal: store.preferences.trainingGoal
         )
         completedSummarySession = nil
         store.saveActiveSession(session)
@@ -781,6 +782,10 @@ public final class LukiAppViewModel {
     public func addUnplannedExerciseToSession(_ exercise: ExerciseDto) {
         guard var session = store.activeSession else { return }
         let clientExId = "sex-\(UUID().uuidString.lowercased())"
+        // Exercises added mid-session follow the snapshot goal's band and rest.
+        let goal = exercise.exerciseType == .STRETCHING ? nil : session.trainingGoalSnapshot
+        let band = goal.map { TrainingGoalProfiles.repRange(for: $0, exercise: exercise) }
+        let reps = band?.min ?? 10
         let sets = (1...3).map { num in
             SessionSetDto(
                 sessionExerciseId: clientExId,
@@ -788,7 +793,7 @@ public final class LukiAppViewModel {
                 setType: .WORKING,
                 weight: 40,
                 weightUnit: session.weightUnit,
-                reps: 10
+                reps: reps
             )
         }
         var newEx = SessionExerciseDto(
@@ -803,9 +808,11 @@ public final class LukiAppViewModel {
             status: .IN_PROGRESS,
             orderIndex: session.exercises.count,
             plannedSets: 3,
-            targetRepsMin: 8,
-            targetRepsMax: 12,
-            restSeconds: store.preferences.defaultRestSeconds,
+            targetRepsMin: band?.min ?? 8,
+            targetRepsMax: band?.max ?? 12,
+            restSeconds: goal != nil
+                ? TrainingGoalProfiles.resolveRestSeconds(store.preferences.defaultRestSeconds, goal: goal)
+                : store.preferences.defaultRestSeconds,
             alternativeExerciseIds: exercise.alternativeExerciseIds,
             sets: sets
         )
@@ -813,7 +820,8 @@ public final class LukiAppViewModel {
             newEx,
             historySessions: store.historySessions,
             catalogExercise: exercise,
-            weightUnit: session.weightUnit
+            weightUnit: session.weightUnit,
+            trainingGoal: goal
         )
         session.exercises.append(newEx)
         session.version += 1

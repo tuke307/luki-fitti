@@ -11,6 +11,7 @@ import {
   SessionType,
   SetType,
   WeightUnit,
+  TrainingGoal,
 } from '../enums';
 import type { WorkoutSessionDto } from '../schemas';
 import { CORE_EXERCISE_CATALOG } from '../catalog/data';
@@ -375,5 +376,67 @@ describe('computeWorkoutExerciseSuggestion — swaps keep the movement', () => {
     ])!;
     assert.equal(suggestion.reasonType, 'MISSING_MUSCLE');
     assert.equal(suggestion.unilateralVariant, false);
+  });
+});
+
+describe('computeExerciseProgression — training goals', () => {
+  const CURL = 'ex-barbell-curl';
+  const progress = (
+    exerciseId: string,
+    sets: LoggedSet[],
+    trainingGoal: Parameters<typeof computeExerciseProgression>[0]['trainingGoal'],
+  ) =>
+    computeExerciseProgression({
+      exerciseId,
+      exerciseName: null,
+      historySessions: [buildSession(0, exerciseId, sets)],
+      catalogExercise: catalog.find((c) => c.id === exerciseId),
+      plannedSets: 3,
+      targetRepsMin: 8,
+      targetRepsMax: 12,
+      weightUnit: WeightUnit.KG,
+      trainingGoal,
+    });
+
+  it('keeps the legacy 8–12 band when no goal is set', () => {
+    const insight = progress(BENCH, threeSets(100, 12, 8), null);
+    assert.equal(insight.phase, 'INCREASE_WEIGHT');
+    assert.equal(insight.setSuggestions[0]!.suggestedWeight, 102.5);
+    assert.equal(insight.setSuggestions[0]!.suggestedReps, 8);
+  });
+
+  it('STRENGTH doubles the barbell step and resets reps to 3', () => {
+    const insight = progress(BENCH, threeSets(100, 6, 8), TrainingGoal.STRENGTH);
+    assert.equal(insight.phase, 'INCREASE_WEIGHT');
+    assert.equal(insight.setSuggestions[0]!.suggestedWeight, 105);
+    assert.equal(insight.setSuggestions[0]!.suggestedReps, 3);
+  });
+
+  it('STRENGTH holds the weight when the whole session was max effort', () => {
+    const insight = progress(BENCH, threeSets(100, 6, 9.5), TrainingGoal.STRENGTH);
+    assert.equal(insight.phase, 'MAINTAIN');
+    assert.equal(insight.setSuggestions[0]!.suggestedWeight, 100);
+    assert.equal(insight.setSuggestions[0]!.suggestedReps, 6);
+  });
+
+  it('HYPERTROPHY uses the 10–15 isolation band', () => {
+    const insight = progress(CURL, threeSets(10, 15, 8), TrainingGoal.HYPERTROPHY);
+    assert.equal(insight.phase, 'INCREASE_WEIGHT');
+    assert.equal(insight.setSuggestions[0]!.suggestedWeight, 11.5);
+    assert.equal(insight.setSuggestions[0]!.suggestedReps, 10);
+  });
+
+  it('ENDURANCE adds weight below the RPE 9 cap', () => {
+    const insight = progress(BENCH, threeSets(50, 20, 8), TrainingGoal.ENDURANCE);
+    assert.equal(insight.phase, 'INCREASE_WEIGHT');
+    assert.equal(insight.setSuggestions[0]!.suggestedWeight, 52.5);
+    assert.equal(insight.setSuggestions[0]!.suggestedReps, 12);
+  });
+
+  it('ENDURANCE holds the weight at the RPE 9 cap', () => {
+    const insight = progress(BENCH, threeSets(50, 20, 9), TrainingGoal.ENDURANCE);
+    assert.equal(insight.phase, 'MAINTAIN');
+    assert.equal(insight.setSuggestions[0]!.suggestedWeight, 50);
+    assert.equal(insight.setSuggestions[0]!.suggestedReps, 20);
   });
 });

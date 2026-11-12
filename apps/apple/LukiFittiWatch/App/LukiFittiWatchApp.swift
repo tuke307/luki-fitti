@@ -389,7 +389,8 @@ public final class WatchWorkoutViewModel {
             userId: store.currentUser?.id ?? "local-user",
             weightUnit: store.preferences.weightUnit,
             sourceDevice: .APPLE_WATCH,
-            historySessions: store.historySessions
+            historySessions: store.historySessions,
+            profileGoal: store.preferences.trainingGoal
         )
         completedSummarySession = nil
         currentExerciseIndex = 0

@@ -9,6 +9,7 @@ export * from './zod-utils';
 
 // Progressive overload & ML suggestion utilities (client-safe)
 export * from './progression.util';
+export * from './training-goal.util';
 
 // Per-set template plans and session → template write-back (client-safe)
 export * from './template-sets.util';

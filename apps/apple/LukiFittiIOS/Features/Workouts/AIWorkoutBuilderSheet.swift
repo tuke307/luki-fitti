@@ -12,6 +12,8 @@ struct AIWorkoutBuilderSheet: View {
     @Environment(\.lukiLocale) private var tr
     @State private var prompt = ""
     @State private var duration: Int? = nil
+    /// nil = profile default; the server resolves it against the saved profile goal.
+    @State private var goal: TrainingGoal? = nil
     @State private var result: WorkoutBuilderResponseDto?
     @State private var busy = false
     @State private var error: String?
@@ -47,6 +49,16 @@ struct AIWorkoutBuilderSheet: View {
                             Text(tr("Any")).tag(Int?.none)
                             ForEach([30, 45, 60, 75, 90], id: \.self) { Text(tr("%d min", $0)).tag(Int?.some($0)) }
                         }
+                        Picker(tr("Training goal"), selection: $goal) {
+                            Text(viewModel.store.preferences.trainingGoal
+                                .map { tr("Profile default (%@)", TrainingGoalLabels.name($0, tr)) }
+                                ?? tr("Profile default"))
+                                .tag(TrainingGoal?.none)
+                            ForEach(TrainingGoal.allCases, id: \.self) { g in
+                                Text(TrainingGoalLabels.name(g, tr)).tag(TrainingGoal?.some(g))
+                            }
+                        }
+                        .accessibilityIdentifier("ios.aiBuilder.trainingGoalPicker")
                     }
                     Section(tr("Ideas")) {
                         ForEach(examples, id: \.self) { example in
@@ -150,7 +162,11 @@ struct AIWorkoutBuilderSheet: View {
         defer { busy = false }
         do {
             result = try await viewModel.store.apiClient.buildWorkout(
-                WorkoutBuilderRequestDto(prompt: prompt.trimmingCharacters(in: .whitespacesAndNewlines), durationMinutes: duration)
+                WorkoutBuilderRequestDto(
+                    prompt: prompt.trimmingCharacters(in: .whitespacesAndNewlines),
+                    durationMinutes: duration,
+                    trainingGoal: goal
+                )
             )
         } catch {
             self.error = MealPhotoSheet.message(for: error, tr)
@@ -185,7 +201,8 @@ struct AIWorkoutBuilderSheet: View {
             description: String(p.summary.prefix(500)),
             folderId: nil,
             durationMinutes: p.estimatedDurationMinutes,
-            exercises: exercises
+            exercises: exercises,
+            trainingGoal: goal
         ) else { return }
         Task { await store.flushSyncQueue() }
         onSaved(template)
