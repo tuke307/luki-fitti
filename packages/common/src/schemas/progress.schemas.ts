@@ -69,13 +69,17 @@ export type ProgressCheckInDto = z.infer<typeof ProgressCheckInDtoSchema>;
 
 // ─── Progress target: AI-edited "future you" image ───
 
-const MAX_TARGET_IMAGE_BYTES = 6 * 1024 * 1024;
+export const PROGRESS_TARGET_MAX_IMAGE_BYTES = 6 * 1024 * 1024;
+
+/** Base64 inflates the 6 MB image by 4/3, plus JSON envelope overhead. */
+export const PROGRESS_TARGET_MAX_BODY_BYTES =
+  Math.ceil(PROGRESS_TARGET_MAX_IMAGE_BYTES / 3) * 4 + 64 * 1024;
 
 export const ProgressTargetRequestSchema = z.object({
   imageBase64: z.string().refine(
     (v) => {
       try {
-        return Buffer.from(v, 'base64').length <= MAX_TARGET_IMAGE_BYTES;
+        return Buffer.from(v, 'base64').length <= PROGRESS_TARGET_MAX_IMAGE_BYTES;
       } catch {
         return false;
       }
