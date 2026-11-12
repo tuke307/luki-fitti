@@ -202,7 +202,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               targetRepsMax: null,
               targetWeight: 60,
               weightUnit,
-              restSeconds: 90,
+              restSeconds: user?.preferences?.defaultRestSeconds ?? 90,
               targetDurationSeconds: null,
               targetDistanceMeters: null,
               notes: '',
@@ -1203,7 +1203,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                         targetRepsMax: null,
                         targetWeight: 40,
                         weightUnit,
-                        restSeconds: 90,
+                        restSeconds: user?.preferences?.defaultRestSeconds ?? 90,
                         targetDurationSeconds: null,
                         targetDistanceMeters: null,
                         notes: '',
@@ -1271,7 +1271,10 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                                     i === idx
                                       ? {
                                           ...item,
-                                          restSeconds: item.restSeconds === 0 ? 90 : 0,
+                                          restSeconds:
+                                            item.restSeconds === 0
+                                              ? (user?.preferences?.defaultRestSeconds ?? 90)
+                                              : 0,
                                         }
                                       : item,
                                   ),
@@ -1448,7 +1451,12 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                           onClick={() =>
                             setTplExercises((prev) =>
                               prev.map((item, i) =>
-                                i === idx ? { ...item, restSeconds: 90 } : item,
+                                i === idx
+                                  ? {
+                                      ...item,
+                                      restSeconds: user?.preferences?.defaultRestSeconds ?? 90,
+                                    }
+                                  : item,
                               ),
                             )
                           }

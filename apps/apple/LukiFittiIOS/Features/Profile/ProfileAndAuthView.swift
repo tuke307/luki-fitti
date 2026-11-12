@@ -634,8 +634,8 @@ private struct TrainingSettingsPage: View {
                     }
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(tr("Rest timer"))
-                        Text(tr("Starts after each set"))
+                        Text(tr("Default rest"))
+                        Text(tr("For new exercises. Each exercise can set its own rest."))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
