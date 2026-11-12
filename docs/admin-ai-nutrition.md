@@ -129,7 +129,7 @@ optional `mealType`, `hint`):
 | `AI_KEY_ENCRYPTION_KEY`                                                                                                                 | 32-byte master key for per-user OpenRouter keys (`openssl rand -base64 32`); AI is off without it |
 | `AI_KEY_ENCRYPTION_KEY_PREVIOUS` / `AI_KEY_ENCRYPTION_KEY_VERSION`                                                                      | Rotation: old key + bumped version; keys are re-encrypted lazily                                  |
 | `OPENROUTER_BASE_URL` / `OPENROUTER_TIMEOUT_MS`                                                                                         | Optional overrides (https only outside local tests)                                               |
-| `SEAWEEDFS_ENDPOINT`, `SEAWEEDFS_PORT`, `SEAWEEDFS_USE_SSL`, `SEAWEEDFS_ACCESS_KEY_API`, `SEAWEEDFS_SECRET_KEY_API`, `SEAWEEDFS_BUCKET` | Meal photo storage (same names as kds/marienmuehle)                                               |
+| `SEAWEEDFS_ENDPOINT`, `SEAWEEDFS_PORT`, `SEAWEEDFS_USE_SSL`, `SEAWEEDFS_ACCESS_KEY_API`, `SEAWEEDFS_SECRET_KEY_API`, `SEAWEEDFS_BUCKET` | Meal photo storage                                                                                |
 
 Models, switches, daily limit and photo retention are edited in **Admin → AI** (stored in
 `AppSettings`). Defaults: `openai/gpt-6.1-terra` for the workout builder and
@@ -140,6 +140,6 @@ bucket and an S3 user with access to it there, then set `SEAWEEDFS_ENDPOINT` to 
 `s3.tony-luke.de`; TLS on port 443 is the default) and put that user's keys into
 `SEAWEEDFS_ACCESS_KEY_API` / `SEAWEEDFS_SECRET_KEY_API`.
 
-For local dev (`compose.dev.yml`, same layout as kds/marienmuehle), copy the sample to
+For local dev (`compose.dev.yml`), copy the sample to
 `~/seaweedfs/luki-fitti/config/s3.json`. The S3 API is then at `http://localhost:8335` and the
 SeaweedFS admin UI at `http://localhost:23648`.
