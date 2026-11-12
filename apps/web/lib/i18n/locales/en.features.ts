@@ -221,6 +221,8 @@ export const enFeatures = {
     oneSideGroup: 'One side at a time',
     suggestionReason:
       'Try one side at a time — training each arm or leg separately can restart progress.',
+    suggestionReasonStalled:
+      '{stalling} has stalled. Try one side at a time — training each side separately can restart progress.',
   },
   exerciseHistory: {
     title: 'History',

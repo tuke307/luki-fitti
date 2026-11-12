@@ -336,7 +336,7 @@ export const de = {
     suggestionChipRegression: '{change} % in den letzten {window} Einheiten',
     suggestionChipSets: '{sets} von {total} Sätzen',
     addSuggestedBtn: 'Hinzufügen',
-    swapSuggestedBtn: '{name} ersetzen',
+    swapSuggestedBtn: 'Ersetzen',
     dismissSuggestionTitle: 'Vorschlag ausblenden',
     exerciseCount: '{count} Übungen',
     exerciseCountOne: '1 Übung',
