@@ -304,24 +304,22 @@ export function MealPhotoSection({
         )}
       </div>
 
-      {(!textOnly || description.length > 0) && (
-        <Button
-          type="button"
-          onClick={() => void analyze()}
-          disabled={disabled || (textOnly && description.length < MEAL_DESCRIPTION_MIN_LENGTH)}
-          className="w-full sm:w-auto"
-        >
-          {busy ? (
-            <>
-              <Spinner /> {t.mealAi.analyzing}
-            </>
-          ) : (
-            <>
-              <Sparkles className="h-4 w-4" /> {t.mealAi.estimate}
-            </>
-          )}
-        </Button>
-      )}
+      <Button
+        type="button"
+        onClick={() => void analyze()}
+        disabled={disabled || (textOnly && description.length < MEAL_DESCRIPTION_MIN_LENGTH)}
+        className="w-full sm:w-auto"
+      >
+        {busy ? (
+          <>
+            <Spinner /> {t.mealAi.analyzing}
+          </>
+        ) : (
+          <>
+            <Sparkles className="h-4 w-4" /> {t.mealAi.estimate}
+          </>
+        )}
+      </Button>
 
       {uncertaintyNote && (
         <p className="text-muted-foreground text-[0.8125rem]">{uncertaintyNote}</p>

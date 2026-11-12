@@ -471,6 +471,7 @@ public enum LukiStrings {
         "Suggest from my details": "Aus meinen Angaben vorschlagen",
         "Suggested workout": "Vorgeschlagenes Workout",
         "Take photo": "Foto aufnehmen",
+        "Camera": "Kamera",
         "The assistant isn’t available right now. Try again in a moment.": "Der Assistent ist gerade nicht verfügbar. Versuch es gleich noch mal.",
         "This feature isn’t turned on for your account.": "Diese Funktion ist für dein Konto nicht freigeschaltet.",
         "Time": "Uhrzeit",
@@ -700,7 +701,7 @@ public enum LukiStrings {
         // Meal description → AI food proposals
         "Photos or description": "Fotos oder Beschreibung",
         "Describe your meal": "Beschreib deine Mahlzeit",
-        "e.g. muesli for breakfast, about 100 g, with 1/4 scoop protein powder, oat milk and a cappuccino": "z. B. Müsli zum Frühstück, ca. 100 g, mit 1/4 Scoop Proteinpulver, Hafermilch und Cappuccino",
+        "e.g. muesli with oat milk, about 100 g": "z. B. Müsli mit Hafermilch, ca. 100 g",
         "Without photos, AI suggests foods from your description. You can edit them before saving.": "Ohne Fotos schlägt die KI Lebensmittel aus deiner Beschreibung vor. Du kannst sie vor dem Speichern anpassen.",
         "Describe your meal in a few words.": "Beschreib deine Mahlzeit in ein paar Worten.",
         "We couldn’t find food in this description.": "In dieser Beschreibung haben wir kein Essen gefunden.",
