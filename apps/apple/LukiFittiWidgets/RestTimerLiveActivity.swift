@@ -201,19 +201,22 @@ private struct CompactRestButtons: View {
                 Text(labels.addRest)
                     .lineLimit(1)
                     .fixedSize()
+                    .frame(minHeight: 32)
             }
             .buttonStyle(.bordered)
             .buttonBorderShape(.capsule)
+            .frame(minHeight: 44)
             Button(intent: SkipRestTimerIntent()) {
                 Image(systemName: "forward.end.fill")
+                    .frame(width: 28, height: 28)
             }
             .buttonStyle(.borderedProminent)
             .buttonBorderShape(.circle)
+            .frame(width: 44, height: 44)
             .tint(LukiColors.accent)
             .accessibilityLabel(labels.skipRest)
         }
-        .controlSize(.small)
-        .font(.footnote.weight(.semibold))
+        .font(.headline.weight(.semibold))
     }
 }
 
