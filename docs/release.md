@@ -16,8 +16,8 @@ feature branch ──squash PR──▶ develop ──release PR (version bump)�
 
 - **Everyday work**: feature branches go into `develop` as squash PRs. Nothing deploys.
 - **Release**: a release PR `develop` → `main` (merge commit, not squash) carries the version
-  bump. CI's `version` job requires the version to be higher than the newest `v*` tag and the
-  marketing screenshots to match it.
+  bump. CI's `version` job requires the version to be higher than the newest `v*` tag and, for
+  minor and major releases, marketing screenshots generated for that `x.y`.
 - **Tag**: on every push to `main`, `.github/workflows/tag.yaml` creates the annotated tag
   `v<version>` (e.g. `v1.0.1`). The tag alone deploys nothing — GITHUB_TOKEN pushes trigger no
   other workflows.
@@ -36,8 +36,9 @@ feature branch ──squash PR──▶ develop ──release PR (version bump)�
 > Since the first App Store release (1.0.0, November 2026), every iOS upload needs a new
 > version. Once a version is released, App Store Connect closes it: new builds with that
 > version are rejected and its builds can no longer be submitted for external TestFlight
-> testing. Raise the version (`1.0.1` for fixes, `1.1.0` for features) in the release PR, and
-> regenerate the marketing screenshots with every version bump.
+> testing. Raise the version (`1.0.1` for fixes, `1.1.0` for features) in the release PR.
+> Regenerate the marketing screenshots for minor and major releases only; patch releases
+> (`x.y.Z`) reuse the screenshots of their `x.y`.
 
 ## 1. Bump the version
 
@@ -57,11 +58,13 @@ generated for (see below). The App Store workflow sets the iOS build number itse
 
 ## 2. Regenerate the marketing screenshots
 
-Required for every version bump, so the App Store listing and the one-pager show the current UI.
+Required for minor and major releases (`1.1.0`, `2.0.0`), so the App Store listing and the
+one-pager show the current UI. Patch releases (`1.0.1`) skip this step and keep the existing
+images: `marketing:check` only compares major and minor version.
 
 ```bash
 yarn workspace @luki-fitti/apple marketing:screenshots   # iPhone, iPad + Apple Watch simulators, EN + DE
-yarn workspace @luki-fitti/apple marketing:check         # fails if the images are older than the version
+yarn workspace @luki-fitti/apple marketing:check         # fails if the images are for an older x.y
 ```
 
 This writes:
@@ -106,8 +109,8 @@ yarn workspace @luki-fitti/apple marketing:check
 
 ## 4. Merge the release PR to `main`
 
-Open the release PR `develop` → `main` with the version bump and the regenerated screenshots
-and merge it with a **merge commit** (not squash — it keeps `develop` and `main` aligned).
+Open the release PR `develop` → `main` with the version bump (and, for minor and major
+releases, the regenerated screenshots) and merge it with a **merge commit** (not squash — it keeps `develop` and `main` aligned).
 `tag.yaml` then creates the `v<version>` tag automatically.
 
 ## 5. Publish the GitHub release
