@@ -9,7 +9,7 @@ they land.
 - [x] A — DB, common formula + fixtures, `points` and `league` modules, rollover scheduler
 - [x] B — Web: weekly EP card, end-of-workout EP, friends leaderboard, league screen,
       promotion/demotion celebration, admin league settings
-- [ ] C — iOS: same screens, Swift EP mirror (fixture tests), Watch: weekly EP + arena + rank
+- [x] C — iOS: same screens, Swift EP mirror (fixture tests), Watch: weekly EP + arena + rank
 - [ ] PR opened
 
 ## Time model
