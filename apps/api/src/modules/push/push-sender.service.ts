@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import * as http2 from 'node:http2';
 import jwt from 'jsonwebtoken';
 import webpush from 'web-push';
@@ -9,7 +9,7 @@ import {
   pushMessageFor,
   renderPushMessage,
 } from '@luki-fitti/common/push-messages';
-import type { PrismaService } from '../database/prisma.service';
+import { PrismaService } from '../database/prisma.service';
 import {
   APNS_BUNDLE_ID,
   APNS_KEY_ID,
@@ -71,7 +71,7 @@ export class PushSenderService {
 
   constructor(
     private readonly prisma: PrismaService,
-    deps: PushSenderDeps = {},
+    @Optional() deps: PushSenderDeps = {},
   ) {
     this.apnsSend = deps.apnsSend ?? ((args) => this.apnsHttp2Send(args));
     this.webPushSend = deps.webPushSend ?? ((args) => this.webPushSendDefault(args));
