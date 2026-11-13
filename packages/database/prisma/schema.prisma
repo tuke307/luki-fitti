@@ -188,6 +188,10 @@ model User {
   discoverableByEmail      Boolean   @default(true)
   /// Pause competing: hidden from leagues, no social pushes; friends stay.
   socialPaused             Boolean   @default(false)
+  /// Current league arena; changed by the weekly rollover and inactivity drops.
+  arena                    Arena     @default(BRONZE)
+  /// Consecutive closed league weeks without a membership; at 2 the arena drops one step.
+  leagueInactiveWeeks      Int       @default(0)
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
 
@@ -210,18 +214,21 @@ model User {
   importJobs         ImportJob[]
   progressCheckIns   ProgressCheckIn[]
 
-  friendshipsA        Friendship[]   @relation("FriendshipUserA")
-  friendshipsB        Friendship[]   @relation("FriendshipUserB")
-  friendRequestsMade  Friendship[]   @relation("FriendshipRequestedBy")
+  friendshipsA        Friendship[]       @relation("FriendshipUserA")
+  friendshipsB        Friendship[]       @relation("FriendshipUserB")
+  friendRequestsMade  Friendship[]       @relation("FriendshipRequestedBy")
   friendInvites       FriendInvite[]
-  blocksMade          UserBlock[]    @relation("BlockBlocker")
-  blocksReceived      UserBlock[]    @relation("BlockBlocked")
-  reportsMade         UserReport[]   @relation("ReportReporter")
-  reportsReceived     UserReport[]   @relation("ReportReported")
-  reportsResolved     UserReport[]   @relation("ReportResolver")
+  blocksMade          UserBlock[]        @relation("BlockBlocker")
+  blocksReceived      UserBlock[]        @relation("BlockBlocked")
+  reportsMade         UserReport[]       @relation("ReportReporter")
+  reportsReceived     UserReport[]       @relation("ReportReported")
+  reportsResolved     UserReport[]       @relation("ReportResolver")
   pushDevices         PushDevice[]
   notifications       Notification[]
-  notificationActions Notification[] @relation("NotificationActor")
+  notificationActions Notification[]     @relation("NotificationActor")
+  effortPointEntries  EffortPointEntry[]
+  weeklyScores        WeeklyScore[]
+  leagueMemberships   LeagueMembership[]
 }
 
 model UserPreferences {
@@ -268,6 +275,8 @@ model UserPreferences {
   aiModels                   Json?
   /// Push category toggle: friend requests and accepted friendships.
   pushFriends                Boolean       @default(true)
+  /// Push category toggle: league outcomes and end-of-week reminders.
+  pushLeagues                Boolean       @default(true)
   createdAt                  DateTime      @default(now())
   updatedAt                  DateTime      @updatedAt
 
@@ -518,6 +527,7 @@ model WorkoutSession {
   template          WorkoutTemplate?   @relation(fields: [templateId], references: [id], onDelete: SetNull)
   stretchingRoutine StretchingRoutine? @relation(fields: [stretchingRoutineId], references: [id], onDelete: SetNull)
   exercises         SessionExercise[]
+  effortPointEntry  EffortPointEntry?
 
   @@index([userId, startedAt])
   @@index([userId, status])
@@ -589,30 +599,44 @@ model SessionSet {
 
 /// Single-row application settings (id = 1), edited in the admin portal.
 model AppSettings {
-  id                      Int      @id @default(1)
+  id                      Int             @id @default(1)
   /// Global kill switches. A user additionally needs a usable OpenRouter key.
-  aiWorkoutBuilderEnabled Boolean  @default(true)
-  aiMealPhotoEnabled      Boolean  @default(true)
+  aiWorkoutBuilderEnabled Boolean         @default(true)
+  aiMealPhotoEnabled      Boolean         @default(true)
   /// OpenRouter model ids (e.g. "openai/gpt-6.1-terra"); fallbacks are tried in order.
-  workoutBuilderModel     String   @default("openai/gpt-6.1-terra")
-  workoutBuilderFallbacks String[] @default(["google/gemini-3.8-flash"])
-  mealPhotoModel          String   @default("google/gemini-3.8-flash")
-  mealPhotoFallbacks      String[] @default(["openai/gpt-6.1-terra"])
+  workoutBuilderModel     String          @default("openai/gpt-6.1-terra")
+  workoutBuilderFallbacks String[]        @default(["google/gemini-3.8-flash"])
+  mealPhotoModel          String          @default("google/gemini-3.8-flash")
+  mealPhotoFallbacks      String[]        @default(["openai/gpt-6.1-terra"])
   /// Max AI runs per user per UTC day across all AI features.
-  aiDailyRunLimit         Int      @default(30)
+  aiDailyRunLimit         Int             @default(30)
   /// Delete stored meal photos after N days; null keeps them until the meal is deleted.
   mealPhotoRetentionDays  Int?
   /// Models users on an admin-assigned key may choose from (own-key users may pick any capable model).
-  userModelAllowlist      String[] @default([])
+  userModelAllowlist      String[]        @default([])
   /// AI "target photo" for progress tracking (part B).
-  aiProgressTargetEnabled Boolean  @default(true)
-  progressTargetModel     String   @default("google/gemini-nano-banana-2.1")
-  progressTargetFallbacks String[] @default(["bytedance-seed/seedream-5-0-flash"])
+  aiProgressTargetEnabled Boolean         @default(true)
+  progressTargetModel     String          @default("google/gemini-nano-banana-2.1")
+  progressTargetFallbacks String[]        @default(["bytedance-seed/seedream-5-0-flash"])
   /// Social kill switch: off by default, enabled per rollout (see docs/social-2.0.md).
-  socialEnabled           Boolean  @default(false)
+  socialEnabled           Boolean         @default(false)
   /// Beta allowlist; empty = everyone once socialEnabled is on.
-  socialBetaUserIds       String[] @default([])
-  updatedAt               DateTime @updatedAt
+  socialBetaUserIds       String[]        @default([])
+  /// Leagues/effort-points kill switch: off → /league/* 403 and no points recorded.
+  leaguesEnabled          Boolean         @default(true)
+  /// AUTO picks the stage from activeUsers thresholds; the other values force it.
+  leagueStageMode         LeagueStageMode @default(AUTO)
+  /// AUTO: minimum eligible users active last week for stage GLOBAL.
+  leagueStage2MinUsers    Int             @default(10)
+  /// AUTO: minimum eligible users active last week for stage ARENAS.
+  leagueStage3MinUsers    Int             @default(150)
+  /// Maximum members per cohort (GLOBAL ignores this: one cohort per week).
+  leagueCohortSize        Int             @default(30)
+  /// Per-day cap applied when the weekly score is recomputed.
+  epDailyCap              Int             @default(600)
+  /// Weekly bonus when entries with points > 0 reach the user's weeklyGoalSessions.
+  epWeeklyGoalBonus       Int             @default(100)
+  updatedAt               DateTime        @updatedAt
 }
 
 /// Who provided the OpenRouter key used for AI runs.
@@ -1005,6 +1029,9 @@ enum ReportStatus {
 enum NotificationKind {
   FRIEND_REQUEST
   FRIEND_ACCEPTED
+  LEAGUE_PROMOTED
+  LEAGUE_DEMOTED
+  LEAGUE_ENDING
 }
 
 /// Mutual friendship. The pair is stored once with userAId < userBId;
@@ -1120,4 +1147,131 @@ model Notification {
   actor User? @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Leagues (PR 2): effort points ledger, weekly scores, cohorts
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum Arena {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+  DIAMOND
+  OBSIDIAN
+  TITAN
+}
+
+enum LeagueStage {
+  FRIENDS
+  GLOBAL
+  ARENAS
+}
+
+enum LeagueStageMode {
+  AUTO
+  FRIENDS
+  GLOBAL
+  ARENAS
+}
+
+enum LeagueOutcome {
+  PROMOTED
+  STAYED
+  DEMOTED
+}
+
+/// One ledger entry per completed session: points can only go down on recompute.
+model EffortPointEntry {
+  id          String   @id @default(uuid())
+  userId      String
+  /// FK cascade: deleting the session deletes its points; WeeklyScore is recomputed.
+  sessionId   String   @unique
+  /// League week of the session (Monday of its Berlin completion day, YYYY-MM-DD).
+  weekKey     String
+  /// Berlin calendar day of the session, YYYY-MM-DD.
+  dayKey      String
+  /// Effective points: firstPoints on create, min(firstPoints, recompute) afterwards.
+  points      Int
+  /// Points at first computation — the ceiling for later edits.
+  firstPoints Int
+  /// computeSessionEffortPoints breakdown (audit + UI).
+  breakdown   Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([userId, weekKey])
+}
+
+/// Weekly aggregate per user: daily-capped points + goal bonus, recomputed from the ledger.
+model WeeklyScore {
+  id        String   @id @default(uuid())
+  userId    String
+  weekKey   String
+  /// Sum over days of min(epDailyCap, day points) + goalBonus.
+  points    Int
+  /// Uncapped weekly sum (no daily cap, no bonus).
+  rawPoints Int
+  /// Number of ledger entries this week.
+  sessions  Int
+  /// epWeeklyGoalBonus when the weekly session goal was met, else 0.
+  goalBonus Int
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekKey])
+  /// Leaderboard/cohort scans order by points within a week.
+  @@index([weekKey, points])
+}
+
+/// One row per league week; created lazily on first access or by the rollover.
+/// closedAt marks the rollover as done — the guard that makes it idempotent.
+model LeagueWeek {
+  weekKey     String      @id
+  stage       LeagueStage
+  /// Eligible users with WeeklyScore.points > 0 in the previous week (AUTO input).
+  activeUsers Int
+  /// ARENAS only: Arena → bucket index, computed at creation (see league.util).
+  buckets     Json?
+  closedAt    DateTime?
+  createdAt   DateTime    @default(now())
+}
+
+/// A ranked group for one week. bucket = arena bucket (ARENAS); null = GLOBAL.
+model LeagueCohort {
+  id        String   @id @default(uuid())
+  weekKey   String
+  bucket    Int?
+  createdAt DateTime @default(now())
+
+  members LeagueMembership[]
+
+  @@index([weekKey, bucket])
+}
+
+/// One row per user per week: the cohort they ranked in and the rollover result.
+model LeagueMembership {
+  id           String         @id @default(uuid())
+  cohortId     String
+  userId       String
+  /// Denormalised for the (userId, weekKey) unique constraint and lookups.
+  weekKey      String
+  arenaAtStart Arena
+  finalPoints  Int?
+  finalRank    Int?
+  outcome      LeagueOutcome?
+  /// Set once the client has shown the promotion/demotion celebration.
+  resultSeenAt DateTime?
+  joinedAt     DateTime       @default(now())
+
+  cohort LeagueCohort @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekKey])
+  @@index([cohortId])
 }

@@ -72,4 +72,8 @@ export {
   MealType,
   FoodItemSource,
   MealAmountUnit,
+  Arena,
+  LeagueStage,
+  LeagueStageMode,
+  LeagueOutcome,
 } from './generated/prisma/client';
