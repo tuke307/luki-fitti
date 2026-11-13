@@ -91,7 +91,8 @@ jobs:
 
       - run: yarn install --frozen-lockfile
 
-      - run: yarn turbo run build --filter='./packages/*'
+      # The API build lets app.module.boot.spec.ts check the full DI graph instead of skipping.
+      - run: yarn turbo run build --filter='./packages/*' --filter=@luki-fitti/api
 
       - run: yarn turbo run test --filter='!@luki-fitti/apple'
 
