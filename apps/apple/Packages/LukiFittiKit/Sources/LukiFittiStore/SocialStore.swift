@@ -24,6 +24,15 @@ public final class SocialStore {
     public var onboardingDismissedThisLaunch = false
     public var lastError: String?
 
+    // MARK: - Leagues & effort points (PR 2)
+
+    public var pointsWeek: PointsWeekDto?
+    public var league: LeagueCurrentDto?
+    public var leagueFriends: [LeagueFriendRowDto] = []
+    public var leagueHistory: [LeagueHistoryEntryDto] = []
+    /// Called after league/points data changes so the app can push a watch snapshot.
+    public var onLeagueDataChanged: (@MainActor () -> Void)?
+
     /// Avatar JPEG bytes keyed by user id, fetched through the authenticated API client.
     @ObservationIgnored public private(set) var avatarCache: [String: Data] = [:]
 
@@ -45,7 +54,52 @@ public final class SocialStore {
         async let p = fetchProfile()
         async let f = refreshFriends()
         async let u = refreshUnread()
-        _ = await (p, f, u)
+        async let l = refreshLeagues()
+        _ = await (p, f, u, l)
+    }
+
+    /// Points, league state and friends board. 403s (leagues disabled) are swallowed —
+    /// the sections simply stay empty.
+    public func refreshLeagues() async {
+        var changed = false
+        if let week = try? await apiClient.fetchPointsWeek() {
+            pointsWeek = week
+            changed = true
+        }
+        if let current = try? await apiClient.fetchLeagueCurrent() {
+            league = current
+            changed = true
+        }
+        if let friends = try? await apiClient.fetchLeagueFriends() {
+            leagueFriends = friends
+            changed = true
+        }
+        if changed { onLeagueDataChanged?() }
+    }
+
+    public func refreshLeagueHistory() async {
+        leagueHistory = (try? await apiClient.fetchLeagueHistory()) ?? leagueHistory
+    }
+
+    /// Clears the pending result locally and tells the server the celebration was shown.
+    public func markResultSeen() async {
+        guard let result = league?.pendingResult else { return }
+        league?.pendingResult = nil
+        do { try await apiClient.markLeagueResultSeen(weekKey: result.weekKey) } catch {}
+        onLeagueDataChanged?()
+    }
+
+    /// Compact watch snapshot, nil when nothing has loaded yet.
+    public var watchSnapshot: SocialWatchSnapshot? {
+        guard let league else { return nil }
+        let rank = league.cohort?.members.first(where: { $0.isSelf })?.rank
+        return SocialWatchSnapshot(
+            weekPoints: pointsWeek?.points ?? 0,
+            arena: league.arena,
+            rank: rank,
+            cohortSize: league.cohort?.members.count,
+            stage: league.stage
+        )
     }
 
     @discardableResult
@@ -136,5 +190,9 @@ public final class SocialStore {
         unreadCount = 0
         avatarCache = [:]
         requestedSection = nil
+        pointsWeek = nil
+        league = nil
+        leagueFriends = []
+        leagueHistory = []
     }
 }

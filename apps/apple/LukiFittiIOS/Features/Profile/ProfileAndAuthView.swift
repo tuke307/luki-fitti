@@ -837,8 +837,9 @@ private struct NotificationSettingsPage: View {
     @Bindable var viewModel: LukiAppViewModel
     let autosave: PreferencesAutosaver
     @State private var notificationStatus: String?
-    @State private var friendsPushLoaded = false
+    @State private var pushPrefsLoaded = false
     @State private var friendsPush = false
+    @State private var leaguesPush = false
     @Environment(\.lukiLocale) private var tr
 
     var body: some View {
@@ -870,19 +871,39 @@ private struct NotificationSettingsPage: View {
                         }
                     }
                     .tint(LukiColors.accent)
-                    .disabled(!friendsPushLoaded)
+                    .disabled(!pushPrefsLoaded)
                     .accessibilityIdentifier("ios.profile.friendsPushToggle")
                     .task {
                         if let prefs = try? await viewModel.store.apiClient.fetchPushPreferences() {
                             friendsPush = prefs.friends
-                            friendsPushLoaded = true
+                            leaguesPush = prefs.leagues
+                            pushPrefsLoaded = true
                         }
                     }
                     .onChange(of: friendsPush) { _, enabled in
-                        guard friendsPushLoaded else { return }
+                        guard pushPrefsLoaded else { return }
                         Task {
                             _ = try? await viewModel.store.apiClient
                                 .updatePushPreferences(UpdatePushPreferencesDto(friends: enabled))
+                        }
+                    }
+
+                    Toggle(isOn: $leaguesPush) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(tr("Leagues"))
+                            Text(tr("Promotion, demotion and end-of-week reminders."))
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .tint(LukiColors.accent)
+                    .disabled(!pushPrefsLoaded)
+                    .accessibilityIdentifier("ios.profile.leaguesPushToggle")
+                    .onChange(of: leaguesPush) { _, enabled in
+                        guard pushPrefsLoaded else { return }
+                        Task {
+                            _ = try? await viewModel.store.apiClient
+                                .updatePushPreferences(UpdatePushPreferencesDto(leagues: enabled))
                         }
                     }
                 }

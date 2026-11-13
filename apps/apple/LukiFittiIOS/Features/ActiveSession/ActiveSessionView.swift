@@ -12,6 +12,8 @@ public struct ActiveSessionView: View {
     @State private var guideTargetId: String?
     @State private var showingAddExerciseSheet = false
     @State private var showingDiscardConfirmation = false
+    /// Server-computed EP for the finished session; replaces the local estimate once synced.
+    @State private var summaryServerEP: Int?
     @ScaledMetric(relativeTo: .body) private var restIconSize: CGFloat = 30
 
     public init(viewModel: LukiAppViewModel) {
@@ -151,6 +153,14 @@ public struct ActiveSessionView: View {
             ) {
                 summaryStats(session)
             }
+            .task(id: session.id) {
+                guard viewModel.socialEnabled else { return }
+                if let week = try? await viewModel.store.apiClient.fetchPointsWeek(),
+                   let entry = week.sessions.first(where: { $0.sessionId == session.id })
+                {
+                    summaryServerEP = entry.points
+                }
+            }
 
             Button {
                 viewModel.showSummaryInHistory()
@@ -181,6 +191,13 @@ public struct ActiveSessionView: View {
         }
         if let avgHr = session.avgHeartRateBpm {
             statPill(label: tr("Avg heart rate"), value: "\(avgHr) bpm")
+        }
+        if viewModel.socialEnabled {
+            let ep = summaryServerEP ?? EffortPoints.compute(session: session.effortPointsInput).total
+            if ep > 0 {
+                statPill(label: tr("Effort points"), value: "+\(ep) EP")
+                    .accessibilityIdentifier("ios.session.summary.ep")
+            }
         }
     }
 

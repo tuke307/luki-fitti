@@ -1063,5 +1063,52 @@ public enum LukiStrings {
         "%@ accepted your friend request.": "%@ hat deine Anfrage angenommen.",
         "%@ sent you a friend request.": "%@ hat dir eine Freundschaftsanfrage geschickt.",
         "3–20 characters: a–z, 0–9, underscore.": "3–20 Zeichen: a–z, 0–9, Unterstrich.",
+
+        // PR 2 — leagues & effort points
+        "Social": "Social",
+        "League": "Liga",
+        "Leagues": "Ligen",
+        "ends in %@": "endet in %@",
+        "%d d %d h": "%d T %d Std",
+        "%d h %d m": "%d Std %d Min",
+        "%d m": "%d Min",
+        "Weekly goal reached · +%d": "Wochenziel erreicht · +%d",
+        "%d of %d workouts · +%d bonus at %d": "%d von %d Workouts · +%d Bonus ab %d",
+        "Leagues start when more people train. You're in %@.": "Ligen starten, wenn mehr Leute trainieren. Du bist in %@.",
+        "Finish a workout to join this week’s league.": "Beende ein Workout, um diese Woche in der Liga mitzuspielen.",
+        "Promotion zone": "Aufstiegszone",
+        "Demotion zone": "Abstiegszone",
+        "Finished weeks show up here.": "Abgeschlossene Wochen erscheinen hier.",
+        "Week of %@": "Woche vom %@",
+        "Promoted": "Aufgestiegen",
+        "Demoted": "Abgestiegen",
+        "Stayed": "Geblieben",
+        "Bronze": "Bronze",
+        "Silver": "Silber",
+        "Gold": "Gold",
+        "Platinum": "Platin",
+        "Diamond": "Diamant",
+        "Obsidian": "Obsidian",
+        "Titan": "Titan",
+        "Promoted to %@": "Aufgestiegen nach %@",
+        "Back to %@. Next week is a new chance.": "Zurück in %@. Nächste Woche ist eine neue Chance.",
+        "#%d with %d EP": "#%d mit %d EP",
+        "You stayed in %@": "Du bleibst in %@",
+        "Effort points": "Effort-Punkte",
+        "%d EP this week": "%d EP diese Woche",
+        "Promotion, demotion and end-of-week reminders.": "Aufstieg, Abstieg und Erinnerungen zum Wochenende.",
     ]
+}
+
+/// Localised arena name, shared by the iOS and Watch league UIs.
+public func arenaName(_ arena: Arena, _ tr: SupportedLocale) -> String {
+    switch arena {
+    case .BRONZE: tr("Bronze")
+    case .SILVER: tr("Silver")
+    case .GOLD: tr("Gold")
+    case .PLATINUM: tr("Platinum")
+    case .DIAMOND: tr("Diamond")
+    case .OBSIDIAN: tr("Obsidian")
+    case .TITAN: tr("Titan")
+    }
 }

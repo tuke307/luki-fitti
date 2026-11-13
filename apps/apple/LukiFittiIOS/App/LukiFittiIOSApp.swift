@@ -103,6 +103,9 @@ public final class LukiAppViewModel {
             language: { Locale.preferredLanguages.first }
         )
 
+        self.social.onLeagueDataChanged = { [weak self] in
+            self?.pushContextToWatch()
+        }
         self.store.onOverviewOrAuthChanged = { [weak self] in
             self?.pushContextToWatch()
         }
@@ -282,7 +285,8 @@ public final class LukiAppViewModel {
             authTokens: handoff?.tokens,
             authHandoffId: handoff?.id,
             activeSession: store.activeSession,
-            deletedSessionIds: store.deletedSessionIds
+            deletedSessionIds: store.deletedSessionIds,
+            social: social.watchSnapshot
         )
     }
 
@@ -1361,8 +1365,8 @@ public struct AppShellView: View {
                 tabRoot(title: tr("History")) { DiaryAnalyticsView(viewModel: viewModel) }
             }
             if viewModel.socialEnabled {
-                Tab(tr("Friends"), systemImage: "person.2", value: LukiMainTab.social) {
-                    tabRoot(title: tr("Friends")) { SocialView(viewModel: viewModel) }
+                Tab(tr("Social"), systemImage: "person.2", value: LukiMainTab.social) {
+                    tabRoot(title: tr("Social")) { SocialView(viewModel: viewModel) }
                 }
             }
         }

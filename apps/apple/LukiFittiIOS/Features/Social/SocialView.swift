@@ -37,7 +37,15 @@ public struct SocialView: View {
     public var body: some View {
         List {
             ownCardSection
-            // PR 2: league + friends-leaderboard sections insert here.
+            if let week = social.pointsWeek {
+                Section { ThisWeekCard(week: week) }
+            }
+            if let league = social.league {
+                Section { LeagueCard(league: league, social: social) } header: {
+                    Text(tr("League"))
+                }
+            }
+            // PR 3/4: duels + raid cards insert here.
             friendsSection
             requestsSection
             sentSection
@@ -88,6 +96,26 @@ public struct SocialView: View {
         .sheet(item: $reportTarget) { target in
             NavigationStack { SocialReportSheet(viewModel: viewModel, target: target) }
         }
+        .overlay(alignment: .top) {
+            if let result = social.league?.pendingResult {
+                if result.outcome == .STAYED {
+                    StayedToast(arena: result.toArena)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .padding(.top, 4)
+                        .task {
+                            try? await Task.sleep(nanoseconds: 2_500_000_000)
+                            await social.markResultSeen()
+                        }
+                } else {
+                    LeagueCelebrationOverlay(result: result) {
+                        Task { await social.markResultSeen() }
+                    }
+                    .transition(.opacity)
+                    .zIndex(1)
+                }
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: social.league?.pendingResult != nil)
         .confirmationDialog(
             tr("Remove @%@ as a friend?", removeTarget?.handle ?? ""),
             isPresented: Binding(get: { removeTarget != nil }, set: { if !$0 { removeTarget = nil } }),
@@ -387,5 +415,21 @@ private struct InviteQrImage: View {
                 .scaledToFit()
                 .accessibilityLabel("QR")
         }
+    }
+}
+
+/// Short "stayed in <arena>" toast — the quiet STAYED outcome gets no full-screen overlay.
+private struct StayedToast: View {
+    let arena: Arena
+    @Environment(\.lukiLocale) private var tr
+
+    var body: some View {
+        Text(tr("You stayed in %@", arenaName(arena, tr)))
+            .font(.footnote.weight(.medium))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(.ultraThinMaterial, in: Capsule())
+            .shadow(radius: 4, y: 2)
+            .accessibilityIdentifier("ios.league.stayedToast")
     }
 }
