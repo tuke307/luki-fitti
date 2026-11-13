@@ -4,7 +4,11 @@ import jwt from 'jsonwebtoken';
 import webpush from 'web-push';
 import { logger } from '@luki-fitti/logger';
 import { NotificationKind, PushPlatform } from '@luki-fitti/common/enums';
-import { pushMessageFor, renderPushMessage } from '@luki-fitti/common/push-messages';
+import {
+  anonymousActorName,
+  pushMessageFor,
+  renderPushMessage,
+} from '@luki-fitti/common/push-messages';
 import type { PrismaService } from '../database/prisma.service';
 import {
   APNS_BUNDLE_ID,
@@ -57,6 +61,8 @@ const APNS_JWT_TTL_MS = 50 * 60 * 1000; // APNs tokens are valid 60 min; renew e
 @Injectable()
 export class PushSenderService {
   private apnsJwt: { token: string; expiresAt: number } | null = null;
+  /** One pooled HTTP/2 session per APNs host — Apple asks providers to reuse them. */
+  private readonly apnsSessions = new Map<string, http2.ClientHttp2Session>();
   private warnedMissing = new Set<string>();
   private readonly apnsSend: NonNullable<PushSenderDeps['apnsSend']>;
   private readonly webPushSend: NonNullable<PushSenderDeps['webPushSend']>;
@@ -77,7 +83,7 @@ export class PushSenderService {
     const notification = await this.prisma.notification.findUnique({
       where: { id: notificationId },
       include: {
-        actor: { select: { handle: true, name: true } },
+        actor: { select: { handle: true } },
         user: {
           select: {
             pushDevices: true,
@@ -90,7 +96,9 @@ export class PushSenderService {
       return;
     }
 
-    const actorName = notification.actor?.handle ?? notification.actor?.name ?? 'Someone';
+    // Display names are friends-only: push text uses @handle, else a locale
+    // placeholder (a friend request comes from a non-friend).
+    const actorHandle = notification.actor?.handle ?? null;
     const payload = {
       kind: notification.kind,
       notificationId: notification.id,
@@ -99,22 +107,36 @@ export class PushSenderService {
         : {}),
     };
 
+    // Every device is tried: one transient failure must not starve the rest, and
+    // a full retry must not re-push devices that already succeeded. Dead-token
+    // deletions count as handled — the job succeeded for those devices.
+    let handled = 0;
+    let transientFailures = 0;
     for (const device of notification.user.pushDevices) {
       const message = renderPushMessage(
         pushMessageFor(notification.kind as NotificationKind, device.locale),
-        actorName,
+        actorHandle ? `@${actorHandle}` : anonymousActorName(device.locale),
       );
       try {
-        if (device.platform === PushPlatform.APNS) {
-          await this.sendApns(device.token, device.apnsSandbox, message, payload, device.id);
-        } else {
-          await this.sendWebPush(device, message, payload);
-        }
+        const outcome =
+          device.platform === PushPlatform.APNS
+            ? await this.sendApns(device.token, device.apnsSandbox, message, payload, device.id)
+            : await this.sendWebPush(device, message, payload);
+        if (outcome !== 'skipped') handled += 1;
       } catch (err) {
+        transientFailures += 1;
         logger.error(`push to device ${device.id} failed: ${String(err)}`);
-        throw err; // BullMQ retries (3 attempts)
       }
     }
+    if (handled === 0 && transientFailures > 0) {
+      throw new Error(`all ${transientFailures} push deliveries failed`); // BullMQ retries
+    }
+  }
+
+  /** Tears down pooled APNs HTTP/2 sessions (called on worker shutdown). */
+  close(): void {
+    for (const session of this.apnsSessions.values()) session.close();
+    this.apnsSessions.clear();
   }
 
   private warnOnce(channel: string): void {
@@ -144,10 +166,10 @@ export class PushSenderService {
     message: { title: string; body: string },
     payload: Record<string, unknown>,
     deviceId: string,
-  ): Promise<void> {
+  ): Promise<'sent' | 'dead' | 'skipped'> {
     if (!this.isApnsConfigured()) {
       this.warnOnce('APNs');
-      return;
+      return 'skipped';
     }
     const result = await this.apnsSend({
       sandbox,
@@ -169,9 +191,30 @@ export class PushSenderService {
     ) {
       await this.prisma.pushDevice.delete({ where: { id: deviceId } });
       logger.info(`deleted dead APNs device ${deviceId}`);
-    } else if (result.status !== 200) {
+      return 'dead';
+    }
+    if (result.status !== 200) {
       throw new Error(`APNs send failed: status ${result.status} ${result.reason ?? ''}`);
     }
+    return 'sent';
+  }
+
+  /** Lazily opens (and reuses) one HTTP/2 session per APNs host. */
+  private apnsClient(host: string): http2.ClientHttp2Session {
+    const cached = this.apnsSessions.get(host);
+    if (cached && !cached.closed && !cached.destroyed) return cached;
+    const client = http2.connect(host);
+    const drop = () => {
+      if (this.apnsSessions.get(host) === client) this.apnsSessions.delete(host);
+    };
+    client.once('close', drop);
+    client.once('error', drop);
+    client.once('goaway', () => {
+      drop();
+      client.close();
+    });
+    this.apnsSessions.set(host, client);
+    return client;
   }
 
   private apnsHttp2Send(args: {
@@ -182,11 +225,7 @@ export class PushSenderService {
   }): Promise<ApnsResult> {
     const host = args.sandbox ? APNS_SANDBOX_HOST : APNS_PROD_HOST;
     return new Promise((resolve, reject) => {
-      const client = http2.connect(host);
-      client.on('error', (err) => {
-        client.close();
-        reject(err);
-      });
+      const client = this.apnsClient(host);
       const req = client.request({
         ':method': 'POST',
         ':path': `/3/device/${args.token}`,
@@ -206,7 +245,6 @@ export class PushSenderService {
         body += chunk.toString('utf8');
       });
       req.on('end', () => {
-        client.close();
         let reason: string | undefined;
         try {
           reason = (JSON.parse(body) as { reason?: string }).reason;
@@ -216,7 +254,7 @@ export class PushSenderService {
         resolve({ status, reason });
       });
       req.on('error', (err) => {
-        client.close();
+        req.close();
         reject(err);
       });
       req.end(args.body);
@@ -229,14 +267,14 @@ export class PushSenderService {
     device: { id: string; token: string; p256dh: string | null; auth: string | null },
     message: { title: string; body: string },
     payload: Record<string, unknown>,
-  ): Promise<void> {
+  ): Promise<'sent' | 'dead' | 'skipped'> {
     if (!this.isWebPushConfigured()) {
       this.warnOnce('Web Push');
-      return;
+      return 'skipped';
     }
     if (!device.p256dh || !device.auth) {
       await this.prisma.pushDevice.delete({ where: { id: device.id } });
-      return;
+      return 'dead';
     }
     try {
       await this.webPushSend({
@@ -245,12 +283,13 @@ export class PushSenderService {
         auth: device.auth,
         payload: JSON.stringify({ title: message.title, body: message.body, ...payload }),
       });
+      return 'sent';
     } catch (err) {
       const status = (err as { statusCode?: number }).statusCode;
       if (status === 404 || status === 410) {
         await this.prisma.pushDevice.delete({ where: { id: device.id } });
         logger.info(`deleted dead Web Push device ${device.id}`);
-        return;
+        return 'dead';
       }
       throw err;
     }

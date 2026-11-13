@@ -22,7 +22,7 @@ function makePrisma(devices: Device[]) {
         id: 'n1',
         kind: 'FRIEND_REQUEST',
         payload: { url: '/social/friends' },
-        actor: { handle: 'lukas', name: null },
+        actor: { handle: 'lukas', name: 'Lukas Meier' },
         user: { pushDevices: devices },
       }),
     },
@@ -41,7 +41,7 @@ function sender(
     apnsConfigured?: boolean;
     webPushConfigured?: boolean;
     apnsSend?: (args: { token: string }) => Promise<ApnsResult>;
-    webPushSend?: (args: { endpoint: string }) => Promise<void>;
+    webPushSend?: (args: { endpoint: string; payload: string }) => Promise<void>;
   },
 ) {
   return new PushSenderService(prisma as unknown as PrismaService, {
@@ -136,6 +136,61 @@ describe('PushSenderService dead-token cleanup', () => {
     });
     await assert.rejects(svc2.sendNotification('n1'));
     assert.deepEqual(prisma2.deleted, []);
+  });
+
+  it('does not throw when one device fails transiently but another succeeds', async () => {
+    const prisma = makePrisma([webDevice('ok'), webDevice('flaky')]);
+    const svc = sender(prisma, {
+      webPushConfigured: true,
+      webPushSend: async ({ endpoint }) => {
+        if (endpoint.includes('flaky')) {
+          throw Object.assign(new Error('server error'), { statusCode: 500 });
+        }
+      },
+    });
+    await svc.sendNotification('n1'); // no retry: 'ok' would otherwise be pushed twice
+    assert.deepEqual(prisma.deleted, []);
+  });
+
+  it('throws only when every device failed transiently', async () => {
+    const prisma = makePrisma([webDevice('a'), webDevice('b')]);
+    const svc = sender(prisma, {
+      webPushConfigured: true,
+      webPushSend: async () => {
+        throw Object.assign(new Error('timeout'), { statusCode: 500 });
+      },
+    });
+    await assert.rejects(svc.sendNotification('n1'));
+    assert.deepEqual(prisma.deleted, []);
+  });
+
+  it('a dead-token deletion counts as handled, not a failure', async () => {
+    const prisma = makePrisma([webDevice('dead'), webDevice('flaky')]);
+    const svc = sender(prisma, {
+      webPushConfigured: true,
+      webPushSend: async ({ endpoint }) => {
+        if (endpoint.includes('dead')) {
+          throw Object.assign(new Error('gone'), { statusCode: 410 });
+        }
+        throw Object.assign(new Error('server error'), { statusCode: 500 });
+      },
+    });
+    await svc.sendNotification('n1');
+    assert.deepEqual(prisma.deleted, ['dead']);
+  });
+
+  it('uses @handle in push text and never the display name', async () => {
+    const prisma = makePrisma([webDevice('d1')]);
+    let sentBody = '';
+    const svc = sender(prisma, {
+      webPushConfigured: true,
+      webPushSend: async ({ payload }) => {
+        sentBody = payload;
+      },
+    });
+    await svc.sendNotification('n1');
+    assert.match(sentBody, /@lukas/);
+    assert.doesNotMatch(sentBody, /Lukas Meier/);
   });
 
   it('deletes web devices missing keys without calling the transport', async () => {

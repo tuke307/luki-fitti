@@ -10,6 +10,8 @@ import { PrismaService } from '../database/prisma.service';
 import { VAPID_PUBLIC_KEY } from '@/config/env.config';
 import { apnsConfigured, webPushConfigured } from './push-config';
 
+const MAX_DEVICES_PER_USER = 10;
+
 @Injectable()
 export class PushService {
   constructor(private readonly prisma: PrismaService) {}
@@ -51,6 +53,17 @@ export class PushService {
       },
       select: { id: true },
     });
+
+    // Cap the registry: keep at most 10 devices per user, evicting the stalest.
+    const stale = await this.prisma.pushDevice.findMany({
+      where: { userId },
+      orderBy: { lastSeenAt: 'desc' },
+      skip: MAX_DEVICES_PER_USER,
+      select: { id: true },
+    });
+    if (stale.length > 0) {
+      await this.prisma.pushDevice.deleteMany({ where: { id: { in: stale.map((d) => d.id) } } });
+    }
     return device;
   }
 

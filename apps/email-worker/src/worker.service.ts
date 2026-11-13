@@ -53,6 +53,7 @@ export class WorkerService implements OnModuleDestroy {
 
   async onModuleDestroy() {
     logger.info('Shutting down email worker...');
+    this.pushSender.close();
     await this.bullmqService.close();
     logger.info('Email worker shut down successfully');
   }
