@@ -1,4 +1,4 @@
-const CACHE_NAME = 'luki-fitti-shell-v3';
+const CACHE_NAME = 'luki-fitti-shell-v4';
 const STATIC_ASSETS = ['/manifest.webmanifest', '/icon-192.svg', '/icon-512.svg'];
 
 self.addEventListener('install', (event) => {
@@ -88,17 +88,46 @@ self.addEventListener('message', (event) => {
   }
 });
 
+self.addEventListener('push', (event) => {
+  if (!self.registration) return;
+  let payload;
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = {};
+  }
+  const data = payload.data && typeof payload.data === 'object' ? payload.data : {};
+  event.waitUntil(
+    self.registration.showNotification(payload.title || 'LukiFitti', {
+      body: payload.body || '',
+      tag: payload.tag || 'luki-fitti-notification',
+      icon: '/icon-192.svg',
+      badge: '/icon-192.svg',
+      data: { url: typeof data.url === 'string' ? data.url : '/' },
+    }),
+  );
+});
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const target =
+    event.notification.data && typeof event.notification.data.url === 'string'
+      ? event.notification.data.url
+      : '/';
+  const openUrl = '/?open=' + encodeURIComponent(target);
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if ('focus' in client) {
-          return client.focus();
+          return client
+            .focus()
+            .then((focused) =>
+              focused && 'navigate' in focused ? focused.navigate(openUrl) : focused,
+            );
         }
       }
       if (self.clients.openWindow) {
-        return self.clients.openWindow('/');
+        return self.clients.openWindow(openUrl);
       }
       return undefined;
     }),
