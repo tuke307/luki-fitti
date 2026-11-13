@@ -5,7 +5,7 @@ Part of [social-2.0.md](social-2.0.md). Branch `feat/social-3-battles`, stacked 
 
 ## Progress
 
-- [ ] A — DB, `battle` module (duels, streaks, trophies), schedulers, pushes
+- [x] A — DB, `battle` module (duels, streaks, trophies), schedulers, pushes
 - [ ] B — Web: duel card + detail, challenge flow, streak rows, trophies, result celebration
 - [ ] C — iOS: same; Watch: active duel score
 - [ ] PR opened
