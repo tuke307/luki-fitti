@@ -96,7 +96,8 @@ self.addEventListener('push', (event) => {
   } catch {
     payload = {};
   }
-  const data = payload.data && typeof payload.data === 'object' ? payload.data : {};
+  // The API sends a flat payload ({ title, body, kind, notificationId, url }).
+  const data = payload.data && typeof payload.data === 'object' ? payload.data : payload;
   event.waitUntil(
     self.registration.showNotification(payload.title || 'LukiFitti', {
       body: payload.body || '',

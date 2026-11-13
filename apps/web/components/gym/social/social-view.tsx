@@ -126,20 +126,6 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
           <>
             <button
               type="button"
-              onClick={() => setProfileOpen(true)}
-              data-testid="social-edit-profile"
-              aria-label={t.social.editProfile}
-              className="flex items-center gap-2 rounded-full py-1 pr-1 pl-1"
-            >
-              <UserAvatar
-                avatarUrl={profile?.avatarUrl}
-                name={profile?.name}
-                handle={handle}
-                className="size-9"
-              />
-            </button>
-            <button
-              type="button"
               onClick={() => setInboxOpen(true)}
               data-testid="social-inbox-btn"
               aria-label={t.social.inboxAria}
