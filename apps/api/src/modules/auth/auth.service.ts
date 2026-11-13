@@ -677,10 +677,11 @@ export class AuthService {
       } | null;
       permissions?: string[];
       handle?: string | null;
+      arena?: string | null;
     },
     features: FeatureGrant[] = [],
     aiKeyConfigured = false,
-    social?: { enabled: boolean; handle: string | null },
+    social?: { enabled: boolean; handle: string | null; arena: string | null },
   ): UserDto {
     const rawLang = user.preferences?.language;
     const normalizedLang: LanguagePreference =
@@ -762,6 +763,7 @@ export class AuthService {
         (settings.socialBetaUserIds.length === 0 || settings.socialBetaUserIds.includes(user.id)),
       ),
       handle: user.handle ?? null,
+      arena: user.arena ?? null,
     };
     return this.formatUserDto(user, features, aiKeyConfigured, social);
   }

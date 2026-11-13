@@ -27,6 +27,7 @@ import { SocialModule } from './modules/social/social.module';
 import { SocialAccessModule } from './modules/social/social-access.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PushModule } from './modules/push/push.module';
+import { LeagueModule } from './modules/league/league.module';
 import { NODE_ENV } from './config/env.config';
 
 @Module({
@@ -65,6 +66,7 @@ import { NODE_ENV } from './config/env.config';
     SocialModule,
     NotificationsModule,
     PushModule,
+    LeagueModule,
   ],
   providers: [
     {

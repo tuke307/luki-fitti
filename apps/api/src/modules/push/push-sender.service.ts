@@ -6,6 +6,8 @@ import { logger } from '@luki-fitti/logger';
 import { NotificationKind, PushPlatform } from '@luki-fitti/common/enums';
 import {
   anonymousActorName,
+  arenaName,
+  leagueEndingMessage,
   pushMessageFor,
   renderPushMessage,
 } from '@luki-fitti/common/push-messages';
@@ -99,12 +101,11 @@ export class PushSenderService {
     // Display names are friends-only: push text uses @handle, else a locale
     // placeholder (a friend request comes from a non-friend).
     const actorHandle = notification.actor?.handle ?? null;
+    const payloadJson = (notification.payload ?? {}) as Record<string, unknown>;
     const payload = {
       kind: notification.kind,
       notificationId: notification.id,
-      ...(typeof (notification.payload as Record<string, unknown>)?.url === 'string'
-        ? { url: (notification.payload as Record<string, unknown>).url }
-        : {}),
+      ...(typeof payloadJson.url === 'string' ? { url: payloadJson.url } : {}),
     };
 
     // Every device is tried: one transient failure must not starve the rest, and
@@ -113,10 +114,17 @@ export class PushSenderService {
     let handled = 0;
     let transientFailures = 0;
     for (const device of notification.user.pushDevices) {
-      const message = renderPushMessage(
-        pushMessageFor(notification.kind as NotificationKind, device.locale),
-        actorHandle ? `@${actorHandle}` : anonymousActorName(device.locale),
-      );
+      const kind = notification.kind as NotificationKind;
+      const template =
+        kind === NotificationKind.LEAGUE_ENDING
+          ? leagueEndingMessage(payloadJson.inDemotionZone === true, device.locale)
+          : pushMessageFor(kind, device.locale);
+      const message = renderPushMessage(template, {
+        actor: actorHandle ? `@${actorHandle}` : anonymousActorName(device.locale),
+        arena: arenaName(String(payloadJson.toArena ?? payloadJson.fromArena ?? ''), device.locale),
+        rank: String(payloadJson.rank ?? ''),
+        places: String(payloadJson.placesToPromotion ?? ''),
+      });
       try {
         const outcome =
           device.platform === PushPlatform.APNS

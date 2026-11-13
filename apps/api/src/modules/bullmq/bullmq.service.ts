@@ -13,9 +13,15 @@ export interface PushJobData {
   notificationId: string;
 }
 
+export interface LeagueJobData {
+  kind: 'rollover' | 'reminder';
+}
+
 const EMAIL_QUEUE_NAME = 'email';
 const PUSH_QUEUE_NAME = 'push';
 const PUSH_MAX_ATTEMPTS = 3;
+const LEAGUE_QUEUE_NAME = 'league';
+const LEAGUE_TZ = 'Europe/Berlin';
 
 @Injectable()
 export class BullMQService {
@@ -25,6 +31,8 @@ export class BullMQService {
   private emailWorker?: Worker<EmailJobData>;
   private pushQueue?: Queue<PushJobData>;
   private pushWorker?: Worker<PushJobData>;
+  private leagueQueue?: Queue<LeagueJobData>;
+  private leagueWorker?: Worker<LeagueJobData>;
 
   private ensureConnection(): void {
     if (!this.connection) {
@@ -56,6 +64,16 @@ export class BullMQService {
       });
     }
     return this.pushQueue;
+  }
+
+  private ensureLeagueQueue(): Queue<LeagueJobData> {
+    this.ensureConnection();
+    if (!this.leagueQueue) {
+      this.leagueQueue = new Queue<LeagueJobData>(LEAGUE_QUEUE_NAME, {
+        connection: this.getBullConnection(),
+      });
+    }
+    return this.leagueQueue;
   }
 
   static getInstance(): BullMQService {
@@ -140,6 +158,47 @@ export class BullMQService {
     logger.info('Push worker started');
   }
 
+  /**
+   * Recurring league jobs in Berlin time: Monday 00:05 rollover, Sunday 18:00
+   * reminder. Idempotent — `upsertJobScheduler` updates rather than duplicates.
+   */
+  async ensureLeagueSchedulers(): Promise<void> {
+    const queue = this.ensureLeagueQueue();
+    await queue.upsertJobScheduler(
+      'league-rollover',
+      { pattern: '5 0 * * 1', tz: LEAGUE_TZ },
+      { name: 'rollover', data: { kind: 'rollover' } },
+    );
+    await queue.upsertJobScheduler(
+      'league-reminder',
+      { pattern: '0 18 * * 0', tz: LEAGUE_TZ },
+      { name: 'reminder', data: { kind: 'reminder' } },
+    );
+    logger.info('League schedulers registered (rollover + reminder)');
+  }
+
+  startLeagueWorker(processor: (kind: LeagueJobData['kind']) => Promise<void>): void {
+    this.ensureLeagueQueue();
+    this.leagueWorker = new Worker<LeagueJobData>(
+      LEAGUE_QUEUE_NAME,
+      async (job) => {
+        await processor(job.data.kind);
+      },
+      {
+        connection: this.getBullConnection(),
+        concurrency: 1,
+        removeOnComplete: { count: 10 } as KeepJobs,
+        removeOnFail: { count: 5 } as KeepJobs,
+      },
+    );
+
+    this.leagueWorker.on('failed', (job, err) => {
+      logger.error(`League job failed: ${job?.data?.kind}`, err);
+    });
+
+    logger.info('League worker started');
+  }
+
   async getQueueStats() {
     const queue = this.ensureQueue();
     return queue.getJobCounts();
@@ -152,11 +211,17 @@ export class BullMQService {
     if (this.pushWorker) {
       await this.pushWorker.close();
     }
+    if (this.leagueWorker) {
+      await this.leagueWorker.close();
+    }
     if (this.emailQueue) {
       await this.emailQueue.close();
     }
     if (this.pushQueue) {
       await this.pushQueue.close();
+    }
+    if (this.leagueQueue) {
+      await this.leagueQueue.close();
     }
     if (this.connection) {
       await this.connection.quit();
