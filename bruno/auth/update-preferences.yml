@@ -17,6 +17,7 @@ http:
         "theme": "dark",
         "language": "en",
         "weeklyGoalSessions": 4,
+        "trainingGoal": "HYPERTROPHY",
         "dailyKcalGoal": 2800,
         "proteinGoalG": 180,
         "weighInReminderEnabled": true,

@@ -30,6 +30,7 @@ public struct WorkoutsView: View {
         let initialDescription: String
         let initialFolderId: String
         let initialDurationMin: Int
+        let initialTrainingGoal: TrainingGoal?
         let initialExercises: [WorkoutTemplateExerciseDto]
     }
 
@@ -190,17 +191,19 @@ public struct WorkoutsView: View {
                 suggestionsEnabled: viewModel.store.preferences.exerciseSuggestionsEnabled,
                 defaultWeightUnit: viewModel.store.preferences.weightUnit,
                 defaultRestSeconds: viewModel.store.preferences.defaultRestSeconds,
+                profileGoal: viewModel.store.preferences.trainingGoal,
                 analytics: viewModel.analytics,
                 onCancel: {
                     activeBuilderContext = nil
                 },
-                onSave: { name, desc, folderId, durationMin, exercises in
+                onSave: { name, desc, folderId, durationMin, trainingGoal, exercises in
                     saveTemplateFromBuilder(
                         editingTemplateId: context.editingTemplateId,
                         name: name,
                         desc: desc,
                         folderId: folderId,
                         durationMin: durationMin,
+                        trainingGoal: trainingGoal,
                         exercises: exercises
                     )
                 }
@@ -453,6 +456,9 @@ public struct WorkoutsView: View {
                             ForEach(Array(block.items.enumerated()), id: \.offset) { _, blockItem in
                                 let ex = blockItem.item
                                 let exInfo = ex.exercise ?? viewModel.store.catalog.first { $0.id == ex.exerciseId }
+                                let band = TrainingGoalProfiles
+                                    .resolve(templateGoal: template.trainingGoal, profileGoal: viewModel.store.preferences.trainingGoal)
+                                    .map { TrainingGoalProfiles.repRange(for: $0, exercise: exInfo) }
                                 HStack(spacing: 8) {
                                     Text("\(blockItem.stepNumber)")
                                         .font(.footnote)
@@ -464,7 +470,7 @@ public struct WorkoutsView: View {
                                         .foregroundStyle(.primary)
                                         .lineLimit(2)
                                         .frame(maxWidth: .infinity, alignment: .leading)
-                                    Text("\(ex.plannedSets)×\(ex.targetRepsMin ?? 8)–\(ex.targetRepsMax ?? 12)")
+                                    Text("\(ex.plannedSets)×\(ex.targetRepsMin ?? band?.min ?? 8)–\(ex.targetRepsMax ?? band?.max ?? 12)")
                                         .font(.footnote.monospacedDigit())
                                         .foregroundStyle(LukiColors.accent)
                                         .padding(.horizontal, 7)
@@ -485,6 +491,9 @@ public struct WorkoutsView: View {
                         let ex = firstItem.item
                         let idx = firstItem.globalIndex
                         let exInfo = ex.exercise ?? viewModel.store.catalog.first { $0.id == ex.exerciseId }
+                        let band = TrainingGoalProfiles
+                            .resolve(templateGoal: template.trainingGoal, profileGoal: viewModel.store.preferences.trainingGoal)
+                            .map { TrainingGoalProfiles.repRange(for: $0, exercise: exInfo) }
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Text("\(idx + 1).")
                                 .font(.caption.bold().monospacedDigit())
@@ -504,7 +513,7 @@ public struct WorkoutsView: View {
                                 }
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            Text("\(ex.plannedSets)×\(ex.targetRepsMin ?? 8)–\(ex.targetRepsMax ?? 12)")
+                            Text("\(ex.plannedSets)×\(ex.targetRepsMin ?? band?.min ?? 8)–\(ex.targetRepsMax ?? band?.max ?? 12)")
                                 .font(.footnote.monospacedDigit())
                                 .foregroundStyle(LukiColors.accent)
                                 .padding(.horizontal, 6)
@@ -534,7 +543,11 @@ public struct WorkoutsView: View {
                        },
                        catalog: viewModel.store.catalog,
                        historySessions: viewModel.store.historySessions,
-                       weightUnit: viewModel.store.preferences.weightUnit
+                       weightUnit: viewModel.store.preferences.weightUnit,
+                       trainingGoal: TrainingGoalProfiles.resolve(
+                           templateGoal: template.trainingGoal,
+                           profileGoal: viewModel.store.preferences.trainingGoal
+                       )
                    ) {
                     let weightUnit = viewModel.store.preferences.weightUnit
                     SuggestionCardView(
@@ -673,7 +686,10 @@ public struct WorkoutsView: View {
                     targetRepsMax: nil,
                     targetWeight: 60,
                     weightUnit: viewModel.store.preferences.weightUnit,
-                    restSeconds: viewModel.store.preferences.defaultRestSeconds,
+                    restSeconds: TrainingGoalProfiles.resolveRestSeconds(
+                        viewModel.store.preferences.defaultRestSeconds,
+                        goal: viewModel.store.preferences.trainingGoal
+                    ),
                     alternativeExerciseIds: Array(firstEx.alternativeExerciseIds.prefix(2)),
                     exercise: firstEx
                 )
@@ -688,6 +704,7 @@ public struct WorkoutsView: View {
             initialDescription: "",
             initialFolderId: defaultFolderId ?? "",
             initialDurationMin: 60,
+            initialTrainingGoal: nil,
             initialExercises: initialEx
         )
     }
@@ -700,6 +717,7 @@ public struct WorkoutsView: View {
             initialDescription: template.description ?? "",
             initialFolderId: template.folderId ?? "",
             initialDurationMin: template.estimatedDurationMinutes ?? 60,
+            initialTrainingGoal: template.trainingGoal,
             initialExercises: template.exercises
         )
     }
@@ -710,6 +728,7 @@ public struct WorkoutsView: View {
         desc: String,
         folderId: String,
         durationMin: Int,
+        trainingGoal: TrainingGoal?,
         exercises: [WorkoutTemplateExerciseDto]
     ) {
         let targetFolderId: String? = folderId.isEmpty ? nil : folderId
@@ -719,7 +738,8 @@ public struct WorkoutsView: View {
             description: desc,
             folderId: targetFolderId,
             durationMinutes: durationMin,
-            exercises: exercises
+            exercises: exercises,
+            trainingGoal: trainingGoal
         ) != nil else { return }
         syncWorkoutChanges()
         let folders = viewModel.store.folders
@@ -754,9 +774,10 @@ private struct TemplateBuilderSheetView: View {
     let suggestionsEnabled: Bool
     let defaultWeightUnit: WeightUnit
     let defaultRestSeconds: Int
+    let profileGoal: TrainingGoal?
     let analytics: AnalyticsClient
     let onCancel: () -> Void
-    let onSave: (String, String, String, Int, [WorkoutTemplateExerciseDto]) -> Void
+    let onSave: (String, String, String, Int, TrainingGoal?, [WorkoutTemplateExerciseDto]) -> Void
 
     @State private var guideExercise: ExerciseDto?
     @State private var suggestionDismissed = false
@@ -764,6 +785,7 @@ private struct TemplateBuilderSheetView: View {
     @State private var desc: String
     @State private var folderId: String
     @State private var durationMin: Int
+    @State private var trainingGoal: TrainingGoal?
     @State private var exercises: [WorkoutTemplateExerciseDto]
     @State private var pickingSlotId: String?
     @State private var showingAddPickerSheet: Bool = false
@@ -781,9 +803,10 @@ private struct TemplateBuilderSheetView: View {
         suggestionsEnabled: Bool,
         defaultWeightUnit: WeightUnit,
         defaultRestSeconds: Int,
+        profileGoal: TrainingGoal?,
         analytics: AnalyticsClient,
         onCancel: @escaping () -> Void,
-        onSave: @escaping (String, String, String, Int, [WorkoutTemplateExerciseDto]) -> Void
+        onSave: @escaping (String, String, String, Int, TrainingGoal?, [WorkoutTemplateExerciseDto]) -> Void
     ) {
         self.context = context
         self.folders = folders
@@ -792,6 +815,7 @@ private struct TemplateBuilderSheetView: View {
         self.suggestionsEnabled = suggestionsEnabled
         self.defaultWeightUnit = defaultWeightUnit
         self.defaultRestSeconds = defaultRestSeconds
+        self.profileGoal = profileGoal
         self.analytics = analytics
         self.onCancel = onCancel
         self.onSave = onSave
@@ -799,6 +823,7 @@ private struct TemplateBuilderSheetView: View {
         self._desc = State(initialValue: context.initialDescription)
         self._folderId = State(initialValue: context.initialFolderId)
         self._durationMin = State(initialValue: context.initialDurationMin)
+        self._trainingGoal = State(initialValue: context.initialTrainingGoal)
         self._exercises = State(initialValue: context.initialExercises)
     }
 
@@ -833,6 +858,25 @@ private struct TemplateBuilderSheetView: View {
                         Stepper(tr("About %d min", durationMin), value: $durationMin, in: 10...240, step: 5)
                             .font(.subheadline)
                             .foregroundStyle(.primary)
+
+                        Picker(selection: $trainingGoal) {
+                            Text(profileGoal.map { tr("Profile default (%@)", TrainingGoalLabels.name($0, tr)) }
+                                ?? tr("Profile default"))
+                                .tag(TrainingGoal?.none)
+                            ForEach(TrainingGoal.allCases, id: \.self) { goal in
+                                Text(TrainingGoalLabels.name(goal, tr)).tag(TrainingGoal?.some(goal))
+                            }
+                        } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(tr("Training goal"))
+                                Text((trainingGoal ?? profileGoal)
+                                    .map { TrainingGoalLabels.caption($0, tr) }
+                                    ?? tr("Default rep ranges and rest times"))
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .accessibilityIdentifier("ios.workouts.trainingGoalPicker")
                     }
                     .padding(14)
                     .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
@@ -967,7 +1011,9 @@ private struct TemplateBuilderSheetView: View {
 
                             if idx < exercises.count - 1 {
                                 Button {
-                                    slot.restSeconds = isSupersetWithNext ? defaultRestSeconds : 0
+                                    slot.restSeconds = isSupersetWithNext
+                                        ? TrainingGoalProfiles.resolveRestSeconds(defaultRestSeconds, goal: resolvedGoal)
+                                        : 0
                                 } label: {
                                     Label(
                                         isSupersetWithNext
@@ -998,7 +1044,7 @@ private struct TemplateBuilderSheetView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(context.editingTemplateId == nil ? tr("Create") : tr("Save Changes")) {
-                        onSave(name, desc, folderId, durationMin, exercises)
+                        onSave(name, desc, folderId, durationMin, trainingGoal, exercises)
                     }
                 }
                 // Number pads have no return key; Done ends typing and commits the value.
@@ -1054,7 +1100,7 @@ private struct TemplateBuilderSheetView: View {
                             targetRepsMax: nil,
                             targetWeight: 40,
                             weightUnit: defaultWeightUnit,
-                            restSeconds: defaultRestSeconds,
+                            restSeconds: TrainingGoalProfiles.resolveRestSeconds(defaultRestSeconds, goal: resolvedGoal),
                             alternativeExerciseIds: Array(chosen.alternativeExerciseIds.prefix(2)),
                             exercise: chosen
                         )
@@ -1063,6 +1109,11 @@ private struct TemplateBuilderSheetView: View {
                 }
             }
         }
+    }
+
+    /// Goal applied while editing: the explicit pick falls back to the profile goal.
+    private var resolvedGoal: TrainingGoal? {
+        TrainingGoalProfiles.resolve(templateGoal: trainingGoal, profileGoal: profileGoal)
     }
 
     /// Live suggestion for the workout being edited (mirrors the web builder's suggestion card).
@@ -1078,7 +1129,8 @@ private struct TemplateBuilderSheetView: View {
                },
                catalog: catalog,
                historySessions: historySessions,
-               weightUnit: defaultWeightUnit
+               weightUnit: defaultWeightUnit,
+               trainingGoal: resolvedGoal
            ) {
             SuggestionCardView(
                 suggestion: suggestion,

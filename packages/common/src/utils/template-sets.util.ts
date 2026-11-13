@@ -1,4 +1,5 @@
 import { SessionExerciseOrigin, SessionStatus, SetType } from '../enums';
+import { LEGACY_DEFAULT_REST_SECONDS, TRAINING_GOAL_PROFILES } from './training-goal.util';
 import type {
   TemplateExerciseInputDto,
   TemplateSetDto,
@@ -142,6 +143,9 @@ export function buildTemplateExercisesFromSession(
     return null;
   }
 
+  const goal = session.trainingGoalSnapshot ?? null;
+  const goalRest = goal ? TRAINING_GOAL_PROFILES[goal].restSeconds : null;
+
   const used = new Set<string>();
   const takeOriginal = (exerciseId: string | null | undefined) => {
     if (!exerciseId) return null;
@@ -191,7 +195,14 @@ export function buildTemplateExercisesFromSession(
       targetRepsMin: original?.targetRepsMin ?? ex.targetRepsMin ?? null,
       targetRepsMax: original?.targetRepsMax ?? ex.targetRepsMax ?? null,
       weightUnit: original?.weightUnit ?? session.weightUnit,
-      restSeconds: ex.restSeconds,
+      // A rest the engine derived from the session's goal snapshot is not a user edit: when the
+      // template still had the legacy default, keep 90 s so later goal changes apply again.
+      restSeconds:
+        goalRest !== null &&
+        original?.restSeconds === LEGACY_DEFAULT_REST_SECONDS &&
+        ex.restSeconds === goalRest
+          ? LEGACY_DEFAULT_REST_SECONDS
+          : ex.restSeconds,
       targetDurationSeconds: original?.targetDurationSeconds ?? ex.targetDurationSeconds ?? null,
       targetDistanceMeters: original?.targetDistanceMeters ?? null,
       notes: original?.notes ?? ex.notes ?? null,

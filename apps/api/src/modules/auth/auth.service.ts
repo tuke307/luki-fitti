@@ -33,6 +33,8 @@ import {
   type BiologicalSex,
   BODY_GOALS,
   type BodyGoal,
+  TRAINING_GOALS,
+  type TrainingGoal,
   DistanceUnit,
   type FeatureGrant,
   isAdminPermission,
@@ -445,6 +447,7 @@ export class AuthService {
           'carbsGoalG',
           'fatGoalG',
           'bodyGoal',
+          'trainingGoal',
           'goalHorizonMonths',
         ] as const
       )
@@ -653,6 +656,7 @@ export class AuthService {
         weighInReminderMinutes?: number;
         aiModels?: unknown;
         bodyGoal?: string | null;
+        trainingGoal?: string | null;
         goalHorizonMonths?: number | null;
         progressPhotoCloudBackup?: boolean;
         progressAiConsentAt?: Date | null;
@@ -709,6 +713,11 @@ export class AuthService {
             aiModels: AiModelChoicesSchema.safeParse(user.preferences.aiModels ?? {}).data ?? {},
             bodyGoal: (BODY_GOALS as readonly string[]).includes(user.preferences.bodyGoal ?? '')
               ? (user.preferences.bodyGoal as BodyGoal)
+              : null,
+            trainingGoal: (TRAINING_GOALS as readonly string[]).includes(
+              user.preferences.trainingGoal ?? '',
+            )
+              ? (user.preferences.trainingGoal as TrainingGoal)
               : null,
             goalHorizonMonths: user.preferences.goalHorizonMonths ?? null,
             progressPhotoCloudBackup: user.preferences.progressPhotoCloudBackup ?? false,

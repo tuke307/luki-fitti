@@ -59,6 +59,40 @@ final class TemplateSetsTests: XCTestCase {
         XCTAssertNil(TemplateSets.buildTemplateExercises(template: tpl, session: unchanged))
     }
 
+    func testWriteBackKeepsLegacyRestWhenGoalDerivedIt() {
+        let tpl = template([
+            WorkoutTemplateExerciseDto(id: "te-a", templateId: "tpl-1", exerciseId: "a", orderIndex: 0, plannedSets: 1, targetWeight: 60),
+        ])
+        var strength = session([
+            SessionExerciseDto(sessionId: "sess-1", exerciseId: "a", exerciseNameSnapshot: "A", primaryMuscleSnapshot: .SHOULDERS, orderIndex: 0, restSeconds: 180, sets: [set(.WORKING, 60, 8)]),
+        ])
+        // The session rested 180 s only because of the strength goal snapshot; the template
+        // keeps its legacy 90 s default, so nothing changed and no update is produced.
+        strength.trainingGoalSnapshot = .STRENGTH
+        XCTAssertNil(TemplateSets.buildTemplateExercises(template: tpl, session: strength))
+    }
+
+    func testWriteBackKeepsRealRestChangeUnderGoal() {
+        let tpl = template([
+            WorkoutTemplateExerciseDto(id: "te-a", templateId: "tpl-1", exerciseId: "a", orderIndex: 0, plannedSets: 1, targetWeight: 60),
+        ])
+        var changed = session([
+            SessionExerciseDto(sessionId: "sess-1", exerciseId: "a", exerciseNameSnapshot: "A", primaryMuscleSnapshot: .SHOULDERS, orderIndex: 0, restSeconds: 120, sets: [set(.WORKING, 60, 8)]),
+        ])
+        changed.trainingGoalSnapshot = .STRENGTH
+        XCTAssertEqual(TemplateSets.buildTemplateExercises(template: tpl, session: changed)?[0].restSeconds, 120)
+    }
+
+    func testWriteBackKeepsDerivedRestWithoutGoal() {
+        let tpl = template([
+            WorkoutTemplateExerciseDto(id: "te-a", templateId: "tpl-1", exerciseId: "a", orderIndex: 0, plannedSets: 1, targetWeight: 60),
+        ])
+        let noGoal = session([
+            SessionExerciseDto(sessionId: "sess-1", exerciseId: "a", exerciseNameSnapshot: "A", primaryMuscleSnapshot: .SHOULDERS, orderIndex: 0, restSeconds: 180, sets: [set(.WORKING, 60, 8)]),
+        ])
+        XCTAssertEqual(TemplateSets.buildTemplateExercises(template: tpl, session: noGoal)?[0].restSeconds, 180)
+    }
+
     private func planned(_ type: SetType, _ reps: Int?) -> TemplateSetDto {
         TemplateSetDto(setType: type, weight: 50, reps: reps)
     }

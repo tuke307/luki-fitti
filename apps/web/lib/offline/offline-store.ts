@@ -15,11 +15,15 @@ import {
   SessionStatus,
   SessionType,
   SetType,
+  TrainingGoal,
   WeightUnit,
 } from '@luki-fitti/common/enums';
 import {
   applyExerciseHistoryToSessionExercise,
+  goalRepRange,
+  resolveRestSeconds,
   resolveTemplateSets,
+  resolveTrainingGoal,
   type DismissedWorkoutSuggestion,
 } from '@luki-fitti/common/utils/client';
 import type {
@@ -453,6 +457,7 @@ export function toSyncPayload(
     templateId: session.templateId,
     stretchingRoutineId: session.stretchingRoutineId,
     sessionType: session.sessionType,
+    trainingGoalSnapshot: session.trainingGoalSnapshot ?? null,
     workoutNameSnapshot: session.workoutNameSnapshot,
     status: session.status,
     startedAt: session.startedAt,
@@ -660,15 +665,20 @@ export function createOfflineSessionFromTemplate(
   userId = 'local-user',
   weightUnit: WeightUnit = WeightUnit.KG,
   historySessions: WorkoutSessionDto[] = [],
+  profileGoal?: TrainingGoal | null,
 ): WorkoutSessionDto {
   const catalogMap = new Map(catalog.map((e) => [e.id, e]));
   const clientSessionId = generateId('sess');
   const nowIso = new Date().toISOString();
+  const goal = resolveTrainingGoal(template.trainingGoal ?? null, profileGoal);
 
   const exercises: SessionExerciseDto[] = template.exercises.map((te, idx) => {
     const exInfo = te.exercise ?? catalogMap.get(te.exerciseId);
+    const isStretch = exInfo?.exerciseType === ExerciseType.STRETCHING;
+    const band = goal && !isStretch ? goalRepRange(goal, exInfo) : null;
+    const goalTe = band ? { ...te, targetRepsMin: band.min, targetRepsMax: band.max } : te;
     const clientExerciseId = generateId('sex');
-    const sets: SessionSetDto[] = resolveTemplateSets(te).map((planned, sIdx) => ({
+    const sets: SessionSetDto[] = resolveTemplateSets(goalTe).map((planned, sIdx) => ({
       id: generateId('set'),
       clientSetId: generateId('cset'),
       sessionExerciseId: clientExerciseId,
@@ -701,11 +711,13 @@ export function createOfflineSessionFromTemplate(
       orderIndex: idx,
       plannedSets: te.plannedSets,
       plannedWarmupSets: te.warmupSets ?? 0,
-      targetRepsMin: te.targetRepsMin,
-      targetRepsMax: te.targetRepsMax,
+      targetRepsMin: band?.min ?? te.targetRepsMin,
+      targetRepsMax: band?.max ?? te.targetRepsMax,
       targetWeight: te.targetWeight,
       targetDurationSeconds: te.targetDurationSeconds,
-      restSeconds: te.restSeconds ?? 90,
+      restSeconds: isStretch
+        ? (te.restSeconds ?? 90)
+        : resolveRestSeconds(te.restSeconds ?? 90, goal),
       alternativeExerciseIds:
         te.alternativeExerciseIds?.length > 0
           ? te.alternativeExerciseIds
@@ -722,6 +734,7 @@ export function createOfflineSessionFromTemplate(
       historySessions,
       exInfo,
       te.weightUnit ?? weightUnit,
+      goal,
     );
   });
 
@@ -732,6 +745,7 @@ export function createOfflineSessionFromTemplate(
     templateId: template.id,
     stretchingRoutineId: null,
     sessionType: SessionType.STRENGTH,
+    trainingGoalSnapshot: goal,
     workoutNameSnapshot: template.name,
     status: SessionStatus.IN_PROGRESS,
     startedAt: nowIso,
@@ -912,6 +926,7 @@ export function substituteExerciseInSession(
       historySessions,
       replacementExercise,
       session.weightUnit,
+      session.trainingGoalSnapshot ?? null,
     );
   });
 

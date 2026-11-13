@@ -33,6 +33,7 @@ final class ProgressionInSessionTests: XCTestCase {
         var exerciseId: String
         var repMin: Int
         var repMax: Int
+        var trainingGoal: TrainingGoal?
         var historySets: [HistorySet]
         var currentSets: [FixtureSet]
         var expect: Expectation
@@ -115,7 +116,8 @@ final class ProgressionInSessionTests: XCTestCase {
                 targetRepsMin: c.repMin,
                 targetRepsMax: c.repMax,
                 weightUnit: .KG,
-                currentSets: currentSets
+                currentSets: currentSets,
+                trainingGoal: c.trainingGoal
             )
 
             let suggestion = try XCTUnwrap(

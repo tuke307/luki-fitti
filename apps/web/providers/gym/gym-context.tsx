@@ -72,6 +72,8 @@ import {
   applyExerciseHistoryToSessionExercise,
   buildTemplateExercisesFromSession,
   DEFAULT_FOLDER_COLOR,
+  goalRepRange,
+  resolveRestSeconds,
   orderWarmupsFirst,
   summarizeTemplateSets,
   toDismissedSuggestion,
@@ -909,6 +911,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
       folderId,
       name: dto.name.trim(),
       description: dto.description ?? null,
+      trainingGoal: dto.trainingGoal ?? null,
       estimatedDurationMinutes: dto.estimatedDurationMinutes ?? 60,
       sortOrder: dto.sortOrder ?? siblings.length,
       createdAt: nowIso,
@@ -941,6 +944,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
       name: dto.name ?? t.name,
       description: dto.description !== undefined ? (dto.description ?? null) : t.description,
       folderId: dto.folderId !== undefined ? dto.folderId : t.folderId,
+      trainingGoal: dto.trainingGoal !== undefined ? dto.trainingGoal : (t.trainingGoal ?? null),
       estimatedDurationMinutes: dto.estimatedDurationMinutes ?? t.estimatedDurationMinutes,
       sortOrder: dto.sortOrder ?? t.sortOrder,
       updatedAt: new Date().toISOString(),
@@ -1110,6 +1114,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
       user?.id ?? 'local-athlete',
       weightUnit,
       historySessions,
+      user?.preferences?.trainingGoal ?? null,
     );
     await persistSessionUpdate(session);
     trackEvent('workout_start', { source: 'template' });
@@ -1143,6 +1148,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
       templateId: null,
       stretchingRoutineId: null,
       sessionType: SessionType.STRENGTH,
+      trainingGoalSnapshot: user?.preferences?.trainingGoal ?? null,
       workoutNameSnapshot: name,
       status: SessionStatus.IN_PROGRESS,
       startedAt: nowIso,
@@ -1314,6 +1320,8 @@ export function GymProvider({ children }: { children: ReactNode }) {
 
     const clientExerciseId = `sex-${Date.now()}`;
     const isStretch = exInfo.exerciseType === ExerciseType.STRETCHING;
+    const sessionGoal = activeSession.trainingGoalSnapshot ?? null;
+    const band = sessionGoal && !isStretch ? goalRepRange(sessionGoal, exInfo) : null;
 
     const defaultSets: SessionSetDto[] = Array.from({ length: isStretch ? 2 : 3 }, (_, idx) => ({
       id: `set-${Date.now()}-${idx}`,
@@ -1323,7 +1331,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
       setType: isStretch ? SetType.STRETCH : SetType.WORKING,
       weight: isStretch ? null : 20,
       weightUnit: activeSession.weightUnit,
-      reps: isStretch ? null : 10,
+      reps: isStretch ? null : (band?.min ?? 10),
       durationSeconds: isStretch ? (exInfo.recommendedDurationSeconds ?? 45) : null,
       distanceMeters: null,
       rpe: null,
@@ -1348,11 +1356,13 @@ export function GymProvider({ children }: { children: ReactNode }) {
       orderIndex: activeSession.exercises.length,
       plannedSets: defaultSets.length,
       plannedWarmupSets: 0,
-      targetRepsMin: isStretch ? null : 8,
-      targetRepsMax: isStretch ? null : 12,
+      targetRepsMin: isStretch ? null : (band?.min ?? 8),
+      targetRepsMax: isStretch ? null : (band?.max ?? 12),
       targetWeight: null,
       targetDurationSeconds: isStretch ? (exInfo.recommendedDurationSeconds ?? 45) : null,
-      restSeconds: isStretch ? 15 : (user?.preferences?.defaultRestSeconds ?? 90),
+      restSeconds: isStretch
+        ? 15
+        : resolveRestSeconds(user?.preferences?.defaultRestSeconds ?? 90, sessionGoal),
       alternativeExerciseIds: exInfo.alternativeExerciseIds ?? [],
       notes: null,
       sets: defaultSets,
@@ -1363,6 +1373,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
       historySessions,
       exInfo,
       activeSession.weightUnit,
+      sessionGoal,
     );
 
     await persistSessionUpdate({

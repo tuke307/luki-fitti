@@ -63,7 +63,10 @@ import {
   deriveRepRange,
   formatDate,
   formatRestDurationMinSec,
+  goalRepRange,
   groupExercisesIntoBlocks,
+  resolveRestSeconds,
+  resolveTrainingGoal,
   type WorkoutExerciseSuggestion,
   DEFAULT_FOLDER_COLOR,
   FOLDER_COLOR_PALETTE,
@@ -72,7 +75,13 @@ import {
   summarizeTemplateSets,
   templateExerciseToInput,
 } from '@luki-fitti/common/utils/client';
-import { FeatureGrant, SessionStatus } from '@luki-fitti/common/enums';
+import {
+  ExerciseType,
+  FeatureGrant,
+  SessionStatus,
+  TRAINING_GOALS,
+  type TrainingGoal,
+} from '@luki-fitti/common/enums';
 import { ExercisePicker } from './exercise-picker';
 import { LateralityBadge } from './laterality-badge';
 import { ExerciseVisual } from './exercise-visual';
@@ -117,6 +126,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
   const { user } = useAuth();
   const { t, format, muscleLabel } = useLocale();
   const suggestionsEnabled = user?.preferences?.exerciseSuggestionsEnabled ?? true;
+  const profileGoal = user?.preferences?.trainingGoal ?? null;
   const canPlanWithAi = showsAiFeature(user, FeatureGrant.AI_WORKOUT_BUILDER);
   const [aiBuilderOpen, setAiBuilderOpen] = useState(false);
   const openAiBuilder = () => setAiBuilderOpen(true);
@@ -135,6 +145,9 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
   const [tplDesc, setTplDesc] = useState('');
   const [tplFolderId, setTplFolderId] = useState<string | null>(null);
   const [tplDurationMin, setTplDurationMin] = useState(60);
+  const [tplTrainingGoal, setTplTrainingGoal] = useState<TrainingGoal | null>(null);
+  /** Goal the builder's exercises/rest defaults follow: template override or profile. */
+  const builderGoal = resolveTrainingGoal(tplTrainingGoal, profileGoal);
   const [tplExercises, setTplExercises] = useState<TemplateExerciseInputDto[]>([]);
 
   const [confirmDelete, setConfirmDelete] = useState<{
@@ -189,6 +202,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
     setTplDesc('');
     setTplFolderId(defaultFolderId);
     setTplDurationMin(60);
+    setTplTrainingGoal(null);
     const firstEx = catalog[0];
     setTplExercises(
       firstEx
@@ -202,7 +216,10 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               targetRepsMax: null,
               targetWeight: 60,
               weightUnit,
-              restSeconds: user?.preferences?.defaultRestSeconds ?? 90,
+              restSeconds: resolveRestSeconds(
+                user?.preferences?.defaultRestSeconds ?? 90,
+                profileGoal,
+              ),
               targetDurationSeconds: null,
               targetDistanceMeters: null,
               notes: '',
@@ -221,6 +238,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
     setTplDesc(tpl.description ?? '');
     setTplFolderId(tpl.folderId);
     setTplDurationMin(tpl.estimatedDurationMinutes ?? 60);
+    setTplTrainingGoal(tpl.trainingGoal ?? null);
     setTplExercises(
       tpl.exercises.map((ex, idx) => ({
         ...templateExerciseToInput(ex, idx),
@@ -250,6 +268,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
       name: tplName.trim(),
       description: tplDesc.trim() || null,
       folderId: tplFolderId,
+      trainingGoal: tplTrainingGoal,
       estimatedDurationMinutes: tplDurationMin,
       exercises: tplExercises.map((ex, idx) => ({
         ...ex,
@@ -345,6 +364,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
     const isExpanded = Boolean(expandedTemplates[tpl.id]);
     const blocks = groupExercisesIntoBlocks(tpl.exercises);
     const folderName = folders.find((f) => f.id === tpl.folderId)?.name ?? null;
+    const tplGoal = resolveTrainingGoal(tpl.trainingGoal ?? null, profileGoal);
 
     const templateSuggestion =
       suggestionsEnabled && !dismissedSuggestions[tpl.id]
@@ -366,14 +386,20 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
             catalog,
             historySessions,
             weightUnit,
+            trainingGoal: tplGoal,
           })
         : null;
 
     const formatTargetPillText = (ex: WorkoutTemplateDto['exercises'][number]) => {
+      const exCat = ex.exercise ?? catalog.find((c) => c.id === ex.exerciseId);
+      const band =
+        tplGoal && exCat?.exerciseType !== ExerciseType.STRETCHING
+          ? goalRepRange(tplGoal, exCat)
+          : null;
+      const repsMin = band?.min ?? ex.targetRepsMin;
+      const repsMax = band?.max ?? ex.targetRepsMax;
       const repsPart =
-        ex.targetRepsMin && ex.targetRepsMax && ex.targetRepsMin !== ex.targetRepsMax
-          ? `${ex.targetRepsMin}–${ex.targetRepsMax}`
-          : `${ex.targetRepsMin ?? 10}`;
+        repsMin && repsMax && repsMin !== repsMax ? `${repsMin}–${repsMax}` : `${repsMin ?? 10}`;
       const weightPart = ex.targetWeight ? ` ${ex.targetWeight} ${weightUnit.toLowerCase()}` : '';
       return `${ex.plannedSets}×${repsPart}${weightPart}`;
     };
@@ -1180,6 +1206,34 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
               </div>
             </div>
 
+            <div className="space-y-1">
+              <Label htmlFor="tpl-training-goal" className="text-xs font-semibold">
+                {t.profile.trainingGoalLabel}
+              </Label>
+              <NativeSelect
+                id="tpl-training-goal"
+                value={tplTrainingGoal ?? ''}
+                onChange={(e) =>
+                  setTplTrainingGoal((e.target.value || null) as TrainingGoal | null)
+                }
+                className="w-full"
+                data-testid="template-training-goal-select"
+              >
+                <option value="">
+                  {format(t.profile.trainingGoalProfileDefault, {
+                    name: profileGoal
+                      ? t.profile.trainingGoals[profileGoal]
+                      : t.profile.trainingGoalUnset,
+                  })}
+                </option>
+                {TRAINING_GOALS.map((goal) => (
+                  <option key={goal} value={goal}>
+                    {t.profile.trainingGoals[goal]}
+                  </option>
+                ))}
+              </NativeSelect>
+            </div>
+
             {/* Ordered Exercises Editor */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -1203,7 +1257,10 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                         targetRepsMax: null,
                         targetWeight: 40,
                         weightUnit,
-                        restSeconds: user?.preferences?.defaultRestSeconds ?? 90,
+                        restSeconds: resolveRestSeconds(
+                          user?.preferences?.defaultRestSeconds ?? 90,
+                          builderGoal,
+                        ),
                         targetDurationSeconds: null,
                         targetDistanceMeters: null,
                         notes: '',
@@ -1493,6 +1550,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                     catalog,
                     historySessions,
                     weightUnit,
+                    trainingGoal: builderGoal,
                   });
 
                   if (!builderSuggestion) return null;

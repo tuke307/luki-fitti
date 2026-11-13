@@ -5,10 +5,12 @@ import {
   Laterality,
   MuscleGroup,
   SetType,
+  TrainingGoal,
   WeightUnit,
 } from '../enums';
 import type { ExerciseDto, SessionExerciseDto, SessionSetDto, WorkoutSessionDto } from '../schemas';
 import { loggedExerciseIds, rankAlternatives } from './exercise-alternatives.util';
+import { TRAINING_GOAL_PROFILES, goalRepRange } from './training-goal.util';
 
 const LBS_TO_KG = 0.45359237;
 const KG_TO_LBS = 1 / LBS_TO_KG;
@@ -364,8 +366,17 @@ function applyInSessionAnchors(params: {
   repMax: number;
   weightUnit: WeightUnit;
   catalogExercise?: ExerciseDto | null;
+  trainingGoal?: TrainingGoal | null;
 }): SetProgressionSuggestion[] {
-  const { setSuggestions, currentSets, repMin, repMax, weightUnit, catalogExercise } = params;
+  const { setSuggestions, currentSets, repMin, repMax, weightUnit, catalogExercise, trainingGoal } =
+    params;
+  const goalProfile = trainingGoal ? TRAINING_GOAL_PROFILES[trainingGoal] : null;
+  const barbellStepMultiplier =
+    goalProfile &&
+    catalogExercise?.category !== ExerciseCategory.ISOLATION &&
+    catalogExercise?.equipment === EquipmentType.BARBELL
+      ? goalProfile.barbellCompoundStepMultiplier
+      : 1;
   if (!currentSets || currentSets.length === 0) return setSuggestions;
 
   const currentWorkingSets = currentSets.filter(
@@ -393,8 +404,11 @@ function applyInSessionAnchors(params: {
     let suggestedWeight: number;
     let suggestedReps: number;
     let phase: ProgressionPhase;
-    if (r0 >= repMax && (rpe0 ?? 8) < MAX_EFFORT_RPE) {
-      const step = getStandardWeightIncrement(weightUnit, catalogExercise, w0);
+    const rpeBelowGoalCap =
+      goalProfile?.increaseWeightMaxRpe == null || (rpe0 ?? 8) < goalProfile.increaseWeightMaxRpe;
+    if (r0 >= repMax && (rpe0 ?? 8) < MAX_EFFORT_RPE && rpeBelowGoalCap) {
+      const step =
+        getStandardWeightIncrement(weightUnit, catalogExercise, w0) * barbellStepMultiplier;
       suggestedWeight = roundToGymStep(w0 + step, 0.5);
       suggestedReps = repMin;
       phase = 'INCREASE_WEIGHT';
@@ -433,6 +447,8 @@ export function computeExerciseProgression(params: {
   targetWeight?: number | null;
   weightUnit?: WeightUnit;
   currentSets?: SessionSetDto[];
+  /** Optional training goal; null/undefined keeps the legacy hypertrophy-like behaviour. */
+  trainingGoal?: TrainingGoal | null;
 }): ExerciseProgressionInsight {
   const {
     exerciseId,
@@ -445,10 +461,14 @@ export function computeExerciseProgression(params: {
     targetWeight = null,
     weightUnit = WeightUnit.KG,
     currentSets,
+    trainingGoal = null,
   } = params;
 
-  const repMin = targetRepsMin ?? 8;
-  const repMax = targetRepsMax ?? Math.max(repMin + 2, 12);
+  const goalProfile = trainingGoal ? TRAINING_GOAL_PROFILES[trainingGoal] : null;
+  const goalBand = trainingGoal ? goalRepRange(trainingGoal, catalogExercise) : null;
+
+  const repMin = goalBand?.min ?? targetRepsMin ?? 8;
+  const repMax = goalBand?.max ?? targetRepsMax ?? Math.max(repMin + 2, 12);
 
   const history = extractGlobalExerciseHistory(
     exerciseId,
@@ -494,13 +514,22 @@ export function computeExerciseProgression(params: {
         repMax,
         weightUnit,
         catalogExercise,
+        trainingGoal,
       }),
     };
   }
 
   const lastWorkingSets = lastSession.workingSets;
   const primaryLastWeight = lastWorkingSets[0]?.weightNormalized ?? 0;
-  const stepIncrement = getStandardWeightIncrement(weightUnit, catalogExercise, primaryLastWeight);
+  const barbellStepMultiplier =
+    goalProfile &&
+    catalogExercise?.category !== ExerciseCategory.ISOLATION &&
+    catalogExercise?.equipment === EquipmentType.BARBELL
+      ? goalProfile.barbellCompoundStepMultiplier
+      : 1;
+  const stepIncrement =
+    getStandardWeightIncrement(weightUnit, catalogExercise, primaryLastWeight) *
+    barbellStepMultiplier;
 
   // Determine overall exercise phase from recent performance & fatigue
   const allSetsHitTopOfBand = lastWorkingSets.every((s) => s.reps >= repMax);
@@ -512,14 +541,35 @@ export function computeExerciseProgression(params: {
     lastSession.bestEstimated1RM < prevSession.bestEstimated1RM * 0.96 &&
     (majoritySetsBelowMin || maxEffortLast);
 
+  // Goal rules can veto a session-level weight bump: strength goals don't reward max
+  // effort, endurance goals only add weight while effort stays below the cap.
+  const sessionBumpAllowed =
+    !goalProfile ||
+    ((goalProfile.maxEffortEarnsWeight || !maxEffortLast) &&
+      (goalProfile.increaseWeightMaxRpe == null ||
+        (lastSession.avgRpe ?? 8) < goalProfile.increaseWeightMaxRpe));
+
+  // A per-set bump follows the same goal rules, judged on that set's RPE.
+  const setBumpAllowed = (rpe: number | null) =>
+    !goalProfile ||
+    ((goalProfile.maxEffortEarnsWeight || (rpe ?? 8) < MAX_EFFORT_RPE) &&
+      (goalProfile.increaseWeightMaxRpe == null || (rpe ?? 8) < goalProfile.increaseWeightMaxRpe));
+
+  // With a goal, a suppressed bump holds the weight and clamps reps into the band.
+  const maintainReps = (reps: number) =>
+    goalProfile ? Math.max(repMin, Math.min(repMax, reps)) : reps;
+
   // Max effort is a normal training outcome: topping out the rep band still earns
   // more weight, and only a max effort below the top holds the prescription.
   let overallPhase: ProgressionPhase;
   if (consecutiveRegression || (majoritySetsBelowMin && maxEffortLast)) {
     overallPhase = 'DELOAD';
-  } else if (allSetsHitTopOfBand && primaryLastWeight > 0) {
+  } else if (allSetsHitTopOfBand && primaryLastWeight > 0 && sessionBumpAllowed) {
     overallPhase = 'INCREASE_WEIGHT';
-  } else if (maxEffortLast && !majoritySetsBelowMin) {
+  } else if (
+    (maxEffortLast && !majoritySetsBelowMin) ||
+    (goalProfile && allSetsHitTopOfBand && !sessionBumpAllowed)
+  ) {
     overallPhase = 'MAINTAIN';
   } else {
     overallPhase = 'INCREASE_REPS';
@@ -566,7 +616,7 @@ export function computeExerciseProgression(params: {
       suggestedWeight = roundToGymStep(reduced, 0.5);
       suggestedReps = Math.max(repMin, Math.min(repMax, lastR));
       setPhase = 'DELOAD';
-    } else if (lastR >= repMax && lastW > 0) {
+    } else if (lastR >= repMax && lastW > 0 && setBumpAllowed(lastRpe)) {
       // Individual set topped out rep range even if later sets didn't -> suggest micro weight bump
       suggestedWeight = roundToGymStep(lastW + stepIncrement, 0.5);
       suggestedReps = repMin;
@@ -578,12 +628,12 @@ export function computeExerciseProgression(params: {
         setPhase = 'INCREASE_REPS';
       } else {
         suggestedWeight = lastW > 0 ? lastW : targetWeight;
-        suggestedReps = lastR;
+        suggestedReps = maintainReps(lastR);
         setPhase = 'MAINTAIN';
       }
     } else {
       suggestedWeight = lastW > 0 ? lastW : targetWeight;
-      suggestedReps = lastR;
+      suggestedReps = maintainReps(lastR);
       setPhase = 'MAINTAIN';
     }
 
@@ -627,6 +677,7 @@ export function computeExerciseProgression(params: {
       repMax,
       weightUnit,
       catalogExercise,
+      trainingGoal,
     }),
   };
 }
@@ -650,6 +701,7 @@ export function applyExerciseHistoryToSessionExercise(
   historySessions: WorkoutSessionDto[],
   catalogExercise?: ExerciseDto | null,
   weightUnit: WeightUnit = WeightUnit.KG,
+  trainingGoal?: TrainingGoal | null,
 ): SessionExerciseDto {
   if (sessionExercise.exerciseTypeSnapshot === ExerciseType.STRETCHING) {
     return sessionExercise;
@@ -666,6 +718,7 @@ export function applyExerciseHistoryToSessionExercise(
     targetWeight: sessionExercise.targetWeight,
     weightUnit,
     currentSets: sessionExercise.sets,
+    trainingGoal,
   });
 
   if (!insight.lastSession) {
@@ -1000,6 +1053,8 @@ export function computeWorkoutExerciseSuggestion(params: {
   weightUnit?: WeightUnit;
   /** Suggestions the user dismissed during this workout: their reason and exercise are skipped. */
   dismissed?: DismissedWorkoutSuggestion[];
+  /** Optional training goal; changes the recommended rep band and progression logic. */
+  trainingGoal?: TrainingGoal | null;
 }): WorkoutExerciseSuggestion | null {
   const {
     workoutName,
@@ -1009,6 +1064,7 @@ export function computeWorkoutExerciseSuggestion(params: {
     historySessions,
     weightUnit = WeightUnit.KG,
     dismissed = [],
+    trainingGoal = null,
   } = params;
 
   const strengthCatalog = catalog.filter((c) => c.exerciseType === ExerciseType.STRENGTH);
@@ -1190,15 +1246,17 @@ export function computeWorkoutExerciseSuggestion(params: {
     picked.reason;
 
   // Compute recommended starting prescription from global history or sensible defaults
+  const suggestedBand = trainingGoal ? goalRepRange(trainingGoal, chosen) : null;
   const chosenInsight = computeExerciseProgression({
     exerciseId: chosen.id,
     exerciseName: chosen.name,
     historySessions,
     catalogExercise: chosen,
     plannedSets: 3,
-    targetRepsMin: 10,
-    targetRepsMax: 14,
+    targetRepsMin: suggestedBand?.min ?? 10,
+    targetRepsMax: suggestedBand?.max ?? 14,
     weightUnit,
+    trainingGoal,
   });
 
   const firstSuggestion = chosenInsight.setSuggestions[0];
@@ -1232,9 +1290,15 @@ export function computeWorkoutExerciseSuggestion(params: {
       setsTotal,
     },
     recommendedSets: 3,
-    recommendedRepsMin: chosen.category === ExerciseCategory.COMPOUND ? 8 : 10,
-    recommendedRepsMax: chosen.category === ExerciseCategory.COMPOUND ? 12 : 15,
+    recommendedRepsMin:
+      suggestedBand?.min ?? (chosen.category === ExerciseCategory.COMPOUND ? 8 : 10),
+    recommendedRepsMax:
+      suggestedBand?.max ?? (chosen.category === ExerciseCategory.COMPOUND ? 12 : 15),
     recommendedWeight: defaultWeight,
-    recommendedRestSeconds: chosen.category === ExerciseCategory.COMPOUND ? 90 : 60,
+    recommendedRestSeconds: trainingGoal
+      ? TRAINING_GOAL_PROFILES[trainingGoal].restSeconds
+      : chosen.category === ExerciseCategory.COMPOUND
+        ? 90
+        : 60,
   };
 }

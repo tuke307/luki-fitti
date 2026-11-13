@@ -8,7 +8,13 @@ import { NativeSelect } from '@luki-fitti/ui/components/ui/native-select';
 import { Spinner } from '@luki-fitti/ui/components/ui/spinner';
 import { Textarea } from '@luki-fitti/ui/components/ui/textarea';
 import { toast } from '@luki-fitti/ui/components/ui/sonner';
-import { AiSkillName, SetType, WeightUnit } from '@luki-fitti/common/enums';
+import {
+  AiSkillName,
+  SetType,
+  TRAINING_GOALS,
+  type TrainingGoal,
+  WeightUnit,
+} from '@luki-fitti/common/enums';
 import {
   AI_PROMPT_MAX_LENGTH,
   type CreateTemplateDto,
@@ -31,11 +37,13 @@ const DURATIONS = [30, 45, 60, 75, 90] as const;
 export function proposalToTemplate(
   p: WorkoutBuilderResponseDto,
   folderId: string | null,
+  trainingGoal?: TrainingGoal | null,
 ): CreateTemplateDto {
   return {
     name: p.name.slice(0, 100),
     description: p.summary.slice(0, 500) || null,
     folderId,
+    trainingGoal: trainingGoal ?? null,
     estimatedDurationMinutes: Math.min(360, Math.max(5, p.estimatedDurationMinutes)),
     exercises: p.exercises.map((ex, index) => ({
       exerciseId: ex.exerciseId,
@@ -79,6 +87,7 @@ export function AiWorkoutBuilderDialog({
   // The prompt survives closing (handy for tweaking it); the result does not.
   const [prompt, setPrompt] = useState('');
   const [duration, setDuration] = useState<string>('');
+  const [goal, setGoal] = useState<TrainingGoal | ''>(user?.preferences?.trainingGoal ?? '');
   const [result, setResult] = useState<WorkoutBuilderResponseDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [keyRequiredOpen, setKeyRequiredOpen] = useState(false);
@@ -110,6 +119,7 @@ export function AiWorkoutBuilderDialog({
       const res = await api.ai.buildWorkout({
         prompt: prompt.trim(),
         ...(duration ? { durationMinutes: Number(duration) } : {}),
+        ...(goal ? { trainingGoal: goal } : {}),
       });
       setResult(res.data);
     } catch (err) {
@@ -124,7 +134,7 @@ export function AiWorkoutBuilderDialog({
     if (!result) return;
     setSaving(true);
     try {
-      await createTemplate(proposalToTemplate(result, null));
+      await createTemplate(proposalToTemplate(result, null, goal || null));
       toast.success(t.aiBuilder.saved);
       close(false);
     } catch (err) {
@@ -230,6 +240,26 @@ export function AiWorkoutBuilderDialog({
                   {DURATIONS.map((d) => (
                     <option key={d} value={d}>
                       {d} {t.common.min}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="ai-goal" className="text-[0.9375rem]">
+                  {t.profile.trainingGoalLabel}
+                </Label>
+                <NativeSelect
+                  id="ai-goal"
+                  value={goal}
+                  disabled={busy}
+                  onChange={(e) => setGoal(e.target.value as TrainingGoal | '')}
+                  className="w-auto"
+                  data-testid="ai-builder-goal-select"
+                >
+                  <option value="">{t.profile.trainingGoalUnset}</option>
+                  {TRAINING_GOALS.map((g) => (
+                    <option key={g} value={g}>
+                      {t.profile.trainingGoals[g]}
                     </option>
                   ))}
                 </NativeSelect>

@@ -320,12 +320,24 @@ export class TrainingTools implements OnModuleInit {
     };
   }
 
-  async userProfile(ctx: ToolContext) {
+  async userProfile(ctx: ToolContext): Promise<{
+    weightUnit: string;
+    defaultRestSeconds: number;
+    weeklyGoalSessions: number;
+    trainingGoal: string | null;
+    savedWorkouts: { name: string; exercises: number }[];
+    equipmentUsedLast90Days: { type: string; uses: number }[];
+  }> {
     const since = new Date(Date.now() - 90 * DAY_MS);
     const [prefs, templates, equipmentRows] = await Promise.all([
       this.prisma.userPreferences.findUnique({
         where: { userId: ctx.userId },
-        select: { weightUnit: true, defaultRestSeconds: true, weeklyGoalSessions: true },
+        select: {
+          weightUnit: true,
+          defaultRestSeconds: true,
+          weeklyGoalSessions: true,
+          trainingGoal: true,
+        },
       }),
       this.prisma.workoutTemplate.findMany({
         where: { userId: ctx.userId },
@@ -351,6 +363,7 @@ export class TrainingTools implements OnModuleInit {
       weightUnit: prefs?.weightUnit ?? 'KG',
       defaultRestSeconds: prefs?.defaultRestSeconds ?? 90,
       weeklyGoalSessions: prefs?.weeklyGoalSessions ?? 4,
+      trainingGoal: prefs?.trainingGoal ?? null,
       savedWorkouts: templates.map((t) => ({ name: t.name, exercises: t._count.exercises })),
       equipmentUsedLast90Days: [...equipment.entries()]
         .sort((a, b) => b[1] - a[1])

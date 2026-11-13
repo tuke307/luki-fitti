@@ -62,6 +62,18 @@ public enum TemplateSets {
     ) -> [WorkoutTemplateExerciseDto]? {
         guard session.templateId == template.id, session.status == .COMPLETED else { return nil }
 
+        // A rest the engine derived from the session's goal snapshot is not a user edit: when the
+        // template still had the legacy default, keep it so later goal changes apply again.
+        let goalRest = session.trainingGoalSnapshot.flatMap { TrainingGoalProfiles.profiles[$0]?.restSeconds }
+        func writtenBackRest(_ sessionRest: Int, original: WorkoutTemplateExerciseDto?) -> Int {
+            if let goalRest,
+               original?.restSeconds == TrainingGoalProfiles.legacyDefaultRestSeconds,
+               sessionRest == goalRest {
+                return TrainingGoalProfiles.legacyDefaultRestSeconds
+            }
+            return sessionRest
+        }
+
         var used = Set<String>()
         func takeOriginal(_ exerciseId: String?) -> WorkoutTemplateExerciseDto? {
             guard let exerciseId,
@@ -106,7 +118,7 @@ public enum TemplateSets {
                 targetRepsMin: original?.targetRepsMin ?? ex.targetRepsMin,
                 targetRepsMax: original?.targetRepsMax ?? ex.targetRepsMax,
                 weightUnit: original?.weightUnit ?? session.weightUnit,
-                restSeconds: ex.restSeconds,
+                restSeconds: writtenBackRest(ex.restSeconds, original: original),
                 targetDurationSeconds: original?.targetDurationSeconds ?? ex.targetDurationSeconds,
                 targetDistanceMeters: original?.targetDistanceMeters,
                 notes: original?.notes ?? ex.notes,

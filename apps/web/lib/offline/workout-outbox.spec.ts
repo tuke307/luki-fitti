@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { WeightUnit } from '@luki-fitti/common/enums';
+import { TrainingGoal, WeightUnit } from '@luki-fitti/common/enums';
 import type { WorkoutFolderDto, WorkoutTemplateDto } from '@luki-fitti/common/schemas';
 import {
   deleteOp,
@@ -197,7 +197,12 @@ describe('workout outbox: legacy ids and request bodies', () => {
       folderId: null,
       sortOrder: 0,
       estimatedDurationMinutes: 60,
+      trainingGoal: null,
     });
+    assert.equal(
+      templateBody({ ...tpl, trainingGoal: TrainingGoal.STRENGTH }).trainingGoal,
+      'STRENGTH',
+    );
     const body = templateBody({ ...tpl, systemKey: null, folderId: FOLDER_A });
     assert.equal(body.folderId, FOLDER_A);
     assert.equal(body.name, 'Push');
