@@ -35,6 +35,10 @@
       "types": "./dist/utils/client.d.ts",
       "default": "./dist/utils/client.js"
     },
+    "./push-messages": {
+      "types": "./dist/push-messages.d.ts",
+      "default": "./dist/push-messages.js"
+    },
     "./utils/crypto": {
       "types": "./dist/utils/crypto.util.d.ts",
       "default": "./dist/utils/crypto.util.js"
