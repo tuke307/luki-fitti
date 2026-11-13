@@ -4,7 +4,7 @@ import XCTest
 final class IOSExercisesAndStretchingUITests: XCTestCase {
     func testCatalogSearchAndStartStretchingSession() {
         let app = IOSUITestHelpers.launchApp()
-        IOSUITestHelpers.navigateToTab(app, label: "Library")
+        IOSUITestHelpers.openLibrary(app)
 
         let searchField = app.textFields["Search exercises"]
         XCTAssertTrue(searchField.waitForExistence(timeout: 8))
@@ -36,7 +36,7 @@ final class IOSExercisesAndStretchingUITests: XCTestCase {
     /// "Full Body & Mobility" is a hint, not a saved default.
     func testNewRoutineTargetAreaShowsPlaceholderOnly() {
         let app = IOSUITestHelpers.launchApp()
-        IOSUITestHelpers.navigateToTab(app, label: "Library")
+        IOSUITestHelpers.openLibrary(app)
 
         let stretching = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Stretching'")).firstMatch
         XCTAssertTrue(stretching.waitForExistence(timeout: 8))

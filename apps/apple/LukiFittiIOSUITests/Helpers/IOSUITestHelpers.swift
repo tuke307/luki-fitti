@@ -24,4 +24,14 @@ enum IOSUITestHelpers {
         XCTAssertTrue(tabButton.waitForExistence(timeout: 8), "Expected tab '\(label)' to exist")
         tabButton.tap()
     }
+
+    /// The exercise library moved into the Workouts tab behind the "Workouts · Library"
+    /// segmented picker — open Workouts, then the Library segment.
+    @MainActor
+    static func openLibrary(_ app: XCUIApplication, workoutsLabel: String = "Workouts", libraryLabel: String = "Library") {
+        navigateToTab(app, label: workoutsLabel)
+        let segment = app.buttons[libraryLabel]
+        XCTAssertTrue(segment.waitForExistence(timeout: 8), "Expected segment '\(libraryLabel)'")
+        segment.tap()
+    }
 }

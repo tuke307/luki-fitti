@@ -307,7 +307,11 @@ final class AppReviewWalkthroughUITests: XCTestCase {
         XCTAssertTrue(tabElement(app, tabHistory).waitForExistence(timeout: 10))
         step("history")
 
-        tabElement(app, tabLibrary).tap()
+        IOSUITestHelpers.openLibrary(
+            app,
+            workoutsLabel: "Workouts",
+            libraryLabel: tabLibrary
+        )
         XCTAssertTrue(
             app.buttons.matching(
                 NSPredicate(format: "identifier BEGINSWITH 'ios.library.exerciseRow.'")

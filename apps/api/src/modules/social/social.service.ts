@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Optional,
   ServiceUnavailableException,
   HttpException,
   HttpStatus,
@@ -74,7 +75,7 @@ export class SocialService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly notifications: NotificationService,
-    deps: SocialServiceDeps = {},
+    @Optional() deps: SocialServiceDeps = {},
   ) {
     this.incrementCounter = deps.incrementCounter ?? incrementUserCounter;
   }
@@ -369,8 +370,18 @@ export class SocialService {
     });
   }
 
+  /** Handle-less users are invisible — they can't start or accept friendships either. */
+  private async requireHandle(userId: string): Promise<void> {
+    const me = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { handle: true },
+    });
+    if (!me?.handle) throw new NotFoundException('User not found');
+  }
+
   async sendRequest(viewerId: string, targetId: string): Promise<{ relation: SocialRelation }> {
     if (viewerId === targetId) throw new BadRequestException('Cannot friend yourself');
+    await this.requireHandle(viewerId);
     const target = await this.prisma.user.findUnique({
       where: { id: targetId },
       select: CARD_SELECT,
@@ -435,6 +446,7 @@ export class SocialService {
   }
 
   async acceptRequest(viewerId: string, requesterId: string): Promise<void> {
+    await this.requireHandle(viewerId);
     const facts = await this.relationFacts(viewerId, requesterId);
     if (facts.blocked) throw new NotFoundException('No incoming request');
     await this.acceptPending(viewerId, requesterId, {
@@ -487,6 +499,7 @@ export class SocialService {
   }
 
   async acceptInvite(viewerId: string, token: string): Promise<{ relation: SocialRelation }> {
+    await this.requireHandle(viewerId);
     const invite = await this.findValidInvite(token);
     if (!invite) throw new NotFoundException('Invite not found or expired');
     if (invite.createdById === viewerId) {

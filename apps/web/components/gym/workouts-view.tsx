@@ -93,19 +93,66 @@ import { AiWorkoutBuilderDialog } from './ai-workout-builder-dialog';
 import { showsAiFeature } from '@/lib/ai/ai-access';
 import { MobileSheet } from './mobile-sheet';
 import { PageTitle } from './page-title';
+import { ExercisesView } from './exercises-view';
 import type {
   TemplateExerciseInputDto,
   WorkoutFolderDto,
   WorkoutTemplateDto,
 } from '@luki-fitti/common/schemas';
 
+export type WorkoutsSegment = 'workouts' | 'library';
+
 interface WorkoutsViewProps {
   onStartSessionNavigation: () => void;
+  segment: WorkoutsSegment;
+  onSegmentChange: (segment: WorkoutsSegment) => void;
+}
+
+/** "Workouts · Library" switch: the exercise catalog moved in with the Social tab. */
+function SegmentControl({
+  segment,
+  onSegmentChange,
+}: {
+  segment: WorkoutsSegment;
+  onSegmentChange: (segment: WorkoutsSegment) => void;
+}) {
+  const { t } = useLocale();
+  const items: Array<{ id: WorkoutsSegment; label: string }> = [
+    { id: 'workouts', label: t.nav.workouts },
+    { id: 'library', label: t.nav.exercises },
+  ];
+  return (
+    <div
+      role="tablist"
+      data-testid="workouts-segment"
+      className="bg-secondary/60 flex rounded-full p-1"
+    >
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          role="tab"
+          aria-selected={segment === item.id}
+          data-testid={`workouts-segment-${item.id}`}
+          onClick={() => onSegmentChange(item.id)}
+          className={`flex-1 rounded-full px-4 py-1.5 text-[0.9375rem] font-medium transition-colors ${
+            segment === item.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
+          }`}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 const BUILDER_FORM_ID = 'template-builder-form';
 
-export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
+export function WorkoutsView({
+  onStartSessionNavigation,
+  segment,
+  onSegmentChange,
+}: WorkoutsViewProps) {
   const {
     catalog,
     folders,
@@ -934,8 +981,22 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
     );
   };
 
+  if (segment === 'library') {
+    return (
+      <div className="mx-auto max-w-2xl min-w-0 space-y-6 pb-10">
+        <div className="pt-1">
+          <SegmentControl segment={segment} onSegmentChange={onSegmentChange} />
+        </div>
+        <ExercisesView onStartSessionNavigation={onStartSessionNavigation} />
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-2xl min-w-0 space-y-6 pb-10">
+      <div className="pt-1">
+        <SegmentControl segment={segment} onSegmentChange={onSegmentChange} />
+      </div>
       <header className="space-y-1">
         <PageTitle
           title={t.workouts.title}

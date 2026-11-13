@@ -17,7 +17,7 @@ const SITE_PATHS: Record<string, string> = {
 
 const PUBLIC_FILE =
   /^\/(favicon\.ico|icon(-\d+)?\.svg|manifest\.(webmanifest|json)|sw\.js|robots\.txt|sitemap\.xml|workbox-.*\.js)$/;
-const PUBLIC_PREFIX = /^\/(_next|api|screens|images|fonts|og)\//;
+const PUBLIC_PREFIX = /^\/(_next|api|screens|images|fonts|og|\.well-known)\//;
 
 function hostOf(req: NextRequest): string {
   return (
