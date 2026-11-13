@@ -36,6 +36,15 @@ public final class SocialStore {
     /// Called after league/points data changes so the app can push a watch snapshot.
     public var onLeagueDataChanged: (@MainActor () -> Void)?
 
+    // MARK: - Duels, streaks & trophies (PR 3)
+
+    /// nil while duels are off or the list hasn't loaded — sections hide on nil.
+    public var duels: DuelListDto?
+    public var streaks: StreakListDto?
+
+    /// UI-test seed: trophy shelves prefer this over a live fetch when set.
+    public var seededTrophies: [String: TrophyListDto]?
+
     /// Avatar JPEG bytes keyed by user id, fetched through the authenticated API client.
     @ObservationIgnored public private(set) var avatarCache: [String: Data] = [:]
 
@@ -58,7 +67,8 @@ public final class SocialStore {
         async let f = refreshFriends()
         async let u = refreshUnread()
         async let l = refreshLeagues()
-        _ = await (p, f, u, l)
+        async let b = refreshBattles()
+        _ = await (p, f, u, l, b)
     }
 
     /// Points, league state and friends board. 403s (leagues disabled or user ineligible) are
@@ -95,6 +105,82 @@ public final class SocialStore {
         lastError = String(describing: error)
     }
 
+    /// Duels and streaks. Same failure policy as `refreshLeagues`: 403s hide the
+    /// sections, everything else lands in `lastError` + the log.
+    public func refreshBattles() async {
+        var changed = false
+        do {
+            duels = try await apiClient.fetchDuels()
+            changed = true
+        } catch let error as APIClientError where isForbidden(error) {
+        } catch { recordLeagueError("duels", error) }
+        do {
+            streaks = try await apiClient.fetchStreaks()
+            changed = true
+        } catch let error as APIClientError where isForbidden(error) {
+        } catch { recordLeagueError("streaks", error) }
+        if changed { onLeagueDataChanged?() }
+    }
+
+    // MARK: - Duel actions
+
+    public func duelAction(_ fn: () async throws -> Void) async {
+        do { try await fn() } catch { lastError = String(describing: error) }
+        await refreshBattles()
+    }
+
+    public func challengeDuel(opponentId: String) async {
+        await duelAction { _ = try await self.apiClient.challengeDuel(opponentId: opponentId) }
+    }
+
+    public func acceptDuel(duelId: String) async {
+        await duelAction { _ = try await self.apiClient.acceptDuel(duelId: duelId) }
+    }
+
+    public func declineDuel(duelId: String) async {
+        await duelAction { try await self.apiClient.declineDuel(duelId: duelId) }
+    }
+
+    public func cancelDuel(duelId: String) async {
+        await duelAction { try await self.apiClient.cancelDuel(duelId: duelId) }
+    }
+
+    /// Clears the pending duel result locally and tells the server it was shown.
+    public func markDuelResultSeen() async {
+        guard let result = duels?.pendingResult else { return }
+        duels?.pendingResult = nil
+        do { try await apiClient.markDuelSeen(duelId: result.id) } catch {}
+        onLeagueDataChanged?()
+    }
+
+    // MARK: - Streak actions
+
+    public func inviteStreak(friendId: String) async {
+        await duelAction { try await self.apiClient.inviteStreak(friendId: friendId) }
+    }
+
+    public func acceptStreak(streakId: String) async {
+        await duelAction { try await self.apiClient.acceptStreak(streakId: streakId) }
+    }
+
+    public func endStreak(streakId: String) async {
+        await duelAction { try await self.apiClient.endStreak(streakId: streakId) }
+    }
+
+    /// Open duels count for the max-3 challenge limit (PENDING + ACTIVE on either side).
+    public var openDuelCount: Int {
+        guard let duels else { return 0 }
+        return duels.active.count + duels.incoming.count + duels.outgoing.count
+    }
+
+    /// The open duel with `friendId`, if one exists (blocks a fresh challenge).
+    public func openDuel(with friendId: String) -> DuelItemDto? {
+        guard let duels else { return nil }
+        return (duels.active + duels.incoming + duels.outgoing).first {
+            $0.opponent.userId == friendId
+        }
+    }
+
     public func refreshLeagueHistory() async {
         leagueHistory = (try? await apiClient.fetchLeagueHistory()) ?? leagueHistory
     }
@@ -111,12 +197,21 @@ public final class SocialStore {
     public var watchSnapshot: SocialWatchSnapshot? {
         guard let league else { return nil }
         let rank = league.cohort?.members.first(where: { $0.isSelf })?.rank
+        let duel = duels?.active.first.map {
+            DuelWatchSnapshot(
+                opponentHandle: $0.opponent.handle,
+                you: $0.you,
+                them: $0.them,
+                daysLeft: $0.daysLeft ?? 0
+            )
+        }
         return SocialWatchSnapshot(
             weekPoints: pointsWeek?.points ?? 0,
             arena: league.arena,
             rank: rank,
             cohortSize: league.cohort?.members.count,
-            stage: league.stage
+            stage: league.stage,
+            duel: duel
         )
     }
 
@@ -212,5 +307,7 @@ public final class SocialStore {
         league = nil
         leagueFriends = []
         leagueHistory = []
+        duels = nil
+        streaks = nil
     }
 }

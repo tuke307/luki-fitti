@@ -25,6 +25,8 @@ public struct SocialView: View {
     @State private var reportTarget: SocialCardDto?
     @State private var removeTarget: SocialCardDto?
     @State private var blockTarget: SocialCardDto?
+    @State private var friendSheetTarget: SocialCardDto?
+    @State private var streakEndTarget: SocialCardDto?
     /// Unread polling: on appear/activate and every 60 s while visible.
     @State private var unreadTimer: Timer?
 
@@ -45,7 +47,16 @@ public struct SocialView: View {
                     Text(tr("League"))
                 }
             }
-            // PR 3/4: duels + raid cards insert here.
+            Section {
+                DuelsSection(
+                    social: social,
+                    myHandle: social.profile?.handle,
+                    myName: social.profile?.name,
+                    myAvatarUrl: social.profile?.avatarUrl,
+                    myUserId: viewModel.store.currentUser?.id ?? "me"
+                )
+            }
+            // PR 4: raid card inserts here.
             friendsSection
             requestsSection
             sentSection
@@ -95,6 +106,27 @@ public struct SocialView: View {
         }
         .sheet(item: $reportTarget) { target in
             NavigationStack { SocialReportSheet(viewModel: viewModel, target: target) }
+        }
+        .sheet(item: $friendSheetTarget) { target in
+            NavigationStack { FriendSheet(friend: target, social: social) }
+        }
+        .fullScreenCover(
+            item: Binding<DuelItemDto?>(
+                get: { social.duels?.pendingResult },
+                set: { _ in }
+            )
+        ) { result in
+            DuelCelebrationOverlay(
+                result: result,
+                onDismiss: { Task { await social.markDuelResultSeen() } },
+                onRematch: {
+                    let opponentId = result.opponent.userId
+                    Task {
+                        await social.markDuelResultSeen()
+                        await social.challengeDuel(opponentId: opponentId)
+                    }
+                }
+            )
         }
         // PROMOTED/DEMOTED get a real full-screen cover so the celebration also covers
         // the floating tab bar (the old .overlay left it tappable and unhittable).
@@ -146,6 +178,21 @@ public struct SocialView: View {
             Button(tr("Cancel"), role: .cancel) {}
         } message: {
             Text(tr("They can no longer find you or send you requests."))
+        }
+        .confirmationDialog(
+            tr("End the streak with @%@?", streakEndTarget?.handle ?? ""),
+            isPresented: Binding(get: { streakEndTarget != nil }, set: { if !$0 { streakEndTarget = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button(tr("End streak"), role: .destructive) {
+                if let t = streakEndTarget,
+                   let streak = social.streaks?.streak(with: t.userId) {
+                    Task { await social.endStreak(streakId: streak.id) }
+                }
+            }
+            Button(tr("Cancel"), role: .cancel) {}
+        } message: {
+            Text(tr("The count resets and you can start again any time."))
         }
     }
 
@@ -219,24 +266,15 @@ public struct SocialView: View {
                     .foregroundStyle(.secondary)
             }
             ForEach(social.friends.friends) { friend in
-                SocialPersonRow(person: friend, social: social) {
-                    Menu {
-                        Button(role: .destructive) { removeTarget = friend } label: {
-                            Label(tr("Remove friend"), systemImage: "person.badge.minus")
-                        }
-                        Button(role: .destructive) { blockTarget = friend } label: {
-                            Label(tr("Block"), systemImage: "hand.raised")
-                        }
-                        Button { reportTarget = friend } label: {
-                            Label(tr("Report"), systemImage: "flag")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .foregroundStyle(.secondary)
-                    }
-                    .accessibilityLabel(tr("More options for @%@", friend.handle))
-                    .accessibilityIdentifier("ios.social.menu.\(friend.userId)")
+                SocialPersonRow(
+                    person: friend,
+                    social: social,
+                    streak: social.streaks?.streak(with: friend.userId)
+                ) {
+                    friendMenu(for: friend)
                 }
+                .contentShape(Rectangle())
+                .onTapGesture { friendSheetTarget = friend }
             }
         } header: {
             Text(tr("Friends"))
@@ -283,6 +321,64 @@ public struct SocialView: View {
                 Text(tr("Sent"))
             }
         }
+    }
+
+    /// The ⋯ menu on a friend row: duel challenge, streak actions, then the
+    /// destructive friend actions.
+    @ViewBuilder
+    private func friendMenu(for friend: SocialCardDto) -> some View {
+        Menu {
+            if social.duels != nil {
+                let blocked = social.openDuel(with: friend.userId) != nil
+                    ? tr("A duel with @%@ is already open", friend.handle)
+                    : social.openDuelCount >= 3 ? tr("You already have 3 open duels") : nil
+                Button {
+                    Task { await social.challengeDuel(opponentId: friend.userId) }
+                } label: {
+                    Label(blocked ?? tr("Challenge to a duel"), systemImage: "figure.fencing")
+                }
+                .disabled(blocked != nil)
+                .accessibilityIdentifier("ios.duel.challenge.\(friend.userId)")
+            }
+            if let streaks = social.streaks {
+                let streak = streaks.streak(with: friend.userId)
+                if streak == nil {
+                    Button {
+                        Task { await social.inviteStreak(friendId: friend.userId) }
+                    } label: {
+                        Label(tr("Start streak"), systemImage: "flame")
+                    }
+                    .accessibilityIdentifier("ios.streak.invite.\(friend.userId)")
+                } else if let streak, streak.status == .PENDING,
+                          streaks.incoming.contains(where: { $0.id == streak.id }) {
+                    Button {
+                        Task { await social.acceptStreak(streakId: streak.id) }
+                    } label: {
+                        Label(tr("Accept streak"), systemImage: "flame")
+                    }
+                    .accessibilityIdentifier("ios.streak.accept.\(friend.userId)")
+                } else if streak?.status == .ACTIVE {
+                    Button(role: .destructive) { streakEndTarget = friend } label: {
+                        Label(tr("End streak"), systemImage: "flame")
+                    }
+                    .accessibilityIdentifier("ios.streak.end.\(friend.userId)")
+                }
+            }
+            Button(role: .destructive) { removeTarget = friend } label: {
+                Label(tr("Remove friend"), systemImage: "person.badge.minus")
+            }
+            Button(role: .destructive) { blockTarget = friend } label: {
+                Label(tr("Block"), systemImage: "hand.raised")
+            }
+            Button { reportTarget = friend } label: {
+                Label(tr("Report"), systemImage: "flag")
+            }
+        } label: {
+            Image(systemName: "ellipsis.circle")
+                .foregroundStyle(.secondary)
+        }
+        .accessibilityLabel(tr("More options for @%@", friend.handle))
+        .accessibilityIdentifier("ios.social.menu.\(friend.userId)")
     }
 
     // MARK: - Add friends

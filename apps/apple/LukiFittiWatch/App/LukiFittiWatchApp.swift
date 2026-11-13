@@ -335,7 +335,9 @@ public final class WatchWorkoutViewModel {
     /// of an applied one would roll back tokens this Watch has rotated since.
     private func applyAuth(_ auth: WatchAuthPayload) {
         store.preferences = auth.preferences
-        socialSnapshot = auth.social
+        if !ProcessInfo.processInfo.arguments.contains("--uitesting-seed-social") {
+            socialSnapshot = auth.social
+        }
         let tokenStore = store.apiClient.tokenStore
         let storedTokens = tokenStore.loadTokens()
         let decision = WatchAuthHandoffPolicy.decide(
@@ -598,6 +600,17 @@ public final class WatchWorkoutViewModel {
         if args.contains("--uitesting-seed-active-session") || args.contains("--uitesting-marketing"),
            let firstTemplate = store.folders.first?.templates.first {
             vm.startWorkout(from: firstTemplate)
+        }
+
+        if args.contains("--uitesting-seed-social") {
+            vm.socialSnapshot = SocialWatchSnapshot(
+                weekPoints: 340,
+                arena: .GOLD,
+                rank: 4,
+                cohortSize: 20,
+                stage: .GLOBAL,
+                duel: DuelWatchSnapshot(opponentHandle: "anna", you: 340, them: 280, daysLeft: 3)
+            )
         }
 
         // Marketing shot: fake live vitals so bpm shows without HealthKit.
