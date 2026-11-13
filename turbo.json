@@ -4,6 +4,7 @@
     "NODE_ENV",
     "API_PORT",
     "JWT_SECRET",
+    "APPLE_APP_IDS",
     "ACCESS_TOKEN_EXPIRY_MS",
     "DATABASE_URL",
     "FRONTEND_URL",

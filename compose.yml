@@ -26,6 +26,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       # Host routing in proxy.ts: SITE_HOSTNAMES serve the marketing site, APP_ORIGIN the app.
       - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-https://app.luki-fitti.tony-luke.de}
+      - APPLE_APP_IDS=${APPLE_APP_IDS:-}
     depends_on:
       luki-fitti-api:
         condition: service_healthy
