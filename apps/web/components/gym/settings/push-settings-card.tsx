@@ -20,6 +20,7 @@ import { SettingsButtonRow, SettingsSwitchRow } from '@/components/gym/settings/
 export function PushSettingsCard() {
   const { t } = useLocale();
   const [friends, setFriends] = useState<boolean | null>(null);
+  const [leagues, setLeagues] = useState<boolean | null>(null);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [deviceEnabled, setDeviceEnabled] = useState(
     () => isWebPushSupported() && thisDeviceEndpoint() !== null,
@@ -29,7 +30,10 @@ export function PushSettingsCard() {
   useEffect(() => {
     let cancelled = false;
     void pushApi.preferences().then((res) => {
-      if (!cancelled && res.data) setFriends(res.data.friends);
+      if (!cancelled && res.data) {
+        setFriends(res.data.friends);
+        setLeagues(res.data.leagues);
+      }
     });
     if (isWebPushSupported()) {
       void fetchPushConfig().then((config) => {
@@ -54,6 +58,19 @@ export function PushSettingsCard() {
             if (res.data) setFriends(res.data.friends);
           }}
           data-testid="push-friends-switch"
+        />
+      )}
+      {leagues !== null && (
+        <SettingsSwitchRow
+          title={t.social.pushLeaguesLabel}
+          subtitle={t.social.pushLeaguesSub}
+          checked={leagues}
+          onCheckedChange={async (enabled) => {
+            setLeagues(enabled);
+            const res = await pushApi.updatePreferences({ leagues: enabled });
+            if (res.data) setLeagues(res.data.leagues);
+          }}
+          data-testid="push-leagues-switch"
         />
       )}
       {isWebPushSupported() && publicKey && !isIosStandaloneRequired() && !deviceEnabled && (

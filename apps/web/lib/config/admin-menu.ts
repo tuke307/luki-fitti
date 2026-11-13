@@ -1,4 +1,11 @@
-import { BotIcon, FlagIcon, LayoutGridIcon, UsersIcon, type LucideIcon } from 'lucide-react';
+import {
+  BotIcon,
+  FlagIcon,
+  LayoutGridIcon,
+  TrophyIcon,
+  UsersIcon,
+  type LucideIcon,
+} from 'lucide-react';
 import { AdminPermission } from '@luki-fitti/common/enums';
 import type { TranslationDictionary } from '@/lib/i18n';
 
@@ -38,6 +45,12 @@ export function getAdminMenu(t: TranslationDictionary, held: readonly string[]):
       href: '/admin/social',
       label: t.admin.navSocial,
       icon: UsersIcon,
+      permissions: [AdminPermission.AI_SETTINGS_MANAGE],
+    },
+    {
+      href: '/admin/leagues',
+      label: t.admin.navLeagues,
+      icon: TrophyIcon,
       permissions: [AdminPermission.AI_SETTINGS_MANAGE],
     },
     {

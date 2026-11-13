@@ -5,12 +5,24 @@ import { Bell, Pencil } from 'lucide-react';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
-import type { FriendListsDto, SocialCardDto, SocialProfileDto } from '@luki-fitti/common/schemas';
+import type {
+  FriendListsDto,
+  LeaguePendingResultDto,
+  SocialCardDto,
+  SocialProfileDto,
+} from '@luki-fitti/common/schemas';
 import { notificationsApi, socialApi } from '@/lib/social/social-api';
 import { PageTitle } from '../page-title';
 import { UserAvatar } from './user-avatar';
 import { FriendRow } from './friend-row';
 import { AddFriendsSection } from './add-friends-section';
+import { ThisWeekCard } from './this-week-card';
+import { LeagueCard } from './league-card';
+import {
+  LeagueCelebration,
+  dismissLeagueResult,
+  useLeagueResult,
+} from './league-celebration';
 import { InboxSheet } from './inbox-sheet';
 import { SocialProfileSheet } from './social-profile-sheet';
 import { SocialOnboardingSheet } from './social-onboarding-sheet';
@@ -35,8 +47,12 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [reportTarget, setReportTarget] = useState<SocialCardDto | null>(null);
+  const [pendingResult, setPendingResult] = useState<LeaguePendingResultDto | null>(null);
+  const [resultOverlay, setResultOverlay] = useState<LeaguePendingResultDto | null>(null);
   const friendsAnchor = useRef<HTMLDivElement>(null);
   const onboardingPrompted = useRef(false);
+
+  useLeagueResult(pendingResult, setResultOverlay);
 
   const refresh = useCallback(async () => {
     const [meRes, friendsRes] = await Promise.all([socialApi.me(), socialApi.friends()]);
@@ -168,7 +184,11 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
         </Button>
       </div>
 
-      {/* PR 2: league + points cards slot in here. */}
+      {/* PR 2: weekly EP + league cards. PR 3/4 add Duels and Raid above Friends. */}
+      <div className="mt-4 space-y-4">
+        <ThisWeekCard />
+        <LeagueCard onPendingResult={setPendingResult} />
+      </div>
 
       <div ref={friendsAnchor} className="mt-6 scroll-mt-20">
         <h2 className="text-muted-foreground px-1 pb-1 text-[0.8125rem] font-medium tracking-wide uppercase">
@@ -283,6 +303,17 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
         profile={profile}
       />
       <ReportSheet user={reportTarget} onOpenChange={(open) => !open && setReportTarget(null)} />
+      {resultOverlay && (
+        <LeagueCelebration
+          result={resultOverlay}
+          onDone={() =>
+            dismissLeagueResult(resultOverlay, () => {
+              setResultOverlay(null);
+              setPendingResult(null);
+            })
+          }
+        />
+      )}
     </div>
   );
 }

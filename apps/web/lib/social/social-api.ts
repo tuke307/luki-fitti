@@ -4,6 +4,7 @@
  */
 import { fetchClient } from '@/lib/api/client';
 import type {
+  AdminLeaguePreviewDto,
   AdminReportListDto,
   AdminReportsQueryDto,
   CreateBlockDto,
@@ -11,13 +12,19 @@ import type {
   FriendInviteDto,
   FriendListsDto,
   HandleAvailabilityDto,
+  LeagueCurrentDto,
+  LeagueFriendRowDto,
+  LeagueHistoryEntryDto,
+  LeagueSettingsDto,
   NotificationListDto,
+  PointsWeekDto,
   PushConfigDto,
   PushPreferencesDto,
   ResolveReportDto,
   SocialProfileDto,
   SocialSettingsDto,
   SocialUserDto,
+  UpdateLeagueSettingsDto,
   UpdatePushPreferencesDto,
   UpdateSocialProfileDto,
   UpdateSocialSettingsDto,
@@ -70,6 +77,35 @@ export const socialApi = {
   unblock: (userId: string) => fetchClient(`/social/blocks/${userId}`, { method: 'DELETE' }),
   report: (data: CreateReportDto) =>
     fetchClient('/social/reports', { method: 'POST', body: JSON.stringify(data) }),
+};
+
+export const pointsApi = {
+  week: (weekKey?: string) =>
+    fetchClient<PointsWeekDto>(`/points/week${weekKey ? `?weekKey=${weekKey}` : ''}`),
+};
+
+export const leagueApi = {
+  current: () => fetchClient<LeagueCurrentDto>('/league/current'),
+  friends: (weekKey?: string) =>
+    fetchClient<{ entries: LeagueFriendRowDto[] }>(
+      `/league/friends${weekKey ? `?weekKey=${weekKey}` : ''}`,
+    ),
+  history: () => fetchClient<{ entries: LeagueHistoryEntryDto[] }>('/league/history'),
+  markResultSeen: (weekKey: string) =>
+    fetchClient(`/league/results/${encodeURIComponent(weekKey)}/seen`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    }),
+};
+
+export const adminLeagueApi = {
+  settings: () => fetchClient<LeagueSettingsDto>('/admin/settings/leagues'),
+  updateSettings: (data: UpdateLeagueSettingsDto) =>
+    fetchClient<LeagueSettingsDto>('/admin/settings/leagues', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  preview: () => fetchClient<AdminLeaguePreviewDto>('/admin/leagues/preview'),
 };
 
 export const notificationsApi = {
