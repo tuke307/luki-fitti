@@ -20,7 +20,7 @@ import { Prisma } from '@luki-fitti/database';
 import { PrismaService } from '../database/prisma.service';
 import { AppSettingsService } from '../app-settings/app-settings.service';
 import { NotificationService } from '../notifications/notification.service';
-import type { StreakService } from '../battle/streak.service';
+import { StreakService } from '../battle/streak.service';
 import { cardFor, resolveRelation, type CardSource } from '../social/relation.util';
 import {
   ARENA_ORDER,

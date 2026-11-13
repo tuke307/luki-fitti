@@ -13,7 +13,7 @@ import { PrismaService } from '../database/prisma.service';
 import { AppSettingsService } from '../app-settings/app-settings.service';
 import { SocialAccessService } from '../social/social-access.service';
 import { LeagueService } from '../league/league.service';
-import type { DuelService } from '../battle/duel.service';
+import { DuelService } from '../battle/duel.service';
 
 /** Sessions older than this at sync time never earn points. */
 const SYNC_WINDOW_MS = 72 * 60 * 60 * 1000;
