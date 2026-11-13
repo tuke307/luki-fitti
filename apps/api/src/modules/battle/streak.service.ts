@@ -151,6 +151,11 @@ export class StreakService {
         );
 
         let { count, longest, freezes, weeksSinceFreeze, lastEvaluatedWeekKey } = fresh;
+        // Collapse a multi-week catch-up to one notification per user: the
+        // worst outcome of the run. BROKEN only fires when the count actually
+        // went from > 0 to 0 — not for every missed week afterwards.
+        let broke = false;
+        let froze = false;
         for (const w of pending) {
           // Weeks before the streak started or already evaluated are skipped.
           if (lastEvaluatedWeekKey && w <= lastEvaluatedWeekKey) continue;
@@ -165,25 +170,28 @@ export class StreakService {
             }
           } else if (freezes > 0) {
             freezes -= 1; // count kept — the freeze absorbs the missed week
-            for (const userId of [a, b]) {
-              notify.push({
-                userId,
-                kind: NotificationKind.STREAK_FROZEN,
-                actorId: userId === a ? b : a,
-              });
-            }
+            froze = true;
           } else {
+            if (count > 0) broke = true;
             count = 0;
             weeksSinceFreeze = 0;
-            for (const userId of [a, b]) {
-              notify.push({
-                userId,
-                kind: NotificationKind.STREAK_BROKEN,
-                actorId: userId === a ? b : a,
-              });
-            }
           }
           lastEvaluatedWeekKey = w;
+        }
+
+        const finalKind = broke
+          ? NotificationKind.STREAK_BROKEN
+          : froze
+            ? NotificationKind.STREAK_FROZEN
+            : null;
+        if (finalKind) {
+          for (const userId of [a, b]) {
+            notify.push({
+              userId,
+              kind: finalKind,
+              actorId: userId === a ? b : a,
+            });
+          }
         }
 
         await tx.friendStreak.update({

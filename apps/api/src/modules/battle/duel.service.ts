@@ -160,10 +160,28 @@ export class DuelService {
 
   /** GET /duels — active, incoming/outgoing challenges, recent results. */
   async list(userId: string): Promise<DuelListDto> {
-    const duels = await this.prisma.duel.findMany({
-      where: { OR: [{ challengerId: userId }, { opponentId: userId }] },
-      orderBy: { createdAt: 'desc' },
-    });
+    const mine = { OR: [{ challengerId: userId }, { opponentId: userId }] };
+    const [open, completed, unseen] = await Promise.all([
+      this.prisma.duel.findMany({
+        where: { ...mine, status: { in: OPEN_STATUSES } },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.duel.findMany({
+        where: { ...mine, status: DuelStatus.COMPLETED },
+        orderBy: { createdAt: 'desc' },
+        take: RECENT_LIMIT,
+      }),
+      this.prisma.duel.findFirst({
+        where: {
+          status: DuelStatus.COMPLETED,
+          OR: [
+            { challengerId: userId, challengerSeenAt: null },
+            { opponentId: userId, opponentSeenAt: null },
+          ],
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
 
     const active: DuelItemDto[] = [];
     const incoming: DuelItemDto[] = [];
@@ -171,15 +189,20 @@ export class DuelService {
     const recent: DuelItemDto[] = [];
     let pendingResult: DuelItemDto | null = null;
 
-    for (const duel of duels) {
+    for (const duel of open) {
       const item = await this.itemFor(userId, duel);
       if (item.status === DuelStatus.ACTIVE) active.push(item);
-      else if (item.status === DuelStatus.PENDING) {
-        (duel.opponentId === userId ? incoming : outgoing).push(item);
-      } else if (item.status === DuelStatus.COMPLETED) {
-        if (recent.length < RECENT_LIMIT) recent.push(item);
-        if (!pendingResult && item.seenAt === null) pendingResult = item;
-      }
+      else (duel.opponentId === userId ? incoming : outgoing).push(item);
+    }
+    const seenIds = new Set<string>();
+    for (const duel of completed) {
+      seenIds.add(duel.id);
+      recent.push(await this.itemFor(userId, duel));
+    }
+    if (unseen && !seenIds.has(unseen.id)) {
+      pendingResult = await this.itemFor(userId, unseen);
+    } else if (unseen) {
+      pendingResult = recent.find((r) => r.id === unseen.id) ?? null;
     }
     return { active, incoming, outgoing, recent, pendingResult };
   }

@@ -181,7 +181,12 @@ const duelMatches = (d: Duel, where: Record<string, unknown>): boolean => {
     status?: DuelStatus | { in: DuelStatus[] };
     createdAt?: { lt: Date };
     endsAt?: { lte: Date };
-    OR?: Array<{ challengerId?: string; opponentId?: string }>;
+    OR?: Array<{
+      challengerId?: string;
+      opponentId?: string;
+      challengerSeenAt?: null;
+      opponentSeenAt?: null;
+    }>;
     NOT?: Array<Record<string, unknown>> | Record<string, unknown>;
   };
   if (w.id !== undefined && d.id !== w.id) return false;
@@ -198,7 +203,9 @@ const duelMatches = (d: Duel, where: Record<string, unknown>): boolean => {
     const hit = w.OR.some(
       (c) =>
         (c.challengerId === undefined || d.challengerId === c.challengerId) &&
-        (c.opponentId === undefined || d.opponentId === c.opponentId),
+        (c.opponentId === undefined || d.opponentId === c.opponentId) &&
+        (c.challengerSeenAt !== null || d.challengerSeenAt === null) &&
+        (c.opponentSeenAt !== null || d.opponentSeenAt === null),
     );
     if (!hit) return false;
   }
@@ -285,11 +292,15 @@ const makePrisma = (state: State) => {
       create: async ({ data }: { data: { challengerId: string; opponentId: string } }) =>
         makeDuel(state, data),
       findFirst: async ({ where }: { where: Record<string, unknown> }) =>
-        state.duels.find((d) => duelMatches(d, where)) ?? null,
-      findMany: async ({ where }: { where: Record<string, unknown> }) =>
         [...state.duels]
           .filter((d) => duelMatches(d, where))
-          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+          .at(0) ?? null,
+      findMany: async ({ where, take }: { where: Record<string, unknown>; take?: number }) =>
+        [...state.duels]
+          .filter((d) => duelMatches(d, where))
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+          .slice(0, take ?? Number.POSITIVE_INFINITY),
       update: async ({
         where: { id },
         data,
@@ -891,6 +902,76 @@ describe('StreakService', () => {
     assert.equal(streak.lastEvaluatedWeekKey, w2);
     const broken = state.notifications.filter((n) => n.kind === NotificationKind.STREAK_BROKEN);
     assert.equal(broken.length, 2);
+  });
+
+  it('collapses a multi-week catch-up to one notification per user', async () => {
+    const state = makeState();
+    const f = accepted(state, 'a', 'b');
+    const w0 = '2026-10-19';
+    const w4 = nextWeekKey(nextWeekKey(nextWeekKey(nextWeekKey(w0))));
+    const streak = makeStreak(state, {
+      friendshipId: f.id,
+      requestedById: 'a',
+      startedWeekKey: w0,
+      count: 5,
+      freezes: 2,
+    });
+    // w0, w1 freeze-consumed; w2 breaks; w3 missed at count 0 — one BROKEN each.
+    await streakService(state).evaluateClosedWeeks(w4);
+    assert.equal(streak.count, 0);
+    assert.equal(streak.freezes, 0);
+    const broken = state.notifications.filter((n) => n.kind === NotificationKind.STREAK_BROKEN);
+    assert.equal(broken.length, 2, 'one BROKEN per user for the whole run');
+    assert.equal(
+      state.notifications.filter((n) => n.kind === NotificationKind.STREAK_FROZEN).length,
+      0,
+      'the earlier frozen weeks are folded into the final state',
+    );
+  });
+
+  it('sends one FROZEN per user across consecutive frozen weeks', async () => {
+    const state = makeState();
+    const f = accepted(state, 'a', 'b');
+    const w0 = '2026-10-19';
+    const w2 = nextWeekKey(nextWeekKey(w0));
+    const streak = makeStreak(state, {
+      friendshipId: f.id,
+      requestedById: 'a',
+      startedWeekKey: w0,
+      count: 5,
+      freezes: 2,
+    });
+    // w0 and w1 both missed → two freezes gone in one run, one FROZEN each.
+    await streakService(state).evaluateClosedWeeks(w2);
+    assert.equal(streak.count, 5);
+    assert.equal(streak.freezes, 0);
+    const frozen = state.notifications.filter((n) => n.kind === NotificationKind.STREAK_FROZEN);
+    assert.equal(frozen.length, 2, 'one FROZEN per user for the whole run');
+  });
+
+  it('does not send BROKEN when the count was already zero', async () => {
+    const state = makeState();
+    const f = accepted(state, 'a', 'b');
+    const w0 = '2026-10-19';
+    const w3 = nextWeekKey(nextWeekKey(nextWeekKey(w0)));
+    const streak = makeStreak(state, {
+      friendshipId: f.id,
+      requestedById: 'a',
+      startedWeekKey: w0,
+      count: 0,
+      freezes: 0,
+    });
+    // Three missed weeks at count 0 — the streak never got going, stay silent.
+    await streakService(state).evaluateClosedWeeks(w3);
+    assert.equal(streak.count, 0);
+    assert.equal(
+      state.notifications.filter((n) => n.kind === NotificationKind.STREAK_BROKEN).length,
+      0,
+    );
+    assert.equal(
+      state.notifications.filter((n) => n.kind === NotificationKind.STREAK_FROZEN).length,
+      0,
+    );
   });
 
   it('reminder nudges only partners still short of the goal, once per week', async () => {
