@@ -19,6 +19,10 @@
       "types": "./dist/enums/index.d.ts",
       "default": "./dist/enums/index.js"
     },
+    "./league": {
+      "types": "./dist/league/index.d.ts",
+      "default": "./dist/league/index.js"
+    },
     "./catalog": {
       "types": "./dist/catalog/index.d.ts",
       "default": "./dist/catalog/index.js"
