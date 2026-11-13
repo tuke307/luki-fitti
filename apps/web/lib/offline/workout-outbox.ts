@@ -286,6 +286,7 @@ export function templateBody(template: WorkoutTemplateDto): UpdateTemplateDto {
     folderId: template.folderId && isServerId(template.folderId) ? template.folderId : null,
     sortOrder: Math.max(0, template.sortOrder),
     estimatedDurationMinutes: clamp(template.estimatedDurationMinutes ?? 60, 5, 360),
+    trainingGoal: template.trainingGoal ?? null,
   };
   if (template.systemKey) return structural;
   return {
