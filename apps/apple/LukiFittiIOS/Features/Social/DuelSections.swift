@@ -18,84 +18,84 @@ struct DuelsSection: View {
 
     var body: some View {
         if let duels = social.duels {
-            let open = duels.active.count + duels.incoming.count + duels.outgoing.count
-            VStack(alignment: .leading, spacing: 8) {
-                Label(tr("Duels"), systemImage: "figure.fencing")
-                    .font(.subheadline.weight(.semibold))
-                if open == 0 {
-                    Text(tr("Challenge a friend to a 7-day duel."))
-                        .font(.subheadline)
+            Group {
+                let open = duels.active.count + duels.incoming.count + duels.outgoing.count
+                VStack(alignment: .leading, spacing: 8) {
+                    Label(tr("Duels"), systemImage: "figure.fencing")
+                        .font(.subheadline.weight(.semibold))
+                    if open == 0 {
+                        Text(tr("Challenge a friend to a 7-day duel."))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
+
+                ForEach(duels.active) { duel in
+                    Button {
+                        detailId = SheetId(id: duel.id)
+                    } label: {
+                        ActiveDuelRow(duel: duel, social: social, myUserId: myUserId,
+                                    myHandle: myHandle, myName: myName, myAvatarUrl: myAvatarUrl)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("ios.duel.row.\(duel.id)")
+                }
+
+                if !duels.incoming.isEmpty {
+                    Text(tr("Challenges"))
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
-                }
-            }
-            .padding(.vertical, 4)
-
-            ForEach(duels.active) { duel in
-                Button {
-                    detailId = SheetId(id: duel.id)
-                } label: {
-                    ActiveDuelRow(duel: duel, social: social, myUserId: myUserId,
-                                myHandle: myHandle, myName: myName, myAvatarUrl: myAvatarUrl)
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("ios.duel.row.\(duel.id)")
-            }
-
-            if !duels.incoming.isEmpty {
-                Text(tr("Challenges"))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                ForEach(duels.incoming) { duel in
-                    HStack(spacing: 10) {
-                        SocialAvatarView(
-                            userId: duel.opponent.userId, handle: duel.opponent.handle,
-                            name: duel.opponent.name, avatarUrl: duel.opponent.avatarUrl,
-                            social: social, size: 34)
-                        Text("@\(duel.opponent.handle)")
-                            .font(.subheadline.weight(.semibold))
-                            .lineLimit(1)
-                        Spacer()
-                        Button(tr("Accept")) { Task { await social.acceptDuel(duelId: duel.id) } }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.small)
-                            .accessibilityIdentifier("ios.duel.accept.\(duel.id)")
-                        Button(tr("Decline")) { Task { await social.declineDuel(duelId: duel.id) } }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
-                            .accessibilityIdentifier("ios.duel.decline.\(duel.id)")
+                        .textCase(.uppercase)
+                    ForEach(duels.incoming) { duel in
+                        HStack(spacing: 10) {
+                            SocialAvatarView(
+                                userId: duel.opponent.userId, handle: duel.opponent.handle,
+                                name: duel.opponent.name, avatarUrl: duel.opponent.avatarUrl,
+                                social: social, size: 34)
+                            Text("@\(duel.opponent.handle)")
+                                .font(.subheadline.weight(.semibold))
+                                .lineLimit(1)
+                            Spacer()
+                            Button(tr("Accept")) { Task { await social.acceptDuel(duelId: duel.id) } }
+                                .buttonStyle(.borderedProminent)
+                                .controlSize(.small)
+                                .accessibilityIdentifier("ios.duel.accept.\(duel.id)")
+                            Button(tr("Decline")) { Task { await social.declineDuel(duelId: duel.id) } }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                                .accessibilityIdentifier("ios.duel.decline.\(duel.id)")
+                        }
                     }
                 }
-            }
 
-            if !duels.outgoing.isEmpty {
-                Text(tr("Sent"))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                ForEach(duels.outgoing) { duel in
-                    HStack(spacing: 10) {
-                        SocialAvatarView(
-                            userId: duel.opponent.userId, handle: duel.opponent.handle,
-                            name: duel.opponent.name, avatarUrl: duel.opponent.avatarUrl,
-                            social: social, size: 34)
-                        Text("@\(duel.opponent.handle)")
-                            .font(.subheadline.weight(.semibold))
-                            .lineLimit(1)
-                        Spacer()
-                        Button(tr("Withdraw")) { Task { await social.cancelDuel(duelId: duel.id) } }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
-                            .accessibilityIdentifier("ios.duel.withdraw.\(duel.id)")
+                if !duels.outgoing.isEmpty {
+                    Text(tr("Sent"))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                    ForEach(duels.outgoing) { duel in
+                        HStack(spacing: 10) {
+                            SocialAvatarView(
+                                userId: duel.opponent.userId, handle: duel.opponent.handle,
+                                name: duel.opponent.name, avatarUrl: duel.opponent.avatarUrl,
+                                social: social, size: 34)
+                            Text("@\(duel.opponent.handle)")
+                                .font(.subheadline.weight(.semibold))
+                                .lineLimit(1)
+                            Spacer()
+                            Button(tr("Withdraw")) { Task { await social.cancelDuel(duelId: duel.id) } }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                                .accessibilityIdentifier("ios.duel.withdraw.\(duel.id)")
+                        }
                     }
                 }
-            }
 
-            Color.clear
-                .frame(height: 0)
-                .sheet(item: $detailId) { sel in
-                    NavigationStack { DuelDetailSheet(duelId: sel.id, social: social) }
-                }
+            }
+            .sheet(item: $detailId) { sel in
+                NavigationStack { DuelDetailSheet(duelId: sel.id, social: social) }
+            }
         }
     }
 }
@@ -119,6 +119,11 @@ private struct ActiveDuelRow: View {
         return total > 0 ? CGFloat(duel.you) / CGFloat(total) : 0.5
     }
 
+    /// Locale-grouped score ("1,240" / "1.240").
+    private func score(_ n: Int) -> String {
+        n.formatted(.number.locale(Locale(identifier: tr.rawValue)))
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 10) {
@@ -127,7 +132,7 @@ private struct ActiveDuelRow: View {
                     avatarUrl: myAvatarUrl, social: social, size: 34)
                 VStack(alignment: .leading, spacing: 3) {
                     HStack {
-                        Text("\(duel.you)")
+                        Text(score(duel.you))
                             .font(.subheadline.weight(.semibold).monospacedDigit())
                         Spacer()
                         Text("@\(duel.opponent.handle)")
@@ -135,25 +140,42 @@ private struct ActiveDuelRow: View {
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                         Spacer()
-                        Text("\(duel.them)")
+                        Text(score(duel.them))
                             .font(.subheadline.weight(.semibold).monospacedDigit())
                     }
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(LukiColors.fill)
-                            Capsule()
-                                .fill(LukiColors.accent)
-                                .frame(width: geo.size.width * youFraction)
+                    if duel.you + duel.them == 0 {
+                        // 0–0: neutral bar with a centre tick — a coloured half reads as a lead.
+                        Capsule()
+                            .fill(LukiColors.fill)
+                            .overlay(alignment: .center) {
+                                Rectangle()
+                                    .fill(.secondary)
+                                    .frame(width: 2, height: 8)
+                            }
+                            .frame(height: 8)
+                    } else {
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(LukiColors.fill)
+                                Capsule()
+                                    .fill(LukiColors.accent)
+                                    .frame(width: geo.size.width * youFraction)
+                            }
                         }
+                        .frame(height: 8)
                     }
-                    .frame(height: 8)
                 }
                 SocialAvatarView(
                     userId: duel.opponent.userId, handle: duel.opponent.handle,
                     name: duel.opponent.name, avatarUrl: duel.opponent.avatarUrl,
                     social: social, size: 34)
             }
-            if let daysLeft = duel.daysLeft {
+            if duel.startsTomorrow {
+                Text(tr("Starts tomorrow"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            } else if let daysLeft = duel.daysLeft {
                 Text(tr("%d d left", daysLeft))
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -180,15 +202,19 @@ private struct DuelDetailSheet: View {
             if let detail {
                 Section {
                     HStack {
-                        Text("\(detail.you)")
+                        Text(detail.you.formatted(.number.locale(Locale(identifier: tr.rawValue))))
                             .font(.title2.bold().monospacedDigit())
                         Spacer()
-                        if let daysLeft = detail.daysLeft {
+                        if detail.startsTomorrow {
+                            Text(tr("Starts tomorrow"))
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        } else if let daysLeft = detail.daysLeft {
                             Text(tr("%d d left", daysLeft))
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
-                        Text("\(detail.them)")
+                        Text(detail.them.formatted(.number.locale(Locale(identifier: tr.rawValue))))
                             .font(.title2.bold().monospacedDigit())
                     }
                 }

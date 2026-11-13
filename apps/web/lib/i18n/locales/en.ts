@@ -1033,6 +1033,7 @@ export const en = {
     duelsEmpty: 'Challenge a friend to a 7-day duel.',
     incomingHeader: 'Challenges',
     daysLeft: '{days} d left',
+    startsTomorrow: 'Starts tomorrow',
     detailTitle: 'Duel vs {handle}',
     cancelDuel: 'Withdraw',
     challenge: 'Challenge to a duel',

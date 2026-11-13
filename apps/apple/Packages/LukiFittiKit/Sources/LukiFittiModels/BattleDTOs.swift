@@ -46,6 +46,17 @@ public struct DuelItemDto: Codable, Sendable, Equatable, Identifiable {
     public var endDayKey: String?
     public var createdAt: String
 
+    /// True while the duel is ACTIVE but its Berlin `startDayKey` is still in the future —
+    /// the window counts from the next midnight, so "8 d left" should read "starts tomorrow".
+    public var startsTomorrow: Bool {
+        guard let startDayKey else { return false }
+        return startDayKey > Self.berlinTodayKey()
+    }
+
+    private static func berlinTodayKey() -> String {
+        DuelTime.berlinTodayKey()
+    }
+
     public init(
         id: String,
         status: DuelStatus,
@@ -97,6 +108,17 @@ public struct DuelListDto: Codable, Sendable, Equatable {
     }
 }
 
+/// Berlin-day helpers shared by the duel DTOs.
+enum DuelTime {
+    static func berlinTodayKey() -> String {
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .gregorian)
+        f.timeZone = TimeZone(identifier: "Europe/Berlin")
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: Date())
+    }
+}
+
 public struct DuelDayPointsDto: Codable, Sendable, Equatable, Identifiable {
     public var dayKey: String
     public var you: Int
@@ -118,6 +140,12 @@ public struct DuelDetailDto: Codable, Sendable, Equatable {
     public var endDayKey: String?
     public var createdAt: String
     public var days: [DuelDayPointsDto]
+
+    /// Same rule as `DuelItemDto.startsTomorrow` — the window starts at the next Berlin midnight.
+    public var startsTomorrow: Bool {
+        guard let startDayKey else { return false }
+        return startDayKey > DuelTime.berlinTodayKey()
+    }
 }
 
 // MARK: - Friend streaks
@@ -229,11 +257,24 @@ public struct DuelWatchSnapshot: Codable, Sendable, Equatable {
     public var you: Int
     public var them: Int
     public var daysLeft: Int
+    /// Window counts from the next Berlin midnight; the row shows "starts tmrw" meanwhile.
+    public var startsTomorrow: Bool
 
-    public init(opponentHandle: String, you: Int, them: Int, daysLeft: Int) {
+    public init(opponentHandle: String, you: Int, them: Int, daysLeft: Int, startsTomorrow: Bool = false) {
         self.opponentHandle = opponentHandle
         self.you = you
         self.them = them
         self.daysLeft = daysLeft
+        self.startsTomorrow = startsTomorrow
+    }
+
+    /// Tolerates contexts from older iPhones that predate `startsTomorrow`.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        opponentHandle = try c.decode(String.self, forKey: .opponentHandle)
+        you = try c.decode(Int.self, forKey: .you)
+        them = try c.decode(Int.self, forKey: .them)
+        daysLeft = try c.decode(Int.self, forKey: .daysLeft)
+        startsTomorrow = try c.decodeIfPresent(Bool.self, forKey: .startsTomorrow) ?? false
     }
 }

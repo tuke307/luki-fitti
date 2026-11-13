@@ -202,7 +202,8 @@ public final class SocialStore {
                 opponentHandle: $0.opponent.handle,
                 you: $0.you,
                 them: $0.them,
-                daysLeft: $0.daysLeft ?? 0
+                daysLeft: $0.daysLeft ?? 0,
+                startsTomorrow: $0.startsTomorrow
             )
         }
         return SocialWatchSnapshot(

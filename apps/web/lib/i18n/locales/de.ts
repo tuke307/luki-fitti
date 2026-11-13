@@ -1041,6 +1041,7 @@ export const de = {
     duelsEmpty: 'Fordere einen Freund zu einem 7-Tage-Duell heraus.',
     incomingHeader: 'Herausforderungen',
     daysLeft: 'noch {days} T',
+    startsTomorrow: 'Startet morgen',
     detailTitle: 'Duell gegen {handle}',
     cancelDuel: 'Zurückziehen',
     challenge: 'Zum Duell herausfordern',

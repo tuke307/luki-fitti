@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import type { DuelDetailDto } from '@luki-fitti/common/schemas';
+import { berlinDayKey } from '@luki-fitti/common/utils';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { duelsApi } from '@/lib/social/social-api';
 import { MobileSheet } from '../mobile-sheet';
@@ -39,6 +40,8 @@ export function DuelDetailSheet({
   }, [duelId]);
 
   const max = Math.max(1, ...(detail?.days ?? []).flatMap((d) => [d.you, d.them]));
+  const notStarted =
+    detail !== null && detail.startDayKey !== null && detail.startDayKey > berlinDayKey(new Date());
 
   return (
     <MobileSheet
@@ -63,8 +66,10 @@ export function DuelDetailSheet({
               </span>
             </div>
             <span className="text-muted-foreground text-[0.8125rem]">
-              {detail.daysLeft !== null &&
-                t.battle.daysLeft.replace('{days}', String(detail.daysLeft))}
+              {notStarted
+                ? t.battle.startsTomorrow
+                : detail.daysLeft !== null &&
+                  t.battle.daysLeft.replace('{days}', String(detail.daysLeft))}
             </span>
             <div className="flex items-center gap-2">
               <span className="text-[1.25rem] font-bold tabular-nums">

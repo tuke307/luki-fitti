@@ -30,7 +30,10 @@ struct DuelCelebrationOverlay: View {
         return tr("@%@ won this one", result.opponent.handle)
     }
     private var score: String {
-        won || tie ? "\(result.you)–\(result.them)" : "\(result.them)–\(result.you)"
+        func fmt(_ n: Int) -> String {
+            n.formatted(.number.locale(Locale(identifier: tr.rawValue)))
+        }
+        return won || tie ? "\(fmt(result.you))–\(fmt(result.them))" : "\(fmt(result.them))–\(fmt(result.you))"
     }
 
     var body: some View {

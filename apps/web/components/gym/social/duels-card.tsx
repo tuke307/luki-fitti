@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Swords } from 'lucide-react';
 import type { DuelItemDto, DuelListDto } from '@luki-fitti/common/schemas';
+import { berlinDayKey } from '@luki-fitti/common/utils';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { duelsApi } from '@/lib/social/social-api';
@@ -14,6 +15,18 @@ import type { MyProfile } from './duel-celebration';
 function VersusBar({ you, them }: { you: number; them: number }) {
   const total = you + them;
   const youPct = total > 0 ? (you / total) * 100 : 50;
+  if (total === 0) {
+    // 0–0: both halves neutral with a centre tick — an orange half would read as a lead.
+    return (
+      <div
+        className="bg-muted-foreground/30 relative flex h-2.5 w-full overflow-hidden rounded-full"
+        role="img"
+        aria-label={`${you} – ${them}`}
+      >
+        <div className="bg-foreground/40 absolute top-0 left-1/2 h-full w-0.5 -translate-x-1/2" />
+      </div>
+    );
+  }
   return (
     <div
       className="bg-secondary flex h-2.5 w-full overflow-hidden rounded-full"
@@ -40,6 +53,8 @@ function ActiveDuelRow({
 }) {
   const { t, locale } = useLocale();
   const bcp47 = locale === 'de' ? 'de-DE' : 'en-GB';
+  // Accepted duels go ACTIVE immediately but only count from the next Berlin midnight.
+  const notStarted = duel.startDayKey !== null && duel.startDayKey > berlinDayKey(new Date());
   return (
     <li>
       <button
@@ -74,7 +89,9 @@ function ActiveDuelRow({
       </button>
       {duel.daysLeft !== null && (
         <p className="text-muted-foreground px-4 pb-2 text-right text-[0.75rem]">
-          {t.battle.daysLeft.replace('{days}', String(duel.daysLeft))}
+          {notStarted
+            ? t.battle.startsTomorrow
+            : t.battle.daysLeft.replace('{days}', String(duel.daysLeft))}
         </p>
       )}
     </li>
