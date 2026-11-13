@@ -76,7 +76,14 @@ export const ContactMatchSchema = z.object({
 export type ContactMatchDto = z.infer<typeof ContactMatchSchema>;
 
 export const SocialSearchQuerySchema = z.object({
-  q: z.string().trim().toLowerCase().min(2).max(40),
+  // Handle characters only (an optional leading @ is dropped), so the prefix search
+  // never receives LIKE wildcards such as `%`.
+  q: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .transform((q) => q.replace(/^@/, ''))
+    .pipe(z.string().regex(/^[a-z0-9_]{2,20}$/)),
 });
 export type SocialSearchQueryDto = z.infer<typeof SocialSearchQuerySchema>;
 
