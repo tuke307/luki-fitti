@@ -6,7 +6,7 @@ Part of [social-2.0.md](social-2.0.md). Branch `feat/social-1-foundation`, stack
 
 ## Progress
 
-- [ ] A — DB, common, API (`social`, `push`, `notifications`, admin), email-worker push processor
+- [x] A — DB, common, API (`social`, `push`, `notifications`, admin), email-worker push processor
 - [ ] B — Web: social tab, onboarding, profile, friends, invites, contact picker, Web Push, admin
 - [ ] C — iOS: social feature, APNs, contacts, invite universal link, entitlements
 - [ ] `PRODUCT.md` tone update, privacy policy draft (`docs/privacy-social.md`)
