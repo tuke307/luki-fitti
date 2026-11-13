@@ -1,0 +1,391 @@
+import SwiftUI
+import PhotosUI
+import CoreImage.CIFilterBuiltins
+import Contacts
+import LukiFittiModels
+import LukiFittiDesign
+import LukiFittiDomain
+import LukiFittiStore
+
+/// Social tab: own card, friends/requests, add-friends (search, invite, contacts) and the
+/// blocked list. League and effort-point sections from PR 2 slot in above `friendsSection`.
+public struct SocialView: View {
+    @Bindable public var viewModel: LukiAppViewModel
+    @Environment(\.lukiLocale) private var tr
+    @Environment(\.scenePhase) private var scenePhase
+
+    @State private var showProfileSheet = false
+    @State private var showOnboarding = false
+    @State private var showInbox = false
+    @State private var showContactsConsent = false
+    @State private var searchText = ""
+    @State private var searchResults: [SocialUserDto] = []
+    @State private var searchTask: Task<Void, Never>?
+    @State private var invite: FriendInviteDto?
+    @State private var reportTarget: SocialCardDto?
+    @State private var removeTarget: SocialCardDto?
+    @State private var blockTarget: SocialCardDto?
+    /// Unread polling: on appear/activate and every 60 s while visible.
+    @State private var unreadTimer: Timer?
+
+    public init(viewModel: LukiAppViewModel) {
+        self.viewModel = viewModel
+    }
+
+    private var social: SocialStore { viewModel.social }
+
+    public var body: some View {
+        List {
+            ownCardSection
+            // PR 2: league + friends-leaderboard sections insert here.
+            friendsSection
+            requestsSection
+            sentSection
+            addFriendsSection
+            blockedSection
+        }
+        .listStyle(.insetGrouped)
+        .listSectionSpacing(14)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showInbox = true
+                } label: {
+                    Image(systemName: social.unreadCount > 0 ? "bell.badge" : "bell")
+                }
+                .accessibilityLabel(tr("Notifications"))
+                .accessibilityIdentifier("ios.social.inboxButton")
+            }
+        }
+        .refreshable { await social.refreshAll() }
+        .task {
+            await social.refreshAll()
+            maybeShowOnboarding()
+            startUnreadPolling()
+        }
+        .onDisappear { unreadTimer?.invalidate(); unreadTimer = nil }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await social.refreshUnread() } }
+        }
+        .onChange(of: social.requestedSection) { _, section in
+            guard let section else { return }
+            social.requestedSection = nil
+            if section == .inbox { showInbox = true }
+            // friends/requests are the default list sections — no extra navigation needed.
+        }
+        .sheet(isPresented: $showProfileSheet) {
+            NavigationStack { SocialProfileSheet(viewModel: viewModel) }
+        }
+        .sheet(isPresented: $showOnboarding) {
+            SocialOnboardingSheet(viewModel: viewModel, isPresented: $showOnboarding)
+        }
+        .sheet(isPresented: $showInbox) {
+            NavigationStack { SocialInboxSheet(viewModel: viewModel) }
+        }
+        .sheet(isPresented: $showContactsConsent) {
+            ContactSyncSheet(viewModel: viewModel)
+        }
+        .sheet(item: $reportTarget) { target in
+            NavigationStack { SocialReportSheet(viewModel: viewModel, target: target) }
+        }
+        .confirmationDialog(
+            tr("Remove @%@ as a friend?", removeTarget?.handle ?? ""),
+            isPresented: Binding(get: { removeTarget != nil }, set: { if !$0 { removeTarget = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button(tr("Remove friend"), role: .destructive) {
+                if let t = removeTarget { Task { await social.remove(t.userId) } }
+            }
+            Button(tr("Cancel"), role: .cancel) {}
+        } message: {
+            Text(tr("You can send a new request any time."))
+        }
+        .confirmationDialog(
+            tr("Block @%@?", blockTarget?.handle ?? ""),
+            isPresented: Binding(get: { blockTarget != nil }, set: { if !$0 { blockTarget = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button(tr("Block"), role: .destructive) {
+                if let t = blockTarget { Task { await social.block(t.userId) } }
+            }
+            Button(tr("Cancel"), role: .cancel) {}
+        } message: {
+            Text(tr("They can no longer find you or send you requests."))
+        }
+    }
+
+    private func maybeShowOnboarding() {
+        guard let profile = social.profile, profile.handle == nil,
+              !social.onboardingDismissedThisLaunch else { return }
+        social.onboardingDismissedThisLaunch = true
+        showOnboarding = true
+    }
+
+    private func startUnreadPolling() {
+        unreadTimer?.invalidate()
+        unreadTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [social] _ in
+            Task { @MainActor in await social.refreshUnread() }
+        }
+    }
+
+    // MARK: - Own card
+
+    @ViewBuilder
+    private var ownCardSection: some View {
+        Section {
+            HStack(spacing: 12) {
+                if let profile = social.profile {
+                    SocialAvatarView(
+                        userId: viewModel.store.currentUser?.id ?? "me",
+                        handle: profile.handle ?? "",
+                        name: profile.name,
+                        avatarUrl: profile.avatarUrl,
+                        social: social,
+                        size: 52
+                    )
+                    VStack(alignment: .leading, spacing: 2) {
+                        if let handle = profile.handle {
+                            Text("@\(handle)").font(.headline)
+                        } else {
+                            Text(tr("Pick a handle so friends can find you."))
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        if let name = profile.name, !name.isEmpty {
+                            Text(name).font(.subheadline).foregroundStyle(.secondary)
+                        }
+                    }
+                    Spacer()
+                    Button(tr("Edit profile")) { showProfileSheet = true }
+                        .font(.subheadline)
+                        .accessibilityIdentifier("ios.social.editProfileButton")
+                } else {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+            }
+            .padding(.vertical, 2)
+        }
+        if social.profile?.socialPaused == true {
+            Section {
+                Text(tr("Friends features are paused — you're invisible in search and leagues."))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    // MARK: - Friends / requests / sent
+
+    private var friendsSection: some View {
+        Section {
+            if social.friends.friends.isEmpty {
+                Text(tr("No friends yet. Search for a handle or send an invite."))
+                    .foregroundStyle(.secondary)
+            }
+            ForEach(social.friends.friends) { friend in
+                SocialPersonRow(person: friend, social: social) {
+                    Menu {
+                        Button(role: .destructive) { removeTarget = friend } label: {
+                            Label(tr("Remove friend"), systemImage: "person.badge.minus")
+                        }
+                        Button(role: .destructive) { blockTarget = friend } label: {
+                            Label(tr("Block"), systemImage: "hand.raised")
+                        }
+                        Button { reportTarget = friend } label: {
+                            Label(tr("Report"), systemImage: "flag")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityLabel(tr("More options for @%@", friend.handle))
+                    .accessibilityIdentifier("ios.social.menu.\(friend.userId)")
+                }
+            }
+        } header: {
+            Text(tr("Friends"))
+        }
+    }
+
+    @ViewBuilder
+    private var requestsSection: some View {
+        if !social.friends.incoming.isEmpty {
+            Section {
+                ForEach(social.friends.incoming) { person in
+                    SocialPersonRow(person: person, social: social) {
+                        HStack(spacing: 8) {
+                            Button(tr("Accept")) { Task { await social.accept(person.userId) } }
+                                .buttonStyle(.borderedProminent)
+                                .controlSize(.small)
+                                .accessibilityIdentifier("ios.social.accept.\(person.userId)")
+                            Button(tr("Decline")) { Task { await social.decline(person.userId) } }
+                                .buttonStyle(.bordered)
+                                .controlSize(.small)
+                                .accessibilityIdentifier("ios.social.decline.\(person.userId)")
+                        }
+                    }
+                }
+            } header: {
+                Text(tr("Requests"))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var sentSection: some View {
+        if !social.friends.outgoing.isEmpty {
+            Section {
+                ForEach(social.friends.outgoing) { person in
+                    SocialPersonRow(person: person, social: social) {
+                        Button(tr("Withdraw")) { Task { await social.remove(person.userId) } }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .accessibilityIdentifier("ios.social.withdraw.\(person.userId)")
+                    }
+                }
+            } header: {
+                Text(tr("Sent"))
+            }
+        }
+    }
+
+    // MARK: - Add friends
+
+    private var addFriendsSection: some View {
+        Section {
+            TextField(tr("Search by @handle"), text: $searchText)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .accessibilityIdentifier("ios.social.searchField")
+                .onChange(of: searchText) { _, query in
+                    searchTask?.cancel()
+                    let trimmed = query.trimmingCharacters(in: .whitespaces).lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "@"))
+                    guard trimmed.count >= 2 else { searchResults = []; return }
+                    searchTask = Task {
+                        try? await Task.sleep(nanoseconds: 350_000_000)
+                        guard !Task.isCancelled else { return }
+                        searchResults = (try? await viewModel.store.apiClient.searchSocialUsers(query: trimmed)) ?? []
+                    }
+                }
+            if !searchText.trimmingCharacters(in: .whitespaces).isEmpty {
+                if searchText.trimmingCharacters(in: .whitespaces).count < 2 {
+                    Text(tr("Type at least 2 characters.")).font(.footnote).foregroundStyle(.secondary)
+                } else if searchResults.isEmpty {
+                    Text(tr("Nobody found with that handle.")).font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+            ForEach(searchResults) { user in
+                SocialPersonRow(person: SocialCardDto(userId: user.userId, handle: user.handle, avatarUrl: user.avatarUrl, name: user.name), social: social) {
+                    switch user.relation {
+                    case .FRIEND:
+                        Text(tr("Friends")).font(.footnote).foregroundStyle(.secondary)
+                    case .OUTGOING:
+                        Button(tr("Withdraw")) { Task { await social.remove(user.userId) } }
+                            .buttonStyle(.bordered).controlSize(.small)
+                    case .INCOMING:
+                        Button(tr("Accept")) { Task { await social.accept(user.userId) } }
+                            .buttonStyle(.borderedProminent).controlSize(.small)
+                    case .SELF:
+                        EmptyView()
+                    default:
+                        Button(tr("Add")) {
+                            Task {
+                                await social.sendRequest(to: user.userId)
+                                searchResults = (try? await viewModel.store.apiClient.searchSocialUsers(query: searchText.trimmingCharacters(in: .whitespaces).lowercased())) ?? []
+                            }
+                        }
+                        .buttonStyle(.borderedProminent).controlSize(.small)
+                        .accessibilityIdentifier("ios.social.add.\(user.userId)")
+                    }
+                }
+            }
+
+            inviteRow
+
+            Button {
+                showContactsConsent = true
+            } label: {
+                Label(tr("Find contacts"), systemImage: "person.crop.circle.badge.magnifyingglass")
+            }
+            .accessibilityIdentifier("ios.social.contactsButton")
+        } header: {
+            Text(tr("Add friends"))
+        }
+    }
+
+    // MARK: - Invite
+
+    @ViewBuilder
+    private var inviteRow: some View {
+        if let invite, let url = URL(string: invite.url) {
+            VStack(alignment: .leading, spacing: 8) {
+                ShareLink(item: url) {
+                    Label(tr("Share link"), systemImage: "square.and.arrow.up")
+                }
+                .accessibilityIdentifier("ios.social.shareInviteButton")
+                HStack(spacing: 12) {
+                    InviteQrImage(url: invite.url)
+                        .frame(width: 64, height: 64)
+                    Text(invite.url)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .truncationMode(.middle)
+                }
+            }
+            .padding(.vertical, 2)
+        } else {
+            Button {
+                Task { invite = try? await viewModel.store.apiClient.createInvite() }
+            } label: {
+                Label(tr("Invite friends"), systemImage: "link")
+            }
+            .accessibilityIdentifier("ios.social.createInviteButton")
+        }
+    }
+
+    // MARK: - Blocked
+
+    @ViewBuilder
+    private var blockedSection: some View {
+        if !social.blocked.isEmpty {
+            Section {
+                ForEach(social.blocked) { person in
+                    SocialPersonRow(person: person, social: social) {
+                        Button(tr("Unblock")) { Task { await social.unblock(person.userId) } }
+                            .buttonStyle(.bordered).controlSize(.small)
+                    }
+                }
+            } header: {
+                Text(tr("Blocked"))
+            }
+        }
+    }
+}
+
+/// QR code for the invite link, rendered by CoreImage `CIQRCodeGenerator` (never HTML).
+private struct InviteQrImage: View {
+    let url: String
+    private let context = CIContext()
+    private let filter = CIFilter.qrCodeGenerator()
+
+    private var image: Image? {
+        filter.setValue(Data(url.utf8), forKey: "inputMessage")
+        filter.setValue("M", forKey: "inputCorrectionLevel")
+        guard let output = filter.outputImage else { return nil }
+        let scaled = output.transformed(by: CGAffineTransform(scaleX: 8, y: 8))
+        guard let cg = context.createCGImage(scaled, from: scaled.extent) else { return nil }
+        return Image(uiImage: UIImage(cgImage: cg))
+    }
+
+    var body: some View {
+        if let image {
+            image
+                .interpolation(.none)
+                .resizable()
+                .scaledToFit()
+                .accessibilityLabel("QR")
+        }
+    }
+}

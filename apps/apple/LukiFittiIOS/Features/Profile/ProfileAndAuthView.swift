@@ -521,7 +521,13 @@ private struct AccountSettingsPage: View {
     @Environment(\.lukiLocale) private var tr
     @Environment(\.dismiss) private var dismiss
 
+    /// Removes this device's APNs registration before tokens are cleared locally.
+    private func unregisterPush() async {
+        await viewModel.unregisterPushDevice()
+    }
+
     private func signOutLocally() {
+        viewModel.social.clearSignedInState()
         viewModel.store.clearAllLocalData()
         viewModel.nutrition.clear()
         viewModel.clearBodyWeightData()
@@ -549,6 +555,7 @@ private struct AccountSettingsPage: View {
 
                     Button(tr("Sign Out"), role: .destructive) {
                         Task {
+                            await unregisterPush()
                             await viewModel.store.apiClient.logout()
                             signOutLocally()
                         }
@@ -566,6 +573,7 @@ private struct AccountSettingsPage: View {
                     ) {
                         Button(tr("Sign out of all devices"), role: .destructive) {
                             Task {
+                                await unregisterPush()
                                 await viewModel.store.apiClient.logoutAllDevices()
                                 signOutLocally()
                             }
@@ -829,6 +837,8 @@ private struct NotificationSettingsPage: View {
     @Bindable var viewModel: LukiAppViewModel
     let autosave: PreferencesAutosaver
     @State private var notificationStatus: String?
+    @State private var friendsPushLoaded = false
+    @State private var friendsPush = false
     @Environment(\.lukiLocale) private var tr
 
     var body: some View {
@@ -849,6 +859,33 @@ private struct NotificationSettingsPage: View {
                 Toggle(tr("Rest timer sound"), isOn: $store.preferences.restTimerSound)
                     .tint(LukiColors.accent)
                     .accessibilityIdentifier("ios.profile.restTimerSoundToggle")
+
+                if viewModel.socialEnabled {
+                    Toggle(isOn: $friendsPush) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(tr("Friends"))
+                            Text(tr("Friend requests and accepted requests."))
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .tint(LukiColors.accent)
+                    .disabled(!friendsPushLoaded)
+                    .accessibilityIdentifier("ios.profile.friendsPushToggle")
+                    .task {
+                        if let prefs = try? await viewModel.store.apiClient.fetchPushPreferences() {
+                            friendsPush = prefs.friends
+                            friendsPushLoaded = true
+                        }
+                    }
+                    .onChange(of: friendsPush) { _, enabled in
+                        guard friendsPushLoaded else { return }
+                        Task {
+                            _ = try? await viewModel.store.apiClient
+                                .updatePushPreferences(UpdatePushPreferencesDto(friends: enabled))
+                        }
+                    }
+                }
 
                 Button {
                     Task {

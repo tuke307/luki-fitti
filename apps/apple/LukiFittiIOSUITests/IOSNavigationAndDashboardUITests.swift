@@ -22,7 +22,7 @@ final class IOSNavigationAndDashboardUITests: XCTestCase {
         IOSUITestHelpers.navigateToTab(app, label: "History")
         XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
 
-        IOSUITestHelpers.navigateToTab(app, label: "Library")
+        IOSUITestHelpers.openLibrary(app)
         XCTAssertTrue(app.buttons["All Muscles"].waitForExistence(timeout: 5))
 
         IOSUITestHelpers.navigateToTab(app, label: "Profile")

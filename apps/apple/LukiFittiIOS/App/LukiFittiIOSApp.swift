@@ -17,7 +17,10 @@ public enum LukiMainTab: String, CaseIterable, Sendable {
     case session
     case nutrition
     case diary
+    /// Library tab: kept as a stable raw value for widgets/shortcuts/deep links; the shell maps
+    /// it onto the Workouts tab's Library segment (social took its tab slot in PR 1).
     case exercises
+    case social
     case profile
 }
 
@@ -35,6 +38,8 @@ public final class LukiAppViewModel {
     public let workoutExport: WorkoutHealthExport
     public let healthCoordinator: HealthKitWorkoutCoordinator
     public let watchSyncCoordinator: WatchSyncCoordinator
+    /// Social tab state (friends, inbox, invites). Only used when `socialEnabled`.
+    public let social: SocialStore
     /// Anonymous screen/event analytics; disabled in DEBUG and UI-test runs.
     public let analytics: AnalyticsClient
     private let watchAuthHandoff = WatchAuthHandoffProvider()
@@ -52,11 +57,18 @@ public final class LukiAppViewModel {
     public var pendingTemplateId: String?
     /// Pushes the weight screen on the Today tab (card, deep link, reminder tap).
     public var isWeightPresented = false
+    /// Legacy `exercises` tab selections land here: the Workouts tab opens its Library segment.
+    public var workoutsShowLibrary = false
+    /// Invite token from an `/invite/<token>` universal link, consumed by InviteAcceptSheet.
+    public var pendingInviteToken: String?
     /// Serializes weigh-in reminder rescheduling so overlapping calls can't interleave.
     var reminderTask: Task<Void, Never>?
 
     /// App language from the in-app preference (System / English / Deutsch).
     public var locale: SupportedLocale { SupportedLocale.resolve(store.preferences.language) }
+
+    /// Server-side rollout gate for the Social tab (beta list / global switch).
+    public var socialEnabled: Bool { SocialStore.isEnabled(for: store.currentUser) }
 
     public init(
         store: OfflineStore = OfflineStore(),
@@ -77,6 +89,7 @@ public final class LukiAppViewModel {
         self.workoutExport = workoutExport
         self.healthCoordinator = healthCoordinator
         self.watchSyncCoordinator = watchSyncCoordinator
+        self.social = SocialStore(apiClient: store.apiClient)
 
         #if DEBUG
         let analyticsEnabled = false
@@ -171,6 +184,10 @@ public final class LukiAppViewModel {
                 await store.refreshFromServerAfterAuth()
             } else {
                 await store.flushSyncQueue()
+            }
+            if socialEnabled {
+                await social.refreshAll()
+                await registerApnsIfAuthorized()
             }
             await syncBodyWeight()
             await syncHealthActivity()
@@ -317,6 +334,18 @@ public final class LukiAppViewModel {
 #endif
 
     public func handleUniversalLink(_ url: URL) {
+        // `https://app.luki-fitti.tony-luke.de/invite/<token>` universal link.
+        if url.scheme?.lowercased() == "https",
+           url.pathComponents.count == 3,
+           url.pathComponents[1] == "invite" {
+            let token = url.pathComponents[2]
+            if InviteTokenValidator.isValid(token) {
+                pendingInviteToken = token
+                // Signed out → sign in first; AppShellView picks the token up after auth.
+                if store.currentUser == nil { selectedTab = .profile }
+            }
+            return
+        }
         if url.scheme?.lowercased() == "lukifitti" {
             switch url.host?.lowercased() {
             case "weight":
@@ -709,6 +738,43 @@ public final class LukiAppViewModel {
         guard await center.notificationSettings().authorizationStatus == .notDetermined else { return }
         _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
         rescheduleWeighInReminders()
+    }
+
+    /// Opens the Social tab on a specific section (push tap / deep link), like the web
+    /// `parseOpenParam` — unknown targets fall back to home.
+    public func openSocial(section: SocialSectionTarget?) {
+        guard socialEnabled else { selectedTab = .home; return }
+        social.requestedSection = section
+        selectedTab = .social
+    }
+
+    /// Re-registers for APNs when permission is already granted (app launch, sign-in).
+    /// Never asks for permission itself — that only happens in `requestPushPermissionAndRegister`.
+    public func registerApnsIfAuthorized() async {
+        guard socialEnabled, store.apiClient.isAuthenticated() else { return }
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--uitesting") { return }
+        #endif
+        let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+        guard status == .authorized || status == .provisional || status == .ephemeral else { return }
+        await UIApplication.shared.registerForRemoteNotifications()
+    }
+
+    /// The only place that asks for push permission (onboarding button / settings toggle).
+    @discardableResult
+    public func requestPushPermissionAndRegister() async -> Bool {
+        let center = UNUserNotificationCenter.current()
+        guard (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) == true else {
+            return false
+        }
+        rescheduleWeighInReminders()
+        await UIApplication.shared.registerForRemoteNotifications()
+        return true
+    }
+
+    /// Removes this device's APNs registration server-side (called before sign-out).
+    public func unregisterPushDevice() async {
+        await ApnsPushManager.shared.unregister(apiClient: store.apiClient)
     }
 
     public func sendTestNotification() async -> Bool {
@@ -1222,6 +1288,7 @@ public final class LukiAppViewModel {
 
 @main
 public struct LukiFittiIOSApp: App {
+    @UIApplicationDelegateAdaptor(LukiAppDelegate.self) private var appDelegate
     @State private var viewModel = LukiAppViewModel.makeConfigured()
     @Environment(\.scenePhase) private var scenePhase
 
@@ -1242,6 +1309,7 @@ public struct LukiFittiIOSApp: App {
                     viewModel.handleUniversalLink(url)
                 }
                 .onAppear {
+                    Task { await ApnsPushManager.shared.attach(viewModel.store.apiClient) }
                     viewModel.pullFromWatchAndServer()
                 }
                 .task { await viewModel.requestNotificationPermissionIfNeeded() }
@@ -1292,8 +1360,10 @@ public struct AppShellView: View {
             Tab(tr("History"), systemImage: "clock.arrow.circlepath", value: LukiMainTab.diary) {
                 tabRoot(title: tr("History")) { DiaryAnalyticsView(viewModel: viewModel) }
             }
-            Tab(tr("Library"), systemImage: "books.vertical", value: LukiMainTab.exercises) {
-                tabRoot(title: tr("Library")) { ExercisesAndStretchingView(viewModel: viewModel) }
+            if viewModel.socialEnabled {
+                Tab(tr("Friends"), systemImage: "person.2", value: LukiMainTab.social) {
+                    tabRoot(title: tr("Friends")) { SocialView(viewModel: viewModel) }
+                }
             }
         }
         .tint(LukiColors.accent)
@@ -1336,6 +1406,18 @@ public struct AppShellView: View {
                     }
             }
             .tint(LukiColors.accent)
+        }
+        // `/invite/<token>` universal link: shows once a user is signed in and social is on
+        // (the token survives the sign-in detour in `pendingInviteToken`).
+        .sheet(isPresented: Binding(
+            get: {
+                viewModel.pendingInviteToken != nil
+                    && viewModel.store.currentUser != nil
+                    && viewModel.socialEnabled
+            },
+            set: { if !$0 { viewModel.pendingInviteToken = nil } }
+        )) {
+            SocialInviteSheet(viewModel: viewModel)
         }
         .onChange(of: viewModel.selectedTab, initial: true) { _, newTab in
             route(to: newTab)
@@ -1408,6 +1490,7 @@ public struct AppShellView: View {
         case .nutrition: return "/nutrition"
         case .diary: return "/history"
         case .exercises: return "/library"
+        case .social: return "/social"
         case .session: return "/session"
         case .profile: return "/profile"
         }
@@ -1425,7 +1508,14 @@ public struct AppShellView: View {
         case .profile:
             isSessionPresented = false
             isProfilePresented = true
-        case .home, .workouts, .nutrition, .diary, .exercises:
+        case .exercises:
+            // The Library tab became the Workouts tab's Library segment.
+            isSessionPresented = false
+            isProfilePresented = false
+            viewModel.workoutsShowLibrary = true
+            contentTab = .workouts
+            viewModel.selectedTab = .workouts
+        case .home, .workouts, .nutrition, .diary, .social:
             isSessionPresented = false
             isProfilePresented = false
             contentTab = tab
