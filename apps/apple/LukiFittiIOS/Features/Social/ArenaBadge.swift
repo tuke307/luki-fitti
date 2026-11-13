@@ -14,6 +14,16 @@ public struct ArenaBadge: View {
         var ring: String
     }
 
+    /// Arena gradient as SwiftUI colours — shared with the celebration glow/headline.
+    public static func gradientColors(for arena: Arena) -> [Color] {
+        let s = style(for: arena)
+        return [LukiColors.colorFromHex(s.from), LukiColors.colorFromHex(s.to)]
+    }
+
+    public static func ringColor(for arena: Arena) -> Color {
+        LukiColors.colorFromHex(style(for: arena).ring)
+    }
+
     private static func style(for arena: Arena) -> Style {
         switch arena {
         case .BRONZE: Style(from: "#C27C3E", to: "#8A4F22", ring: "#E8B27F")

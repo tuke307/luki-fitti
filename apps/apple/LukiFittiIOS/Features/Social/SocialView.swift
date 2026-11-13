@@ -96,23 +96,30 @@ public struct SocialView: View {
         .sheet(item: $reportTarget) { target in
             NavigationStack { SocialReportSheet(viewModel: viewModel, target: target) }
         }
+        // PROMOTED/DEMOTED get a real full-screen cover so the celebration also covers
+        // the floating tab bar (the old .overlay left it tappable and unhittable).
+        .fullScreenCover(
+            item: Binding<LeaguePendingResultDto?>(
+                get: {
+                    guard let r = social.league?.pendingResult, r.outcome != .STAYED else { return nil }
+                    return r
+                },
+                set: { _ in }
+            )
+        ) { result in
+            LeagueCelebrationOverlay(result: result) {
+                Task { await social.markResultSeen() }
+            }
+        }
         .overlay(alignment: .top) {
-            if let result = social.league?.pendingResult {
-                if result.outcome == .STAYED {
-                    StayedToast(arena: result.toArena)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                        .padding(.top, 4)
-                        .task {
-                            try? await Task.sleep(nanoseconds: 2_500_000_000)
-                            await social.markResultSeen()
-                        }
-                } else {
-                    LeagueCelebrationOverlay(result: result) {
-                        Task { await social.markResultSeen() }
+            if let result = social.league?.pendingResult, result.outcome == .STAYED {
+                StayedToast(arena: result.toArena)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .padding(.top, 4)
+                    .task {
+                        try? await Task.sleep(nanoseconds: 2_500_000_000)
+                        await social.markResultSeen()
                     }
-                    .transition(.opacity)
-                    .zIndex(1)
-                }
             }
         }
         .animation(.easeInOut(duration: 0.25), value: social.league?.pendingResult != nil)

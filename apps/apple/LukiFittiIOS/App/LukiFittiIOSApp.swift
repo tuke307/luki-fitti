@@ -1173,7 +1173,39 @@ public final class LukiAppViewModel {
             }
         }
 
+        if args.contains("--uitesting-seed-league-celebration") {
+            seedLeagueCelebration(vm: vm, store: store)
+        }
+
         return vm
+    }
+
+    /// `--uitesting-seed-league-celebration`: a signed-in social user whose current week
+    /// carries an unseen PROMOTED result, so the celebration cover presents on open.
+    /// `refreshAll` stays a no-op (apiClient is unauthenticated) so the seed survives.
+    private static func seedLeagueCelebration(vm: LukiAppViewModel, store: OfflineStore) {
+        store.currentUser = UserDto(
+            id: "uitest-social",
+            email: "uitest@lukifitti.test",
+            name: "UI Tester",
+            social: UserSocialDto(enabled: true, handle: "uitester", arena: .SILVER)
+        )
+        vm.social.profile = SocialProfileDto(handle: "uitester", name: "UI Tester")
+        vm.social.league = LeagueCurrentDto(
+            weekKey: "2026-W45",
+            stage: .GLOBAL,
+            endsAt: ISO8601DateFormatter().string(from: Date().addingTimeInterval(172_800)),
+            arena: .BRONZE,
+            cohort: nil,
+            pendingResult: LeaguePendingResultDto(
+                weekKey: "2026-W45",
+                outcome: .PROMOTED,
+                fromArena: .BRONZE,
+                toArena: .SILVER,
+                rank: 2,
+                points: 1_240
+            )
+        )
     }
 
     /// Seeds believable content for `--uitesting-marketing` screenshot runs: ~8 weeks of
