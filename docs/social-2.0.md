@@ -410,3 +410,5 @@ Append one line per session: date, what was done, what is next.
 |            | + review fixes (push retry/SSRF/pooling, report evidence, deletion GC)   |                                   |
 | 2026-11-13 | PR 2 part A: leagues migration, EP formula + fixtures, points/league      | PR 2 part B (web)                 |
 |            | modules, session hooks, rollover + reminder schedulers in email-worker   |                                   |
+| 2026-11-13 | PR 2 part A review fixes: chronological set ordering, mid-week           | PR 2 part B (web)                 |
+|            | placement, bucket stranding, multi-week rollover close                 |                                   |
