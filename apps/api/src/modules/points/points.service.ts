@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
+import { logger } from '@luki-fitti/logger';
 import {
   computeSessionEffortPoints,
   type EffortPointsBreakdown,
@@ -12,6 +13,7 @@ import { PrismaService } from '../database/prisma.service';
 import { AppSettingsService } from '../app-settings/app-settings.service';
 import { SocialAccessService } from '../social/social-access.service';
 import { LeagueService } from '../league/league.service';
+import type { DuelService } from '../battle/duel.service';
 
 /** Sessions older than this at sync time never earn points. */
 const SYNC_WINDOW_MS = 72 * 60 * 60 * 1000;
@@ -25,6 +27,8 @@ export class PointsService {
     private readonly appSettings: AppSettingsService,
     private readonly socialAccess: SocialAccessService,
     private readonly leagues: LeagueService,
+    /** Optional so specs and the email-worker can run without the battle module. */
+    @Optional() private readonly duels?: DuelService,
   ) {}
 
   /**
@@ -47,7 +51,10 @@ export class PointsService {
         },
       }),
     ]);
-    if (!settings.leaguesEnabled || !enabled) return;
+    // Points feed leagues, duels and streaks; only with all three off is a
+    // session not worth recording.
+    const pointsOn = settings.leaguesEnabled || settings.duelsEnabled || settings.streaksEnabled;
+    if (!pointsOn || !enabled) return;
     if (!session || session.status !== SessionStatus.COMPLETED || !session.completedAt) return;
     // Imported sessions never earn league points.
     if (session.sourceDevice === 'IMPORT') return;
@@ -116,10 +123,16 @@ export class PointsService {
 
     const weekPoints = await this.recomputeWeeklyScore(userId, weekKey);
 
+    // Best-effort: active duels of this user pick up the new points. A failure
+    // here must never lose the session's own entry.
+    await this.duels
+      ?.recomputeForUser(userId)
+      .catch((err) => logger.warn(`duel recompute after recordSession failed: ${String(err)}`));
+
     // Any positive weekly score → lazy cohort placement (eligible users only,
     // stages with cohorts). Idempotent, so a user who only became eligible
     // mid-week still gets placed.
-    if (weekPoints > 0) {
+    if (settings.leaguesEnabled && weekPoints > 0) {
       const week = await this.leagues.ensureWeek(weekKey);
       if (
         (week.stage as LeagueStage) !== LeagueStage.FRIENDS &&
@@ -139,6 +152,9 @@ export class PointsService {
     if (!entry || entry.userId !== userId) return;
     await this.prisma.effortPointEntry.delete({ where: { id: entry.id } });
     await this.recomputeWeeklyScore(userId, entry.weekKey);
+    await this.duels
+      ?.recomputeForUser(userId)
+      .catch((err) => logger.warn(`duel recompute after removeSession failed: ${String(err)}`));
   }
 
   /**
@@ -166,16 +182,23 @@ export class PointsService {
     for (const dayPoints of perDay.values()) {
       points += Math.min(dayPoints, settings.epDailyCap);
     }
-    const goalBonus =
-      entries.filter((e) => e.points > 0).length >= (prefs?.weeklyGoalSessions ?? 4)
-        ? settings.epWeeklyGoalBonus
-        : 0;
+    const goalReached =
+      entries.filter((e) => e.points > 0).length >= (prefs?.weeklyGoalSessions ?? 4);
+    const goalBonus = goalReached ? settings.epWeeklyGoalBonus : 0;
     points += goalBonus;
 
     await this.prisma.weeklyScore.upsert({
       where: { userId_weekKey: { userId, weekKey } },
-      update: { points, rawPoints, sessions: entries.length, goalBonus },
-      create: { userId, weekKey, points, rawPoints, sessions: entries.length, goalBonus },
+      update: { points, rawPoints, sessions: entries.length, goalBonus, goalReached },
+      create: {
+        userId,
+        weekKey,
+        points,
+        rawPoints,
+        sessions: entries.length,
+        goalBonus,
+        goalReached,
+      },
     });
     return points;
   }

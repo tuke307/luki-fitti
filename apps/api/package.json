@@ -37,6 +37,18 @@
     "./services/app-settings.service": {
       "types": "./src/modules/app-settings/app-settings.service.ts",
       "default": "./dist/src/modules/app-settings/app-settings.service.js"
+    },
+    "./services/duel.service": {
+      "types": "./src/modules/battle/duel.service.ts",
+      "default": "./dist/src/modules/battle/duel.service.js"
+    },
+    "./services/streak.service": {
+      "types": "./src/modules/battle/streak.service.ts",
+      "default": "./dist/src/modules/battle/streak.service.js"
+    },
+    "./services/trophy.service": {
+      "types": "./src/modules/battle/trophy.service.ts",
+      "default": "./dist/src/modules/battle/trophy.service.js"
     }
   },
   "scripts": {

@@ -11,6 +11,7 @@ import {
 import type { AppSettingsService } from '../app-settings/app-settings.service';
 import type { PrismaService } from '../database/prisma.service';
 import type { NotificationService } from '../notifications/notification.service';
+import type { StreakService } from '../battle/streak.service';
 import { LeagueService } from './league.service';
 
 interface Week {
@@ -48,6 +49,8 @@ const makeState = () => ({
   >(),
   notifications: [] as Array<{ userId: string; kind: NotificationKind; payload: unknown }>,
   arenaCounts: [] as Array<{ arena: Arena; n: bigint }>,
+  streakEvals: [] as string[],
+  streakReminders: [] as string[],
   locks: 0,
   cohortSeq: 0,
 });
@@ -273,8 +276,23 @@ const notifications = (state: ReturnType<typeof makeState>) =>
     },
   }) as unknown as NotificationService;
 
+const streaks = (state: ReturnType<typeof makeState>) =>
+  ({
+    evaluateClosedWeeks: async (weekKey: string) => {
+      state.streakEvals.push(weekKey);
+    },
+    remind: async (weekKey: string) => {
+      state.streakReminders.push(weekKey);
+    },
+  }) as unknown as StreakService;
+
 const service = (state: ReturnType<typeof makeState>, settingsOverrides = {}) =>
-  new LeagueService(makePrisma(state), settings(settingsOverrides), notifications(state));
+  new LeagueService(
+    makePrisma(state),
+    settings(settingsOverrides),
+    notifications(state),
+    streaks(state),
+  );
 
 const addUsers = (
   state: ReturnType<typeof makeState>,
@@ -630,5 +648,35 @@ describe('reminder', () => {
     });
     await service(state).reminder();
     assert.equal(state.notifications.length, 0);
+  });
+});
+
+describe('streak hooks', () => {
+  it('rollover evaluates streaks even when leagues are disabled', async () => {
+    const state = makeState();
+    const svc = service(state, {
+      leaguesEnabled: false,
+      streaksEnabled: true,
+      socialEnabled: true,
+    });
+    await svc.rollover();
+    assert.deepEqual(state.streakEvals, [berlinWeekKey(new Date())]);
+  });
+
+  it('skips streak evaluation when streaks or social are off', async () => {
+    const state = makeState();
+    await service(state, { leaguesEnabled: false, streaksEnabled: false }).rollover();
+    await service(state, {
+      leaguesEnabled: false,
+      streaksEnabled: true,
+      socialEnabled: false,
+    }).rollover();
+    assert.equal(state.streakEvals.length, 0);
+  });
+
+  it('reminder pushes the streak reminder alongside the league one', async () => {
+    const state = makeState();
+    await service(state, { streaksEnabled: true, socialEnabled: true }).reminder();
+    assert.deepEqual(state.streakReminders, [berlinWeekKey(new Date())]);
   });
 });

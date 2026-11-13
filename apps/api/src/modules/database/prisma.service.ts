@@ -202,4 +202,16 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get leagueMembership(): typeof prisma.leagueMembership {
     return prisma.leagueMembership;
   }
+
+  get duel(): typeof prisma.duel {
+    return prisma.duel;
+  }
+
+  get friendStreak(): typeof prisma.friendStreak {
+    return prisma.friendStreak;
+  }
+
+  get trophy(): typeof prisma.trophy {
+    return prisma.trophy;
+  }
 }

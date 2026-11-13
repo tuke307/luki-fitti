@@ -20,6 +20,7 @@ import { Prisma } from '@luki-fitti/database';
 import { PrismaService } from '../database/prisma.service';
 import { AppSettingsService } from '../app-settings/app-settings.service';
 import { NotificationService } from '../notifications/notification.service';
+import type { StreakService } from '../battle/streak.service';
 import { cardFor, resolveRelation, type CardSource } from '../social/relation.util';
 import {
   ARENA_ORDER,
@@ -68,6 +69,7 @@ export class LeagueService {
     private readonly prisma: PrismaService,
     private readonly appSettings: AppSettingsService,
     private readonly notifications: NotificationService,
+    private readonly streaks: StreakService,
   ) {}
 
   /**
@@ -191,14 +193,32 @@ export class LeagueService {
    * Weekly rollover: closes the previous Berlin week once (idempotent via
    * closedAt), ranks every cohort, writes final rank/points/outcome on the
    * memberships plus arena moves, applies the inactivity sweep, then prepares
-   * the next week and notifies movers.
+   * the next week and notifies movers. Friend-streak evaluation runs afterwards
+   * and does not depend on leagues being enabled.
    */
   async rollover(): Promise<void> {
     const settings = await this.appSettings.get();
-    if (!settings.leaguesEnabled) return;
-
     const now = new Date();
     const currentWeek = berlinWeekKey(now);
+    if (settings.leaguesEnabled) {
+      await this.closeAndPrepareWeeks(now, currentWeek, settings);
+    }
+    // Streaks count even when leagues are off — every week before the current
+    // one counts as closed for evaluation.
+    if (settings.streaksEnabled && settings.socialEnabled) {
+      await this.streaks.evaluateClosedWeeks(currentWeek);
+    }
+  }
+
+  /**
+   * Closes every still-open league week (idempotent via closedAt), then creates
+   * the new week and sends the collected outcome notifications.
+   */
+  private async closeAndPrepareWeeks(
+    now: Date,
+    currentWeek: string,
+    settings: { socialBetaUserIds: string[]; socialEnabled: boolean },
+  ): Promise<void> {
     const prevKey = previousWeekKey(currentWeek);
 
     // Close every week that is still open (usually just the previous one, but
@@ -382,13 +402,26 @@ export class LeagueService {
   }
 
   /**
-   * Sunday-evening warning: members within two ranks of the promotion line or
-   * inside the demotion zone get LEAGUE_ENDING, at most once per user per week.
+   * Sunday-evening jobs: the league ending warning plus the friend-streak
+   * reminder, each gated by its own feature flag.
    */
   async reminder(): Promise<void> {
     const settings = await this.appSettings.get();
-    if (!settings.leaguesEnabled) return;
     const weekKey = berlinWeekKey(new Date());
+    if (settings.leaguesEnabled) {
+      await this.leagueReminder(weekKey);
+    }
+    // Sunday-evening streak nudge, independent of the league week shape.
+    if (settings.streaksEnabled && settings.socialEnabled) {
+      await this.streaks.remind(weekKey);
+    }
+  }
+
+  /**
+   * Sunday-evening warning: members within two ranks of the promotion line or
+   * inside the demotion zone get LEAGUE_ENDING, at most once per user per week.
+   */
+  private async leagueReminder(weekKey: string): Promise<void> {
     const week = await this.prisma.leagueWeek.findUnique({ where: { weekKey } });
     if (!week || (week.stage as LeagueStage) === LeagueStage.FRIENDS || week.closedAt) return;
 

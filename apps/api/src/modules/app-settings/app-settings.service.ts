@@ -41,6 +41,8 @@ export interface AppSettingsRecord {
   leagueCohortSize: number;
   epDailyCap: number;
   epWeeklyGoalBonus: number;
+  duelsEnabled: boolean;
+  streaksEnabled: boolean;
   updatedAt: Date;
 }
 

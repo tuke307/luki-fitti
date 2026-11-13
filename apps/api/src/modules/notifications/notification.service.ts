@@ -13,12 +13,24 @@ import { avatarUrlFor } from '../social/relation.util';
 import { quietHoursDelayMs } from './quiet-hours.util';
 
 /** NotificationKind → UserPreferences push toggle that gates the push job. */
-const KIND_PREF: Record<NotificationKind, 'pushFriends' | 'pushLeagues'> = {
+const KIND_PREF: Record<
+  NotificationKind,
+  'pushFriends' | 'pushLeagues' | 'pushDuels' | 'pushStreaks'
+> = {
   [NotificationKind.FRIEND_REQUEST]: 'pushFriends',
   [NotificationKind.FRIEND_ACCEPTED]: 'pushFriends',
   [NotificationKind.LEAGUE_PROMOTED]: 'pushLeagues',
   [NotificationKind.LEAGUE_DEMOTED]: 'pushLeagues',
   [NotificationKind.LEAGUE_ENDING]: 'pushLeagues',
+  [NotificationKind.DUEL_INVITE]: 'pushDuels',
+  [NotificationKind.DUEL_ACCEPTED]: 'pushDuels',
+  [NotificationKind.DUEL_STANDINGS]: 'pushDuels',
+  [NotificationKind.DUEL_RESULT]: 'pushDuels',
+  [NotificationKind.STREAK_INVITE]: 'pushStreaks',
+  [NotificationKind.STREAK_STARTED]: 'pushStreaks',
+  [NotificationKind.STREAK_REMINDER]: 'pushStreaks',
+  [NotificationKind.STREAK_FROZEN]: 'pushStreaks',
+  [NotificationKind.STREAK_BROKEN]: 'pushStreaks',
 };
 
 const PAIR = (a: string, b: string) => (a < b ? ([a, b] as const) : ([b, a] as const));
