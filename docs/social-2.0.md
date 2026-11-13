@@ -431,3 +431,6 @@ Append one line per session: date, what was done, what is next.
 |            | points/social/league hooks, duels-tick + duels-standings schedulers, push prefs + copy                                                                                                                                            |                                   |
 | 2026-11-14 | PR 3 part B (web): duels card + per-day detail sheet, friend-menu challenge with limit/existing reasons,                                                                                                                                 | PR 3 part C (iOS + Watch)         |
 |            | streak chips + invite/accept/end in friend rows, trophy shelves in profile + friend sheets, duel result celebration (WON/TIE/LOST + rematch), push toggles, /social/duels deep link, EN/DE, e2e                                                            |                                   |
+| 2026-11-14 | PR 3 part C (iOS + Watch): battle DTOs + API client + decoding tests from real responses, | Open PR 3 for review |
+|            | Duels section + detail sheet, friend-menu challenge/streak actions, trophy shelves, | |
+|            | duel celebration cover + Continue UI test, /social/duels deep link, Watch duel row, EN/DE | |

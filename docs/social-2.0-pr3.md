@@ -7,7 +7,7 @@ Part of [social-2.0.md](social-2.0.md). Branch `feat/social-3-battles`, stacked 
 
 - [x] A — DB, `battle` module (duels, streaks, trophies), schedulers, pushes
 - [x] B — Web: duel card + detail, challenge flow, streak rows, trophies, result celebration
-- [ ] C — iOS: same; Watch: active duel score
+- [x] C — iOS: same; Watch: active duel score
 - [ ] PR opened
 
 ## Prisma (one migration `battles`)
