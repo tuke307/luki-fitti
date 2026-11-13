@@ -146,6 +146,8 @@ public struct UserDto: Codable, Sendable, Equatable, Hashable, Identifiable {
     public var features: [String]? = nil
     /// Whether the user has a usable OpenRouter key (own or admin-assigned).
     public var aiKeyConfigured: Bool = false
+    /// Social feature gate + own handle (absent on older servers).
+    public var social: UserSocialDto? = nil
 
     public func hasFeature(_ feature: FeatureGrant) -> Bool {
         features?.contains(feature.rawValue) ?? false
@@ -161,7 +163,8 @@ public struct UserDto: Codable, Sendable, Equatable, Hashable, Identifiable {
         preferences: UserPreferencesDto? = nil,
         tokens: AuthTokensDto? = nil,
         requiresEmailConfirmation: Bool? = nil,
-        message: String? = nil
+        message: String? = nil,
+        social: UserSocialDto? = nil
     ) {
         self.id = id
         self.email = email
@@ -173,6 +176,7 @@ public struct UserDto: Codable, Sendable, Equatable, Hashable, Identifiable {
         self.tokens = tokens
         self.requiresEmailConfirmation = requiresEmailConfirmation
         self.message = message
+        self.social = social
     }
 
     public init(from decoder: Decoder) throws {
@@ -190,6 +194,7 @@ public struct UserDto: Codable, Sendable, Equatable, Hashable, Identifiable {
         permissions = try c.decodeIfPresent([String].self, forKey: .permissions)
         features = try c.decodeIfPresent([String].self, forKey: .features)
         aiKeyConfigured = try c.decodeIfPresent(Bool.self, forKey: .aiKeyConfigured) ?? false
+        social = try c.decodeIfPresent(UserSocialDto.self, forKey: .social)
     }
 }
 
