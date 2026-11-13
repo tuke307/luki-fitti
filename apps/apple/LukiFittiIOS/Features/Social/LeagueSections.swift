@@ -46,7 +46,7 @@ struct ThisWeekCard: View {
                         ? tr("Weekly goal reached · +%d", week.goal.bonus)
                         : tr(
                             "%d of %d workouts · +%d bonus at %d",
-                            week.goal.done, week.goal.target, week.goal.bonus, week.goal.target
+                            week.goal.done, week.goal.target, week.goal.available, week.goal.target
                         )
                 )
                 .font(.footnote)

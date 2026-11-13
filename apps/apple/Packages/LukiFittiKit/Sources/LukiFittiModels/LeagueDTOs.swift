@@ -75,7 +75,10 @@ public struct PointsWeekDto: Codable, Sendable, Equatable {
     public struct Goal: Codable, Sendable, Equatable {
         public var target: Int
         public var done: Int
+        /// Bonus actually earned this week (0 until the goal is reached).
         public var bonus: Int
+        /// Bonus that would be earned on reaching the target.
+        public var available: Int
     }
 }
 
@@ -97,13 +100,24 @@ public struct LeagueCohortDto: Codable, Sendable, Equatable {
     public var demoteCount: Int
 }
 
-public struct LeaguePendingResultDto: Codable, Sendable, Equatable {
+public struct LeaguePendingResultDto: Codable, Sendable, Equatable, Identifiable {
     public var weekKey: String
     public var outcome: LeagueOutcome
     public var fromArena: Arena
     public var toArena: Arena
     public var rank: Int
     public var points: Int
+
+    public var id: String { weekKey }
+
+    public init(weekKey: String, outcome: LeagueOutcome, fromArena: Arena, toArena: Arena, rank: Int, points: Int) {
+        self.weekKey = weekKey
+        self.outcome = outcome
+        self.fromArena = fromArena
+        self.toArena = toArena
+        self.rank = rank
+        self.points = points
+    }
 }
 
 public struct LeagueCurrentDto: Codable, Sendable, Equatable {
@@ -114,6 +128,22 @@ public struct LeagueCurrentDto: Codable, Sendable, Equatable {
     public var arena: Arena
     public var cohort: LeagueCohortDto?
     public var pendingResult: LeaguePendingResultDto?
+
+    public init(
+        weekKey: String,
+        stage: LeagueStage,
+        endsAt: String,
+        arena: Arena,
+        cohort: LeagueCohortDto? = nil,
+        pendingResult: LeaguePendingResultDto? = nil
+    ) {
+        self.weekKey = weekKey
+        self.stage = stage
+        self.endsAt = endsAt
+        self.arena = arena
+        self.cohort = cohort
+        self.pendingResult = pendingResult
+    }
 }
 
 public struct LeagueFriendRowDto: Codable, Sendable, Equatable, Identifiable {

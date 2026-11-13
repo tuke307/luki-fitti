@@ -37,7 +37,14 @@ export interface PointsWeekDto {
   dailyCap: number;
   days: PointsDayDto[];
   sessions: PointsSessionDto[];
-  goal: { target: number; done: number; bonus: number };
+  goal: {
+    target: number;
+    done: number;
+    /** Bonus actually earned this week (0 until the goal is reached). */
+    bonus: number;
+    /** Bonus that would be earned on reaching the target (`epWeeklyGoalBonus`). */
+    available: number;
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

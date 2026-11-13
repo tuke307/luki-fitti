@@ -90,7 +90,7 @@ export function ThisWeekCard() {
           : t.league.goalProgress
               .replace('{done}', String(week.goal.done))
               .replaceAll('{target}', String(week.goal.target))
-              .replace('{bonus}', String(week.goal.bonus))}
+              .replace('{bonus}', String(week.goal.available))}
       </p>
     </section>
   );

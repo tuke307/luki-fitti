@@ -223,7 +223,12 @@ export class PointsService {
         points: e.points,
         breakdown: e.breakdown as unknown as EffortPointsBreakdown,
       })),
-      goal: { target: weeklyGoal, done, bonus: goalBonus },
+      goal: {
+        target: weeklyGoal,
+        done,
+        bonus: goalBonus,
+        available: settings.epWeeklyGoalBonus,
+      },
     };
   }
 }

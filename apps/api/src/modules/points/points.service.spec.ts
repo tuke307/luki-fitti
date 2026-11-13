@@ -380,6 +380,8 @@ describe('PointsService.getWeek', () => {
     assert.ok(week.sessions[0]!.breakdown.sets > 0);
     assert.equal(week.goal.target, 4);
     assert.equal(week.goal.done, 1);
+    assert.equal(week.goal.bonus, 0);
+    assert.equal(week.goal.available, 100);
     assert.ok(week.points > 0);
   });
 });
