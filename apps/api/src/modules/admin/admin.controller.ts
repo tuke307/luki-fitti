@@ -8,8 +8,11 @@ import {
   Patch,
   Put,
   Query,
+  Res,
+  StreamableFile,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AdminPermission } from '@luki-fitti/common/enums';
@@ -157,6 +160,20 @@ export class AdminController {
   @ApiOperation({ summary: 'UGC moderation queue (user reports)' })
   listReports(@Query(new ZodValidationPipe(AdminReportsQuerySchema)) query: AdminReportsQueryDto) {
     return this.adminService.listReports(query);
+  }
+
+  @Get('reports/:id/avatar')
+  @RequirePermissions(AdminPermission.USERS_MANAGE)
+  @ApiOperation({ summary: "Stream a report's avatar evidence copy" })
+  async getReportAvatar(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const body = await this.adminService.getReportAvatar(id);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    // Stored avatars are always re-encoded JPEGs; never echo a stored content type.
+    return new StreamableFile(body, { type: 'image/jpeg', disposition: 'inline' });
   }
 
   @Patch('reports/:id')

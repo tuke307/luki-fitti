@@ -230,8 +230,15 @@ function makePrisma(seed: { users?: TestUser[] } = {}) {
     },
     userReport: {
       create: async ({ data }: { data: Record<string, unknown> }) => {
-        reports.push(data);
-        return { id: `rep-${reports.length}` };
+        const row = { id: `rep-${reports.length + 1}`, ...data };
+        reports.push(row);
+        return { id: row.id };
+      },
+      update: async ({ where, data }: { where: { id: string }; data: Record<string, unknown> }) => {
+        const row = reports.find((r) => r.id === where.id);
+        if (!row) throw new NotFoundException();
+        Object.assign(row, data);
+        return row;
       },
     },
     $transaction: async (arg: unknown) => {
@@ -242,9 +249,25 @@ function makePrisma(seed: { users?: TestUser[] } = {}) {
   return prisma;
 }
 
-function makeService(prisma: ReturnType<typeof makePrisma>) {
+function makeService(
+  prisma: ReturnType<typeof makePrisma>,
+  objects: Map<string, Buffer> = new Map(),
+) {
   const notifications = { notify: async () => undefined } as unknown as NotificationService;
-  const storage = {} as unknown as StorageService;
+  const storage = {
+    objects,
+    get: async (key: string) => {
+      const body = objects.get(key);
+      if (!body) throw new Error(`no such object ${key}`);
+      return { body, contentType: 'image/jpeg' };
+    },
+    put: async (key: string, body: Buffer) => {
+      objects.set(key, body);
+    },
+    deleteMany: async (keys: string[]) => {
+      for (const k of keys) objects.delete(k);
+    },
+  } as unknown as StorageService;
   return new SocialService(prisma as unknown as PrismaService, storage, notifications, {
     incrementCounter: async () => 1,
   });
@@ -385,19 +408,34 @@ describe('SocialService contact matching', () => {
 });
 
 describe('SocialService reports', () => {
-  it('snapshots handle, name and avatar key', async () => {
+  it('snapshots handle, name and a copied avatar object', async () => {
     const prisma = makePrisma({
       users: [
         makeUser({ id: 'me', handle: 'me' }),
         makeUser({ id: 'bad', handle: 'bad', name: 'Bad Name', avatarKey: 'avatars/bad/1.jpg' }),
       ],
     });
-    const svc = makeService(prisma);
+    const objects = new Map([['avatars/bad/1.jpg', Buffer.from('jpeg-bytes')]]);
+    const svc = makeService(prisma, objects);
     await svc.createReport('me', 'bad', ReportReason.INAPPROPRIATE_NAME, 'offensive');
     const report = prisma.reports[0]!;
     assert.equal(report.handleSnapshot, 'bad');
     assert.equal(report.nameSnapshot, 'Bad Name');
-    assert.equal(report.avatarKeySnapshot, 'avatars/bad/1.jpg');
+    assert.equal(report.avatarKeySnapshot, 'reports/rep-1.jpg');
+    // The evidence copy survives the live object being deleted.
+    assert.deepEqual(objects.get('reports/rep-1.jpg'), Buffer.from('jpeg-bytes'));
+  });
+
+  it('leaves the snapshot null when the copy fails', async () => {
+    const prisma = makePrisma({
+      users: [
+        makeUser({ id: 'me', handle: 'me' }),
+        makeUser({ id: 'bad', handle: 'bad', avatarKey: 'avatars/bad/gone.jpg' }),
+      ],
+    });
+    const svc = makeService(prisma); // empty storage: get() throws
+    await svc.createReport('me', 'bad', ReportReason.INAPPROPRIATE_NAME);
+    assert.equal(prisma.reports[0]!.avatarKeySnapshot, undefined);
   });
 });
 

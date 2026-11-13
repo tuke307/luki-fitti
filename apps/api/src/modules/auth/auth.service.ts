@@ -612,9 +612,21 @@ export class AuthService {
         select: { storageKey: true },
       })
     ).map((p) => p.storageKey);
+    // Same for the social avatar and report evidence copies of this user.
+    const reportKeys = (
+      await this.prisma.userReport.findMany({
+        where: { reportedId: user.id, avatarKeySnapshot: { not: null } },
+        select: { avatarKeySnapshot: true },
+      })
+    ).map((r) => r.avatarKeySnapshot as string);
+    const storageKeys = [
+      ...progressKeys,
+      ...reportKeys,
+      ...(user.avatarKey ? [user.avatarKey] : []),
+    ];
 
     await this.prisma.user.delete({ where: { id: user.id } });
-    await this.storage?.deleteMany(progressKeys);
+    await this.storage?.deleteMany(storageKeys);
 
     return {
       success: true,

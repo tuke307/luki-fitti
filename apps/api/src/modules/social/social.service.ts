@@ -636,10 +636,25 @@ export class SocialService {
         details,
         handleSnapshot: target.handle,
         nameSnapshot: target.name,
-        avatarKeySnapshot: target.avatarKey,
       },
       select: { id: true },
     });
+
+    // Evidence copy: the live avatar object is deleted on replace/remove/moderation,
+    // so the report keeps its own object and snapshots that key instead.
+    if (target.avatarKey) {
+      const snapshotKey = `reports/${report.id}.jpg`;
+      try {
+        const { body } = await this.storage.get(target.avatarKey);
+        await this.storage.put(snapshotKey, body, 'image/jpeg');
+        await this.prisma.userReport.update({
+          where: { id: report.id },
+          data: { avatarKeySnapshot: snapshotKey },
+        });
+      } catch (err) {
+        logger.error(`report ${report.id}: avatar snapshot copy failed: ${String(err)}`);
+      }
+    }
     return report;
   }
 }

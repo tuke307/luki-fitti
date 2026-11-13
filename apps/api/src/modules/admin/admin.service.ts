@@ -289,6 +289,17 @@ export class AdminService {
     return { items: items.map(toAdminReportDto), total, page: query.page, limit: query.limit };
   }
 
+  /** JPEG bytes of the report's evidence copy (`reports/<id>.jpg`), 404 when absent. */
+  async getReportAvatar(reportId: string): Promise<Buffer> {
+    const report = await this.prisma.userReport.findUnique({
+      where: { id: reportId },
+      select: { avatarKeySnapshot: true },
+    });
+    if (!report?.avatarKeySnapshot) throw new NotFoundException('No avatar snapshot');
+    const { body } = await this.storage.get(report.avatarKeySnapshot);
+    return body;
+  }
+
   async resolveReport(
     adminId: string,
     reportId: string,
@@ -309,7 +320,7 @@ export class AdminService {
         where: { id: report.reportedId },
         data: { avatarKey: null, avatarUpdatedAt: null },
       });
-      // Snapshot keeps the evidence; remove the live object.
+      // The report's own copy under reports/ keeps the evidence; drop the live object.
       if (target?.avatarKey) await this.storage.deleteMany([target.avatarKey]);
     } else if (dto.action === 'RESET_HANDLE') {
       await this.prisma.user.update({

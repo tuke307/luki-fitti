@@ -8,6 +8,7 @@ import type {
 import type { Prisma } from '@luki-fitti/database';
 import { PrismaService } from '../database/prisma.service';
 import { BullMQService } from '../bullmq/bullmq.service';
+import { SocialAccessService } from '../social/social-access.service';
 import { avatarUrlFor } from '../social/relation.util';
 import { quietHoursDelayMs } from './quiet-hours.util';
 
@@ -24,11 +25,13 @@ export class NotificationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly bullmq: BullMQService,
+    private readonly socialAccess: SocialAccessService,
   ) {}
 
   /**
    * In-app inbox entry, then — when the user's push category allows it — a BullMQ
-   * push job (delayed to the end of local quiet hours when needed).
+   * push job (delayed to the end of local quiet hours when needed). Paused users
+   * and users outside the social rollout get the inbox row but no push.
    */
   async notify(
     userId: string,
@@ -40,10 +43,15 @@ export class NotificationService {
       data: { userId, kind, actorId, payload: payload as Prisma.InputJsonValue },
     });
 
-    const prefs = await this.prisma.userPreferences.findUnique({
-      where: { userId },
-      select: { [KIND_PREF[kind]]: true },
-    });
+    const [user, prefs, rolloutAllowed] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: userId }, select: { socialPaused: true } }),
+      this.prisma.userPreferences.findUnique({
+        where: { userId },
+        select: { [KIND_PREF[kind]]: true },
+      }),
+      this.socialAccess.isEnabledFor(userId),
+    ]);
+    if (user?.socialPaused || !rolloutAllowed) return;
     const allowed = (prefs as Record<string, boolean> | null)?.[KIND_PREF[kind]] ?? true;
     if (!allowed) return;
 
