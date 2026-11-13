@@ -77,11 +77,12 @@ struct LeagueCelebrationOverlay: View {
                     )
                     .font(promoted ? .largeTitle.weight(.heavy) : .title2.bold())
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(
-                        promoted
-                            ? LinearGradient(colors: arenaColors, startPoint: .leading, endPoint: .trailing)
-                            : LinearGradient(colors: [.primary], startPoint: .leading, endPoint: .trailing)
-                    )
+                    .foregroundStyle(.primary)
+                    // Arena colour stays decorative — gradient text failed WCAG 3:1 on several arenas.
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(LinearGradient(colors: arenaColors, startPoint: .leading, endPoint: .trailing))
+                        .frame(width: 96, height: 4)
+                        .accessibilityHidden(true)
                     Text(tr("#%d with %d EP", result.rank, result.points))
                         .font(.title3)
                         .foregroundStyle(.secondary)

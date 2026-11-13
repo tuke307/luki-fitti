@@ -165,11 +165,7 @@ export function LeagueCard({
         <ArenaBadge arena={arena} size={36} />
         <div className="min-w-0 flex-1">
           <p className="text-[1.0625rem] font-semibold">{arenaName(t, arena)}</p>
-          {countdown && (
-            <p className="text-muted-foreground text-[0.8125rem]">
-              {t.league.endsIn.replace('{time}', countdown)}
-            </p>
-          )}
+          {countdown && <p className="text-muted-foreground text-[0.8125rem]">{countdown}</p>}
         </div>
         {showSegmented && (
           <div

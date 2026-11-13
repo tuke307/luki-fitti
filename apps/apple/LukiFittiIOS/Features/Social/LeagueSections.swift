@@ -152,9 +152,11 @@ struct LeagueCard: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(arenaName(league.arena, tr))
                         .font(.subheadline.weight(.semibold))
-                    Text(tr("ends in %@", leagueCountdown(to: league.endsAt, tr)))
+                    Text(leagueCountdown(to: league.endsAt, tr))
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
                 Spacer()
                 if league.stage != .FRIENDS {

@@ -219,19 +219,15 @@ export function LeagueCelebration({
           className={
             promoted ? 'text-[2.5rem] leading-tight font-extrabold' : 'text-[1.75rem] font-bold'
           }
-          style={
-            promoted
-              ? {
-                  backgroundImage: `linear-gradient(90deg, ${style.from}, ${style.to})`,
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  color: 'transparent',
-                }
-              : undefined
-          }
         >
           {title}
         </motion.h1>
+        {/* Arena colour stays decorative — gradient text failed WCAG 3:1 on several arenas. */}
+        <div
+          aria-hidden="true"
+          className="mx-auto h-1 w-24 rounded-full"
+          style={{ backgroundImage: `linear-gradient(90deg, ${style.from}, ${style.to})` }}
+        />
         <p className="text-muted-foreground text-[1.25rem]">{sub}</p>
       </div>
 
