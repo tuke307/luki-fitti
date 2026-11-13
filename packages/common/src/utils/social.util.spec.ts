@@ -6,6 +6,7 @@ import {
   emailLookupHash,
   HANDLE_CHANGE_COOLDOWN_DAYS,
   isHandleAllowed,
+  isWebPushEndpointAllowed,
   nextHandleChangeAt,
   normalizeEmailForLookup,
   normalizeHandle,
@@ -68,5 +69,32 @@ describe('social.util email lookup hashing', () => {
 
   it('produces lowercase 64-hex output', async () => {
     assert.match(await emailLookupHash('a@b.c'), /^[0-9a-f]{64}$/);
+  });
+});
+
+describe('social.util web push endpoint allowlist', () => {
+  it('accepts the known push services', () => {
+    for (const url of [
+      'https://fcm.googleapis.com/fcm/send/abc123',
+      'https://updates.push.services.mozilla.com/wpush/v2/xyz',
+      'https://push.services.mozilla.com/wpush/v1/xyz',
+      'https://web.push.apple.com/QmFkb2',
+      'https://db5.notify.windows.com/?token=abc',
+    ]) {
+      assert.equal(isWebPushEndpointAllowed(url), true, url);
+    }
+  });
+
+  it('rejects non-https, unknown hosts and non-URLs (SSRF guard)', () => {
+    for (const url of [
+      'http://fcm.googleapis.com/fcm/send/abc',
+      'https://169.254.169.254/latest/meta-data',
+      'https://localhost:3001/internal',
+      'https://evil-push.apple.com.attacker.example/x',
+      'not a url',
+      'https://fcm.googleapis.com.evil.example/x',
+    ]) {
+      assert.equal(isWebPushEndpointAllowed(url), false, url);
+    }
   });
 });

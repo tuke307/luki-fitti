@@ -126,3 +126,34 @@ export const EMAIL_LOOKUP_TEST_VECTOR = {
   normalized: 'foo@example.com',
   sha256Hex: '321ba197033e81286fedb719d60d4ed5cecaed170733cb4a92013811afc0e3b6',
 } as const;
+
+/**
+ * Known Web Push services. `registerDevice` stores the endpoint verbatim and the
+ * sender POSTs to it, so anything off this list would be an SSRF primitive.
+ * Entries prefixed `*.` match any subdomain (and the bare host).
+ */
+export const WEB_PUSH_ALLOWED_HOSTS = [
+  'fcm.googleapis.com',
+  'updates.push.services.mozilla.com',
+  'push.services.mozilla.com',
+  '*.push.apple.com',
+  '*.notify.windows.com',
+] as const;
+
+export function isWebPushEndpointAllowed(raw: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== 'https:') return false;
+  const host = url.hostname.toLowerCase();
+  return WEB_PUSH_ALLOWED_HOSTS.some((entry) => {
+    if (entry.startsWith('*.')) {
+      const base = entry.slice(2);
+      return host === base || host.endsWith(`.${base}`);
+    }
+    return host === entry;
+  });
+}

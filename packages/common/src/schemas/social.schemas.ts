@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { NotificationKind, PushPlatform, ReportReason, ReportStatus } from '../enums';
-import { HANDLE_REGEX } from '../utils/social.util';
+import { HANDLE_REGEX, isWebPushEndpointAllowed } from '../utils/social.util';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Social: profile, friends, invites, contacts, blocks, reports
@@ -96,16 +96,28 @@ export type CreateReportDto = z.infer<typeof CreateReportSchema>;
 // Push: device registry, preferences, config
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const RegisterPushDeviceSchema = z.object({
-  platform: z.enum(PushPlatform),
-  /** APNs hex token or Web Push endpoint URL. */
-  token: z.string().trim().min(8).max(4096),
-  p256dh: z.string().trim().min(1).max(512).optional(),
-  auth: z.string().trim().min(1).max(512).optional(),
-  apnsSandbox: z.boolean().default(false).optional(),
-  locale: z.string().trim().min(2).max(20),
-  timeZone: z.string().trim().min(1).max(64),
-});
+export const RegisterPushDeviceSchema = z
+  .object({
+    platform: z.enum(PushPlatform),
+    /** APNs hex token or Web Push endpoint URL. */
+    token: z.string().trim().min(8).max(4096),
+    p256dh: z.string().trim().min(1).max(512).optional(),
+    auth: z.string().trim().min(1).max(512).optional(),
+    apnsSandbox: z.boolean().default(false).optional(),
+    locale: z.string().trim().min(2).max(20),
+    timeZone: z.string().trim().min(1).max(64),
+  })
+  // The endpoint is stored and later POSTed to, so it must be an https URL of a
+  // known push service — anything else would be an SSRF primitive.
+  .superRefine((value, ctx) => {
+    if (value.platform === PushPlatform.WEBPUSH && !isWebPushEndpointAllowed(value.token)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['token'],
+        message: 'Web Push token must be an https URL of a known push service',
+      });
+    }
+  });
 export type RegisterPushDeviceDto = z.infer<typeof RegisterPushDeviceSchema>;
 
 export const DeletePushDeviceSchema = z.object({

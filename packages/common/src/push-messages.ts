@@ -2,7 +2,9 @@ import { NotificationKind } from './enums';
 
 /**
  * Localised push title/body per notification kind. `{actor}` is replaced with the
- * actor's handle or display name by the sender. Unknown locales fall back to English.
+ * actor's `@handle` by the sender — display names are friends-only and never go
+ * into push text. Actors without a handle render as `anonymousActorName(locale)`.
+ * Unknown locales fall back to English.
  */
 export interface PushMessage {
   title: string;
@@ -31,6 +33,11 @@ export function pushMessageFor(
 ): PushMessage {
   const lang: Locale = locale?.toLowerCase().startsWith('de') ? 'de' : 'en';
   return MESSAGES[kind][lang] ?? MESSAGES[kind].en;
+}
+
+/** Push text for an actor without a handle (display names stay friends-only). */
+export function anonymousActorName(locale: string | null | undefined): string {
+  return locale?.toLowerCase().startsWith('de') ? 'Jemand' : 'Someone';
 }
 
 export function renderPushMessage(message: PushMessage, actor: string): PushMessage {
