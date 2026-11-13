@@ -48,6 +48,7 @@ import {
   type UpdatePreferencesDto,
   type UserDto,
 } from '@luki-fitti/common/schemas';
+import { emailLookupHash } from '@luki-fitti/common/utils';
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
@@ -114,6 +115,7 @@ export class AuthService {
       const user = await tx.user.create({
         data: {
           email,
+          emailLookupHash: await emailLookupHash(email),
           name: dto.name?.trim() || email.split('@')[0] || 'Athlete',
           passwordHash,
           emailVerified: false,
@@ -662,9 +664,11 @@ export class AuthService {
         progressAiConsentAt?: Date | null;
       } | null;
       permissions?: string[];
+      handle?: string | null;
     },
     features: FeatureGrant[] = [],
     aiKeyConfigured = false,
+    social?: { enabled: boolean; handle: string | null },
   ): UserDto {
     const rawLang = user.preferences?.language;
     const normalizedLang: LanguagePreference =
@@ -727,14 +731,26 @@ export class AuthService {
       permissions: (user.permissions ?? []).filter(isAdminPermission) as AdminPermission[],
       features,
       aiKeyConfigured,
+      social,
     };
   }
 
   /** Formats a user: enabled features (global switches) plus whether they have a usable key. */
   private async toUserDto(user: Parameters<AuthService['formatUserDto']>[0]): Promise<UserDto> {
-    const [features, aiKeyConfigured] = this.appSettings
-      ? await Promise.all([this.appSettings.enabledFeatures(), this.appSettings.hasAiKey(user.id)])
-      : [[], false];
-    return this.formatUserDto(user, features, aiKeyConfigured);
+    const [features, aiKeyConfigured, settings] = this.appSettings
+      ? await Promise.all([
+          this.appSettings.enabledFeatures(),
+          this.appSettings.hasAiKey(user.id),
+          this.appSettings.get(),
+        ])
+      : [[], false, null];
+    const social = {
+      enabled: Boolean(
+        settings?.socialEnabled &&
+        (settings.socialBetaUserIds.length === 0 || settings.socialBetaUserIds.includes(user.id)),
+      ),
+      handle: user.handle ?? null,
+    };
+    return this.formatUserDto(user, features, aiKeyConfigured, social);
   }
 }

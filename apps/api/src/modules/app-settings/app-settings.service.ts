@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { AiKeySlot, FEATURE_GRANTS, FeatureGrant } from '@luki-fitti/common/enums';
-import type { AiSettingsDto, UpdateAiSettingsDto } from '@luki-fitti/common/schemas';
+import type {
+  AiSettingsDto,
+  SocialSettingsDto,
+  UpdateAiSettingsDto,
+  UpdateSocialSettingsDto,
+} from '@luki-fitti/common/schemas';
 import { PrismaService } from '../database/prisma.service';
 import {
   getAiKeyEncryptionConfig,
@@ -24,6 +29,8 @@ export interface AppSettingsRecord {
   aiDailyRunLimit: number;
   mealPhotoRetentionDays: number | null;
   userModelAllowlist: string[];
+  socialEnabled: boolean;
+  socialBetaUserIds: string[];
   updatedAt: Date;
 }
 
@@ -135,6 +142,28 @@ export class AppSettingsService {
     });
     this.cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
     return this.toDto(value);
+  }
+
+  async getSocialSettings(): Promise<SocialSettingsDto> {
+    const value = await this.get();
+    return { socialEnabled: value.socialEnabled, socialBetaUserIds: value.socialBetaUserIds };
+  }
+
+  async updateSocialSettings(dto: UpdateSocialSettingsDto): Promise<SocialSettingsDto> {
+    const value = await this.prisma.appSettings.upsert({
+      where: { id: SETTINGS_ID },
+      create: {
+        id: SETTINGS_ID,
+        ...dto,
+        socialBetaUserIds: dto.socialBetaUserIds ? [...new Set(dto.socialBetaUserIds)] : undefined,
+      },
+      update: {
+        ...dto,
+        socialBetaUserIds: dto.socialBetaUserIds ? [...new Set(dto.socialBetaUserIds)] : undefined,
+      },
+    });
+    this.cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
+    return this.getSocialSettings();
   }
 
   private async toDto(value: AppSettingsRecord): Promise<AiSettingsDto> {

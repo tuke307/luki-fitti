@@ -14,17 +14,23 @@ import { Throttle } from '@nestjs/throttler';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AdminPermission } from '@luki-fitti/common/enums';
 import {
+  AdminReportsQuerySchema,
   AdminUserQuerySchema,
   AiUsageQuerySchema,
+  ResolveReportSchema,
   SetAiKeySchema,
   UpdateAiSettingsSchema,
+  UpdateSocialSettingsSchema,
   UpdateUserAccessSchema,
+  type AdminReportsQueryDto,
   type AdminUserQueryDto,
   type AdminUserAiKeyDto,
   type AiModelCatalogDto,
   type AiUsageQueryDto,
+  type ResolveReportDto,
   type SetAiKeyDto,
   type UpdateAiSettingsDto,
+  type UpdateSocialSettingsDto,
   type UpdateUserAccessDto,
 } from '@luki-fitti/common/schemas';
 import { AuthGuard } from '@/guards/auth.guard';
@@ -127,6 +133,42 @@ export class AdminController {
   @ApiOperation({ summary: 'Update AI feature switches, models and limits' })
   updateAiSettings(@Body(new ZodValidationPipe(UpdateAiSettingsSchema)) body: UpdateAiSettingsDto) {
     return this.appSettings.updateAiSettings(body);
+  }
+
+  @Get('settings/social')
+  @RequirePermissions(AdminPermission.AI_SETTINGS_MANAGE)
+  @ApiOperation({ summary: 'Social kill switch and beta allowlist' })
+  getSocialSettings() {
+    return this.appSettings.getSocialSettings();
+  }
+
+  @Put('settings/social')
+  @UseGuards(CsrfGuard)
+  @RequirePermissions(AdminPermission.AI_SETTINGS_MANAGE)
+  @ApiOperation({ summary: 'Update social kill switch and beta allowlist' })
+  updateSocialSettings(
+    @Body(new ZodValidationPipe(UpdateSocialSettingsSchema)) body: UpdateSocialSettingsDto,
+  ) {
+    return this.appSettings.updateSocialSettings(body);
+  }
+
+  @Get('reports')
+  @RequirePermissions(AdminPermission.USERS_MANAGE)
+  @ApiOperation({ summary: 'UGC moderation queue (user reports)' })
+  listReports(@Query(new ZodValidationPipe(AdminReportsQuerySchema)) query: AdminReportsQueryDto) {
+    return this.adminService.listReports(query);
+  }
+
+  @Patch('reports/:id')
+  @UseGuards(CsrfGuard)
+  @RequirePermissions(AdminPermission.USERS_MANAGE)
+  @ApiOperation({ summary: 'Resolve/dismiss a report, optionally clearing avatar or handle' })
+  resolveReport(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body(new ZodValidationPipe(ResolveReportSchema)) body: ResolveReportDto,
+  ) {
+    return this.adminService.resolveReport(actor.id, id, body);
   }
 
   @Get('ai-usage')

@@ -1,17 +1,22 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { AdminPermission, isAdminPermission } from '@luki-fitti/common/enums';
+import { AdminPermission, isAdminPermission, ReportStatus } from '@luki-fitti/common/enums';
 import type {
   AdminDashboardDto,
+  AdminReportDto,
+  AdminReportListDto,
+  AdminReportsQueryDto,
   AdminUserDto,
   AdminUserListDto,
   AdminUserQueryDto,
   AdminUserAiUsageDto,
   AiUsageSummaryDto,
+  ResolveReportDto,
   UpdateUserAccessDto,
 } from '@luki-fitti/common/schemas';
 import { PrismaService } from '../database/prisma.service';
 import { AiUsageService } from '../ai/ai-usage.service';
 import { AiKeyService } from '../ai/ai-key.service';
+import { StorageService } from '../storage/storage.service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const round4 = (value: number) => Math.round(value * 10_000) / 10_000;
@@ -23,6 +28,7 @@ export class AdminService {
     private readonly prisma: PrismaService,
     private readonly aiUsage: AiUsageService,
     private readonly aiKeys: AiKeyService,
+    private readonly storage: StorageService,
   ) {}
 
   async getDashboard(): Promise<AdminDashboardDto> {
@@ -267,4 +273,85 @@ export class AdminService {
       email: user.email,
     };
   }
+  // ── Social moderation ────────────────────────────────────────────────────
+
+  async listReports(query: AdminReportsQueryDto): Promise<AdminReportListDto> {
+    const where = query.status ? { status: query.status } : {};
+    const [items, total] = await Promise.all([
+      this.prisma.userReport.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (query.page - 1) * query.limit,
+        take: query.limit,
+      }),
+      this.prisma.userReport.count({ where }),
+    ]);
+    return { items: items.map(toAdminReportDto), total, page: query.page, limit: query.limit };
+  }
+
+  async resolveReport(
+    adminId: string,
+    reportId: string,
+    dto: ResolveReportDto,
+  ): Promise<AdminReportDto> {
+    const report = await this.prisma.userReport.findUnique({ where: { id: reportId } });
+    if (!report) throw new NotFoundException('Report not found');
+    if (report.status !== ReportStatus.OPEN) {
+      throw new BadRequestException('Report is already resolved');
+    }
+
+    if (dto.action === 'CLEAR_AVATAR') {
+      const target = await this.prisma.user.findUnique({
+        where: { id: report.reportedId },
+        select: { avatarKey: true },
+      });
+      await this.prisma.user.update({
+        where: { id: report.reportedId },
+        data: { avatarKey: null, avatarUpdatedAt: null },
+      });
+      // Snapshot keeps the evidence; remove the live object.
+      if (target?.avatarKey) await this.storage.deleteMany([target.avatarKey]);
+    } else if (dto.action === 'RESET_HANDLE') {
+      await this.prisma.user.update({
+        where: { id: report.reportedId },
+        data: { handle: null, handleChangedAt: null },
+      });
+    }
+
+    const updated = await this.prisma.userReport.update({
+      where: { id: reportId },
+      data: { status: dto.status, resolvedAt: new Date(), resolvedById: adminId },
+    });
+    return toAdminReportDto(updated);
+  }
+}
+
+function toAdminReportDto(report: {
+  id: string;
+  reporterId: string;
+  reportedId: string;
+  reason: string;
+  details: string | null;
+  handleSnapshot: string | null;
+  nameSnapshot: string | null;
+  avatarKeySnapshot: string | null;
+  status: string;
+  createdAt: Date;
+  resolvedAt: Date | null;
+  resolvedById: string | null;
+}): AdminReportDto {
+  return {
+    id: report.id,
+    reporterId: report.reporterId,
+    reportedId: report.reportedId,
+    reason: report.reason as AdminReportDto['reason'],
+    details: report.details,
+    handleSnapshot: report.handleSnapshot,
+    nameSnapshot: report.nameSnapshot,
+    avatarKeySnapshot: report.avatarKeySnapshot,
+    status: report.status as AdminReportDto['status'],
+    createdAt: report.createdAt.toISOString(),
+    resolvedAt: report.resolvedAt?.toISOString() ?? null,
+    resolvedById: report.resolvedById,
+  };
 }
