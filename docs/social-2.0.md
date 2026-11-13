@@ -412,3 +412,5 @@ Append one line per session: date, what was done, what is next.
 |            | + review fixes (push retry/SSRF/pooling, report evidence, deletion GC)   |                                   |
 | 2026-11-13 | PR 1 part B: web social tab, onboarding, friends, invites +   | PR 1 part C (iOS)                |
 |            | AASA, web push + inbox, admin social/reports, EN/DE, e2e       |                                  |
+| 2026-11-13 | PR 1 part C: iOS Friends tab, onboarding/profile/inbox sheets, | Security review, open PR         |
+|            | APNs + invite universal links, contacts sync, Library segment  |                                  |
