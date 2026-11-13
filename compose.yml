@@ -89,6 +89,14 @@ services:
       - SEAWEEDFS_SECRET_KEY_API=${SEAWEEDFS_SECRET_KEY_API}
       - SEAWEEDFS_USE_SSL=${SEAWEEDFS_USE_SSL}
       - SEAWEEDFS_BUCKET=${SEAWEEDFS_BUCKET:-luki-fitti-meal-photos}
+      # Push notifications (each channel optional; disabled when unset)
+      - APNS_KEY_P8_BASE64=${APNS_KEY_P8_BASE64:-}
+      - APNS_KEY_ID=${APNS_KEY_ID:-}
+      - APNS_TEAM_ID=${APNS_TEAM_ID:-}
+      - APNS_BUNDLE_ID=${APNS_BUNDLE_ID:-}
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
+      - VAPID_SUBJECT=${VAPID_SUBJECT:-}
     depends_on:
       luki-fitti-db-migrate:
         condition: service_completed_successfully
@@ -136,6 +144,14 @@ services:
       - EMAIL_RETRY_DELAY_MS=${EMAIL_RETRY_DELAY_MS}
       - EMAIL_MAX_ATTEMPTS=${EMAIL_MAX_ATTEMPTS}
       - REDIS_URL=${REDIS_URL}
+      # Push notifications (each channel optional; disabled when unset)
+      - APNS_KEY_P8_BASE64=${APNS_KEY_P8_BASE64:-}
+      - APNS_KEY_ID=${APNS_KEY_ID:-}
+      - APNS_TEAM_ID=${APNS_TEAM_ID:-}
+      - APNS_BUNDLE_ID=${APNS_BUNDLE_ID:-}
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
+      - VAPID_SUBJECT=${VAPID_SUBJECT:-}
     depends_on:
       luki-fitti-db-migrate:
         condition: service_completed_successfully
