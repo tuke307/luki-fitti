@@ -464,10 +464,12 @@ export const deFeatures: Widen<typeof enFeatures> = {
     navSocial: 'Social',
     navLeagues: 'Ligen',
     leaguesTitle: 'Ligen',
-    leaguesSub: 'Wöchentliche Ligen nach Effort-Punkten. Aus heißt: keine Liga-Oberflächen, keine Punkte.',
+    leaguesSub:
+      'Wöchentliche Ligen nach Effort-Punkten. Aus heißt: keine Liga-Oberflächen, keine Punkte.',
     leaguesEnabledLabel: 'Ligen aktiviert',
     leagueStageModeLabel: 'Stufen-Modus',
-    leagueStageModeHint: 'AUTO wählt die Stufe nach aktiven Nutzern der Vorwoche; ein fester Modus erzwingt sie.',
+    leagueStageModeHint:
+      'AUTO wählt die Stufe nach aktiven Nutzern der Vorwoche; ein fester Modus erzwingt sie.',
     leagueStageAUTO: 'Auto',
     leagueStageFRIENDS: 'Freunde',
     leagueStageGLOBAL: 'Global',

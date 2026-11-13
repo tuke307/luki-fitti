@@ -460,7 +460,8 @@ export const enFeatures = {
     leaguesSub: 'Weekly effort-point leagues. Off hides every league surface and stops points.',
     leaguesEnabledLabel: 'Leagues enabled',
     leagueStageModeLabel: 'Stage mode',
-    leagueStageModeHint: 'AUTO picks the stage from last week’s active users; a fixed mode forces it.',
+    leagueStageModeHint:
+      'AUTO picks the stage from last week’s active users; a fixed mode forces it.',
     leagueStageAUTO: 'Auto',
     leagueStageFRIENDS: 'Friends',
     leagueStageGLOBAL: 'Global',

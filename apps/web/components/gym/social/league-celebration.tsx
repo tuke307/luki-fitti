@@ -26,8 +26,9 @@ function pseudoRandom(seed: number): number {
 /**
  * Dense radial burst out of the badge (~120 pieces over the first 2.5 s, eased
  * outward with a gravity drop), then a light top-down drizzle that keeps going.
+ * Shared with the duel celebration.
  */
-function Confetti() {
+export function Confetti() {
   const burst = useMemo(
     () =>
       Array.from({ length: 120 }, (_, i) => ({
