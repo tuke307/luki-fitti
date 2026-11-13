@@ -85,10 +85,7 @@ function LeaderboardRow({
         className="size-8"
       />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[0.9375rem] font-medium">
-          @{card.handle}
-          {isSelf && <span className="text-muted-foreground ml-1.5 font-normal">·</span>}
-        </p>
+        <p className="truncate text-[0.9375rem] font-medium">@{card.handle}</p>
       </div>
       {zone === 'PROMOTE' && (
         <ChevronUp aria-label="promotion" className="h-4 w-4 text-emerald-500" />
@@ -204,7 +201,10 @@ export function LeagueCard({
       {stage === LeagueStage.FRIENDS || board === 'friends' ? (
         <>
           {stage === LeagueStage.FRIENDS && (
-            <p className="text-muted-foreground px-4 pb-2 text-[0.8125rem]" data-testid="league-friends-note">
+            <p
+              className="text-muted-foreground px-4 pb-2 text-[0.8125rem]"
+              data-testid="league-friends-note"
+            >
               {t.league.friendsNote.replace('{arena}', arenaName(t, arena))}
             </p>
           )}
@@ -261,7 +261,10 @@ export function LeagueCard({
         {t.league.history}
       </button>
       {historyOpen && (
-        <ul className="border-border divide-border/60 border-t divide-y" data-testid="league-history">
+        <ul
+          className="border-border divide-border/60 border-t divide-y"
+          data-testid="league-history"
+        >
           {(history ?? []).map((entry) => (
             <li key={entry.weekKey} className="flex items-center gap-3 px-4 py-2.5">
               <ArenaBadge arena={entry.arena} size={22} />
