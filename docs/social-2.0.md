@@ -15,14 +15,14 @@ change the plan go into the [Decision log](#decision-log), not into chat.
 
 Legend: `[ ]` open · `[~]` in progress · `[x]` done. Keep the PR column current.
 
-| #   | Pull request                                         | Branch                         | PR  | State                                   |
-| :-- | :--------------------------------------------------- | :----------------------------- | :-- | :-------------------------------------- |
-| 0   | Plan (this document)                                 | `feat/social-2.0`              | —   | open                                    |
-| 1   | Social foundation: profiles, friends, contacts, push | `feat/social-1-foundation`     | —   | in progress ([spec](social-2.0-pr1.md)) |
-| 2   | Effort points, friends leaderboard, leagues          | `feat/social-2-leagues`        | —   | planned                                 |
-| 3   | Battles: 1v1 duel and friend streak                  | `feat/social-3-battles`        | —   | planned                                 |
-| 4   | Raids: community raid boss and squad raids           | `feat/social-4-raids`          | —   | planned                                 |
-| 5   | Release 2.0.0: polish, legal, screenshots, version   | `release/2.0.0` (develop→main) | —   | planned                                 |
+| #   | Pull request                                         | Branch                         | PR    | State                                                           |
+| :-- | :--------------------------------------------------- | :----------------------------- | :---- | :-------------------------------------------------------------- |
+| 0   | Plan (this document)                                 | `feat/social-2.0`              | #100  | open                                                            |
+| 1   | Social foundation: profiles, friends, contacts, push | `feat/social-1-foundation`     | #101  | draft: backend done, web + iOS open ([spec](social-2.0-pr1.md)) |
+| 2   | Effort points, friends leaderboard, leagues          | `feat/social-2-leagues`        | draft | in progress ([spec](social-2.0-pr2.md))                         |
+| 3   | Battles: 1v1 duel and friend streak                  | `feat/social-3-battles`        | —     | planned                                                         |
+| 4   | Raids: community raid boss and squad raids           | `feat/social-4-raids`          | —     | planned                                                         |
+| 5   | Release 2.0.0: polish, legal, screenshots, version   | `release/2.0.0` (develop→main) | —     | planned                                                         |
 
 Each PR branches from the previous one (stacked) and targets `develop` once its parent is merged.
 PR 0 only carries this document; the implementation PRs are 1–5 (maximum five).
@@ -402,9 +402,9 @@ marketing screenshots for 2.0 · release notes · release PR `develop` → `main
 
 Append one line per session: date, what was done, what is next.
 
-| Date       | Done                                                                     | Next                                    |
-| :--------- | :----------------------------------------------------------------------- | :-------------------------------------- |
-| 2026-11-13 | Research, decisions with the user, this plan, plan PR                    | Answer open questions, start PR 1       |
-| 2026-11-13 | PR 1 part A: social_foundation migration, common social utils/schemas,   | PR 1 part B (web)                       |
-|            | API social/push/notifications/admin modules, email-worker push processor |                                         |
-|            | + review fixes (push retry/SSRF/pooling, report evidence, deletion GC)   |                                         |
+| Date       | Done                                                                     | Next                              |
+| :--------- | :----------------------------------------------------------------------- | :-------------------------------- |
+| 2026-11-13 | Research, decisions with the user, this plan, plan PR                    | Answer open questions, start PR 1 |
+| 2026-11-13 | PR 1 part A: social_foundation migration, common social utils/schemas,   | PR 1 part B (web)                 |
+|            | API social/push/notifications/admin modules, email-worker push processor |                                   |
+|            | + review fixes (push retry/SSRF/pooling, report evidence, deletion GC)   |                                   |
