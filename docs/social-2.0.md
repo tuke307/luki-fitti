@@ -407,3 +407,4 @@ Append one line per session: date, what was done, what is next.
 | 2026-11-13 | Research, decisions with the user, this plan, plan PR                    | Answer open questions, start PR 1       |
 | 2026-11-13 | PR 1 part A: social_foundation migration, common social utils/schemas,   | PR 1 part B (web)                       |
 |            | API social/push/notifications/admin modules, email-worker push processor |                                         |
+|            | + review fixes (push retry/SSRF/pooling, report evidence, deletion GC)   |                                         |
