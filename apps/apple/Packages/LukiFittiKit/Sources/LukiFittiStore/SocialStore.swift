@@ -1,8 +1,11 @@
 import Foundation
 import Observation
+import os
 import LukiFittiModels
 import LukiFittiDomain
 import LukiFittiAPI
+
+private let socialLog = Logger(subsystem: "LukiFitti", category: "SocialStore")
 
 /// View-model store for the Social tab: own profile, friend lists, search results, inbox and
 /// push preferences. All calls are best-effort — errors are surfaced via `lastError` and never
@@ -58,23 +61,38 @@ public final class SocialStore {
         _ = await (p, f, u, l)
     }
 
-    /// Points, league state and friends board. 403s (leagues disabled) are swallowed —
-    /// the sections simply stay empty.
+    /// Points, league state and friends board. 403s (leagues disabled or user ineligible) are
+    /// expected and swallowed — the sections stay empty. Other failures land in `lastError` and
+    /// the log so a decode/HTTP regression can't silently hide the whole section.
     public func refreshLeagues() async {
         var changed = false
-        if let week = try? await apiClient.fetchPointsWeek() {
-            pointsWeek = week
+        do {
+            pointsWeek = try await apiClient.fetchPointsWeek()
             changed = true
-        }
-        if let current = try? await apiClient.fetchLeagueCurrent() {
-            league = current
+        } catch let error as APIClientError where isForbidden(error) {
+        } catch { recordLeagueError("points/week", error) }
+        do {
+            league = try await apiClient.fetchLeagueCurrent()
             changed = true
-        }
-        if let friends = try? await apiClient.fetchLeagueFriends() {
-            leagueFriends = friends
+        } catch let error as APIClientError where isForbidden(error) {
+        } catch { recordLeagueError("league/current", error) }
+        do {
+            leagueFriends = try await apiClient.fetchLeagueFriends()
             changed = true
-        }
+        } catch let error as APIClientError where isForbidden(error) {
+        } catch { recordLeagueError("league/friends", error) }
         if changed { onLeagueDataChanged?() }
+    }
+
+    private func isForbidden(_ error: APIClientError) -> Bool {
+        if case .forbidden = error { return true }
+        if case let .serverError(code, _) = error { return code == 403 }
+        return false
+    }
+
+    private func recordLeagueError(_ endpoint: String, _ error: Error) {
+        socialLog.error("\(endpoint, privacy: .public) failed: \(String(describing: error), privacy: .public)")
+        lastError = String(describing: error)
     }
 
     public func refreshLeagueHistory() async {
