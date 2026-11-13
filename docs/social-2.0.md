@@ -397,14 +397,16 @@ marketing screenshots for 2.0 · release notes · release PR `develop` → `main
 | 2026-11-13 | Scope, tone, privacy, platforms and battle formats as in [Decisions](#decisions-settled-with-the-user-2026-11-13)               |
 | 2026-11-13 | Community raid boss included (user: "make the raid boss really cool looking"); Ghost Duel parked for 2.1 (pending confirmation) |
 | 2026-11-13 | Max five implementation PRs, stacked, each targeting `develop`                                                                  |
+| 2026-11-14 | Social replaces the Exercises tab on iPhone and web; the exercise library moves into Workouts as a "Library" segment            |
+| 2026-11-14 | Order: finish PR 1 (web, iOS), then PR 2 web + iOS/Watch, then PRs 3 and 4                                                      |
 
 ## Session log
 
 Append one line per session: date, what was done, what is next.
 
-| Date       | Done                                                                     | Next                                    |
-| :--------- | :----------------------------------------------------------------------- | :-------------------------------------- |
-| 2026-11-13 | Research, decisions with the user, this plan, plan PR                    | Answer open questions, start PR 1       |
-| 2026-11-13 | PR 1 part A: social_foundation migration, common social utils/schemas,   | PR 1 part B (web)                       |
-|            | API social/push/notifications/admin modules, email-worker push processor |                                         |
-|            | + review fixes (push retry/SSRF/pooling, report evidence, deletion GC)   |                                         |
+| Date       | Done                                                                     | Next                              |
+| :--------- | :----------------------------------------------------------------------- | :-------------------------------- |
+| 2026-11-13 | Research, decisions with the user, this plan, plan PR                    | Answer open questions, start PR 1 |
+| 2026-11-13 | PR 1 part A: social_foundation migration, common social utils/schemas,   | PR 1 part B (web)                 |
+|            | API social/push/notifications/admin modules, email-worker push processor |                                   |
+|            | + review fixes (push retry/SSRF/pooling, report evidence, deletion GC)   |                                   |
