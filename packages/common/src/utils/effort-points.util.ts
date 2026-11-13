@@ -71,6 +71,12 @@ const zero: EffortPointsBreakdown = {
   droppedSets: 0,
 };
 
+/** Sort key: timed sets chronologically, untimed sets last (stable order kept). */
+const setTimeKey = (completedAt: string | null): number => {
+  const ms = completedAt ? Date.parse(completedAt) : NaN;
+  return Number.isFinite(ms) ? ms : Number.POSITIVE_INFINITY;
+};
+
 export function computeSessionEffortPoints(session: EffortPointsSessionInput): EffortPointsResult {
   if (
     session.status !== 'COMPLETED' ||
@@ -89,42 +95,51 @@ export function computeSessionEffortPoints(session: EffortPointsSessionInput): E
   // durations would double-count them.
   let stretchSeconds = isStretchSession ? session.totalStretchSeconds : 0;
 
+  // Plausibility rules run on the chronological order the sets were actually
+  // performed in, not on exercise-array order (supersets and unordered query
+  // results would otherwise drop legitimate sets). Untimed sets keep their
+  // relative order after all timed ones (stable sort, Infinity key).
+  const orderedSets: Array<{ set: EffortPointsSetInput; exerciseType: string }> = [];
   for (const exercise of session.exercises) {
     for (const set of exercise.sets) {
-      if (!set.completed) continue;
-      if (countedSets >= maxSets) {
-        breakdown.droppedSets += 1;
-        continue;
-      }
-      const completedAtMs = set.completedAt ? Date.parse(set.completedAt) : NaN;
-      if (
-        lastCountedAt !== null &&
-        Number.isFinite(completedAtMs) &&
-        completedAtMs - lastCountedAt < EP_SET_PLAUSIBILITY_SECONDS * 1000
-      ) {
-        breakdown.droppedSets += 1;
-        continue;
-      }
-      countedSets += 1;
-      if (Number.isFinite(completedAtMs)) lastCountedAt = completedAtMs;
+      if (set.completed) orderedSets.push({ set, exerciseType: exercise.exerciseTypeSnapshot });
+    }
+  }
+  orderedSets.sort((a, b) => setTimeKey(a.set.completedAt) - setTimeKey(b.set.completedAt));
 
-      const isWarmup = set.setType === 'WARMUP';
-      const isStrength = exercise.exerciseTypeSnapshot === 'STRENGTH';
-      const isStretchingExercise = exercise.exerciseTypeSnapshot === 'STRETCHING';
+  for (const { set, exerciseType } of orderedSets) {
+    if (countedSets >= maxSets) {
+      breakdown.droppedSets += 1;
+      continue;
+    }
+    const completedAtMs = set.completedAt ? Date.parse(set.completedAt) : NaN;
+    if (
+      lastCountedAt !== null &&
+      Number.isFinite(completedAtMs) &&
+      completedAtMs - lastCountedAt < EP_SET_PLAUSIBILITY_SECONDS * 1000
+    ) {
+      breakdown.droppedSets += 1;
+      continue;
+    }
+    countedSets += 1;
+    if (Number.isFinite(completedAtMs)) lastCountedAt = completedAtMs;
 
-      if (isWarmup) {
-        breakdown.warmups += 1;
-      } else if (isStrength && (set.setType === 'WORKING' || set.setType === 'DROPSET')) {
-        breakdown.sets += 1;
-      } else if (exercise.exerciseTypeSnapshot === 'CARDIO') {
-        breakdown.cardioMinutes += Math.floor((set.durationSeconds ?? 0) / 60);
-      } else if (!isStretchSession && (isStretchingExercise || set.setType === 'STRETCH')) {
-        stretchSeconds += set.durationSeconds ?? 0;
-      }
+    const isWarmup = set.setType === 'WARMUP';
+    const isStrength = exerciseType === 'STRENGTH';
+    const isStretchingExercise = exerciseType === 'STRETCHING';
 
-      if (set.isPersonalRecord && breakdown.prs < EP_MAX_PRS_PER_SESSION) {
-        breakdown.prs += 1;
-      }
+    if (isWarmup) {
+      breakdown.warmups += 1;
+    } else if (isStrength && (set.setType === 'WORKING' || set.setType === 'DROPSET')) {
+      breakdown.sets += 1;
+    } else if (exerciseType === 'CARDIO') {
+      breakdown.cardioMinutes += Math.floor((set.durationSeconds ?? 0) / 60);
+    } else if (!isStretchSession && (isStretchingExercise || set.setType === 'STRETCH')) {
+      stretchSeconds += set.durationSeconds ?? 0;
+    }
+
+    if (set.isPersonalRecord && breakdown.prs < EP_MAX_PRS_PER_SESSION) {
+      breakdown.prs += 1;
     }
   }
 

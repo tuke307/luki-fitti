@@ -16,12 +16,21 @@ const berlinParts = new Intl.DateTimeFormat('en-CA', {
   hourCycle: 'h23',
 });
 
-function parts(date: Date): Record<string, number> {
-  const out: Record<string, number> = {};
+interface BerlinParts {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+}
+
+function parts(date: Date): BerlinParts {
+  const out = {} as Record<string, number>;
   for (const p of berlinParts.formatToParts(date)) {
     if (p.type !== 'literal') out[p.type] = Number(p.value);
   }
-  return out;
+  return out as unknown as BerlinParts;
 }
 
 /** Berlin calendar date of `date` as `YYYY-MM-DD`. */

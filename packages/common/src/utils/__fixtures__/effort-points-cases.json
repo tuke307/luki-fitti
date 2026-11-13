@@ -1002,5 +1002,194 @@
         "droppedSets": 0
       }
     }
+  },
+  {
+    "name": "exercises listed in reverse chronological order: nothing dropped",
+    "session": {
+      "status": "COMPLETED",
+      "sessionType": "STRENGTH",
+      "sourceDevice": "WEB",
+      "activeDurationSeconds": 1200,
+      "totalStretchSeconds": 0,
+      "completedAt": "2026-11-09T13:00:00.000Z",
+      "exercises": [
+        {
+          "exerciseTypeSnapshot": "STRENGTH",
+          "sets": [
+            {
+              "setType": "WORKING",
+              "completed": true,
+              "completedAt": "2026-11-09T12:30:00.000Z",
+              "isPersonalRecord": false,
+              "durationSeconds": null
+            },
+            {
+              "setType": "WORKING",
+              "completed": true,
+              "completedAt": "2026-11-09T12:31:00.000Z",
+              "isPersonalRecord": false,
+              "durationSeconds": null
+            },
+            {
+              "setType": "WORKING",
+              "completed": true,
+              "completedAt": "2026-11-09T12:32:00.000Z",
+              "isPersonalRecord": false,
+              "durationSeconds": null
+            }
+          ]
+        },
+        {
+          "exerciseTypeSnapshot": "STRENGTH",
+          "sets": [
+            {
+              "setType": "WORKING",
+              "completed": true,
+              "completedAt": "2026-11-09T12:00:00.000Z",
+              "isPersonalRecord": false,
+              "durationSeconds": null
+            },
+            {
+              "setType": "WORKING",
+              "completed": true,
+              "completedAt": "2026-11-09T12:01:00.000Z",
+              "isPersonalRecord": false,
+              "durationSeconds": null
+            },
+            {
+              "setType": "WORKING",
+              "completed": true,
+              "completedAt": "2026-11-09T12:02:00.000Z",
+              "isPersonalRecord": false,
+              "durationSeconds": null
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "total": 80,
+      "breakdown": {
+        "sets": 6,
+        "warmups": 0,
+        "prs": 0,
+        "cardioMinutes": 0,
+        "stretchMinutes": 0,
+        "finishBonus": 20,
+        "droppedSets": 0
+      }
+    }
+  },
+  {
+    "name": "interleaved superset 20s apart: nothing dropped",
+    "session": {
+      "status": "COMPLETED",
+      "sessionType": "STRENGTH",
+      "sourceDevice": "WEB",
+      "activeDurationSeconds": 1200,
+      "totalStretchSeconds": 0,
+      "completedAt": "2026-11-09T13:00:00.000Z",
+      "exercises": [
+        {
+          "exerciseTypeSnapshot": "STRENGTH",
+          "sets": [
+            {
+              "setType": "WORKING",
+              "completed": true,
+              "completedAt": "2026-11-09T12:00:00.000Z",
+              "isPersonalRecord": false,
+              "durationSeconds": null
+            },
+            {
+              "setType": "WORKING",
+              "completed": true,
+              "completedAt": "2026-11-09T12:00:40.000Z",
+              "isPersonalRecord": false,
+              "durationSeconds": null
+            }
+          ]
+        },
+        {
+          "exerciseTypeSnapshot": "STRENGTH",
+          "sets": [
+            {
+              "setType": "WORKING",
+              "completed": true,
+              "completedAt": "2026-11-09T12:00:20.000Z",
+              "isPersonalRecord": false,
+              "durationSeconds": null
+            },
+            {
+              "setType": "WORKING",
+              "completed": true,
+              "completedAt": "2026-11-09T12:01:00.000Z",
+              "isPersonalRecord": false,
+              "durationSeconds": null
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "total": 60,
+      "breakdown": {
+        "sets": 4,
+        "warmups": 0,
+        "prs": 0,
+        "cardioMinutes": 0,
+        "stretchMinutes": 0,
+        "finishBonus": 20,
+        "droppedSets": 0
+      }
+    }
+  },
+  {
+    "name": "two sets 5s apart across different exercises: later one dropped",
+    "session": {
+      "status": "COMPLETED",
+      "sessionType": "STRENGTH",
+      "sourceDevice": "WEB",
+      "activeDurationSeconds": 1200,
+      "totalStretchSeconds": 0,
+      "completedAt": "2026-11-09T13:00:00.000Z",
+      "exercises": [
+        {
+          "exerciseTypeSnapshot": "STRENGTH",
+          "sets": [
+            {
+              "setType": "WORKING",
+              "completed": true,
+              "completedAt": "2026-11-09T12:00:00.000Z",
+              "isPersonalRecord": false,
+              "durationSeconds": null
+            }
+          ]
+        },
+        {
+          "exerciseTypeSnapshot": "STRENGTH",
+          "sets": [
+            {
+              "setType": "WORKING",
+              "completed": true,
+              "completedAt": "2026-11-09T12:00:05.000Z",
+              "isPersonalRecord": false,
+              "durationSeconds": null
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "total": 30,
+      "breakdown": {
+        "sets": 1,
+        "warmups": 0,
+        "prs": 0,
+        "cardioMinutes": 0,
+        "stretchMinutes": 0,
+        "finishBonus": 20,
+        "droppedSets": 1
+      }
+    }
   }
 ]
