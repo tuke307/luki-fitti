@@ -1,4 +1,4 @@
-import { BotIcon, LayoutGridIcon, UsersIcon, type LucideIcon } from 'lucide-react';
+import { BotIcon, FlagIcon, LayoutGridIcon, UsersIcon, type LucideIcon } from 'lucide-react';
 import { AdminPermission } from '@luki-fitti/common/enums';
 import type { TranslationDictionary } from '@/lib/i18n';
 
@@ -33,6 +33,18 @@ export function getAdminMenu(t: TranslationDictionary, held: readonly string[]):
       label: t.admin.navAi,
       icon: BotIcon,
       permissions: [AdminPermission.AI_SETTINGS_MANAGE],
+    },
+    {
+      href: '/admin/social',
+      label: t.admin.navSocial,
+      icon: UsersIcon,
+      permissions: [AdminPermission.AI_SETTINGS_MANAGE],
+    },
+    {
+      href: '/admin/reports',
+      label: t.admin.navReports,
+      icon: FlagIcon,
+      permissions: [AdminPermission.USERS_MANAGE],
     },
   ];
   return items.filter((item) => hasAny(held, item.permissions));
