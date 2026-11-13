@@ -114,9 +114,9 @@ export function computeArenaBuckets(
     }
   }
   // A trailing bucket below the minimum merges back into the previous one —
-  // but only when it contains TITAN (the top arena has no higher bucket to
-  // merge upward into). A partial bucket below empty top arenas stays.
-  if (size > 0 && size < minUsers && bucket > 0 && (activePerArena[Arena.TITAN] ?? 0) > 0) {
+  // an undersized top bucket (even an empty one above the last closed bucket)
+  // would otherwise strand high arenas in cohorts that can never move.
+  if (bucket > 0 && size < minUsers) {
     for (const arena of ARENA_ORDER) {
       if (buckets[arena] === bucket) buckets[arena] = bucket - 1;
     }

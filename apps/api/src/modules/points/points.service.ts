@@ -39,7 +39,12 @@ export class PointsService {
       this.socialAccess.isEnabledFor(userId),
       this.prisma.workoutSession.findUnique({
         where: { id: sessionId },
-        include: { exercises: { include: { sets: true } } },
+        include: {
+          exercises: {
+            orderBy: { orderIndex: 'asc' },
+            include: { sets: { orderBy: { setNumber: 'asc' } } },
+          },
+        },
       }),
     ]);
     if (!settings.leaguesEnabled || !enabled) return;
@@ -84,10 +89,6 @@ export class PointsService {
     const { total, breakdown } = computeSessionEffortPoints(input);
     const dayKey = berlinDayKey(completedAt);
 
-    const previousScore = await this.prisma.weeklyScore.findUnique({
-      where: { userId_weekKey: { userId, weekKey } },
-      select: { points: true },
-    });
     const existing = await this.prisma.effortPointEntry.findUnique({ where: { sessionId } });
     if (existing) {
       await this.prisma.effortPointEntry.update({
@@ -113,14 +114,15 @@ export class PointsService {
       });
     }
 
-    await this.recomputeWeeklyScore(userId, weekKey);
+    const weekPoints = await this.recomputeWeeklyScore(userId, weekKey);
 
-    // First points of the week → lazy cohort placement (eligible users only,
-    // stages with cohorts).
-    if ((previousScore?.points ?? 0) === 0 && total > 0) {
+    // Any positive weekly score → lazy cohort placement (eligible users only,
+    // stages with cohorts). Idempotent, so a user who only became eligible
+    // mid-week still gets placed.
+    if (weekPoints > 0) {
       const week = await this.leagues.ensureWeek(weekKey);
       if (
-        week.stage !== LeagueStage.FRIENDS &&
+        (week.stage as LeagueStage) !== LeagueStage.FRIENDS &&
         (await this.socialAccess.isEligibleForLeagues(userId))
       ) {
         await this.leagues.ensurePlaced(userId, weekKey);
@@ -144,7 +146,7 @@ export class PointsService {
    * (epWeeklyGoalBonus when the number of entries with points > 0 reaches the
    * user's weeklyGoalSessions). rawPoints keeps the uncapped total.
    */
-  async recomputeWeeklyScore(userId: string, weekKey: string): Promise<void> {
+  async recomputeWeeklyScore(userId: string, weekKey: string): Promise<number> {
     const [settings, prefs, entries] = await Promise.all([
       this.appSettings.get(),
       this.prisma.userPreferences.findUnique({
@@ -175,6 +177,7 @@ export class PointsService {
       update: { points, rawPoints, sessions: entries.length, goalBonus },
       create: { userId, weekKey, points, rawPoints, sessions: entries.length, goalBonus },
     });
+    return points;
   }
 
   /** GET /points/week — transparent per-day and per-session breakdown. */

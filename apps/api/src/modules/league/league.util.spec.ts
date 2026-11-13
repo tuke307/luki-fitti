@@ -80,7 +80,7 @@ describe('computeArenaBuckets', () => {
       number
     >;
 
-  it('one bucket per ≥10-user group, small arenas merge upward', () => {
+  it('an undersized top bucket merges down so high arenas are never stranded', () => {
     const buckets = computeArenaBuckets(
       counts([
         [Arena.BRONZE, 12],
@@ -88,7 +88,35 @@ describe('computeArenaBuckets', () => {
       ]),
     );
     assert.equal(buckets[Arena.BRONZE], 0);
+    assert.equal(buckets[Arena.SILVER], 0);
+    assert.equal(buckets[Arena.TITAN], 0);
+  });
+
+  it('a partial mid-table bucket merges down, keeping the full bucket above', () => {
+    const buckets = computeArenaBuckets(
+      counts([
+        [Arena.BRONZE, 10],
+        [Arena.SILVER, 10],
+        [Arena.DIAMOND, 4],
+      ]),
+    );
+    assert.equal(buckets[Arena.BRONZE], 0);
     assert.equal(buckets[Arena.SILVER], 1);
+    assert.equal(buckets[Arena.DIAMOND], 1);
+    assert.equal(buckets[Arena.TITAN], 1);
+  });
+
+  it('empty top arenas land in the last closed bucket', () => {
+    const buckets = computeArenaBuckets(
+      counts([
+        [Arena.BRONZE, 10],
+        [Arena.SILVER, 10],
+      ]),
+    );
+    assert.equal(buckets[Arena.BRONZE], 0);
+    assert.equal(buckets[Arena.SILVER], 1);
+    assert.equal(buckets[Arena.OBSIDIAN], 1);
+    assert.equal(buckets[Arena.TITAN], 1);
   });
 
   it('a trailing bucket under the minimum merges back down', () => {
@@ -115,5 +143,6 @@ describe('computeArenaBuckets', () => {
     assert.equal(buckets[Arena.SILVER], 0);
     assert.equal(buckets[Arena.GOLD], 0);
     assert.equal(buckets[Arena.DIAMOND], 1);
+    assert.equal(buckets[Arena.TITAN], 1);
   });
 });

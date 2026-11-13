@@ -292,6 +292,20 @@ describe('PointsService.recordSession', () => {
     assert.deepEqual(leagueStub.placed, ['u1']);
   });
 
+  it('places a user who only becomes eligible mid-week', async () => {
+    const state = makeState();
+    const opts = { eligible: false };
+    const { svc, leagueStub } = service(state, opts);
+    state.sessions.set('s1', makeSession('s1'));
+    await svc.recordSession('u1', 's1');
+    assert.deepEqual(leagueStub.placed, [], 'not placed while ineligible');
+
+    opts.eligible = true; // e.g. picked a handle after the first session
+    state.sessions.set('s2', makeSession('s2'));
+    await svc.recordSession('u1', 's2');
+    assert.deepEqual(leagueStub.placed, ['u1'], 'placed once eligible with a positive score');
+  });
+
   it('never places anyone in a FRIENDS week or when not league-eligible', async () => {
     const state = makeState();
     const { svc, leagueStub } = service(state, { stage: LeagueStage.FRIENDS });

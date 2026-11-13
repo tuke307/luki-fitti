@@ -82,6 +82,11 @@ const makePrisma = (state: ReturnType<typeof makeState>) => {
         where: { weekKey: string };
         data: { closedAt: Date };
       }) => Object.assign(state.weeks.get(weekKey)!, data),
+      findMany: async ({ where }: { where: { closedAt: null; weekKey: { lt: string } } }) =>
+        [...state.weeks.values()]
+          .filter((w) => w.closedAt === null && w.weekKey < where.weekKey.lt)
+          .sort((a, b) => a.weekKey.localeCompare(b.weekKey))
+          .map((w) => ({ weekKey: w.weekKey })),
     },
     leagueCohort: {
       findFirst: async ({ where }: { where: { weekKey: string; bucket: number | null } }) =>
@@ -546,6 +551,39 @@ describe('rollover', () => {
     const payload = state.notifications[0]!.payload as Record<string, unknown>;
     assert.equal(payload.weekKey, prevKey);
     assert.ok(payload.fromArena && payload.toArena && payload.rank);
+  });
+
+  it('closes every unclosed week oldest first and notifies only for the latest', async () => {
+    const state = makeState();
+    const prevKey = prevWeek();
+    const olderKey = previousWeekKey(prevKey);
+    for (const weekKey of [olderKey, prevKey]) {
+      state.weeks.set(weekKey, {
+        weekKey,
+        stage: LeagueStage.GLOBAL,
+        activeUsers: 5,
+        buckets: null,
+        closedAt: null,
+      });
+      const userIds = ids(5, weekKey);
+      addUsers(state, userIds);
+      seedCohort(state, weekKey, userIds);
+      for (const [i, id] of userIds.entries()) {
+        state.scores.push({
+          userId: id,
+          weekKey,
+          points: 5 - i,
+          updatedAt: new Date(i),
+        });
+      }
+    }
+    await service(state).rollover();
+    assert.ok(state.weeks.get(olderKey)!.closedAt, 'older week closed');
+    assert.ok(state.weeks.get(prevKey)!.closedAt, 'previous week closed');
+    const notifiedWeeks = new Set(
+      state.notifications.map((n) => (n.payload as { weekKey: string }).weekKey),
+    );
+    assert.deepEqual([...notifiedWeeks], [prevKey], 'only the latest week notifies');
   });
 
   it('does nothing when leagues are disabled', async () => {

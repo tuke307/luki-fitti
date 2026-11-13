@@ -200,91 +200,123 @@ export class LeagueService {
     const now = new Date();
     const currentWeek = berlinWeekKey(now);
     const prevKey = previousWeekKey(currentWeek);
+
+    // Close every week that is still open (usually just the previous one, but
+    // a worker outage can leave several), oldest first, each in its own
+    // transaction. The previous week is ensured even when its row is missing.
+    const unclosed = await this.prisma.leagueWeek.findMany({
+      where: { closedAt: null, weekKey: { lt: currentWeek } },
+      orderBy: { weekKey: 'asc' },
+      select: { weekKey: true },
+    });
+    const keysToClose = [...new Set([...unclosed.map((w) => w.weekKey), prevKey])].sort();
+
     const notify: Array<{
       userId: string;
       kind: NotificationKind;
       payload: Record<string, unknown>;
     }> = [];
-
-    const didClose = await this.prisma.$transaction(async (tx) => {
-      let week = await tx.leagueWeek.findUnique({ where: { weekKey: prevKey } });
-      if (week?.closedAt) return false;
-      week ??= await this.ensureWeek(prevKey, tx);
-
-      const scores = await tx.weeklyScore.findMany({ where: { weekKey: prevKey } });
-      const scoreMap = new Map(scores.map((s) => [s.userId, s]));
-
-      if ((week.stage as LeagueStage) !== LeagueStage.FRIENDS) {
-        const cohorts = await tx.leagueCohort.findMany({
-          where: { weekKey: prevKey },
-          include: { members: true },
-        });
-        for (const cohort of cohorts) {
-          const ranked = rankMembers(
-            cohort.members.map((m) => ({
-              userId: m.userId,
-              arenaAtStart: m.arenaAtStart as Arena,
-              points: scoreMap.get(m.userId)?.points ?? 0,
-              updatedAt: scoreMap.get(m.userId)?.updatedAt ?? new Date(0),
-            })),
-          );
-          const n = ranked.length;
-          for (const member of ranked) {
-            // 0-point members rank but earn no outcome (INACTIVE).
-            const outcome =
-              member.points <= 0
-                ? null
-                : outcomeFor(week.stage as LeagueStage, member.arenaAtStart, member.rank, n);
-            const arenaAfter =
-              outcome === LeagueOutcome.PROMOTED
-                ? arenaStep(member.arenaAtStart, 1)
-                : outcome === LeagueOutcome.DEMOTED
-                  ? arenaStep(member.arenaAtStart, -1)
-                  : member.arenaAtStart;
-            await tx.leagueMembership.updateMany({
-              where: { cohortId: cohort.id, userId: member.userId },
-              data: {
-                finalPoints: member.points,
-                finalRank: member.rank,
-                outcome: outcome as DbOutcome | null,
-              },
-            });
-            if (arenaAfter !== member.arenaAtStart) {
-              await tx.user.update({
-                where: { id: member.userId },
-                data: { arena: arenaAfter as DbArena },
-              });
-            }
-            if (outcome === LeagueOutcome.PROMOTED || outcome === LeagueOutcome.DEMOTED) {
-              notify.push({
-                userId: member.userId,
-                kind:
-                  outcome === LeagueOutcome.PROMOTED
-                    ? NotificationKind.LEAGUE_PROMOTED
-                    : NotificationKind.LEAGUE_DEMOTED,
-                payload: {
-                  weekKey: prevKey,
-                  fromArena: member.arenaAtStart,
-                  toArena: arenaAfter,
-                  rank: member.rank,
-                },
-              });
-            }
-          }
-        }
-        await this.applyInactivitySweep(tx, prevKey, scoreMap, settings);
-      }
-      await tx.leagueWeek.update({ where: { weekKey: prevKey }, data: { closedAt: now } });
-      return true;
-    });
-
-    if (!didClose) return;
+    let closedAny = false;
+    for (const [index, weekKey] of keysToClose.entries()) {
+      const isLatest = index === keysToClose.length - 1;
+      closedAny =
+        (await this.closeWeek(weekKey, now, settings, isLatest ? notify : [])) || closedAny;
+    }
+    if (!closedAny) return;
     await this.ensureWeek(currentWeek);
     for (const n of notify) {
       await this.notifications
         .notify(n.userId, n.kind, null, n.payload)
         .catch((err) => logger.warn(`league outcome notification failed: ${String(err)}`));
     }
+  }
+
+  /**
+   * Closes one open week: ranks cohorts, writes outcomes and arena moves,
+   * sweeps inactivity, sets closedAt — all in one long-running transaction.
+   * Outcome notifications for the week are appended to `notify`.
+   */
+  private async closeWeek(
+    prevKey: string,
+    now: Date,
+    settings: { socialBetaUserIds: string[]; socialEnabled: boolean },
+    notify: Array<{ userId: string; kind: NotificationKind; payload: Record<string, unknown> }>,
+  ): Promise<boolean> {
+    return this.prisma.$transaction(
+      async (tx) => {
+        let week = await tx.leagueWeek.findUnique({ where: { weekKey: prevKey } });
+        if (week?.closedAt) return false;
+        week ??= await this.ensureWeek(prevKey, tx);
+
+        const scores = await tx.weeklyScore.findMany({ where: { weekKey: prevKey } });
+        const scoreMap = new Map(scores.map((s) => [s.userId, s]));
+
+        if ((week.stage as LeagueStage) !== LeagueStage.FRIENDS) {
+          const cohorts = await tx.leagueCohort.findMany({
+            where: { weekKey: prevKey },
+            include: { members: true },
+          });
+          for (const cohort of cohorts) {
+            const ranked = rankMembers(
+              cohort.members.map((m) => ({
+                userId: m.userId,
+                arenaAtStart: m.arenaAtStart as Arena,
+                points: scoreMap.get(m.userId)?.points ?? 0,
+                updatedAt: scoreMap.get(m.userId)?.updatedAt ?? new Date(0),
+              })),
+            );
+            const n = ranked.length;
+            for (const member of ranked) {
+              // 0-point members rank but earn no outcome (INACTIVE).
+              const outcome =
+                member.points <= 0
+                  ? null
+                  : outcomeFor(week.stage as LeagueStage, member.arenaAtStart, member.rank, n);
+              const arenaAfter =
+                outcome === LeagueOutcome.PROMOTED
+                  ? arenaStep(member.arenaAtStart, 1)
+                  : outcome === LeagueOutcome.DEMOTED
+                    ? arenaStep(member.arenaAtStart, -1)
+                    : member.arenaAtStart;
+              await tx.leagueMembership.updateMany({
+                where: { cohortId: cohort.id, userId: member.userId },
+                data: {
+                  finalPoints: member.points,
+                  finalRank: member.rank,
+                  outcome: outcome as DbOutcome | null,
+                },
+              });
+              if (arenaAfter !== member.arenaAtStart) {
+                await tx.user.update({
+                  where: { id: member.userId },
+                  data: { arena: arenaAfter as DbArena },
+                });
+              }
+              if (outcome === LeagueOutcome.PROMOTED || outcome === LeagueOutcome.DEMOTED) {
+                notify.push({
+                  userId: member.userId,
+                  kind:
+                    outcome === LeagueOutcome.PROMOTED
+                      ? NotificationKind.LEAGUE_PROMOTED
+                      : NotificationKind.LEAGUE_DEMOTED,
+                  payload: {
+                    weekKey: prevKey,
+                    fromArena: member.arenaAtStart,
+                    toArena: arenaAfter,
+                    rank: member.rank,
+                  },
+                });
+              }
+            }
+          }
+          await this.applyInactivitySweep(tx, prevKey, scoreMap, settings);
+        }
+        await tx.leagueWeek.update({ where: { weekKey: prevKey }, data: { closedAt: now } });
+        return true;
+      },
+      // Ranking + per-member writes can exceed the 5 s default timeout.
+      { maxWait: 10_000, timeout: 120_000 },
+    );
   }
 
   /**
