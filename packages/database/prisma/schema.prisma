@@ -229,6 +229,11 @@ model User {
   effortPointEntries  EffortPointEntry[]
   weeklyScores        WeeklyScore[]
   leagueMemberships   LeagueMembership[]
+  duelsChallenged     Duel[]             @relation("DuelChallenger")
+  duelsOpponent       Duel[]             @relation("DuelOpponent")
+  duelsWon            Duel[]             @relation("DuelWinner")
+  streaksRequested    FriendStreak[]     @relation("StreakRequestedBy")
+  trophies            Trophy[]
 }
 
 model UserPreferences {
@@ -277,6 +282,10 @@ model UserPreferences {
   pushFriends                Boolean       @default(true)
   /// Push category toggle: league outcomes and end-of-week reminders.
   pushLeagues                Boolean       @default(true)
+  /// Push category toggle: duel invites, standings and results.
+  pushDuels                  Boolean       @default(true)
+  /// Push category toggle: friend-streak invites, reminders and outcomes.
+  pushStreaks                Boolean       @default(true)
   createdAt                  DateTime      @default(now())
   updatedAt                  DateTime      @updatedAt
 
@@ -636,6 +645,10 @@ model AppSettings {
   epDailyCap              Int             @default(600)
   /// Weekly bonus when entries with points > 0 reach the user's weeklyGoalSessions.
   epWeeklyGoalBonus       Int             @default(100)
+  /// Duels kill switch: off → /duels/* 403 and the tick/standings jobs no-op.
+  duelsEnabled            Boolean         @default(true)
+  /// Friend-streak kill switch: off → /streaks/* 403 and no evaluation/reminders.
+  streaksEnabled          Boolean         @default(true)
   updatedAt               DateTime        @updatedAt
 }
 
@@ -1032,6 +1045,15 @@ enum NotificationKind {
   LEAGUE_PROMOTED
   LEAGUE_DEMOTED
   LEAGUE_ENDING
+  DUEL_INVITE
+  DUEL_ACCEPTED
+  DUEL_STANDINGS
+  DUEL_RESULT
+  STREAK_INVITE
+  STREAK_STARTED
+  STREAK_REMINDER
+  STREAK_FROZEN
+  STREAK_BROKEN
 }
 
 /// Mutual friendship. The pair is stored once with userAId < userBId;
@@ -1045,9 +1067,11 @@ model Friendship {
   createdAt     DateTime         @default(now())
   acceptedAt    DateTime?
 
-  userA       User @relation("FriendshipUserA", fields: [userAId], references: [id], onDelete: Cascade)
-  userB       User @relation("FriendshipUserB", fields: [userBId], references: [id], onDelete: Cascade)
-  requestedBy User @relation("FriendshipRequestedBy", fields: [requestedById], references: [id], onDelete: Cascade)
+  userA       User          @relation("FriendshipUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB       User          @relation("FriendshipUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  requestedBy User          @relation("FriendshipRequestedBy", fields: [requestedById], references: [id], onDelete: Cascade)
+  /// One streak per friendship; cascades with it (unfriend/block end the streak).
+  streak      FriendStreak?
 
   @@unique([userAId, userBId])
   @@index([userBId])
@@ -1209,18 +1233,21 @@ model EffortPointEntry {
 
 /// Weekly aggregate per user: daily-capped points + goal bonus, recomputed from the ledger.
 model WeeklyScore {
-  id        String   @id @default(uuid())
-  userId    String
-  weekKey   String
+  id          String   @id @default(uuid())
+  userId      String
+  weekKey     String
   /// Sum over days of min(epDailyCap, day points) + goalBonus.
-  points    Int
+  points      Int
   /// Uncapped weekly sum (no daily cap, no bonus).
-  rawPoints Int
+  rawPoints   Int
   /// Number of ledger entries this week.
-  sessions  Int
+  sessions    Int
   /// epWeeklyGoalBonus when the weekly session goal was met, else 0.
-  goalBonus Int
-  updatedAt DateTime @updatedAt
+  goalBonus   Int
+  /// Entries with points > 0 reached the user's weeklyGoalSessions (streak input;
+  /// independent of epWeeklyGoalBonus).
+  goalReached Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1274,4 +1301,101 @@ model LeagueMembership {
 
   @@unique([userId, weekKey])
   @@index([cohortId])
+}
+
+enum DuelStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  DECLINED
+  CANCELLED
+  EXPIRED
+}
+
+enum FriendStreakStatus {
+  PENDING
+  ACTIVE
+}
+
+enum TrophyKind {
+  DUEL_WIN
+}
+
+/// 1v1 weekly duel between friends. Scores are the daily-capped EP sums over
+/// [startDayKey, endDayKey); recomputed on each session sync and at completion.
+model Duel {
+  id                  String     @id @default(uuid())
+  challengerId        String
+  opponentId          String
+  status              DuelStatus @default(PENDING)
+  createdAt           DateTime   @default(now())
+  respondedAt         DateTime?
+  /// Berlin day the duel starts (set on accept); YYYY-MM-DD.
+  startDayKey         String?
+  /// Exclusive end day key: startDayKey + 7.
+  endDayKey           String?
+  /// Berlin-midnight UTC instants matching the day keys.
+  startsAt            DateTime?
+  endsAt              DateTime?
+  challengerPoints    Int        @default(0)
+  opponentPoints      Int        @default(0)
+  winnerId            String?
+  isTie               Boolean    @default(false)
+  /// Set once each side has seen the result (drives pendingResult).
+  challengerSeenAt    DateTime?
+  opponentSeenAt      DateTime?
+  /// Guard for the once-per-day standings push.
+  lastStandingsDayKey String?
+
+  challenger User  @relation("DuelChallenger", fields: [challengerId], references: [id], onDelete: Cascade)
+  opponent   User  @relation("DuelOpponent", fields: [opponentId], references: [id], onDelete: Cascade)
+  winner     User? @relation("DuelWinner", fields: [winnerId], references: [id], onDelete: SetNull)
+
+  @@index([challengerId, status])
+  @@index([opponentId, status])
+  /// The tick job scans ACTIVE duels by endsAt.
+  @@index([status, endsAt])
+}
+
+/// Weekly friend streak: both partners hitting their weeklyGoalSessions keeps
+/// the count alive; up to 2 freezes absorb a missed week. Cascades with the
+/// friendship, so unfriending or blocking ends it silently.
+model FriendStreak {
+  id                   String             @id @default(uuid())
+  friendshipId         String             @unique
+  status               FriendStreakStatus
+  requestedById        String
+  count                Int                @default(0)
+  longest              Int                @default(0)
+  /// League week (Monday, YYYY-MM-DD) the streak started counting.
+  startedWeekKey       String?
+  /// Last closed week the rollover evaluated.
+  lastEvaluatedWeekKey String?
+  /// Banked freezes (max 2).
+  freezes              Int                @default(0)
+  /// Consecutive kept weeks since the last freeze was earned/consumed.
+  weeksSinceFreeze     Int                @default(0)
+  /// Guard for the once-per-week reminder.
+  lastReminderWeekKey  String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  friendship  Friendship @relation(fields: [friendshipId], references: [id], onDelete: Cascade)
+  requestedBy User       @relation("StreakRequestedBy", fields: [requestedById], references: [id], onDelete: Cascade)
+}
+
+/// Earned achievements; one row per (user, kind, refId). PR 4 adds RAID_* kinds.
+model Trophy {
+  id        String     @id @default(uuid())
+  userId    String
+  kind      TrophyKind
+  /// Source object (e.g. the duel id) — keeps the award idempotent.
+  refId     String
+  tier      String?
+  createdAt DateTime   @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, refId])
+  @@index([userId, createdAt])
 }
