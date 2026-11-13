@@ -3,15 +3,18 @@ import { logger } from '@luki-fitti/logger';
 import { EmailService } from '@luki-fitti/api/services/email.service';
 import { BullMQService } from '@luki-fitti/api/services/bullmq.service';
 import { PrismaService } from '@luki-fitti/api/services/prisma.service';
+import { PushSenderService } from '@luki-fitti/api/services/push-sender.service';
 
 @Injectable()
 export class WorkerService implements OnModuleDestroy {
   private readonly bullmqService: BullMQService;
   private readonly emailService: EmailService;
+  private readonly pushSender: PushSenderService;
 
   constructor(private readonly prismaService: PrismaService) {
     this.bullmqService = BullMQService.getInstance();
     this.emailService = new EmailService(this.prismaService, this.bullmqService);
+    this.pushSender = new PushSenderService(this.prismaService);
   }
 
   async startWorker(): Promise<void> {
@@ -19,6 +22,10 @@ export class WorkerService implements OnModuleDestroy {
 
     this.bullmqService.startEmailWorker(async (emailId) => {
       await this.processEmailJob(emailId);
+    });
+
+    this.bullmqService.startPushWorker(async (notificationId) => {
+      await this.pushSender.sendNotification(notificationId);
     });
 
     logger.info('Email worker started successfully');
