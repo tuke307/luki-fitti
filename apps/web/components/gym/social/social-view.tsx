@@ -18,11 +18,7 @@ import { FriendRow } from './friend-row';
 import { AddFriendsSection } from './add-friends-section';
 import { ThisWeekCard } from './this-week-card';
 import { LeagueCard } from './league-card';
-import {
-  LeagueCelebration,
-  dismissLeagueResult,
-  useLeagueResult,
-} from './league-celebration';
+import { LeagueCelebration, dismissLeagueResult, useLeagueResult } from './league-celebration';
 import { InboxSheet } from './inbox-sheet';
 import { SocialProfileSheet } from './social-profile-sheet';
 import { SocialOnboardingSheet } from './social-onboarding-sheet';
