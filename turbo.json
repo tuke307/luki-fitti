@@ -41,6 +41,18 @@
       "outputs": ["dist/**", ".next/**", "!.next/cache/**", "public/dist/**"],
       "dependsOn": ["^build"]
     },
+    "@luki-fitti/web#build": {
+      // The docs site stages repo markdown into the build; keep it cache-visible.
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*",
+        "../../docs/**",
+        "../../README.md",
+        "../../CONTRIBUTING.md"
+      ],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**", "public/dist/**"],
+      "dependsOn": ["^build"]
+    },
     "@luki-fitti/database#build": {
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["dist/**", "src/generated/**"],
