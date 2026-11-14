@@ -13,6 +13,7 @@ import {
   seedPointsWeekForE2e,
   seedSocialUser,
   setLeagueStageModeForE2e,
+  signInSeededUser,
 } from './helpers/social.js';
 
 /**
@@ -76,8 +77,7 @@ test.describe('Social: friends, requests and invites', () => {
     await signOut(page);
 
     // ── User B finds A via handle search and sends a request ──
-    await submitLoginPageForm(page, userB.email, userB.password);
-    await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+    await signInSeededUser(page, userB);
     await navigateToTab(page, 'social');
     await dismissOnboardingIfShown(page);
     await page.getByTestId('social-search-input').fill(handleA);
@@ -87,8 +87,7 @@ test.describe('Social: friends, requests and invites', () => {
     await signOut(page);
 
     // ── User A accepts the incoming request ──
-    await submitLoginPageForm(page, userA.email, userA.password);
-    await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+    await signInSeededUser(page, userA);
     await navigateToTab(page, 'social');
     const acceptBtn = page.getByTestId(`friend-accept-${userB.id}`);
     await expect(acceptBtn).toBeVisible({ timeout: 10_000 });
@@ -105,8 +104,7 @@ test.describe('Social: friends, requests and invites', () => {
     await signOut(page);
 
     // ── User C accepts the invite while signed in ──
-    await submitLoginPageForm(page, userC.email, userC.password);
-    await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+    await signInSeededUser(page, userC);
     await navigateToTab(page, 'social');
     await dismissOnboardingIfShown(page);
 
@@ -146,8 +144,7 @@ test.describe('Social: leagues and effort points', () => {
     await seedGlobalCohortForE2e([userA.id, userB.id]);
 
     await resetOfflineStore(page);
-    await submitLoginPageForm(page, userA.email, userA.password);
-    await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+    await signInSeededUser(page, userA);
     await navigateToTab(page, 'social');
     await dismissOnboardingIfShown(page);
 
@@ -192,8 +189,7 @@ test.describe('Social: duels', () => {
     await resetOfflineStore(page);
 
     // ── A challenges B from the friend row menu ──
-    await submitLoginPageForm(page, userA.email, userA.password);
-    await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+    await signInSeededUser(page, userA);
     await navigateToTab(page, 'social');
     await dismissOnboardingIfShown(page);
     await expect(page.getByTestId(`friend-row-${userB.id}`)).toBeVisible({ timeout: 10_000 });
@@ -205,8 +201,7 @@ test.describe('Social: duels', () => {
     await signOut(page);
 
     // ── B accepts the incoming challenge; the duel goes active ──
-    await submitLoginPageForm(page, userB.email, userB.password);
-    await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+    await signInSeededUser(page, userB);
     await navigateToTab(page, 'social');
     await dismissOnboardingIfShown(page);
     const acceptBtn = page.getByTestId(/^duel-accept-/);
@@ -217,8 +212,7 @@ test.describe('Social: duels', () => {
     await signOut(page);
 
     // ── A sees the active duel too ──
-    await submitLoginPageForm(page, userA.email, userA.password);
-    await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+    await signInSeededUser(page, userA);
     await navigateToTab(page, 'social');
     await dismissOnboardingIfShown(page);
     const duelRow = page.getByTestId(/^duel-row-/);
@@ -255,8 +249,7 @@ test.describe('Social: raids', () => {
     await seedCommunityRaidForE2e(user.id, 1900);
 
     await resetOfflineStore(page);
-    await submitLoginPageForm(page, user.email, user.password);
-    await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+    await signInSeededUser(page, user);
     await navigateToTab(page, 'social');
     await dismissOnboardingIfShown(page);
 

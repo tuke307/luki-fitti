@@ -13,6 +13,9 @@ config({ path: resolve(__dirname, '../../.env.local') });
 config({ path: resolve(__dirname, '../../../api/.env.local') });
 
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { createHash, randomBytes } from 'crypto';
+import { expect, type Page } from '@playwright/test';
 import prisma from '@luki-fitti/database';
 import { berlinDayKey, berlinWeekKey, weekBounds } from '@luki-fitti/common/utils';
 import { bossForWeek, raidPhaseFor } from '@luki-fitti/common/raid';
@@ -258,4 +261,92 @@ export async function seedCommunityRaidForE2e(userId: string, damage = 120): Pro
     data: { phase: raidPhaseFor(updated.damage, updated.maxHp) },
   });
   return raid.id;
+}
+
+// Mirrors apps/api/src/config/env.config.ts so the signed tokens match whatever
+// secret the api under test actually uses (incl. its dev-only fallback).
+const ACCESS_TOKEN_EXPIRY_MS = Number(process.env.ACCESS_TOKEN_EXPIRY_MS) || 900000;
+const REFRESH_TOKEN_EXPIRY_MS = Number(process.env.REFRESH_TOKEN_EXPIRY_MS) || 7776000000;
+
+const INSECURE_SECRET_VALUES = new Set([
+  'your-jwt-secret-key',
+  'your-jwt-refresh-secret-key',
+  'secret',
+  '',
+]);
+
+function e2eJwtSecret(envValue: string | undefined, name: string): string {
+  const value = (envValue ?? '').trim();
+  if (value.length >= 32 && !INSECURE_SECRET_VALUES.has(value)) return value;
+  return `dev-only-insecure-${name.toLowerCase()}-do-not-use-in-production`;
+}
+
+/**
+ * Establishes a real authenticated session for a seeded user without hitting
+ * the throttled `POST /api/auth/login` (10 req / 10 min per IP — the suite's
+ * repeated form logins exhaust it). Replicates `issueSessionCookies` in the
+ * auth controller: an HS512 access token (payload `{ id, email, sid, jti }`),
+ * a refresh token whose sha256 hash is stored as a RefreshToken row in the
+ * same family (`sid`), and a CSRF token cookie the web client echoes back via
+ * the `X-CSRF-Token` header — so `AuthGuard` + `CsrfGuard` accept the session
+ * and UI sign-out revokes it like a real one.
+ */
+export async function signInSeededUser(page: Page, user: SeededSocialUser): Promise<void> {
+  const familyId = crypto.randomUUID();
+  const accessToken = jwt.sign(
+    {
+      id: user.id,
+      email: user.email,
+      sid: familyId,
+      jti: randomBytes(16).toString('hex'),
+    },
+    e2eJwtSecret(process.env.JWT_SECRET, 'JWT_SECRET'),
+    { expiresIn: Math.floor(ACCESS_TOKEN_EXPIRY_MS / 1000), algorithm: 'HS512' },
+  );
+  const refreshToken = jwt.sign(
+    { id: user.id, sid: familyId, jti: randomBytes(16).toString('hex') },
+    e2eJwtSecret(process.env.JWT_REFRESH_SECRET, 'JWT_REFRESH_SECRET'),
+    { expiresIn: Math.floor(REFRESH_TOKEN_EXPIRY_MS / 1000), algorithm: 'HS512' },
+  );
+
+  await prisma.refreshToken.create({
+    data: {
+      token: createHash('sha256').update(refreshToken).digest('hex'),
+      userId: user.id,
+      familyId,
+      deviceLabel: 'web',
+      expiresAt: new Date(Date.now() + REFRESH_TOKEN_EXPIRY_MS),
+    },
+  });
+
+  const baseUrl = new URL(process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000');
+  await page.context().addCookies([
+    {
+      name: 'accessToken',
+      value: accessToken,
+      url: baseUrl.origin,
+      httpOnly: true,
+      sameSite: 'Strict',
+    },
+    {
+      name: 'refreshToken',
+      value: refreshToken,
+      url: baseUrl.origin,
+      httpOnly: true,
+      sameSite: 'Strict',
+    },
+    {
+      name: 'csrfToken',
+      value: randomBytes(24).toString('hex'),
+      url: baseUrl.origin,
+      httpOnly: false,
+      sameSite: 'Strict',
+    },
+  ]);
+
+  await page.goto('/');
+  await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+  await expect(page.getByTestId('header-sync-status')).not.toContainText(/Guest/i, {
+    timeout: 15_000,
+  });
 }
