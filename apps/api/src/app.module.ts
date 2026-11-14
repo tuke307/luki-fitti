@@ -30,6 +30,8 @@ import { PushModule } from './modules/push/push.module';
 import { LeagueModule } from './modules/league/league.module';
 import { BattleModule } from './modules/battle/battle.module';
 import { RaidModule } from './modules/raid/raid.module';
+import { ApiKeysModule } from './modules/api-keys/api-keys.module';
+import { PublicApiModule } from './modules/public-api/public-api.module';
 import { NODE_ENV } from './config/env.config';
 
 @Module({
@@ -71,6 +73,8 @@ import { NODE_ENV } from './config/env.config';
     LeagueModule,
     BattleModule,
     RaidModule,
+    ApiKeysModule,
+    PublicApiModule,
   ],
   providers: [
     {

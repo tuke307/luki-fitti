@@ -10,9 +10,15 @@ const SENSITIVE_KEY =
 /** Request bodies that must never be logged, even redacted (privacy promise in the policy). */
 const OMITTED_BODY_PATHS = [/^\/api\/import\//, /^\/api\/social\/contacts\/match/];
 
-/** Masks capability tokens that travel in URL paths (friend invites). Exported for tests. */
+/**
+ * Masks capability tokens that travel in URLs (friend invite ids in the path,
+ * personal API keys `lf_pat_…` wherever a client mistakenly put them).
+ * Exported for tests.
+ */
 export function redactUrlForLog(url: string): string {
-  return url.replace(/(\/invites?\/)[^/?#]+/g, '$1[redacted]');
+  return url
+    .replace(/(\/invites?\/)[^/?#]+/g, '$1[redacted]')
+    .replace(/lf_pat_[^&\s/]+/g, 'lf_pat_[redacted]');
 }
 
 /** Deep copy with sensitive values replaced. Exported for tests. */

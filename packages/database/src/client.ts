@@ -56,6 +56,7 @@ export type {
   MealEntry,
   MealItem,
   MealPhoto,
+  ApiKey,
 } from './generated/prisma/client';
 
 export {

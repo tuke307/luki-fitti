@@ -4,6 +4,8 @@ export const DEFAULT_SITE_LOCALE: SiteLocale = 'de';
 
 const isProd = process.env.NODE_ENV === 'production';
 export const SITE_HOSTNAMES = isProd ? ['luki-fitti.tony-luke.de'] : ['site.localhost:3000'];
+export const DOCS_HOSTNAMES = isProd ? ['docs.luki-fitti.tony-luke.de'] : ['docs.localhost:3000'];
+export const DOCS_ORIGIN = `http${isProd ? 's' : ''}://${DOCS_HOSTNAMES[0]}`;
 export const APP_ORIGIN = isProd ? 'https://app.luki-fitti.tony-luke.de' : 'http://localhost:3000';
 export const SITE_ORIGIN = `http${isProd ? 's' : ''}://${SITE_HOSTNAMES[0]}`;
 

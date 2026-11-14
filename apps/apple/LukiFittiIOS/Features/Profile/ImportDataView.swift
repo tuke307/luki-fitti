@@ -14,7 +14,7 @@ struct ImportDataView: View {
     @State private var showsPicker = false
     @State private var state: ImportState = .idle
 
-    static let formatDocURL = URL(string: "https://github.com/tuke307/luki-fitti/blob/main/docs/import-format.md")!
+    static let formatDocURL = URL(string: "https://docs.luki-fitti.tony-luke.de/import-format")!
 
     enum ImportState: Equatable {
         case idle
@@ -26,7 +26,7 @@ struct ImportDataView: View {
         case failed(String)
     }
 
-    /// Step-by-step migration guides in the public repo. App names stay untranslated.
+    /// Step-by-step migration guides on the docs site. App names stay untranslated.
     private static let importGuides: [(name: String, docFile: String, accessibilityId: String)] = [
         ("GymLife", "gymlife-import", "ios.profile.row.import.gymlife"),
         ("Alpha Progression", "alpha-progression-import", "ios.profile.row.import.alphaProgression"),
@@ -80,7 +80,7 @@ struct ImportDataView: View {
             Section {
                 ForEach(Self.importGuides, id: \.name) { guide in
                     Button {
-                        if let url = URL(string: "https://github.com/tuke307/luki-fitti/blob/main/docs/\(guide.docFile).md") {
+                        if let url = URL(string: "https://docs.luki-fitti.tony-luke.de/\(guide.docFile)") {
                             openURL(url)
                         }
                     } label: {

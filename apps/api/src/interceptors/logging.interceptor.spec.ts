@@ -39,4 +39,15 @@ describe('redactUrlForLog', () => {
   it('leaves the invite collection route alone', () => {
     assert.equal(redactUrlForLog('/api/social/invites'), '/api/social/invites');
   });
+
+  it('masks lf_pat_ keys wherever a client put them in the URL', () => {
+    assert.equal(
+      redactUrlForLog('/api/v1/sessions?key=lf_pat_abc234de_secret'),
+      '/api/v1/sessions?key=lf_pat_[redacted]',
+    );
+    assert.equal(
+      redactUrlForLog('/api/v1/me?a=1&key=lf_pat_abc234de_secret&b=2'),
+      '/api/v1/me?a=1&key=lf_pat_[redacted]&b=2',
+    );
+  });
 });

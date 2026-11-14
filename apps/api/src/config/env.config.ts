@@ -45,6 +45,19 @@ export function getJwtRefreshSecret(): string {
   return _jwtRefreshSecret;
 }
 
+let _apiKeyPepper: string | undefined;
+/**
+ * HMAC pepper for personal API key hashes (`lf_pat_…`). Same rules as the JWT
+ * secrets: ≥32 high-entropy chars in production (throws at first use otherwise),
+ * a deterministic dev-only fallback elsewhere.
+ */
+export function getApiKeyPepper(): string {
+  if (_apiKeyPepper === undefined) {
+    _apiKeyPepper = resolveJwtSecret(process.env.API_KEY_PEPPER, 'API_KEY_PEPPER');
+  }
+  return _apiKeyPepper;
+}
+
 export const REFRESH_TOKEN_EXPIRY_MS = Number(process.env.REFRESH_TOKEN_EXPIRY_MS) || 7776000000;
 // Window in which an already-rotated refresh token is still accepted (lost responses, tabs).
 export const REFRESH_TOKEN_REUSE_GRACE_MS =

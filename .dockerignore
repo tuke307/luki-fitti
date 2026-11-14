@@ -81,3 +81,6 @@ apps/apple
 # If excluding everything, whitelist 'public'
 # **
 # !public
+
+# The docs site needs the repo-root README.md as its home page
+!README.md

@@ -873,3 +873,5 @@ export * from './league.schemas';
 export * from './battle.schemas';
 export * from './raid.schemas';
 export * from './import';
+export * from './api-keys.schemas';
+export * from './public-api.schemas';

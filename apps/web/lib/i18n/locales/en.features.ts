@@ -454,6 +454,7 @@ export const enFeatures = {
     retentionHint: 'Leave empty to keep photos until the meal is deleted.',
     saveSettings: 'Save settings',
     settingsSaved: 'Settings saved',
+    navApiKeys: 'API keys',
     navSocial: 'Social',
     navLeagues: 'Leagues',
     navBosses: 'Bosses',
@@ -491,6 +492,12 @@ export const enFeatures = {
 
     navReports: 'Reports',
     socialTitle: 'Social',
+    apiKeysSub:
+      'Personal API keys for the read-only public API. Off blocks new keys and every key request.',
+    apiKeysEnabledLabel: 'Personal API keys enabled',
+    mcpEnabledLabel: 'AI assistants (MCP)',
+    mcpSub:
+      'Lets AI assistants connect with a personal API key that has the mcp scope. Off blocks every MCP request.',
     socialSub: 'Kill switch and the beta allowlist. An empty list enables social for everyone.',
     socialEnabledLabel: 'Social enabled',
     betaListTitle: 'Beta allowlist',

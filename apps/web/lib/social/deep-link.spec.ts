@@ -28,7 +28,15 @@ describe('parseOpenParam', () => {
     });
   });
 
+  it('maps /profile/api-keys to the profile settings page', () => {
+    assert.deepEqual(parseOpenParam('?open=%2Fprofile%2Fapi-keys'), {
+      tab: 'profile',
+      page: 'apiKeys',
+    });
+  });
+
   it('falls back to home for unknown or unsafe values', () => {
+    assert.deepEqual(parseOpenParam('?open=%2Fprofile%2Fother'), { tab: 'home' });
     assert.deepEqual(parseOpenParam('?open=%2Fadmin'), { tab: 'home' });
     assert.deepEqual(parseOpenParam('?open=https%3A%2F%2Fevil.test'), { tab: 'home' });
     assert.deepEqual(parseOpenParam('?open=javascript:alert(1)'), { tab: 'home' });
