@@ -46,7 +46,12 @@ export const PublicListQuerySchema = z.object({
 });
 export type PublicListQueryDto = z.infer<typeof PublicListQuerySchema>;
 
-/** Lists that also filter by an event date range (`from`/`to`, inclusive). */
+/**
+ * Lists that also filter by an event date range (`from`/`to`, inclusive).
+ * A date-only value is a whole UTC calendar day: `from` covers from 00:00Z
+ * that day, `to` covers until 23:59:59.999Z (i.e. `to=2026-11-14` includes
+ * the 14th). Full datetimes are compared exactly.
+ */
 export const PublicRangeQuerySchema = PublicListQuerySchema.extend({
   from: isoDateOrDateTime.optional(),
   to: isoDateOrDateTime.optional(),

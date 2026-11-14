@@ -43,7 +43,14 @@ import type {
 } from '@luki-fitti/common/schemas';
 import { PrismaService } from '../database/prisma.service';
 import { AnalyticsService } from '../analytics/analytics.service';
-import { cursorWhere, decodeCursor, toPage, type Page } from './pagination.util';
+import {
+  cursorWhere,
+  decodeCursor,
+  rangeBounds,
+  rangeDayBounds,
+  toPage,
+  type Page,
+} from './pagination.util';
 
 const LBS_TO_KG = 0.45359237;
 
@@ -108,14 +115,7 @@ export class PublicApiService {
       this.prisma.workoutSession.findMany({
         where: {
           userId,
-          ...(query.from || query.to
-            ? {
-                startedAt: {
-                  ...(query.from ? { gte: new Date(query.from) } : {}),
-                  ...(query.to ? { lte: new Date(query.to) } : {}),
-                },
-              }
-            : {}),
+          ...(query.from || query.to ? { startedAt: rangeBounds(query) } : {}),
           AND: this.listFilters<Prisma.WorkoutSessionWhereInput>(query),
         },
         orderBy: [{ updatedAt: 'asc' }, { id: 'asc' }],
@@ -282,14 +282,7 @@ export class PublicApiService {
       this.prisma.mealEntry.findMany({
         where: {
           userId,
-          ...(query.from || query.to
-            ? {
-                eatenAt: {
-                  ...(query.from ? { gte: new Date(query.from) } : {}),
-                  ...(query.to ? { lte: new Date(query.to) } : {}),
-                },
-              }
-            : {}),
+          ...(query.from || query.to ? { eatenAt: rangeBounds(query) } : {}),
           AND: this.listFilters<Prisma.MealEntryWhereInput>(query),
         },
         include: { items: { orderBy: { orderIndex: 'asc' } } },
@@ -333,14 +326,7 @@ export class PublicApiService {
       this.prisma.bodyWeightEntry.findMany({
         where: {
           userId,
-          ...(query.from || query.to
-            ? {
-                measuredAt: {
-                  ...(query.from ? { gte: new Date(query.from) } : {}),
-                  ...(query.to ? { lte: new Date(query.to) } : {}),
-                },
-              }
-            : {}),
+          ...(query.from || query.to ? { measuredAt: rangeBounds(query) } : {}),
           AND: this.listFilters<Prisma.BodyWeightEntryWhereInput>(query),
         },
         orderBy: [{ updatedAt: 'asc' }, { id: 'asc' }],
@@ -403,14 +389,7 @@ export class PublicApiService {
       this.prisma.healthDailyEnergy.findMany({
         where: {
           userId,
-          ...(query.from || query.to
-            ? {
-                day: {
-                  ...(query.from ? { gte: query.from.slice(0, 10) } : {}),
-                  ...(query.to ? { lte: query.to.slice(0, 10) } : {}),
-                },
-              }
-            : {}),
+          ...(query.from || query.to ? { day: rangeDayBounds(query) } : {}),
           AND: this.listFilters<Prisma.HealthDailyEnergyWhereInput>(query),
         },
         orderBy: [{ updatedAt: 'asc' }, { id: 'asc' }],
@@ -432,14 +411,7 @@ export class PublicApiService {
       this.prisma.healthWorkout.findMany({
         where: {
           userId,
-          ...(query.from || query.to
-            ? {
-                startedAt: {
-                  ...(query.from ? { gte: new Date(query.from) } : {}),
-                  ...(query.to ? { lte: new Date(query.to) } : {}),
-                },
-              }
-            : {}),
+          ...(query.from || query.to ? { startedAt: rangeBounds(query) } : {}),
           AND: this.listFilters<Prisma.HealthWorkoutWhereInput>(query),
         },
         orderBy: [{ updatedAt: 'asc' }, { id: 'asc' }],

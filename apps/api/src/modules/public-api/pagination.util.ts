@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import type { PublicRangeQueryDto } from '@luki-fitti/common/schemas';
 
 /**
  * Opaque cursor pagination for `/api/v1` lists. The cursor is base64url JSON
@@ -45,6 +46,53 @@ export function cursorWhere(cursor: CursorPosition, dateField = 'updatedAt') {
 export interface Page<T> {
   data: T[];
   nextCursor: string | null;
+}
+
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+const dayAfter = (isoDay: string): Date => {
+  const d = new Date(`${isoDay}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d;
+};
+
+/**
+ * `from`/`to` bounds for a timestamp column. A date-only value is a whole UTC
+ * calendar day: `from` becomes `>= 00:00Z` of that day and `to` becomes
+ * `< 00:00Z` of the next day (so `to=2026-11-14` includes the 14th).
+ * Full datetimes stay exact (`from` >=, `to` <=).
+ */
+export function rangeBounds(query: Pick<PublicRangeQueryDto, 'from' | 'to'>): {
+  gte?: Date;
+  lt?: Date;
+  lte?: Date;
+} {
+  const bounds: { gte?: Date; lt?: Date; lte?: Date } = {};
+  if (query.from) bounds.gte = new Date(query.from);
+  if (query.to) {
+    if (DATE_ONLY.test(query.to)) {
+      bounds.lt = dayAfter(query.to);
+    } else {
+      bounds.lte = new Date(query.to);
+    }
+  }
+  return bounds;
+}
+
+/**
+ * Same day semantics for `YYYY-MM-DD` string columns (e.g. `HealthDailyEnergy.day`):
+ * `from` >= the from-day, `to` < the day after the to-day.
+ */
+export function rangeDayBounds(query: Pick<PublicRangeQueryDto, 'from' | 'to'>): {
+  gte?: string;
+  lt?: string;
+} {
+  const bounds: { gte?: string; lt?: string } = {};
+  if (query.from) bounds.gte = new Date(query.from).toISOString().slice(0, 10);
+  if (query.to) {
+    bounds.lt = dayAfter(new Date(query.to).toISOString().slice(0, 10)).toISOString().slice(0, 10);
+  }
+  return bounds;
 }
 
 /**
