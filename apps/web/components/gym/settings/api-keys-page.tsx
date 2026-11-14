@@ -390,8 +390,8 @@ export function ApiKeysPage() {
     }
   };
 
-  // The docs page arrives with PR B; locale path mirrors the legal links.
-  const docsHref = locale === 'de' ? '/developers' : `/${locale}/developers`;
+  // Public API guide; will move to the docs site once its URL is settled.
+  const docsHref = 'https://github.com/tuke307/luki-fitti/blob/main/docs/public-api.md';
 
   return (
     <>
