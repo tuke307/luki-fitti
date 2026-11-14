@@ -193,6 +193,7 @@
     },
     "/v1/sessions": {
       "get": {
+        "description": "Summary rows by default. `include=exercises` returns full sessions with exercises and sets (limit capped at 50) for tools that need sets without one request per session.",
         "operationId": "PublicSessionsController_listSessions",
         "parameters": [
           {
@@ -3616,6 +3617,24 @@
           }
         ],
         "summary": "Full workout backup as a luki-fitti-import@1 file",
+        "tags": ["Public API v1"]
+      }
+    },
+    "/v1/key": {
+      "get": {
+        "operationId": "PublicKeyController_getKey",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Introspect the presented API key (id, scopes, expiry)",
         "tags": ["Public API v1"]
       }
     }
