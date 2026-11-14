@@ -518,7 +518,14 @@ export enum ApiKeyScope {
   READ_BODY = 'read:body',
   READ_ACTIVITY = 'read:activity',
   EXPORT = 'export',
+  /** Lets AI assistants use the key through the MCP server (`/v1/key` introspection). */
+  MCP = 'mcp',
 }
 
 /** All scopes a user can grant when creating a key. */
 export const API_KEY_SCOPES: readonly ApiKeyScope[] = Object.values(ApiKeyScope);
+
+/** Every `read:*` scope — e.g. the "AI assistant (MCP)" preset grants these plus `mcp`. */
+export const API_KEY_READ_SCOPES: readonly ApiKeyScope[] = API_KEY_SCOPES.filter((s) =>
+  s.startsWith('read:'),
+);

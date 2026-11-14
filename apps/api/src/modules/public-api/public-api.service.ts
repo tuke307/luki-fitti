@@ -36,6 +36,7 @@ import type {
   PublicSessionDto,
   PublicSessionExerciseDto,
   PublicSessionListItemDto,
+  PublicSessionListQueryDto,
   PublicSessionSetDto,
   PublicStretchingRoutineDto,
   PublicWorkoutFolderDto,
@@ -109,8 +110,9 @@ export class PublicApiService {
 
   async listSessions(
     userId: string,
-    query: PublicRangeQueryDto,
-  ): Promise<PublicListDto<PublicSessionListItemDto>> {
+    query: PublicSessionListQueryDto,
+  ): Promise<PublicListDto<PublicSessionListItemDto | PublicSessionDto>> {
+    const withExercises = query.include === 'exercises';
     const page = await this.paginate(
       this.prisma.workoutSession.findMany({
         where: {
@@ -118,12 +120,20 @@ export class PublicApiService {
           ...(query.from || query.to ? { startedAt: rangeBounds(query) } : {}),
           AND: this.listFilters<Prisma.WorkoutSessionWhereInput>(query),
         },
+        ...(withExercises
+          ? { include: { exercises: { include: { sets: true }, orderBy: { orderIndex: 'asc' } } } }
+          : {}),
         orderBy: [{ updatedAt: 'asc' }, { id: 'asc' }],
         take: query.limit + 1,
       }),
       query,
     );
-    return { data: page.data.map((s) => this.toSessionListItem(s)), nextCursor: page.nextCursor };
+    return {
+      data: page.data.map((s) =>
+        withExercises ? this.toSession(s as SessionRow) : this.toSessionListItem(s),
+      ),
+      nextCursor: page.nextCursor,
+    };
   }
 
   async getSession(userId: string, id: string): Promise<PublicSessionDto> {

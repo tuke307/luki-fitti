@@ -205,13 +205,19 @@ export interface SocialSettingsDto {
   socialBetaUserIds: string[];
 }
 
-export const UpdateApiKeysSettingsSchema = z.object({
-  apiKeysEnabled: z.boolean(),
-});
+export const UpdateApiKeysSettingsSchema = z
+  .object({
+    apiKeysEnabled: z.boolean().optional(),
+    mcpEnabled: z.boolean().optional(),
+  })
+  .refine((dto) => Object.values(dto).some((v) => v !== undefined), {
+    message: 'At least one setting is required',
+  });
 export type UpdateApiKeysSettingsDto = z.infer<typeof UpdateApiKeysSettingsSchema>;
 
 export interface ApiKeysSettingsDto {
   apiKeysEnabled: boolean;
+  mcpEnabled: boolean;
 }
 
 export const AdminReportsQuerySchema = z.object({

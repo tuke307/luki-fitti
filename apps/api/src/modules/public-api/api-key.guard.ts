@@ -23,6 +23,8 @@ import { verifyApiKeySecret } from '../api-keys/api-key.crypto';
 export interface RequestApiKey {
   id: string;
   scopes: ApiKeyScope[];
+  /** ISO 8601 expiry, or null for a key without expiry. */
+  expiresAt: string | null;
 }
 
 /** One generic message: never reveal which check failed (probing defense). */
@@ -118,7 +120,11 @@ export class ApiKeyGuard implements CanActivate {
     }
 
     request.user = { id: record.user.id, email: record.user.email, permissions: [] };
-    request.apiKey = { id: record.id, scopes: record.scopes as ApiKeyScope[] };
+    request.apiKey = {
+      id: record.id,
+      scopes: record.scopes as ApiKeyScope[],
+      expiresAt: record.expiresAt?.toISOString() ?? null,
+    };
 
     // lastUsedAt: at most one write per minute per key, fire-and-forget.
     try {

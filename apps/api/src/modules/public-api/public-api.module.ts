@@ -10,6 +10,7 @@ import { PublicWorkoutsController } from './public-workouts.controller';
 import { PublicNutritionController } from './public-nutrition.controller';
 import { PublicBodyController } from './public-body.controller';
 import { PublicActivityController } from './public-activity.controller';
+import { PublicKeyController } from './public-key.controller';
 
 @Module({
   imports: [AnalyticsModule],
@@ -20,6 +21,7 @@ import { PublicActivityController } from './public-activity.controller';
     PublicNutritionController,
     PublicBodyController,
     PublicActivityController,
+    PublicKeyController,
   ],
   providers: [ApiKeyGuard, ScopesGuard, ApiKeyRateLimitGuard, PublicApiService],
 })
