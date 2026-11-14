@@ -153,7 +153,7 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
               API access. Revoked and expired keys are deleted 30 days after they end; all keys are
               deleted with your account. API keys only read your own data and never include photos
               or social data. When you connect an AI assistant through the MCP server, the data it
-              fetches is sent to the assistant's provider at your request.
+              fetches is sent to the assistant&rsquo;s provider at your request.
             </p>
           </section>
           <section>
