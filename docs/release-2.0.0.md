@@ -12,7 +12,9 @@ Last updated: 2026-11-15 (end of session 1).
 main ◀── develop ◀── release/2.0.0  (version bump 2.0.0)        PR #106 → develop  (draft)
                       ├── feat/social-2.0   (social features)    PR #100 → release/2.0.0
                       │    └── #101 … #104 already merged into it
-                      └── feat/api-keys     (API keys + MCP)     PR #107 → release/2.0.0 (draft, docs only)
+                      └── feat/api-keys     (API keys)           PR #107 → release/2.0.0 (draft, docs only)
+                           └── feat/mcp-server (MCP server)      PR #108 → feat/api-keys (draft, docs only;
+                                                                  retarget to release/2.0.0 after #107)
 ```
 
 - `release/2.0.0` was cut from `develop` and carries only the version bump (`yarn version:set
@@ -25,13 +27,13 @@ main ◀── develop ◀── release/2.0.0  (version bump 2.0.0)        PR #
 
 ## Status
 
-| Stream                                                                 | PR                                         | State                                                                                                                                     | Docs                                                                |
-| :--------------------------------------------------------------------- | :----------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------ |
-| Version bump 2.0.0                                                     | #106 (`release/2.0.0` → `develop`)         | draft. Screenshots for 2.0 still missing (on purpose, done last)                                                                          | `docs/release.md`                                                   |
-| Social: friends, leagues, duels, raids                                 | #100 (`feat/social-2.0` → `release/2.0.0`) | **all 4 sub-PRs merged** (#101–#104). Lint/test/apple green after the fix `f9b280a3`; e2e was still running at handoff, so check it first | `docs/social-2.0.md` + `social-2.0-pr1…4.md` (on `feat/social-2.0`) |
-| Personal API keys                                                      | #107 (`feat/api-keys` → `release/2.0.0`)   | **design approved, implementation not started**                                                                                           | `docs/api-keys.md` (on `feat/api-keys`)                             |
-| MCP server                                                             | part of #107's stream                      | **design approved, implementation not started**                                                                                           | `docs/mcp-server.md` (on `feat/api-keys`)                           |
-| Former "PR 5": beta, final privacy policy, App Store notes, release PR | —                                          | **postponed** by the user; ships together with the next feature                                                                           | `docs/social-2.0.md` → "Later"                                      |
+| Stream                                                                 | PR                                                               | State                                                                                                                                     | Docs                                                                |
+| :--------------------------------------------------------------------- | :--------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------ |
+| Version bump 2.0.0                                                     | #106 (`release/2.0.0` → `develop`)                               | draft. Screenshots for 2.0 still missing (on purpose, done last)                                                                          | `docs/release.md`                                                   |
+| Social: friends, leagues, duels, raids                                 | #100 (`feat/social-2.0` → `release/2.0.0`)                       | **all 4 sub-PRs merged** (#101–#104). Lint/test/apple green after the fix `f9b280a3`; e2e was still running at handoff, so check it first | `docs/social-2.0.md` + `social-2.0-pr1…4.md` (on `feat/social-2.0`) |
+| Personal API keys                                                      | #107 (`feat/api-keys` → `release/2.0.0`)                         | **design approved, implementation not started**                                                                                           | `docs/api-keys.md` (on `feat/api-keys`)                             |
+| MCP server (separate feature)                                          | #108 (`feat/mcp-server` → `feat/api-keys`, then `release/2.0.0`) | **design approved, implementation not started**; starts after API keys                                                                    | `docs/mcp-server.md` (on `feat/mcp-server`)                         |
+| Former "PR 5": beta, final privacy policy, App Store notes, release PR | —                                                                | **postponed** by the user; ships together with the next feature                                                                           | `docs/social-2.0.md` → "Later"                                      |
 
 ## Next steps (in order)
 
@@ -58,14 +60,17 @@ main ◀── develop ◀── release/2.0.0  (version bump 2.0.0)        PR #
    - Shared `luki-fitti-import@1` export builder in `@luki-fitti/common` (the web backup
      button switches to it) and `/v1/export`.
    - Public OpenAPI output for `/api/v1`, the `/developers` page, the privacy paragraph.
-5. **MCP server PR C** (`docs/mcp-server.md`).
+5. **MCP server: a separate feature, #108** (`docs/mcp-server.md` on `feat/mcp-server`).
+   - Before starting, merge the implemented `feat/api-keys` into `feat/mcp-server`. Retarget
+     #108 to `release/2.0.0` once #107 is merged.
    - Copy the `apps/mcp-server` scaffold from `/Users/MEISSTO/source/marienmuehle/apps/mcp-server`
      (same as kds-werkzeugbau): `app.module.ts`, `config.ts`, guard, `tools/mcp-date-utils.ts`,
      Dockerfile, Bruno collection.
    - Pin `@rekog/mcp-nest` 2.0.8, `@modelcontextprotocol/server` 2.3.1, `/node` 2.1.1 and
      `/core` 2.3.1 **exactly**, after vetting.
-   - Replace the shared-secret guard with forwarding the user's `lf_pat_` key, plus a new
-     `GET /v1/key` and the `mcp` scope.
+   - Replace the shared-secret guard with forwarding the user's `lf_pat_` key. This feature
+     also adds the `mcp` scope, `GET /v1/key` and `AppSettings.mcpEnabled` to the API (not
+     the API keys feature).
    - The 9 read-only tools.
    - Routing: Caddy `handle /mcp/*` → `mcp-server:3030`, plus a fourth production image.
    - Decided: URL `https://app.luki-fitti.tony-luke.de/mcp`, and `tools/list` requires a key.
@@ -94,8 +99,7 @@ marketing:screenshots`), then the user merges #106 into `develop`.
   - `/Users/MEISSTO/source/luki-fitti`: the user's main checkout on `develop`. Don't touch.
   - `/Users/MEISSTO/source/luki-fitti-wt/social-2.0`: detached at `feat/social-2.0`
     (`f9b280a3`), with its own `node_modules`.
-  - `/Users/MEISSTO/source/luki-fitti-wt/api-keys`: `feat/api-keys` (+ this doc on a temp
-    branch). It has **no** `node_modules`, so run `yarn install` there; don't symlink another
+  - `/Users/MEISSTO/source/luki-fitti-wt/api-keys`: `feat/api-keys` / `feat/mcp-server`. It has its own `node_modules` (`yarn install` done there); don't symlink another
     worktree's.
 - **Databases (local Postgres `tuke307-local-postgres-1`, port 5432):**
   - `lukifittidb` is the user's shared dev DB. It already has the `20261113000000_social_foundation`
@@ -132,6 +136,6 @@ marketing:screenshots`), then the user merges #106 into `develop`.
 
 ## Session log
 
-| Date            | Done                                                                                                                                                                                                 | Next                                           |
-| :-------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------- |
-| 2026-11-13 → 15 | Social plan + PRs #101–#104 built, reviewed and merged into `feat/social-2.0`; CI extended to feature branches; `release/2.0.0` + #106; API keys and MCP designs approved (#107); lint fixes on #100 | Check #100 e2e, merge #100, then API keys PR A |
+| Date            | Done                                                                                                                                                                                                                                          | Next                                           |
+| :-------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------- |
+| 2026-11-13 → 15 | Social plan + PRs #101–#104 built, reviewed and merged into `feat/social-2.0`; CI extended to feature branches; `release/2.0.0` + #106; API keys design (#107) and MCP design (#108, split into its own feature) approved; lint fixes on #100 | Check #100 e2e, merge #100, then API keys PR A |
