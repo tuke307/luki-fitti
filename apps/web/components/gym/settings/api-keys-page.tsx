@@ -352,7 +352,7 @@ function KeyRow({ apiKey, onRevoke }: { apiKey: ApiKeyDto; onRevoke: (k: ApiKeyD
 }
 
 export function ApiKeysPage() {
-  const { t, format, locale } = useLocale();
+  const { t, format } = useLocale();
   const d = t.apiKeys;
   const [list, setList] = useState<ApiKeyListDto | null>(null);
   const [error, setError] = useState(false);
