@@ -110,15 +110,16 @@ API_KEY_CREATED
 
 ## Scopes
 
-| Scope            | Grants                                                        |
-| :--------------- | :------------------------------------------------------------ |
-| `read:profile`   | `GET /v1/me` (id, name, units, goals; never the email)        |
-| `read:workouts`  | templates, folders, stretching routines, custom exercises     |
-| `read:sessions`  | workout sessions with exercises and sets, personal records    |
-| `read:nutrition` | meal entries and items (no photos in v1)                      |
-| `read:body`      | body weight entries, progress check-ins (metadata, no photos) |
-| `read:activity`  | Apple Health daily energy and imported workouts               |
-| `export`         | `GET /v1/export` (everything above as `luki-fitti-import@1`)  |
+| Scope            | Grants                                                                                               |
+| :--------------- | :--------------------------------------------------------------------------------------------------- |
+| `read:profile`   | `GET /v1/me` (id, name, units, goals; never the email)                                               |
+| `read:workouts`  | templates, folders, stretching routines, custom exercises                                            |
+| `read:sessions`  | workout sessions with exercises and sets, personal records                                           |
+| `read:nutrition` | meal entries and items (no photos in v1)                                                             |
+| `read:body`      | body weight entries, progress check-ins (metadata, no photos)                                        |
+| `read:activity`  | Apple Health daily energy and imported workouts                                                      |
+| `export`         | `GET /v1/export` (everything above as `luki-fitti-import@1`)                                         |
+| `mcp`            | `GET /v1/key` introspection; required to connect an AI assistant via the [MCP server](mcp-server.md) |
 
 Deny by default: a route without an `@ApiScope(...)` decorator is unreachable with a key.
 Progress and meal photos are excluded in v1 (large, sensitive, and they'd need signed URLs);
@@ -204,8 +205,9 @@ lf_pat_…`. Anything that doesn't start with `lf_pat_` is rejected there, and t
 
 The MCP server is its own feature and PR (branch `feat/mcp-server`, design in
 `docs/mcp-server.md` there). It builds on this one: it forwards the user's API key to
-`/api/v1`. It also adds what only it needs: the `mcp` scope and `GET /v1/key`. Nothing in this
-feature depends on it.
+`/api/v1`. It also adds what only it needs: the `mcp` scope, `GET /v1/key`, and
+`GET /v1/sessions?include=exercises` (full session rows, `limit` capped at 50) so its tools
+can fetch sets without one request per session. Nothing in this feature depends on it.
 
 ## Architecture fit
 

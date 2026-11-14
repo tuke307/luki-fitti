@@ -10,7 +10,7 @@ import { Checkbox } from '@luki-fitti/ui/components/ui/checkbox';
 import { Input } from '@luki-fitti/ui/components/ui/input';
 import { Label } from '@luki-fitti/ui/components/ui/label';
 import { toast } from '@luki-fitti/ui/components/ui/sonner';
-import { API_KEY_SCOPES, ApiKeyScope } from '@luki-fitti/common/enums';
+import { API_KEY_READ_SCOPES, API_KEY_SCOPES, ApiKeyScope } from '@luki-fitti/common/enums';
 import type { ApiKeyDto, ApiKeyListDto, CreatedApiKeyDto } from '@luki-fitti/common/schemas';
 import { api, ApiClientError } from '@/lib/api';
 import { useLocale } from '@/providers/i18n/locale-context';
@@ -19,6 +19,11 @@ import { ConfirmDestructiveDialog } from '../confirm-destructive-dialog';
 import { SettingsSection } from './settings-row';
 
 const EXPIRY_OPTIONS = [30, 90, 365, null] as const;
+
+/** Default preselection: everything except `mcp`, which only the MCP preset ticks. */
+const DEFAULT_SCOPES = API_KEY_SCOPES.filter((s) => s !== ApiKeyScope.MCP);
+/** "AI assistant (MCP)" preset: the mcp scope plus all read scopes (no `export`). */
+const MCP_PRESET_SCOPES = [ApiKeyScope.MCP, ...API_KEY_READ_SCOPES];
 
 /** Relative "x ago" via Intl.RelativeTimeFormat; under an hour it says minutes, etc. */
 function relativeAgo(iso: string, bcp47: string): string {
@@ -42,7 +47,7 @@ function CreateApiKeySheet({ open, onOpenChange, onCreated }: CreateSheetProps) 
   const d = useLocale().t.apiKeys;
 
   const [name, setName] = useState('');
-  const [scopes, setScopes] = useState<Set<ApiKeyScope>>(new Set(API_KEY_SCOPES));
+  const [scopes, setScopes] = useState<Set<ApiKeyScope>>(new Set(DEFAULT_SCOPES));
   const [expiresInDays, setExpiresInDays] = useState<30 | 90 | 365 | null>(90);
   const [currentPassword, setCurrentPassword] = useState('');
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -53,7 +58,7 @@ function CreateApiKeySheet({ open, onOpenChange, onCreated }: CreateSheetProps) 
 
   const reset = () => {
     setName('');
-    setScopes(new Set(API_KEY_SCOPES));
+    setScopes(new Set(DEFAULT_SCOPES));
     setExpiresInDays(90);
     setCurrentPassword('');
     setPasswordError(null);
@@ -209,6 +214,17 @@ function CreateApiKeySheet({ open, onOpenChange, onCreated }: CreateSheetProps) 
 
           <fieldset className="space-y-2">
             <legend className="text-xs font-semibold">{d.scopesLabel}</legend>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setScopes(new Set(MCP_PRESET_SCOPES))}
+                data-testid="api-key-scope-preset-mcp"
+              >
+                {d.presetMcp}
+              </Button>
+            </div>
             <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
               {API_KEY_SCOPES.map((scope) => (
                 <label key={scope} className="flex items-center gap-2.5 text-[0.9375rem]">

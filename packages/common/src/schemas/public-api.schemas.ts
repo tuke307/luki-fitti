@@ -58,6 +58,27 @@ export const PublicRangeQuerySchema = PublicListQuerySchema.extend({
 });
 export type PublicRangeQueryDto = z.infer<typeof PublicRangeQuerySchema>;
 
+/**
+ * `GET /v1/sessions`: `include=exercises` returns full session rows (exercises
+ * and sets) instead of summary rows. It's capped at 50 rows per page because
+ * a page of full sessions is much heavier — this exists so tools can fetch
+ * sets without one call per session.
+ */
+export const PublicSessionListQuerySchema = PublicRangeQuerySchema.extend({
+  include: z.enum(['exercises']).optional(),
+}).refine((q) => q.include !== 'exercises' || q.limit <= 50, {
+  message: 'limit must be 50 or less when include=exercises',
+  path: ['limit'],
+});
+export type PublicSessionListQueryDto = z.infer<typeof PublicSessionListQuerySchema>;
+
+/** `GET /v1/key`: introspection for the presented key (MCP server auth). */
+export interface PublicKeyDto {
+  id: string;
+  scopes: string[];
+  expiresAt: string | null;
+}
+
 /** `/v1/exercises`: `custom=true` lists only the user's custom exercises. */
 export const PublicExerciseQuerySchema = PublicListQuerySchema.extend({
   custom: z.enum(['true', 'false']).optional(),

@@ -503,6 +503,9 @@ export const deFeatures: Widen<typeof enFeatures> = {
     apiKeysSub:
       'Persönliche API-Schlüssel für die schreibgeschützte öffentliche API. Aus blockiert neue Schlüssel und alle Anfragen.',
     apiKeysEnabledLabel: 'Persönliche API-Schlüssel aktiviert',
+    mcpEnabledLabel: 'KI-Assistenten (MCP)',
+    mcpSub:
+      'Erlaubt KI-Assistenten den Zugriff mit einem persönlichen API-Schlüssel mit mcp-Berechtigung. Aus blockiert jede MCP-Anfrage.',
     socialSub: 'Kill-Switch und Beta-Freigabeliste. Eine leere Liste aktiviert Social für alle.',
     socialEnabledLabel: 'Social aktiviert',
     betaListTitle: 'Beta-Freigabeliste',

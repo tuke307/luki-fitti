@@ -1,0 +1,33 @@
+info:
+  name: initialize
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{MCP_URL}}/mcp"
+  body:
+    type: json
+    data: |-
+      {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+          "protocolVersion": "2025-06-18",
+          "capabilities": {},
+          "clientInfo": { "name": "bruno", "version": "1" }
+        }
+      }
+  auth: none
+  headers:
+    - name: Content-Type
+      value: application/json
+    - name: Accept
+      value: application/json, text/event-stream
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

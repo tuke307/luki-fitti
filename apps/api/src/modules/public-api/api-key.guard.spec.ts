@@ -92,7 +92,22 @@ describe('ApiKeyGuard', () => {
     } as unknown as ExecutionContext;
     assert.equal(await g.canActivate(c), true);
     assert.deepEqual(request.user, { id: 'u1', email: 'u@t.dev', permissions: [] });
-    assert.deepEqual(request.apiKey, { id: KEY_ID, scopes: ['read:workouts'] });
+    assert.deepEqual(request.apiKey, { id: KEY_ID, scopes: ['read:workouts'], expiresAt: null });
+  });
+
+  it('attaches the ISO expiry when the key has one', async () => {
+    const expiresAt = new Date('2027-01-01T00:00:00Z');
+    const { g } = guard(record({ expiresAt }));
+    const request: Record<string, unknown> = {
+      headers: { authorization: bearer },
+      query: {},
+      ip: '10.0.0.1',
+    };
+    const c = {
+      switchToHttp: () => ({ getRequest: () => request }),
+    } as unknown as ExecutionContext;
+    assert.equal(await g.canActivate(c), true);
+    assert.equal((request.apiKey as { expiresAt: string }).expiresAt, expiresAt.toISOString());
   });
 
   it('rejects a key in the query string with 400 invalid_request', async () => {

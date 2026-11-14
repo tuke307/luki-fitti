@@ -6,3 +6,8 @@ variables:
     value: "3001"
   - name: EMAIL_WORKER_PORT
     value: "3002"
+  - name: MCP_URL
+    value: http://localhost:3030
+  - name: LUKIFITTI_API_KEY
+    value: ""
+
