@@ -4,6 +4,8 @@ import { source } from '@/lib/docs/source';
 import { docsTree } from '@/lib/docs/nav';
 import { DocsHeader } from '@/components/docs/docs-header';
 
+export const dynamic = 'force-dynamic';
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <>

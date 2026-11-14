@@ -67,7 +67,8 @@ test.describe('docs site', () => {
 
     for (const path of urls) {
       await page.goto(`${DOCS}${path}`, { waitUntil: 'load' });
-      await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
+      // API reference operations render their own layout without an h1.
+      await expect(page.locator('h1, article').first()).toBeVisible();
     }
     expect(errors).toEqual([]);
   });

@@ -4,18 +4,19 @@ import { useSearchContext } from 'fumadocs-ui/contexts/search';
 import { SidebarTrigger } from 'fumadocs-ui/layouts/docs/slots/sidebar';
 import { SiGithub } from '@icons-pack/react-simple-icons';
 import { APP_ORIGIN, SITE_ORIGIN } from '@/lib/site/config';
-import { useSyncExternalStore } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 function KbdHint() {
-  const isMac = useSyncExternalStore(
-    () => () => {},
-    () => /Mac|iPhone|iPad/.test(navigator.platform),
-    () => true,
-  );
+  // Client-only: the platform differs between server and browser, so rendering it
+  // during hydration is a mismatch. Empty until mounted.
+  const [isMac, setIsMac] = useState<boolean | null>(null);
+  useEffect(() => {
+    setIsMac(/Mac|iPhone|iPad/.test(navigator.platform));
+  }, []);
   return (
     <kbd className="docs-kbd" aria-hidden>
-      {isMac ? '⌘K' : 'Ctrl K'}
+      {isMac === null ? '' : isMac ? '⌘K' : 'Ctrl K'}
     </kbd>
   );
 }
