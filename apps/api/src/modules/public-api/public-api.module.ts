@@ -15,6 +15,7 @@ import { PublicNutritionController } from './public-nutrition.controller';
 import { PublicBodyController } from './public-body.controller';
 import { PublicActivityController } from './public-activity.controller';
 import { PublicExportController } from './public-export.controller';
+import { PublicKeyController } from './public-key.controller';
 
 @Module({
   imports: [AnalyticsModule, WorkoutModule, SessionModule, ExerciseModule],
@@ -26,6 +27,7 @@ import { PublicExportController } from './public-export.controller';
     PublicBodyController,
     PublicActivityController,
     PublicExportController,
+    PublicKeyController,
   ],
   providers: [
     ApiKeyGuard,

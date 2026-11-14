@@ -5,12 +5,12 @@ import {
   PublicPersonalRecordSchema,
   PublicSessionListItemSchema,
   PublicSessionSchema,
-  PublicRangeQuerySchema,
+  PublicSessionListQuerySchema,
   type PublicListDto,
   type PublicPersonalRecordDto,
-  type PublicRangeQueryDto,
   type PublicSessionDto,
   type PublicSessionListItemDto,
+  type PublicSessionListQueryDto,
 } from '@luki-fitti/common/schemas';
 import { ApiPublicErrors, ApiRangeQueries, jsonSchemaOf, listJsonSchema } from './swagger.util';
 import { ApiScope } from '@/decorators/api-scope.decorator';
@@ -35,11 +35,17 @@ export class PublicSessionsController {
   @ApiScope(ApiKeyScope.READ_SESSIONS)
   @ApiRangeQueries()
   @ApiOkResponse({ schema: listJsonSchema(jsonSchemaOf(PublicSessionListItemSchema)) })
-  @ApiOperation({ summary: 'Workout sessions (summary rows), cursor-paginated' })
+  @ApiOperation({
+    summary: 'Workout sessions (summary rows), cursor-paginated',
+    description:
+      'Summary rows by default. `include=exercises` returns full sessions with ' +
+      'exercises and sets (limit capped at 50) for tools that need sets without ' +
+      'one request per session.',
+  })
   listSessions(
     @CurrentUser() user: AuthenticatedUser,
-    @Query(new ZodValidationPipe(PublicRangeQuerySchema)) query: PublicRangeQueryDto,
-  ): Promise<PublicListDto<PublicSessionListItemDto>> {
+    @Query(new ZodValidationPipe(PublicSessionListQuerySchema)) query: PublicSessionListQueryDto,
+  ): Promise<PublicListDto<PublicSessionListItemDto | PublicSessionDto>> {
     return this.publicApi.listSessions(user.id, query);
   }
 
