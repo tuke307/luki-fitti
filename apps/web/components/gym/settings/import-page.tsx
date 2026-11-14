@@ -18,6 +18,7 @@ import {
 } from '@/lib/import/import-file';
 import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
+import { DOCS_ORIGIN } from '@/lib/site/config';
 import { SettingsRow, SettingsSection } from './settings-row';
 
 type ImportState =
@@ -30,21 +31,21 @@ type ImportState =
 
 const KINDS = ['sessions', 'templates', 'folders', 'customExercises'] as const;
 
-/** Step-by-step migration guides in the public repo. App names stay untranslated. */
+/** Step-by-step migration guides on the docs site. App names stay untranslated. */
 const IMPORT_GUIDES = [
   {
     name: 'GymLife',
-    url: 'https://github.com/tuke307/luki-fitti/blob/main/docs/gymlife-import.md',
+    url: `${DOCS_ORIGIN}/gymlife-import`,
     testId: 'import-guide-gymlife',
   },
   {
     name: 'Alpha Progression',
-    url: 'https://github.com/tuke307/luki-fitti/blob/main/docs/alpha-progression-import.md',
+    url: `${DOCS_ORIGIN}/alpha-progression-import`,
     testId: 'import-guide-alpha-progression',
   },
   {
     name: 'MCI',
-    url: 'https://github.com/tuke307/luki-fitti/blob/main/docs/mci-import.md',
+    url: `${DOCS_ORIGIN}/mci-import`,
     testId: 'import-guide-mci',
   },
 ] as const;
