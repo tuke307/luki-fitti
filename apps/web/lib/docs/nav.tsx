@@ -21,6 +21,7 @@ const SHORT_LABELS: Record<string, string> = {
   '/public-api': 'Getting started',
   '/mcp': 'Connect an AI assistant',
   '/contributing': 'Contributing',
+  '/adr': 'All ADRs',
   '/roadmap': 'Roadmap',
   '/release': 'Release flow',
   '/app-store-release': 'App Store',
@@ -65,7 +66,10 @@ const API_GROUP_ORDER = [
 function collectPages(nodes: Node[], into = new Map<string, Item>()) {
   for (const node of nodes) {
     if (node.type === 'page') into.set(node.url, node);
-    if (node.type === 'folder') collectPages(node.children, into);
+    if (node.type === 'folder') {
+      if (node.index?.type === 'page') into.set(node.index.url, node.index);
+      collectPages(node.children, into);
+    }
   }
   return into;
 }
@@ -103,6 +107,10 @@ export function docsTree(tree: Root): Root {
     root: true,
     index: overview,
     children: [
+      // Tab index pages also live in children: fumadocs resolves the active
+      // tab (findPath / isLayoutTabActive) over children only, so an index-only
+      // page leaves the sidebar with no selected tab and no dropdown.
+      ...(overview ? [overview] : []),
       group(
         'Import',
         pages([
@@ -148,6 +156,7 @@ export function docsTree(tree: Root): Root {
     root: true,
     index: gettingStarted,
     children: [
+      ...(gettingStarted ? [gettingStarted] : []),
       ...API_GROUP_ORDER.filter((g) => apiGroups.has(g)).map((g) =>
         group(g, apiGroups.get(g) ?? []),
       ),
@@ -161,10 +170,13 @@ export function docsTree(tree: Root): Root {
     $id: 'group-decisions',
     name: 'Decisions',
     index: page('/adr'),
-    children: ADRS.map(({ url, label }): Item | undefined => {
-      const node = items.get(url);
-      return node ? { ...node, name: label } : undefined;
-    }).filter((n): n is Item => Boolean(n)),
+    children: [
+      ...(page('/adr') ? [page('/adr')!] : []),
+      ...ADRS.map(({ url, label }): Item | undefined => {
+        const node = items.get(url);
+        return node ? { ...node, name: label } : undefined;
+      }).filter((n): n is Item => Boolean(n)),
+    ],
   };
 
   const contributing = page('/contributing');
@@ -179,6 +191,7 @@ export function docsTree(tree: Root): Root {
     root: true,
     index: contributing,
     children: [
+      ...(contributing ? [contributing] : []),
       roadmap,
       group('Releases', pages(['/release', '/app-store-release'])),
       ...(decisions.children.length > 0 ? [decisions] : []),
