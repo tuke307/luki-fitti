@@ -840,6 +840,7 @@ private struct NotificationSettingsPage: View {
     @State private var pushPrefsLoaded = false
     @State private var friendsPush = false
     @State private var leaguesPush = false
+    @State private var raidsPush = false
     @Environment(\.lukiLocale) private var tr
 
     var body: some View {
@@ -877,6 +878,7 @@ private struct NotificationSettingsPage: View {
                         if let prefs = try? await viewModel.store.apiClient.fetchPushPreferences() {
                             friendsPush = prefs.friends
                             leaguesPush = prefs.leagues
+                            raidsPush = prefs.raids
                             pushPrefsLoaded = true
                         }
                     }
@@ -904,6 +906,25 @@ private struct NotificationSettingsPage: View {
                         Task {
                             _ = try? await viewModel.store.apiClient
                                 .updatePushPreferences(UpdatePushPreferencesDto(leagues: enabled))
+                        }
+                    }
+
+                    Toggle(isOn: $raidsPush) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(tr("Raids"))
+                            Text(tr("Boss enrages, defeats and squad raid starts."))
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .tint(LukiColors.accent)
+                    .disabled(!pushPrefsLoaded)
+                    .accessibilityIdentifier("ios.profile.raidsPushToggle")
+                    .onChange(of: raidsPush) { _, enabled in
+                        guard pushPrefsLoaded else { return }
+                        Task {
+                            _ = try? await viewModel.store.apiClient
+                                .updatePushPreferences(UpdatePushPreferencesDto(raids: enabled))
                         }
                     }
                 }

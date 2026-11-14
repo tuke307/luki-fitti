@@ -92,6 +92,19 @@ export function isHandleAllowed(input: string): boolean {
   return checkHandle(input).ok;
 }
 
+/**
+ * Word-level profanity check for free-text names (squad names, display names):
+ * every alphanumeric word is matched against the same blocklist as handles,
+ * without the handle format/length restrictions.
+ */
+export function isNameAllowed(input: string): boolean {
+  const words = input
+    .toLowerCase()
+    .split(/[^a-z0-9äöüß]+/i)
+    .filter(Boolean);
+  return words.every((word) => !BLOCKED_HANDLE_SUBSTRINGS.some((bad) => word.includes(bad)));
+}
+
 /** Earliest date a user who last changed at `changedAt` may pick a new handle. */
 export function nextHandleChangeAt(changedAt: Date | null): Date | null {
   if (!changedAt) return null;

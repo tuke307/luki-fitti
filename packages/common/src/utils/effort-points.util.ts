@@ -14,6 +14,10 @@ export interface EffortPointsSetInput {
 
 export interface EffortPointsExerciseInput {
   exerciseTypeSnapshot: string;
+  /** Exercise's primary muscle, used to attribute set points to raid weak spots. */
+  primaryMuscleSnapshot?: string | null;
+  /** Display name, used only to report `topExercise`. */
+  exerciseNameSnapshot?: string | null;
   sets: EffortPointsSetInput[];
 }
 
@@ -46,6 +50,14 @@ export interface EffortPointsBreakdown {
 export interface EffortPointsResult {
   total: number;
   breakdown: EffortPointsBreakdown;
+  /**
+   * Points attributed per weak spot: set + PR points under the exercise's
+   * `primaryMuscleSnapshot`, cardio points under 'CARDIO', stretch points under
+   * 'STRETCHING'. The finish bonus is unattributed. Keys match `WeakSpot`.
+   */
+  pointsByWeakSpot: Record<string, number>;
+  /** Name of the exercise that earned the most points, when one did. */
+  topExercise: string | null;
 }
 
 export const EP_WORKING_SET = 10;
@@ -83,10 +95,14 @@ export function computeSessionEffortPoints(session: EffortPointsSessionInput): E
     session.sourceDevice === 'IMPORT' ||
     session.activeDurationSeconds < EP_MIN_ACTIVE_SECONDS
   ) {
-    return { total: 0, breakdown: { ...zero } };
+    return { total: 0, breakdown: { ...zero }, pointsByWeakSpot: {}, topExercise: null };
   }
 
   const breakdown: EffortPointsBreakdown = { ...zero };
+  const pointsByWeakSpot: Record<string, number> = {};
+  const credit = (spot: string | null | undefined, points: number): void => {
+    if (spot && points > 0) pointsByWeakSpot[spot] = (pointsByWeakSpot[spot] ?? 0) + points;
+  };
   const maxSets = Math.floor(session.activeDurationSeconds / EP_SET_PLAUSIBILITY_SECONDS);
   const isStretchSession = session.sessionType === 'STRETCHING';
   let countedSets = 0;
@@ -99,15 +115,31 @@ export function computeSessionEffortPoints(session: EffortPointsSessionInput): E
   // performed in, not on exercise-array order (supersets and unordered query
   // results would otherwise drop legitimate sets). Untimed sets keep their
   // relative order after all timed ones (stable sort, Infinity key).
-  const orderedSets: Array<{ set: EffortPointsSetInput; exerciseType: string }> = [];
-  for (const exercise of session.exercises) {
+  const orderedSets: Array<{
+    set: EffortPointsSetInput;
+    exerciseType: string;
+    primaryMuscle: string | null;
+    exerciseIndex: number;
+  }> = [];
+  session.exercises.forEach((exercise, exerciseIndex) => {
     for (const set of exercise.sets) {
-      if (set.completed) orderedSets.push({ set, exerciseType: exercise.exerciseTypeSnapshot });
+      if (set.completed) {
+        orderedSets.push({
+          set,
+          exerciseType: exercise.exerciseTypeSnapshot,
+          primaryMuscle: exercise.primaryMuscleSnapshot ?? null,
+          exerciseIndex,
+        });
+      }
     }
-  }
+  });
+  const pointsByExercise = new Map<number, number>();
+  const creditExercise = (index: number, points: number): void => {
+    if (points > 0) pointsByExercise.set(index, (pointsByExercise.get(index) ?? 0) + points);
+  };
   orderedSets.sort((a, b) => setTimeKey(a.set.completedAt) - setTimeKey(b.set.completedAt));
 
-  for (const { set, exerciseType } of orderedSets) {
+  for (const { set, exerciseType, primaryMuscle, exerciseIndex } of orderedSets) {
     if (countedSets >= maxSets) {
       breakdown.droppedSets += 1;
       continue;
@@ -130,16 +162,26 @@ export function computeSessionEffortPoints(session: EffortPointsSessionInput): E
 
     if (isWarmup) {
       breakdown.warmups += 1;
+      credit(primaryMuscle, EP_WARMUP_SET);
+      creditExercise(exerciseIndex, EP_WARMUP_SET);
     } else if (isStrength && (set.setType === 'WORKING' || set.setType === 'DROPSET')) {
       breakdown.sets += 1;
+      credit(primaryMuscle, EP_WORKING_SET);
+      creditExercise(exerciseIndex, EP_WORKING_SET);
     } else if (exerciseType === 'CARDIO') {
-      breakdown.cardioMinutes += Math.floor((set.durationSeconds ?? 0) / 60);
+      const minutes = Math.floor((set.durationSeconds ?? 0) / 60);
+      breakdown.cardioMinutes += minutes;
+      creditExercise(exerciseIndex, minutes * EP_PER_CARDIO_MINUTE);
     } else if (!isStretchSession && (isStretchingExercise || set.setType === 'STRETCH')) {
-      stretchSeconds += set.durationSeconds ?? 0;
+      const seconds = set.durationSeconds ?? 0;
+      stretchSeconds += seconds;
+      creditExercise(exerciseIndex, Math.floor(seconds / 60) * EP_PER_STRETCH_MINUTE);
     }
 
     if (set.isPersonalRecord && breakdown.prs < EP_MAX_PRS_PER_SESSION) {
       breakdown.prs += 1;
+      credit(primaryMuscle, EP_PERSONAL_RECORD);
+      creditExercise(exerciseIndex, EP_PERSONAL_RECORD);
     }
   }
 
@@ -151,6 +193,9 @@ export function computeSessionEffortPoints(session: EffortPointsSessionInput): E
     breakdown.finishBonus = EP_FINISH_BONUS;
   }
 
+  credit('CARDIO', breakdown.cardioMinutes * EP_PER_CARDIO_MINUTE);
+  credit('STRETCHING', breakdown.stretchMinutes * EP_PER_STRETCH_MINUTE);
+
   const total =
     breakdown.sets * EP_WORKING_SET +
     breakdown.warmups * EP_WARMUP_SET +
@@ -158,5 +203,14 @@ export function computeSessionEffortPoints(session: EffortPointsSessionInput): E
     breakdown.cardioMinutes * EP_PER_CARDIO_MINUTE +
     breakdown.stretchMinutes * EP_PER_STRETCH_MINUTE +
     breakdown.finishBonus;
-  return { total, breakdown };
+
+  let topExercise: string | null = null;
+  let topPoints = 0;
+  for (const [index, points] of pointsByExercise) {
+    if (points > topPoints) {
+      topPoints = points;
+      topExercise = session.exercises[index]?.exerciseNameSnapshot ?? null;
+    }
+  }
+  return { total, breakdown, pointsByWeakSpot, topExercise };
 }

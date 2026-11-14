@@ -29,6 +29,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { PushModule } from './modules/push/push.module';
 import { LeagueModule } from './modules/league/league.module';
 import { BattleModule } from './modules/battle/battle.module';
+import { RaidModule } from './modules/raid/raid.module';
 import { NODE_ENV } from './config/env.config';
 
 @Module({
@@ -69,6 +70,7 @@ import { NODE_ENV } from './config/env.config';
     PushModule,
     LeagueModule,
     BattleModule,
+    RaidModule,
   ],
   providers: [
     {

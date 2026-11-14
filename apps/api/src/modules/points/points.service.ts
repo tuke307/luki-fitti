@@ -14,6 +14,7 @@ import { AppSettingsService } from '../app-settings/app-settings.service';
 import { SocialAccessService } from '../social/social-access.service';
 import { LeagueService } from '../league/league.service';
 import { DuelService } from '../battle/duel.service';
+import { RaidService } from '../raid/raid.service';
 
 /** Sessions older than this at sync time never earn points. */
 const SYNC_WINDOW_MS = 72 * 60 * 60 * 1000;
@@ -29,6 +30,8 @@ export class PointsService {
     private readonly leagues: LeagueService,
     /** Optional so specs and the email-worker can run without the battle module. */
     @Optional() private readonly duels?: DuelService,
+    /** Optional so specs and the email-worker can run without the raid module. */
+    @Optional() private readonly raids?: RaidService,
   ) {}
 
   /**
@@ -84,6 +87,8 @@ export class PointsService {
       completedAt: completedAt.toISOString(),
       exercises: session.exercises.map((ex) => ({
         exerciseTypeSnapshot: ex.exerciseTypeSnapshot,
+        primaryMuscleSnapshot: ex.primaryMuscleSnapshot,
+        exerciseNameSnapshot: ex.exerciseNameSnapshot,
         sets: ex.sets.map((s) => ({
           setType: s.setType,
           completed: s.completed,
@@ -93,8 +98,11 @@ export class PointsService {
         })),
       })),
     };
-    const { total, breakdown } = computeSessionEffortPoints(input);
+    const { total, breakdown, pointsByWeakSpot, topExercise } = computeSessionEffortPoints(input);
     const dayKey = berlinDayKey(completedAt);
+    // The weak-spot attribution travels inside the breakdown JSON so raid damage
+    // needn't recompute the session.
+    const storedBreakdown = { ...breakdown, pointsByWeakSpot, topExercise };
 
     const existing = await this.prisma.effortPointEntry.findUnique({ where: { sessionId } });
     if (existing) {
@@ -104,7 +112,7 @@ export class PointsService {
           dayKey,
           firstPoints: Math.min(existing.firstPoints, total),
           points: Math.min(existing.firstPoints, total),
-          breakdown: breakdown as unknown as Prisma.InputJsonValue,
+          breakdown: storedBreakdown as unknown as Prisma.InputJsonValue,
         },
       });
     } else {
@@ -116,7 +124,7 @@ export class PointsService {
           dayKey,
           points: total,
           firstPoints: total,
-          breakdown: breakdown as unknown as Prisma.InputJsonValue,
+          breakdown: storedBreakdown as unknown as Prisma.InputJsonValue,
         },
       });
     }
@@ -128,6 +136,11 @@ export class PointsService {
     await this.duels
       ?.recomputeForUser(userId)
       .catch((err) => logger.warn(`duel recompute after recordSession failed: ${String(err)}`));
+
+    // Best-effort: active raids pick up the session's damage.
+    await this.raids
+      ?.applySession(userId, sessionId)
+      .catch((err) => logger.warn(`raid damage after recordSession failed: ${String(err)}`));
 
     // Any positive weekly score → lazy cohort placement (eligible users only,
     // stages with cohorts). Idempotent, so a user who only became eligible
@@ -155,6 +168,9 @@ export class PointsService {
     await this.duels
       ?.recomputeForUser(userId)
       .catch((err) => logger.warn(`duel recompute after removeSession failed: ${String(err)}`));
+    await this.raids
+      ?.removeSession(userId, sessionId)
+      .catch((err) => logger.warn(`raid damage refund after removeSession failed: ${String(err)}`));
   }
 
   /**

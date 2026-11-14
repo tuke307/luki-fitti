@@ -58,7 +58,9 @@ import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { computeRemainingRestSeconds } from '@/lib/offline/offline-store';
 import { computeSessionEffortPoints } from '@luki-fitti/common/utils';
-import { pointsApi } from '@/lib/social/social-api';
+import { RAID_BOSSES, raidDamage } from '@luki-fitti/common/raid';
+import type { RaidDto } from '@luki-fitti/common/schemas';
+import { pointsApi, raidsApi } from '@/lib/social/social-api';
 import { triggerWorkoutNotification } from '@/lib/notifications/notification-manager';
 import {
   computeExerciseProgression,
@@ -124,7 +126,7 @@ export function ActiveSessionView({
     focusedExerciseId,
     setFocusedExercise,
   } = useGym();
-  const { t, format, muscleLabel, equipmentLabel } = useLocale();
+  const { t, format, locale, muscleLabel, equipmentLabel } = useLocale();
 
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const [showSubstituteFor, setShowSubstituteFor] = useState<string | null>(null);
@@ -174,6 +176,33 @@ export function ActiveSessionView({
     const total = computeSessionEffortPoints(completedSummary).total;
     return total > 0 ? total : null;
   }, [completedSummary, user?.social?.enabled]);
+
+  // "+N damage to <boss>" line: optimistic via the shared formula + the boss's
+  // weakTo, shown only while a community raid is active.
+  const [communityRaid, setCommunityRaid] = useState<RaidDto | null>(null);
+  useEffect(() => {
+    if (!completedSummary || !user?.social?.enabled) return;
+    let cancelled = false;
+    void raidsApi
+      .current()
+      .then((res) => {
+        if (!cancelled) setCommunityRaid(res.data?.community ?? null);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [completedSummary, user?.social?.enabled]);
+  const raidHit = useMemo(() => {
+    if (!completedSummary || !communityRaid || communityRaid.status !== 'ACTIVE') return null;
+    const boss = RAID_BOSSES.find((b) => b.slug === communityRaid.bossSlug);
+    if (!boss) return null;
+    const ep = computeSessionEffortPoints(completedSummary);
+    const damage = raidDamage(ep.total, ep.pointsByWeakSpot, boss);
+    if (damage <= 0) return null;
+    const weak = boss.weakTo.reduce((sum, w) => sum + (ep.pointsByWeakSpot[w] ?? 0), 0);
+    return { boss, damage, weak };
+  }, [completedSummary, communityRaid]);
   useEffect(() => {
     if (!completedSummary || !user?.social?.enabled) return;
     let cancelled = false;
@@ -226,6 +255,18 @@ export function ActiveSessionView({
               className="text-primary mt-1 text-[1.0625rem] font-semibold tabular-nums"
             >
               {format(t.league.epEarned, { points: completedEp.toLocaleString() })}
+            </p>
+          )}
+          {raidHit && (
+            <p
+              data-testid="session-finish-raid"
+              className="mt-1 text-[0.9375rem] font-semibold text-orange-500 tabular-nums"
+            >
+              {format(t.raid.workoutDamage, {
+                points: raidHit.damage.toLocaleString(),
+                boss: locale === 'de' ? raidHit.boss.name.de : raidHit.boss.name.en,
+                weak: raidHit.weak > 0 ? t.raid.weakBonus : '',
+              })}
             </p>
           )}
         </div>

@@ -56,7 +56,7 @@ public struct SocialView: View {
                     myUserId: viewModel.store.currentUser?.id ?? "me"
                 )
             }
-            // PR 4: raid card inserts here.
+            RaidsSection(social: social, myUserId: viewModel.store.currentUser?.id ?? "me")
             friendsSection
             requestsSection
             sentSection
@@ -109,6 +109,16 @@ public struct SocialView: View {
         }
         .sheet(item: $friendSheetTarget) { target in
             NavigationStack { FriendSheet(friend: target, social: social) }
+        }
+        .fullScreenCover(
+            item: Binding<RaidResultDto?>(
+                get: { social.raids?.pendingResults.first },
+                set: { _ in }
+            )
+        ) { result in
+            RaidCelebrationOverlay(result: result) {
+                Task { await social.markRaidResultSeen(raidId: result.raidId) }
+            }
         }
         .fullScreenCover(
             item: Binding<DuelItemDto?>(

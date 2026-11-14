@@ -5,7 +5,9 @@ import { gotoProfileTab, resetOfflineStore } from './helpers/offline-store.js';
 import { navigateToTab } from './helpers/shell.js';
 import {
   completeDuelForE2e,
+  enableRaidsForE2e,
   enableSocialForE2e,
+  seedCommunityRaidForE2e,
   seedFriendshipForE2e,
   seedGlobalCohortForE2e,
   seedPointsWeekForE2e,
@@ -211,7 +213,7 @@ test.describe('Social: duels', () => {
     await expect(acceptBtn).toBeVisible({ timeout: 10_000 });
     await acceptBtn.click();
     await expect(page.getByTestId(/^duel-row-/)).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByTestId('duels-card')).toContainText(/left|noch/i);
+    await expect(page.getByTestId('duels-card')).toContainText(/left|noch|tomorrow|morgen/i);
     await signOut(page);
 
     // ── A sees the active duel too ──
@@ -238,5 +240,36 @@ test.describe('Social: duels', () => {
     await expect(celebration).toContainText('400');
     await page.getByTestId('duel-celebration-dismiss').click();
     await expect(celebration).toHaveCount(0);
+  });
+});
+
+test.describe('Social: raids', () => {
+  test.beforeAll(async () => {
+    await enableSocialForE2e();
+    await enableRaidsForE2e();
+  });
+
+  test('a finished workout shows as damage on the raid card and page', async ({ page }) => {
+    const unique = Date.now().toString(36);
+    const user = await seedSocialUser('raider', undefined, `raider_${unique}`);
+    await seedCommunityRaidForE2e(user.id, 1900);
+
+    await resetOfflineStore(page);
+    await submitLoginPageForm(page, user.email, user.password);
+    await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+    await navigateToTab(page, 'social');
+    await dismissOnboardingIfShown(page);
+
+    // The raid card shows the user's damage against the weekly boss.
+    const card = page.getByTestId('raid-card');
+    await expect(card).toBeVisible({ timeout: 10_000 });
+    await expect(card).toContainText('1,900');
+
+    // Opening the card shows the raid page with the boss render present
+    // (WebGL canvas or the 2D fallback, not pixels).
+    await card.click();
+    const raidPage = page.getByTestId('raid-page');
+    await expect(raidPage).toBeVisible({ timeout: 10_000 });
+    await expect(raidPage.locator('canvas, [role="img"]').first()).toBeVisible({ timeout: 15_000 });
   });
 });

@@ -23,6 +23,7 @@ export function PushSettingsCard() {
   const [leagues, setLeagues] = useState<boolean | null>(null);
   const [duels, setDuels] = useState<boolean | null>(null);
   const [streaks, setStreaks] = useState<boolean | null>(null);
+  const [raids, setRaids] = useState<boolean | null>(null);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [deviceEnabled, setDeviceEnabled] = useState(
     () => isWebPushSupported() && thisDeviceEndpoint() !== null,
@@ -37,6 +38,7 @@ export function PushSettingsCard() {
         setLeagues(res.data.leagues);
         setDuels(res.data.duels);
         setStreaks(res.data.streaks);
+        setRaids(res.data.raids);
       }
     });
     if (isWebPushSupported()) {
@@ -101,6 +103,19 @@ export function PushSettingsCard() {
             if (res.data) setStreaks(res.data.streaks);
           }}
           data-testid="push-streaks-switch"
+        />
+      )}
+      {raids !== null && (
+        <SettingsSwitchRow
+          title={t.raid.pushRaidsLabel}
+          subtitle={t.raid.pushRaidsSub}
+          checked={raids}
+          onCheckedChange={async (enabled) => {
+            setRaids(enabled);
+            const res = await pushApi.updatePreferences({ raids: enabled });
+            if (res.data) setRaids(res.data.raids);
+          }}
+          data-testid="push-raids-switch"
         />
       )}
       {isWebPushSupported() && publicKey && !isIosStandaloneRequired() && !deviceEnabled && (

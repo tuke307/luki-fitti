@@ -1,0 +1,24 @@
+{
+  "success": true,
+  "data": {
+    "community": {
+      "id": "f2a464d1-b5fe-4b9a-b362-72a95ea19421",
+      "kind": "COMMUNITY",
+      "squad": null,
+      "bossSlug": "core-kraken",
+      "difficulty": null,
+      "weekKey": "2026-11-09",
+      "endsAt": "2026-11-15T23:00:00.000Z",
+      "maxHp": 2000,
+      "damage": 3200,
+      "phase": 2,
+      "status": "ACTIVE",
+      "defeatedAt": null,
+      "yourDamage": 1300,
+      "finalBlow": null
+    },
+    "squads": [],
+    "pendingResults": []
+  },
+  "error": null
+}

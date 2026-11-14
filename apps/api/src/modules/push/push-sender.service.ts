@@ -7,6 +7,7 @@ import { NotificationKind, PushPlatform } from '@luki-fitti/common/enums';
 import {
   anonymousActorName,
   arenaName,
+  raidBossName,
   duelResultMessage,
   duelStandingsMessage,
   leagueEndingMessage,
@@ -141,6 +142,9 @@ export class PushSenderService {
         them: String(payloadJson.them ?? ''),
         days: String(payloadJson.daysLeft ?? ''),
         count: String(payloadJson.count ?? ''),
+        boss: raidBossName(String(payloadJson.bossSlug ?? ''), device.locale),
+        squad: String(payloadJson.squadName ?? ''),
+        percent: String(payloadJson.percent ?? ''),
       });
       try {
         const outcome =

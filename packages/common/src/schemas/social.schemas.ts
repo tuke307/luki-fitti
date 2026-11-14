@@ -142,6 +142,7 @@ export const UpdatePushPreferencesSchema = z.object({
   leagues: z.boolean().optional(),
   duels: z.boolean().optional(),
   streaks: z.boolean().optional(),
+  raids: z.boolean().optional(),
 });
 export type UpdatePushPreferencesDto = z.infer<typeof UpdatePushPreferencesSchema>;
 
@@ -150,6 +151,7 @@ export interface PushPreferencesDto {
   leagues: boolean;
   duels: boolean;
   streaks: boolean;
+  raids: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

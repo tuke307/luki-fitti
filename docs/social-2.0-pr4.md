@@ -6,9 +6,9 @@ Watch**.
 
 ## Progress
 
-- [ ] A — DB, `raid` + `squad` modules, damage pipeline, spawn/phase/escape, trophies, pushes
-- [ ] B — Boss recipes (common), web 3D renderer (three.js), raid page, squad UI, celebrations
-- [ ] C — iOS SceneKit renderer, raid page, squad UI, widget snapshot, Watch HP ring
+- [x] A — DB, `raid` + `squad` modules, damage pipeline, spawn/phase/escape, trophies, pushes
+- [x] B — Boss recipes (common), web 3D renderer (three.js), raid page, squad UI, celebrations
+- [x] C — iOS SceneKit renderer, raid page, squad UI, widget snapshot, Watch HP ring
 - [ ] Design review (impeccable / apple-design-skill), reduced motion, VoiceOver
 - [ ] PR opened
 
@@ -54,18 +54,18 @@ no textures. Friendly-menacing, never gory. It must read at 120 pt.
 
 **Roster (8):**
 
-| slug               | Name EN / DE                           | Weak to                                                       | Silhouette idea                                   |
-| :----------------- | :------------------------------------- | :------------------------------------------------------------ | :------------------------------------------------ |
-| `leg-day-titan`    | Leg Day Titan / Beintag-Titan          | QUADRICEPS, GLUTES, HAMSTRINGS, CALVES                        | squat block body on huge legs, tiny arms          |
-| `iron-back-golem`  | Iron Back Golem / Eiserner Rückengolem | BACK, LATS (use the existing back-related MuscleGroup values) | hunched stone torso, armour plates on the back    |
-| `chest-hydra`      | Chest Hydra / Brust-Hydra              | CHEST, TRICEPS                                                | round chest-body with three neck heads            |
-| `shoulder-wyvern`  | Shoulder Wyvern / Schulter-Wyvern      | SHOULDERS                                                     | small body, oversized wing-shoulders              |
-| `core-kraken`      | Core Kraken / Rumpf-Krake              | ABS / CORE values                                             | round body, six tentacle torus arcs               |
-| `arm-cyclops`      | Arm Cyclops / Arm-Zyklop               | BICEPS, TRICEPS, FOREARMS                                     | one giant eye, massive arms                       |
-| `mobility-phantom` | Mobility Phantom / Mobilitäts-Phantom  | STRETCHING                                                    | floating ghost capsule, ribbon tail               |
-| `cardio-comet`     | Cardio Comet / Cardio-Komet            | CARDIO                                                        | sphere with cone flame trail, constantly spinning |
+| slug               | Name EN / DE                           | Weak to                                    | Silhouette idea                                   |
+| :----------------- | :------------------------------------- | :----------------------------------------- | :------------------------------------------------ |
+| `leg-day-titan`    | Leg Day Titan / Beintag-Titan          | QUADRICEPS, GLUTES, HAMSTRINGS, CALVES     | squat block body on huge legs, tiny arms          |
+| `iron-back-golem`  | Iron Back Golem / Eiserner Rückengolem | BACK (no LATS enum exists; BACK covers it) | hunched stone torso, armour plates on the back    |
+| `chest-hydra`      | Chest Hydra / Brust-Hydra              | CHEST, TRICEPS                             | round chest-body with three neck heads            |
+| `shoulder-wyvern`  | Shoulder Wyvern / Schulter-Wyvern      | SHOULDERS                                  | small body, oversized wing-shoulders              |
+| `core-kraken`      | Core Kraken / Rumpf-Krake              | ABS_CORE, HIP_FLEXORS                      | round body, six tentacle torus arcs               |
+| `arm-cyclops`      | Arm Cyclops / Arm-Zyklop               | BICEPS, TRICEPS, FOREARMS                  | one giant eye, massive arms                       |
+| `mobility-phantom` | Mobility Phantom / Mobilitäts-Phantom  | STRETCHING                                 | floating ghost capsule, ribbon tail               |
+| `cardio-comet`     | Cardio Comet / Cardio-Komet            | CARDIO                                     | sphere with cone flame trail, constantly spinning |
 
-Map "weak to" onto the real `MuscleGroup` enum values in the schema; don't invent new ones.
+Implemented in `packages/common/src/raid/raid-bosses.ts` with the real `MuscleGroup` values above (no LATS or ABS enum exists — `BACK` and `ABS_CORE`/`HIP_FLEXORS` cover them), plus the `CARDIO`/`STRETCHING` weak spots.
 
 **Animation states** (same parameters on both platforms, in the recipe module as constants):
 

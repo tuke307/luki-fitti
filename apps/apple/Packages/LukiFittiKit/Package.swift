@@ -38,6 +38,8 @@ let package = Package(
             resources: [
                 .process("Resources/starter_catalog.json"),
                 .process("Resources/exercise_search.json"),
+                .process("Resources/raid_bosses.json"),
+                .process("Resources/raid_boss_vectors.json"),
             ]
         ),
         .target(
@@ -86,6 +88,7 @@ let package = Package(
             name: "LukiFittiModelsTests",
             dependencies: [
                 "LukiFittiModels",
+                "LukiFittiDesign",
             ]
         ),
         .testTarget(

@@ -22,6 +22,10 @@ describe('parseOpenParam', () => {
       tab: 'social',
       section: 'duels',
     });
+    assert.deepEqual(parseOpenParam('?open=%2Fsocial%2Fraids'), {
+      tab: 'social',
+      section: 'raids',
+    });
   });
 
   it('falls back to home for unknown or unsafe values', () => {

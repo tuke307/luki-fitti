@@ -1,0 +1,55 @@
+{
+  "success": true,
+  "data": {
+    "id": "f2a464d1-b5fe-4b9a-b362-72a95ea19421",
+    "kind": "COMMUNITY",
+    "squad": null,
+    "bossSlug": "core-kraken",
+    "difficulty": null,
+    "weekKey": "2026-11-09",
+    "endsAt": "2026-11-15T23:00:00.000Z",
+    "maxHp": 2000,
+    "damage": 3200,
+    "phase": 2,
+    "status": "ACTIVE",
+    "defeatedAt": null,
+    "yourDamage": 1300,
+    "finalBlow": null,
+    "top": [
+      {
+        "card": {
+          "userId": "1377e249-b53d-4459-876a-814473c10a4f",
+          "handle": "shot_raider_1812",
+          "avatarUrl": null
+        },
+        "damage": 1300,
+        "rank": 1
+      },
+      {
+        "card": {
+          "userId": "68ec2a6f-b0d4-4b03-8735-565bcf614638",
+          "handle": "fx_raider_47821",
+          "avatarUrl": null,
+          "name": "FX Raider"
+        },
+        "damage": 1300,
+        "rank": 2
+      },
+      {
+        "card": {
+          "userId": "09b70ab5-df7f-44ca-8ca4-49ce1cfa1ce3",
+          "handle": "shot_rival_1874",
+          "avatarUrl": null
+        },
+        "damage": 600,
+        "rank": 3
+      }
+    ],
+    "you": {
+      "damage": 1300,
+      "rank": 2,
+      "trophies": 0
+    }
+  },
+  "error": null
+}

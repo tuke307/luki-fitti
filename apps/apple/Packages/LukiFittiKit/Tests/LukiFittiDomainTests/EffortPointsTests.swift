@@ -15,6 +15,8 @@ final class EffortPointsTests: XCTestCase {
                     var durationSeconds: Int?
                 }
                 var exerciseTypeSnapshot: String
+                var primaryMuscleSnapshot: String?
+                var exerciseNameSnapshot: String?
                 var sets: [Set]
             }
             var status: String
@@ -37,6 +39,7 @@ final class EffortPointsTests: XCTestCase {
             }
             var total: Int
             var breakdown: Breakdown
+            var pointsByWeakSpot: [String: Int]?
         }
         var name: String
         var session: Session
@@ -57,7 +60,7 @@ final class EffortPointsTests: XCTestCase {
 
     func testSharedFixtureCases() throws {
         let cases = try loadCases()
-        XCTAssertEqual(cases.count, 17, "fixture should cover 17 cases")
+        XCTAssertEqual(cases.count, 20, "fixture should cover 20 cases")
         for c in cases {
             let input = EffortPoints.SessionInput(
                 status: c.session.status,
@@ -68,6 +71,8 @@ final class EffortPointsTests: XCTestCase {
                 exercises: c.session.exercises.map {
                     EffortPoints.ExerciseInput(
                         exerciseTypeSnapshot: $0.exerciseTypeSnapshot,
+                        primaryMuscleSnapshot: $0.primaryMuscleSnapshot,
+                        exerciseNameSnapshot: $0.exerciseNameSnapshot,
                         sets: $0.sets.map {
                             EffortPoints.SetInput(
                                 setType: $0.setType,
@@ -91,6 +96,10 @@ final class EffortPointsTests: XCTestCase {
             XCTAssertEqual(b.stretchMinutes, e.stretchMinutes, "stretchMinutes mismatch in '\(c.name)'")
             XCTAssertEqual(b.finishBonus, e.finishBonus, "finishBonus mismatch in '\(c.name)'")
             XCTAssertEqual(b.droppedSets, e.droppedSets, "droppedSets mismatch in '\(c.name)'")
+            XCTAssertEqual(
+                result.pointsByWeakSpot, c.expected.pointsByWeakSpot ?? [:],
+                "pointsByWeakSpot mismatch in '\(c.name)'"
+            )
         }
     }
 }

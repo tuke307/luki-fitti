@@ -338,6 +338,14 @@ public final class WatchWorkoutViewModel {
         if !ProcessInfo.processInfo.arguments.contains("--uitesting-seed-social") {
             socialSnapshot = auth.social
         }
+        // Raid phase enrage haptic: fires once per newly crossed threshold.
+        if let phase = auth.social?.raid?.phase {
+            let last = UserDefaults.standard.integer(forKey: Self.lastRaidPhaseKey)
+            if phase > last {
+                UserDefaults.standard.set(phase, forKey: Self.lastRaidPhaseKey)
+                WKInterfaceDevice.current().play(.notification)
+            }
+        }
         let tokenStore = store.apiClient.tokenStore
         let storedTokens = tokenStore.loadTokens()
         let decision = WatchAuthHandoffPolicy.decide(
@@ -370,6 +378,7 @@ public final class WatchWorkoutViewModel {
         }
     }
 
+    private static let lastRaidPhaseKey = "watch.lastRaidPhase"
     private static let lastAppliedHandoffIdKey = "watchAuth.lastAppliedHandoffId"
     private static let authRequestInterval: TimeInterval = 60
     @ObservationIgnored private var lastAuthRequestAt: Date?
@@ -609,7 +618,10 @@ public final class WatchWorkoutViewModel {
                 rank: 4,
                 cohortSize: 20,
                 stage: .GLOBAL,
-                duel: DuelWatchSnapshot(opponentHandle: "anna", you: 340, them: 280, daysLeft: 3)
+                duel: DuelWatchSnapshot(opponentHandle: "anna", you: 340, them: 280, daysLeft: 3),
+                raid: RaidWatchSnapshot(
+                    bossSlug: "core-kraken", hpFraction: 0.3, phase: 2,
+                    endsAt: "2026-11-15T23:00:00.000Z")
             )
         }
 

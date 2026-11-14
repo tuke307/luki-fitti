@@ -358,6 +358,13 @@ public final class LukiAppViewModel {
             case "nutrition":
                 selectedTab = .nutrition
                 return
+            case "social":
+                // `lukifitti://social/raids` (widget tap): reuse the push deep-link routing.
+                switch SocialDeepLink.section(for: "/social\(url.path)") {
+                case .social(let section): openSocial(section: section)
+                case .home: openSocial(section: nil)
+                }
+                return
             case "workouts":
                 selectedTab = .workouts
                 if let templateId = URLComponents(url: url, resolvingAgainstBaseURL: true)?
@@ -1180,6 +1187,12 @@ public final class LukiAppViewModel {
         if args.contains("--uitesting-seed-duel-result") {
             seedDuelCelebration(vm: vm, store: store)
         }
+        if args.contains("--uitesting-seed-raid") {
+            seedRaid(vm: vm, store: store)
+        }
+        if args.contains("--uitesting-seed-raid-result") {
+            seedRaidResult(vm: vm, store: store)
+        }
 
         return vm
     }
@@ -1245,6 +1258,89 @@ public final class LukiAppViewModel {
                 counts: ["DUEL_WIN": 1]
             ),
         ]
+    }
+
+    /// `--uitesting-seed-raid`: a signed-in social user with a live community raid at
+    /// phase 3, so the raid card and detail page render the enraged boss.
+    private static func seedRaid(vm: LukiAppViewModel, store: OfflineStore) {
+        store.currentUser = UserDto(
+            id: "uitest-social",
+            email: "uitest@lukifitti.test",
+            name: "UI Tester",
+            social: UserSocialDto(enabled: true, handle: "uitester", arena: .SILVER)
+        )
+        vm.social.profile = SocialProfileDto(handle: "uitester", name: "UI Tester")
+        let endsAt = ISO8601DateFormatter().string(from: Date().addingTimeInterval(46 * 3600))
+        vm.social.raids = RaidListDto(
+            community: RaidDto(
+                id: "uitest-raid-1",
+                kind: .COMMUNITY,
+                bossSlug: "core-kraken",
+                weekKey: "2026-W46",
+                endsAt: endsAt,
+                maxHp: 2_000,
+                damage: 1_900,
+                phase: 3,
+                status: .ACTIVE,
+                yourDamage: 1_240
+            )
+        )
+        let anna = SocialCardDto(userId: "uitest-anna", handle: "anna", avatarUrl: nil, name: "Anna")
+        let max = SocialCardDto(userId: "uitest-max", handle: "max", avatarUrl: nil, name: "Max")
+        vm.social.seededRaidDetails["uitest-raid-1"] = RaidDetailDto(
+            id: "uitest-raid-1",
+            kind: .COMMUNITY,
+            bossSlug: "core-kraken",
+            weekKey: "2026-W46",
+            endsAt: endsAt,
+            maxHp: 2_000,
+            damage: 1_900,
+            phase: 3,
+            status: .ACTIVE,
+            yourDamage: 1_240,
+            top: [
+                RaidTopEntryDto(card: anna, damage: 1_500, rank: 1),
+                RaidTopEntryDto(
+                    card: SocialCardDto(
+                        userId: "uitest-social", handle: "uitester", avatarUrl: nil,
+                        name: "UI Tester"),
+                    damage: 1_240, rank: 2),
+                RaidTopEntryDto(card: max, damage: 400, rank: 3),
+            ],
+            you: RaidDetailDto.You(damage: 1_240, rank: 2, trophies: 1)
+        )
+        vm.social.seededRaidFeeds["uitest-raid-1"] = [
+            RaidFeedHitDto(
+                card: anna, damage: 210, weakSpotDamage: 60, topExercise: "Squat",
+                at: endsAt),
+            RaidFeedHitDto(
+                card: max, damage: 140, weakSpotDamage: 0, topExercise: nil, at: endsAt),
+        ]
+    }
+
+    /// `--uitesting-seed-raid-result`: a signed-in social user with an unseen DEFEATED
+    /// raid result, so the celebration cover presents on the Social tab.
+    private static func seedRaidResult(vm: LukiAppViewModel, store: OfflineStore) {
+        store.currentUser = UserDto(
+            id: "uitest-social",
+            email: "uitest@lukifitti.test",
+            name: "UI Tester",
+            social: UserSocialDto(enabled: true, handle: "uitester", arena: .SILVER)
+        )
+        vm.social.profile = SocialProfileDto(handle: "uitester", name: "UI Tester")
+        vm.social.raids = RaidListDto(
+            pendingResults: [
+                RaidResultDto(
+                    raidId: "uitest-raid-result-1",
+                    outcome: .DEFEATED,
+                    bossSlug: "core-kraken",
+                    bossName: "Core Kraken",
+                    crownRank: 2,
+                    finalBlow: true,
+                    you: 1_240
+                )
+            ]
+        )
     }
 
     /// `--uitesting-seed-league-celebration`: a signed-in social user whose current week
@@ -1399,6 +1495,29 @@ public struct LukiFittiIOSApp: App {
 
     public var body: some Scene {
         WindowGroup {
+            if ProcessInfo.processInfo.arguments.contains("--uitesting-boss-gallery") {
+                BossGalleryView()
+                    .environment(\.lukiLocale, viewModel.locale)
+            } else if ProcessInfo.processInfo.arguments.contains("--uitesting-widget-snap") {
+                // Writes a phase-accurate boss still (what WidgetSnapshotWriter stores for
+                // the widget) into the app sandbox's tmp dir for screenshot capture.
+                Color.clear
+                    .environment(\.lukiLocale, viewModel.locale)
+                    .task {
+                        guard let boss = RaidBossCatalog.boss(slug: "core-kraken"),
+                              let image = BossSceneView.renderImage(boss: boss, phase: 3),
+                              let data = image.pngData() else { return }
+                        let url = FileManager.default.temporaryDirectory
+                            .appendingPathComponent("raid_widget.png")
+                        try? data.write(to: url)
+                        print("WIDGET_SNAP:\(url.path)")
+                    }
+            } else if ProcessInfo.processInfo.arguments.contains("--uitesting-raid-page") {
+                NavigationStack {
+                    RaidDetailView(raidId: "uitest-raid-1", social: viewModel.social)
+                }
+                .environment(\.lukiLocale, viewModel.locale)
+            } else {
             AppShellView(viewModel: viewModel)
                 .environment(\.lukiLocale, viewModel.locale)
                 // The App Review video is recorded in dark mode — the verify flow
@@ -1430,6 +1549,8 @@ public struct LukiFittiIOSApp: App {
                 .onChange(of: viewModel.store.unfiledTemplates) { WidgetSnapshotWriter.publish(from: viewModel) }
                 .onChange(of: viewModel.store.preferences) { WidgetSnapshotWriter.publish(from: viewModel) }
                 .onChange(of: viewModel.nutrition.entries) { WidgetSnapshotWriter.publish(from: viewModel) }
+                .onChange(of: viewModel.social.raids) { WidgetSnapshotWriter.publish(from: viewModel) }
+            }
         }
     }
 }
