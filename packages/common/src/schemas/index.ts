@@ -201,6 +201,8 @@ export const UserSchema = z.object({
   features: z.array(z.enum(FeatureGrant)).optional(),
   /** Whether the user has a usable OpenRouter key (own or admin-assigned). */
   aiKeyConfigured: z.boolean().optional(),
+  /** Social feature gate + chosen handle for this user. */
+  social: z.object({ enabled: z.boolean(), handle: z.string().nullable() }).optional(),
 });
 
 export const AuthTokensSchema = z.object({
@@ -860,4 +862,5 @@ export * from './activity.schemas';
 export * from './progress.schemas';
 export * from './ai.schemas';
 export * from './ai-models.schemas';
+export * from './social.schemas';
 export * from './import';

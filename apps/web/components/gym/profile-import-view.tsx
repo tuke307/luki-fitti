@@ -75,6 +75,7 @@ import {
   SettingsSubpage,
   SettingsSwitchRow,
 } from './settings/settings-row';
+import { PushSettingsCard } from '@/components/gym/settings/push-settings-card';
 import { PageTitle } from './page-title';
 import { unitLabel } from '@/lib/format/weight';
 import { WeightView } from './weight/weight-view';
@@ -643,6 +644,7 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
               onCheckedChange={(checked) => void updatePreferences({ restTimerSound: checked })}
               data-testid="rest-sound-switch"
             />
+            {isAuthenticated && <PushSettingsCard />}
             <SettingsButtonRow
               title={t.profile.sendTestNotificationBtn}
               data-testid="profile-test-notification-btn"

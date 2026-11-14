@@ -150,4 +150,28 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get importJob(): typeof prisma.importJob {
     return prisma.importJob;
   }
+
+  get friendship(): typeof prisma.friendship {
+    return prisma.friendship;
+  }
+
+  get friendInvite(): typeof prisma.friendInvite {
+    return prisma.friendInvite;
+  }
+
+  get userBlock(): typeof prisma.userBlock {
+    return prisma.userBlock;
+  }
+
+  get userReport(): typeof prisma.userReport {
+    return prisma.userReport;
+  }
+
+  get pushDevice(): typeof prisma.pushDevice {
+    return prisma.pushDevice;
+  }
+
+  get notification(): typeof prisma.notification {
+    return prisma.notification;
+  }
 }

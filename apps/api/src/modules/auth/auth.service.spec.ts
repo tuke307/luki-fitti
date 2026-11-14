@@ -163,6 +163,9 @@ function createMockPrisma() {
     progressPhoto: {
       findMany: async () => [],
     },
+    userReport: {
+      findMany: async () => [],
+    },
     $transaction: async <T>(fn: (tx: unknown) => Promise<T>) => fn(prisma),
   };
 

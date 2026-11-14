@@ -15,14 +15,14 @@ change the plan go into the [Decision log](#decision-log), not into chat.
 
 Legend: `[ ]` open · `[~]` in progress · `[x]` done. Keep the PR column current.
 
-| #   | Pull request                                         | Branch                         | PR  | State   |
-| :-- | :--------------------------------------------------- | :----------------------------- | :-- | :------ |
-| 0   | Plan (this document)                                 | `feat/social-2.0`              | —   | open    |
-| 1   | Social foundation: profiles, friends, contacts, push | `feat/social-1-foundation`     | —   | planned |
-| 2   | Effort points, friends leaderboard, leagues          | `feat/social-2-leagues`        | —   | planned |
-| 3   | Battles: 1v1 duel and friend streak                  | `feat/social-3-battles`        | —   | planned |
-| 4   | Raids: community raid boss and squad raids           | `feat/social-4-raids`          | —   | planned |
-| 5   | Release 2.0.0: polish, legal, screenshots, version   | `release/2.0.0` (develop→main) | —   | planned |
+| #   | Pull request                                         | Branch                         | PR  | State                                   |
+| :-- | :--------------------------------------------------- | :----------------------------- | :-- | :-------------------------------------- |
+| 0   | Plan (this document)                                 | `feat/social-2.0`              | —   | open                                    |
+| 1   | Social foundation: profiles, friends, contacts, push | `feat/social-1-foundation`     | —   | in progress ([spec](social-2.0-pr1.md)) |
+| 2   | Effort points, friends leaderboard, leagues          | `feat/social-2-leagues`        | —   | planned                                 |
+| 3   | Battles: 1v1 duel and friend streak                  | `feat/social-3-battles`        | —   | planned                                 |
+| 4   | Raids: community raid boss and squad raids           | `feat/social-4-raids`          | —   | planned                                 |
+| 5   | Release 2.0.0: polish, legal, screenshots, version   | `release/2.0.0` (develop→main) | —   | planned                                 |
 
 Each PR branches from the previous one (stacked) and targets `develop` once its parent is merged.
 PR 0 only carries this document; the implementation PRs are 1–5 (maximum five).
@@ -249,7 +249,7 @@ New models:
 | `UserBlock`            | `blockerId`, `blockedId`                                                                                                                                         |
 | `UserReport`           | `reporterId`, `reportedId`, `reason`, `status`, admin notes                                                                                                      |
 | `PushDevice`           | `userId`, `platform APNS/WEBPUSH`, `token`/`endpoint`, `p256dh`, `auth`, `locale`, `timeZone`, `lastSeenAt`                                                      |
-| `ActivityItem`         | In-app inbox: `userId`, `kind`, `payload Json`, `readAt`                                                                                                         |
+| `Notification`         | In-app inbox: `userId`, `kind`, `actorId`, `payload Json`, `readAt` (the existing `activity` module is Apple Health import)                                      |
 | `EffortPointEntry`     | Ledger: `userId`, `sessionId?`, `kind`, `points`, `dayKey`, `weekKey`; unique `(sessionId, kind)`                                                                |
 | `WeeklyScore`          | `userId`, `weekKey`, `points`, `rawPoints` (pre-cap); unique `(userId, weekKey)`                                                                                 |
 | `LeagueCohort`         | `weekKey`, `stage`, `arena?`                                                                                                                                     |
@@ -275,7 +275,7 @@ New Nest modules, all routes authenticated, zod schemas in `@luki-fitti/common`:
   invites (`POST /social/invites`, `POST /social/invites/:token/accept`), `POST /social/contacts/match`,
   blocks, reports.
 - `push` — `POST/DELETE /push/devices`, `GET /push/vapid-public-key`, `GET/PATCH /push/preferences`,
-  `GET /activity`, `POST /activity/read`.
+  `GET /notifications`, `POST /notifications/read`.
 - `points` — `GET /points/week`, `GET /points/history`; listener on session completion
   (inside `SessionService` sync path) that enqueues EP computation.
 - `league` — `GET /league/current`, `GET /league/friends`, `GET /league/history`; rollover job.
@@ -397,11 +397,20 @@ marketing screenshots for 2.0 · release notes · release PR `develop` → `main
 | 2026-11-13 | Scope, tone, privacy, platforms and battle formats as in [Decisions](#decisions-settled-with-the-user-2026-11-13)               |
 | 2026-11-13 | Community raid boss included (user: "make the raid boss really cool looking"); Ghost Duel parked for 2.1 (pending confirmation) |
 | 2026-11-13 | Max five implementation PRs, stacked, each targeting `develop`                                                                  |
+| 2026-11-14 | Social replaces the Exercises tab on iPhone and web; the exercise library moves into Workouts as a "Library" segment            |
+| 2026-11-14 | Order: finish PR 1 (web, iOS), then PR 2 web + iOS/Watch, then PRs 3 and 4                                                      |
 
 ## Session log
 
 Append one line per session: date, what was done, what is next.
 
-| Date       | Done                                                  | Next                              |
-| :--------- | :---------------------------------------------------- | :-------------------------------- |
-| 2026-11-13 | Research, decisions with the user, this plan, plan PR | Answer open questions, start PR 1 |
+| Date       | Done                                                                     | Next                              |
+| :--------- | :----------------------------------------------------------------------- | :-------------------------------- |
+| 2026-11-13 | Research, decisions with the user, this plan, plan PR                    | Answer open questions, start PR 1 |
+| 2026-11-13 | PR 1 part A: social_foundation migration, common social utils/schemas,   | PR 1 part B (web)                 |
+|            | API social/push/notifications/admin modules, email-worker push processor |                                   |
+|            | + review fixes (push retry/SSRF/pooling, report evidence, deletion GC)   |                                   |
+| 2026-11-13 | PR 1 part B: web social tab, onboarding, friends, invites +   | PR 1 part C (iOS)                |
+|            | AASA, web push + inbox, admin social/reports, EN/DE, e2e       |                                  |
+| 2026-11-13 | PR 1 part C: iOS Friends tab, onboarding/profile/inbox sheets, | Security review, open PR         |
+|            | APNs + invite universal links, contacts sync, Library segment  |                                  |

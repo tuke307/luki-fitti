@@ -380,3 +380,36 @@ export enum ProgressPhotoKind {
 }
 
 export const PROGRESS_PHOTO_KINDS: ProgressPhotoKind[] = Object.values(ProgressPhotoKind);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Social (mirrors the Prisma enums in packages/database)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export enum FriendshipStatus {
+  PENDING = 'PENDING',
+  ACCEPTED = 'ACCEPTED',
+}
+
+export enum PushPlatform {
+  APNS = 'APNS',
+  WEBPUSH = 'WEBPUSH',
+}
+
+export enum ReportReason {
+  SPAM = 'SPAM',
+  HARASSMENT = 'HARASSMENT',
+  INAPPROPRIATE_NAME = 'INAPPROPRIATE_NAME',
+  INAPPROPRIATE_AVATAR = 'INAPPROPRIATE_AVATAR',
+  OTHER = 'OTHER',
+}
+
+export enum ReportStatus {
+  OPEN = 'OPEN',
+  RESOLVED = 'RESOLVED',
+  DISMISSED = 'DISMISSED',
+}
+
+export enum NotificationKind {
+  FRIEND_REQUEST = 'FRIEND_REQUEST',
+  FRIEND_ACCEPTED = 'FRIEND_ACCEPTED',
+}

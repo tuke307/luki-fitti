@@ -176,6 +176,18 @@ model User {
   lastLoginAt              DateTime?
   /// Admin portal permissions (AdminPermission values). Empty = regular user.
   permissions              String[]  @default([])
+  /// Social: unique @handle, stored lowercase; null = invisible to other users.
+  handle                   String?   @unique
+  handleChangedAt          DateTime?
+  /// Storage key of the re-encoded 512px JPEG avatar (private, streamed by the API).
+  avatarKey                String?
+  avatarUpdatedAt          DateTime?
+  /// SHA-256 hex of lower(trim(email)); powers opt-in contact matching.
+  emailLookupHash          String?   @unique
+  /// Opt-in "find me by email" contact matching.
+  discoverableByEmail      Boolean   @default(true)
+  /// Pause competing: hidden from leagues, no social pushes; friends stay.
+  socialPaused             Boolean   @default(false)
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
 
@@ -197,6 +209,19 @@ model User {
   aiKeys             UserAiKey[]
   importJobs         ImportJob[]
   progressCheckIns   ProgressCheckIn[]
+
+  friendshipsA        Friendship[]   @relation("FriendshipUserA")
+  friendshipsB        Friendship[]   @relation("FriendshipUserB")
+  friendRequestsMade  Friendship[]   @relation("FriendshipRequestedBy")
+  friendInvites       FriendInvite[]
+  blocksMade          UserBlock[]    @relation("BlockBlocker")
+  blocksReceived      UserBlock[]    @relation("BlockBlocked")
+  reportsMade         UserReport[]   @relation("ReportReporter")
+  reportsReceived     UserReport[]   @relation("ReportReported")
+  reportsResolved     UserReport[]   @relation("ReportResolver")
+  pushDevices         PushDevice[]
+  notifications       Notification[]
+  notificationActions Notification[] @relation("NotificationActor")
 }
 
 model UserPreferences {
@@ -241,6 +266,8 @@ model UserPreferences {
   progressAiConsentAt        DateTime?
   /// Per-skill OpenRouter model choice: Partial<Record<AiSkillName, modelId>>; null = defaults.
   aiModels                   Json?
+  /// Push category toggle: friend requests and accepted friendships.
+  pushFriends                Boolean       @default(true)
   createdAt                  DateTime      @default(now())
   updatedAt                  DateTime      @updatedAt
 
@@ -581,6 +608,10 @@ model AppSettings {
   aiProgressTargetEnabled Boolean  @default(true)
   progressTargetModel     String   @default("google/gemini-nano-banana-2.1")
   progressTargetFallbacks String[] @default(["bytedance-seed/seedream-5-0-flash"])
+  /// Social kill switch: off by default, enabled per rollout (see docs/social-2.0.md).
+  socialEnabled           Boolean  @default(false)
+  /// Beta allowlist; empty = everyone once socialEnabled is on.
+  socialBetaUserIds       String[] @default([])
   updatedAt               DateTime @updatedAt
 }
 
@@ -943,6 +974,150 @@ model ImportJob {
   createdAt DateTime        @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+}
+
+enum PushPlatform {
+  APNS
+  WEBPUSH
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  INAPPROPRIATE_NAME
+  INAPPROPRIATE_AVATAR
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+enum NotificationKind {
+  FRIEND_REQUEST
+  FRIEND_ACCEPTED
+}
+
+/// Mutual friendship. The pair is stored once with userAId < userBId;
+/// PENDING until the other side accepts (requestedById records who asked).
+model Friendship {
+  id            String           @id @default(uuid())
+  userAId       String
+  userBId       String
+  requestedById String
+  status        FriendshipStatus
+  createdAt     DateTime         @default(now())
+  acceptedAt    DateTime?
+
+  userA       User @relation("FriendshipUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB       User @relation("FriendshipUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  requestedBy User @relation("FriendshipRequestedBy", fields: [requestedById], references: [id], onDelete: Cascade)
+
+  @@unique([userAId, userBId])
+  @@index([userBId])
+}
+
+/// Shareable friend-invite link. Only the SHA-256 of the token is stored —
+/// a DB leak can never mint invite links.
+model FriendInvite {
+  id          String   @id @default(uuid())
+  /// SHA-256 hex of the random base64url token in the URL.
+  tokenHash   String   @unique
+  createdById String
+  expiresAt   DateTime
+  maxUses     Int      @default(20)
+  uses        Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([createdById])
+}
+
+/// Block hides both users from each other everywhere (deny by default).
+model UserBlock {
+  id        String   @id @default(uuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker User @relation("BlockBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("BlockBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+}
+
+/// UGC moderation report; snapshots keep evidence even if the profile changes later.
+model UserReport {
+  id                String       @id @default(uuid())
+  reporterId        String
+  reportedId        String
+  reason            ReportReason
+  /// Free-text context, max 500 chars (validated in zod).
+  details           String?
+  handleSnapshot    String?
+  nameSnapshot      String?
+  avatarKeySnapshot String?
+  status            ReportStatus @default(OPEN)
+  createdAt         DateTime     @default(now())
+  resolvedAt        DateTime?
+  resolvedById      String?
+
+  reporter   User  @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reported   User  @relation("ReportReported", fields: [reportedId], references: [id], onDelete: Cascade)
+  resolvedBy User? @relation("ReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+}
+
+/// One push target per device: APNs device token or Web Push subscription endpoint.
+model PushDevice {
+  id          String       @id @default(uuid())
+  userId      String
+  platform    PushPlatform
+  /// APNs hex token or Web Push endpoint URL; unique so a reinstall moves it to its owner.
+  token       String       @unique
+  /// Web Push keys (null for APNs).
+  p256dh      String?
+  auth        String?
+  /// Debug builds use the APNs sandbox environment.
+  apnsSandbox Boolean      @default(false)
+  /// BCP-47 locale ("en", "de") for notification text.
+  locale      String
+  /// IANA time zone for quiet hours, e.g. "Europe/Berlin".
+  timeZone    String
+  lastSeenAt  DateTime     @default(now())
+  createdAt   DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// In-app notification inbox; mirrors every push so it works without push permission.
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  kind      NotificationKind
+  /// The user the notification is about (e.g. the friend who requested).
+  actorId   String?
+  /// Extra data for the client (deep-link url, etc.); never PII beyond the actor.
+  payload   Json
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actor User? @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
 }
