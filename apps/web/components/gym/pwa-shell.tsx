@@ -38,7 +38,7 @@ import { WorkoutsView, type WorkoutsSegment } from './workouts-view';
 import { ActiveSessionView } from './active-session-view';
 import { DiaryAnalyticsView } from './diary-analytics-view';
 import { SocialView, type SocialSection } from './social/social-view';
-import { ProfileImportView } from './profile-import-view';
+import { ProfileImportView, requestSettingsPage } from './profile-import-view';
 import { NutritionView } from './nutrition/nutrition-view';
 import { GlassIconButton } from './settings/settings-row';
 import { AI_KEY_NAVIGATE_EVENT } from '@/lib/ai/ai-key-required';
@@ -177,6 +177,12 @@ export function PwaShell() {
       queueMicrotask(() => {
         setActiveTab('social');
         setSocialSection(target.section);
+      });
+    }
+    if (target.tab === 'profile' && user) {
+      queueMicrotask(() => {
+        requestSettingsPage(target.page);
+        setProfileOpen(true);
       });
     }
     // Strip the param so refreshes and shares land on the plain shell.

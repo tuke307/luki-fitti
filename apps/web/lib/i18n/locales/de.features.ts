@@ -461,6 +461,7 @@ export const deFeatures: Widen<typeof enFeatures> = {
     retentionHint: 'Leer lassen, um Fotos zu behalten, bis die Mahlzeit gelöscht wird.',
     saveSettings: 'Einstellungen speichern',
     settingsSaved: 'Einstellungen gespeichert',
+    navApiKeys: 'API-Schlüssel',
     navSocial: 'Social',
     navLeagues: 'Ligen',
     navBosses: 'Bosse',
@@ -499,6 +500,9 @@ export const deFeatures: Widen<typeof enFeatures> = {
 
     navReports: 'Meldungen',
     socialTitle: 'Social',
+    apiKeysSub:
+      'Persönliche API-Schlüssel für die schreibgeschützte öffentliche API. Aus blockiert neue Schlüssel und alle Anfragen.',
+    apiKeysEnabledLabel: 'Persönliche API-Schlüssel aktiviert',
     socialSub: 'Kill-Switch und Beta-Freigabeliste. Eine leere Liste aktiviert Social für alle.',
     socialEnabledLabel: 'Social aktiviert',
     betaListTitle: 'Beta-Freigabeliste',

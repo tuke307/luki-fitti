@@ -36,6 +36,15 @@ export async function enableSocialForE2e(): Promise<void> {
   });
 }
 
+/** Flips the `apiKeysEnabled` kill switch on the singleton AppSettings row. */
+export async function setApiKeysEnabledForE2e(enabled: boolean): Promise<void> {
+  await prisma.appSettings.upsert({
+    where: { id: 1 },
+    update: { apiKeysEnabled: enabled },
+    create: { id: 1, apiKeysEnabled: enabled },
+  });
+}
+
 /** Creates an already-verified user so the spec can sign in without Mailpit. */
 export async function seedSocialUser(
   prefix: string,

@@ -23,6 +23,7 @@ import {
   ResolveReportSchema,
   SetAiKeySchema,
   UpdateAiSettingsSchema,
+  UpdateApiKeysSettingsSchema,
   UpdateLeagueSettingsSchema,
   UpdateSocialSettingsSchema,
   UpdateUserAccessSchema,
@@ -34,6 +35,7 @@ import {
   type ResolveReportDto,
   type SetAiKeyDto,
   type UpdateAiSettingsDto,
+  type UpdateApiKeysSettingsDto,
   type UpdateLeagueSettingsDto,
   type UpdateSocialSettingsDto,
   type UpdateUserAccessDto,
@@ -190,6 +192,23 @@ export class AdminController {
     @Body(new ZodValidationPipe(ResolveReportSchema)) body: ResolveReportDto,
   ) {
     return this.adminService.resolveReport(actor.id, id, body);
+  }
+
+  @Get('settings/api-keys')
+  @RequirePermissions(AdminPermission.AI_SETTINGS_MANAGE)
+  @ApiOperation({ summary: 'Personal API keys kill switch' })
+  getApiKeySettings() {
+    return this.appSettings.getApiKeySettings();
+  }
+
+  @Put('settings/api-keys')
+  @UseGuards(CsrfGuard)
+  @RequirePermissions(AdminPermission.AI_SETTINGS_MANAGE)
+  @ApiOperation({ summary: 'Update the personal API keys kill switch' })
+  updateApiKeySettings(
+    @Body(new ZodValidationPipe(UpdateApiKeysSettingsSchema)) body: UpdateApiKeysSettingsDto,
+  ) {
+    return this.appSettings.updateApiKeySettings(body);
   }
 
   @Get('settings/leagues')

@@ -26,6 +26,7 @@ import type {
   NutritionSummaryQueryDto,
   ProgressCheckInDto,
   UpdateAiSettingsDto,
+  UpdateApiKeysSettingsDto,
   UpdateUserAccessDto,
   UpsertBodyWeightEntryDto,
   UpsertExerciseFeedbackDto,
@@ -34,7 +35,11 @@ import type {
   WorkoutBuilderResponseDto,
   AnalyticsQueryDto,
   AnalyticsSummaryDto,
+  ApiKeyListDto,
+  ApiKeysSettingsDto,
   ChangePasswordDto,
+  CreateApiKeyDto,
+  CreatedApiKeyDto,
   ConfirmAccountDeletionDto,
   CreateExerciseDto,
   CreateFolderDto,
@@ -405,6 +410,21 @@ export const admin = {
     apiFetch<AdminUserAiUsageDto>(
       `/admin/ai-usage/users/${encodeURIComponent(userId)}?days=${days}`,
     ),
+  getApiKeySettings: () => apiFetch<ApiKeysSettingsDto>('/admin/settings/api-keys'),
+  updateApiKeySettings: (data: UpdateApiKeysSettingsDto) =>
+    apiFetch<ApiKeysSettingsDto>('/admin/settings/api-keys', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+};
+
+/** Personal API keys (`lf_pat_…`) for the read-only public API. The full secret is only in the create response. */
+export const apiKeys = {
+  list: () => apiFetch<ApiKeyListDto>('/api-keys'),
+  create: (data: CreateApiKeyDto) =>
+    apiFetch<CreatedApiKeyDto>('/api-keys', { method: 'POST', body: JSON.stringify(data) }),
+  revoke: (id: string) =>
+    apiFetch<{ success: boolean }>(`/api-keys/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 };
 
 /** File import (`luki-fitti-import@1`); `fileText` is the uploaded JSON file, sent unchanged. */
@@ -431,5 +451,6 @@ export const api = {
   ai,
   exerciseFeedback,
   admin,
+  apiKeys,
   importData,
 };

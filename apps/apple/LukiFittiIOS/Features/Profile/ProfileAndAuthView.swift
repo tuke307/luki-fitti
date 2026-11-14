@@ -469,6 +469,15 @@ public struct ProfileAndAuthView: View {
                 SettingsRow(tr("Data sources"), systemImage: "books.vertical", tint: LukiColors.accent)
             }
             .accessibilityIdentifier("ios.profile.row.dataSources")
+
+            if viewModel.store.currentUser != nil {
+                NavigationLink {
+                    ApiKeysView(viewModel: viewModel)
+                } label: {
+                    SettingsRow(tr("API keys"), systemImage: "key.horizontal", tint: LukiColors.setStretch)
+                }
+                .accessibilityIdentifier("ios.profile.row.apiKeys")
+            }
         } header: {
             Text(tr("Data"))
         }

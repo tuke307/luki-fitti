@@ -110,6 +110,10 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return prisma.appSettings;
   }
 
+  get apiKey(): typeof prisma.apiKey {
+    return prisma.apiKey;
+  }
+
   get aiRun(): typeof prisma.aiRun {
     return prisma.aiRun;
   }
