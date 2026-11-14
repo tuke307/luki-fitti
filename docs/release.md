@@ -15,6 +15,8 @@ feature branch ──squash PR──▶ develop ──release PR (version bump)�
 ```
 
 - **Everyday work**: feature branches go into `develop` as squash PRs. Nothing deploys.
+  Stacked PRs that target another `feat/**`, `fix/**` or `release/**` branch run the same CI
+  (lint, tests, builds, e2e) as PRs into `develop`.
 - **Release**: a release PR `develop` → `main` (merge commit, not squash) carries the version
   bump. CI's `version` job requires the version to be higher than the newest `v*` tag and, for
   minor and major releases, marketing screenshots generated for that `x.y`.
