@@ -4,7 +4,7 @@ MCP server that lets AI assistants (Claude Code/Desktop, Cursor, VS Code, …) a
 about a user's own training — sessions, exercise progress, nutrition, body weight — using the
 user's personal API key. It holds no data and no secrets: every tool call is forwarded to the
 main API's `/api/v1` with the caller's `lf_pat_…` key, so all access control (scopes, owner
-filters, rate limits) lives in the API. Design doc: `docs/mcp-server.md`.
+filters, rate limits) lives in the API. Design record: `docs/adr/0005-mcp-server.md`; user guide: `docs/mcp.md`.
 
 - Transport: **Streamable HTTP** at `POST /mcp` (stateless, JSON responses), plus unauthenticated
   `GET /health` for healthchecks.
