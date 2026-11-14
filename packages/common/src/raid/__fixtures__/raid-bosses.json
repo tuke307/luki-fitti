@@ -106,8 +106,8 @@
         "id": "arm-l",
         "shape": "capsule",
         "size": [0.1, 0.28, 0.1],
-        "position": [-0.6, 1.25, 0.05],
-        "rotation": [0, 0, 35],
+        "position": [-0.62, 1.34, 0.05],
+        "rotation": [0, 0, 58],
         "slot": "primary",
         "role": "limb"
       },
@@ -115,8 +115,24 @@
         "id": "arm-r",
         "shape": "capsule",
         "size": [0.1, 0.28, 0.1],
-        "position": [0.6, 1.25, 0.05],
-        "rotation": [0, 0, -35],
+        "position": [0.62, 1.34, 0.05],
+        "rotation": [0, 0, -58],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "fist-l",
+        "shape": "sphere",
+        "size": [0.14, 0.14, 0.14],
+        "position": [-0.74, 1.46, 0.05],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "fist-r",
+        "shape": "sphere",
+        "size": [0.14, 0.14, 0.14],
+        "position": [0.74, 1.46, 0.05],
         "slot": "primary",
         "role": "limb"
       },
@@ -157,11 +173,53 @@
         "parent": "eye-r"
       },
       {
+        "id": "brow-l",
+        "shape": "roundedBox",
+        "size": [0.26, 0.07, 0.06],
+        "position": [-0.24, 1.56, 0.44],
+        "rotation": [0, 0, -12],
+        "slot": "dark",
+        "role": "detail"
+      },
+      {
+        "id": "brow-r",
+        "shape": "roundedBox",
+        "size": [0.26, 0.07, 0.06],
+        "position": [0.24, 1.56, 0.44],
+        "rotation": [0, 0, 12],
+        "slot": "dark",
+        "role": "detail"
+      },
+      {
         "id": "mouth",
         "shape": "roundedBox",
-        "size": [0.24, 0.06, 0.04],
-        "position": [0, 1.02, 0.44],
+        "size": [0.34, 0.1, 0.05],
+        "position": [0, 1, 0.44],
         "slot": "dark",
+        "role": "detail"
+      },
+      {
+        "id": "tooth-1",
+        "shape": "box",
+        "size": [0.08, 0.05, 0.02],
+        "position": [-0.1, 1.03, 0.47],
+        "slot": "eyeWhite",
+        "role": "detail"
+      },
+      {
+        "id": "tooth-2",
+        "shape": "box",
+        "size": [0.08, 0.05, 0.02],
+        "position": [0.02, 1.03, 0.47],
+        "slot": "eyeWhite",
+        "role": "detail"
+      },
+      {
+        "id": "tooth-3",
+        "shape": "box",
+        "size": [0.08, 0.05, 0.02],
+        "position": [0.14, 1.03, 0.47],
+        "slot": "eyeWhite",
         "role": "detail"
       },
       {
@@ -314,8 +372,8 @@
       {
         "id": "brow",
         "shape": "roundedBox",
-        "size": [0.5, 0.1, 0.12],
-        "position": [0, 1.44, 0.44],
+        "size": [0.56, 0.14, 0.14],
+        "position": [0, 1.42, 0.44],
         "slot": "dark",
         "role": "armor",
         "parent": "head"
@@ -323,26 +381,28 @@
       {
         "id": "eye-l",
         "shape": "sphere",
-        "size": [0.12, 0.14, 0.07],
-        "position": [-0.13, 1.32, 0.56],
+        "size": [0.18, 0.2, 0.08],
+        "position": [-0.14, 1.3, 0.55],
         "slot": "eyeWhite",
         "role": "eye",
-        "parent": "head"
+        "parent": "head",
+        "emissive": true
       },
       {
         "id": "eye-r",
         "shape": "sphere",
-        "size": [0.12, 0.14, 0.07],
-        "position": [0.13, 1.32, 0.56],
+        "size": [0.18, 0.2, 0.08],
+        "position": [0.14, 1.3, 0.55],
         "slot": "eyeWhite",
         "role": "eye",
-        "parent": "head"
+        "parent": "head",
+        "emissive": true
       },
       {
         "id": "pupil-l",
         "shape": "sphere",
-        "size": [0.06, 0.07, 0.04],
-        "position": [-0.13, 1.32, 0.62],
+        "size": [0.08, 0.09, 0.05],
+        "position": [-0.14, 1.3, 0.62],
         "slot": "pupil",
         "role": "pupil",
         "parent": "eye-l"
@@ -350,11 +410,31 @@
       {
         "id": "pupil-r",
         "shape": "sphere",
-        "size": [0.06, 0.07, 0.04],
-        "position": [0.13, 1.32, 0.62],
+        "size": [0.08, 0.09, 0.05],
+        "position": [0.14, 1.3, 0.62],
         "slot": "pupil",
         "role": "pupil",
         "parent": "eye-r"
+      },
+      {
+        "id": "rune-1",
+        "shape": "roundedBox",
+        "size": [0.5, 0.07, 0.03],
+        "position": [0, 0.92, 0.46],
+        "rotation": [0, 0, 10],
+        "slot": "accent",
+        "role": "detail",
+        "emissive": true
+      },
+      {
+        "id": "rune-2",
+        "shape": "roundedBox",
+        "size": [0.34, 0.06, 0.03],
+        "position": [-0.08, 0.78, 0.46],
+        "rotation": [0, 0, -14],
+        "slot": "accent",
+        "role": "detail",
+        "emissive": true
       },
       {
         "id": "arm-l",
@@ -1199,7 +1279,7 @@
         "id": "crack-head",
         "shape": "box",
         "size": [0.04, 0.3, 0.02],
-        "position": [-0.15, 1.3, 0.7],
+        "position": [-0.45, 1.12, 0.55],
         "rotation": [0, 0, 26],
         "slot": "dark",
         "role": "crack",
@@ -1455,7 +1535,7 @@
         "id": "crack-eye",
         "shape": "box",
         "size": [0.04, 0.3, 0.02],
-        "position": [0.1, 1.3, 0.55],
+        "position": [0.4, 1.48, 0.42],
         "rotation": [0, 0, 12],
         "slot": "dark",
         "role": "crack",
@@ -1658,7 +1738,7 @@
         "id": "crack-eye",
         "shape": "box",
         "size": [0.03, 0.24, 0.02],
-        "position": [0.2, 1.28, 0.7],
+        "position": [0.44, 1.05, 0.5],
         "rotation": [0, 0, -20],
         "slot": "dark",
         "role": "crack",

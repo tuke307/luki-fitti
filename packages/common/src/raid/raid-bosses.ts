@@ -29,6 +29,8 @@ export interface BossPart {
   parent?: string;
   /** cracks/extra armour appear per enrage phase */
   minPhase?: 0 | 1 | 2 | 3;
+  /** render the slot colour with an emissive boost (glowing eyes/runes) */
+  emissive?: boolean;
 }
 
 export interface RaidBoss {
@@ -154,13 +156,13 @@ export const RAID_BOSSES: RaidBoss[] = [
         slot: 'dark',
         role: 'limb',
       },
-      // comically tiny arms
+      // comically tiny arms, mid-flex
       {
         id: 'arm-l',
         shape: 'capsule',
         size: [0.1, 0.28, 0.1],
-        position: [-0.6, 1.25, 0.05],
-        rotation: [0, 0, 35],
+        position: [-0.62, 1.34, 0.05],
+        rotation: [0, 0, 58],
         slot: 'primary',
         role: 'limb',
       },
@@ -168,8 +170,24 @@ export const RAID_BOSSES: RaidBoss[] = [
         id: 'arm-r',
         shape: 'capsule',
         size: [0.1, 0.28, 0.1],
-        position: [0.6, 1.25, 0.05],
-        rotation: [0, 0, -35],
+        position: [0.62, 1.34, 0.05],
+        rotation: [0, 0, -58],
+        slot: 'primary',
+        role: 'limb',
+      },
+      {
+        id: 'fist-l',
+        shape: 'sphere',
+        size: [0.14, 0.14, 0.14],
+        position: [-0.74, 1.46, 0.05],
+        slot: 'primary',
+        role: 'limb',
+      },
+      {
+        id: 'fist-r',
+        shape: 'sphere',
+        size: [0.14, 0.14, 0.14],
+        position: [0.74, 1.46, 0.05],
         slot: 'primary',
         role: 'limb',
       },
@@ -211,11 +229,53 @@ export const RAID_BOSSES: RaidBoss[] = [
         parent: 'eye-r',
       },
       {
+        id: 'brow-l',
+        shape: 'roundedBox',
+        size: [0.26, 0.07, 0.06],
+        position: [-0.24, 1.56, 0.44],
+        rotation: [0, 0, -12],
+        slot: 'dark',
+        role: 'detail',
+      },
+      {
+        id: 'brow-r',
+        shape: 'roundedBox',
+        size: [0.26, 0.07, 0.06],
+        position: [0.24, 1.56, 0.44],
+        rotation: [0, 0, 12],
+        slot: 'dark',
+        role: 'detail',
+      },
+      {
         id: 'mouth',
         shape: 'roundedBox',
-        size: [0.24, 0.06, 0.04],
-        position: [0, 1.02, 0.44],
+        size: [0.34, 0.1, 0.05],
+        position: [0, 1.0, 0.44],
         slot: 'dark',
+        role: 'detail',
+      },
+      {
+        id: 'tooth-1',
+        shape: 'box',
+        size: [0.08, 0.05, 0.02],
+        position: [-0.1, 1.03, 0.47],
+        slot: 'eyeWhite',
+        role: 'detail',
+      },
+      {
+        id: 'tooth-2',
+        shape: 'box',
+        size: [0.08, 0.05, 0.02],
+        position: [0.02, 1.03, 0.47],
+        slot: 'eyeWhite',
+        role: 'detail',
+      },
+      {
+        id: 'tooth-3',
+        shape: 'box',
+        size: [0.08, 0.05, 0.02],
+        position: [0.14, 1.03, 0.47],
+        slot: 'eyeWhite',
         role: 'detail',
       },
       // headband
@@ -362,8 +422,8 @@ export const RAID_BOSSES: RaidBoss[] = [
       {
         id: 'brow',
         shape: 'roundedBox',
-        size: [0.5, 0.1, 0.12],
-        position: [0, 1.44, 0.44],
+        size: [0.56, 0.14, 0.14],
+        position: [0, 1.42, 0.44],
         slot: 'dark',
         role: 'armor',
         parent: 'head',
@@ -371,26 +431,28 @@ export const RAID_BOSSES: RaidBoss[] = [
       {
         id: 'eye-l',
         shape: 'sphere',
-        size: [0.12, 0.14, 0.07],
-        position: [-0.13, 1.32, 0.56],
+        size: [0.18, 0.2, 0.08],
+        position: [-0.14, 1.3, 0.55],
         slot: 'eyeWhite',
         role: 'eye',
         parent: 'head',
+        emissive: true,
       },
       {
         id: 'eye-r',
         shape: 'sphere',
-        size: [0.12, 0.14, 0.07],
-        position: [0.13, 1.32, 0.56],
+        size: [0.18, 0.2, 0.08],
+        position: [0.14, 1.3, 0.55],
         slot: 'eyeWhite',
         role: 'eye',
         parent: 'head',
+        emissive: true,
       },
       {
         id: 'pupil-l',
         shape: 'sphere',
-        size: [0.06, 0.07, 0.04],
-        position: [-0.13, 1.32, 0.62],
+        size: [0.08, 0.09, 0.05],
+        position: [-0.14, 1.3, 0.62],
         slot: 'pupil',
         role: 'pupil',
         parent: 'eye-l',
@@ -398,11 +460,32 @@ export const RAID_BOSSES: RaidBoss[] = [
       {
         id: 'pupil-r',
         shape: 'sphere',
-        size: [0.06, 0.07, 0.04],
-        position: [0.13, 1.32, 0.62],
+        size: [0.08, 0.09, 0.05],
+        position: [0.14, 1.3, 0.62],
         slot: 'pupil',
         role: 'pupil',
         parent: 'eye-r',
+      },
+      // glowing rune stripes across the belly
+      {
+        id: 'rune-1',
+        shape: 'roundedBox',
+        size: [0.5, 0.07, 0.03],
+        position: [0, 0.92, 0.58],
+        rotation: [0, 0, 10],
+        slot: 'accent',
+        role: 'detail',
+        emissive: true,
+      },
+      {
+        id: 'rune-2',
+        shape: 'roundedBox',
+        size: [0.34, 0.06, 0.03],
+        position: [-0.08, 0.78, 0.58],
+        rotation: [0, 0, -14],
+        slot: 'accent',
+        role: 'detail',
+        emissive: true,
       },
       // stubby arms and legs
       {
@@ -1234,7 +1317,7 @@ export const RAID_BOSSES: RaidBoss[] = [
         id: 'crack-head',
         shape: 'box',
         size: [0.04, 0.3, 0.02],
-        position: [-0.15, 1.3, 0.7],
+        position: [-0.45, 1.12, 0.55],
         rotation: [0, 0, 26],
         slot: 'dark',
         role: 'crack',
@@ -1486,7 +1569,7 @@ export const RAID_BOSSES: RaidBoss[] = [
         id: 'crack-eye',
         shape: 'box',
         size: [0.04, 0.3, 0.02],
-        position: [0.1, 1.3, 0.55],
+        position: [0.4, 1.48, 0.42],
         rotation: [0, 0, 12],
         slot: 'dark',
         role: 'crack',
@@ -1686,7 +1769,7 @@ export const RAID_BOSSES: RaidBoss[] = [
         id: 'crack-eye',
         shape: 'box',
         size: [0.03, 0.24, 0.02],
-        position: [0.2, 1.28, 0.7],
+        position: [0.44, 1.05, 0.5],
         rotation: [0, 0, -20],
         slot: 'dark',
         role: 'crack',
@@ -1980,4 +2063,59 @@ export function validateBossRecipe(boss: RaidBoss): string[] {
   }
   if (!boss.idle || boss.idle.periodMs <= 0) problems.push('idle animation is missing');
   return problems;
+}
+
+/**
+ * Bounding sphere of a recipe in scene units, padded for the worst-case idle
+ * bob/sway plus the 1.15 hit squash. Clients use it to frame the camera so no
+ * part is ever clipped. Pure — shared by the web renderer and iOS.
+ */
+export interface BossBounds {
+  center: [number, number, number];
+  radius: number;
+}
+
+export function bossBounds(boss: RaidBoss): BossBounds {
+  const min: [number, number, number] = [Infinity, Infinity, Infinity];
+  const max: [number, number, number] = [-Infinity, -Infinity, -Infinity];
+  const partRadius = (p: BossPart) =>
+    0.5 * Math.sqrt(p.size[0] ** 2 + p.size[1] ** 2 + p.size[2] ** 2);
+  for (const part of boss.parts) {
+    const r = partRadius(part);
+    for (let i = 0; i < 3; i++) {
+      min[i] = Math.min(min[i]!, part.position[i]! - r);
+      max[i] = Math.max(max[i]!, part.position[i]! + r);
+    }
+  }
+  const center: [number, number, number] = [
+    (min[0] + max[0]) / 2,
+    (min[1] + max[1]) / 2,
+    (min[2] + max[2]) / 2,
+  ];
+  let radius = 0;
+  for (const part of boss.parts) {
+    const d = Math.sqrt(
+      (part.position[0] - center[0]) ** 2 +
+        (part.position[1] - center[1]) ** 2 +
+        (part.position[2] - center[2]) ** 2,
+    );
+    radius = Math.max(radius, d + partRadius(part));
+  }
+  // idle motion + hit squash (1.15 scale on the widest axis)
+  radius += boss.idle.bob + boss.idle.sway * radius;
+  radius *= 1.15;
+  return { center, radius };
+}
+
+/**
+ * Enrage phase for a damage/HP pair: 1/2/3 crossed at 75/50/25 % HP left.
+ * Mirrors the server-side transition so clients can derive it when only the
+ * bar values are at hand.
+ */
+export function raidPhaseFor(damage: number, maxHp: number): number {
+  const left = maxHp > 0 ? 1 - damage / maxHp : 1;
+  if (left <= 0.25) return 3;
+  if (left <= 0.5) return 2;
+  if (left <= 0.75) return 1;
+  return 0;
 }
