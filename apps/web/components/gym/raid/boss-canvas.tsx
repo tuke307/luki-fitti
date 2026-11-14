@@ -144,6 +144,28 @@ function shadowTexture(THREE: Three): import('three').DataTexture {
   return tex;
 }
 
+/** Soft radial glow: white centre fading to 0, tinted by the material colour. */
+function auraTexture(THREE: Three): import('three').DataTexture {
+  const size = 128;
+  const data = new Uint8Array(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const dx = x / (size - 1) - 0.5;
+      const dy = y / (size - 1) - 0.5;
+      const r = Math.sqrt(dx * dx + dy * dy) * 2;
+      const a = Math.max(0, 1 - r) ** 2.4;
+      const i = (y * size + x) * 4;
+      data[i] = 255;
+      data[i + 1] = 255;
+      data[i + 2] = 255;
+      data[i + 3] = Math.round(a * 255);
+    }
+  }
+  const tex = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+  tex.needsUpdate = true;
+  return tex;
+}
+
 /** 2D fallback for missing WebGL / low-power contexts. */
 function BossFallback({
   boss,
@@ -260,16 +282,31 @@ export function BossCanvas({
       }
       renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
 
-      const bounds = bossBounds(boss);
+      const bounds = bossBounds(boss, BASE_YAW);
       const [cx, cy, cz] = bounds.center;
 
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 30);
-      const frame = () => {
-        // fit the bounding sphere with ~12 % padding in both directions
-        const halfFov = ((camera.fov / 2) * Math.PI) / 180;
-        const dist = ((bounds.radius * 1.12) / Math.tan(halfFov)) * Math.max(1, 1 / camera.aspect);
-        camera.position.set(cx, cy + dist * 0.14, cz + dist);
+      // tight projected fit at the idle yaw: the larger silhouette dimension
+      // fills 80 % of the smaller canvas side, plus a small allowance for the
+      // bob/sway and the 1.15 hit squash. Defeated reframes on the padded sphere.
+      const swayPad = boss.idle.sway * Math.max(bounds.halfWidth, bounds.halfHeight);
+      const fitDim =
+        Math.max(bounds.halfWidth + swayPad, bounds.halfHeight + swayPad + boss.idle.bob) *
+        2 *
+        1.15;
+      let camDist = 0;
+      const targetDistance = () => {
+        const tan = Math.tan(((camera.fov / 2) * Math.PI) / 180);
+        if (liveRef.current.state === 'defeated') {
+          return (bounds.radius * 1.12) / (tan * Math.min(1, camera.aspect));
+        }
+        return fitDim / (2 * 0.8 * tan * Math.min(1, camera.aspect));
+      };
+      const frame = (snap = false) => {
+        const target = targetDistance();
+        camDist = snap ? target : camDist + (target - camDist) * 0.12;
+        camera.position.set(cx, cy + camDist * 0.14, cz + camDist);
         camera.lookAt(cx, cy, cz);
       };
 
@@ -389,19 +426,30 @@ export function BossCanvas({
       scene.add(shadow);
       disposables.push(shadowGeo, shadowMat, shadowTex);
 
-      // enrage aura, fitted to the boss bounds (never fills the card)
-      const auraGeo = new THREE.SphereGeometry(bounds.radius * 0.95, 24, 18);
-      const auraMat = new THREE.MeshBasicMaterial({
-        color: boss.palette.accent,
+      // enrage aura: a camera-facing soft glow sprite behind the silhouette.
+      // Additive on dark themes; on light cards it would wash out, so a
+      // normal-blended warm tint at low alpha is used instead.
+      const auraTex = auraTexture(THREE);
+      const auraMat = new THREE.SpriteMaterial({
+        map: auraTex,
+        color: 0xff5a2a,
         transparent: true,
         opacity: 0,
-        blending: THREE.AdditiveBlending,
         depthWrite: false,
       });
-      const aura = new THREE.Mesh(auraGeo, auraMat);
+      const themeMq = window.matchMedia('(prefers-color-scheme: dark)');
+      const applyAuraBlending = () => {
+        auraMat.blending = themeMq.matches ? THREE.AdditiveBlending : THREE.NormalBlending;
+        auraMat.needsUpdate = true;
+      };
+      applyAuraBlending();
+      themeMq.addEventListener('change', applyAuraBlending);
+      const aura = new THREE.Sprite(auraMat);
+      const auraSize = bounds.radius * 2 * 1.15;
+      aura.scale.set(auraSize, auraSize, 1);
       aura.position.set(cx, cy, cz);
       scene.add(aura);
-      disposables.push(auraGeo, auraMat);
+      disposables.push(auraMat, auraTex);
 
       host.appendChild(renderer.domElement);
       renderer.domElement.style.display = 'block';
@@ -416,7 +464,8 @@ export function BossCanvas({
         renderer.setSize(w, h, false);
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
-        frame();
+        camDist = targetDistance();
+        frame(true);
       };
       resize();
       const ro = new ResizeObserver(resize);
@@ -503,6 +552,7 @@ export function BossCanvas({
         const dt = Math.min(0.05, clock.getDelta() || 0.016);
         const t = clock.elapsedTime;
         const { state, phase } = liveRef.current;
+        frame();
 
         // state transitions
         if (state !== lastState) {
@@ -611,9 +661,11 @@ export function BossCanvas({
             mat.emissive.copy(c);
           }
           if (phase > 0) {
-            auraMat.color.set(0xff4a1f);
-            auraMat.opacity = (0.08 + 0.1 * f) * (1 + 0.3 * Math.sin(t * 5));
-            aura.scale.setScalar(1 + 0.06 * f + 0.04 * f * Math.sin(t * 5));
+            // peak ~0.35 at phase 1 rising to ~0.6 at phase 3, pulsing
+            const peak = 0.35 + 0.125 * (phase - 1);
+            const themeScale = themeMq.matches ? 1 : 0.5;
+            auraMat.opacity = peak * themeScale * (1 + 0.15 * Math.sin(t * 4));
+            aura.scale.setScalar(auraSize * (1 + 0.05 * f + 0.03 * f * Math.sin(t * 4)));
           } else {
             auraMat.opacity = 0;
           }
@@ -662,6 +714,7 @@ export function BossCanvas({
       cleanup = () => {
         cancelAnimationFrame(raf);
         document.removeEventListener('visibilitychange', onVis);
+        themeMq.removeEventListener('change', applyAuraBlending);
         io.disconnect();
         ro.disconnect();
         renderer.domElement.removeEventListener('pointermove', onPointerMove);

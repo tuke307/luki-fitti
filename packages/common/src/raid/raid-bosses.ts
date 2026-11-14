@@ -312,7 +312,7 @@ export const RAID_BOSSES: RaidBoss[] = [
         id: 'crack-body',
         shape: 'box',
         size: [0.05, 0.4, 0.02],
-        position: [0.12, 1.1, 0.44],
+        position: [0.46, 1.05, 0.44],
         rotation: [0, 0, -24],
         slot: 'dark',
         role: 'crack',
@@ -1307,7 +1307,7 @@ export const RAID_BOSSES: RaidBoss[] = [
         id: 'crack-body',
         shape: 'box',
         size: [0.04, 0.4, 0.02],
-        position: [0.3, 0.95, 0.78],
+        position: [0.44, 0.6, 0.62],
         rotation: [0, 0, -20],
         slot: 'dark',
         role: 'crack',
@@ -1569,7 +1569,7 @@ export const RAID_BOSSES: RaidBoss[] = [
         id: 'crack-eye',
         shape: 'box',
         size: [0.04, 0.3, 0.02],
-        position: [0.4, 1.48, 0.42],
+        position: [0.52, 1.32, 0.3],
         rotation: [0, 0, 12],
         slot: 'dark',
         role: 'crack',
@@ -1982,7 +1982,7 @@ export const RAID_BOSSES: RaidBoss[] = [
         id: 'scorch-1',
         shape: 'box',
         size: [0.03, 0.25, 0.02],
-        position: [0.25, 0.75, 0.72],
+        position: [0.46, 0.62, 0.45],
         rotation: [0, 0, -24],
         slot: 'dark',
         role: 'crack',
@@ -1992,7 +1992,7 @@ export const RAID_BOSSES: RaidBoss[] = [
         id: 'scorch-2',
         shape: 'box',
         size: [0.03, 0.2, 0.02],
-        position: [-0.28, 1.1, 0.66],
+        position: [-0.48, 0.95, 0.4],
         rotation: [0, 0, 18],
         slot: 'dark',
         role: 'crack',
@@ -2061,25 +2061,88 @@ export function validateBossRecipe(boss: RaidBoss): string[] {
   if (boss.parts.length > MAX_BOSS_PARTS) {
     problems.push(`${boss.parts.length} parts exceeds the ${MAX_BOSS_PARTS} budget`);
   }
+  // cracks live on open body surface — never across eyes, pupils or the mouth
+  const boxOf = (p: BossPart) => {
+    // true rotated bounds: rotate the 8 corners by the part's euler angles
+    const rot = p.rotation ?? ([0, 0, 0] as const);
+    const rx = ((rot[0] ?? 0) * Math.PI) / 180;
+    const ry = ((rot[1] ?? 0) * Math.PI) / 180;
+    const rz = ((rot[2] ?? 0) * Math.PI) / 180;
+    const [cx, sx, cy, sy, cz, sz] = [
+      Math.cos(rx),
+      Math.sin(rx),
+      Math.cos(ry),
+      Math.sin(ry),
+      Math.cos(rz),
+      Math.sin(rz),
+    ];
+    const lo = [Infinity, Infinity, Infinity] as number[];
+    const hi = [-Infinity, -Infinity, -Infinity] as number[];
+    for (const px of [-1, 1])
+      for (const py of [-1, 1])
+        for (const pz of [-1, 1]) {
+          let [vx, vy, vz] = [(p.size[0] * px) / 2, (p.size[1] * py) / 2, (p.size[2] * pz) / 2];
+          [vy, vz] = [vy * cx - vz * sx, vy * sx + vz * cx]; // rotate X
+          [vx, vz] = [vx * cy + vz * sy, -vx * sy + vz * cy]; // rotate Y
+          [vx, vy] = [vx * cz - vy * sz, vx * sz + vy * cz]; // rotate Z
+          const w = [vx + p.position[0], vy + p.position[1], vz + p.position[2]];
+          for (let i = 0; i < 3; i++) {
+            lo[i] = Math.min(lo[i]!, w[i]!);
+            hi[i] = Math.max(hi[i]!, w[i]!);
+          }
+        }
+    return { lo, hi };
+  };
+  const face = boss.parts.filter(
+    (p) => p.role === 'eye' || p.role === 'pupil' || (p.role === 'detail' && p.position[2] > 0),
+  );
+  for (const crack of boss.parts.filter((p) => p.role === 'crack')) {
+    const c = boxOf(crack);
+    for (const part of face) {
+      const f = boxOf(part);
+      const overlap =
+        c.lo[0]! < f.hi[0]! &&
+        c.hi[0]! > f.lo[0]! &&
+        c.lo[1]! < f.hi[1]! &&
+        c.hi[1]! > f.lo[1]! &&
+        c.lo[2]! < f.hi[2]! &&
+        c.hi[2]! > f.lo[2]!;
+      if (overlap) {
+        problems.push(`${crack.id}: crack overlaps ${part.id} — keep cracks off the face`);
+      }
+    }
+  }
   if (!boss.idle || boss.idle.periodMs <= 0) problems.push('idle animation is missing');
   return problems;
 }
 
 /**
- * Bounding sphere of a recipe in scene units, padded for the worst-case idle
- * bob/sway plus the 1.15 hit squash. Clients use it to frame the camera so no
- * part is ever clipped. Pure — shared by the web renderer and iOS.
+ * Bounds of a recipe in scene units: the axis-aligned box plus the padded
+ * bounding sphere (worst-case idle bob/sway + the 1.15 hit squash). Clients
+ * frame the camera from the projected box so no part is ever clipped. Pure —
+ * shared by the web renderer and iOS.
  */
 export interface BossBounds {
   center: [number, number, number];
+  /** padded sphere radius — used for the wide defeated framing */
   radius: number;
+  min: [number, number, number];
+  max: [number, number, number];
+  /**
+   * projected half extents of the idle pose at `yaw` (radians about Y,
+   * relative to `center`) — the silhouette the camera actually sees. Use
+   * for tight framing; `radius` is the conservative fallback.
+   */
+  halfWidth: number;
+  halfHeight: number;
 }
 
-export function bossBounds(boss: RaidBoss): BossBounds {
+const partRadius = (p: BossPart) =>
+  0.5 * Math.sqrt(p.size[0] ** 2 + p.size[1] ** 2 + p.size[2] ** 2);
+
+export function bossBounds(boss: RaidBoss, yaw = 0): BossBounds {
   const min: [number, number, number] = [Infinity, Infinity, Infinity];
   const max: [number, number, number] = [-Infinity, -Infinity, -Infinity];
-  const partRadius = (p: BossPart) =>
-    0.5 * Math.sqrt(p.size[0] ** 2 + p.size[1] ** 2 + p.size[2] ** 2);
   for (const part of boss.parts) {
     const r = partRadius(part);
     for (let i = 0; i < 3; i++) {
@@ -2093,18 +2156,26 @@ export function bossBounds(boss: RaidBoss): BossBounds {
     (min[2] + max[2]) / 2,
   ];
   let radius = 0;
+  let halfWidth = 0;
+  let halfHeight = 0;
+  const cos = Math.cos(yaw);
+  const sin = Math.sin(yaw);
   for (const part of boss.parts) {
-    const d = Math.sqrt(
-      (part.position[0] - center[0]) ** 2 +
-        (part.position[1] - center[1]) ** 2 +
-        (part.position[2] - center[2]) ** 2,
-    );
-    radius = Math.max(radius, d + partRadius(part));
+    const dx = part.position[0] - center[0];
+    const dy = part.position[1] - center[1];
+    const dz = part.position[2] - center[2];
+    const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    const r = partRadius(part);
+    radius = Math.max(radius, d + r);
+    // rotate the part centre about Y into camera space
+    const px = dx * cos + dz * sin;
+    halfWidth = Math.max(halfWidth, Math.abs(px) + r);
+    halfHeight = Math.max(halfHeight, Math.abs(dy) + r);
   }
   // idle motion + hit squash (1.15 scale on the widest axis)
   radius += boss.idle.bob + boss.idle.sway * radius;
   radius *= 1.15;
-  return { center, radius };
+  return { center, radius, min, max, halfWidth, halfHeight };
 }
 
 /**
