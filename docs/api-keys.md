@@ -110,16 +110,16 @@ API_KEY_CREATED
 
 ## Scopes
 
-| Scope            | Grants                                                                 |
-| :--------------- | :--------------------------------------------------------------------- |
-| `read:profile`   | `GET /v1/me` (id, name, units, goals; never the email)                 |
-| `read:workouts`  | templates, folders, stretching routines, custom exercises              |
-| `read:sessions`  | workout sessions with exercises and sets, personal records             |
-| `read:nutrition` | meal entries and items (no photos in v1)                               |
-| `read:body`      | body weight entries, progress check-ins (metadata, no photos)          |
-| `read:activity`  | Apple Health daily energy and imported workouts                        |
-| `export`         | `GET /v1/export` (everything above as `luki-fitti-import@1`)           |
-| `mcp`            | `POST /api/mcp` (the MCP endpoint; tools still need their read scopes) |
+| Scope            | Grants                                                                        |
+| :--------------- | :---------------------------------------------------------------------------- |
+| `read:profile`   | `GET /v1/me` (id, name, units, goals; never the email)                        |
+| `read:workouts`  | templates, folders, stretching routines, custom exercises                     |
+| `read:sessions`  | workout sessions with exercises and sets, personal records                    |
+| `read:nutrition` | meal entries and items (no photos in v1)                                      |
+| `read:body`      | body weight entries, progress check-ins (metadata, no photos)                 |
+| `read:activity`  | Apple Health daily energy and imported workouts                               |
+| `export`         | `GET /v1/export` (everything above as `luki-fitti-import@1`)                  |
+| `mcp`            | the MCP server (`/mcp`) and `GET /v1/key`; tools still need their read scopes |
 
 Deny by default: a route without an `@ApiScope(...)` decorator is unreachable with a key.
 Progress and meal photos are excluded in v1 (large, sensitive, and they'd need signed URLs);
