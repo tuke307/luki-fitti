@@ -85,7 +85,7 @@ export class EmailTemplateService {
       reset_password_url: 'http://localhost:3000/reset-password?token=sample-token',
       delete_account_url: 'http://localhost:3000/delete-account?token=sample-token',
       api_key_name: 'Google Sheets',
-      keys_url: 'http://localhost:3000/?open=%2FapiKeys',
+      keys_url: 'http://localhost:3000/?open=%2Fprofile%2Fapi-keys',
       expiry_minutes: 60,
       frontend_url: 'http://localhost:3000',
     });

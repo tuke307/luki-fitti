@@ -205,7 +205,7 @@ export class EmailService {
     keyName: string,
   ): Promise<Email> {
     // `?open=` deep link: the web shell consumes it into the API keys settings page.
-    const keysUrl = `${FRONTEND_URL}/?open=${encodeURIComponent('/apiKeys')}`;
+    const keysUrl = `${FRONTEND_URL}/?open=${encodeURIComponent('/profile/api-keys')}`;
     return this.enqueueGenericEmail(
       EmailTemplateType.API_KEY_CREATED,
       user.email,
