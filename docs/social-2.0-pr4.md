@@ -8,7 +8,7 @@ Watch**.
 
 - [x] A — DB, `raid` + `squad` modules, damage pipeline, spawn/phase/escape, trophies, pushes
 - [x] B — Boss recipes (common), web 3D renderer (three.js), raid page, squad UI, celebrations
-- [ ] C — iOS SceneKit renderer, raid page, squad UI, widget snapshot, Watch HP ring
+- [x] C — iOS SceneKit renderer, raid page, squad UI, widget snapshot, Watch HP ring
 - [ ] Design review (impeccable / apple-design-skill), reduced motion, VoiceOver
 - [ ] PR opened
 
