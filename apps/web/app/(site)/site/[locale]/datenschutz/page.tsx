@@ -71,6 +71,18 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
             </p>
           </section>
           <section>
+            <h2>API-Schlüssel</h2>
+            <p>
+              Wenn du einen persönlichen API-Schlüssel erstellst, speichern wir seinen Namen, die
+              gewählten Berechtigungen (Scopes), Erstellungs- und Ablaufdatum sowie den Zeitpunkt
+              der letzten Nutzung. Vom Schlüssel selbst speichern wir nur einen verschlüsselten Hash
+              — nie den Schlüssel im Klartext. Für API-Zugriffe speichern wir keine IP-Adressen.
+              Widerrufene und abgelaufene Schlüssel werden 30 Tage nach ihrem Ende gelöscht; mit dem
+              Konto werden alle Schlüssel gelöscht. API-Schlüssel lesen nur deine eigenen Daten und
+              enthalten nie Fotos oder Social-Daten.
+            </p>
+          </section>
+          <section>
             <h2>Hosting</h2>
             <p>Deine Daten liegen auf einem Server in Deutschland.</p>
           </section>
@@ -128,6 +140,17 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
             <p>
               Requests to OpenRouter (workout suggestions, meal analysis) are only sent when you use
               an AI feature with your own key. OpenRouter&rsquo;s privacy policy applies.
+            </p>
+          </section>
+          <section>
+            <h2>API keys</h2>
+            <p>
+              When you create a personal API key, we store its name, the scopes you chose, the
+              creation and expiry dates, and the time it was last used. Of the key itself we only
+              store a keyed hash — never the secret in plain text. We do not store IP addresses for
+              API access. Revoked and expired keys are deleted 30 days after they end; all keys are
+              deleted with your account. API keys only read your own data and never include photos
+              or social data.
             </p>
           </section>
           <section>
