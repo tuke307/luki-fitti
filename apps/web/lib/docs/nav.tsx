@@ -20,7 +20,6 @@ const SHORT_LABELS: Record<string, string> = {
   '/public-api': 'Getting started',
   '/mcp': 'Connect an AI assistant',
   '/contributing': 'Contributing',
-  '/possible-features': 'Possible features',
   '/roadmap': 'Roadmap',
   '/release': 'Release flow',
   '/app-store-release': 'App Store',
@@ -201,7 +200,7 @@ export function docsTree(tree: Root): Root {
     root: true,
     index: contributing,
     children: [
-      ...pages(['/contributing', '/possible-features']),
+      ...pages(['/contributing']),
       roadmap,
       group('Releases', pages(['/release', '/app-store-release'])),
       ...(decisions.children.length > 0 ? [decisions] : []),
