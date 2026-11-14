@@ -1,0 +1,26 @@
+{
+  "success": true,
+  "data": {
+    "squads": [
+      {
+        "id": "d792a8ea-f90c-4e6f-b977-8469435d1761",
+        "name": "FX Squad",
+        "role": "OWNER",
+        "members": [
+          {
+            "card": {
+              "userId": "68ec2a6f-b0d4-4b03-8735-565bcf614638",
+              "handle": "fx_raider_47821",
+              "avatarUrl": null,
+              "name": "FX Raider"
+            },
+            "role": "OWNER",
+            "joinedAt": "2026-11-14T01:05:47.840Z"
+          }
+        ]
+      }
+    ],
+    "invites": []
+  },
+  "error": null
+}

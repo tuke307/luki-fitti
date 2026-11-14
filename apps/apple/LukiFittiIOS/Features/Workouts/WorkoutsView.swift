@@ -61,7 +61,45 @@ public struct WorkoutsView: View {
         !allFolderIds.isEmpty && allFolderIds.allSatisfy { expandedFolderIds.contains($0) }
     }
 
+    /// The Library moved here from the old fifth tab: "Workouts · Library" at the top.
+    @State private var segment: WorkoutsSegment = .workouts
+
+    private enum WorkoutsSegment: Int {
+        case workouts
+        case library
+    }
+
     public var body: some View {
+        VStack(spacing: 0) {
+            Picker("", selection: $segment) {
+                Text(tr("Workouts")).tag(WorkoutsSegment.workouts)
+                Text(tr("Library")).tag(WorkoutsSegment.library)
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .accessibilityIdentifier("ios.workouts.segmentPicker")
+            if segment == .library {
+                ExercisesAndStretchingView(viewModel: viewModel)
+            } else {
+                workoutsList
+            }
+        }
+        .onAppear {
+            if viewModel.workoutsShowLibrary {
+                segment = .library
+                viewModel.workoutsShowLibrary = false
+            }
+        }
+        .onChange(of: viewModel.workoutsShowLibrary) { _, show in
+            if show {
+                segment = .library
+                viewModel.workoutsShowLibrary = false
+            }
+        }
+    }
+
+    private var workoutsList: some View {
         List {
             if allFolderIds.count > 1, !isEditing {
                 Section {

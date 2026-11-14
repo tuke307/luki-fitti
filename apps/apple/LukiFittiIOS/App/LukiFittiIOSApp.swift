@@ -17,7 +17,10 @@ public enum LukiMainTab: String, CaseIterable, Sendable {
     case session
     case nutrition
     case diary
+    /// Library tab: kept as a stable raw value for widgets/shortcuts/deep links; the shell maps
+    /// it onto the Workouts tab's Library segment (social took its tab slot in PR 1).
     case exercises
+    case social
     case profile
 }
 
@@ -35,6 +38,8 @@ public final class LukiAppViewModel {
     public let workoutExport: WorkoutHealthExport
     public let healthCoordinator: HealthKitWorkoutCoordinator
     public let watchSyncCoordinator: WatchSyncCoordinator
+    /// Social tab state (friends, inbox, invites). Only used when `socialEnabled`.
+    public let social: SocialStore
     /// Anonymous screen/event analytics; disabled in DEBUG and UI-test runs.
     public let analytics: AnalyticsClient
     private let watchAuthHandoff = WatchAuthHandoffProvider()
@@ -52,11 +57,18 @@ public final class LukiAppViewModel {
     public var pendingTemplateId: String?
     /// Pushes the weight screen on the Today tab (card, deep link, reminder tap).
     public var isWeightPresented = false
+    /// Legacy `exercises` tab selections land here: the Workouts tab opens its Library segment.
+    public var workoutsShowLibrary = false
+    /// Invite token from an `/invite/<token>` universal link, consumed by InviteAcceptSheet.
+    public var pendingInviteToken: String?
     /// Serializes weigh-in reminder rescheduling so overlapping calls can't interleave.
     var reminderTask: Task<Void, Never>?
 
     /// App language from the in-app preference (System / English / Deutsch).
     public var locale: SupportedLocale { SupportedLocale.resolve(store.preferences.language) }
+
+    /// Server-side rollout gate for the Social tab (beta list / global switch).
+    public var socialEnabled: Bool { SocialStore.isEnabled(for: store.currentUser) }
 
     public init(
         store: OfflineStore = OfflineStore(),
@@ -77,6 +89,7 @@ public final class LukiAppViewModel {
         self.workoutExport = workoutExport
         self.healthCoordinator = healthCoordinator
         self.watchSyncCoordinator = watchSyncCoordinator
+        self.social = SocialStore(apiClient: store.apiClient)
 
         #if DEBUG
         let analyticsEnabled = false
@@ -90,6 +103,9 @@ public final class LukiAppViewModel {
             language: { Locale.preferredLanguages.first }
         )
 
+        self.social.onLeagueDataChanged = { [weak self] in
+            self?.pushContextToWatch()
+        }
         self.store.onOverviewOrAuthChanged = { [weak self] in
             self?.pushContextToWatch()
         }
@@ -171,6 +187,10 @@ public final class LukiAppViewModel {
                 await store.refreshFromServerAfterAuth()
             } else {
                 await store.flushSyncQueue()
+            }
+            if socialEnabled {
+                await social.refreshAll()
+                await registerApnsIfAuthorized()
             }
             await syncBodyWeight()
             await syncHealthActivity()
@@ -265,7 +285,8 @@ public final class LukiAppViewModel {
             authTokens: handoff?.tokens,
             authHandoffId: handoff?.id,
             activeSession: store.activeSession,
-            deletedSessionIds: store.deletedSessionIds
+            deletedSessionIds: store.deletedSessionIds,
+            social: social.watchSnapshot
         )
     }
 
@@ -317,6 +338,18 @@ public final class LukiAppViewModel {
 #endif
 
     public func handleUniversalLink(_ url: URL) {
+        // `https://app.luki-fitti.tony-luke.de/invite/<token>` universal link.
+        if url.scheme?.lowercased() == "https",
+           url.pathComponents.count == 3,
+           url.pathComponents[1] == "invite" {
+            let token = url.pathComponents[2]
+            if InviteTokenValidator.isValid(token) {
+                pendingInviteToken = token
+                // Signed out → sign in first; AppShellView picks the token up after auth.
+                if store.currentUser == nil { selectedTab = .profile }
+            }
+            return
+        }
         if url.scheme?.lowercased() == "lukifitti" {
             switch url.host?.lowercased() {
             case "weight":
@@ -324,6 +357,13 @@ public final class LukiAppViewModel {
                 return
             case "nutrition":
                 selectedTab = .nutrition
+                return
+            case "social":
+                // `lukifitti://social/raids` (widget tap): reuse the push deep-link routing.
+                switch SocialDeepLink.section(for: "/social\(url.path)") {
+                case .social(let section): openSocial(section: section)
+                case .home: openSocial(section: nil)
+                }
                 return
             case "workouts":
                 selectedTab = .workouts
@@ -709,6 +749,43 @@ public final class LukiAppViewModel {
         guard await center.notificationSettings().authorizationStatus == .notDetermined else { return }
         _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
         rescheduleWeighInReminders()
+    }
+
+    /// Opens the Social tab on a specific section (push tap / deep link), like the web
+    /// `parseOpenParam` — unknown targets fall back to home.
+    public func openSocial(section: SocialSectionTarget?) {
+        guard socialEnabled else { selectedTab = .home; return }
+        social.requestedSection = section
+        selectedTab = .social
+    }
+
+    /// Re-registers for APNs when permission is already granted (app launch, sign-in).
+    /// Never asks for permission itself — that only happens in `requestPushPermissionAndRegister`.
+    public func registerApnsIfAuthorized() async {
+        guard socialEnabled, store.apiClient.isAuthenticated() else { return }
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--uitesting") { return }
+        #endif
+        let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+        guard status == .authorized || status == .provisional || status == .ephemeral else { return }
+        await UIApplication.shared.registerForRemoteNotifications()
+    }
+
+    /// The only place that asks for push permission (onboarding button / settings toggle).
+    @discardableResult
+    public func requestPushPermissionAndRegister() async -> Bool {
+        let center = UNUserNotificationCenter.current()
+        guard (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) == true else {
+            return false
+        }
+        rescheduleWeighInReminders()
+        await UIApplication.shared.registerForRemoteNotifications()
+        return true
+    }
+
+    /// Removes this device's APNs registration server-side (called before sign-out).
+    public func unregisterPushDevice() async {
+        await ApnsPushManager.shared.unregister(apiClient: store.apiClient)
     }
 
     public func sendTestNotification() async -> Bool {
@@ -1103,7 +1180,195 @@ public final class LukiAppViewModel {
             }
         }
 
+        if args.contains("--uitesting-seed-league-celebration") {
+            seedLeagueCelebration(vm: vm, store: store)
+        }
+
+        if args.contains("--uitesting-seed-duel-result") {
+            seedDuelCelebration(vm: vm, store: store)
+        }
+        if args.contains("--uitesting-seed-raid") {
+            seedRaid(vm: vm, store: store)
+        }
+        if args.contains("--uitesting-seed-raid-result") {
+            seedRaidResult(vm: vm, store: store)
+        }
+
         return vm
+    }
+
+    /// `--uitesting-seed-duel-result`: a signed-in social user with an unseen WON duel
+    /// result, so the duel celebration cover presents on the Social tab.
+    private static func seedDuelCelebration(vm: LukiAppViewModel, store: OfflineStore) {
+        store.currentUser = UserDto(
+            id: "uitest-social",
+            email: "uitest@lukifitti.test",
+            name: "UI Tester",
+            social: UserSocialDto(enabled: true, handle: "uitester", arena: .SILVER)
+        )
+        vm.social.profile = SocialProfileDto(handle: "uitester", name: "UI Tester")
+        let opponent = SocialCardDto(
+            userId: "uitest-opponent", handle: "anna", avatarUrl: nil, name: "Anna")
+        vm.social.friends = FriendListsDto(friends: [opponent])
+        vm.social.duels = DuelListDto(
+            active: [
+                DuelItemDto(
+                    id: "uitest-duel-active",
+                    status: .ACTIVE,
+                    opponent: opponent,
+                    you: 340,
+                    them: 280,
+                    daysLeft: 3,
+                    startDayKey: "2026-11-14",
+                    endDayKey: "2026-11-21",
+                    createdAt: ISO8601DateFormatter().string(from: Date())
+                )
+            ],
+            pendingResult: DuelItemDto(
+                id: "uitest-duel-1",
+                status: .COMPLETED,
+                opponent: opponent,
+                you: 1_240,
+                them: 980,
+                outcome: .WON,
+                createdAt: ISO8601DateFormatter().string(from: Date())
+            )
+        )
+        vm.social.streaks = StreakListDto(active: [
+            FriendStreakDto(
+                id: "uitest-streak-1",
+                status: .ACTIVE,
+                friend: opponent,
+                count: 5,
+                longest: 5,
+                freezes: 1,
+                thisWeek: FriendStreakDto.ThisWeek(
+                    you: StreakWeekProgressDto(done: 2, target: 4),
+                    them: StreakWeekProgressDto(done: 3, target: 3)
+                )
+            )
+        ])
+        vm.social.seededTrophies = [
+            "uitest-social": TrophyListDto(
+                items: [TrophyDto(kind: .DUEL_WIN, refId: "d1", createdAt: "2026-11-13T00:00:00Z")],
+                counts: ["DUEL_WIN": 3]
+            ),
+            opponent.userId: TrophyListDto(
+                items: [TrophyDto(kind: .DUEL_WIN, refId: "d2", createdAt: "2026-11-13T00:00:00Z")],
+                counts: ["DUEL_WIN": 1]
+            ),
+        ]
+    }
+
+    /// `--uitesting-seed-raid`: a signed-in social user with a live community raid at
+    /// phase 3, so the raid card and detail page render the enraged boss.
+    private static func seedRaid(vm: LukiAppViewModel, store: OfflineStore) {
+        store.currentUser = UserDto(
+            id: "uitest-social",
+            email: "uitest@lukifitti.test",
+            name: "UI Tester",
+            social: UserSocialDto(enabled: true, handle: "uitester", arena: .SILVER)
+        )
+        vm.social.profile = SocialProfileDto(handle: "uitester", name: "UI Tester")
+        let endsAt = ISO8601DateFormatter().string(from: Date().addingTimeInterval(46 * 3600))
+        vm.social.raids = RaidListDto(
+            community: RaidDto(
+                id: "uitest-raid-1",
+                kind: .COMMUNITY,
+                bossSlug: "core-kraken",
+                weekKey: "2026-W46",
+                endsAt: endsAt,
+                maxHp: 2_000,
+                damage: 1_900,
+                phase: 3,
+                status: .ACTIVE,
+                yourDamage: 1_240
+            )
+        )
+        let anna = SocialCardDto(userId: "uitest-anna", handle: "anna", avatarUrl: nil, name: "Anna")
+        let max = SocialCardDto(userId: "uitest-max", handle: "max", avatarUrl: nil, name: "Max")
+        vm.social.seededRaidDetails["uitest-raid-1"] = RaidDetailDto(
+            id: "uitest-raid-1",
+            kind: .COMMUNITY,
+            bossSlug: "core-kraken",
+            weekKey: "2026-W46",
+            endsAt: endsAt,
+            maxHp: 2_000,
+            damage: 1_900,
+            phase: 3,
+            status: .ACTIVE,
+            yourDamage: 1_240,
+            top: [
+                RaidTopEntryDto(card: anna, damage: 1_500, rank: 1),
+                RaidTopEntryDto(
+                    card: SocialCardDto(
+                        userId: "uitest-social", handle: "uitester", avatarUrl: nil,
+                        name: "UI Tester"),
+                    damage: 1_240, rank: 2),
+                RaidTopEntryDto(card: max, damage: 400, rank: 3),
+            ],
+            you: RaidDetailDto.You(damage: 1_240, rank: 2, trophies: 1)
+        )
+        vm.social.seededRaidFeeds["uitest-raid-1"] = [
+            RaidFeedHitDto(
+                card: anna, damage: 210, weakSpotDamage: 60, topExercise: "Squat",
+                at: endsAt),
+            RaidFeedHitDto(
+                card: max, damage: 140, weakSpotDamage: 0, topExercise: nil, at: endsAt),
+        ]
+    }
+
+    /// `--uitesting-seed-raid-result`: a signed-in social user with an unseen DEFEATED
+    /// raid result, so the celebration cover presents on the Social tab.
+    private static func seedRaidResult(vm: LukiAppViewModel, store: OfflineStore) {
+        store.currentUser = UserDto(
+            id: "uitest-social",
+            email: "uitest@lukifitti.test",
+            name: "UI Tester",
+            social: UserSocialDto(enabled: true, handle: "uitester", arena: .SILVER)
+        )
+        vm.social.profile = SocialProfileDto(handle: "uitester", name: "UI Tester")
+        vm.social.raids = RaidListDto(
+            pendingResults: [
+                RaidResultDto(
+                    raidId: "uitest-raid-result-1",
+                    outcome: .DEFEATED,
+                    bossSlug: "core-kraken",
+                    bossName: "Core Kraken",
+                    crownRank: 2,
+                    finalBlow: true,
+                    you: 1_240
+                )
+            ]
+        )
+    }
+
+    /// `--uitesting-seed-league-celebration`: a signed-in social user whose current week
+    /// carries an unseen PROMOTED result, so the celebration cover presents on open.
+    /// `refreshAll` stays a no-op (apiClient is unauthenticated) so the seed survives.
+    private static func seedLeagueCelebration(vm: LukiAppViewModel, store: OfflineStore) {
+        store.currentUser = UserDto(
+            id: "uitest-social",
+            email: "uitest@lukifitti.test",
+            name: "UI Tester",
+            social: UserSocialDto(enabled: true, handle: "uitester", arena: .SILVER)
+        )
+        vm.social.profile = SocialProfileDto(handle: "uitester", name: "UI Tester")
+        vm.social.league = LeagueCurrentDto(
+            weekKey: "2026-W45",
+            stage: .GLOBAL,
+            endsAt: ISO8601DateFormatter().string(from: Date().addingTimeInterval(172_800)),
+            arena: .BRONZE,
+            cohort: nil,
+            pendingResult: LeaguePendingResultDto(
+                weekKey: "2026-W45",
+                outcome: .PROMOTED,
+                fromArena: .BRONZE,
+                toArena: .SILVER,
+                rank: 2,
+                points: 1_240
+            )
+        )
     }
 
     /// Seeds believable content for `--uitesting-marketing` screenshot runs: ~8 weeks of
@@ -1222,6 +1487,7 @@ public final class LukiAppViewModel {
 
 @main
 public struct LukiFittiIOSApp: App {
+    @UIApplicationDelegateAdaptor(LukiAppDelegate.self) private var appDelegate
     @State private var viewModel = LukiAppViewModel.makeConfigured()
     @Environment(\.scenePhase) private var scenePhase
 
@@ -1229,6 +1495,29 @@ public struct LukiFittiIOSApp: App {
 
     public var body: some Scene {
         WindowGroup {
+            if ProcessInfo.processInfo.arguments.contains("--uitesting-boss-gallery") {
+                BossGalleryView()
+                    .environment(\.lukiLocale, viewModel.locale)
+            } else if ProcessInfo.processInfo.arguments.contains("--uitesting-widget-snap") {
+                // Writes a phase-accurate boss still (what WidgetSnapshotWriter stores for
+                // the widget) into the app sandbox's tmp dir for screenshot capture.
+                Color.clear
+                    .environment(\.lukiLocale, viewModel.locale)
+                    .task {
+                        guard let boss = RaidBossCatalog.boss(slug: "core-kraken"),
+                              let image = BossSceneView.renderImage(boss: boss, phase: 3),
+                              let data = image.pngData() else { return }
+                        let url = FileManager.default.temporaryDirectory
+                            .appendingPathComponent("raid_widget.png")
+                        try? data.write(to: url)
+                        print("WIDGET_SNAP:\(url.path)")
+                    }
+            } else if ProcessInfo.processInfo.arguments.contains("--uitesting-raid-page") {
+                NavigationStack {
+                    RaidDetailView(raidId: "uitest-raid-1", social: viewModel.social)
+                }
+                .environment(\.lukiLocale, viewModel.locale)
+            } else {
             AppShellView(viewModel: viewModel)
                 .environment(\.lukiLocale, viewModel.locale)
                 // The App Review video is recorded in dark mode — the verify flow
@@ -1242,6 +1531,7 @@ public struct LukiFittiIOSApp: App {
                     viewModel.handleUniversalLink(url)
                 }
                 .onAppear {
+                    Task { await ApnsPushManager.shared.attach(viewModel.store.apiClient) }
                     viewModel.pullFromWatchAndServer()
                 }
                 .task { await viewModel.requestNotificationPermissionIfNeeded() }
@@ -1259,6 +1549,8 @@ public struct LukiFittiIOSApp: App {
                 .onChange(of: viewModel.store.unfiledTemplates) { WidgetSnapshotWriter.publish(from: viewModel) }
                 .onChange(of: viewModel.store.preferences) { WidgetSnapshotWriter.publish(from: viewModel) }
                 .onChange(of: viewModel.nutrition.entries) { WidgetSnapshotWriter.publish(from: viewModel) }
+                .onChange(of: viewModel.social.raids) { WidgetSnapshotWriter.publish(from: viewModel) }
+            }
         }
     }
 }
@@ -1292,8 +1584,10 @@ public struct AppShellView: View {
             Tab(tr("History"), systemImage: "clock.arrow.circlepath", value: LukiMainTab.diary) {
                 tabRoot(title: tr("History")) { DiaryAnalyticsView(viewModel: viewModel) }
             }
-            Tab(tr("Library"), systemImage: "books.vertical", value: LukiMainTab.exercises) {
-                tabRoot(title: tr("Library")) { ExercisesAndStretchingView(viewModel: viewModel) }
+            if viewModel.socialEnabled {
+                Tab(tr("Social"), systemImage: "person.2", value: LukiMainTab.social) {
+                    tabRoot(title: tr("Social")) { SocialView(viewModel: viewModel) }
+                }
             }
         }
         .tint(LukiColors.accent)
@@ -1336,6 +1630,18 @@ public struct AppShellView: View {
                     }
             }
             .tint(LukiColors.accent)
+        }
+        // `/invite/<token>` universal link: shows once a user is signed in and social is on
+        // (the token survives the sign-in detour in `pendingInviteToken`).
+        .sheet(isPresented: Binding(
+            get: {
+                viewModel.pendingInviteToken != nil
+                    && viewModel.store.currentUser != nil
+                    && viewModel.socialEnabled
+            },
+            set: { if !$0 { viewModel.pendingInviteToken = nil } }
+        )) {
+            SocialInviteSheet(viewModel: viewModel)
         }
         .onChange(of: viewModel.selectedTab, initial: true) { _, newTab in
             route(to: newTab)
@@ -1408,6 +1714,7 @@ public struct AppShellView: View {
         case .nutrition: return "/nutrition"
         case .diary: return "/history"
         case .exercises: return "/library"
+        case .social: return "/social"
         case .session: return "/session"
         case .profile: return "/profile"
         }
@@ -1425,7 +1732,14 @@ public struct AppShellView: View {
         case .profile:
             isSessionPresented = false
             isProfilePresented = true
-        case .home, .workouts, .nutrition, .diary, .exercises:
+        case .exercises:
+            // The Library tab became the Workouts tab's Library segment.
+            isSessionPresented = false
+            isProfilePresented = false
+            viewModel.workoutsShowLibrary = true
+            contentTab = .workouts
+            viewModel.selectedTab = .workouts
+        case .home, .workouts, .nutrition, .diary, .social:
             isSessionPresented = false
             isProfilePresented = false
             contentTab = tab

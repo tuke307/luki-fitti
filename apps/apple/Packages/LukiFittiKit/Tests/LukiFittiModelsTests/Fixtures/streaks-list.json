@@ -1,0 +1,24 @@
+{
+  "success": true,
+  "data": {
+    "active": [
+      {
+        "id": "14d165f1-89b5-40a1-9782-bbe98868d123",
+        "status": "ACTIVE",
+        "friend": {
+          "userId": "804dc174-c3ad-4fa8-af3c-2c348aa1ec6e",
+          "handle": "shotbob_mwflew0b",
+          "avatarUrl": null,
+          "name": "E2E Social shot.b"
+        },
+        "count": 5,
+        "longest": 0,
+        "freezes": 1,
+        "thisWeek": { "you": { "done": 1, "target": 4 }, "them": { "done": 1, "target": 4 } }
+      }
+    ],
+    "incoming": [],
+    "outgoing": []
+  },
+  "error": null
+}

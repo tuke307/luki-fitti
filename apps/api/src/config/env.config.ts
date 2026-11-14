@@ -192,3 +192,16 @@ export const SEAWEEDFS_ACCESS_KEY_API = (process.env.SEAWEEDFS_ACCESS_KEY_API ??
 export const SEAWEEDFS_SECRET_KEY_API = (process.env.SEAWEEDFS_SECRET_KEY_API ?? '').trim();
 export const SEAWEEDFS_BUCKET =
   (process.env.SEAWEEDFS_BUCKET ?? '').trim() || 'luki-fitti-meal-photos';
+
+// Push notifications. Each channel is optional: when its env vars are missing the
+// channel stays disabled and the sender logs one warning on first use.
+// APNS_KEY_P8_BASE64 is the base64-encoded .p8 private key (openssl base64 -in key.p8).
+// TODO: Configure APNS_*/VAPID_* in your environment / secret store, never commit keys.
+export const APNS_KEY_P8_BASE64 = (process.env.APNS_KEY_P8_BASE64 ?? '').trim();
+export const APNS_KEY_ID = (process.env.APNS_KEY_ID ?? '').trim();
+export const APNS_TEAM_ID = (process.env.APNS_TEAM_ID ?? '').trim();
+export const APNS_BUNDLE_ID = (process.env.APNS_BUNDLE_ID ?? '').trim();
+export const VAPID_PUBLIC_KEY = (process.env.VAPID_PUBLIC_KEY ?? '').trim();
+export const VAPID_PRIVATE_KEY = (process.env.VAPID_PRIVATE_KEY ?? '').trim();
+export const VAPID_SUBJECT =
+  (process.env.VAPID_SUBJECT ?? '').trim() || 'mailto:noreply@lukifitti.app';
