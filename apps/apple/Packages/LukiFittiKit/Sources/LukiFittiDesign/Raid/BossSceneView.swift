@@ -105,10 +105,11 @@ public struct BossSceneView: UIViewRepresentable {
 
         // parts
         private let group = SCNNode()
+        private let swayGroup = SCNNode()
         private var built: [(part: RaidBossRecipe.Part, node: SCNNode, base: SCNVector3, velocity: SCNVector3, spin: SCNVector3)] = []
         private var pupils: [SCNNode] = []
         private var eyes: [SCNNode] = []
-        private var brows: [(node: SCNNode, side: Double, baseRotZ: Double)] = []
+        private var brows: [(node: SCNNode, side: Double, base: simd_float4x4)] = []
         private var slotMaterials: [String: SCNMaterial] = [:]
         private var extraMaterials: [(mat: SCNMaterial, slot: String)] = []
         private var outlineMat = SCNMaterial()
@@ -183,55 +184,22 @@ public struct BossSceneView: UIViewRepresentable {
 
         // MARK: scene construction
 
-        private func hex(_ string: String) -> UIColor {
-            var s = string.trimmingCharacters(in: .init(charactersIn: "#"))
-            if s.count == 6 { s += "FF" }
-            var v: UInt64 = 0
-            Scanner(string: s).scanHexInt64(&v)
-            return UIColor(
-                red: CGFloat((v >> 24) & 0xFF) / 255,
-                green: CGFloat((v >> 16) & 0xFF) / 255,
-                blue: CGFloat((v >> 8) & 0xFF) / 255,
-                alpha: CGFloat(v & 0xFF) / 255)
-        }
-
-        private func geometry(for part: RaidBossRecipe.Part) -> SCNGeometry {
-            let w = CGFloat(part.size.x), h = CGFloat(part.size.y), d = CGFloat(part.size.z)
-            switch part.shape {
-            case .sphere:
-                let s = SCNSphere(radius: 0.5)
-                s.segmentCount = 24
-                return s.scaled(w, h, d)
-            case .capsule:
-                return SCNCapsule(capRadius: w / 2, height: h)
-            case .roundedBox:
-                return SCNBox(
-                    width: w, height: h, length: d,
-                    chamferRadius: min(w, h, d) * 0.18)
-            case .cone:
-                return SCNCone(topRadius: 0, bottomRadius: w / 2, height: h).scaled(1, 1, d / w)
-            case .cylinder:
-                return SCNCylinder(radius: w / 2, height: h).scaled(1, 1, d / w)
-            case .torus:
-                return SCNTorus(ringRadius: w / 2, pipeRadius: max(0.02, d / 2))
-            case .box:
-                return SCNBox(width: w, height: h, length: d, chamferRadius: 0)
-            }
-        }
-
         private func materialFor(_ slot: String, emissive: Bool) -> SCNMaterial {
             if !emissive, let mat = slotMaterials[slot] { return mat }
             let mat = SCNMaterial()
             mat.lightingModel = .lambert
-            // 3-band toon quantisation of the shaded colour.
+            // 3-band toon: quantise luminance only (guarded — preserves hue,
+            // no per-channel posterisation).
             mat.shaderModifiers = [
                 .fragment: """
                     #pragma body
                     vec3 c = _output.color.rgb;
-                    _output.color.rgb = mix(floor(c * 3.0 + 0.5) / 3.0, c, 0.2);
+                    float lum = clamp(dot(c, vec3(0.299, 0.587, 0.114)), 0.0, 1.0);
+                    float band = floor(lum * 3.0 + 0.5) / 3.0;
+                    _output.color.rgb = c * (band / max(lum, 1e-3));
                     """
             ]
-            let color = hex(boss.palette[slot] ?? "#888888")
+            let color = BossSceneBuilder.hex(boss.palette[slot] ?? "#888888")
             mat.diffuse.contents = color
             if emissive {
                 mat.emission.contents = color
@@ -296,7 +264,7 @@ public struct BossSceneView: UIViewRepresentable {
             let rim = SCNNode()
             rim.light = SCNLight()
             rim.light!.type = .directional
-            rim.light!.color = hex(boss.palette["accent"] ?? "#ffffff")
+            rim.light!.color = BossSceneBuilder.hex(boss.palette["accent"] ?? "#ffffff")
             rim.light!.intensity = 600
             rim.position = SCNVector3(2.5, 2.5, -3)
             rim.look(at: SCNVector3(x: Float(c.x), y: Float(c.y), z: Float(c.z)))
@@ -306,40 +274,31 @@ public struct BossSceneView: UIViewRepresentable {
             group.rotation = SCNVector4(0, 1, 0, Self.baseYaw)
 
             outlineMat.lightingModel = .constant
-            outlineMat.diffuse.contents = hex(boss.palette["dark"] ?? "#222222")
+            outlineMat.diffuse.contents = BossSceneBuilder.hex(boss.palette["dark"] ?? "#222222")
             outlineMat.cullMode = .front
+            outlineMat.writesToDepthBuffer = true
+            outlineMat.readsFromDepthBuffer = true
             flashMat.lightingModel = .constant
             flashMat.diffuse.contents = UIColor.white
             flashMat.transparency = 0
             flashMat.writesToDepthBuffer = false
 
+            let graph = BossSceneBuilder.build(
+                boss: boss,
+                materialFor: { materialFor($0.slot.rawValue, emissive: $0.emissive ?? false) },
+                outlineMat: outlineMat,
+                flashMat: flashMat,
+                outlineScale: Self.outlineScale)
+            swayGroup.addChildNode(graph.group)
+            group.addChildNode(swayGroup)
             for part in boss.parts {
-                let geo = geometry(for: part)
-                let mat = materialFor(part.slot.rawValue, emissive: part.emissive ?? false)
-                geo.materials = [mat]
-                let node = SCNNode(geometry: geo)
-                node.position = SCNVector3(x: Float(part.position.x), y: Float(part.position.y), z: Float(part.position.z))
-                if let r = part.rotation {
-                    node.eulerAngles = SCNVector3(
-                        Float(r.x * .pi / 180), Float(r.y * .pi / 180), Float(r.z * .pi / 180))
-                }
-                // inverted-hull outline + white hit flash
-                let outline = SCNNode(geometry: geo.copy() as! SCNGeometry)
-                outline.geometry!.materials = [outlineMat]
-                outline.scale = SCNVector3(x: Float(Self.outlineScale), y: Float(Self.outlineScale), z: Float(Self.outlineScale))
-                node.addChildNode(outline)
-                let flash = SCNNode(geometry: geo.copy() as! SCNGeometry)
-                flash.geometry!.materials = [flashMat]
-                flash.scale = SCNVector3(x: Float(Self.outlineScale + 0.01), y: Float(Self.outlineScale + 0.01), z: Float(Self.outlineScale + 0.01))
-                node.addChildNode(flash)
-                node.name = part.id
-                group.addChildNode(node)
+                let node = graph.nodes[part.id]!
                 built.append((part, node, node.position, SCNVector3(), SCNVector3()))
                 if part.role == .pupil { pupils.append(node) }
                 if part.role == .eye { eyes.append(node) }
                 if part.id.hasPrefix("brow") {
                     let side = part.position.x == 0 ? 0.0 : (part.position.x > 0 ? 1.0 : -1.0)
-                    brows.append((node, side, Double(node.eulerAngles.z)))
+                    brows.append((node, side, node.simdTransform))
                 }
             }
 
@@ -358,11 +317,10 @@ public struct BossSceneView: UIViewRepresentable {
             shadowNode.position = SCNVector3(Float(c.x), Float(floorY + 0.01), Float(c.z))
             scene.rootNode.addChildNode(shadowNode)
 
-            // enrage aura: billboarded soft glow sprite, blended per theme
+            // enrage aura: billboarded CGGradient glow plane, blended per theme
             auraSize = bounds.radius * 2 * 1.15
             let auraGeo = SCNPlane(width: auraSize, height: auraSize)
-            auraMat.diffuse.contents = radialTexture(
-                peak: 255, exponent: 2.4, rgb: (255, 90, 42))
+            auraMat.diffuse.contents = BossSceneBuilder.auraTexture()
             auraMat.lightingModel = .constant
             auraMat.writesToDepthBuffer = false
             auraMat.transparency = 0
@@ -403,10 +361,10 @@ public struct BossSceneView: UIViewRepresentable {
             let f = Double(phase) / 3
             if f > 0 {
                 for (slot, mat) in slotMaterials {
-                    mat.diffuse.contents = enragedColor(slot, f: f)
+                    mat.diffuse.contents = BossSceneBuilder.enragedColor(boss: boss, slot: slot, f: f)
                 }
                 for (mat, slot) in extraMaterials {
-                    mat.diffuse.contents = enragedColor(slot, f: f)
+                    mat.diffuse.contents = BossSceneBuilder.enragedColor(boss: boss, slot: slot, f: f)
                 }
             }
             if phase > 0 {
@@ -427,18 +385,7 @@ public struct BossSceneView: UIViewRepresentable {
             cameraNode.look(at: SCNVector3(x: Float(c.x), y: Float(c.y), z: Float(c.z)))
         }
 
-        private func enragedColor(_ slot: String, f: Double) -> UIColor {
-            let base = hex(boss.palette[slot] ?? "#888888")
-            guard let target = boss.enragedPalette[slot], f > 0 else { return base }
-            var r1: CGFloat = 0, g1: CGFloat = 0, b1: CGFloat = 0, a1: CGFloat = 0
-            var r2: CGFloat = 0, g2: CGFloat = 0, b2: CGFloat = 0, a2: CGFloat = 0
-            base.getRed(&r1, green: &g1, blue: &b1, alpha: &a1)
-            hex(target).getRed(&r2, green: &g2, blue: &b2, alpha: &a2)
-            let t = CGFloat(f)
-            return UIColor(
-                red: r1 + (r2 - r1) * t, green: g1 + (g2 - g1) * t, blue: b1 + (b2 - b1) * t,
-                alpha: 1)
-        }
+
 
         // MARK: per-frame update (mirrors the web tick)
 
@@ -505,7 +452,9 @@ public struct BossSceneView: UIViewRepresentable {
                 shadowNode.scale = SCNVector3(x: Float(shadowScale), y: Float(shadowScale), z: Float(shadowScale))
                 shadowMat.transparency = max(0.6, 1 - max(0, bob) * 3)
                 let period = (boss.idle.periodMs / 1000) * .pi * 2
-                group.eulerAngles.z = Float(sin(time * speed * (period / .pi) * 0.5) * boss.idle.sway)
+                // local sway after the yaw (Ry·Rz like the web pivot)
+                swayGroup.eulerAngles.z =
+                    Float(sin(time * speed * (period / .pi) * 0.5) * boss.idle.sway)
 
                 // drag rotation with spring back to the three-quarter pose
                 if !dragging { targetRotY += (Self.baseYaw - targetRotY) * 0.1 }
@@ -521,8 +470,13 @@ public struct BossSceneView: UIViewRepresentable {
                 // eyebrows angle down from phase 2
                 let anger = phase >= 2 ? min(1, Double(phase - 1) / 2) : 0
                 for b in brows {
-                    b.node.eulerAngles.z =
-                        Float(b.baseRotZ + (b.side == 0 ? -0.12 : b.side * -0.25) * anger)
+                    // post-multiply a local-z tilt — eulers on these nodes use
+                    // the matrix convention (Rx·Ry·Rz), not SceneKit's
+                    let a = Float((b.side == 0 ? -0.12 : b.side * -0.25) * anger)
+                    let cs = cos(a), sn = sin(a)
+                    b.node.simdTransform = b.base * simd_float4x4(
+                        simd_float4(cs, sn, 0, 0), simd_float4(-sn, cs, 0, 0),
+                        simd_float4(0, 0, 1, 0), simd_float4(0, 0, 0, 1))
                 }
 
                 // blink
@@ -560,10 +514,10 @@ public struct BossSceneView: UIViewRepresentable {
                 // enrage palette lerp + red-orange aura pulse
                 let f = Double(phase) / 3
                 for (slot, mat) in slotMaterials {
-                    mat.diffuse.contents = enragedColor(slot, f: f)
+                    mat.diffuse.contents = BossSceneBuilder.enragedColor(boss: boss, slot: slot, f: f)
                 }
                 for e in extraMaterials {
-                    let c = enragedColor(e.slot, f: f)
+                    let c = BossSceneBuilder.enragedColor(boss: boss, slot: e.slot, f: f)
                     e.mat.diffuse.contents = c
                     e.mat.emission.contents = c
                 }
@@ -610,35 +564,6 @@ public struct BossSceneView: UIViewRepresentable {
         }
     }
 }
-
-private extension SCNGeometry {
-    /// Uniformly scaled copy for shapes expressed via a base radius of 0.5.
-    func scaled(_ x: CGFloat, _ y: CGFloat, _ z: CGFloat) -> SCNGeometry {
-        let node = SCNNode(geometry: self)
-        node.scale = SCNVector3(Float(x), Float(y), Float(z))
-        let sources = node.geometry!.sources(for: .vertex).map { src -> SCNGeometrySource in
-            let count = src.vectorCount
-            var data = src.data
-            data.withUnsafeMutableBytes { ptr in
-                let base = ptr.baseAddress!
-                for i in 0..<count {
-                    let offset = src.dataOffset + i * src.dataStride
-                    let f = base.advanced(by: offset).assumingMemoryBound(to: Float.self)
-                    f[0] *= Float(x); f[1] *= Float(y); f[2] *= Float(z)
-                }
-            }
-            return SCNGeometrySource(
-                data: data, semantic: src.semantic, vectorCount: src.vectorCount,
-                usesFloatComponents: src.usesFloatComponents,
-                componentsPerVector: src.componentsPerVector,
-                bytesPerComponent: src.bytesPerComponent,
-                dataOffset: src.dataOffset, dataStride: src.dataStride)
-        }
-        let elements = node.geometry!.elements
-        return SCNGeometry(sources: sources, elements: elements)
-    }
-}
-
 
 public extension BossSceneView {
     /// Renders a phase-accurate still of the boss for the home widget snapshot.
