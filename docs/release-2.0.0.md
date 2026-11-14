@@ -4,7 +4,7 @@
 the branches, the PRs, what is done, what is next, and the pitfalls already hit. Update the
 [Status](#status) and the [Session log](#session-log) before a session ends.
 
-Last updated: 2026-11-15 (end of session 1).
+Last updated: 2026-11-14 (session 2).
 
 ## Branch model
 
@@ -27,22 +27,18 @@ main ◀── develop ◀── release/2.0.0  (version bump 2.0.0)        PR #
 
 ## Status
 
-| Stream                                                                 | PR                                                               | State                                                                                                                                     | Docs                                                                |
-| :--------------------------------------------------------------------- | :--------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------ |
-| Version bump 2.0.0                                                     | #106 (`release/2.0.0` → `develop`)                               | draft. Screenshots for 2.0 still missing (on purpose, done last)                                                                          | `docs/release.md`                                                   |
-| Social: friends, leagues, duels, raids                                 | #100 (`feat/social-2.0` → `release/2.0.0`)                       | **all 4 sub-PRs merged** (#101–#104). Lint/test/apple green after the fix `f9b280a3`; e2e was still running at handoff, so check it first | `docs/social-2.0.md` + `social-2.0-pr1…4.md` (on `feat/social-2.0`) |
-| Personal API keys                                                      | #107 (`feat/api-keys` → `release/2.0.0`)                         | **design approved, implementation not started**                                                                                           | `docs/api-keys.md` (on `feat/api-keys`)                             |
-| MCP server (separate feature)                                          | #108 (`feat/mcp-server` → `feat/api-keys`, then `release/2.0.0`) | **design approved, implementation not started**; starts after API keys                                                                    | `docs/mcp-server.md` (on `feat/mcp-server`)                         |
-| Former "PR 5": beta, final privacy policy, App Store notes, release PR | —                                                                | **postponed** by the user; ships together with the next feature                                                                           | `docs/social-2.0.md` → "Later"                                      |
+| Stream                                                                 | PR                                                               | State                                                                                                                   | Docs                                                                |
+| :--------------------------------------------------------------------- | :--------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------ |
+| Version bump 2.0.0                                                     | #106 (`release/2.0.0` → `develop`)                               | draft. Screenshots for 2.0 still missing (on purpose, done last)                                                        | `docs/release.md`                                                   |
+| Social: friends, leagues, duels, raids                                 | #100 (`feat/social-2.0` → `release/2.0.0`)                       | **all 4 sub-PRs merged** (#101–#104). **merged** into `release/2.0.0` (squash `4ae47c21`, 2026-11-14), all checks green | `docs/social-2.0.md` + `social-2.0-pr1…4.md` (on `feat/social-2.0`) |
+| Personal API keys                                                      | #107 (`feat/api-keys` → `release/2.0.0`)                         | **design approved, implementation not started**                                                                         | `docs/api-keys.md` (on `feat/api-keys`)                             |
+| MCP server (separate feature)                                          | #108 (`feat/mcp-server` → `feat/api-keys`, then `release/2.0.0`) | **design approved, implementation not started**; starts after API keys                                                  | `docs/mcp-server.md` (on `feat/mcp-server`)                         |
+| Former "PR 5": beta, final privacy policy, App Store notes, release PR | —                                                                | **postponed** by the user; ships together with the next feature                                                         | `docs/social-2.0.md` → "Later"                                      |
 
 ## Next steps (in order)
 
-1. **Finish #100.**
-   - Confirm `gh pr checks 100` is fully green, especially e2e. If e2e fails, read the job
-     log (`gh api repos/tuke307/luki-fitti/actions/jobs/<id>/logs --allow-escape-sequences`)
-     and fix it on `feat/social-2.0`.
-   - Then the user merges #100 into `release/2.0.0`, ideally with a **merge commit, not a
-     squash** (see pitfalls).
+1. ~~**Finish #100.**~~ Done: e2e fixed in `99cf5a6a`, squash-merged into `release/2.0.0` as
+   `4ae47c21` (tree verified equal to the PR head apart from the version bump).
 2. **Prepare `feat/api-keys` for implementation.**
    - After #100 is merged, `git merge --no-ff origin/release/2.0.0` into `feat/api-keys`, so
      the schema already contains the social models (User/AppSettings fields, migrations up to
@@ -133,9 +129,16 @@ marketing:screenshots`), then the user merges #106 into `develop`.
   `XYZ`. Use matrices. Parity tests on both platforms guard the boss geometry.
 - **Commits:** conventional commits, lower-case subject, no AI attribution or co-author
   trailers; stage specific files.
+- **Login throttle in e2e:** `POST /auth/login` allows 10 requests per 10 minutes per IP, and
+  the API keeps the count in memory. Use the real login form once per spec at most. Sign in
+  other seeded users with `signInSeededUser` (`apps/web/tests/e2e/helpers/social.ts`), and
+  never relax the throttle. Restart the API between local full runs.
+- **Worktree `release-2.0.0`:** `/Users/MEISSTO/source/luki-fitti-wt/release-2.0.0` has
+  `release/2.0.0` checked out for doc updates. It has no `node_modules`.
 
 ## Session log
 
-| Date            | Done                                                                                                                                                                                                                                          | Next                                           |
-| :-------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------- |
-| 2026-11-13 → 15 | Social plan + PRs #101–#104 built, reviewed and merged into `feat/social-2.0`; CI extended to feature branches; `release/2.0.0` + #106; API keys design (#107) and MCP design (#108, split into its own feature) approved; lint fixes on #100 | Check #100 e2e, merge #100, then API keys PR A |
+| Date            | Done                                                                                                                                                                                                                                          | Next                                                                |
+| :-------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------ |
+| 2026-11-13 → 15 | Social plan + PRs #101–#104 built, reviewed and merged into `feat/social-2.0`; CI extended to feature branches; `release/2.0.0` + #106; API keys design (#107) and MCP design (#108, split into its own feature) approved; lint fixes on #100 | Check #100 e2e, merge #100, then API keys PR A                      |
+| 2026-11-14      | #100 e2e fixed: the social spec's UI logins hit the login throttle. Seeded users now sign in through a minted session (`99cf5a6a`), and all checks are green; the user squash-merged #100                                                     | API keys PR A + B: merge `release/2.0.0` into `feat/api-keys` first |
