@@ -27,6 +27,8 @@ export interface EmailTemplateData extends Record<string, unknown> {
   confirmation_url?: string;
   reset_password_url?: string;
   delete_account_url?: string;
+  api_key_name?: string;
+  keys_url?: string;
   expiry_minutes?: number;
   frontend_url?: string;
 }
@@ -191,6 +193,27 @@ export class EmailService {
         email: user.email,
         delete_account_url: deleteAccountUrl,
         expiry_minutes: Math.round(ACCOUNT_DELETION_EXPIRY_MS / 60000),
+        frontend_url: FRONTEND_URL,
+      },
+      new Date(),
+      user.id,
+    );
+  }
+
+  public async enqueueApiKeyCreatedEmail(
+    user: { id: string; email: string; name?: string | null },
+    keyName: string,
+  ): Promise<Email> {
+    // `?open=` deep link: the web shell consumes it into the API keys settings page.
+    const keysUrl = `${FRONTEND_URL}/?open=${encodeURIComponent('/apiKeys')}`;
+    return this.enqueueGenericEmail(
+      EmailTemplateType.API_KEY_CREATED,
+      user.email,
+      {
+        name: user.name || user.email.split('@')[0] || 'GymBuddy',
+        email: user.email,
+        api_key_name: keyName,
+        keys_url: keysUrl,
         frontend_url: FRONTEND_URL,
       },
       new Date(),

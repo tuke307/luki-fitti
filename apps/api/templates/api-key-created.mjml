@@ -1,0 +1,75 @@
+<mjml>
+  <mj-head>
+    <mj-title>New API key for your LukiFitti account</mj-title>
+    <mj-preview>A new API key was created for your LukiFitti account.</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif" />
+      <mj-text color="#E2E8F0" font-size="15px" line-height="24px" />
+      <mj-button
+        background-color="#00E5FF"
+        color="#0B0D10"
+        border-radius="12px"
+        font-size="15px"
+        font-weight="800"
+        inner-padding="14px 28px"
+      />
+    </mj-attributes>
+    <mj-style>
+      .card {
+        border: 1px solid #1E293B;
+        border-radius: 20px;
+      }
+      .muted {
+        color: #94A3B8;
+        font-size: 12px;
+        line-height: 18px;
+      }
+      .link {
+        color: #00E5FF;
+        text-decoration: underline;
+        word-break: break-all;
+      }
+      .brand-accent {
+        color: #CCFF00;
+      }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#0B0D10">
+    <mj-wrapper padding="32px 16px" background-color="#11151C" css-class="card">
+      <mj-section padding="16px 24px 8px">
+        <mj-column>
+          <mj-text align="center" font-size="22px" font-weight="900" letter-spacing="1px" padding="0">
+            LUKI<span class="brand-accent">FITTI</span>
+          </mj-text>
+          <mj-text align="center" css-class="muted" padding="4px 0 16px">
+            Personal Gym &amp; Workout Tracker
+          </mj-text>
+          <mj-divider border-color="#1E293B" border-width="1px" />
+          <mj-text align="center" font-size="22px" font-weight="800" padding="16px 0 8px">
+            New API Key Created
+          </mj-text>
+          <mj-text padding="8px 0">
+            Hey <strong>{{ name }}</strong>,
+          </mj-text>
+          <mj-text padding="0 0 16px">
+            A new API key '<strong>{{ api_key_name }}</strong>' was created for your LukiFitti
+            account (<strong>{{ email }}</strong>). You can review and revoke your keys here:
+          </mj-text>
+          <mj-button href="{{ keys_url }}" align="center" padding="8px 0 20px">
+            Manage API Keys
+          </mj-button>
+          <mj-text css-class="muted" padding="8px 0 0">
+            Or copy and paste this link into your browser:
+          </mj-text>
+          <mj-text font-size="12px" padding="4px 0 16px">
+            <a class="link" href="{{ keys_url }}" target="_blank">{{ keys_url }}</a>
+          </mj-text>
+          <mj-divider border-color="#1E293B" border-width="1px" />
+          <mj-text align="center" css-class="muted" padding="12px 0 0" font-size="11px">
+            If this wasn't you, revoke the key and change your password immediately.
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+  </mj-body>
+</mjml>

@@ -2,9 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { AiKeySlot, FEATURE_GRANTS, FeatureGrant } from '@luki-fitti/common/enums';
 import type {
   AiSettingsDto,
+  ApiKeysSettingsDto,
   LeagueSettingsDto,
   SocialSettingsDto,
   UpdateAiSettingsDto,
+  UpdateApiKeysSettingsDto,
   UpdateLeagueSettingsDto,
   UpdateSocialSettingsDto,
 } from '@luki-fitti/common/schemas';
@@ -46,6 +48,7 @@ export interface AppSettingsRecord {
   raidsEnabled: boolean;
   raidHpPerActiveUser: number;
   raidMinHp: number;
+  apiKeysEnabled: boolean;
   updatedAt: Date;
 }
 
@@ -202,6 +205,21 @@ export class AppSettingsService {
     })) as AppSettingsRecord;
     this.cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
     return this.getLeagueSettings();
+  }
+
+  async getApiKeySettings(): Promise<ApiKeysSettingsDto> {
+    const value = await this.get();
+    return { apiKeysEnabled: value.apiKeysEnabled };
+  }
+
+  async updateApiKeySettings(dto: UpdateApiKeysSettingsDto): Promise<ApiKeysSettingsDto> {
+    const value = (await this.prisma.appSettings.upsert({
+      where: { id: SETTINGS_ID },
+      create: { id: SETTINGS_ID, ...dto },
+      update: dto,
+    })) as AppSettingsRecord;
+    this.cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
+    return this.getApiKeySettings();
   }
 
   private async toDto(value: AppSettingsRecord): Promise<AiSettingsDto> {
