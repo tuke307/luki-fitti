@@ -21,6 +21,22 @@
     "./services/push-sender.service": {
       "types": "./src/modules/push/push-sender.service.ts",
       "default": "./dist/src/modules/push/push-sender.service.js"
+    },
+    "./services/league.service": {
+      "types": "./src/modules/league/league.service.ts",
+      "default": "./dist/src/modules/league/league.service.js"
+    },
+    "./services/social-access.service": {
+      "types": "./src/modules/social/social-access.service.ts",
+      "default": "./dist/src/modules/social/social-access.service.js"
+    },
+    "./services/notification.service": {
+      "types": "./src/modules/notifications/notification.service.ts",
+      "default": "./dist/src/modules/notifications/notification.service.js"
+    },
+    "./services/app-settings.service": {
+      "types": "./src/modules/app-settings/app-settings.service.ts",
+      "default": "./dist/src/modules/app-settings/app-settings.service.js"
     }
   },
   "scripts": {

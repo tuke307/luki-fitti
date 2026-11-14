@@ -139,11 +139,13 @@ export interface PushConfigDto {
 
 export const UpdatePushPreferencesSchema = z.object({
   friends: z.boolean().optional(),
+  leagues: z.boolean().optional(),
 });
 export type UpdatePushPreferencesDto = z.infer<typeof UpdatePushPreferencesSchema>;
 
 export interface PushPreferencesDto {
   friends: boolean;
+  leagues: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

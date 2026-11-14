@@ -34,10 +34,13 @@ public enum SocialNotificationKind: String, Codable, Sendable, Equatable, Hashab
 public struct UserSocialDto: Codable, Sendable, Equatable, Hashable {
     public var enabled: Bool
     public var handle: String?
+    /// League arena (PR 2); nil for servers predating the field or league-less users.
+    public var arena: Arena?
 
-    public init(enabled: Bool, handle: String? = nil) {
+    public init(enabled: Bool, handle: String? = nil, arena: Arena? = nil) {
         self.enabled = enabled
         self.handle = handle
+        self.arena = arena
     }
 }
 
@@ -152,12 +155,27 @@ public struct PushConfigDto: Codable, Sendable, Equatable {
 
 public struct PushPreferencesDto: Codable, Sendable, Equatable {
     public var friends: Bool
+    /// League outcomes + reminders (PR 2); defaults true when the server omits it.
+    public var leagues: Bool
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        friends = try c.decode(Bool.self, forKey: .friends)
+        leagues = try c.decodeIfPresent(Bool.self, forKey: .leagues) ?? true
+    }
+
+    public init(friends: Bool, leagues: Bool = true) {
+        self.friends = friends
+        self.leagues = leagues
+    }
 }
 
 public struct UpdatePushPreferencesDto: Encodable, Sendable {
     public var friends: Bool?
-    public init(friends: Bool? = nil) {
+    public var leagues: Bool?
+    public init(friends: Bool? = nil, leagues: Bool? = nil) {
         self.friends = friends
+        self.leagues = leagues
     }
 }
 

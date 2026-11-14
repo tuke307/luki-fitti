@@ -55,6 +55,10 @@ public struct WatchHomeView: View {
                     .accessibilityIdentifier("watch.home.nextUp")
                 }
 
+                if let snapshot = viewModel.socialSnapshot {
+                    leagueRow(snapshot)
+                }
+
                 Section(tr("Workouts")) {
                     ForEach(viewModel.store.folders) { folder in
                         NavigationLink {
@@ -94,6 +98,27 @@ public struct WatchHomeView: View {
             }
             .navigationTitle("LukiFitti")
         }
+    }
+
+    /// Compact league row: "Gold · #4 · 820 EP", or just the weekly EP on friends weeks.
+    private func leagueRow(_ snapshot: SocialWatchSnapshot) -> some View {
+        Label {
+            Text(
+                snapshot.stage == .FRIENDS
+                    ? tr("%d EP this week", snapshot.weekPoints)
+                    : [
+                        arenaName(snapshot.arena, tr),
+                        snapshot.rank.map { "#\($0)" },
+                        "\(snapshot.weekPoints) EP",
+                    ].compactMap { $0 }.joined(separator: " · ")
+            )
+            .font(.footnote)
+            .lineLimit(1)
+        } icon: {
+            Image(systemName: "shield.fill")
+                .foregroundStyle(LukiColors.accent)
+        }
+        .accessibilityIdentifier("watch.home.leagueRow")
     }
 
     /// Compact sync row: an icon whose shape matches the state, one status line, then the account.

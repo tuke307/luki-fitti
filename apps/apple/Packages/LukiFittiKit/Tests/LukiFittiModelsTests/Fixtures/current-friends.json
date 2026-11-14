@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "data": {
+    "weekKey": "2026-11-09",
+    "stage": "FRIENDS",
+    "endsAt": "2026-11-15T23:00:00.000Z",
+    "arena": "BRONZE",
+    "cohort": null,
+    "pendingResult": null
+  },
+  "error": null
+}

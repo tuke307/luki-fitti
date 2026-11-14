@@ -23,6 +23,7 @@ import {
   ResolveReportSchema,
   SetAiKeySchema,
   UpdateAiSettingsSchema,
+  UpdateLeagueSettingsSchema,
   UpdateSocialSettingsSchema,
   UpdateUserAccessSchema,
   type AdminReportsQueryDto,
@@ -33,6 +34,7 @@ import {
   type ResolveReportDto,
   type SetAiKeyDto,
   type UpdateAiSettingsDto,
+  type UpdateLeagueSettingsDto,
   type UpdateSocialSettingsDto,
   type UpdateUserAccessDto,
 } from '@luki-fitti/common/schemas';
@@ -45,6 +47,7 @@ import { ZodValidationPipe } from '@/pipes/zod-validation.pipe';
 import { AppSettingsService } from '../app-settings/app-settings.service';
 import { AiKeyService } from '../ai/ai-key.service';
 import { OpenRouterModelsService } from '../ai/openrouter-models.service';
+import { LeagueService } from '../league/league.service';
 import { AdminService } from './admin.service';
 
 @ApiTags('Admin')
@@ -56,6 +59,7 @@ export class AdminController {
     private readonly appSettings: AppSettingsService,
     private readonly aiKeys: AiKeyService,
     private readonly modelCatalog: OpenRouterModelsService,
+    private readonly leagueService: LeagueService,
   ) {}
 
   @Get('dashboard')
@@ -186,6 +190,30 @@ export class AdminController {
     @Body(new ZodValidationPipe(ResolveReportSchema)) body: ResolveReportDto,
   ) {
     return this.adminService.resolveReport(actor.id, id, body);
+  }
+
+  @Get('settings/leagues')
+  @RequirePermissions(AdminPermission.AI_SETTINGS_MANAGE)
+  @ApiOperation({ summary: 'League rollout settings (kill switch, stage, cohort size, caps)' })
+  getLeagueSettings() {
+    return this.appSettings.getLeagueSettings();
+  }
+
+  @Put('settings/leagues')
+  @UseGuards(CsrfGuard)
+  @RequirePermissions(AdminPermission.AI_SETTINGS_MANAGE)
+  @ApiOperation({ summary: 'Update league rollout settings' })
+  updateLeagueSettings(
+    @Body(new ZodValidationPipe(UpdateLeagueSettingsSchema)) body: UpdateLeagueSettingsDto,
+  ) {
+    return this.appSettings.updateLeagueSettings(body);
+  }
+
+  @Get('leagues/preview')
+  @RequirePermissions(AdminPermission.AI_SETTINGS_MANAGE)
+  @ApiOperation({ summary: 'Dry-run of the next weekly league rollover' })
+  leaguePreview() {
+    return this.leagueService.adminPreview();
   }
 
   @Get('ai-usage')

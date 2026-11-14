@@ -14,6 +14,7 @@ config({ path: resolve(__dirname, '../../../api/.env.local') });
 
 import bcrypt from 'bcrypt';
 import prisma from '@luki-fitti/database';
+import { berlinDayKey, berlinWeekKey } from '@luki-fitti/common/utils';
 
 export interface SeededSocialUser {
   id: string;
@@ -49,4 +50,77 @@ export async function seedSocialUser(
     },
   });
   return { id: user.id, email, password, name: `E2E Social ${prefix}` };
+}
+
+/** Forces the league stage mode (AUTO thresholds are impractical to seed for). */
+export async function setLeagueStageModeForE2e(
+  mode: 'AUTO' | 'FRIENDS' | 'GLOBAL' | 'ARENAS',
+): Promise<void> {
+  await prisma.appSettings.upsert({
+    where: { id: 1 },
+    update: { leagueStageMode: mode },
+    create: { id: 1, socialEnabled: true, leagueStageMode: mode },
+  });
+}
+
+/**
+ * Seeds one completed session + its EP ledger entry + the weekly score for the
+ * current Berlin week, as if the user had just synced a real workout.
+ */
+export async function seedPointsWeekForE2e(userId: string, points: number): Promise<string> {
+  const weekKey = berlinWeekKey(new Date());
+  const dayKey = berlinDayKey(new Date());
+  const session = await prisma.workoutSession.create({
+    data: {
+      clientSessionId: `e2e-${crypto.randomUUID()}`,
+      userId,
+      workoutNameSnapshot: 'E2E Seeded Workout',
+      status: 'COMPLETED',
+      completedAt: new Date(),
+      activeDurationSeconds: 3600,
+    },
+  });
+  await prisma.effortPointEntry.create({
+    data: {
+      userId,
+      sessionId: session.id,
+      weekKey,
+      dayKey,
+      points,
+      firstPoints: points,
+      breakdown: {
+        sets: 1,
+        warmups: 0,
+        prs: 0,
+        cardioMinutes: 0,
+        stretchMinutes: 0,
+        finishBonus: 0,
+        droppedSets: 0,
+      },
+    },
+  });
+  await prisma.weeklyScore.upsert({
+    where: { userId_weekKey: { userId, weekKey } },
+    update: { points, rawPoints: points, sessions: 1 },
+    create: { userId, weekKey, points, rawPoints: points, sessions: 1, goalBonus: 0 },
+  });
+  return weekKey;
+}
+
+/** Puts every given user into one GLOBAL cohort for the current week. */
+export async function seedGlobalCohortForE2e(userIds: string[]): Promise<string> {
+  const weekKey = berlinWeekKey(new Date());
+  // The week row may already exist (lazily created as FRIENDS); force the stage.
+  await prisma.leagueWeek.upsert({
+    where: { weekKey },
+    update: { stage: 'GLOBAL' },
+    create: { weekKey, stage: 'GLOBAL', activeUsers: userIds.length },
+  });
+  const cohort = await prisma.leagueCohort.create({ data: { weekKey, bucket: null } });
+  for (const userId of userIds) {
+    await prisma.leagueMembership.create({
+      data: { cohortId: cohort.id, userId, weekKey, arenaAtStart: 'BRONZE' },
+    });
+  }
+  return weekKey;
 }

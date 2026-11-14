@@ -1,8 +1,11 @@
 import Foundation
 import Observation
+import os
 import LukiFittiModels
 import LukiFittiDomain
 import LukiFittiAPI
+
+private let socialLog = Logger(subsystem: "LukiFitti", category: "SocialStore")
 
 /// View-model store for the Social tab: own profile, friend lists, search results, inbox and
 /// push preferences. All calls are best-effort — errors are surfaced via `lastError` and never
@@ -23,6 +26,15 @@ public final class SocialStore {
     /// One onboarding presentation per launch while the user has no handle.
     public var onboardingDismissedThisLaunch = false
     public var lastError: String?
+
+    // MARK: - Leagues & effort points (PR 2)
+
+    public var pointsWeek: PointsWeekDto?
+    public var league: LeagueCurrentDto?
+    public var leagueFriends: [LeagueFriendRowDto] = []
+    public var leagueHistory: [LeagueHistoryEntryDto] = []
+    /// Called after league/points data changes so the app can push a watch snapshot.
+    public var onLeagueDataChanged: (@MainActor () -> Void)?
 
     /// Avatar JPEG bytes keyed by user id, fetched through the authenticated API client.
     @ObservationIgnored public private(set) var avatarCache: [String: Data] = [:]
@@ -45,7 +57,67 @@ public final class SocialStore {
         async let p = fetchProfile()
         async let f = refreshFriends()
         async let u = refreshUnread()
-        _ = await (p, f, u)
+        async let l = refreshLeagues()
+        _ = await (p, f, u, l)
+    }
+
+    /// Points, league state and friends board. 403s (leagues disabled or user ineligible) are
+    /// expected and swallowed — the sections stay empty. Other failures land in `lastError` and
+    /// the log so a decode/HTTP regression can't silently hide the whole section.
+    public func refreshLeagues() async {
+        var changed = false
+        do {
+            pointsWeek = try await apiClient.fetchPointsWeek()
+            changed = true
+        } catch let error as APIClientError where isForbidden(error) {
+        } catch { recordLeagueError("points/week", error) }
+        do {
+            league = try await apiClient.fetchLeagueCurrent()
+            changed = true
+        } catch let error as APIClientError where isForbidden(error) {
+        } catch { recordLeagueError("league/current", error) }
+        do {
+            leagueFriends = try await apiClient.fetchLeagueFriends()
+            changed = true
+        } catch let error as APIClientError where isForbidden(error) {
+        } catch { recordLeagueError("league/friends", error) }
+        if changed { onLeagueDataChanged?() }
+    }
+
+    private func isForbidden(_ error: APIClientError) -> Bool {
+        if case .forbidden = error { return true }
+        if case let .serverError(code, _) = error { return code == 403 }
+        return false
+    }
+
+    private func recordLeagueError(_ endpoint: String, _ error: Error) {
+        socialLog.error("\(endpoint, privacy: .public) failed: \(String(describing: error), privacy: .public)")
+        lastError = String(describing: error)
+    }
+
+    public func refreshLeagueHistory() async {
+        leagueHistory = (try? await apiClient.fetchLeagueHistory()) ?? leagueHistory
+    }
+
+    /// Clears the pending result locally and tells the server the celebration was shown.
+    public func markResultSeen() async {
+        guard let result = league?.pendingResult else { return }
+        league?.pendingResult = nil
+        do { try await apiClient.markLeagueResultSeen(weekKey: result.weekKey) } catch {}
+        onLeagueDataChanged?()
+    }
+
+    /// Compact watch snapshot, nil when nothing has loaded yet.
+    public var watchSnapshot: SocialWatchSnapshot? {
+        guard let league else { return nil }
+        let rank = league.cohort?.members.first(where: { $0.isSelf })?.rank
+        return SocialWatchSnapshot(
+            weekPoints: pointsWeek?.points ?? 0,
+            arena: league.arena,
+            rank: rank,
+            cohortSize: league.cohort?.members.count,
+            stage: league.stage
+        )
     }
 
     @discardableResult
@@ -136,5 +208,9 @@ public final class SocialStore {
         unreadCount = 0
         avatarCache = [:]
         requestedSection = nil
+        pointsWeek = nil
+        league = nil
+        leagueFriends = []
+        leagueHistory = []
     }
 }

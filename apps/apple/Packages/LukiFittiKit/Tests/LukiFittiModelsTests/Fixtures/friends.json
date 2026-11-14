@@ -1,0 +1,19 @@
+{
+  "success": true,
+  "data": {
+    "entries": [
+      {
+        "rank": 1,
+        "card": {
+          "userId": "d0fbbb5a-21be-4002-8ed2-6434bca256b9",
+          "handle": "iossocial",
+          "avatarUrl": null,
+          "name": "iOS Social"
+        },
+        "points": 420,
+        "isSelf": true
+      }
+    ]
+  },
+  "error": null
+}

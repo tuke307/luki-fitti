@@ -19,6 +19,8 @@ public final class WatchWorkoutViewModel {
     public var currentExerciseIndex: Int = 0
     public var activePageTab: Int = 2 // Defaults to Page 2 (Center) when a workout starts
     public var completedSummarySession: WorkoutSessionDto?
+    /// Latest league snapshot pushed by the iPhone; nil while social is off or unloaded.
+    public var socialSnapshot: SocialWatchSnapshot?
     public var showingChangeExerciseSheet: Bool = false
     public var showingEditSetSheet: Bool = false
     public var isRefreshingFromServer: Bool = false
@@ -323,7 +325,8 @@ public final class WatchWorkoutViewModel {
             preferences: payload.preferences,
             currentUser: payload.currentUser,
             authTokens: payload.authTokens,
-            authHandoffId: payload.authHandoffId
+            authHandoffId: payload.authHandoffId,
+            social: payload.social
         ))
     }
 
@@ -332,6 +335,7 @@ public final class WatchWorkoutViewModel {
     /// of an applied one would roll back tokens this Watch has rotated since.
     private func applyAuth(_ auth: WatchAuthPayload) {
         store.preferences = auth.preferences
+        socialSnapshot = auth.social
         let tokenStore = store.apiClient.tokenStore
         let storedTokens = tokenStore.loadTokens()
         let decision = WatchAuthHandoffPolicy.decide(

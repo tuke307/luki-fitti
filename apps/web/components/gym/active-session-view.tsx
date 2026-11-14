@@ -57,6 +57,8 @@ import { useAuth } from '@/providers/auth/auth-context';
 import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { computeRemainingRestSeconds } from '@/lib/offline/offline-store';
+import { computeSessionEffortPoints } from '@luki-fitti/common/utils';
+import { pointsApi } from '@/lib/social/social-api';
 import { triggerWorkoutNotification } from '@/lib/notifications/notification-manager';
 import {
   computeExerciseProgression,
@@ -133,6 +135,8 @@ export function ActiveSessionView({
   const [addExerciseMuscle, setAddExerciseMuscle] = useState<MuscleGroup | 'ALL'>('ALL');
   const [sessionNotes, setSessionNotes] = useState('');
   const [completedSummary, setCompletedSummary] = useState<WorkoutSessionDto | null>(null);
+  /** Server EP once /points/week answers; `undefined` = still showing the optimistic value. */
+  const [serverEp, setServerEp] = useState<number | null | undefined>(undefined);
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false);
   const [guideFor, setGuideFor] = useState<string | null>(null);
 
@@ -162,6 +166,27 @@ export function ActiveSessionView({
     () => filterExercisesByQuery(catalog, addExerciseSearch, addExerciseMuscle),
     [catalog, addExerciseSearch, addExerciseMuscle],
   );
+
+  // "+N EP" on the finish summary: optimistic from the shared formula, then the
+  // ledger value once /points/week answers (hidden entirely when leagues are off).
+  const optimisticEp = useMemo(() => {
+    if (!completedSummary || !user?.social?.enabled) return null;
+    const total = computeSessionEffortPoints(completedSummary).total;
+    return total > 0 ? total : null;
+  }, [completedSummary, user?.social?.enabled]);
+  useEffect(() => {
+    if (!completedSummary || !user?.social?.enabled) return;
+    let cancelled = false;
+    void pointsApi.week().then((res) => {
+      if (cancelled) return;
+      const entry = res.data?.sessions.find((s) => s.sessionId === completedSummary.id);
+      setServerEp(entry && entry.points > 0 ? entry.points : null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [completedSummary, user?.social?.enabled]);
+  const completedEp = serverEp === undefined ? optimisticEp : serverEp;
 
   if (completedSummary) {
     const showStretchTime =
@@ -195,6 +220,14 @@ export function ActiveSessionView({
             {format(t.session.completeTitle, { name: completedSummary.workoutNameSnapshot })}
           </h2>
           <p className="text-muted-foreground text-[0.9375rem]">{t.session.completeSub}</p>
+          {completedEp !== null && (
+            <p
+              data-testid="session-finish-ep"
+              className="text-primary mt-1 text-[1.0625rem] font-semibold tabular-nums"
+            >
+              {format(t.league.epEarned, { points: completedEp.toLocaleString() })}
+            </p>
+          )}
         </div>
 
         <dl className="bg-card grid grid-cols-3 divide-x divide-border/60 rounded-[1.25rem] py-4">

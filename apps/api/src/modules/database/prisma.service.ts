@@ -30,6 +30,14 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return prisma.$transaction.bind(prisma);
   }
 
+  get $queryRaw(): typeof prisma.$queryRaw {
+    return prisma.$queryRaw.bind(prisma);
+  }
+
+  get $executeRaw(): typeof prisma.$executeRaw {
+    return prisma.$executeRaw.bind(prisma);
+  }
+
   get user(): typeof prisma.user {
     return prisma.user;
   }
@@ -173,5 +181,25 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
 
   get notification(): typeof prisma.notification {
     return prisma.notification;
+  }
+
+  get effortPointEntry(): typeof prisma.effortPointEntry {
+    return prisma.effortPointEntry;
+  }
+
+  get weeklyScore(): typeof prisma.weeklyScore {
+    return prisma.weeklyScore;
+  }
+
+  get leagueWeek(): typeof prisma.leagueWeek {
+    return prisma.leagueWeek;
+  }
+
+  get leagueCohort(): typeof prisma.leagueCohort {
+    return prisma.leagueCohort;
+  }
+
+  get leagueMembership(): typeof prisma.leagueMembership {
+    return prisma.leagueMembership;
   }
 }

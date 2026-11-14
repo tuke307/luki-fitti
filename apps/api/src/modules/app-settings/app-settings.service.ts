@@ -2,16 +2,19 @@ import { Injectable } from '@nestjs/common';
 import { AiKeySlot, FEATURE_GRANTS, FeatureGrant } from '@luki-fitti/common/enums';
 import type {
   AiSettingsDto,
+  LeagueSettingsDto,
   SocialSettingsDto,
   UpdateAiSettingsDto,
+  UpdateLeagueSettingsDto,
   UpdateSocialSettingsDto,
 } from '@luki-fitti/common/schemas';
+import type { LeagueStageMode } from '@luki-fitti/common/enums';
 import { PrismaService } from '../database/prisma.service';
 import {
   getAiKeyEncryptionConfig,
   SEAWEEDFS_ACCESS_KEY_API,
   SEAWEEDFS_ENDPOINT,
-} from '@/config/env.config';
+} from '../../config/env.config';
 
 const SETTINGS_ID = 1;
 const CACHE_TTL_MS = 10_000;
@@ -31,6 +34,13 @@ export interface AppSettingsRecord {
   userModelAllowlist: string[];
   socialEnabled: boolean;
   socialBetaUserIds: string[];
+  leaguesEnabled: boolean;
+  leagueStageMode: LeagueStageMode;
+  leagueStage2MinUsers: number;
+  leagueStage3MinUsers: number;
+  leagueCohortSize: number;
+  epDailyCap: number;
+  epWeeklyGoalBonus: number;
   updatedAt: Date;
 }
 
@@ -81,11 +91,11 @@ export class AppSettingsService {
 
   async get(): Promise<AppSettingsRecord> {
     if (this.cache && this.cache.expiresAt > Date.now()) return this.cache.value;
-    const value = await this.prisma.appSettings.upsert({
+    const value = (await this.prisma.appSettings.upsert({
       where: { id: SETTINGS_ID },
       update: {},
       create: { id: SETTINGS_ID },
-    });
+    })) as AppSettingsRecord;
     this.cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
     return value;
   }
@@ -122,7 +132,7 @@ export class AppSettingsService {
 
   async updateAiSettings(dto: UpdateAiSettingsDto): Promise<AiSettingsDto> {
     const dedupe = (list?: string[]) => (list ? [...new Set(list)] : undefined);
-    const value = await this.prisma.appSettings.upsert({
+    const value = (await this.prisma.appSettings.upsert({
       where: { id: SETTINGS_ID },
       create: {
         id: SETTINGS_ID,
@@ -139,7 +149,7 @@ export class AppSettingsService {
         progressTargetFallbacks: dedupe(dto.progressTargetFallbacks),
         userModelAllowlist: dedupe(dto.userModelAllowlist),
       },
-    });
+    })) as AppSettingsRecord;
     this.cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
     return this.toDto(value);
   }
@@ -150,7 +160,7 @@ export class AppSettingsService {
   }
 
   async updateSocialSettings(dto: UpdateSocialSettingsDto): Promise<SocialSettingsDto> {
-    const value = await this.prisma.appSettings.upsert({
+    const value = (await this.prisma.appSettings.upsert({
       where: { id: SETTINGS_ID },
       create: {
         id: SETTINGS_ID,
@@ -161,9 +171,32 @@ export class AppSettingsService {
         ...dto,
         socialBetaUserIds: dto.socialBetaUserIds ? [...new Set(dto.socialBetaUserIds)] : undefined,
       },
-    });
+    })) as AppSettingsRecord;
     this.cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
     return this.getSocialSettings();
+  }
+
+  async getLeagueSettings(): Promise<LeagueSettingsDto> {
+    const value = await this.get();
+    return {
+      leaguesEnabled: value.leaguesEnabled,
+      leagueStageMode: value.leagueStageMode,
+      leagueStage2MinUsers: value.leagueStage2MinUsers,
+      leagueStage3MinUsers: value.leagueStage3MinUsers,
+      leagueCohortSize: value.leagueCohortSize,
+      epDailyCap: value.epDailyCap,
+      epWeeklyGoalBonus: value.epWeeklyGoalBonus,
+    };
+  }
+
+  async updateLeagueSettings(dto: UpdateLeagueSettingsDto): Promise<LeagueSettingsDto> {
+    const value = (await this.prisma.appSettings.upsert({
+      where: { id: SETTINGS_ID },
+      create: { id: SETTINGS_ID, ...dto },
+      update: dto,
+    })) as AppSettingsRecord;
+    this.cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
+    return this.getLeagueSettings();
   }
 
   private async toDto(value: AppSettingsRecord): Promise<AiSettingsDto> {

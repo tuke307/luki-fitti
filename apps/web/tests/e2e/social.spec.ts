@@ -2,7 +2,13 @@ import { test, expect, type Page } from '@playwright/test';
 import { submitLoginPageForm } from './helpers/auth.js';
 import { gotoProfileTab, resetOfflineStore } from './helpers/offline-store.js';
 import { navigateToTab } from './helpers/shell.js';
-import { enableSocialForE2e, seedSocialUser } from './helpers/social.js';
+import {
+  enableSocialForE2e,
+  seedGlobalCohortForE2e,
+  seedPointsWeekForE2e,
+  seedSocialUser,
+  setLeagueStageModeForE2e,
+} from './helpers/social.js';
 
 /**
  * Covers the PR 1 social flows end to end: admin enables social (via the DB —
@@ -109,5 +115,54 @@ test.describe('Social: friends, requests and invites', () => {
     await expect(page).toHaveURL(/\/(\?open=%2Fsocial)?$/, { timeout: 10_000 });
     await expect(page.getByTestId('social-view')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByTestId(`friend-row-${userA.id}`)).toBeVisible();
+  });
+});
+
+test.describe('Social: leagues and effort points', () => {
+  test.describe.configure({ mode: 'serial' });
+
+  test.beforeAll(async () => {
+    await enableSocialForE2e();
+    await setLeagueStageModeForE2e('GLOBAL');
+  });
+
+  test.afterAll(async () => {
+    await setLeagueStageModeForE2e('AUTO');
+  });
+
+  test('two users in a GLOBAL cohort see the league list with their EP', async ({ page }) => {
+    const unique = Date.now().toString(36);
+    const [userA, userB] = await Promise.all([
+      seedSocialUser('liga', undefined, `liga_${unique}`),
+      seedSocialUser('mara', undefined, `mara_${unique}`),
+    ]);
+    await seedPointsWeekForE2e(userA.id, 120);
+    await seedPointsWeekForE2e(userB.id, 340);
+    await seedGlobalCohortForE2e([userA.id, userB.id]);
+
+    await resetOfflineStore(page);
+    await submitLoginPageForm(page, userA.email, userA.password);
+    await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+    await navigateToTab(page, 'social');
+    await dismissOnboardingIfShown(page);
+
+    // This-week card shows the seeded EP.
+    await expect(page.getByTestId('this-week-card')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('this-week-card')).toContainText('120');
+
+    // The GLOBAL cohort lists both users, ranked by weekly EP.
+    await expect(page.getByTestId('league-cohort')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId(`league-row-${userB.id}`)).toBeVisible();
+    await expect(page.getByTestId(`league-row-${userA.id}`)).toBeVisible();
+    await expect(page.getByTestId(`league-row-${userB.id}`)).toContainText('340');
+    const rows = page.getByTestId('league-cohort').locator('li');
+    await expect(rows.first()).toContainText(`@mara_${unique}`);
+
+    // The Friends segment still lists both users.
+    await page.getByTestId('league-tab-friends').click();
+    await expect(page.getByTestId('league-friends-board')).toBeVisible();
+    await expect(
+      page.getByTestId('league-friends-board').getByText(`@liga_${unique}`),
+    ).toBeVisible();
   });
 });

@@ -15,22 +15,22 @@ change the plan go into the [Decision log](#decision-log), not into chat.
 
 Legend: `[ ]` open · `[~]` in progress · `[x]` done. Keep the PR column current.
 
-| #   | Pull request                                         | Branch                         | PR  | State                                   |
-| :-- | :--------------------------------------------------- | :----------------------------- | :-- | :-------------------------------------- |
-| 0   | Plan (this document)                                 | `feat/social-2.0`              | —   | open                                    |
-| 1   | Social foundation: profiles, friends, contacts, push | `feat/social-1-foundation`     | —   | in progress ([spec](social-2.0-pr1.md)) |
-| 2   | Effort points, friends leaderboard, leagues          | `feat/social-2-leagues`        | —   | planned                                 |
-| 3   | Battles: 1v1 duel and friend streak                  | `feat/social-3-battles`        | —   | planned                                 |
-| 4   | Raids: community raid boss and squad raids           | `feat/social-4-raids`          | —   | planned                                 |
-| 5   | Release 2.0.0: polish, legal, screenshots, version   | `release/2.0.0` (develop→main) | —   | planned                                 |
+| #   | Pull request                                         | Branch                         | PR   | State                                                                  |
+| :-- | :--------------------------------------------------- | :----------------------------- | :--- | :--------------------------------------------------------------------- |
+| 0   | Plan (this document)                                 | `feat/social-2.0`              | #100 | open                                                                   |
+| 1   | Social foundation: profiles, friends, contacts, push | `feat/social-1-foundation`     | #101 | ready for review ([spec](social-2.0-pr1.md))                           |
+| 2   | Effort points, friends leaderboard, leagues          | `feat/social-2-leagues`        | #102 | draft: backend done, web + iOS in progress ([spec](social-2.0-pr2.md)) |
+| 3   | Battles: 1v1 duel and friend streak                  | `feat/social-3-battles`        | —    | specified ([spec](social-2.0-pr3.md))                                  |
+| 4   | Raids: community raid boss and squad raids           | `feat/social-4-raids`          | —    | specified ([spec](social-2.0-pr4.md))                                  |
+| 5   | Release 2.0.0: polish, legal, screenshots, version   | `release/2.0.0` (develop→main) | —    | planned                                                                |
 
 Each PR branches from the previous one (stacked) and targets `develop` once its parent is merged.
 PR 0 only carries this document; the implementation PRs are 1–5 (maximum five).
 
 ### Open questions (answer before the PR that needs it)
 
-- [ ] **PR 4:** Boss art source: commission an illustrator, or generate with an image model and
-      vectorise/clean up by hand? (See [Raid boss visuals](#raid-boss-visuals).)
+- [x] **PR 4:** Boss art: minimalist 3D, bold cartoon, procedural primitives rendered with
+      three.js / SceneKit (decided 2026-11-14, see `social-2.0-pr4.md`).
 - [ ] **PR 1:** Legal review of contact matching and the privacy policy text (German law, GDPR
       Art. 6(1)(f) legitimate interest vs. consent). Do we need a DPIA?
 - [ ] **PR 1:** APNs `.p8` key and VAPID key pair: who creates them, stored in Coolify env and
@@ -398,19 +398,32 @@ marketing screenshots for 2.0 · release notes · release PR `develop` → `main
 | 2026-11-13 | Community raid boss included (user: "make the raid boss really cool looking"); Ghost Duel parked for 2.1 (pending confirmation) |
 | 2026-11-13 | Max five implementation PRs, stacked, each targeting `develop`                                                                  |
 | 2026-11-14 | Social replaces the Exercises tab on iPhone and web; the exercise library moves into Workouts as a "Library" segment            |
+| 2026-11-14 | Raid bosses: minimalist 3D, bold cartoon, built from primitives (three.js on web, SceneKit on iOS), no model files              |
 | 2026-11-14 | Order: finish PR 1 (web, iOS), then PR 2 web + iOS/Watch, then PRs 3 and 4                                                      |
 
 ## Session log
 
 Append one line per session: date, what was done, what is next.
 
-| Date       | Done                                                                     | Next                              |
-| :--------- | :----------------------------------------------------------------------- | :-------------------------------- |
-| 2026-11-13 | Research, decisions with the user, this plan, plan PR                    | Answer open questions, start PR 1 |
-| 2026-11-13 | PR 1 part A: social_foundation migration, common social utils/schemas,   | PR 1 part B (web)                 |
-|            | API social/push/notifications/admin modules, email-worker push processor |                                   |
-|            | + review fixes (push retry/SSRF/pooling, report evidence, deletion GC)   |                                   |
-| 2026-11-13 | PR 1 part B: web social tab, onboarding, friends, invites +              | PR 1 part C (iOS)                 |
-|            | AASA, web push + inbox, admin social/reports, EN/DE, e2e                 |                                   |
-| 2026-11-13 | PR 1 part C: iOS Friends tab, onboarding/profile/inbox sheets,           | Security review, open PR          |
-|            | APNs + invite universal links, contacts sync, Library segment            |                                   |
+| Date       | Done                                                                                                                                                                                                                                                                     | Next                              |
+| :--------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------- |
+| 2026-11-13 | Research, decisions with the user, this plan, plan PR                                                                                                                                                                                                                    | Answer open questions, start PR 1 |
+| 2026-11-13 | PR 1 part A: social_foundation migration, common social utils/schemas,                                                                                                                                                                                                   | PR 1 part B (web)                 |
+|            | API social/push/notifications/admin modules, email-worker push processor                                                                                                                                                                                                 |                                   |
+|            | + review fixes (push retry/SSRF/pooling, report evidence, deletion GC)                                                                                                                                                                                                   |                                   |
+| 2026-11-13 | PR 2 part A: leagues migration, EP formula + fixtures, points/league                                                                                                                                                                                                     | PR 2 part B (web)                 |
+|            | modules, session hooks, rollover + reminder schedulers in email-worker                                                                                                                                                                                                   |                                   |
+| 2026-11-13 | PR 2 part A review fixes: chronological set ordering, mid-week                                                                                                                                                                                                           | PR 2 part B (web)                 |
+|            | placement, bucket stranding, multi-week rollover close                                                                                                                                                                                                                   |                                   |
+| 2026-11-13 | PR 1 part B: web social tab, onboarding, friends, invites +                                                                                                                                                                                                              | PR 1 part C (iOS)                 |
+|            | AASA, web push + inbox, admin social/reports, EN/DE, e2e                                                                                                                                                                                                                 |                                   |
+| 2026-11-13 | PR 1 part C: iOS Friends tab, onboarding/profile/inbox sheets,                                                                                                                                                                                                           | Security review, open PR          |
+|            | APNs + invite universal links, contacts sync, Library segment                                                                                                                                                                                                            |                                   |
+| 2026-11-14 | Boss art decided (minimalist 3D, bold cartoon, procedural primitives); PR 3 + PR 4 specs; PR 1 ready (#101); the shared local `lukifittidb` already has the social_foundation migration (from the PR 1 e2e run); later local tests use a separate `luki_fitti_social` DB | PR 2 parts B and C                |
+| 2026-11-13 | PR 2 part B: Social tab rename, this-week EP card, stage-aware league card,                                                                                                                                                                                              | PR 2 part C (iOS + Watch)         |
+|            | celebrations, workout EP, Leagues push toggle, admin leagues page, e2e league case                                                                                                                                                                                       |                                   |
+| 2026-11-13 | PR 2 part C: Swift EffortPoints mirror + fixture tests, Social tab leagues UI,                                                                                                                                                                                           | PR 2 review, open PR              |
+|            | celebration overlay, workout EP, push Leagues toggle, EN/DE, Watch social row                                                                                                                                                                                            |                                   |
+| 2026-11-13 | PR 2 B+C review fixes: goal.available DTO, league-fetch error logging + decode tests,                                                                                                                                                                                    |                                   |
+|            | celebration fullScreenCover + loud treatment (both platforms), web separator; watch                                                                                                                                                                                      |                                   |
+|            | social:null traced to missing keychain tokens on the simulator install                                                                                                                                                                                                   |                                   |

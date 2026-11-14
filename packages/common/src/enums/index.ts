@@ -412,4 +412,36 @@ export enum ReportStatus {
 export enum NotificationKind {
   FRIEND_REQUEST = 'FRIEND_REQUEST',
   FRIEND_ACCEPTED = 'FRIEND_ACCEPTED',
+  LEAGUE_PROMOTED = 'LEAGUE_PROMOTED',
+  LEAGUE_DEMOTED = 'LEAGUE_DEMOTED',
+  LEAGUE_ENDING = 'LEAGUE_ENDING',
+}
+
+export enum Arena {
+  BRONZE = 'BRONZE',
+  SILVER = 'SILVER',
+  GOLD = 'GOLD',
+  PLATINUM = 'PLATINUM',
+  DIAMOND = 'DIAMOND',
+  OBSIDIAN = 'OBSIDIAN',
+  TITAN = 'TITAN',
+}
+
+export enum LeagueStage {
+  FRIENDS = 'FRIENDS',
+  GLOBAL = 'GLOBAL',
+  ARENAS = 'ARENAS',
+}
+
+export enum LeagueStageMode {
+  AUTO = 'AUTO',
+  FRIENDS = 'FRIENDS',
+  GLOBAL = 'GLOBAL',
+  ARENAS = 'ARENAS',
+}
+
+export enum LeagueOutcome {
+  PROMOTED = 'PROMOTED',
+  STAYED = 'STAYED',
+  DEMOTED = 'DEMOTED',
 }
