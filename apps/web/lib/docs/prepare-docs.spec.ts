@@ -41,3 +41,40 @@ test('prepare-docs never stages docs/plans/** or the top-level plan files', () =
     });
   }
 });
+
+test('githubDatesFor maps repo paths to last commit dates and never throws', async () => {
+  const { githubDatesFor } = await import('./github-dates.mjs');
+  const calls: { url: string; init: RequestInit | undefined }[] = [];
+  const fetchImpl = (async (url: string, init?: RequestInit) => {
+    calls.push({ url, init });
+    const repoPath = decodeURIComponent(new URL(url).searchParams.get('path') ?? '');
+    if (repoPath === 'docs/missing.md') return { ok: true, json: async () => [] };
+    if (repoPath === 'docs/broken.md') return { ok: false, status: 404 };
+    return {
+      ok: true,
+      json: async () => [{ commit: { committer: { date: '2026-11-14T10:00:00Z' } } }],
+    };
+  }) as unknown as typeof fetch;
+  const dates = await githubDatesFor(
+    ['README.md', 'docs/missing.md', 'docs/broken.md', 'docs/guide.md'],
+    { fetchImpl, token: 'test-token' },
+  );
+  assert.equal(dates.get('README.md'), '2026-11-14T10:00:00Z');
+  assert.equal(dates.get('docs/guide.md'), '2026-11-14T10:00:00Z');
+  assert.equal(dates.get('docs/missing.md'), null);
+  assert.equal(dates.get('docs/broken.md'), null);
+  // The token only travels in the Authorization header, per request.
+  assert.equal(calls.length, 4);
+  for (const { init } of calls) {
+    const headers = init?.headers as Record<string, string>;
+    assert.equal(headers.Authorization, 'Bearer test-token');
+    assert.equal(headers.Accept, 'application/vnd.github+json');
+  }
+  // A throwing fetch resolves to null dates rather than failing the build.
+  const dead = await githubDatesFor(['README.md'], {
+    fetchImpl: async () => {
+      throw new Error('offline');
+    },
+  });
+  assert.equal(dead.get('README.md'), null);
+});

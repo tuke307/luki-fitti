@@ -8,14 +8,17 @@ import { useSyncExternalStore } from 'react';
 import Link from 'next/link';
 
 function KbdHint() {
+  // Client-only: the platform differs between server and browser, so rendering it
+  // during hydration is a mismatch. The null server snapshot leaves it empty
+  // until hydration, then React re-reads the client snapshot.
   const isMac = useSyncExternalStore(
     () => () => {},
     () => /Mac|iPhone|iPad/.test(navigator.platform),
-    () => true,
+    () => null as boolean | null,
   );
   return (
     <kbd className="docs-kbd" aria-hidden>
-      {isMac ? '⌘K' : 'Ctrl K'}
+      {isMac === null ? '' : isMac ? '⌘K' : 'Ctrl K'}
     </kbd>
   );
 }

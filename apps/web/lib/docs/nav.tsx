@@ -1,3 +1,4 @@
+import { createElement } from 'react';
 import { BookOpen, FolderGit2, Terminal } from 'lucide-react';
 import type { Folder, Item, Node, Root } from 'fumadocs-core/page-tree';
 
@@ -20,6 +21,7 @@ const SHORT_LABELS: Record<string, string> = {
   '/public-api': 'Getting started',
   '/mcp': 'Connect an AI assistant',
   '/contributing': 'Contributing',
+  '/adr': 'All ADRs',
   '/roadmap': 'Roadmap',
   '/release': 'Release flow',
   '/app-store-release': 'App Store',
@@ -64,7 +66,10 @@ const API_GROUP_ORDER = [
 function collectPages(nodes: Node[], into = new Map<string, Item>()) {
   for (const node of nodes) {
     if (node.type === 'page') into.set(node.url, node);
-    if (node.type === 'folder') collectPages(node.children, into);
+    if (node.type === 'folder') {
+      if (node.index?.type === 'page') into.set(node.index.url, node.index);
+      collectPages(node.children, into);
+    }
   }
   return into;
 }
@@ -87,6 +92,7 @@ export function docsTree(tree: Root): Root {
 
   const group = (name: string, children: Node[]): Folder => ({
     type: 'folder',
+    $id: `group-${name.toLowerCase().replace(/\W+/g, '-')}`,
     name,
     children,
   });
@@ -94,12 +100,16 @@ export function docsTree(tree: Root): Root {
   const overview = page('/');
   const guides: Folder = {
     type: 'folder',
+    $id: 'tab-guides',
     name: 'Guides',
     description: 'Move your data in and use the app',
-    icon: <BookOpen className="size-4" />,
+    icon: createElement(BookOpen, { className: 'size-4' }),
     root: true,
     index: overview,
     children: [
+      // Tab index pages also live in children: fumadocs resolves the active
+      // tab (findPath / isLayoutTabActive) over children only, so an index-only
+      // page leaves the sidebar with no selected tab and no dropdown.
       ...(overview ? [overview] : []),
       group(
         'Import',
@@ -139,9 +149,10 @@ export function docsTree(tree: Root): Root {
   const mcpGuide = page('/mcp');
   const api: Folder = {
     type: 'folder',
+    $id: 'tab-api',
     name: 'API',
     description: 'Personal API keys and the v1 reference',
-    icon: <Terminal className="size-4" />,
+    icon: createElement(Terminal, { className: 'size-4' }),
     root: true,
     index: gettingStarted,
     children: [
@@ -156,26 +167,31 @@ export function docsTree(tree: Root): Root {
   // ADRs present on this branch, in a fixed order; missing files are skipped.
   const decisions: Folder = {
     type: 'folder',
+    $id: 'group-decisions',
     name: 'Decisions',
     index: page('/adr'),
-    children: ADRS.map(({ url, label }): Item | undefined => {
-      const node = items.get(url);
-      return node ? { ...node, name: label } : undefined;
-    }).filter((n): n is Item => Boolean(n)),
+    children: [
+      ...(page('/adr') ? [page('/adr')!] : []),
+      ...ADRS.map(({ url, label }): Item | undefined => {
+        const node = items.get(url);
+        return node ? { ...node, name: label } : undefined;
+      }).filter((n): n is Item => Boolean(n)),
+    ],
   };
 
   const contributing = page('/contributing');
   // The roadmap is a real route on the docs host, not a content page.
-  const roadmap: Item = { type: 'page', name: 'Roadmap', url: '/roadmap' };
+  const roadmap: Item = { type: 'page', $id: 'page-roadmap', name: 'Roadmap', url: '/roadmap' };
   const project: Folder = {
     type: 'folder',
+    $id: 'tab-project',
     name: 'Project',
     description: 'Contribute, release and follow the plans',
-    icon: <FolderGit2 className="size-4" />,
+    icon: createElement(FolderGit2, { className: 'size-4' }),
     root: true,
     index: contributing,
     children: [
-      ...pages(['/contributing']),
+      ...(contributing ? [contributing] : []),
       roadmap,
       group('Releases', pages(['/release', '/app-store-release'])),
       ...(decisions.children.length > 0 ? [decisions] : []),

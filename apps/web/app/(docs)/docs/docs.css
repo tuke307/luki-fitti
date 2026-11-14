@@ -12,6 +12,12 @@
 @import 'fumadocs-ui/css/black.css';
 @import 'fumadocs-ui/css/preset-legacy.css';
 
+/* fumadocs-ui ships utilities for `::highlight(fd-search)` (CSS Custom Highlight API).
+   Lightning CSS doesn't recognize that pseudo-element and fails to parse the generated
+   rule (dev overlay "issues"), so the utilities are excluded here. */
+@source not inline('[&_::highlight(fd-search)]:text-fd-primary');
+@source not inline('[&_::highlight(fd-search)]:underline');
+
 :root {
   --color-fd-background: var(--background);
   --color-fd-foreground: var(--foreground);
@@ -282,9 +288,35 @@ body.docs-site {
     display: none;
   }
 
+  /* Icon-only brand keeps room for the search/GitHub/pill controls on one line. */
+  .docs-brand span {
+    display: none;
+  }
+
+  .docs-nav {
+    gap: 0.5rem;
+  }
+
+  /* ≥44px touch targets for the header controls. */
+  .docs-sidebar-trigger,
+  .docs-nav-icon,
+  .docs-open-app {
+    min-height: 2.75rem;
+  }
+
+  .docs-sidebar-trigger,
+  .docs-nav-icon {
+    min-width: 2.75rem;
+  }
+
+  .docs-open-app {
+    padding-inline: 0.75rem;
+  }
+
   .docs-search-trigger {
     flex: 0 0 auto;
-    width: 2.25rem;
+    width: 2.75rem;
+    min-height: 2.75rem;
     justify-content: center;
     padding-inline: 0;
   }
@@ -339,6 +371,7 @@ body.docs-site {
 .docs-open-app {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
   height: 2.25rem;
   padding-inline: 0.875rem;
   border-radius: 9999px;
@@ -347,6 +380,7 @@ body.docs-site {
   font-size: 0.8125rem;
   font-weight: 500;
   text-decoration: none;
+  white-space: nowrap;
   transition: filter 150ms var(--ease-out-quart, ease-out);
 }
 
@@ -668,6 +702,68 @@ a.docs-roadmap-title:hover {
   color: var(--foreground);
 }
 
+/* ADR pages: the leading "- Status / - Date / - Deciders" list is re-rendered as a
+   compact meta row by the page component; the markdown copy is hidden. */
+.docs-adr > ul:first-of-type {
+  display: none;
+}
+
+.docs-adr-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: -0.5rem 0 1.5rem;
+  font-size: 0.8125rem;
+}
+
+.docs-adr-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Distinct muted tints; the text label carries the meaning, color is only a hint. */
+.docs-adr-status-accepted {
+  color: var(--success);
+  border-color: color-mix(in oklch, var(--success) 40%, transparent);
+  background-color: color-mix(in oklch, var(--success) 10%, transparent);
+}
+
+.docs-adr-status-implemented {
+  color: var(--set-warmup);
+  border-color: color-mix(in oklch, var(--set-warmup) 40%, transparent);
+  background-color: color-mix(in oklch, var(--set-warmup) 10%, transparent);
+}
+
+.docs-adr-status-proposed {
+  color: var(--warning);
+  border-color: color-mix(in oklch, var(--warning) 40%, transparent);
+  background-color: color-mix(in oklch, var(--warning) 10%, transparent);
+}
+
+.docs-adr-status-default {
+  color: var(--muted-foreground);
+  border-color: var(--border);
+  background-color: var(--muted);
+}
+
+.docs-adr-meta-value {
+  color: var(--muted-foreground);
+}
+
+.docs-adr-meta-value + .docs-adr-meta-value::before {
+  content: '·';
+  margin-right: 0.5rem;
+  color: var(--muted-foreground);
+  opacity: 0.6;
+}
+
 /* Mermaid diagrams: card surface, horizontal scroll on narrow screens. */
 .docs-mermaid {
   overflow-x: auto;
@@ -679,6 +775,8 @@ a.docs-roadmap-title:hover {
 }
 
 .docs-mermaid svg {
+  display: block;
+  margin-inline: auto;
   max-width: none;
   height: auto;
 }

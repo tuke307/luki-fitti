@@ -51,6 +51,28 @@ test.describe('docs site', () => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   });
 
+  test('every docs page renders without console errors', async ({ page }) => {
+    const res = await page.request.get(`${DOCS}/sitemap.xml`);
+    expect(res.ok()).toBeTruthy();
+    const urls = [...(await res.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map(
+      (m) => new URL(m[1]!).pathname,
+    );
+    expect(urls.length).toBeGreaterThan(0);
+
+    const errors: string[] = [];
+    page.on('console', (m) => {
+      if (m.type() === 'error') errors.push(`${page.url()}: ${m.text()}`);
+    });
+    page.on('pageerror', (e) => errors.push(`${page.url()}: ${e.message}`));
+
+    for (const path of urls) {
+      await page.goto(`${DOCS}${path}`, { waitUntil: 'load' });
+      // API reference operations render their own layout without an h1.
+      await expect(page.locator('h1, article').first()).toBeVisible();
+    }
+    expect(errors).toEqual([]);
+  });
+
   test('the API reference renders an operation', async ({ page }) => {
     await page.goto(`${DOCS}/api-reference/v1/sessions/get`);
     await expect(page.locator('article')).toContainText('/api/v1/sessions');
