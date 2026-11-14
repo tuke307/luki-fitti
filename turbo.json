@@ -33,7 +33,10 @@
     "PASSWORD_RESET_EXPIRY_MS",
     "ACCOUNT_DELETION_EXPIRY_MS",
     "NEXT_RUNTIME",
-    "GIT_SHA"
+    "GIT_SHA",
+    "GITHUB_PROJECT_OWNER",
+    "GITHUB_PROJECT_NUMBER",
+    "GITHUB_PROJECT_TOKEN"
   ],
   "tasks": {
     "build": {

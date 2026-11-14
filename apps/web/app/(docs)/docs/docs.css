@@ -564,3 +564,106 @@ body.docs-site {
     display: none;
   }
 }
+
+/* Roadmap: a quiet list of the GitHub project board, grouped by status. */
+.docs-roadmap-filters {
+  display: flex;
+  gap: 0.375rem;
+  margin: 1.25rem 0 0.25rem;
+}
+
+.docs-roadmap-filter {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  text-decoration: none;
+}
+
+.docs-roadmap-filter:hover {
+  color: var(--foreground);
+}
+
+.docs-roadmap-filter[aria-current='true'] {
+  border-color: color-mix(in oklch, var(--primary) 45%, transparent);
+  color: color-mix(in oklch, var(--primary) 80%, white);
+}
+
+.docs-roadmap-status {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 1.75rem 0 0;
+}
+
+.docs-roadmap-count {
+  color: var(--muted-foreground);
+  font-weight: 400;
+  font-size: 0.8125rem;
+  margin-left: 0.375rem;
+}
+
+.docs-roadmap-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.docs-roadmap-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9375rem;
+}
+
+.docs-roadmap-row:last-child {
+  border-bottom: 0;
+}
+
+.docs-roadmap-kind {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  min-width: 2.5rem;
+}
+
+.docs-roadmap-title {
+  color: var(--foreground);
+  text-decoration: none;
+}
+
+a.docs-roadmap-title:hover {
+  color: color-mix(in oklch, var(--primary) 80%, white);
+}
+
+.docs-roadmap-meta,
+.docs-roadmap-label {
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+}
+
+.docs-roadmap-tag {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.docs-roadmap-done {
+  margin-top: 1.75rem;
+}
+
+.docs-roadmap-done > summary {
+  cursor: pointer;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+.docs-roadmap-done > summary:hover {
+  color: var(--foreground);
+}
