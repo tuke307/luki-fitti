@@ -1,7 +1,10 @@
 import { Controller, Get, Param, Query, UseFilters, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ApiKeyScope } from '@luki-fitti/common/enums';
 import {
+  PublicPersonalRecordSchema,
+  PublicSessionListItemSchema,
+  PublicSessionSchema,
   PublicRangeQuerySchema,
   type PublicListDto,
   type PublicPersonalRecordDto,
@@ -9,6 +12,7 @@ import {
   type PublicSessionDto,
   type PublicSessionListItemDto,
 } from '@luki-fitti/common/schemas';
+import { ApiPublicErrors, ApiRangeQueries, jsonSchemaOf, listJsonSchema } from './swagger.util';
 import { ApiScope } from '@/decorators/api-scope.decorator';
 import { CurrentUser, type AuthenticatedUser } from '@/decorators/current-user.decorator';
 import { ZodValidationPipe } from '@/pipes/zod-validation.pipe';
@@ -19,6 +23,7 @@ import { PublicApiExceptionFilter } from './public-api.filter';
 import { PublicApiService } from './public-api.service';
 
 @ApiTags('Public API v1')
+@ApiPublicErrors()
 @ApiBearerAuth()
 @Controller('v1')
 @UseGuards(ApiKeyGuard, ScopesGuard, ApiKeyRateLimitGuard)
@@ -28,6 +33,8 @@ export class PublicSessionsController {
 
   @Get('sessions')
   @ApiScope(ApiKeyScope.READ_SESSIONS)
+  @ApiRangeQueries()
+  @ApiOkResponse({ schema: listJsonSchema(jsonSchemaOf(PublicSessionListItemSchema)) })
   @ApiOperation({ summary: 'Workout sessions (summary rows), cursor-paginated' })
   listSessions(
     @CurrentUser() user: AuthenticatedUser,
@@ -38,6 +45,7 @@ export class PublicSessionsController {
 
   @Get('sessions/:id')
   @ApiScope(ApiKeyScope.READ_SESSIONS)
+  @ApiOkResponse({ schema: jsonSchemaOf(PublicSessionSchema) })
   @ApiOperation({ summary: 'One workout session with exercises and sets' })
   getSession(
     @CurrentUser() user: AuthenticatedUser,
@@ -48,6 +56,7 @@ export class PublicSessionsController {
 
   @Get('personal-records')
   @ApiScope(ApiKeyScope.READ_SESSIONS)
+  @ApiOkResponse({ schema: listJsonSchema(jsonSchemaOf(PublicPersonalRecordSchema)) })
   @ApiOperation({ summary: 'Personal records computed from completed sessions' })
   async listPersonalRecords(
     @CurrentUser() user: AuthenticatedUser,

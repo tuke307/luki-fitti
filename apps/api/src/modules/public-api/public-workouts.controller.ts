@@ -1,7 +1,11 @@
 import { Controller, Get, Query, UseFilters, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ApiKeyScope } from '@luki-fitti/common/enums';
 import {
+  PublicExerciseSchema,
+  PublicStretchingRoutineSchema,
+  PublicWorkoutFolderSchema,
+  PublicWorkoutTemplateSchema,
   PublicExerciseQuerySchema,
   PublicListQuerySchema,
   type PublicExerciseDto,
@@ -12,6 +16,7 @@ import {
   type PublicWorkoutFolderDto,
   type PublicWorkoutTemplateDto,
 } from '@luki-fitti/common/schemas';
+import { ApiListQueries, ApiPublicErrors, jsonSchemaOf, listJsonSchema } from './swagger.util';
 import { ApiScope } from '@/decorators/api-scope.decorator';
 import { CurrentUser, type AuthenticatedUser } from '@/decorators/current-user.decorator';
 import { ZodValidationPipe } from '@/pipes/zod-validation.pipe';
@@ -22,6 +27,7 @@ import { PublicApiExceptionFilter } from './public-api.filter';
 import { PublicApiService } from './public-api.service';
 
 @ApiTags('Public API v1')
+@ApiPublicErrors()
 @ApiBearerAuth()
 @Controller('v1')
 @UseGuards(ApiKeyGuard, ScopesGuard, ApiKeyRateLimitGuard)
@@ -31,6 +37,8 @@ export class PublicWorkoutsController {
 
   @Get('workouts')
   @ApiScope(ApiKeyScope.READ_WORKOUTS)
+  @ApiListQueries()
+  @ApiOkResponse({ schema: listJsonSchema(jsonSchemaOf(PublicWorkoutTemplateSchema)) })
   @ApiOperation({ summary: 'Workout templates with their exercises' })
   listWorkouts(
     @CurrentUser() user: AuthenticatedUser,
@@ -41,6 +49,8 @@ export class PublicWorkoutsController {
 
   @Get('folders')
   @ApiScope(ApiKeyScope.READ_WORKOUTS)
+  @ApiListQueries()
+  @ApiOkResponse({ schema: listJsonSchema(jsonSchemaOf(PublicWorkoutFolderSchema)) })
   @ApiOperation({ summary: 'Workout folders' })
   listFolders(
     @CurrentUser() user: AuthenticatedUser,
@@ -51,6 +61,8 @@ export class PublicWorkoutsController {
 
   @Get('stretching-routines')
   @ApiScope(ApiKeyScope.READ_WORKOUTS)
+  @ApiListQueries()
+  @ApiOkResponse({ schema: listJsonSchema(jsonSchemaOf(PublicStretchingRoutineSchema)) })
   @ApiOperation({ summary: 'Stretching routines with their exercises' })
   listStretchingRoutines(
     @CurrentUser() user: AuthenticatedUser,
@@ -61,6 +73,8 @@ export class PublicWorkoutsController {
 
   @Get('exercises')
   @ApiScope(ApiKeyScope.READ_WORKOUTS)
+  @ApiListQueries()
+  @ApiOkResponse({ schema: listJsonSchema(jsonSchemaOf(PublicExerciseSchema)) })
   @ApiOperation({
     summary: 'Exercises: own custom + system catalog (custom=true → custom only)',
   })
