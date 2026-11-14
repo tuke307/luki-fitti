@@ -1,0 +1,102 @@
+{
+  "success": true,
+  "data": [
+    {
+      "slug": "leg-day-titan",
+      "name": {
+        "en": "Leg Day Titan",
+        "de": "Beintag-Titan"
+      },
+      "lore": {
+        "en": "It skipped arm day for a decade. Make it regret the squat rack.",
+        "de": "Es hat zehn Jahre lang den Arm-Tag geschwänzt. Zeit fürs Squat-Rack."
+      },
+      "weakTo": ["QUADRICEPS", "GLUTES", "HAMSTRINGS", "CALVES"]
+    },
+    {
+      "slug": "iron-back-golem",
+      "name": {
+        "en": "Iron Back Golem",
+        "de": "Eiserner Rückengolem"
+      },
+      "lore": {
+        "en": "Forged from every barbell ever dropped without control.",
+        "de": "Geschmiedet aus jeder Langhantel, die je unkontrolliert fiel."
+      },
+      "weakTo": ["BACK"]
+    },
+    {
+      "slug": "chest-hydra",
+      "name": {
+        "en": "Chest Hydra",
+        "de": "Brust-Hydra"
+      },
+      "lore": {
+        "en": "Cut one head off and it benches two more.",
+        "de": "Schlag einen Kopf ab und es drückt zwei weitere."
+      },
+      "weakTo": ["CHEST", "TRICEPS"]
+    },
+    {
+      "slug": "shoulder-wyvern",
+      "name": {
+        "en": "Shoulder Wyvern",
+        "de": "Schulter-Wyvern"
+      },
+      "lore": {
+        "en": "Its wings are delts. Its delts are also wings.",
+        "de": "Seine Flügel sind Deltas. Seine Deltas sind auch Flügel."
+      },
+      "weakTo": ["SHOULDERS"]
+    },
+    {
+      "slug": "core-kraken",
+      "name": {
+        "en": "Core Kraken",
+        "de": "Rumpf-Krake"
+      },
+      "lore": {
+        "en": "Six tentacles, zero excuses. Planks are its only fear.",
+        "de": "Sechs Tentakel, null Ausreden. Planks sind seine einzige Angst."
+      },
+      "weakTo": ["ABS_CORE", "HIP_FLEXORS"]
+    },
+    {
+      "slug": "arm-cyclops",
+      "name": {
+        "en": "Arm Cyclops",
+        "de": "Arm-Zyklop"
+      },
+      "lore": {
+        "en": "One eye, two pythons. Curls for the girls — and for the raid.",
+        "de": "Ein Auge, zwei Pythons. Curls für den Raid."
+      },
+      "weakTo": ["BICEPS", "TRICEPS", "FOREARMS"]
+    },
+    {
+      "slug": "mobility-phantom",
+      "name": {
+        "en": "Mobility Phantom",
+        "de": "Mobilitäts-Phantom"
+      },
+      "lore": {
+        "en": "It slipped through every stretching routine you skipped.",
+        "de": "Es schlüpfte durch jede Dehneinheit, die du ausgelassen hast."
+      },
+      "weakTo": ["STRETCHING"]
+    },
+    {
+      "slug": "cardio-comet",
+      "name": {
+        "en": "Cardio Comet",
+        "de": "Cardio-Komet"
+      },
+      "lore": {
+        "en": "It never stops moving. Neither should you.",
+        "de": "Es bleibt nie stehen. Du auch nicht."
+      },
+      "weakTo": ["CARDIO"]
+    }
+  ],
+  "error": null
+}

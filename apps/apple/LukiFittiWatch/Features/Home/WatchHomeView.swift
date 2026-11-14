@@ -60,6 +60,9 @@ public struct WatchHomeView: View {
                     if let duel = snapshot.duel {
                         duelRow(duel)
                     }
+                    if let raid = snapshot.raid {
+                        raidRow(raid)
+                    }
                 }
 
                 Section(tr("Workouts")) {
@@ -146,6 +149,38 @@ public struct WatchHomeView: View {
                 .foregroundStyle(LukiColors.accent)
         }
         .accessibilityIdentifier("watch.home.duelRow")
+    }
+
+    /// Compact raid row: an HP ring tinted with the boss's primary colour + the
+    /// boss name. No 3D on the Watch.
+    private func raidRow(_ raid: RaidWatchSnapshot) -> some View {
+        let boss = RaidBossCatalog.boss(slug: raid.bossSlug)
+        let name = boss.map { tr == .de ? $0.name.de : $0.name.en } ?? raid.bossSlug
+        return Label {
+            Text("\(name) · \(Int(max(0, raid.hpFraction) * 100))%")
+                .font(.footnote)
+                .lineLimit(1)
+        } icon: {
+            Gauge(value: max(0, min(1, raid.hpFraction)), in: 0...1) {
+                Image(systemName: "bolt.fill")
+            }
+            .gaugeStyle(.accessoryCircularCapacity)
+            .tint(bossTint(boss))
+            .frame(width: 20, height: 20)
+        }
+        .accessibilityIdentifier("watch.home.raidRow")
+    }
+
+    private func bossTint(_ boss: RaidBossRecipe?) -> Color {
+        guard let hex = boss?.palette["primary"] else { return LukiColors.accent }
+        var s = hex.trimmingCharacters(in: .init(charactersIn: "#"))
+        if s.count == 6 { s += "FF" }
+        var v: UInt64 = 0
+        Scanner(string: s).scanHexInt64(&v)
+        return Color(
+            red: Double((v >> 24) & 0xFF) / 255,
+            green: Double((v >> 16) & 0xFF) / 255,
+            blue: Double((v >> 8) & 0xFF) / 255)
     }
 
     /// Compact sync row: an icon whose shape matches the state, one status line, then the account.

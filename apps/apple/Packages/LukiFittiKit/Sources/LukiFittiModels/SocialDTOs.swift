@@ -157,25 +157,42 @@ public struct PushPreferencesDto: Codable, Sendable, Equatable {
     public var friends: Bool
     /// League outcomes + reminders (PR 2); defaults true when the server omits it.
     public var leagues: Bool
+    /// Duel invites/results (PR 3) and raid phase/defeat pushes (PR 4); all
+    /// default true when the server omits them.
+    public var duels: Bool
+    public var streaks: Bool
+    public var raids: Bool
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         friends = try c.decode(Bool.self, forKey: .friends)
         leagues = try c.decodeIfPresent(Bool.self, forKey: .leagues) ?? true
+        duels = try c.decodeIfPresent(Bool.self, forKey: .duels) ?? true
+        streaks = try c.decodeIfPresent(Bool.self, forKey: .streaks) ?? true
+        raids = try c.decodeIfPresent(Bool.self, forKey: .raids) ?? true
     }
 
-    public init(friends: Bool, leagues: Bool = true) {
+    public init(friends: Bool, leagues: Bool = true, duels: Bool = true, streaks: Bool = true, raids: Bool = true) {
         self.friends = friends
         self.leagues = leagues
+        self.duels = duels
+        self.streaks = streaks
+        self.raids = raids
     }
 }
 
 public struct UpdatePushPreferencesDto: Encodable, Sendable {
     public var friends: Bool?
     public var leagues: Bool?
-    public init(friends: Bool? = nil, leagues: Bool? = nil) {
+    public var duels: Bool?
+    public var streaks: Bool?
+    public var raids: Bool?
+    public init(friends: Bool? = nil, leagues: Bool? = nil, duels: Bool? = nil, streaks: Bool? = nil, raids: Bool? = nil) {
         self.friends = friends
         self.leagues = leagues
+        self.duels = duels
+        self.streaks = streaks
+        self.raids = raids
     }
 }
 

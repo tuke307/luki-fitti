@@ -11,5 +11,6 @@ public struct LukiFittiWidgetBundle: WidgetBundle {
         #endif
         NextWorkoutWidget()
         NutritionWidget()
+        RaidWidget()
     }
 }

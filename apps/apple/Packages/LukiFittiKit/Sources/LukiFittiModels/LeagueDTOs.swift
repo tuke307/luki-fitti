@@ -164,6 +164,8 @@ public struct SocialWatchSnapshot: Codable, Sendable, Equatable {
     public var stage: LeagueStage
     /// Active duel, if any (PR 3); nil for older iPhones and quiet weeks.
     public var duel: DuelWatchSnapshot?
+    /// Community raid, if any (PR 4); nil for older iPhones.
+    public var raid: RaidWatchSnapshot?
 
     public init(
         weekPoints: Int,
@@ -171,7 +173,8 @@ public struct SocialWatchSnapshot: Codable, Sendable, Equatable {
         rank: Int? = nil,
         cohortSize: Int? = nil,
         stage: LeagueStage,
-        duel: DuelWatchSnapshot? = nil
+        duel: DuelWatchSnapshot? = nil,
+        raid: RaidWatchSnapshot? = nil
     ) {
         self.weekPoints = weekPoints
         self.arena = arena
@@ -179,6 +182,7 @@ public struct SocialWatchSnapshot: Codable, Sendable, Equatable {
         self.cohortSize = cohortSize
         self.stage = stage
         self.duel = duel
+        self.raid = raid
     }
 }
 

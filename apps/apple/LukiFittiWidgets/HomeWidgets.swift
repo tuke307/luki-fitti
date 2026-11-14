@@ -181,3 +181,80 @@ private struct NutritionWidgetView: View {
         .widgetURL(URL(string: "lukifitti://nutrition")!)
     }
 }
+
+public struct RaidWidget: Widget {
+    public init() {}
+
+    public var body: some WidgetConfiguration {
+        StaticConfiguration(kind: "RaidWidget", provider: HomeWidgetProvider()) { entry in
+            RaidWidgetView(entry: entry)
+        }
+        .configurationDisplayName(SupportedLocale.en("Raid boss"))
+        .description(SupportedLocale.en("The community raid boss and its HP."))
+        .supportedFamilies([.systemSmall, .systemMedium])
+    }
+}
+
+private struct RaidWidgetView: View {
+    let entry: HomeWidgetEntry
+    @Environment(\.widgetFamily) private var family
+
+    private var bossImage: UIImage? {
+        guard let url = SharedSnapshotStore.containerURL()?
+            .appendingPathComponent(SharedSnapshotStore.raidImageFileName) else { return nil }
+        return UIImage(contentsOfFile: url.path)
+    }
+
+    var body: some View {
+        if let raid = entry.snapshot?.raid {
+            HStack(spacing: 10) {
+                if let image = bossImage {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: family == .systemSmall ? 72 : 110)
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    Label(entry.tr("Raid"), systemImage: "bolt.shield")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(LukiColors.accent)
+                    Text(raid.bossName)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                    ProgressView(value: min(1, max(0, raid.hpFraction)))
+                        .tint(raid.phase >= 2 ? .orange : LukiColors.accent)
+                    if let ends = raidEnds(raid.endsAt) {
+                        Text(entry.tr("ends %@", ends))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .padding(4)
+            .widgetURL(URL(string: "lukifitti://social/raids"))
+        } else {
+            VStack(alignment: .leading, spacing: 6) {
+                Label(entry.tr("Raid"), systemImage: "bolt.shield")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(LukiColors.accent)
+                Spacer()
+                Text(entry.tr("No raid this week"))
+                    .font(.subheadline.weight(.semibold))
+                Text(entry.tr("Check back Monday."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .padding(4)
+        }
+    }
+
+    private func raidEnds(_ iso: String) -> String? {
+        guard let date = ISO8601DateFormatter().date(from: iso) else { return nil }
+        let seconds = max(0, date.timeIntervalSince(entry.date))
+        let days = Int(seconds / 86_400)
+        let hours = Int((seconds.truncatingRemainder(dividingBy: 86_400)) / 3_600)
+        return days > 0 ? entry.tr("%d d %d h", days, hours) : entry.tr("%d h", max(1, hours))
+    }
+}

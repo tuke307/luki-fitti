@@ -42,8 +42,17 @@ public final class SocialStore {
     public var duels: DuelListDto?
     public var streaks: StreakListDto?
 
+    // MARK: - Raids & squads (PR 4)
+
+    /// nil while raids are off or the list hasn't loaded — the section hides on nil.
+    public var raids: RaidListDto?
+    public var squadList: SquadListDto?
+
     /// UI-test seed: trophy shelves prefer this over a live fetch when set.
     public var seededTrophies: [String: TrophyListDto]?
+    /// UI-test seeds: canned raid detail + feed so the detail page renders without an API.
+    public var seededRaidDetails: [String: RaidDetailDto] = [:]
+    public var seededRaidFeeds: [String: [RaidFeedHitDto]] = [:]
 
     /// Avatar JPEG bytes keyed by user id, fetched through the authenticated API client.
     @ObservationIgnored public private(set) var avatarCache: [String: Data] = [:]
@@ -68,7 +77,8 @@ public final class SocialStore {
         async let u = refreshUnread()
         async let l = refreshLeagues()
         async let b = refreshBattles()
-        _ = await (p, f, u, l, b)
+        async let r = refreshRaids()
+        _ = await (p, f, u, l, b, r)
     }
 
     /// Points, league state and friends board. 403s (leagues disabled or user ineligible) are
@@ -120,6 +130,76 @@ public final class SocialStore {
         } catch let error as APIClientError where isForbidden(error) {
         } catch { recordLeagueError("streaks", error) }
         if changed { onLeagueDataChanged?() }
+    }
+
+    /// Community + squad raids and the squad list. Same failure policy as the
+    /// battle endpoints: 403s hide the sections.
+    public func refreshRaids() async {
+        var changed = false
+        do {
+            raids = try await apiClient.fetchRaids()
+            changed = true
+        } catch let error as APIClientError where isForbidden(error) {
+        } catch { recordLeagueError("raids", error) }
+        do {
+            squadList = try await apiClient.fetchSquads()
+            changed = true
+        } catch let error as APIClientError where isForbidden(error) {
+        } catch { recordLeagueError("squads", error) }
+        if changed { onLeagueDataChanged?() }
+    }
+
+    // MARK: - Raid actions
+
+    public func raidAction(_ fn: () async throws -> Void) async {
+        do { try await fn() } catch { lastError = String(describing: error) }
+        await refreshRaids()
+    }
+
+    public func markRaidResultSeen(raidId: String) async {
+        raids?.pendingResults.removeAll { $0.raidId == raidId }
+        do { try await apiClient.markRaidSeen(raidId: raidId) } catch {}
+        onLeagueDataChanged?()
+    }
+
+    public func createSquad(name: String) async {
+        await raidAction { _ = try await self.apiClient.createSquad(name: name) }
+    }
+
+    public func renameSquad(squadId: String, name: String) async {
+        await raidAction { try await self.apiClient.renameSquad(squadId: squadId, name: name) }
+    }
+
+    public func leaveSquad(squadId: String) async {
+        await raidAction { try await self.apiClient.leaveSquad(squadId: squadId) }
+    }
+
+    public func kickSquadMember(squadId: String, userId: String) async {
+        await raidAction { try await self.apiClient.kickSquadMember(squadId: squadId, userId: userId) }
+    }
+
+    public func inviteToSquad(squadId: String, userId: String) async {
+        await raidAction { try await self.apiClient.inviteToSquad(squadId: squadId, userId: userId) }
+    }
+
+    public func acceptSquadInvite(squadId: String) async {
+        await raidAction { try await self.apiClient.acceptSquadInvite(squadId: squadId) }
+    }
+
+    public func declineSquadInvite(squadId: String) async {
+        await raidAction { try await self.apiClient.declineSquadInvite(squadId: squadId) }
+    }
+
+    public func startSquadRaid(squadId: String, bossSlug: String, difficulty: RaidDifficulty) async {
+        await raidAction {
+            try await self.apiClient.startSquadRaid(
+                squadId: squadId, bossSlug: bossSlug, difficulty: difficulty)
+        }
+    }
+
+    /// All currently shown raids (community first, then squad raids).
+    public var shownRaids: [RaidDto] {
+        (raids.map { [$0.community].compactMap { $0 } + $0.squads }) ?? []
     }
 
     // MARK: - Duel actions
@@ -206,13 +286,22 @@ public final class SocialStore {
                 startsTomorrow: $0.startsTomorrow
             )
         }
+        let raid = raids?.community.map {
+            RaidWatchSnapshot(
+                bossSlug: $0.bossSlug,
+                hpFraction: $0.hpFraction,
+                phase: $0.effectivePhase,
+                endsAt: $0.endsAt
+            )
+        }
         return SocialWatchSnapshot(
             weekPoints: pointsWeek?.points ?? 0,
             arena: league.arena,
             rank: rank,
             cohortSize: league.cohort?.members.count,
             stage: league.stage,
-            duel: duel
+            duel: duel,
+            raid: raid
         )
     }
 
@@ -310,5 +399,7 @@ public final class SocialStore {
         leagueHistory = []
         duels = nil
         streaks = nil
+        raids = nil
+        squadList = nil
     }
 }

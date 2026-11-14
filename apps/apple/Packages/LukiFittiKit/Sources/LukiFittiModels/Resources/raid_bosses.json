@@ -1,0 +1,1974 @@
+[
+  {
+    "slug": "leg-day-titan",
+    "name": {
+      "en": "Leg Day Titan",
+      "de": "Beintag-Titan"
+    },
+    "lore": {
+      "en": "It skipped arm day for a decade. Make it regret the squat rack.",
+      "de": "Es hat zehn Jahre lang den Arm-Tag geschwänzt. Zeit fürs Squat-Rack."
+    },
+    "weakTo": ["QUADRICEPS", "GLUTES", "HAMSTRINGS", "CALVES"],
+    "palette": {
+      "primary": "#E2723A",
+      "secondary": "#F5C469",
+      "accent": "#7C3F21",
+      "eyeWhite": "#FFFFFF",
+      "pupil": "#23272F",
+      "dark": "#2B1B12"
+    },
+    "enragedPalette": {
+      "primary": "#D1472B",
+      "accent": "#FF3D2E"
+    },
+    "idle": {
+      "bob": 0.02,
+      "sway": 0.03,
+      "periodMs": 2600
+    },
+    "parts": [
+      {
+        "id": "body",
+        "shape": "roundedBox",
+        "size": [1.1, 0.95, 0.85],
+        "position": [0, 1.15, 0],
+        "slot": "primary",
+        "role": "body"
+      },
+      {
+        "id": "belt",
+        "shape": "roundedBox",
+        "size": [1.14, 0.14, 0.9],
+        "position": [0, 0.72, 0],
+        "slot": "dark",
+        "role": "armor"
+      },
+      {
+        "id": "buckle",
+        "shape": "box",
+        "size": [0.2, 0.12, 0.05],
+        "position": [0, 0.72, 0.44],
+        "slot": "secondary",
+        "role": "detail"
+      },
+      {
+        "id": "leg-l",
+        "shape": "capsule",
+        "size": [0.34, 0.62, 0.34],
+        "position": [-0.32, 0.32, 0],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "leg-r",
+        "shape": "capsule",
+        "size": [0.34, 0.62, 0.34],
+        "position": [0.32, 0.32, 0],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "calf-l",
+        "shape": "sphere",
+        "size": [0.3, 0.22, 0.3],
+        "position": [-0.32, 0.38, -0.16],
+        "slot": "primary",
+        "role": "limb",
+        "parent": "leg-l"
+      },
+      {
+        "id": "calf-r",
+        "shape": "sphere",
+        "size": [0.3, 0.22, 0.3],
+        "position": [0.32, 0.38, -0.16],
+        "slot": "primary",
+        "role": "limb",
+        "parent": "leg-r"
+      },
+      {
+        "id": "foot-l",
+        "shape": "roundedBox",
+        "size": [0.4, 0.16, 0.55],
+        "position": [-0.32, 0.05, 0.1],
+        "slot": "dark",
+        "role": "limb"
+      },
+      {
+        "id": "foot-r",
+        "shape": "roundedBox",
+        "size": [0.4, 0.16, 0.55],
+        "position": [0.32, 0.05, 0.1],
+        "slot": "dark",
+        "role": "limb"
+      },
+      {
+        "id": "arm-l",
+        "shape": "capsule",
+        "size": [0.1, 0.28, 0.1],
+        "position": [-0.62, 1.34, 0.05],
+        "rotation": [0, 0, 58],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "arm-r",
+        "shape": "capsule",
+        "size": [0.1, 0.28, 0.1],
+        "position": [0.62, 1.34, 0.05],
+        "rotation": [0, 0, -58],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "fist-l",
+        "shape": "sphere",
+        "size": [0.14, 0.14, 0.14],
+        "position": [-0.74, 1.46, 0.05],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "fist-r",
+        "shape": "sphere",
+        "size": [0.14, 0.14, 0.14],
+        "position": [0.74, 1.46, 0.05],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "eye-l",
+        "shape": "sphere",
+        "size": [0.2, 0.24, 0.1],
+        "position": [-0.22, 1.35, 0.42],
+        "slot": "eyeWhite",
+        "role": "eye",
+        "parent": "body"
+      },
+      {
+        "id": "eye-r",
+        "shape": "sphere",
+        "size": [0.2, 0.24, 0.1],
+        "position": [0.22, 1.35, 0.42],
+        "slot": "eyeWhite",
+        "role": "eye",
+        "parent": "body"
+      },
+      {
+        "id": "pupil-l",
+        "shape": "sphere",
+        "size": [0.09, 0.11, 0.05],
+        "position": [-0.22, 1.35, 0.5],
+        "slot": "pupil",
+        "role": "pupil",
+        "parent": "eye-l"
+      },
+      {
+        "id": "pupil-r",
+        "shape": "sphere",
+        "size": [0.09, 0.11, 0.05],
+        "position": [0.22, 1.35, 0.5],
+        "slot": "pupil",
+        "role": "pupil",
+        "parent": "eye-r"
+      },
+      {
+        "id": "brow-l",
+        "shape": "roundedBox",
+        "size": [0.26, 0.07, 0.06],
+        "position": [-0.24, 1.56, 0.44],
+        "rotation": [0, 0, -12],
+        "slot": "dark",
+        "role": "detail"
+      },
+      {
+        "id": "brow-r",
+        "shape": "roundedBox",
+        "size": [0.26, 0.07, 0.06],
+        "position": [0.24, 1.56, 0.44],
+        "rotation": [0, 0, 12],
+        "slot": "dark",
+        "role": "detail"
+      },
+      {
+        "id": "mouth",
+        "shape": "roundedBox",
+        "size": [0.34, 0.1, 0.05],
+        "position": [0, 1, 0.44],
+        "slot": "dark",
+        "role": "detail"
+      },
+      {
+        "id": "tooth-1",
+        "shape": "box",
+        "size": [0.08, 0.05, 0.02],
+        "position": [-0.1, 1.03, 0.47],
+        "slot": "eyeWhite",
+        "role": "detail"
+      },
+      {
+        "id": "tooth-2",
+        "shape": "box",
+        "size": [0.08, 0.05, 0.02],
+        "position": [0.02, 1.03, 0.47],
+        "slot": "eyeWhite",
+        "role": "detail"
+      },
+      {
+        "id": "tooth-3",
+        "shape": "box",
+        "size": [0.08, 0.05, 0.02],
+        "position": [0.14, 1.03, 0.47],
+        "slot": "eyeWhite",
+        "role": "detail"
+      },
+      {
+        "id": "headband",
+        "shape": "roundedBox",
+        "size": [1.12, 0.1, 0.88],
+        "position": [0, 1.58, 0],
+        "slot": "secondary",
+        "role": "detail"
+      },
+      {
+        "id": "crack-leg-l",
+        "shape": "box",
+        "size": [0.04, 0.3, 0.02],
+        "position": [-0.32, 0.4, 0.33],
+        "rotation": [0, 0, 18],
+        "slot": "dark",
+        "role": "crack",
+        "minPhase": 1
+      },
+      {
+        "id": "crack-leg-r",
+        "shape": "box",
+        "size": [0.04, 0.3, 0.02],
+        "position": [0.32, 0.32, 0.33],
+        "rotation": [0, 0, -14],
+        "slot": "dark",
+        "role": "crack",
+        "minPhase": 2
+      },
+      {
+        "id": "crack-body",
+        "shape": "box",
+        "size": [0.05, 0.4, 0.02],
+        "position": [0.46, 1.05, 0.44],
+        "rotation": [0, 0, -24],
+        "slot": "dark",
+        "role": "crack",
+        "minPhase": 3
+      },
+      {
+        "id": "vein-l",
+        "shape": "box",
+        "size": [0.03, 0.26, 0.02],
+        "position": [-0.2, 0.34, 0.34],
+        "rotation": [0, 0, -22],
+        "slot": "accent",
+        "role": "crack",
+        "minPhase": 3
+      }
+    ]
+  },
+  {
+    "slug": "iron-back-golem",
+    "name": {
+      "en": "Iron Back Golem",
+      "de": "Eiserner Rückengolem"
+    },
+    "lore": {
+      "en": "Forged from every barbell ever dropped without control.",
+      "de": "Geschmiedet aus jeder Langhantel, die je unkontrolliert fiel."
+    },
+    "weakTo": ["BACK"],
+    "palette": {
+      "primary": "#5B6470",
+      "secondary": "#3E4550",
+      "accent": "#F5A623",
+      "eyeWhite": "#FFE9C4",
+      "pupil": "#B33B1D",
+      "dark": "#1E232B"
+    },
+    "enragedPalette": {
+      "accent": "#FF6B1A",
+      "eyeWhite": "#FFC46B",
+      "primary": "#6E4A3A"
+    },
+    "idle": {
+      "bob": 0.015,
+      "sway": 0.02,
+      "periodMs": 3400
+    },
+    "parts": [
+      {
+        "id": "torso",
+        "shape": "roundedBox",
+        "size": [1.15, 1, 0.9],
+        "position": [0, 0.95, 0],
+        "rotation": [14, 0, 0],
+        "slot": "primary",
+        "role": "body"
+      },
+      {
+        "id": "belly",
+        "shape": "roundedBox",
+        "size": [0.8, 0.6, 0.3],
+        "position": [0, 0.75, 0.42],
+        "slot": "secondary",
+        "role": "body",
+        "parent": "torso"
+      },
+      {
+        "id": "plate-1",
+        "shape": "roundedBox",
+        "size": [1.05, 0.22, 0.18],
+        "position": [0, 1.5, -0.32],
+        "rotation": [20, 0, 0],
+        "slot": "secondary",
+        "role": "armor",
+        "parent": "torso"
+      },
+      {
+        "id": "plate-2",
+        "shape": "roundedBox",
+        "size": [0.95, 0.22, 0.18],
+        "position": [0, 1.24, -0.4],
+        "rotation": [24, 0, 0],
+        "slot": "secondary",
+        "role": "armor",
+        "parent": "torso"
+      },
+      {
+        "id": "plate-3",
+        "shape": "roundedBox",
+        "size": [0.85, 0.22, 0.18],
+        "position": [0, 0.98, -0.44],
+        "rotation": [28, 0, 0],
+        "slot": "secondary",
+        "role": "armor",
+        "parent": "torso"
+      },
+      {
+        "id": "plate-4",
+        "shape": "roundedBox",
+        "size": [0.75, 0.2, 0.16],
+        "position": [0, 0.74, -0.44],
+        "rotation": [32, 0, 0],
+        "slot": "secondary",
+        "role": "armor",
+        "parent": "torso",
+        "minPhase": 1
+      },
+      {
+        "id": "head",
+        "shape": "sphere",
+        "size": [0.5, 0.42, 0.42],
+        "position": [0, 1.32, 0.32],
+        "slot": "primary",
+        "role": "body"
+      },
+      {
+        "id": "brow",
+        "shape": "roundedBox",
+        "size": [0.56, 0.14, 0.14],
+        "position": [0, 1.42, 0.44],
+        "slot": "dark",
+        "role": "armor",
+        "parent": "head"
+      },
+      {
+        "id": "eye-l",
+        "shape": "sphere",
+        "size": [0.18, 0.2, 0.08],
+        "position": [-0.14, 1.3, 0.55],
+        "slot": "eyeWhite",
+        "role": "eye",
+        "parent": "head",
+        "emissive": true
+      },
+      {
+        "id": "eye-r",
+        "shape": "sphere",
+        "size": [0.18, 0.2, 0.08],
+        "position": [0.14, 1.3, 0.55],
+        "slot": "eyeWhite",
+        "role": "eye",
+        "parent": "head",
+        "emissive": true
+      },
+      {
+        "id": "pupil-l",
+        "shape": "sphere",
+        "size": [0.08, 0.09, 0.05],
+        "position": [-0.14, 1.3, 0.62],
+        "slot": "pupil",
+        "role": "pupil",
+        "parent": "eye-l"
+      },
+      {
+        "id": "pupil-r",
+        "shape": "sphere",
+        "size": [0.08, 0.09, 0.05],
+        "position": [0.14, 1.3, 0.62],
+        "slot": "pupil",
+        "role": "pupil",
+        "parent": "eye-r"
+      },
+      {
+        "id": "rune-1",
+        "shape": "roundedBox",
+        "size": [0.5, 0.07, 0.03],
+        "position": [0, 0.92, 0.58],
+        "rotation": [0, 0, 10],
+        "slot": "accent",
+        "role": "detail",
+        "emissive": true
+      },
+      {
+        "id": "rune-2",
+        "shape": "roundedBox",
+        "size": [0.34, 0.06, 0.03],
+        "position": [-0.08, 0.78, 0.58],
+        "rotation": [0, 0, -14],
+        "slot": "accent",
+        "role": "detail",
+        "emissive": true
+      },
+      {
+        "id": "arm-l",
+        "shape": "capsule",
+        "size": [0.24, 0.6, 0.24],
+        "position": [-0.66, 0.8, 0.15],
+        "rotation": [0, 0, 12],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "arm-r",
+        "shape": "capsule",
+        "size": [0.24, 0.6, 0.24],
+        "position": [0.66, 0.8, 0.15],
+        "rotation": [0, 0, -12],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "fist-l",
+        "shape": "roundedBox",
+        "size": [0.32, 0.28, 0.3],
+        "position": [-0.74, 0.42, 0.2],
+        "slot": "secondary",
+        "role": "limb",
+        "parent": "arm-l"
+      },
+      {
+        "id": "fist-r",
+        "shape": "roundedBox",
+        "size": [0.32, 0.28, 0.3],
+        "position": [0.74, 0.42, 0.2],
+        "slot": "secondary",
+        "role": "limb",
+        "parent": "arm-r"
+      },
+      {
+        "id": "leg-l",
+        "shape": "cylinder",
+        "size": [0.3, 0.36, 0.3],
+        "position": [-0.32, 0.16, 0.05],
+        "slot": "secondary",
+        "role": "limb"
+      },
+      {
+        "id": "leg-r",
+        "shape": "cylinder",
+        "size": [0.3, 0.36, 0.3],
+        "position": [0.32, 0.16, 0.05],
+        "slot": "secondary",
+        "role": "limb"
+      },
+      {
+        "id": "crack-1",
+        "shape": "box",
+        "size": [0.04, 0.5, 0.02],
+        "position": [-0.2, 1, 0.46],
+        "rotation": [0, 0, 20],
+        "slot": "accent",
+        "role": "crack",
+        "minPhase": 1
+      },
+      {
+        "id": "crack-2",
+        "shape": "box",
+        "size": [0.04, 0.4, 0.02],
+        "position": [0.24, 0.85, 0.46],
+        "rotation": [0, 0, -26],
+        "slot": "accent",
+        "role": "crack",
+        "minPhase": 2
+      },
+      {
+        "id": "crack-3",
+        "shape": "box",
+        "size": [0.05, 0.55, 0.02],
+        "position": [0.02, 1.15, 0.47],
+        "rotation": [0, 0, 8],
+        "slot": "accent",
+        "role": "crack",
+        "minPhase": 3
+      }
+    ]
+  },
+  {
+    "slug": "chest-hydra",
+    "name": {
+      "en": "Chest Hydra",
+      "de": "Brust-Hydra"
+    },
+    "lore": {
+      "en": "Cut one head off and it benches two more.",
+      "de": "Schlag einen Kopf ab und es drückt zwei weitere."
+    },
+    "weakTo": ["CHEST", "TRICEPS"],
+    "palette": {
+      "primary": "#C65B4E",
+      "secondary": "#F0C8A0",
+      "accent": "#5B8C5A",
+      "eyeWhite": "#FFFFFF",
+      "pupil": "#23272F",
+      "dark": "#331A17"
+    },
+    "enragedPalette": {
+      "primary": "#A83226",
+      "accent": "#E8D44D"
+    },
+    "idle": {
+      "bob": 0.03,
+      "sway": 0.05,
+      "periodMs": 2200
+    },
+    "parts": [
+      {
+        "id": "body",
+        "shape": "sphere",
+        "size": [1.1, 1, 0.95],
+        "position": [0, 0.75, 0],
+        "slot": "primary",
+        "role": "body"
+      },
+      {
+        "id": "belly",
+        "shape": "sphere",
+        "size": [0.72, 0.7, 0.3],
+        "position": [0, 0.6, 0.55],
+        "slot": "secondary",
+        "role": "body",
+        "parent": "body"
+      },
+      {
+        "id": "pec-l",
+        "shape": "sphere",
+        "size": [0.4, 0.3, 0.2],
+        "position": [-0.26, 0.95, 0.52],
+        "slot": "secondary",
+        "role": "body",
+        "parent": "body"
+      },
+      {
+        "id": "pec-r",
+        "shape": "sphere",
+        "size": [0.4, 0.3, 0.2],
+        "position": [0.26, 0.95, 0.52],
+        "slot": "secondary",
+        "role": "body",
+        "parent": "body"
+      },
+      {
+        "id": "neck-c",
+        "shape": "capsule",
+        "size": [0.16, 0.55, 0.16],
+        "position": [0, 1.5, 0.05],
+        "slot": "primary",
+        "role": "limb",
+        "parent": "body"
+      },
+      {
+        "id": "neck-l",
+        "shape": "capsule",
+        "size": [0.14, 0.5, 0.14],
+        "position": [-0.4, 1.42, 0],
+        "rotation": [0, 0, 28],
+        "slot": "primary",
+        "role": "limb",
+        "parent": "body"
+      },
+      {
+        "id": "neck-r",
+        "shape": "capsule",
+        "size": [0.14, 0.5, 0.14],
+        "position": [0.4, 1.42, 0],
+        "rotation": [0, 0, -28],
+        "slot": "primary",
+        "role": "limb",
+        "parent": "body"
+      },
+      {
+        "id": "head-c",
+        "shape": "sphere",
+        "size": [0.34, 0.3, 0.3],
+        "position": [0, 1.82, 0.08],
+        "slot": "primary",
+        "role": "body",
+        "parent": "neck-c"
+      },
+      {
+        "id": "head-l",
+        "shape": "sphere",
+        "size": [0.3, 0.27, 0.27],
+        "position": [-0.58, 1.72, 0.05],
+        "slot": "primary",
+        "role": "body",
+        "parent": "neck-l"
+      },
+      {
+        "id": "head-r",
+        "shape": "sphere",
+        "size": [0.3, 0.27, 0.27],
+        "position": [0.58, 1.72, 0.05],
+        "slot": "primary",
+        "role": "body",
+        "parent": "neck-r"
+      },
+      {
+        "id": "crest-c",
+        "shape": "cone",
+        "size": [0.12, 0.18, 0.06],
+        "position": [0, 2, 0.02],
+        "rotation": [-15, 0, 0],
+        "slot": "accent",
+        "role": "horn",
+        "parent": "head-c"
+      },
+      {
+        "id": "crest-l",
+        "shape": "cone",
+        "size": [0.1, 0.15, 0.05],
+        "position": [-0.64, 1.86, 0],
+        "rotation": [-15, 0, 10],
+        "slot": "accent",
+        "role": "horn",
+        "parent": "head-l"
+      },
+      {
+        "id": "crest-r",
+        "shape": "cone",
+        "size": [0.1, 0.15, 0.05],
+        "position": [0.64, 1.86, 0],
+        "rotation": [-15, 0, -10],
+        "slot": "accent",
+        "role": "horn",
+        "parent": "head-r"
+      },
+      {
+        "id": "eye-cl",
+        "shape": "sphere",
+        "size": [0.1, 0.12, 0.06],
+        "position": [-0.08, 1.86, 0.32],
+        "slot": "eyeWhite",
+        "role": "eye",
+        "parent": "head-c"
+      },
+      {
+        "id": "eye-cr",
+        "shape": "sphere",
+        "size": [0.1, 0.12, 0.06],
+        "position": [0.08, 1.86, 0.32],
+        "slot": "eyeWhite",
+        "role": "eye",
+        "parent": "head-c"
+      },
+      {
+        "id": "pupil-cl",
+        "shape": "sphere",
+        "size": [0.05, 0.06, 0.03],
+        "position": [-0.08, 1.86, 0.37],
+        "slot": "pupil",
+        "role": "pupil",
+        "parent": "eye-cl"
+      },
+      {
+        "id": "pupil-cr",
+        "shape": "sphere",
+        "size": [0.05, 0.06, 0.03],
+        "position": [0.08, 1.86, 0.37],
+        "slot": "pupil",
+        "role": "pupil",
+        "parent": "eye-cr"
+      },
+      {
+        "id": "eye-ll",
+        "shape": "sphere",
+        "size": [0.09, 0.11, 0.05],
+        "position": [-0.64, 1.76, 0.28],
+        "slot": "eyeWhite",
+        "role": "eye",
+        "parent": "head-l"
+      },
+      {
+        "id": "eye-lr",
+        "shape": "sphere",
+        "size": [0.09, 0.11, 0.05],
+        "position": [-0.5, 1.76, 0.3],
+        "slot": "eyeWhite",
+        "role": "eye",
+        "parent": "head-l"
+      },
+      {
+        "id": "pupil-ll",
+        "shape": "sphere",
+        "size": [0.045, 0.055, 0.03],
+        "position": [-0.64, 1.76, 0.33],
+        "slot": "pupil",
+        "role": "pupil",
+        "parent": "eye-ll"
+      },
+      {
+        "id": "pupil-lr",
+        "shape": "sphere",
+        "size": [0.045, 0.055, 0.03],
+        "position": [-0.5, 1.76, 0.35],
+        "slot": "pupil",
+        "role": "pupil",
+        "parent": "eye-lr"
+      },
+      {
+        "id": "eye-rl",
+        "shape": "sphere",
+        "size": [0.09, 0.11, 0.05],
+        "position": [0.5, 1.76, 0.3],
+        "slot": "eyeWhite",
+        "role": "eye",
+        "parent": "head-r"
+      },
+      {
+        "id": "eye-rr",
+        "shape": "sphere",
+        "size": [0.09, 0.11, 0.05],
+        "position": [0.64, 1.76, 0.28],
+        "slot": "eyeWhite",
+        "role": "eye",
+        "parent": "head-r"
+      },
+      {
+        "id": "pupil-rl",
+        "shape": "sphere",
+        "size": [0.045, 0.055, 0.03],
+        "position": [0.5, 1.76, 0.35],
+        "slot": "pupil",
+        "role": "pupil",
+        "parent": "eye-rl"
+      },
+      {
+        "id": "pupil-rr",
+        "shape": "sphere",
+        "size": [0.045, 0.055, 0.03],
+        "position": [0.64, 1.76, 0.33],
+        "slot": "pupil",
+        "role": "pupil",
+        "parent": "eye-rr"
+      },
+      {
+        "id": "foot-l",
+        "shape": "roundedBox",
+        "size": [0.32, 0.14, 0.4],
+        "position": [-0.3, 0.05, 0.15],
+        "slot": "dark",
+        "role": "limb"
+      },
+      {
+        "id": "foot-r",
+        "shape": "roundedBox",
+        "size": [0.32, 0.14, 0.4],
+        "position": [0.3, 0.05, 0.15],
+        "slot": "dark",
+        "role": "limb"
+      },
+      {
+        "id": "neck-sprout",
+        "shape": "capsule",
+        "size": [0.1, 0.28, 0.1],
+        "position": [-0.18, 1.62, -0.15],
+        "rotation": [-20, 0, 18],
+        "slot": "accent",
+        "role": "limb",
+        "parent": "body",
+        "minPhase": 2
+      },
+      {
+        "id": "crack-belly",
+        "shape": "box",
+        "size": [0.04, 0.35, 0.02],
+        "position": [0.1, 0.62, 0.83],
+        "rotation": [0, 0, -18],
+        "slot": "dark",
+        "role": "crack",
+        "minPhase": 1
+      },
+      {
+        "id": "crack-pec",
+        "shape": "box",
+        "size": [0.04, 0.3, 0.02],
+        "position": [-0.28, 0.98, 0.66],
+        "rotation": [0, 0, 24],
+        "slot": "dark",
+        "role": "crack",
+        "minPhase": 3
+      }
+    ]
+  },
+  {
+    "slug": "shoulder-wyvern",
+    "name": {
+      "en": "Shoulder Wyvern",
+      "de": "Schulter-Wyvern"
+    },
+    "lore": {
+      "en": "Its wings are delts. Its delts are also wings.",
+      "de": "Seine Flügel sind Deltas. Seine Deltas sind auch Flügel."
+    },
+    "weakTo": ["SHOULDERS"],
+    "palette": {
+      "primary": "#4EA3E2",
+      "secondary": "#BFE3F7",
+      "accent": "#FFB02E",
+      "eyeWhite": "#FFFFFF",
+      "pupil": "#23272F",
+      "dark": "#16334A"
+    },
+    "enragedPalette": {
+      "primary": "#2E6FC2",
+      "accent": "#FF7A1A"
+    },
+    "idle": {
+      "bob": 0.05,
+      "sway": 0.06,
+      "periodMs": 2000
+    },
+    "parts": [
+      {
+        "id": "body",
+        "shape": "capsule",
+        "size": [0.55, 0.7, 0.5],
+        "position": [0, 0.7, 0],
+        "slot": "primary",
+        "role": "body"
+      },
+      {
+        "id": "belly",
+        "shape": "sphere",
+        "size": [0.42, 0.5, 0.2],
+        "position": [0, 0.62, 0.28],
+        "slot": "secondary",
+        "role": "body",
+        "parent": "body"
+      },
+      {
+        "id": "wing-l",
+        "shape": "roundedBox",
+        "size": [0.85, 0.55, 0.14],
+        "position": [-0.68, 1.05, -0.05],
+        "rotation": [0, 12, 32],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "wing-r",
+        "shape": "roundedBox",
+        "size": [0.85, 0.55, 0.14],
+        "position": [0.68, 1.05, -0.05],
+        "rotation": [0, -12, -32],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "wingtip-l",
+        "shape": "cone",
+        "size": [0.22, 0.4, 0.1],
+        "position": [-1.1, 1.28, -0.08],
+        "rotation": [0, 0, 60],
+        "slot": "accent",
+        "role": "detail",
+        "parent": "wing-l"
+      },
+      {
+        "id": "wingtip-r",
+        "shape": "cone",
+        "size": [0.22, 0.4, 0.1],
+        "position": [1.1, 1.28, -0.08],
+        "rotation": [0, 0, -60],
+        "slot": "accent",
+        "role": "detail",
+        "parent": "wing-r"
+      },
+      {
+        "id": "delt-l",
+        "shape": "sphere",
+        "size": [0.34, 0.32, 0.3],
+        "position": [-0.42, 1, 0.05],
+        "slot": "primary",
+        "role": "body"
+      },
+      {
+        "id": "delt-r",
+        "shape": "sphere",
+        "size": [0.34, 0.32, 0.3],
+        "position": [0.42, 1, 0.05],
+        "slot": "primary",
+        "role": "body"
+      },
+      {
+        "id": "head",
+        "shape": "sphere",
+        "size": [0.42, 0.4, 0.4],
+        "position": [0, 1.3, 0.08],
+        "slot": "primary",
+        "role": "body"
+      },
+      {
+        "id": "beak",
+        "shape": "cone",
+        "size": [0.14, 0.28, 0.12],
+        "position": [0, 1.24, 0.45],
+        "rotation": [95, 0, 0],
+        "slot": "accent",
+        "role": "horn",
+        "parent": "head"
+      },
+      {
+        "id": "crest",
+        "shape": "cone",
+        "size": [0.1, 0.24, 0.06],
+        "position": [0, 1.55, 0],
+        "rotation": [-25, 0, 0],
+        "slot": "accent",
+        "role": "horn",
+        "parent": "head"
+      },
+      {
+        "id": "eye-l",
+        "shape": "sphere",
+        "size": [0.12, 0.15, 0.07],
+        "position": [-0.13, 1.36, 0.4],
+        "slot": "eyeWhite",
+        "role": "eye",
+        "parent": "head"
+      },
+      {
+        "id": "eye-r",
+        "shape": "sphere",
+        "size": [0.12, 0.15, 0.07],
+        "position": [0.13, 1.36, 0.4],
+        "slot": "eyeWhite",
+        "role": "eye",
+        "parent": "head"
+      },
+      {
+        "id": "pupil-l",
+        "shape": "sphere",
+        "size": [0.06, 0.075, 0.04],
+        "position": [-0.13, 1.36, 0.46],
+        "slot": "pupil",
+        "role": "pupil",
+        "parent": "eye-l"
+      },
+      {
+        "id": "pupil-r",
+        "shape": "sphere",
+        "size": [0.06, 0.075, 0.04],
+        "position": [0.13, 1.36, 0.46],
+        "slot": "pupil",
+        "role": "pupil",
+        "parent": "eye-r"
+      },
+      {
+        "id": "tail",
+        "shape": "cone",
+        "size": [0.14, 0.5, 0.12],
+        "position": [0, 0.3, -0.4],
+        "rotation": [-60, 0, 0],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "foot-l",
+        "shape": "cone",
+        "size": [0.12, 0.16, 0.14],
+        "position": [-0.18, 0.06, 0.15],
+        "rotation": [180, 0, 0],
+        "slot": "accent",
+        "role": "limb"
+      },
+      {
+        "id": "foot-r",
+        "shape": "cone",
+        "size": [0.12, 0.16, 0.14],
+        "position": [0.18, 0.06, 0.15],
+        "rotation": [180, 0, 0],
+        "slot": "accent",
+        "role": "limb"
+      },
+      {
+        "id": "feather-l",
+        "shape": "cone",
+        "size": [0.08, 0.22, 0.05],
+        "position": [-0.85, 0.78, -0.02],
+        "rotation": [0, 0, 100],
+        "slot": "accent",
+        "role": "detail",
+        "parent": "wing-l",
+        "minPhase": 1
+      },
+      {
+        "id": "feather-r",
+        "shape": "cone",
+        "size": [0.08, 0.22, 0.05],
+        "position": [0.85, 0.78, -0.02],
+        "rotation": [0, 0, -100],
+        "slot": "accent",
+        "role": "detail",
+        "parent": "wing-r",
+        "minPhase": 1
+      },
+      {
+        "id": "crack-wing",
+        "shape": "box",
+        "size": [0.03, 0.3, 0.02],
+        "position": [-0.7, 1.1, 0.03],
+        "rotation": [0, 0, 30],
+        "slot": "dark",
+        "role": "crack",
+        "minPhase": 2
+      },
+      {
+        "id": "crack-delt",
+        "shape": "box",
+        "size": [0.03, 0.2, 0.02],
+        "position": [0.42, 1.02, 0.32],
+        "rotation": [0, 0, -18],
+        "slot": "dark",
+        "role": "crack",
+        "minPhase": 3
+      }
+    ]
+  },
+  {
+    "slug": "core-kraken",
+    "name": {
+      "en": "Core Kraken",
+      "de": "Rumpf-Krake"
+    },
+    "lore": {
+      "en": "Six tentacles, zero excuses. Planks are its only fear.",
+      "de": "Sechs Tentakel, null Ausreden. Planks sind seine einzige Angst."
+    },
+    "weakTo": ["ABS_CORE", "HIP_FLEXORS"],
+    "palette": {
+      "primary": "#8A6BD1",
+      "secondary": "#D9CFF5",
+      "accent": "#FF7A59",
+      "eyeWhite": "#FFFFFF",
+      "pupil": "#23272F",
+      "dark": "#2D1F4A"
+    },
+    "enragedPalette": {
+      "primary": "#6B44B8",
+      "accent": "#FF3D2E"
+    },
+    "idle": {
+      "bob": 0.04,
+      "sway": 0.05,
+      "periodMs": 2400
+    },
+    "parts": [
+      {
+        "id": "body",
+        "shape": "sphere",
+        "size": [1.1, 0.95, 1],
+        "position": [0, 0.9, 0],
+        "slot": "primary",
+        "role": "body"
+      },
+      {
+        "id": "belly",
+        "shape": "sphere",
+        "size": [0.7, 0.6, 0.3],
+        "position": [0, 0.72, 0.6],
+        "slot": "secondary",
+        "role": "body",
+        "parent": "body"
+      },
+      {
+        "id": "tent-1",
+        "shape": "torus",
+        "size": [0.34, 0.34, 0.14],
+        "position": [-0.62, 0.28, 0.3],
+        "rotation": [80, 0, 30],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "tent-2",
+        "shape": "torus",
+        "size": [0.34, 0.34, 0.14],
+        "position": [0.62, 0.28, 0.3],
+        "rotation": [80, 0, -30],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "tent-3",
+        "shape": "torus",
+        "size": [0.34, 0.34, 0.14],
+        "position": [-0.4, 0.22, -0.42],
+        "rotation": [100, 20, 0],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "tent-4",
+        "shape": "torus",
+        "size": [0.34, 0.34, 0.14],
+        "position": [0.4, 0.22, -0.42],
+        "rotation": [100, -20, 0],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "tent-5",
+        "shape": "torus",
+        "size": [0.34, 0.34, 0.14],
+        "position": [-0.75, 0.3, -0.1],
+        "rotation": [85, 0, 55],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "tent-6",
+        "shape": "torus",
+        "size": [0.34, 0.34, 0.14],
+        "position": [0.75, 0.3, -0.1],
+        "rotation": [85, 0, -55],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "suck-1",
+        "shape": "sphere",
+        "size": [0.07, 0.07, 0.05],
+        "position": [-0.62, 0.42, 0.5],
+        "slot": "accent",
+        "role": "detail",
+        "parent": "tent-1"
+      },
+      {
+        "id": "suck-2",
+        "shape": "sphere",
+        "size": [0.07, 0.07, 0.05],
+        "position": [0.62, 0.42, 0.5],
+        "slot": "accent",
+        "role": "detail",
+        "parent": "tent-2"
+      },
+      {
+        "id": "eye-l",
+        "shape": "sphere",
+        "size": [0.3, 0.36, 0.14],
+        "position": [-0.24, 1.05, 0.72],
+        "slot": "eyeWhite",
+        "role": "eye",
+        "parent": "body"
+      },
+      {
+        "id": "eye-r",
+        "shape": "sphere",
+        "size": [0.3, 0.36, 0.14],
+        "position": [0.24, 1.05, 0.72],
+        "slot": "eyeWhite",
+        "role": "eye",
+        "parent": "body"
+      },
+      {
+        "id": "pupil-l",
+        "shape": "sphere",
+        "size": [0.13, 0.16, 0.07],
+        "position": [-0.24, 1.05, 0.84],
+        "slot": "pupil",
+        "role": "pupil",
+        "parent": "eye-l"
+      },
+      {
+        "id": "pupil-r",
+        "shape": "sphere",
+        "size": [0.13, 0.16, 0.07],
+        "position": [0.24, 1.05, 0.84],
+        "slot": "pupil",
+        "role": "pupil",
+        "parent": "eye-r"
+      },
+      {
+        "id": "brow-l",
+        "shape": "roundedBox",
+        "size": [0.3, 0.07, 0.06],
+        "position": [-0.26, 1.34, 0.68],
+        "rotation": [0, 0, -14],
+        "slot": "dark",
+        "role": "detail",
+        "parent": "body"
+      },
+      {
+        "id": "brow-r",
+        "shape": "roundedBox",
+        "size": [0.3, 0.07, 0.06],
+        "position": [0.26, 1.34, 0.68],
+        "rotation": [0, 0, 14],
+        "slot": "dark",
+        "role": "detail",
+        "parent": "body"
+      },
+      {
+        "id": "beak",
+        "shape": "cone",
+        "size": [0.16, 0.18, 0.14],
+        "position": [0, 0.68, 0.85],
+        "rotation": [90, 0, 0],
+        "slot": "dark",
+        "role": "detail"
+      },
+      {
+        "id": "suck-3",
+        "shape": "sphere",
+        "size": [0.06, 0.06, 0.04],
+        "position": [-0.4, 0.36, -0.2],
+        "slot": "accent",
+        "role": "detail",
+        "parent": "tent-3",
+        "minPhase": 1
+      },
+      {
+        "id": "suck-4",
+        "shape": "sphere",
+        "size": [0.06, 0.06, 0.04],
+        "position": [0.4, 0.36, -0.2],
+        "slot": "accent",
+        "role": "detail",
+        "parent": "tent-4",
+        "minPhase": 1
+      },
+      {
+        "id": "crack-body",
+        "shape": "box",
+        "size": [0.04, 0.4, 0.02],
+        "position": [0.44, 0.6, 0.62],
+        "rotation": [0, 0, -20],
+        "slot": "dark",
+        "role": "crack",
+        "minPhase": 2
+      },
+      {
+        "id": "crack-head",
+        "shape": "box",
+        "size": [0.04, 0.3, 0.02],
+        "position": [-0.45, 1.12, 0.55],
+        "rotation": [0, 0, 26],
+        "slot": "dark",
+        "role": "crack",
+        "minPhase": 3
+      }
+    ]
+  },
+  {
+    "slug": "arm-cyclops",
+    "name": {
+      "en": "Arm Cyclops",
+      "de": "Arm-Zyklop"
+    },
+    "lore": {
+      "en": "One eye, two pythons. Curls for the girls — and for the raid.",
+      "de": "Ein Auge, zwei Pythons. Curls für den Raid."
+    },
+    "weakTo": ["BICEPS", "TRICEPS", "FOREARMS"],
+    "palette": {
+      "primary": "#78B159",
+      "secondary": "#3E6B34",
+      "accent": "#E8D44D",
+      "eyeWhite": "#FFFFFF",
+      "pupil": "#7A2A1F",
+      "dark": "#1F3318"
+    },
+    "enragedPalette": {
+      "primary": "#4E8C3A",
+      "accent": "#FF5A2E"
+    },
+    "idle": {
+      "bob": 0.025,
+      "sway": 0.035,
+      "periodMs": 2800
+    },
+    "parts": [
+      {
+        "id": "body",
+        "shape": "roundedBox",
+        "size": [0.85, 0.9, 0.7],
+        "position": [0, 0.85, 0],
+        "slot": "primary",
+        "role": "body"
+      },
+      {
+        "id": "belly",
+        "shape": "sphere",
+        "size": [0.5, 0.5, 0.25],
+        "position": [0, 0.7, 0.4],
+        "slot": "secondary",
+        "role": "body",
+        "parent": "body"
+      },
+      {
+        "id": "eye",
+        "shape": "sphere",
+        "size": [0.52, 0.55, 0.2],
+        "position": [0, 1.05, 0.45],
+        "slot": "eyeWhite",
+        "role": "eye",
+        "parent": "body"
+      },
+      {
+        "id": "pupil",
+        "shape": "sphere",
+        "size": [0.2, 0.24, 0.08],
+        "position": [0, 1.05, 0.62],
+        "slot": "pupil",
+        "role": "pupil",
+        "parent": "eye"
+      },
+      {
+        "id": "brow",
+        "shape": "roundedBox",
+        "size": [0.5, 0.1, 0.08],
+        "position": [0, 1.36, 0.4],
+        "rotation": [0, 0, 0],
+        "slot": "dark",
+        "role": "armor",
+        "parent": "body"
+      },
+      {
+        "id": "horn-l",
+        "shape": "cone",
+        "size": [0.1, 0.2, 0.08],
+        "position": [-0.3, 1.42, 0],
+        "rotation": [0, 0, 20],
+        "slot": "accent",
+        "role": "horn",
+        "parent": "body"
+      },
+      {
+        "id": "horn-r",
+        "shape": "cone",
+        "size": [0.1, 0.2, 0.08],
+        "position": [0.3, 1.42, 0],
+        "rotation": [0, 0, -20],
+        "slot": "accent",
+        "role": "horn",
+        "parent": "body"
+      },
+      {
+        "id": "shoulder-l",
+        "shape": "sphere",
+        "size": [0.4, 0.38, 0.38],
+        "position": [-0.55, 1.15, 0.05],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "shoulder-r",
+        "shape": "sphere",
+        "size": [0.4, 0.38, 0.38],
+        "position": [0.55, 1.15, 0.05],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "bicep-l",
+        "shape": "sphere",
+        "size": [0.34, 0.4, 0.34],
+        "position": [-0.78, 0.85, 0.1],
+        "slot": "primary",
+        "role": "limb",
+        "parent": "shoulder-l"
+      },
+      {
+        "id": "bicep-r",
+        "shape": "sphere",
+        "size": [0.34, 0.4, 0.34],
+        "position": [0.78, 0.85, 0.1],
+        "slot": "primary",
+        "role": "limb",
+        "parent": "shoulder-r"
+      },
+      {
+        "id": "forearm-l",
+        "shape": "capsule",
+        "size": [0.26, 0.5, 0.26],
+        "position": [-0.82, 0.5, 0.12],
+        "rotation": [0, 0, 8],
+        "slot": "secondary",
+        "role": "limb",
+        "parent": "bicep-l"
+      },
+      {
+        "id": "forearm-r",
+        "shape": "capsule",
+        "size": [0.26, 0.5, 0.26],
+        "position": [0.82, 0.5, 0.12],
+        "rotation": [0, 0, -8],
+        "slot": "secondary",
+        "role": "limb",
+        "parent": "bicep-r"
+      },
+      {
+        "id": "fist-l",
+        "shape": "roundedBox",
+        "size": [0.32, 0.3, 0.32],
+        "position": [-0.86, 0.2, 0.15],
+        "slot": "primary",
+        "role": "limb",
+        "parent": "forearm-l"
+      },
+      {
+        "id": "fist-r",
+        "shape": "roundedBox",
+        "size": [0.32, 0.3, 0.32],
+        "position": [0.86, 0.2, 0.15],
+        "slot": "primary",
+        "role": "limb",
+        "parent": "forearm-r"
+      },
+      {
+        "id": "band-l",
+        "shape": "torus",
+        "size": [0.3, 0.3, 0.08],
+        "position": [-0.83, 0.36, 0.12],
+        "rotation": [0, 0, 8],
+        "slot": "accent",
+        "role": "detail",
+        "parent": "forearm-l"
+      },
+      {
+        "id": "band-r",
+        "shape": "torus",
+        "size": [0.3, 0.3, 0.08],
+        "position": [0.83, 0.36, 0.12],
+        "rotation": [0, 0, -8],
+        "slot": "accent",
+        "role": "detail",
+        "parent": "forearm-r"
+      },
+      {
+        "id": "leg-l",
+        "shape": "capsule",
+        "size": [0.18, 0.3, 0.18],
+        "position": [-0.2, 0.18, 0],
+        "slot": "secondary",
+        "role": "limb"
+      },
+      {
+        "id": "leg-r",
+        "shape": "capsule",
+        "size": [0.18, 0.3, 0.18],
+        "position": [0.2, 0.18, 0],
+        "slot": "secondary",
+        "role": "limb"
+      },
+      {
+        "id": "spike-l",
+        "shape": "cone",
+        "size": [0.1, 0.22, 0.1],
+        "position": [-0.62, 1.42, 0.02],
+        "rotation": [0, 0, 30],
+        "slot": "accent",
+        "role": "horn",
+        "parent": "shoulder-l",
+        "minPhase": 1
+      },
+      {
+        "id": "spike-r",
+        "shape": "cone",
+        "size": [0.1, 0.22, 0.1],
+        "position": [0.62, 1.42, 0.02],
+        "rotation": [0, 0, -30],
+        "slot": "accent",
+        "role": "horn",
+        "parent": "shoulder-r",
+        "minPhase": 1
+      },
+      {
+        "id": "vein-l",
+        "shape": "box",
+        "size": [0.03, 0.3, 0.02],
+        "position": [-0.78, 0.88, 0.42],
+        "rotation": [0, 0, -20],
+        "slot": "accent",
+        "role": "crack",
+        "minPhase": 2
+      },
+      {
+        "id": "vein-r",
+        "shape": "box",
+        "size": [0.03, 0.3, 0.02],
+        "position": [0.78, 0.88, 0.42],
+        "rotation": [0, 0, 20],
+        "slot": "accent",
+        "role": "crack",
+        "minPhase": 2
+      },
+      {
+        "id": "crack-eye",
+        "shape": "box",
+        "size": [0.04, 0.3, 0.02],
+        "position": [0.52, 1.32, 0.3],
+        "rotation": [0, 0, 12],
+        "slot": "dark",
+        "role": "crack",
+        "minPhase": 3
+      }
+    ]
+  },
+  {
+    "slug": "mobility-phantom",
+    "name": {
+      "en": "Mobility Phantom",
+      "de": "Mobilitäts-Phantom"
+    },
+    "lore": {
+      "en": "It slipped through every stretching routine you skipped.",
+      "de": "Es schlüpfte durch jede Dehneinheit, die du ausgelassen hast."
+    },
+    "weakTo": ["STRETCHING"],
+    "palette": {
+      "primary": "#CFE8FF",
+      "secondary": "#8FD0FF",
+      "accent": "#6C8CFF",
+      "eyeWhite": "#2A3345",
+      "pupil": "#E8F4FF",
+      "dark": "#42506B"
+    },
+    "enragedPalette": {
+      "primary": "#9FB8E8",
+      "accent": "#4A5BE0"
+    },
+    "idle": {
+      "bob": 0.06,
+      "sway": 0.08,
+      "periodMs": 3000
+    },
+    "parts": [
+      {
+        "id": "body",
+        "shape": "capsule",
+        "size": [0.85, 1, 0.8],
+        "position": [0, 1, 0],
+        "slot": "primary",
+        "role": "body"
+      },
+      {
+        "id": "inner",
+        "shape": "capsule",
+        "size": [0.55, 0.7, 0.5],
+        "position": [0, 0.9, 0.1],
+        "slot": "secondary",
+        "role": "body",
+        "parent": "body"
+      },
+      {
+        "id": "tail-1",
+        "shape": "sphere",
+        "size": [0.4, 0.3, 0.38],
+        "position": [0, 0.42, -0.05],
+        "slot": "primary",
+        "role": "limb",
+        "parent": "body"
+      },
+      {
+        "id": "tail-2",
+        "shape": "sphere",
+        "size": [0.28, 0.22, 0.26],
+        "position": [0.12, 0.2, -0.12],
+        "slot": "primary",
+        "role": "limb",
+        "parent": "tail-1"
+      },
+      {
+        "id": "tail-3",
+        "shape": "sphere",
+        "size": [0.18, 0.15, 0.17],
+        "position": [-0.08, 0.05, -0.18],
+        "slot": "secondary",
+        "role": "limb",
+        "parent": "tail-2"
+      },
+      {
+        "id": "tail-4",
+        "shape": "sphere",
+        "size": [0.1, 0.09, 0.1],
+        "position": [0.08, -0.06, -0.24],
+        "slot": "secondary",
+        "role": "limb",
+        "parent": "tail-3"
+      },
+      {
+        "id": "arm-l",
+        "shape": "capsule",
+        "size": [0.12, 0.5, 0.12],
+        "position": [-0.55, 0.95, 0.1],
+        "rotation": [0, 0, 70],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "arm-r",
+        "shape": "capsule",
+        "size": [0.12, 0.5, 0.12],
+        "position": [0.55, 0.95, 0.1],
+        "rotation": [0, 0, -70],
+        "slot": "primary",
+        "role": "limb"
+      },
+      {
+        "id": "eye-l",
+        "shape": "sphere",
+        "size": [0.16, 0.24, 0.08],
+        "position": [-0.2, 1.15, 0.62],
+        "slot": "eyeWhite",
+        "role": "eye",
+        "parent": "body"
+      },
+      {
+        "id": "eye-r",
+        "shape": "sphere",
+        "size": [0.16, 0.24, 0.08],
+        "position": [0.2, 1.15, 0.62],
+        "slot": "eyeWhite",
+        "role": "eye",
+        "parent": "body"
+      },
+      {
+        "id": "pupil-l",
+        "shape": "sphere",
+        "size": [0.07, 0.1, 0.04],
+        "position": [-0.2, 1.15, 0.69],
+        "slot": "pupil",
+        "role": "pupil",
+        "parent": "eye-l"
+      },
+      {
+        "id": "pupil-r",
+        "shape": "sphere",
+        "size": [0.07, 0.1, 0.04],
+        "position": [0.2, 1.15, 0.69],
+        "slot": "pupil",
+        "role": "pupil",
+        "parent": "eye-r"
+      },
+      {
+        "id": "mouth",
+        "shape": "sphere",
+        "size": [0.1, 0.12, 0.05],
+        "position": [0, 0.9, 0.66],
+        "slot": "eyeWhite",
+        "role": "detail",
+        "parent": "body"
+      },
+      {
+        "id": "mote-1",
+        "shape": "sphere",
+        "size": [0.06, 0.06, 0.06],
+        "position": [-0.7, 1.4, 0.2],
+        "slot": "accent",
+        "role": "detail"
+      },
+      {
+        "id": "mote-2",
+        "shape": "sphere",
+        "size": [0.05, 0.05, 0.05],
+        "position": [0.72, 0.7, 0.25],
+        "slot": "accent",
+        "role": "detail"
+      },
+      {
+        "id": "mote-3",
+        "shape": "sphere",
+        "size": [0.045, 0.045, 0.045],
+        "position": [0.4, 1.6, -0.1],
+        "slot": "accent",
+        "role": "detail"
+      },
+      {
+        "id": "shred-1",
+        "shape": "cone",
+        "size": [0.1, 0.3, 0.06],
+        "position": [-0.35, 0.35, 0.1],
+        "rotation": [0, 0, 150],
+        "slot": "secondary",
+        "role": "detail",
+        "parent": "body",
+        "minPhase": 1
+      },
+      {
+        "id": "shred-2",
+        "shape": "cone",
+        "size": [0.08, 0.26, 0.05],
+        "position": [0.38, 0.32, -0.05],
+        "rotation": [0, 0, -160],
+        "slot": "secondary",
+        "role": "detail",
+        "parent": "body",
+        "minPhase": 2
+      },
+      {
+        "id": "crack-eye",
+        "shape": "box",
+        "size": [0.03, 0.24, 0.02],
+        "position": [0.44, 1.05, 0.5],
+        "rotation": [0, 0, -20],
+        "slot": "dark",
+        "role": "crack",
+        "minPhase": 3
+      }
+    ]
+  },
+  {
+    "slug": "cardio-comet",
+    "name": {
+      "en": "Cardio Comet",
+      "de": "Cardio-Komet"
+    },
+    "lore": {
+      "en": "It never stops moving. Neither should you.",
+      "de": "Es bleibt nie stehen. Du auch nicht."
+    },
+    "weakTo": ["CARDIO"],
+    "palette": {
+      "primary": "#FF7A59",
+      "secondary": "#FFC94D",
+      "accent": "#FF3D2E",
+      "eyeWhite": "#FFFFFF",
+      "pupil": "#23272F",
+      "dark": "#4A1A0E"
+    },
+    "enragedPalette": {
+      "primary": "#FF4A2E",
+      "secondary": "#FF9A2E"
+    },
+    "idle": {
+      "bob": 0.05,
+      "sway": 0.1,
+      "periodMs": 1600
+    },
+    "parts": [
+      {
+        "id": "body",
+        "shape": "sphere",
+        "size": [0.95, 0.95, 0.95],
+        "position": [0, 0.9, 0],
+        "slot": "primary",
+        "role": "body"
+      },
+      {
+        "id": "flame-1",
+        "shape": "cone",
+        "size": [0.55, 0.9, 0.55],
+        "position": [0, 1, -0.75],
+        "rotation": [-70, 0, 0],
+        "slot": "accent",
+        "role": "detail"
+      },
+      {
+        "id": "flame-2",
+        "shape": "cone",
+        "size": [0.38, 0.7, 0.38],
+        "position": [0, 1.05, -0.62],
+        "rotation": [-70, 0, 0],
+        "slot": "secondary",
+        "role": "detail",
+        "parent": "flame-1"
+      },
+      {
+        "id": "flame-3",
+        "shape": "cone",
+        "size": [0.22, 0.45, 0.22],
+        "position": [0, 1.1, -0.5],
+        "rotation": [-70, 0, 0],
+        "slot": "primary",
+        "role": "detail",
+        "parent": "flame-2"
+      },
+      {
+        "id": "sweatband",
+        "shape": "torus",
+        "size": [0.95, 0.95, 0.12],
+        "position": [0, 1.15, 0],
+        "rotation": [90, 0, 0],
+        "slot": "secondary",
+        "role": "detail",
+        "parent": "body"
+      },
+      {
+        "id": "knot",
+        "shape": "sphere",
+        "size": [0.14, 0.12, 0.12],
+        "position": [0.4, 1.28, 0.28],
+        "slot": "secondary",
+        "role": "detail",
+        "parent": "body"
+      },
+      {
+        "id": "eye-l",
+        "shape": "sphere",
+        "size": [0.18, 0.22, 0.09],
+        "position": [-0.2, 0.95, 0.68],
+        "slot": "eyeWhite",
+        "role": "eye",
+        "parent": "body"
+      },
+      {
+        "id": "eye-r",
+        "shape": "sphere",
+        "size": [0.18, 0.22, 0.09],
+        "position": [0.2, 0.95, 0.68],
+        "slot": "eyeWhite",
+        "role": "eye",
+        "parent": "body"
+      },
+      {
+        "id": "pupil-l",
+        "shape": "sphere",
+        "size": [0.08, 0.1, 0.05],
+        "position": [-0.2, 0.95, 0.76],
+        "slot": "pupil",
+        "role": "pupil",
+        "parent": "eye-l"
+      },
+      {
+        "id": "pupil-r",
+        "shape": "sphere",
+        "size": [0.08, 0.1, 0.05],
+        "position": [0.2, 0.95, 0.76],
+        "slot": "pupil",
+        "role": "pupil",
+        "parent": "eye-r"
+      },
+      {
+        "id": "brow-l",
+        "shape": "roundedBox",
+        "size": [0.2, 0.05, 0.04],
+        "position": [-0.2, 1.14, 0.7],
+        "rotation": [0, 0, -18],
+        "slot": "dark",
+        "role": "detail",
+        "parent": "body"
+      },
+      {
+        "id": "brow-r",
+        "shape": "roundedBox",
+        "size": [0.2, 0.05, 0.04],
+        "position": [0.2, 1.14, 0.7],
+        "rotation": [0, 0, 18],
+        "slot": "dark",
+        "role": "detail",
+        "parent": "body"
+      },
+      {
+        "id": "mouth",
+        "shape": "roundedBox",
+        "size": [0.22, 0.08, 0.04],
+        "position": [0, 0.68, 0.68],
+        "slot": "eyeWhite",
+        "role": "detail",
+        "parent": "body"
+      },
+      {
+        "id": "leg-l",
+        "shape": "capsule",
+        "size": [0.14, 0.3, 0.14],
+        "position": [-0.2, 0.2, 0.12],
+        "rotation": [25, 0, 10],
+        "slot": "dark",
+        "role": "limb"
+      },
+      {
+        "id": "leg-r",
+        "shape": "capsule",
+        "size": [0.14, 0.3, 0.14],
+        "position": [0.22, 0.22, -0.08],
+        "rotation": [-20, 0, -10],
+        "slot": "dark",
+        "role": "limb"
+      },
+      {
+        "id": "speed-1",
+        "shape": "box",
+        "size": [0.03, 0.03, 0.3],
+        "position": [-0.55, 0.7, -0.5],
+        "slot": "secondary",
+        "role": "detail"
+      },
+      {
+        "id": "speed-2",
+        "shape": "box",
+        "size": [0.03, 0.03, 0.36],
+        "position": [0.55, 1, -0.55],
+        "slot": "secondary",
+        "role": "detail"
+      },
+      {
+        "id": "speed-3",
+        "shape": "box",
+        "size": [0.025, 0.025, 0.26],
+        "position": [-0.3, 1.3, -0.45],
+        "slot": "secondary",
+        "role": "detail",
+        "minPhase": 1
+      },
+      {
+        "id": "flame-4",
+        "shape": "cone",
+        "size": [0.6, 1.1, 0.6],
+        "position": [0, 0.95, -0.95],
+        "rotation": [-70, 0, 0],
+        "slot": "accent",
+        "role": "detail",
+        "minPhase": 2
+      },
+      {
+        "id": "scorch-1",
+        "shape": "box",
+        "size": [0.03, 0.25, 0.02],
+        "position": [0.46, 0.62, 0.45],
+        "rotation": [0, 0, -24],
+        "slot": "dark",
+        "role": "crack",
+        "minPhase": 2
+      },
+      {
+        "id": "scorch-2",
+        "shape": "box",
+        "size": [0.03, 0.2, 0.02],
+        "position": [-0.48, 0.95, 0.4],
+        "rotation": [0, 0, 18],
+        "slot": "dark",
+        "role": "crack",
+        "minPhase": 3
+      }
+    ]
+  }
+]

@@ -30,10 +30,21 @@ public enum EffortPoints {
 
     public struct ExerciseInput: Sendable, Equatable {
         public var exerciseTypeSnapshot: String
+        /// Exercise's primary muscle; attributes set/PR points to raid weak spots.
+        public var primaryMuscleSnapshot: String?
+        /// Display name, used only to report `topExercise`.
+        public var exerciseNameSnapshot: String?
         public var sets: [SetInput]
 
-        public init(exerciseTypeSnapshot: String, sets: [SetInput]) {
+        public init(
+            exerciseTypeSnapshot: String,
+            primaryMuscleSnapshot: String? = nil,
+            exerciseNameSnapshot: String? = nil,
+            sets: [SetInput]
+        ) {
             self.exerciseTypeSnapshot = exerciseTypeSnapshot
+            self.primaryMuscleSnapshot = primaryMuscleSnapshot
+            self.exerciseNameSnapshot = exerciseNameSnapshot
             self.sets = sets
         }
     }
@@ -79,6 +90,12 @@ public enum EffortPoints {
     public struct Result: Sendable, Equatable {
         public var total: Int
         public var breakdown: Breakdown
+        /// Points attributed per weak spot: set + PR points under the exercise's
+        /// `primaryMuscleSnapshot`, cardio points under "CARDIO", stretch points under
+        /// "STRETCHING". The finish bonus is unattributed. Keys match `WeakSpot`.
+        public var pointsByWeakSpot: [String: Int]
+        /// Name of the exercise that earned the most points, when one did.
+        public var topExercise: String?
     }
 
     public static let workingSet = 10
@@ -114,7 +131,7 @@ public enum EffortPoints {
         if session.status != "COMPLETED" || session.sourceDevice == "IMPORT"
             || session.activeDurationSeconds < minActiveSeconds
         {
-            return Result(total: 0, breakdown: Breakdown())
+            return Result(total: 0, breakdown: Breakdown(), pointsByWeakSpot: [:], topExercise: nil)
         }
 
         var breakdown = Breakdown()
@@ -129,10 +146,25 @@ public enum EffortPoints {
         // Plausibility rules run on the chronological order the sets were actually
         // performed in, not on exercise-array order. Untimed sets keep their relative
         // order after all timed ones (stable sort, infinity key).
-        var orderedSets: [(set: SetInput, exerciseType: String, order: Int)] = []
-        for exercise in session.exercises {
+        var pointsByWeakSpot: [String: Int] = [:]
+        func credit(_ spot: String?, _ points: Int) {
+            guard let spot, points > 0 else { return }
+            pointsByWeakSpot[spot, default: 0] += points
+        }
+        var orderedSets: [(set: SetInput, exerciseType: String, primaryMuscle: String?, order: Int)] = []
+        var pointsByExercise: [Int: Int] = [:]
+        func creditExercise(_ index: Int, _ points: Int) {
+            guard points > 0 else { return }
+            pointsByExercise[index, default: 0] += points
+        }
+        var exerciseIndexByOrder: [Int] = []
+        for (exerciseIndex, exercise) in session.exercises.enumerated() {
             for set in exercise.sets where set.completed {
-                orderedSets.append((set, exercise.exerciseTypeSnapshot, orderedSets.count))
+                exerciseIndexByOrder.append(exerciseIndex)
+                orderedSets.append((
+                    set, exercise.exerciseTypeSnapshot, exercise.primaryMuscleSnapshot,
+                    orderedSets.count
+                ))
             }
         }
         orderedSets.sort { lhs, rhs in
@@ -161,18 +193,29 @@ public enum EffortPoints {
             let isStrength = entry.exerciseType == "STRENGTH"
             let isStretchingExercise = entry.exerciseType == "STRETCHING"
 
+            let exerciseIndex = exerciseIndexByOrder[entry.order]
             if isWarmup {
                 breakdown.warmups += 1
+                credit(entry.primaryMuscle, warmupSet)
+                creditExercise(exerciseIndex, warmupSet)
             } else if isStrength && (set.setType == "WORKING" || set.setType == "DROPSET") {
                 breakdown.sets += 1
+                credit(entry.primaryMuscle, workingSet)
+                creditExercise(exerciseIndex, workingSet)
             } else if entry.exerciseType == "CARDIO" {
-                breakdown.cardioMinutes += (set.durationSeconds ?? 0) / 60
+                let minutes = (set.durationSeconds ?? 0) / 60
+                breakdown.cardioMinutes += minutes
+                creditExercise(exerciseIndex, minutes * perCardioMinute)
             } else if !isStretchSession && (isStretchingExercise || set.setType == "STRETCH") {
-                stretchSeconds += set.durationSeconds ?? 0
+                let seconds = set.durationSeconds ?? 0
+                stretchSeconds += seconds
+                creditExercise(exerciseIndex, seconds / 60 * perStretchMinute)
             }
 
             if set.isPersonalRecord && breakdown.prs < maxPrsPerSession {
                 breakdown.prs += 1
+                credit(entry.primaryMuscle, personalRecord)
+                creditExercise(exerciseIndex, personalRecord)
             }
         }
 
@@ -184,6 +227,9 @@ public enum EffortPoints {
             breakdown.finishBonus = finishBonus
         }
 
+        credit("CARDIO", breakdown.cardioMinutes * perCardioMinute)
+        credit("STRETCHING", breakdown.stretchMinutes * perStretchMinute)
+
         let total =
             breakdown.sets * workingSet +
             breakdown.warmups * warmupSet +
@@ -191,7 +237,18 @@ public enum EffortPoints {
             breakdown.cardioMinutes * perCardioMinute +
             breakdown.stretchMinutes * perStretchMinute +
             breakdown.finishBonus
-        return Result(total: total, breakdown: breakdown)
+        var topExercise: String?
+        var topPoints = 0
+        for (index, points) in pointsByExercise where points > topPoints {
+            topPoints = points
+            topExercise = session.exercises[index].exerciseNameSnapshot
+        }
+        return Result(
+            total: total,
+            breakdown: breakdown,
+            pointsByWeakSpot: pointsByWeakSpot,
+            topExercise: topExercise
+        )
     }
 }
 
@@ -207,6 +264,8 @@ public extension WorkoutSessionDto {
             exercises: exercises.map {
                 EffortPoints.ExerciseInput(
                     exerciseTypeSnapshot: $0.exerciseTypeSnapshot.rawValue,
+                    primaryMuscleSnapshot: $0.primaryMuscleSnapshot.rawValue,
+                    exerciseNameSnapshot: $0.exerciseNameSnapshot,
                     sets: $0.sets.map {
                         EffortPoints.SetInput(
                             setType: $0.setType.rawValue,
