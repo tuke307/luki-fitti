@@ -1,6 +1,6 @@
 # LukiFitti MCP server (design)
 
-Status: **draft for review** · Target: 2.0.0 (branch `feat/api-keys` → `release/2.0.0`) ·
+Status: **approved 2026-11-15** · Target: 2.0.0 (branch `feat/api-keys` → `release/2.0.0`) ·
 Depends on: [personal API keys](api-keys.md)
 
 AI assistants (Claude Desktop/Code, Cursor, VS Code, ChatGPT and other MCP clients) connect to
@@ -191,9 +191,9 @@ The third PR of the API keys work (after keys + read API and export + docs), int
 `/v1/key` endpoint, compose/production wiring, the Bruno collection, the `/developers` MCP
 section and the tests.
 
-## Open questions
+## Decisions (2026-11-15)
 
-1. **URL:** a path on the app domain (`app.luki-fitti.tony-luke.de/mcp`, proposed), or a
-   subdomain `mcp.luki-fitti.tony-luke.de`?
-2. **`tools/list` without a key:** marienmühle keeps discovery public. Here it's proposed to
-   require the key (so the list can be filtered by scope). Fine?
+1. **URL:** a path on the app domain, `https://app.luki-fitti.tony-luke.de/mcp` (and the same
+   path on `luki-fitti.tony-luke.de`).
+2. **`tools/list` requires the key**, so the list can be filtered by the key's scopes; only the
+   handshake (`initialize`, `notifications/initialized`, `ping`) stays public.
