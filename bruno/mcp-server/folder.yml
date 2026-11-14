@@ -1,0 +1,7 @@
+info:
+  name: mcp-server
+  type: folder
+  seq: 20
+
+request:
+  auth: none

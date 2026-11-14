@@ -6,3 +6,8 @@ variables:
     value: "443"
   - name: EMAIL_WORKER_PORT
     value: "3002"
+  - name: MCP_URL
+    value: https://app.luki-fitti.tony-luke.de
+  - name: LUKIFITTI_API_KEY
+    value: ""
+

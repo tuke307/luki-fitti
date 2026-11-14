@@ -1,0 +1,31 @@
+info:
+  name: call-list-sessions
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{MCP_URL}}/mcp"
+  headers:
+    - name: Authorization
+      value: Bearer {{LUKIFITTI_API_KEY}}
+    - name: Content-Type
+      value: application/json
+    - name: Accept
+      value: application/json, text/event-stream
+  body:
+    type: json
+    data: |-
+      {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": { "name": "list-sessions", "arguments": { "limit": 10 } }
+      }
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
