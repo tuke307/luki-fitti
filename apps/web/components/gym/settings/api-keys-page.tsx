@@ -13,6 +13,7 @@ import { toast } from '@luki-fitti/ui/components/ui/sonner';
 import { API_KEY_SCOPES, ApiKeyScope } from '@luki-fitti/common/enums';
 import type { ApiKeyDto, ApiKeyListDto, CreatedApiKeyDto } from '@luki-fitti/common/schemas';
 import { api, ApiClientError } from '@/lib/api';
+import { DOCS_ORIGIN } from '@/lib/site/config';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { MobileSheet } from '../mobile-sheet';
 import { ConfirmDestructiveDialog } from '../confirm-destructive-dialog';
@@ -390,8 +391,7 @@ export function ApiKeysPage() {
     }
   };
 
-  // Public API guide; will move to the docs site once its URL is settled.
-  const docsHref = 'https://github.com/tuke307/luki-fitti/blob/main/docs/public-api.md';
+  const docsHref = `${DOCS_ORIGIN}/public-api`;
 
   return (
     <>

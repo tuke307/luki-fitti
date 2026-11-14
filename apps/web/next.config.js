@@ -1,4 +1,5 @@
 import { execSync } from 'child_process';
+import { createMDX } from 'fumadocs-mdx/next';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
@@ -23,7 +24,7 @@ function gitSha() {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  allowedDevOrigins: ['site.localhost'],
+  allowedDevOrigins: ['site.localhost', 'docs.localhost'],
   images: {
     // ?v=<content-hash> on the site screenshots must pass the optimizer.
     localPatterns: [{ pathname: '/screens/**' }],
@@ -83,4 +84,5 @@ const nextConfig = {
   outputFileTracingRoot: join(__dirname, '../../'),
 };
 
-export default nextConfig;
+const withMDX = createMDX({ configPath: './source.config.ts' });
+export default withMDX(nextConfig);

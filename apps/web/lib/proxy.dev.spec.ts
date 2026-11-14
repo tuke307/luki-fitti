@@ -26,3 +26,22 @@ test('dev: site.localhost app paths redirect (307) to the local app origin', asy
   assert.equal(r.status, 307);
   assert.equal(r.headers.get('location'), 'http://localhost:3000/workouts');
 });
+
+test('dev: docs.localhost host rewrites / to /docs', async () => {
+  const r = await proxy(req('docs.localhost:3000', '/'));
+  assert.equal(r.headers.get('x-middleware-rewrite'), 'http://docs.localhost:3000/docs');
+});
+
+test('dev: docs.localhost paths rewrite into /docs/* and strip /docs', async () => {
+  const r = await proxy(req('docs.localhost:3000', '/public-api'));
+  assert.equal(r.headers.get('x-middleware-rewrite'), 'http://docs.localhost:3000/docs/public-api');
+  const strip = await proxy(req('docs.localhost:3000', '/docs/public-api'));
+  assert.equal(strip.status, 307);
+  assert.equal(strip.headers.get('location'), 'http://docs.localhost:3000/public-api');
+});
+
+test('dev: app host /docs* redirects (307) to the docs origin', async () => {
+  const r = await proxy(req('localhost:3000', '/docs/public-api'));
+  assert.equal(r.status, 307);
+  assert.equal(r.headers.get('location'), 'http://docs.localhost:3000/public-api');
+});

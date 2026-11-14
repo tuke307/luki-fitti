@@ -34,11 +34,26 @@
     "PASSWORD_RESET_EXPIRY_MS",
     "ACCOUNT_DELETION_EXPIRY_MS",
     "NEXT_RUNTIME",
-    "GIT_SHA"
+    "GIT_SHA",
+    "GITHUB_PROJECT_OWNER",
+    "GITHUB_PROJECT_NUMBER",
+    "GITHUB_PROJECT_TOKEN"
   ],
   "tasks": {
     "build": {
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**", "public/dist/**"],
+      "dependsOn": ["^build"]
+    },
+    "@luki-fitti/web#build": {
+      // The docs site stages repo markdown into the build; keep it cache-visible.
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*",
+        "../../docs/**",
+        "../../README.md",
+        "../../CONTRIBUTING.md"
+      ],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**", "public/dist/**"],
       "dependsOn": ["^build"]
     },
