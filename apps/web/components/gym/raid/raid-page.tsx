@@ -28,7 +28,7 @@ export function RaidPage({
 
   useEffect(() => {
     if (!raidId) {
-      setDetailFor(null);
+      // `detail` is derived from raidId, so a closed page needs no state reset.
       seenHits.current.clear();
       return;
     }

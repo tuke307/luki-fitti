@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { NotificationKind, RaidDifficulty, TrophyKind } from '@luki-fitti/common/enums';
-import { berlinDayKey, berlinWeekKey, previousWeekKey, weekBounds } from '@luki-fitti/common/utils';
+import { berlinWeekKey, previousWeekKey, weekBounds } from '@luki-fitti/common/utils';
 import { bossForWeek, raidDamage, RAID_BOSSES } from '@luki-fitti/common/raid';
 import type { AppSettingsService } from '../app-settings/app-settings.service';
 import type { NotificationService } from '../notifications/notification.service';
@@ -122,13 +122,7 @@ const match = (row: Record<string, unknown>, where: Record<string, unknown> = {}
 function makePrisma(state: State): PrismaService {
   const prisma: Record<string, unknown> = {
     raid: {
-      findFirst: async ({
-        where,
-        include,
-      }: {
-        where: Record<string, unknown>;
-        include?: unknown;
-      }) =>
+      findFirst: async ({ where }: { where: Record<string, unknown>; include?: unknown }) =>
         state.raids.filter((r) => match(r as unknown as Record<string, unknown>, where))[0] ?? null,
       findUnique: async ({ where }: { where: { id?: string } }) => {
         const row = state.raids.find((r) => r.id === where.id);
@@ -149,7 +143,7 @@ function makePrisma(state: State): PrismaService {
         }
         return rows.map((r) => ({ ...r }));
       },
-      create: async ({ data, include }: { data: Record<string, unknown>; include?: unknown }) => {
+      create: async ({ data }: { data: Record<string, unknown>; include?: unknown }) => {
         if (
           data.kind === 'COMMUNITY' &&
           state.raids.some((r) => r.kind === 'COMMUNITY' && r.weekKey === data.weekKey)
@@ -232,7 +226,6 @@ function makePrisma(state: State): PrismaService {
       findMany: async ({
         where,
         include,
-        orderBy,
       }: {
         where?: Record<string, unknown>;
         include?: { user?: unknown; raid?: unknown };
@@ -247,13 +240,7 @@ function makePrisma(state: State): PrismaService {
             if (include?.raid) out.raid = state.raids.find((r) => r.id === h.raidId) ?? null;
             return out;
           }),
-      findFirst: async ({
-        where,
-        orderBy,
-      }: {
-        where?: Record<string, unknown>;
-        orderBy?: unknown;
-      }) =>
+      findFirst: async ({ where }: { where?: Record<string, unknown>; orderBy?: unknown }) =>
         state.hits
           .filter((h) => match(hitRow(h, state), where ?? {}))
           .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0] ?? null,
@@ -274,13 +261,7 @@ function makePrisma(state: State): PrismaService {
       deleteMany: async ({ where }: { where: Record<string, unknown> }) => {
         state.hits = state.hits.filter((h) => !match(hitRow(h, state), where));
       },
-      aggregate: async ({
-        where,
-        _sum,
-      }: {
-        where: Record<string, unknown>;
-        _sum: { damage: true };
-      }) => ({
+      aggregate: async ({ where }: { where: Record<string, unknown>; _sum: { damage: true } }) => ({
         _sum: {
           damage: state.hits
             .filter((h) => match(hitRow(h, state), where))
@@ -288,11 +269,7 @@ function makePrisma(state: State): PrismaService {
         },
       }),
       groupBy: async ({
-        by,
         where,
-        _sum,
-        _max,
-        orderBy,
       }: {
         by: string[];
         where?: Record<string, unknown>;
@@ -369,13 +346,7 @@ function makePrisma(state: State): PrismaService {
       },
     },
     weeklyScore: {
-      findMany: async ({
-        where,
-        distinct,
-      }: {
-        where: Record<string, unknown>;
-        distinct?: string[];
-      }) => {
+      findMany: async ({ where }: { where: Record<string, unknown>; distinct?: string[] }) => {
         const seen = new Set<string>();
         return state.scores
           .filter((s) => match(s as unknown as Record<string, unknown>, where))
@@ -384,7 +355,7 @@ function makePrisma(state: State): PrismaService {
       },
     },
     user: {
-      findUnique: async ({ where, select }: { where: { id: string }; select?: unknown }) =>
+      findUnique: async ({ where }: { where: { id: string }; select?: unknown }) =>
         state.users.get(where.id) ?? null,
       findMany: async ({ where }: { where?: Record<string, unknown> }) =>
         [...state.users.values()].filter((u) =>
@@ -441,20 +412,13 @@ function makePrisma(state: State): PrismaService {
           (m) =>
             m.squadId === where.squadId_userId.squadId && m.userId === where.squadId_userId.userId,
         ) ?? null,
-      findFirst: async ({
-        where,
-        orderBy,
-      }: {
-        where: Record<string, unknown>;
-        orderBy?: unknown;
-      }) =>
+      findFirst: async ({ where }: { where: Record<string, unknown>; orderBy?: unknown }) =>
         state.members
           .filter((m) => match(m as unknown as Record<string, unknown>, where))
           .sort((a, b) => a.joinedAt.getTime() - b.joinedAt.getTime())[0] ?? null,
       findMany: async ({
         where,
         include,
-        orderBy,
       }: {
         where?: Record<string, unknown>;
         include?: { squad?: unknown; user?: unknown };
@@ -531,8 +495,6 @@ function makePrisma(state: State): PrismaService {
         ) ?? null,
       findMany: async ({
         where,
-        include,
-        orderBy,
       }: {
         where?: Record<string, unknown>;
         include?: unknown;
@@ -632,8 +594,6 @@ function hitRow(hit: Hit, state: State): Record<string, unknown> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-
-const SETTINGS: Partial<AppSettingsService['get'] extends () => Promise<infer T> ? T : never> = {};
 
 function makeSettings(overrides: Record<string, unknown> = {}): AppSettingsService {
   return {
@@ -766,7 +726,7 @@ describe('RaidService', () => {
   });
 
   it('current lazily spawns when the week has no raid yet', async () => {
-    const { state, svc } = setup();
+    const { svc } = setup();
     const out = await svc.current('u1');
     assert.ok(out.community);
     assert.equal(out.community.weekKey, berlinWeekKey(new Date()));
@@ -775,7 +735,7 @@ describe('RaidService', () => {
   it('applySession adds damage with the weak-spot bonus and writes the hit', async () => {
     const { state, svc } = setup();
     const boss = RAID_BOSSES.find((b) => b.slug === 'leg-day-titan')!;
-    const raid = seedRaid(state, { bossSlug: boss.slug, maxHp: 10000 });
+    seedRaid(state, { bossSlug: boss.slug, maxHp: 10000 });
     seedSession(state, 's1', 'u1', 100, { QUADRICEPS: 40 }, new Date());
     await svc.applySession('u1', 's1');
     const hit = state.hits[0]!;
@@ -803,7 +763,7 @@ describe('RaidService', () => {
 
   it('a re-sync can only lower the hit', async () => {
     const { state, svc } = setup();
-    const raid = seedRaid(state, { maxHp: 10000 });
+    seedRaid(state, { maxHp: 10000 });
     const today = new Date();
     seedSession(state, 's1', 'u1', 100, {}, today);
     await svc.applySession('u1', 's1');
@@ -1064,7 +1024,7 @@ describe('SquadService', () => {
   };
 
   it('creates a squad with the owner and enforces the 3-squad limit', async () => {
-    const { state, svc } = setup();
+    const { svc } = setup();
     const squad = await svc.create('owner', 'Iron Crew');
     assert.equal(squad.role, 'OWNER');
     assert.equal(squad.members.length, 1);

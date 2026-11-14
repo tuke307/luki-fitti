@@ -50,10 +50,17 @@ describe('boss geometry parity', () => {
         assert.ok(mesh, `no mesh for ${part.id}`);
         mesh.geometry.computeBoundingBox();
         const bb = mesh.geometry.boundingBox!.clone().applyMatrix4(mesh.matrixWorld);
-        const exp = expected[part.id];
+        const exp: { min: number[]; max: number[] } | undefined = expected[part.id];
         assert.ok(exp, `no vector for ${part.id}`);
-        const got = [bb.min.x, bb.min.y, bb.min.z, bb.max.x, bb.max.y, bb.max.z];
-        const want = [exp.min[0]!, exp.min[1]!, exp.min[2]!, exp.max[0]!, exp.max[1]!, exp.max[2]!];
+        const got: number[] = [bb.min.x, bb.min.y, bb.min.z, bb.max.x, bb.max.y, bb.max.z];
+        const want: number[] = [
+          exp.min[0]!,
+          exp.min[1]!,
+          exp.min[2]!,
+          exp.max[0]!,
+          exp.max[1]!,
+          exp.max[2]!,
+        ];
         for (let i = 0; i < 6; i++) {
           assert.ok(
             Math.abs(got[i]! - want[i]!) <= TOLERANCE,

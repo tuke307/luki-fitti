@@ -7,6 +7,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import process from 'node:process';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outPath = join(root, 'src/raid/__fixtures__/raid-bosses.json');
