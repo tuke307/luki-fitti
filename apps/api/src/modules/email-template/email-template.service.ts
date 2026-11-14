@@ -24,6 +24,11 @@ const DEFAULT_TEMPLATES: Record<
     subject: 'LukiFitti — Confirm account deletion',
     htmlFile: 'account-deletion.mjml',
   },
+  [EmailTemplateType.API_KEY_CREATED]: {
+    name: 'API Key Created',
+    subject: 'LukiFitti — New API key "{{ api_key_name }}" created',
+    htmlFile: 'api-key-created.mjml',
+  },
 };
 
 @Injectable()
@@ -42,7 +47,9 @@ export class EmailTemplateService {
             ? 1
             : type === EmailTemplateType.PASSWORD_RESET
               ? 2
-              : 3,
+              : type === EmailTemplateType.ACCOUNT_DELETION
+                ? 3
+                : 4,
         name: fallback.name,
         subject: fallback.subject,
         htmlFile: fallback.htmlFile,
@@ -77,6 +84,8 @@ export class EmailTemplateService {
       confirmation_url: 'http://localhost:3000/verify-email?token=sample-token',
       reset_password_url: 'http://localhost:3000/reset-password?token=sample-token',
       delete_account_url: 'http://localhost:3000/delete-account?token=sample-token',
+      api_key_name: 'Google Sheets',
+      keys_url: 'http://localhost:3000/?open=%2Fprofile%2Fapi-keys',
       expiry_minutes: 60,
       frontend_url: 'http://localhost:3000',
     });

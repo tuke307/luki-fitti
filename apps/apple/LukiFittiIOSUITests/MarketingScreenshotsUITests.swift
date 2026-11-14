@@ -127,9 +127,11 @@ final class MarketingScreenshotsUITests: XCTestCase {
 
     @MainActor private func shot04() {
         let app = launch(session: false)
-        let tab = tabElement(app, tabLibrary)
-        XCTAssertTrue(tab.waitForExistence(timeout: 15), "Library tab missing")
-        tab.tap()
+        IOSUITestHelpers.openLibrary(
+            app,
+            workoutsLabel: "Workouts",
+            libraryLabel: tabLibrary
+        )
         XCTAssertTrue(
             app.buttons.matching(
                 NSPredicate(format: "identifier BEGINSWITH 'ios.library.exerciseRow.'")

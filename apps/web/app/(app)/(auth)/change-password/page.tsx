@@ -8,6 +8,7 @@ import { Card } from '@luki-fitti/ui/components/ui/card';
 import { Input } from '@luki-fitti/ui/components/ui/input';
 import { Label } from '@luki-fitti/ui/components/ui/label';
 import { api } from '@/lib/api';
+import { toast } from '@luki-fitti/ui/components/ui/sonner';
 import { useLocale } from '@/providers/i18n/locale-context';
 
 export default function ChangePasswordPage() {
@@ -25,7 +26,21 @@ export default function ChangePasswordPage() {
     try {
       const res = await api.auth.changePassword({ currentPassword, newPassword });
       if (res.success) {
-        setMessage('Password updated successfully.');
+        setMessage(t.auth.passwordUpdatedMessage);
+        try {
+          const keys = await api.apiKeys.list();
+          const active = (keys.data?.keys ?? []).filter((k) => k.status === 'active').length;
+          if (active > 0)
+            toast(t.apiKeys.hintActiveKeys.replace('{count}', String(active)), {
+              description: t.apiKeys.hintReview,
+              action: {
+                label: t.apiKeys.hintReview,
+                onClick: () => router.push('/?open=%2Fprofile%2Fapi-keys'),
+              },
+            });
+        } catch {
+          /* the hint is nice-to-have */
+        }
         setTimeout(() => router.push('/'), 1000);
       }
     } catch (err) {

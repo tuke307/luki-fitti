@@ -17,6 +17,38 @@
     "./services/prisma.service": {
       "types": "./src/modules/database/prisma.service.ts",
       "default": "./dist/src/modules/database/prisma.service.js"
+    },
+    "./services/push-sender.service": {
+      "types": "./src/modules/push/push-sender.service.ts",
+      "default": "./dist/src/modules/push/push-sender.service.js"
+    },
+    "./services/league.service": {
+      "types": "./src/modules/league/league.service.ts",
+      "default": "./dist/src/modules/league/league.service.js"
+    },
+    "./services/social-access.service": {
+      "types": "./src/modules/social/social-access.service.ts",
+      "default": "./dist/src/modules/social/social-access.service.js"
+    },
+    "./services/notification.service": {
+      "types": "./src/modules/notifications/notification.service.ts",
+      "default": "./dist/src/modules/notifications/notification.service.js"
+    },
+    "./services/app-settings.service": {
+      "types": "./src/modules/app-settings/app-settings.service.ts",
+      "default": "./dist/src/modules/app-settings/app-settings.service.js"
+    },
+    "./services/duel.service": {
+      "types": "./src/modules/battle/duel.service.ts",
+      "default": "./dist/src/modules/battle/duel.service.js"
+    },
+    "./services/streak.service": {
+      "types": "./src/modules/battle/streak.service.ts",
+      "default": "./dist/src/modules/battle/streak.service.js"
+    },
+    "./services/trophy.service": {
+      "types": "./src/modules/battle/trophy.service.ts",
+      "default": "./dist/src/modules/battle/trophy.service.js"
     }
   },
   "scripts": {
@@ -58,6 +90,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "sharp": "0.35.5",
+    "web-push": "3.6.7",
     "zod": "^4.6.5"
   },
   "devDependencies": {

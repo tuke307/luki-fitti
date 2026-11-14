@@ -2,9 +2,14 @@ name: CI
 
 on:
   pull_request:
+    # Stacked feature PRs (e.g. feat/social-2-leagues → feat/social-2.0) get the same
+    # lint, test, build and e2e gates as PRs into develop.
     branches:
       - develop
       - main
+      - 'feat/**'
+      - 'fix/**'
+      - 'release/**'
   workflow_dispatch:
 
 permissions:
@@ -91,7 +96,8 @@ jobs:
 
       - run: yarn install --frozen-lockfile
 
-      - run: yarn turbo run build --filter='./packages/*'
+      # The API build lets app.module.boot.spec.ts check the full DI graph instead of skipping.
+      - run: yarn turbo run build --filter='./packages/*' --filter=@luki-fitti/api
 
       - run: yarn turbo run test --filter='!@luki-fitti/apple'
 
@@ -146,6 +152,7 @@ jobs:
         run: |
           JWT_SECRET_VALUE="$(openssl rand -hex 32)"
           JWT_REFRESH_SECRET_VALUE="$(openssl rand -hex 32)"
+          API_KEY_PEPPER_VALUE="$(openssl rand -hex 32)"
 
           cat > apps/api/.env.local <<EOF
           API_PORT=3001
@@ -156,6 +163,7 @@ jobs:
           ACCESS_TOKEN_EXPIRY_MS=900000
           REFRESH_TOKEN_EXPIRY_MS=7776000000
           REFRESH_TOKEN_REUSE_GRACE_MS=30000
+          API_KEY_PEPPER=${API_KEY_PEPPER_VALUE}
           DATABASE_URL=postgresql://postgres:postgres@localhost:5432/luki_fitti
           FRONTEND_URL=http://localhost:3000
           REDIS_URL=redis://localhost:6379

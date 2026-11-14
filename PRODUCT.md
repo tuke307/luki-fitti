@@ -25,10 +25,24 @@ Calm, confident, encouraging. The voice is a good training partner: short senten
 no jargon, no shouting. Numbers carry the emotion (a new best, a full week), not exclamation marks
 or neon. The app should feel like it belongs on an iPhone next to Apple Fitness and Gentler Streak.
 
+### Social and competition (since 2.0)
+
+The Social tab (leagues, friends, duels, raid bosses) is allowed to be loud, in the spirit of
+Duolingo: promotions, duel wins and boss kills get full-screen celebrations, motion, sound and
+haptics, and the raid bosses are illustrated characters with personality. Two boundaries keep it
+from bleeding into the training partner:
+
+- **The workout flow stays calm.** No pop-ups, confetti or rank changes between sets. Points and
+  raid damage appear once, on the summary after a workout is finished.
+- **One celebration per moment.** Each result (promotion, duel, boss kill) is celebrated once and
+  then becomes a quiet entry in history. Streaks and nudges never shame ("You lost your streak")
+  — they invite ("Train today to keep your 5-week streak with Anna").
+
 ## Anti-references
 
 - Hacker / terminal dashboards: monospace everywhere, neon on near-black, ALL-CAPS labels.
-- "Bro" gym apps: aggressive gradients, flames, lightning bolts, achievement spam.
+- "Bro" gym apps: aggressive gradients, flames, lightning bolts, achievement spam outside the
+  Social tab.
 - SaaS analytics dashboards: KPI tile grids, jargon titles ("Avg. Session Load"), dense charts
   on the home screen.
 - Exposing implementation: sync badges that are always visible, version numbers, formula names

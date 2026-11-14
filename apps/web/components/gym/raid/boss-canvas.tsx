@@ -1,0 +1,685 @@
+'use client';
+
+import React from 'react';
+import { useReducedMotion } from 'framer-motion';
+import { bossBounds, type RaidBoss, type Slot } from '@luki-fitti/common/raid';
+import { buildBossParts, type RoundedBoxCtor, type Three } from '@/lib/raid/boss-geometry';
+
+export type BossVisualState = 'idle' | 'defeated' | 'escaped';
+
+export interface BossHit {
+  /** Incrementing id — a new value triggers the hit animation. */
+  id: number;
+  damage: number;
+}
+
+interface BossCanvasProps {
+  boss: RaidBoss;
+  state?: BossVisualState;
+  /** Enrage phase 0–3 — drives the palette lerp, cracks and aura. */
+  phase?: number;
+  /** Latest hit to animate; new `id` re-triggers. */
+  hit?: BossHit | null;
+  /** Force reduced-motion rendering (defaults to the OS preference). */
+  reducedMotion?: boolean;
+  /** Allow drag-to-rotate (default true). */
+  interactive?: boolean;
+  /** Fallback/aria label — defaults to the boss's English name. */
+  label?: string;
+  /** HP fraction 0–1 for the 2D fallback card. */
+  hpFraction?: number;
+  className?: string;
+}
+
+const OUTLINE_SCALE = 1.045;
+/** default three-quarter pose (≈ −18°) */
+const BASE_YAW = -0.32;
+const PUPIL_TRACK = 0.045;
+const BLINK_MIN_MS = 3000;
+const BLINK_SPAN_MS = 2000;
+const BLINK_MS = 120;
+const HIT_MS = 250;
+const FLASH_MS = 120;
+const EXPLODE_MS = 1200;
+const ESCAPE_MS = 900;
+
+function toonGradient(THREE: Three): import('three').DataTexture {
+  const data = new Uint8Array([70, 155, 255]);
+  const tex = new THREE.DataTexture(data, 3, 1, THREE.RedFormat);
+  tex.minFilter = THREE.NearestFilter;
+  tex.magFilter = THREE.NearestFilter;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/** Soft radial blob: centre ~26 % alpha fading to 0, used as contact shadow. */
+function shadowTexture(THREE: Three): import('three').DataTexture {
+  const size = 128;
+  const data = new Uint8Array(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const dx = x / (size - 1) - 0.5;
+      const dy = y / (size - 1) - 0.5;
+      const r = Math.sqrt(dx * dx + dy * dy) * 2;
+      const a = Math.max(0, 1 - r) ** 1.7;
+      const i = (y * size + x) * 4;
+      data[i] = 0;
+      data[i + 1] = 0;
+      data[i + 2] = 0;
+      data[i + 3] = Math.round(a * 66);
+    }
+  }
+  const tex = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/** Soft radial glow: white centre fading to 0, tinted by the material colour. */
+function auraTexture(THREE: Three): import('three').DataTexture {
+  const size = 128;
+  const data = new Uint8Array(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const dx = x / (size - 1) - 0.5;
+      const dy = y / (size - 1) - 0.5;
+      const r = Math.sqrt(dx * dx + dy * dy) * 2;
+      const a = Math.max(0, 1 - r) ** 2.4;
+      const i = (y * size + x) * 4;
+      data[i] = 255;
+      data[i + 1] = 255;
+      data[i + 2] = 255;
+      data[i + 3] = Math.round(a * 255);
+    }
+  }
+  const tex = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/** 2D fallback for missing WebGL / low-power contexts. */
+function BossFallback({
+  boss,
+  label,
+  hpFraction,
+  className,
+}: {
+  boss: RaidBoss;
+  label: string;
+  hpFraction?: number;
+  className?: string;
+}) {
+  return (
+    <div
+      role="img"
+      aria-label={label}
+      className={`flex flex-col items-center justify-center rounded-2xl ${className ?? ''}`}
+      style={{
+        background: `radial-gradient(circle at 50% 35%, ${boss.palette.accent}33, transparent 70%), linear-gradient(160deg, ${boss.palette.primary}, ${boss.palette.dark})`,
+      }}
+    >
+      <svg viewBox="0 0 40 40" width="40%" aria-hidden="true">
+        <circle cx="20" cy="20" r="14" fill={boss.palette.secondary} />
+        <circle cx="15.5" cy="18" r="3.4" fill={boss.palette.eyeWhite} />
+        <circle cx="24.5" cy="18" r="3.4" fill={boss.palette.eyeWhite} />
+        <circle cx="15.5" cy="18.6" r="1.7" fill={boss.palette.pupil} />
+        <circle cx="24.5" cy="18.6" r="1.7" fill={boss.palette.pupil} />
+        <path d="M14 26 q6 4 12 0" stroke={boss.palette.dark} strokeWidth="2" fill="none" />
+      </svg>
+      <span className="mt-1 text-xs font-bold text-white drop-shadow">{label}</span>
+      {hpFraction !== undefined ? (
+        <div className="mt-1 h-1.5 w-2/3 overflow-hidden rounded-full bg-black/40">
+          <div
+            className="h-full rounded-full bg-white/90"
+            style={{ width: `${Math.round(hpFraction * 100)}%` }}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function BossCanvas({
+  boss,
+  state = 'idle',
+  phase = 0,
+  hit = null,
+  reducedMotion,
+  interactive = true,
+  label,
+  hpFraction,
+  className,
+}: BossCanvasProps) {
+  const prefersReduced = useReducedMotion() ?? false;
+  const reduced = reducedMotion ?? prefersReduced;
+  const hostRef = React.useRef<HTMLDivElement | null>(null);
+  const [failed, setFailed] = React.useState(false);
+  const [damageFloats, setDamageFloats] = React.useState<BossHit[]>([]);
+  const engineRef = React.useRef<{ triggerHit: (damage: number) => void } | null>(null);
+  const liveRef = React.useRef({ state, phase });
+  React.useEffect(() => {
+    liveRef.current = { state, phase };
+  }, [state, phase]);
+
+  // New hits queue a floating damage number (DOM overlay) + the mesh squash.
+  const lastHitId = React.useRef(0);
+  React.useEffect(() => {
+    if (!hit || hit.id === lastHitId.current) return;
+    lastHitId.current = hit.id;
+    engineRef.current?.triggerHit(hit.damage);
+    if (!reduced) {
+      const add = setTimeout(() => setDamageFloats((list) => [...list, hit]), 0);
+      const drop = setTimeout(
+        () => setDamageFloats((list) => list.filter((f) => f.id !== hit.id)),
+        1400,
+      );
+      return () => {
+        clearTimeout(add);
+        clearTimeout(drop);
+      };
+    }
+  }, [hit, reduced]);
+
+  React.useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    let disposed = false;
+    let cleanup: (() => void) | undefined;
+
+    const boot = async () => {
+      let THREE: Three;
+      let RoundedBox: RoundedBoxCtor | null = null;
+      try {
+        [THREE, { RoundedBoxGeometry: RoundedBox }] = await Promise.all([
+          import('three'),
+          import('three/examples/jsm/geometries/RoundedBoxGeometry.js'),
+        ]);
+      } catch {
+        try {
+          THREE = await import('three');
+        } catch {
+          if (!disposed) setFailed(true);
+          return;
+        }
+      }
+      if (disposed) return;
+
+      let renderer: import('three').WebGLRenderer;
+      try {
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      } catch {
+        setFailed(true);
+        return;
+      }
+      renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+
+      const bounds = bossBounds(boss, BASE_YAW);
+      const [cx, cy, cz] = bounds.center;
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 30);
+      // tight projected fit at the idle yaw: the larger silhouette dimension
+      // fills 80 % of the smaller canvas side, plus a small allowance for the
+      // bob/sway and the 1.15 hit squash. Defeated reframes on the padded sphere.
+      const swayPad = boss.idle.sway * Math.max(bounds.halfWidth, bounds.halfHeight);
+      const fitDim =
+        Math.max(bounds.halfWidth + swayPad, bounds.halfHeight + swayPad + boss.idle.bob) *
+        2 *
+        1.15;
+      let camDist = 0;
+      const targetDistance = () => {
+        const tan = Math.tan(((camera.fov / 2) * Math.PI) / 180);
+        if (liveRef.current.state === 'defeated') {
+          return (bounds.radius * 1.12) / (tan * Math.min(1, camera.aspect));
+        }
+        return fitDim / (2 * 0.8 * tan * Math.min(1, camera.aspect));
+      };
+      const frame = (snap = false) => {
+        const target = targetDistance();
+        camDist = snap ? target : camDist + (target - camDist) * 0.12;
+        camera.position.set(cx, cy + camDist * 0.14, cz + camDist);
+        camera.lookAt(cx, cy, cz);
+      };
+
+      // key light from the upper left + a subtle accent rim from behind
+      scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+      const key = new THREE.DirectionalLight(0xffffff, 2.6);
+      key.position.set(-2.5, 4.5, 3);
+      scene.add(key);
+      const rim = new THREE.DirectionalLight(boss.palette.accent, 1.1);
+      rim.position.set(2.5, 2.5, -3);
+      scene.add(rim);
+
+      const gradient = toonGradient(THREE);
+      const group = new THREE.Group();
+      scene.add(group);
+
+      const disposables: Array<{ dispose: () => void }> = [gradient];
+      const slotMaterials = new Map<Slot, import('three').MeshToonMaterial>();
+      /** extra materials (emissive clones) that still follow the palette lerp */
+      const extraMaterials: Array<{ mat: import('three').MeshToonMaterial; slot: Slot }> = [];
+      const slotColor = (slot: Slot) => new THREE.Color(boss.palette[slot]);
+      const materialFor = (slot: Slot, emissive = false) => {
+        if (!emissive) {
+          let mat = slotMaterials.get(slot);
+          if (!mat) {
+            mat = new THREE.MeshToonMaterial({ color: slotColor(slot), gradientMap: gradient });
+            slotMaterials.set(slot, mat);
+            disposables.push(mat);
+          }
+          return mat;
+        }
+        const mat = new THREE.MeshToonMaterial({
+          color: slotColor(slot),
+          gradientMap: gradient,
+          emissive: slotColor(slot),
+          emissiveIntensity: 0.85,
+        });
+        extraMaterials.push({ mat, slot });
+        disposables.push(mat);
+        return mat;
+      };
+      const outlineMat = new THREE.MeshBasicMaterial({
+        color: boss.palette.dark,
+        side: THREE.BackSide,
+      });
+      disposables.push(outlineMat);
+      const flashMat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+      });
+      disposables.push(flashMat);
+
+      const {
+        built,
+        pupils,
+        eyes,
+        brows,
+        group: partsGroup,
+      } = buildBossParts(THREE, RoundedBox, boss, materialFor, outlineMat, flashMat, OUTLINE_SCALE);
+      group.add(partsGroup);
+      for (const b of built) disposables.push(b.mesh.geometry);
+
+      // soft contact shadow blob, ~60 % of the body width, hugging the floor
+      const bodyWidth =
+        boss.parts.filter((p) => p.role === 'body').reduce((w, p) => Math.max(w, p.size[0]), 0) ||
+        bounds.radius;
+      const shadowTex = shadowTexture(THREE);
+      const shadowGeo = new THREE.PlaneGeometry(bodyWidth * 1.3, bodyWidth * 1.3);
+      const shadowMat = new THREE.MeshBasicMaterial({
+        map: shadowTex,
+        transparent: true,
+        depthWrite: false,
+      });
+      const shadow = new THREE.Mesh(shadowGeo, shadowMat);
+      shadow.rotation.x = -Math.PI / 2;
+      const floorY = Math.min(...boss.parts.map((p) => p.position[1] - p.size[1] / 2));
+      shadow.position.set(cx, floorY + 0.01, cz);
+      scene.add(shadow);
+      disposables.push(shadowGeo, shadowMat, shadowTex);
+
+      // enrage aura: a camera-facing soft glow sprite behind the silhouette.
+      // Additive on dark themes; on light cards it would wash out, so a
+      // normal-blended warm tint at low alpha is used instead.
+      const auraTex = auraTexture(THREE);
+      const auraMat = new THREE.SpriteMaterial({
+        map: auraTex,
+        color: 0xff5a2a,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+      });
+      const themeMq = window.matchMedia('(prefers-color-scheme: dark)');
+      const applyAuraBlending = () => {
+        auraMat.blending = themeMq.matches ? THREE.AdditiveBlending : THREE.NormalBlending;
+        auraMat.needsUpdate = true;
+      };
+      applyAuraBlending();
+      themeMq.addEventListener('change', applyAuraBlending);
+      const aura = new THREE.Sprite(auraMat);
+      const auraSize = bounds.radius * 2 * 1.15;
+      aura.scale.set(auraSize, auraSize, 1);
+      aura.position.set(cx, cy, cz);
+      scene.add(aura);
+      disposables.push(auraMat, auraTex);
+
+      host.appendChild(renderer.domElement);
+      renderer.domElement.style.display = 'block';
+      renderer.domElement.style.width = '100%';
+      renderer.domElement.style.height = '100%';
+      renderer.domElement.style.touchAction = 'none';
+      if (interactive) renderer.domElement.style.cursor = 'grab';
+
+      const resize = () => {
+        const w = host.clientWidth || 1;
+        const h = host.clientHeight || 1;
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        camDist = targetDistance();
+        frame(true);
+      };
+      resize();
+      const ro = new ResizeObserver(resize);
+      ro.observe(host);
+
+      // visibility: pause off-screen and when the tab hides
+      let visible = true;
+      let pageVisible = !document.hidden;
+      const io = new IntersectionObserver((entries) => {
+        visible = entries[0]?.isIntersecting ?? true;
+      });
+      io.observe(host);
+      const onVis = () => {
+        pageVisible = !document.hidden;
+      };
+      document.addEventListener('visibilitychange', onVis);
+
+      // pointer tracking (pupils) + drag-to-rotate with spring back
+      const pointer = new THREE.Vector2(0, 0);
+      let dragging = false;
+      let lastX = 0;
+      let targetRotY = BASE_YAW;
+      let rotY = targetRotY;
+      let rotVel = 0;
+      const onPointerMove = (e: PointerEvent) => {
+        const rect = host.getBoundingClientRect();
+        pointer.set(
+          ((e.clientX - rect.left) / rect.width) * 2 - 1,
+          -(((e.clientY - rect.top) / rect.height) * 2 - 1),
+        );
+        if (dragging) {
+          targetRotY += (e.clientX - lastX) * 0.01;
+          lastX = e.clientX;
+        }
+      };
+      const onPointerDown = (e: PointerEvent) => {
+        if (!interactive || reduced) return;
+        dragging = true;
+        lastX = e.clientX;
+        renderer.domElement.setPointerCapture(e.pointerId);
+        renderer.domElement.style.cursor = 'grabbing';
+      };
+      const endDrag = () => {
+        dragging = false;
+        if (interactive) renderer.domElement.style.cursor = 'grab';
+      };
+      renderer.domElement.addEventListener('pointermove', onPointerMove);
+      renderer.domElement.addEventListener('pointerdown', onPointerDown);
+      renderer.domElement.addEventListener('pointerup', endDrag);
+      renderer.domElement.addEventListener('pointercancel', endDrag);
+
+      // animation state
+      let hitStart = -1;
+      let flashStart = -1;
+      let nextBlink = performance.now() + BLINK_MIN_MS + Math.random() * BLINK_SPAN_MS;
+      let blinkStart = -1;
+      let explodeStart = -1;
+      let escapeStart = -1;
+      let lastPhase = -1;
+      let lastState: BossVisualState | null = null;
+      engineRef.current = {
+        triggerHit: () => {
+          hitStart = performance.now();
+          flashStart = hitStart;
+        },
+      };
+
+      const rand = (lo: number, hi: number) => lo + Math.random() * (hi - lo);
+      const clock = new THREE.Clock();
+      let raf = 0;
+
+      const setPhaseVisibility = (p: number) => {
+        for (const b of built) {
+          const min = (b.mesh.userData.minPhase as number) ?? 0;
+          b.mesh.visible = min <= p;
+        }
+      };
+      setPhaseVisibility(phase);
+
+      const tick = () => {
+        raf = requestAnimationFrame(tick);
+        if (!visible || !pageVisible) return;
+        const now = performance.now();
+        const dt = Math.min(0.05, clock.getDelta() || 0.016);
+        const t = clock.elapsedTime;
+        const { state, phase } = liveRef.current;
+        frame();
+
+        // state transitions
+        if (state !== lastState) {
+          if (state === 'defeated' && lastState !== null) {
+            explodeStart = now;
+            for (const b of built) {
+              b.velocity.set(rand(-1.6, 1.6), rand(1.2, 2.6), rand(-0.8, 0.8));
+              b.spin.set(rand(-4, 4), rand(-4, 4), rand(-4, 4));
+            }
+          }
+          if (state === 'escaped' && lastState !== null) escapeStart = now;
+          lastState = state;
+        }
+        if (phase !== lastPhase) {
+          setPhaseVisibility(phase);
+          lastPhase = phase;
+        }
+
+        if (reduced) {
+          // static three-quarter pose, state changes via opacity cross-fade
+          rotY += (BASE_YAW - rotY) * 0.12;
+          group.rotation.y = rotY;
+          const targetOpacity = state === 'idle' ? 1 : 0.25;
+          for (const mat of slotMaterials.values()) {
+            mat.transparent = true;
+            mat.opacity += (targetOpacity - mat.opacity) * 0.1;
+          }
+        } else {
+          // idle bob + sway, faster when enraged
+          const speed = 1 + phase * 0.35;
+          const period = (boss.idle.periodMs / 1000) * Math.PI * 2;
+          const bob = Math.sin(t * speed * (2000 / boss.idle.periodMs) * Math.PI) * boss.idle.bob;
+          group.position.y = bob;
+          // shadow shrinks/fades a touch when the boss rises
+          shadow.scale.setScalar(Math.max(0.85, 1 - Math.max(0, bob) * 2));
+          shadowMat.opacity = Math.max(0.6, 1 - Math.max(0, bob) * 3);
+          group.rotation.z = Math.sin(t * speed * (period / Math.PI) * 0.5) * boss.idle.sway;
+
+          // drag rotation with spring back to the three-quarter pose
+          if (!dragging) targetRotY += (BASE_YAW - targetRotY) * 0.1;
+          const spring = (targetRotY - rotY) * 14;
+          rotVel = (rotVel + spring * dt) * Math.pow(0.0015, dt);
+          rotY += rotVel * dt;
+          group.rotation.y = rotY;
+
+          // pupils track the pointer; they shrink once enraged
+          const pupilScale = phase >= 2 ? 0.8 : 1;
+          for (const p of pupils) {
+            if (p.userData.baseX === undefined) {
+              p.userData.baseX = p.position.x;
+              p.userData.baseY = p.position.y;
+            }
+            p.position.x = p.userData.baseX + pointer.x * PUPIL_TRACK;
+            p.position.y = p.userData.baseY + pointer.y * PUPIL_TRACK;
+            p.scale.setScalar(pupilScale);
+          }
+
+          // eyebrows angle down from phase 2
+          const anger = phase >= 2 ? Math.min(1, (phase - 1) / 2) : 0;
+          for (const b of brows) {
+            b.mesh.rotation.z = b.baseRotZ + (b.side === 0 ? -0.12 : b.side * -0.25) * anger;
+          }
+
+          // blink
+          if (blinkStart < 0 && now >= nextBlink) blinkStart = now;
+          if (blinkStart >= 0) {
+            const k = Math.min(1, (now - blinkStart) / BLINK_MS);
+            const s = k < 0.5 ? 1 - k * 1.8 : 0.1 + (k - 0.5) * 1.8;
+            for (const e of eyes) e.scale.y = Math.max(0.1, s);
+            if (k >= 1) {
+              blinkStart = -1;
+              nextBlink = now + BLINK_MIN_MS + Math.random() * BLINK_SPAN_MS;
+              for (const e of eyes) e.scale.y = 1;
+            }
+          }
+
+          // hit squash + flash
+          if (hitStart >= 0) {
+            const k = (now - hitStart) / HIT_MS;
+            if (k >= 1) {
+              group.scale.set(1, 1, 1);
+              hitStart = -1;
+            } else {
+              const s = Math.sin(k * Math.PI);
+              group.scale.set(1 + s * 0.12, 1 - s * 0.18, 1 + s * 0.12);
+            }
+          }
+          if (flashStart >= 0) {
+            const k = (now - flashStart) / FLASH_MS;
+            flashMat.opacity = k >= 1 ? 0 : (1 - k) * 0.85;
+            if (k >= 1) flashStart = -1;
+          }
+
+          // enrage palette lerp + red-orange aura pulse
+          const f = phase / 3;
+          const enragedColor = (slot: Slot) => {
+            const base = slotColor(slot);
+            return boss.enragedPalette[slot]
+              ? base.lerp(new THREE.Color(boss.enragedPalette[slot]!), f)
+              : base;
+          };
+          for (const [slot, mat] of slotMaterials) mat.color.copy(enragedColor(slot));
+          for (const { mat, slot } of extraMaterials) {
+            const c = enragedColor(slot);
+            mat.color.copy(c);
+            mat.emissive.copy(c);
+          }
+          if (phase > 0) {
+            // peak ~0.35 at phase 1 rising to ~0.6 at phase 3, pulsing
+            const peak = 0.35 + 0.125 * (phase - 1);
+            const themeScale = themeMq.matches ? 1 : 0.5;
+            auraMat.opacity = peak * themeScale * (1 + 0.15 * Math.sin(t * 4));
+            aura.scale.setScalar(auraSize * (1 + 0.05 * f + 0.03 * f * Math.sin(t * 4)));
+          } else {
+            auraMat.opacity = 0;
+          }
+        }
+
+        // defeated: parts fly out with gravity then fade
+        if (explodeStart >= 0) {
+          const k = (now - explodeStart) / EXPLODE_MS;
+          for (const b of built) {
+            b.velocity.y -= 4.5 * dt;
+            b.mesh.position.addScaledVector(b.velocity, dt);
+            b.mesh.rotation.x += b.spin.x * dt;
+            b.mesh.rotation.y += b.spin.y * dt;
+            b.mesh.rotation.z += b.spin.z * dt;
+          }
+          const fade = Math.max(0, 1 - Math.max(0, k - 0.6) / 0.4);
+          for (const mat of slotMaterials.values()) {
+            mat.transparent = true;
+            mat.opacity = fade;
+          }
+          outlineMat.transparent = true;
+          outlineMat.opacity = fade;
+          shadowMat.opacity = fade;
+          if (k >= 1.4) group.visible = false;
+        }
+
+        // escaped: shrink + rise + fade
+        if (escapeStart >= 0) {
+          const k = Math.min(1, (now - escapeStart) / ESCAPE_MS);
+          const e = 1 - Math.pow(1 - k, 3);
+          group.scale.setScalar(Math.max(0.001, 1 - e));
+          group.position.y = e * 1.4;
+          for (const mat of slotMaterials.values()) {
+            mat.transparent = true;
+            mat.opacity = 1 - e;
+          }
+          outlineMat.transparent = true;
+          outlineMat.opacity = 1 - e;
+          shadowMat.opacity = 1 - e;
+        }
+
+        renderer.render(scene, camera);
+      };
+      raf = requestAnimationFrame(tick);
+
+      cleanup = () => {
+        cancelAnimationFrame(raf);
+        document.removeEventListener('visibilitychange', onVis);
+        themeMq.removeEventListener('change', applyAuraBlending);
+        io.disconnect();
+        ro.disconnect();
+        renderer.domElement.removeEventListener('pointermove', onPointerMove);
+        renderer.domElement.removeEventListener('pointerdown', onPointerDown);
+        renderer.domElement.removeEventListener('pointerup', endDrag);
+        renderer.domElement.removeEventListener('pointercancel', endDrag);
+        for (const d of disposables) d.dispose();
+        renderer.dispose();
+        renderer.domElement.remove();
+        engineRef.current = null;
+      };
+    };
+
+    void boot();
+    return () => {
+      disposed = true;
+      cleanup?.();
+    };
+    // The scene is built once per boss; state/phase/hit are read live inside tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boss.slug, interactive]);
+
+  const accessibleLabel = label ?? boss.name.en;
+
+  if (failed) {
+    return (
+      <BossFallback
+        boss={boss}
+        label={accessibleLabel}
+        hpFraction={hpFraction}
+        className={className}
+      />
+    );
+  }
+
+  return (
+    <div
+      ref={hostRef}
+      className={`relative overflow-hidden ${className ?? ''}`}
+      role="img"
+      aria-label={accessibleLabel}
+      data-phase={phase}
+      data-state={state}
+      data-boss={boss.slug}
+    >
+      {damageFloats.map((f) => (
+        <span
+          key={f.id}
+          className="boss-damage-float pointer-events-none absolute left-1/2 top-1/3 z-10 -translate-x-1/2 text-lg font-black text-red-500 drop-shadow"
+        >
+          -{f.damage.toLocaleString()}
+        </span>
+      ))}
+      <style>{`
+        .boss-damage-float {
+          animation: boss-damage-float 1.3s ease-out forwards;
+        }
+        @keyframes boss-damage-float {
+          0% {
+            transform: translate(-50%, 0) scale(0.6);
+            opacity: 0;
+          }
+          15% {
+            opacity: 1;
+            transform: translate(-50%, -12px) scale(1.15);
+          }
+          100% {
+            transform: translate(-50%, -52px) scale(1);
+            opacity: 0;
+          }
+        }
+      `}</style>
+    </div>
+  );
+}

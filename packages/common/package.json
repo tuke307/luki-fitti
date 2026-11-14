@@ -19,6 +19,14 @@
       "types": "./dist/enums/index.d.ts",
       "default": "./dist/enums/index.js"
     },
+    "./league": {
+      "types": "./dist/league/index.d.ts",
+      "default": "./dist/league/index.js"
+    },
+    "./raid": {
+      "types": "./dist/raid/index.d.ts",
+      "default": "./dist/raid/index.js"
+    },
     "./catalog": {
       "types": "./dist/catalog/index.d.ts",
       "default": "./dist/catalog/index.js"
@@ -35,6 +43,10 @@
       "types": "./dist/utils/client.d.ts",
       "default": "./dist/utils/client.js"
     },
+    "./push-messages": {
+      "types": "./dist/push-messages.d.ts",
+      "default": "./dist/push-messages.js"
+    },
     "./utils/crypto": {
       "types": "./dist/utils/crypto.util.d.ts",
       "default": "./dist/utils/crypto.util.js"
@@ -47,8 +59,10 @@
   "scripts": {
     "build": "tsc --build && tsc-alias -p tsconfig.json -f -fe .js",
     "lint": "eslint . --max-warnings 0",
-    "test": "node --import tsx --test 'src/**/*.spec.ts'",
-    "catalog:import": "tsx scripts/import-catalog.ts"
+    "test": "yarn raid:check && node --import tsx --test 'src/**/*.spec.ts'",
+    "catalog:import": "tsx scripts/import-catalog.ts",
+    "raid:export": "node scripts/export-raid-bosses.mjs",
+    "raid:check": "node scripts/export-raid-bosses.mjs --check"
   },
   "dependencies": {
     "date-fns": "^4.4.0",

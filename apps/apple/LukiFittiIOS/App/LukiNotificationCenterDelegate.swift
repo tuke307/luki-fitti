@@ -39,12 +39,27 @@ final class LukiNotificationCenterDelegate: NSObject, UNUserNotificationCenterDe
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
-        guard response.notification.request.content.categoryIdentifier == WeighInReminderScheduler.categoryIdentifier else {
+        let content = response.notification.request.content
+        guard content.categoryIdentifier == WeighInReminderScheduler.categoryIdentifier else {
+            // Remote (APNs) push: route the `url` userInfo key like the web `?open=` link.
+            if let url = content.userInfo["url"] as? String {
+                await handlePushUrl(url)
+            }
             return
         }
         let action = response.actionIdentifier
         let text = (response as? UNTextInputNotificationResponse)?.userText
         await handleWeighIn(action: action, text: text)
+    }
+
+    private func handlePushUrl(_ url: String) async {
+        guard let viewModel else { return }
+        switch SocialDeepLink.section(for: url) {
+        case .home:
+            viewModel.selectedTab = .home
+        case .social(let section):
+            viewModel.openSocial(section: section)
+        }
     }
 
     private func handleWeighIn(action: String, text: String?) async {

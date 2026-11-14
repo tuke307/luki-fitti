@@ -8,23 +8,36 @@ import {
   Patch,
   Put,
   Query,
+  Res,
+  StreamableFile,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AdminPermission } from '@luki-fitti/common/enums';
 import {
+  AdminReportsQuerySchema,
   AdminUserQuerySchema,
   AiUsageQuerySchema,
+  ResolveReportSchema,
   SetAiKeySchema,
   UpdateAiSettingsSchema,
+  UpdateApiKeysSettingsSchema,
+  UpdateLeagueSettingsSchema,
+  UpdateSocialSettingsSchema,
   UpdateUserAccessSchema,
+  type AdminReportsQueryDto,
   type AdminUserQueryDto,
   type AdminUserAiKeyDto,
   type AiModelCatalogDto,
   type AiUsageQueryDto,
+  type ResolveReportDto,
   type SetAiKeyDto,
   type UpdateAiSettingsDto,
+  type UpdateApiKeysSettingsDto,
+  type UpdateLeagueSettingsDto,
+  type UpdateSocialSettingsDto,
   type UpdateUserAccessDto,
 } from '@luki-fitti/common/schemas';
 import { AuthGuard } from '@/guards/auth.guard';
@@ -36,6 +49,7 @@ import { ZodValidationPipe } from '@/pipes/zod-validation.pipe';
 import { AppSettingsService } from '../app-settings/app-settings.service';
 import { AiKeyService } from '../ai/ai-key.service';
 import { OpenRouterModelsService } from '../ai/openrouter-models.service';
+import { LeagueService } from '../league/league.service';
 import { AdminService } from './admin.service';
 
 @ApiTags('Admin')
@@ -47,6 +61,7 @@ export class AdminController {
     private readonly appSettings: AppSettingsService,
     private readonly aiKeys: AiKeyService,
     private readonly modelCatalog: OpenRouterModelsService,
+    private readonly leagueService: LeagueService,
   ) {}
 
   @Get('dashboard')
@@ -127,6 +142,97 @@ export class AdminController {
   @ApiOperation({ summary: 'Update AI feature switches, models and limits' })
   updateAiSettings(@Body(new ZodValidationPipe(UpdateAiSettingsSchema)) body: UpdateAiSettingsDto) {
     return this.appSettings.updateAiSettings(body);
+  }
+
+  @Get('settings/social')
+  @RequirePermissions(AdminPermission.AI_SETTINGS_MANAGE)
+  @ApiOperation({ summary: 'Social kill switch and beta allowlist' })
+  getSocialSettings() {
+    return this.appSettings.getSocialSettings();
+  }
+
+  @Put('settings/social')
+  @UseGuards(CsrfGuard)
+  @RequirePermissions(AdminPermission.AI_SETTINGS_MANAGE)
+  @ApiOperation({ summary: 'Update social kill switch and beta allowlist' })
+  updateSocialSettings(
+    @Body(new ZodValidationPipe(UpdateSocialSettingsSchema)) body: UpdateSocialSettingsDto,
+  ) {
+    return this.appSettings.updateSocialSettings(body);
+  }
+
+  @Get('reports')
+  @RequirePermissions(AdminPermission.USERS_MANAGE)
+  @ApiOperation({ summary: 'UGC moderation queue (user reports)' })
+  listReports(@Query(new ZodValidationPipe(AdminReportsQuerySchema)) query: AdminReportsQueryDto) {
+    return this.adminService.listReports(query);
+  }
+
+  @Get('reports/:id/avatar')
+  @RequirePermissions(AdminPermission.USERS_MANAGE)
+  @ApiOperation({ summary: "Stream a report's avatar evidence copy" })
+  async getReportAvatar(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const body = await this.adminService.getReportAvatar(id);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    // Stored avatars are always re-encoded JPEGs; never echo a stored content type.
+    return new StreamableFile(body, { type: 'image/jpeg', disposition: 'inline' });
+  }
+
+  @Patch('reports/:id')
+  @UseGuards(CsrfGuard)
+  @RequirePermissions(AdminPermission.USERS_MANAGE)
+  @ApiOperation({ summary: 'Resolve/dismiss a report, optionally clearing avatar or handle' })
+  resolveReport(
+    @CurrentUser() actor: AuthenticatedUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body(new ZodValidationPipe(ResolveReportSchema)) body: ResolveReportDto,
+  ) {
+    return this.adminService.resolveReport(actor.id, id, body);
+  }
+
+  @Get('settings/api-keys')
+  @RequirePermissions(AdminPermission.AI_SETTINGS_MANAGE)
+  @ApiOperation({ summary: 'Personal API keys kill switch' })
+  getApiKeySettings() {
+    return this.appSettings.getApiKeySettings();
+  }
+
+  @Put('settings/api-keys')
+  @UseGuards(CsrfGuard)
+  @RequirePermissions(AdminPermission.AI_SETTINGS_MANAGE)
+  @ApiOperation({ summary: 'Update the personal API keys kill switch' })
+  updateApiKeySettings(
+    @Body(new ZodValidationPipe(UpdateApiKeysSettingsSchema)) body: UpdateApiKeysSettingsDto,
+  ) {
+    return this.appSettings.updateApiKeySettings(body);
+  }
+
+  @Get('settings/leagues')
+  @RequirePermissions(AdminPermission.AI_SETTINGS_MANAGE)
+  @ApiOperation({ summary: 'League rollout settings (kill switch, stage, cohort size, caps)' })
+  getLeagueSettings() {
+    return this.appSettings.getLeagueSettings();
+  }
+
+  @Put('settings/leagues')
+  @UseGuards(CsrfGuard)
+  @RequirePermissions(AdminPermission.AI_SETTINGS_MANAGE)
+  @ApiOperation({ summary: 'Update league rollout settings' })
+  updateLeagueSettings(
+    @Body(new ZodValidationPipe(UpdateLeagueSettingsSchema)) body: UpdateLeagueSettingsDto,
+  ) {
+    return this.appSettings.updateLeagueSettings(body);
+  }
+
+  @Get('leagues/preview')
+  @RequirePermissions(AdminPermission.AI_SETTINGS_MANAGE)
+  @ApiOperation({ summary: 'Dry-run of the next weekly league rollover' })
+  leaguePreview() {
+    return this.leagueService.adminPreview();
   }
 
   @Get('ai-usage')

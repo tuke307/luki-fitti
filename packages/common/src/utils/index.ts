@@ -23,3 +23,7 @@ export * from './feature-request.util';
 export * from './import-file.util';
 export * from './history-insights.util';
 export * from './training-goal.util';
+export * from './social.util';
+export * from './league-time.util';
+export * from './effort-points.util';
+export * from './api-key.util';

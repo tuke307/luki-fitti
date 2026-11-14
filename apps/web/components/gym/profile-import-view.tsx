@@ -43,6 +43,7 @@ import { Label } from '@luki-fitti/ui/components/ui/label';
 import { toast } from '@luki-fitti/ui/components/ui/sonner';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useAuth } from '@/providers/auth/auth-context';
+import { api } from '@/lib/api';
 import { trackEvent } from '@/lib/analytics/track';
 import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
@@ -62,6 +63,7 @@ import { AiUsageView } from './ai-usage/ai-usage-view';
 import { AiKeyCard } from './ai-key-card';
 import { AiModelsPage } from './settings/ai-models-page';
 import { ImportPage } from './settings/import-page';
+import { ApiKeysPage } from './settings/api-keys-page';
 import { buildFeatureRequestMailto, buildImportFile } from '@luki-fitti/common/utils';
 import { AI_KEY_NAVIGATE_EVENT } from '@/lib/ai/ai-key-required';
 import {
@@ -75,6 +77,7 @@ import {
   SettingsSubpage,
   SettingsSwitchRow,
 } from './settings/settings-row';
+import { PushSettingsCard } from '@/components/gym/settings/push-settings-card';
 import { PageTitle } from './page-title';
 import { unitLabel } from '@/lib/format/weight';
 import { WeightView } from './weight/weight-view';
@@ -100,6 +103,7 @@ const SETTINGS_PAGES = [
   'aiKey',
   'aiModels',
   'aiUsage',
+  'apiKeys',
   'export',
   'import',
   'sources',
@@ -112,6 +116,7 @@ const AUTH_ONLY_PAGES: ReadonlySet<SettingsPage> = new Set([
   'aiKey',
   'aiModels',
   'aiUsage',
+  'apiKeys',
 ]);
 
 const REST_OPTIONS = [60, 75, 90, 120, 150, 180] as const;
@@ -129,6 +134,13 @@ const HISTORY_KEY = 'profilePage';
 
 function isSettingsPage(value: unknown): value is SettingsPage {
   return typeof value === 'string' && (SETTINGS_PAGES as readonly string[]).includes(value);
+}
+
+let pendingSettingsPage: SettingsPage | null = null;
+
+/** Call before opening the profile so the settings view mounts on that page (e.g. `?open=` deep links). */
+export function requestSettingsPage(page: SettingsPage): void {
+  pendingSettingsPage = page;
 }
 
 function readHistoryPage(): SettingsPage | null {
@@ -164,14 +176,17 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [logoutAllDialogOpen, setLogoutAllDialogOpen] = useState(false);
+  const [activeApiKeyCount, setActiveApiKeyCount] = useState(0);
   const navigatorOs =
     typeof navigator !== 'undefined'
       ? ((navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData
           ?.platform ?? undefined)
       : undefined;
-  const [page, setPage] = useState<SettingsPage>(() =>
-    hasPendingWeightFocusRequest() ? 'health' : 'root',
-  );
+  const [page, setPage] = useState<SettingsPage>(() => {
+    const pending = pendingSettingsPage;
+    pendingSettingsPage = null;
+    return pending ?? (hasPendingWeightFocusRequest() ? 'health' : 'root');
+  });
   const initialPage = useRef(page);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const lastOpened = useRef<SettingsPage | null>(null);
@@ -299,6 +314,7 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
     aiKey: t.profile.rowAiKey,
     aiModels: t.profile.rowAiModels,
     aiUsage: t.profile.rowAiUsage,
+    apiKeys: t.apiKeys.title,
     export: t.profile.rowDataExport,
     import: t.profile.rowDataImport,
     sources: t.profile.rowDataSources,
@@ -317,6 +333,21 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
+
+  useEffect(() => {
+    if (!logoutAllDialogOpen || !isAuthenticated) return;
+    let cancelled = false;
+    api.apiKeys
+      .list()
+      .then((list) => {
+        if (!cancelled)
+          setActiveApiKeyCount((list.data?.keys ?? []).filter((k) => k.status === 'active').length);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [logoutAllDialogOpen, isAuthenticated]);
 
   useEffect(() => {
     if (!focusAfterChange.current) return;
@@ -643,6 +674,7 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
               onCheckedChange={(checked) => void updatePreferences({ restTimerSound: checked })}
               data-testid="rest-sound-switch"
             />
+            {isAuthenticated && <PushSettingsCard />}
             <SettingsButtonRow
               title={t.profile.sendTestNotificationBtn}
               data-testid="profile-test-notification-btn"
@@ -710,6 +742,8 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
             <AiUsageView />
           </Card>
         );
+      case 'apiKeys':
+        return <ApiKeysPage />;
       case 'import':
         return <ImportPage isAuthenticated={isAuthenticated} />;
       case 'export':
@@ -941,6 +975,15 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
                 tone="stretch"
                 title={t.profile.rowDataExport}
               />
+              {isAuthenticated && (
+                <SettingsRow
+                  onClick={() => openPage('apiKeys')}
+                  data-testid="settings-row-api-keys"
+                  icon={KeyRound}
+                  tone="stretch"
+                  title={t.profile.rowApiKeys}
+                />
+              )}
               <SettingsRow
                 onClick={() => openPage('sources')}
                 data-testid="settings-row-sources"
@@ -1073,6 +1116,21 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
             </DialogTitle>
             <DialogDescription>{t.profile.signOutAllDialogDesc}</DialogDescription>
           </DialogHeader>
+          {activeApiKeyCount > 0 && (
+            <p className="text-muted-foreground text-xs" data-testid="signout-all-api-keys-hint">
+              {format(t.apiKeys.hintActiveKeys, { count: activeApiKeyCount })}{' '}
+              <button
+                type="button"
+                className="text-primary font-semibold underline underline-offset-2"
+                onClick={() => {
+                  setLogoutAllDialogOpen(false);
+                  openPage('apiKeys');
+                }}
+              >
+                {t.apiKeys.hintReview}
+              </button>
+            </p>
+          )}
           <DialogFooter>
             <Button
               type="button"

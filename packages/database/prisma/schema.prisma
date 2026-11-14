@@ -176,6 +176,22 @@ model User {
   lastLoginAt              DateTime?
   /// Admin portal permissions (AdminPermission values). Empty = regular user.
   permissions              String[]  @default([])
+  /// Social: unique @handle, stored lowercase; null = invisible to other users.
+  handle                   String?   @unique
+  handleChangedAt          DateTime?
+  /// Storage key of the re-encoded 512px JPEG avatar (private, streamed by the API).
+  avatarKey                String?
+  avatarUpdatedAt          DateTime?
+  /// SHA-256 hex of lower(trim(email)); powers opt-in contact matching.
+  emailLookupHash          String?   @unique
+  /// Opt-in "find me by email" contact matching.
+  discoverableByEmail      Boolean   @default(true)
+  /// Pause competing: hidden from leagues, no social pushes; friends stay.
+  socialPaused             Boolean   @default(false)
+  /// Current league arena; changed by the weekly rollover and inactivity drops.
+  arena                    Arena     @default(BRONZE)
+  /// Consecutive closed league weeks without a membership; at 2 the arena drops one step.
+  leagueInactiveWeeks      Int       @default(0)
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
 
@@ -195,8 +211,38 @@ model User {
   aiRuns             AiRun[]
   /// Encrypted OpenRouter keys (never select with the user; see UserAiKey).
   aiKeys             UserAiKey[]
+  /// Personal API keys for the read-only public API (hashed secrets only).
+  apiKeys            ApiKey[]
   importJobs         ImportJob[]
   progressCheckIns   ProgressCheckIn[]
+
+  friendshipsA        Friendship[]          @relation("FriendshipUserA")
+  friendshipsB        Friendship[]          @relation("FriendshipUserB")
+  friendRequestsMade  Friendship[]          @relation("FriendshipRequestedBy")
+  friendInvites       FriendInvite[]
+  blocksMade          UserBlock[]           @relation("BlockBlocker")
+  blocksReceived      UserBlock[]           @relation("BlockBlocked")
+  reportsMade         UserReport[]          @relation("ReportReporter")
+  reportsReceived     UserReport[]          @relation("ReportReported")
+  reportsResolved     UserReport[]          @relation("ReportResolver")
+  pushDevices         PushDevice[]
+  notifications       Notification[]
+  notificationActions Notification[]        @relation("NotificationActor")
+  effortPointEntries  EffortPointEntry[]
+  weeklyScores        WeeklyScore[]
+  leagueMemberships   LeagueMembership[]
+  duelsChallenged     Duel[]                @relation("DuelChallenger")
+  duelsOpponent       Duel[]                @relation("DuelOpponent")
+  duelsWon            Duel[]                @relation("DuelWinner")
+  streaksRequested    FriendStreak[]        @relation("StreakRequestedBy")
+  trophies            Trophy[]
+  raidHits            RaidHit[]
+  raidFinalBlows      Raid[]                @relation("RaidFinalBlow")
+  raidSeen            RaidParticipantSeen[]
+  squadMemberships    SquadMember[]
+  squadsCreated       Squad[]               @relation("SquadCreator")
+  squadInvites        SquadInvite[]         @relation("SquadInvited")
+  squadInvitesSent    SquadInvite[]         @relation("SquadInviter")
 }
 
 model UserPreferences {
@@ -241,6 +287,16 @@ model UserPreferences {
   progressAiConsentAt        DateTime?
   /// Per-skill OpenRouter model choice: Partial<Record<AiSkillName, modelId>>; null = defaults.
   aiModels                   Json?
+  /// Push category toggle: friend requests and accepted friendships.
+  pushFriends                Boolean       @default(true)
+  /// Push category toggle: league outcomes and end-of-week reminders.
+  pushLeagues                Boolean       @default(true)
+  /// Push category toggle: duel invites, standings and results.
+  pushDuels                  Boolean       @default(true)
+  /// Push category toggle: friend-streak invites, reminders and outcomes.
+  pushStreaks                Boolean       @default(true)
+  /// Push category toggle: raid spawns, phases, outcomes and squad activity.
+  pushRaids                  Boolean       @default(true)
   createdAt                  DateTime      @default(now())
   updatedAt                  DateTime      @updatedAt
 
@@ -491,6 +547,7 @@ model WorkoutSession {
   template          WorkoutTemplate?   @relation(fields: [templateId], references: [id], onDelete: SetNull)
   stretchingRoutine StretchingRoutine? @relation(fields: [stretchingRoutineId], references: [id], onDelete: SetNull)
   exercises         SessionExercise[]
+  effortPointEntry  EffortPointEntry?
 
   @@index([userId, startedAt])
   @@index([userId, status])
@@ -562,26 +619,56 @@ model SessionSet {
 
 /// Single-row application settings (id = 1), edited in the admin portal.
 model AppSettings {
-  id                      Int      @id @default(1)
+  id                      Int             @id @default(1)
   /// Global kill switches. A user additionally needs a usable OpenRouter key.
-  aiWorkoutBuilderEnabled Boolean  @default(true)
-  aiMealPhotoEnabled      Boolean  @default(true)
+  aiWorkoutBuilderEnabled Boolean         @default(true)
+  aiMealPhotoEnabled      Boolean         @default(true)
   /// OpenRouter model ids (e.g. "openai/gpt-6.1-terra"); fallbacks are tried in order.
-  workoutBuilderModel     String   @default("openai/gpt-6.1-terra")
-  workoutBuilderFallbacks String[] @default(["google/gemini-3.8-flash"])
-  mealPhotoModel          String   @default("google/gemini-3.8-flash")
-  mealPhotoFallbacks      String[] @default(["openai/gpt-6.1-terra"])
+  workoutBuilderModel     String          @default("openai/gpt-6.1-terra")
+  workoutBuilderFallbacks String[]        @default(["google/gemini-3.8-flash"])
+  mealPhotoModel          String          @default("google/gemini-3.8-flash")
+  mealPhotoFallbacks      String[]        @default(["openai/gpt-6.1-terra"])
   /// Max AI runs per user per UTC day across all AI features.
-  aiDailyRunLimit         Int      @default(30)
+  aiDailyRunLimit         Int             @default(30)
   /// Delete stored meal photos after N days; null keeps them until the meal is deleted.
   mealPhotoRetentionDays  Int?
   /// Models users on an admin-assigned key may choose from (own-key users may pick any capable model).
-  userModelAllowlist      String[] @default([])
+  userModelAllowlist      String[]        @default([])
   /// AI "target photo" for progress tracking (part B).
-  aiProgressTargetEnabled Boolean  @default(true)
-  progressTargetModel     String   @default("google/gemini-nano-banana-2.1")
-  progressTargetFallbacks String[] @default(["bytedance-seed/seedream-5-0-flash"])
-  updatedAt               DateTime @updatedAt
+  aiProgressTargetEnabled Boolean         @default(true)
+  progressTargetModel     String          @default("google/gemini-nano-banana-2.1")
+  progressTargetFallbacks String[]        @default(["bytedance-seed/seedream-5-0-flash"])
+  /// Social kill switch: off by default, enabled per rollout (see docs/social-2.0.md).
+  socialEnabled           Boolean         @default(false)
+  /// Beta allowlist; empty = everyone once socialEnabled is on.
+  socialBetaUserIds       String[]        @default([])
+  /// Leagues/effort-points kill switch: off → /league/* 403 and no points recorded.
+  leaguesEnabled          Boolean         @default(true)
+  /// AUTO picks the stage from activeUsers thresholds; the other values force it.
+  leagueStageMode         LeagueStageMode @default(AUTO)
+  /// AUTO: minimum eligible users active last week for stage GLOBAL.
+  leagueStage2MinUsers    Int             @default(10)
+  /// AUTO: minimum eligible users active last week for stage ARENAS.
+  leagueStage3MinUsers    Int             @default(150)
+  /// Maximum members per cohort (GLOBAL ignores this: one cohort per week).
+  leagueCohortSize        Int             @default(30)
+  /// Per-day cap applied when the weekly score is recomputed.
+  epDailyCap              Int             @default(600)
+  /// Weekly bonus when entries with points > 0 reach the user's weeklyGoalSessions.
+  epWeeklyGoalBonus       Int             @default(100)
+  /// Duels kill switch: off → /duels/* 403 and the tick/standings jobs no-op.
+  duelsEnabled            Boolean         @default(true)
+  /// Friend-streak kill switch: off → /streaks/* 403 and no evaluation/reminders.
+  streaksEnabled          Boolean         @default(true)
+  /// Raids kill switch: off → /raids/* and /squads/* 403, no spawn/escape/damage.
+  raidsEnabled            Boolean         @default(true)
+  /// Community raid HP per eligible active user (last 4 closed weeks).
+  raidHpPerActiveUser     Int             @default(400)
+  /// Community raid HP floor.
+  raidMinHp               Int             @default(2000)
+  /// Personal API keys kill switch: off → /api/v1/* 403 and key creation blocked.
+  apiKeysEnabled          Boolean         @default(false)
+  updatedAt               DateTime        @updatedAt
 }
 
 /// Who provided the OpenRouter key used for AI runs.
@@ -613,6 +700,29 @@ model UserAiKey {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, slot])
+}
+
+/// Personal API key (`lf_pat_<id>_<secret>`) for the read-only public API /api/v1.
+/// Only the HMAC-SHA256(API_KEY_PEPPER, secret) hash is stored; the secret is shown once.
+model ApiKey {
+  /// The 8-char public id embedded in the key (lookup key, shown in the UI).
+  id         String    @id
+  userId     String
+  /// 1–40 chars.
+  name       String
+  /// hex(HMAC-SHA256(API_KEY_PEPPER, secret)).
+  secretHash String
+  /// ApiKeyScope values, validated in zod.
+  scopes     String[]
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  /// Updated at most once per minute per key (Redis-gated, fire-and-forget).
+  lastUsedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 enum AiRunStatus {
@@ -754,6 +864,7 @@ enum EmailTemplateType {
   ACCOUNT_CONFIRMATION
   PASSWORD_RESET
   ACCOUNT_DELETION
+  API_KEY_CREATED
 }
 
 enum EmailStatus {
@@ -945,4 +1056,534 @@ model ImportJob {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+}
+
+enum PushPlatform {
+  APNS
+  WEBPUSH
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  INAPPROPRIATE_NAME
+  INAPPROPRIATE_AVATAR
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+enum NotificationKind {
+  FRIEND_REQUEST
+  FRIEND_ACCEPTED
+  LEAGUE_PROMOTED
+  LEAGUE_DEMOTED
+  LEAGUE_ENDING
+  DUEL_INVITE
+  DUEL_ACCEPTED
+  DUEL_STANDINGS
+  DUEL_RESULT
+  STREAK_INVITE
+  STREAK_STARTED
+  STREAK_REMINDER
+  STREAK_FROZEN
+  STREAK_BROKEN
+  RAID_SPAWNED
+  RAID_PHASE
+  RAID_DEFEATED
+  RAID_ESCAPED
+  SQUAD_INVITE
+  SQUAD_RAID_STARTED
+}
+
+/// Mutual friendship. The pair is stored once with userAId < userBId;
+/// PENDING until the other side accepts (requestedById records who asked).
+model Friendship {
+  id            String           @id @default(uuid())
+  userAId       String
+  userBId       String
+  requestedById String
+  status        FriendshipStatus
+  createdAt     DateTime         @default(now())
+  acceptedAt    DateTime?
+
+  userA       User          @relation("FriendshipUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB       User          @relation("FriendshipUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  requestedBy User          @relation("FriendshipRequestedBy", fields: [requestedById], references: [id], onDelete: Cascade)
+  /// One streak per friendship; cascades with it (unfriend/block end the streak).
+  streak      FriendStreak?
+
+  @@unique([userAId, userBId])
+  @@index([userBId])
+}
+
+/// Shareable friend-invite link. Only the SHA-256 of the token is stored —
+/// a DB leak can never mint invite links.
+model FriendInvite {
+  id          String   @id @default(uuid())
+  /// SHA-256 hex of the random base64url token in the URL.
+  tokenHash   String   @unique
+  createdById String
+  expiresAt   DateTime
+  maxUses     Int      @default(20)
+  uses        Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([createdById])
+}
+
+/// Block hides both users from each other everywhere (deny by default).
+model UserBlock {
+  id        String   @id @default(uuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker User @relation("BlockBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("BlockBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+}
+
+/// UGC moderation report; snapshots keep evidence even if the profile changes later.
+model UserReport {
+  id                String       @id @default(uuid())
+  reporterId        String
+  reportedId        String
+  reason            ReportReason
+  /// Free-text context, max 500 chars (validated in zod).
+  details           String?
+  handleSnapshot    String?
+  nameSnapshot      String?
+  avatarKeySnapshot String?
+  status            ReportStatus @default(OPEN)
+  createdAt         DateTime     @default(now())
+  resolvedAt        DateTime?
+  resolvedById      String?
+
+  reporter   User  @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reported   User  @relation("ReportReported", fields: [reportedId], references: [id], onDelete: Cascade)
+  resolvedBy User? @relation("ReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+}
+
+/// One push target per device: APNs device token or Web Push subscription endpoint.
+model PushDevice {
+  id          String       @id @default(uuid())
+  userId      String
+  platform    PushPlatform
+  /// APNs hex token or Web Push endpoint URL; unique so a reinstall moves it to its owner.
+  token       String       @unique
+  /// Web Push keys (null for APNs).
+  p256dh      String?
+  auth        String?
+  /// Debug builds use the APNs sandbox environment.
+  apnsSandbox Boolean      @default(false)
+  /// BCP-47 locale ("en", "de") for notification text.
+  locale      String
+  /// IANA time zone for quiet hours, e.g. "Europe/Berlin".
+  timeZone    String
+  lastSeenAt  DateTime     @default(now())
+  createdAt   DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// In-app notification inbox; mirrors every push so it works without push permission.
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  kind      NotificationKind
+  /// The user the notification is about (e.g. the friend who requested).
+  actorId   String?
+  /// Extra data for the client (deep-link url, etc.); never PII beyond the actor.
+  payload   Json
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actor User? @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Leagues (PR 2): effort points ledger, weekly scores, cohorts
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum Arena {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+  DIAMOND
+  OBSIDIAN
+  TITAN
+}
+
+enum LeagueStage {
+  FRIENDS
+  GLOBAL
+  ARENAS
+}
+
+enum LeagueStageMode {
+  AUTO
+  FRIENDS
+  GLOBAL
+  ARENAS
+}
+
+enum LeagueOutcome {
+  PROMOTED
+  STAYED
+  DEMOTED
+}
+
+/// One ledger entry per completed session: points can only go down on recompute.
+model EffortPointEntry {
+  id          String   @id @default(uuid())
+  userId      String
+  /// FK cascade: deleting the session deletes its points; WeeklyScore is recomputed.
+  sessionId   String   @unique
+  /// League week of the session (Monday of its Berlin completion day, YYYY-MM-DD).
+  weekKey     String
+  /// Berlin calendar day of the session, YYYY-MM-DD.
+  dayKey      String
+  /// Effective points: firstPoints on create, min(firstPoints, recompute) afterwards.
+  points      Int
+  /// Points at first computation — the ceiling for later edits.
+  firstPoints Int
+  /// computeSessionEffortPoints breakdown (audit + UI).
+  breakdown   Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([userId, weekKey])
+}
+
+/// Weekly aggregate per user: daily-capped points + goal bonus, recomputed from the ledger.
+model WeeklyScore {
+  id          String   @id @default(uuid())
+  userId      String
+  weekKey     String
+  /// Sum over days of min(epDailyCap, day points) + goalBonus.
+  points      Int
+  /// Uncapped weekly sum (no daily cap, no bonus).
+  rawPoints   Int
+  /// Number of ledger entries this week.
+  sessions    Int
+  /// epWeeklyGoalBonus when the weekly session goal was met, else 0.
+  goalBonus   Int
+  /// Entries with points > 0 reached the user's weeklyGoalSessions (streak input;
+  /// independent of epWeeklyGoalBonus).
+  goalReached Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekKey])
+  /// Leaderboard/cohort scans order by points within a week.
+  @@index([weekKey, points])
+}
+
+/// One row per league week; created lazily on first access or by the rollover.
+/// closedAt marks the rollover as done — the guard that makes it idempotent.
+model LeagueWeek {
+  weekKey     String      @id
+  stage       LeagueStage
+  /// Eligible users with WeeklyScore.points > 0 in the previous week (AUTO input).
+  activeUsers Int
+  /// ARENAS only: Arena → bucket index, computed at creation (see league.util).
+  buckets     Json?
+  closedAt    DateTime?
+  createdAt   DateTime    @default(now())
+}
+
+/// A ranked group for one week. bucket = arena bucket (ARENAS); null = GLOBAL.
+model LeagueCohort {
+  id        String   @id @default(uuid())
+  weekKey   String
+  bucket    Int?
+  createdAt DateTime @default(now())
+
+  members LeagueMembership[]
+
+  @@index([weekKey, bucket])
+}
+
+/// One row per user per week: the cohort they ranked in and the rollover result.
+model LeagueMembership {
+  id           String         @id @default(uuid())
+  cohortId     String
+  userId       String
+  /// Denormalised for the (userId, weekKey) unique constraint and lookups.
+  weekKey      String
+  arenaAtStart Arena
+  finalPoints  Int?
+  finalRank    Int?
+  outcome      LeagueOutcome?
+  /// Set once the client has shown the promotion/demotion celebration.
+  resultSeenAt DateTime?
+  joinedAt     DateTime       @default(now())
+
+  cohort LeagueCohort @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekKey])
+  @@index([cohortId])
+}
+
+enum DuelStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  DECLINED
+  CANCELLED
+  EXPIRED
+}
+
+enum FriendStreakStatus {
+  PENDING
+  ACTIVE
+}
+
+enum TrophyKind {
+  DUEL_WIN
+  RAID_DEFEATED
+  RAID_CROWN
+  RAID_FINAL_BLOW
+}
+
+/// 1v1 weekly duel between friends. Scores are the daily-capped EP sums over
+/// [startDayKey, endDayKey); recomputed on each session sync and at completion.
+model Duel {
+  id                  String     @id @default(uuid())
+  challengerId        String
+  opponentId          String
+  status              DuelStatus @default(PENDING)
+  createdAt           DateTime   @default(now())
+  respondedAt         DateTime?
+  /// Berlin day the duel starts (set on accept); YYYY-MM-DD.
+  startDayKey         String?
+  /// Exclusive end day key: startDayKey + 7.
+  endDayKey           String?
+  /// Berlin-midnight UTC instants matching the day keys.
+  startsAt            DateTime?
+  endsAt              DateTime?
+  challengerPoints    Int        @default(0)
+  opponentPoints      Int        @default(0)
+  winnerId            String?
+  isTie               Boolean    @default(false)
+  /// Set once each side has seen the result (drives pendingResult).
+  challengerSeenAt    DateTime?
+  opponentSeenAt      DateTime?
+  /// Guard for the once-per-day standings push.
+  lastStandingsDayKey String?
+
+  challenger User  @relation("DuelChallenger", fields: [challengerId], references: [id], onDelete: Cascade)
+  opponent   User  @relation("DuelOpponent", fields: [opponentId], references: [id], onDelete: Cascade)
+  winner     User? @relation("DuelWinner", fields: [winnerId], references: [id], onDelete: SetNull)
+
+  @@index([challengerId, status])
+  @@index([opponentId, status])
+  /// The tick job scans ACTIVE duels by endsAt.
+  @@index([status, endsAt])
+}
+
+/// Weekly friend streak: both partners hitting their weeklyGoalSessions keeps
+/// the count alive; up to 2 freezes absorb a missed week. Cascades with the
+/// friendship, so unfriending or blocking ends it silently.
+model FriendStreak {
+  id                   String             @id @default(uuid())
+  friendshipId         String             @unique
+  status               FriendStreakStatus
+  requestedById        String
+  count                Int                @default(0)
+  longest              Int                @default(0)
+  /// League week (Monday, YYYY-MM-DD) the streak started counting.
+  startedWeekKey       String?
+  /// Last closed week the rollover evaluated.
+  lastEvaluatedWeekKey String?
+  /// Banked freezes (max 2).
+  freezes              Int                @default(0)
+  /// Consecutive kept weeks since the last freeze was earned/consumed.
+  weeksSinceFreeze     Int                @default(0)
+  /// Guard for the once-per-week reminder.
+  lastReminderWeekKey  String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  friendship  Friendship @relation(fields: [friendshipId], references: [id], onDelete: Cascade)
+  requestedBy User       @relation("StreakRequestedBy", fields: [requestedById], references: [id], onDelete: Cascade)
+}
+
+/// Earned achievements; one row per (user, kind, refId). PR 4 adds RAID_* kinds.
+model Trophy {
+  id        String     @id @default(uuid())
+  userId    String
+  kind      TrophyKind
+  /// Source object (e.g. the duel id) — keeps the award idempotent.
+  refId     String
+  tier      String?
+  createdAt DateTime   @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, refId])
+  @@index([userId, createdAt])
+}
+
+enum RaidKind {
+  /// One shared boss for everyone, spawned every week.
+  COMMUNITY
+  /// A squad's own boss, one per squad per week.
+  SQUAD
+}
+
+enum RaidStatus {
+  ACTIVE
+  DEFEATED
+  ESCAPED
+}
+
+enum RaidDifficulty {
+  NORMAL
+  HARD
+  HEROIC
+}
+
+enum SquadRole {
+  OWNER
+  MEMBER
+}
+
+/// Weekly raid boss. COMMUNITY rows have squadId = null (uniqueness is enforced
+/// by the partial index "Raid_community_week" added in the raids migration).
+/// `damage` is the running sum of all applied RaidHits.
+model Raid {
+  id              String          @id @default(uuid())
+  kind            RaidKind
+  squadId         String?
+  bossSlug        String
+  difficulty      RaidDifficulty?
+  /// League week (Monday, YYYY-MM-DD) the raid belongs to.
+  weekKey         String
+  startsAt        DateTime
+  endsAt          DateTime
+  maxHp           Int
+  damage          Int             @default(0)
+  /// Enrage thresholds crossed: 1/2/3 at 75/50/25 % HP left.
+  phase           Int             @default(0)
+  status          RaidStatus      @default(ACTIVE)
+  defeatedAt      DateTime?
+  finalBlowUserId String?
+  createdAt       DateTime        @default(now())
+
+  squad     Squad?                @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  finalBlow User?                 @relation("RaidFinalBlow", fields: [finalBlowUserId], references: [id], onDelete: SetNull)
+  hits      RaidHit[]
+  seenBy    RaidParticipantSeen[]
+
+  @@unique([kind, weekKey, squadId])
+  /// The spawn/escape job scans ACTIVE raids by endsAt.
+  @@index([status, endsAt])
+  @@index([squadId, weekKey])
+}
+
+/// One hit = one completed session applied to one raid. `firstDamage` keeps the
+/// first computed value so a re-sync can only lower the hit (min, like the
+/// EffortPointEntry ledger).
+model RaidHit {
+  id             String   @id @default(uuid())
+  raidId         String
+  userId         String
+  sessionId      String
+  damage         Int
+  firstDamage    Int
+  /// The portion of `damage` earned through the boss's weak spots (2× part).
+  weakSpotDamage Int      @default(0)
+  /// Display label for the feed (friends/self only — privacy filtered on read).
+  topExercise    String?
+  /// Berlin day of the hit, for the per-user-per-day damage cap.
+  dayKey         String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  raid Raid @relation(fields: [raidId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([raidId, sessionId])
+  @@index([raidId, createdAt])
+  @@index([raidId, userId])
+}
+
+/// Defeat/escape celebration is shown once per participant.
+model RaidParticipantSeen {
+  raidId String
+  userId String
+  seenAt DateTime @default(now())
+
+  raid Raid @relation(fields: [raidId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([raidId, userId])
+}
+
+/// Friend raid squad: max 10 members, 3 squads per user, friends-only invites.
+model Squad {
+  id          String   @id @default(uuid())
+  name        String
+  createdById String
+  createdAt   DateTime @default(now())
+
+  createdBy User          @relation("SquadCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  members   SquadMember[]
+  invites   SquadInvite[]
+  raids     Raid[]
+}
+
+model SquadMember {
+  squadId  String
+  userId   String
+  role     SquadRole
+  joinedAt DateTime  @default(now())
+
+  squad Squad @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([squadId, userId])
+  @@index([userId])
+}
+
+model SquadInvite {
+  id          String   @id @default(uuid())
+  squadId     String
+  invitedId   String
+  invitedById String
+  createdAt   DateTime @default(now())
+
+  squad     Squad @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  invited   User  @relation("SquadInvited", fields: [invitedId], references: [id], onDelete: Cascade)
+  invitedBy User  @relation("SquadInviter", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@unique([squadId, invitedId])
 }
