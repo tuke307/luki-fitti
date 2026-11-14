@@ -1,0 +1,559 @@
+/**
+ * Docs site theme: maps Fumadocs' --color-fd-* variables onto the LukiFitti design
+ * tokens (system grays, the ember --primary, true-black dark mode) and restyles the
+ * pieces where the defaults diverge from the product's look.
+ *
+ * The Fumadocs preset uses `@apply`, so it must live in a file that imports
+ * tailwindcss itself. This stylesheet therefore carries its own Tailwind copy,
+ * scoped to the docs routes that import it.
+ */
+
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/black.css';
+@import 'fumadocs-ui/css/preset-legacy.css';
+
+:root {
+  --color-fd-background: var(--background);
+  --color-fd-foreground: var(--foreground);
+  --color-fd-muted: var(--muted);
+  --color-fd-muted-foreground: var(--muted-foreground);
+  --color-fd-popover: var(--popover);
+  --color-fd-popover-foreground: var(--popover-foreground);
+  --color-fd-card: var(--card);
+  --color-fd-card-foreground: var(--card-foreground);
+  --color-fd-border: var(--border);
+  --color-fd-primary: var(--primary);
+  --color-fd-primary-foreground: var(--primary-foreground);
+  --color-fd-secondary: var(--secondary);
+  --color-fd-secondary-foreground: var(--secondary-foreground);
+  --color-fd-accent: color-mix(in oklch, var(--primary) 12%, transparent);
+  --color-fd-accent-foreground: var(--foreground);
+  --color-fd-ring: var(--ring);
+  --color-fd-overlay: rgb(0 0 0 / 0.4);
+  --color-fd-info: var(--set-warmup);
+  --color-fd-warning: var(--warning);
+  --color-fd-error: var(--destructive);
+  --color-fd-success: var(--success);
+  --radius: var(--radius);
+}
+
+.dark {
+  --color-fd-overlay: rgb(0 0 0 / 0.6);
+}
+
+body.docs-site {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  font-size: 1rem;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* Sidebar group labels: iOS grouped-list style — quiet sentence case. */
+#nd-sidebar [data-sidebar='group'] p,
+#nd-sidebar .fd-sidebar-group-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Active sidebar item: ember tint, foreground label. */
+#nd-sidebar a[data-active='true'] {
+  background-color: color-mix(in oklch, var(--primary) 12%, transparent);
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+#nd-sidebar a {
+  transition:
+    background-color 150ms var(--ease-out-quart, ease-out),
+    color 150ms var(--ease-out-quart, ease-out);
+}
+
+/* Prose: 16–17px, ~1.6 leading, ~70ch measure, balanced headings. */
+.prose {
+  --fd-prose-text: 1.0625rem;
+  max-width: 70ch;
+  font-size: var(--fd-prose-text);
+  line-height: 1.6;
+}
+
+.prose h1,
+.prose h2,
+.prose h3 {
+  text-wrap: balance;
+  letter-spacing: -0.015em;
+}
+
+.prose h1 {
+  font-size: 2rem;
+  line-height: 1.15;
+}
+
+.prose h2 {
+  font-size: 1.5rem;
+  line-height: 1.2;
+  margin-top: 2.5em;
+}
+
+.prose h3 {
+  font-size: 1.25rem;
+  line-height: 1.25;
+}
+
+.prose p {
+  text-wrap: pretty;
+}
+
+.prose a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.prose a:hover {
+  text-decoration: underline;
+}
+
+/* Tables: tabular numbers, scroll horizontally inside their container. */
+.prose table {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9375rem;
+}
+
+/* Callouts and blockquotes: tinted fill + full hairline, never a side stripe. */
+.prose blockquote,
+.fd-callout {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background-color: color-mix(in oklch, var(--muted) 55%, transparent);
+  padding: 0.75rem 1rem;
+}
+
+.prose blockquote {
+  font-style: normal;
+  color: var(--muted-foreground);
+}
+
+/* Code blocks sit on the card surface; text size follows the prose scale. */
+.prose figure[data-rehype-pretty-code-figure],
+.prose pre {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.prose code:not(pre code) {
+  background-color: var(--muted);
+  border-radius: 0.375rem;
+  padding: 0.1em 0.35em;
+  font-size: 0.875em;
+}
+
+/* Focus visibility everywhere. */
+.docs-site :focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 0.375rem;
+}
+
+/* Motion: state changes only, 150–250ms, full reduced-motion fallback. */
+@media (prefers-reduced-motion: no-preference) {
+  .docs-site button,
+  .docs-site a {
+    transition-duration: 200ms;
+    transition-timing-function: var(--ease-out-quart, cubic-bezier(0.25, 1, 0.5, 1));
+  }
+
+  .docs-site button:active {
+    transform: scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .docs-site *,
+  .docs-site *::before,
+  .docs-site *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Docs header: an in-flow spacer holds the grid row; the material bar is fixed so it
+   spans the full viewport width, including over the sidebar. */
+.docs-header-slot {
+  grid-area: header;
+  height: 3.5rem;
+}
+
+.docs-header {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 40;
+  border-bottom: 1px solid var(--border);
+}
+
+.docs-header-inner {
+  margin-inline: auto;
+  max-width: 76rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  height: 3.5rem;
+  padding-inline: 1rem;
+}
+
+/* The DocsLayout grid rows start below the fixed header. */
+.docs-layout {
+  --fd-docs-row-1: 3.5rem;
+}
+
+.docs-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.docs-search-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: 1.5rem;
+  min-width: 0;
+  height: 2.25rem;
+  padding-inline: 0.75rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--border);
+  background-color: color-mix(in oklch, var(--muted) 55%, transparent);
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  flex: 0 1 16rem;
+}
+
+.docs-search-trigger:hover {
+  background-color: var(--muted);
+  color: var(--foreground);
+}
+
+.docs-search-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.docs-kbd {
+  margin-left: auto;
+  font-family: inherit;
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  padding: 0.0625rem 0.3125rem;
+  background-color: var(--background);
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .docs-search-label,
+  .docs-kbd {
+    display: none;
+  }
+
+  .docs-search-trigger {
+    flex: 0 0 auto;
+    width: 2.25rem;
+    justify-content: center;
+    padding-inline: 0;
+  }
+}
+
+.docs-nav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.docs-nav-link {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  text-decoration: none;
+}
+
+.docs-nav-link:hover {
+  color: var(--foreground);
+}
+
+.docs-nav-icon {
+  display: inline-flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: var(--muted-foreground);
+}
+
+.docs-nav-icon:hover {
+  color: var(--foreground);
+}
+
+.docs-sidebar-trigger {
+  display: inline-flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.625rem;
+  color: var(--foreground);
+  margin-left: -0.375rem;
+}
+
+.docs-sidebar-trigger:hover {
+  background-color: var(--muted);
+}
+
+.docs-open-app {
+  display: inline-flex;
+  align-items: center;
+  height: 2.25rem;
+  padding-inline: 0.875rem;
+  border-radius: 9999px;
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: filter 150ms var(--ease-out-quart, ease-out);
+}
+
+.docs-open-app:hover {
+  filter: brightness(1.1);
+}
+
+/* Home signature: intro + real screenshot + asymmetric entry paths. */
+.docs-hero {
+  margin-bottom: 2rem;
+}
+
+.docs-hero-grid {
+  display: grid;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+@media (min-width: 768px) {
+  .docs-hero-grid {
+    grid-template-columns: 1.2fr 1fr;
+    gap: 2.5rem;
+  }
+}
+
+.docs-hero-copy h1 {
+  font-size: 2.25rem;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  margin: 0 0 0.75rem;
+  text-wrap: balance;
+}
+
+.docs-hero-copy p {
+  color: var(--muted-foreground);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 34rem;
+  text-wrap: pretty;
+}
+
+.docs-hero-shot {
+  display: flex;
+  justify-content: center;
+}
+
+.docs-hero-shot img {
+  width: 15rem;
+  max-width: 60%;
+  height: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.06),
+    0 12px 32px -8px rgb(0 0 0 / 0.18);
+}
+
+.docs-hero-paths {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 2rem;
+}
+
+@media (min-width: 768px) {
+  .docs-hero-paths {
+    grid-template-columns: 1.15fr 1fr 0.85fr;
+    gap: 0.75rem;
+  }
+}
+
+.docs-hero-path {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background-color: var(--card);
+  color: var(--foreground);
+  text-decoration: none;
+  transition:
+    border-color 150ms var(--ease-out-quart, ease-out),
+    background-color 150ms var(--ease-out-quart, ease-out);
+}
+
+.docs-hero-path:hover {
+  border-color: color-mix(in oklch, var(--primary) 40%, var(--border));
+  background-color: color-mix(in oklch, var(--card) 92%, var(--muted));
+}
+
+.docs-hero-path > svg {
+  color: var(--primary);
+  margin-top: 0.125rem;
+}
+
+.docs-hero-path-title {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  letter-spacing: -0.01em;
+}
+
+.docs-hero-path-body {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  margin-top: 0.125rem;
+}
+
+.docs-hero-path-arrow {
+  margin-left: auto;
+  color: var(--muted-foreground);
+  align-self: center;
+}
+
+.docs-hero-path:hover .docs-hero-path-arrow {
+  color: var(--primary);
+}
+
+.docs-hero-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background-color: var(--card);
+  color: var(--muted-foreground);
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition:
+    border-color 150ms var(--ease-out-quart, ease-out),
+    color 150ms var(--ease-out-quart, ease-out);
+}
+
+.docs-hero-search:hover {
+  border-color: color-mix(in oklch, var(--primary) 40%, var(--border));
+  color: var(--foreground);
+}
+
+.docs-hero-search:active {
+  transform: scale(0.97);
+}
+
+.docs-hero-search kbd {
+  margin-left: 0.5rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--border);
+  background-color: var(--background);
+  font-family: inherit;
+  font-size: 0.75rem;
+}
+
+.docs-hero-meta {
+  margin-top: 1.5rem;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+}
+
+.docs-hero-meta a {
+  color: var(--primary);
+}
+
+.docs-skip {
+  position: absolute;
+  left: -9999px;
+  top: 0.5rem;
+  z-index: 60;
+  border-radius: 0.5rem;
+  background: var(--card);
+  color: var(--foreground);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+}
+
+.docs-skip:focus-visible {
+  left: 0.5rem;
+}
+
+/* Compact sidebar: one line per item at 14px, quiet sentence-case group labels,
+   clear gaps between groups. Mobile sheet keeps 44px touch targets. */
+#nd-sidebar [data-radix-scroll-area-viewport] a[data-active],
+#nd-sidebar-mobile a[data-active] {
+  font-size: 0.875rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+#nd-sidebar [data-radix-scroll-area-viewport] > div > p,
+#nd-sidebar-mobile p {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+#nd-sidebar [data-radix-scroll-area-viewport] a[data-active] > span,
+#nd-sidebar-mobile a[data-active] > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 767px) {
+  #nd-sidebar-mobile a[data-active] {
+    min-height: 44px;
+    align-items: center;
+    font-size: 0.9375rem;
+  }
+}
+
+/* AA: the ember primary on the card surface reaches only 4.12:1; mixing in 20%
+   white lifts the active sidebar label past 4.5:1 while staying in hue. */
+#nd-sidebar a[data-active='true'],
+#nd-sidebar-mobile a[data-active='true'] {
+  color: color-mix(in oklch, var(--primary) 80%, white);
+}
