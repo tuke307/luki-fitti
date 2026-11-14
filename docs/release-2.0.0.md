@@ -12,7 +12,9 @@ Last updated: 2026-11-14 (session 2).
 main ◀── develop ◀── release/2.0.0  (version bump 2.0.0)        PR #106 → develop  (draft)
                       ├── feat/social-2.0   (social features)    PR #100 → release/2.0.0
                       │    └── #101 … #104 already merged into it
-                      └── feat/api-keys     (API keys)           PR #107 → release/2.0.0 (draft, docs only)
+                      └── feat/api-keys     (API keys)           PR #107 → release/2.0.0 (draft, umbrella)
+                           ├── feat/api-keys-pr-a (keys + v1)    PR #109 → feat/api-keys (CI green)
+                           │    └── feat/api-keys-pr-b (export, OpenAPI, docs site)  → feat/api-keys-pr-a
                            └── feat/mcp-server (MCP server)      PR #108 → feat/api-keys (draft, docs only;
                                                                   retarget to release/2.0.0 after #107)
 ```
@@ -27,35 +29,36 @@ main ◀── develop ◀── release/2.0.0  (version bump 2.0.0)        PR #
 
 ## Status
 
-| Stream                                                                 | PR                                                               | State                                                                                                                   | Docs                                                                |
-| :--------------------------------------------------------------------- | :--------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------ |
-| Version bump 2.0.0                                                     | #106 (`release/2.0.0` → `develop`)                               | draft. Screenshots for 2.0 still missing (on purpose, done last)                                                        | `docs/release.md`                                                   |
-| Social: friends, leagues, duels, raids                                 | #100 (`feat/social-2.0` → `release/2.0.0`)                       | **all 4 sub-PRs merged** (#101–#104). **merged** into `release/2.0.0` (squash `4ae47c21`, 2026-11-14), all checks green | `docs/social-2.0.md` + `social-2.0-pr1…4.md` (on `feat/social-2.0`) |
-| Personal API keys                                                      | #107 (`feat/api-keys` → `release/2.0.0`)                         | **design approved, implementation not started**                                                                         | `docs/api-keys.md` (on `feat/api-keys`)                             |
-| MCP server (separate feature)                                          | #108 (`feat/mcp-server` → `feat/api-keys`, then `release/2.0.0`) | **design approved, implementation not started**; starts after API keys                                                  | `docs/mcp-server.md` (on `feat/mcp-server`)                         |
-| Former "PR 5": beta, final privacy policy, App Store notes, release PR | —                                                                | **postponed** by the user; ships together with the next feature                                                         | `docs/social-2.0.md` → "Later"                                      |
+| Stream                                                                 | PR                                                               | State                                                                                                                      | Docs                                                                |
+| :--------------------------------------------------------------------- | :--------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------ |
+| Version bump 2.0.0                                                     | #106 (`release/2.0.0` → `develop`)                               | draft. Screenshots for 2.0 still missing (on purpose, done last)                                                           | `docs/release.md`                                                   |
+| Social: friends, leagues, duels, raids                                 | #100 (`feat/social-2.0` → `release/2.0.0`)                       | **all 4 sub-PRs merged** (#101–#104). **merged** into `release/2.0.0` (squash `4ae47c21`, 2026-11-14), all checks green    | `docs/social-2.0.md` + `social-2.0-pr1…4.md` (on `feat/social-2.0`) |
+| Personal API keys                                                      | #107 (`feat/api-keys` → `release/2.0.0`)                         | **PR A #109 open, CI green**, waiting for review/merge into `feat/api-keys`. PR B in progress (export, OpenAPI, docs site) | `docs/api-keys.md` (on `feat/api-keys`)                             |
+| MCP server (separate feature)                                          | #108 (`feat/mcp-server` → `feat/api-keys`, then `release/2.0.0`) | **design approved, implementation not started**; starts after API keys                                                     | `docs/mcp-server.md` (on `feat/mcp-server`)                         |
+| Former "PR 5": beta, final privacy policy, App Store notes, release PR | —                                                                | **postponed** by the user; ships together with the next feature                                                            | `docs/social-2.0.md` → "Later"                                      |
 
 ## Next steps (in order)
 
 1. ~~**Finish #100.**~~ Done: e2e fixed in `99cf5a6a`, squash-merged into `release/2.0.0` as
    `4ae47c21` (tree verified equal to the PR head apart from the version bump).
-2. **Prepare `feat/api-keys` for implementation.**
-   - After #100 is merged, `git merge --no-ff origin/release/2.0.0` into `feat/api-keys`, so
-     the schema already contains the social models (User/AppSettings fields, migrations up to
-     `20261116000000_raids`).
-   - Name the API key migration later than that, e.g. `20261117000000_api_keys`.
-3. **API keys PR A: keys + read API** (`docs/api-keys.md` → "Delivery" 1).
-   - Migration `ApiKey`, `AppSettings.apiKeysEnabled`, email template `API_KEY_CREATED`.
-   - Key management routes (password re-auth, max 10 keys, expiry 30/90/365 days or none).
-   - `ApiKeyGuard` + `ScopesGuard` (deny by default), `/api/v1` read endpoints except export,
-     and per-key Redis rate limits with headers.
-   - Web settings page (create, show once, list, revoke) and iOS list + revoke.
-   - All tests from the doc.
-   - New server env var `API_KEY_PEPPER` (user must add it to Coolify and the env samples).
-4. **API keys PR B: export + docs.**
-   - Shared `luki-fitti-import@1` export builder in `@luki-fitti/common` (the web backup
-     button switches to it) and `/v1/export`.
-   - Public OpenAPI output for `/api/v1`, the `/developers` page, the privacy paragraph.
+2. ~~**Prepare `feat/api-keys`.**~~ Done: `release/2.0.0` merged in (`fcb8d74a`); migration
+   `20261117000000_api_keys`.
+3. ~~**API keys PR A: keys + read API.**~~ Built as #109 (`feat/api-keys-pr-a` →
+   `feat/api-keys`), CI green. The user reviews and merges it. Sub-PRs go into `feat/api-keys`
+   (like social); #107 is the umbrella PR into `release/2.0.0`.
+4. **API keys PR B: export + docs** (`feat/api-keys-pr-b`, stacked on PR A).
+   - `/v1/export` built server-side with the existing shared `buildImportFile` (the web backup
+     button already uses it). It covers workouts only, because of the `luki-fitti-import@1`
+     format.
+   - Public OpenAPI file `docs/openapi/public-api-v1.json`, the developer guide
+     `docs/public-api.md`, the privacy paragraph.
+   - **Docs site `docs.luki-fitti.tony-luke.de`** (decided 2026-11-14, replaces the planned
+     `/developers` page):
+     - Fumadocs inside `apps/web`, as a third host in `proxy.ts` next to site and app.
+     - Publishes every file in `docs/`, English only.
+     - API reference via `fumadocs-openapi`.
+     - App, iOS and site links point there.
+     - Details: `docs/api-keys.md` → "Docs site".
 5. **MCP server: a separate feature, #108** (`docs/mcp-server.md` on `feat/mcp-server`).
    - Before starting, merge the implemented `feat/api-keys` into `feat/mcp-server`. Retarget
      #108 to `release/2.0.0` once #107 is merged.
@@ -87,7 +90,12 @@ marketing:screenshots`), then the user merges #106 into `develop`.
   helpers load it first, so local e2e only passes with an env override.
 - Legal review of `docs/privacy-social.md` (5 open points, incl. "Find me by email" on by
   default).
-- Later for API keys: create the `API_KEY_PEPPER` secret.
+- API keys:
+  - Create the `API_KEY_PEPPER` secret (≥32 chars, `openssl rand -hex 32`) in Coolify and add
+    it to `apps/api/.env.sample`. Changing it later invalidates all keys.
+  - Turn the kill switch on at `/admin/api-keys` after release.
+- Docs site: a DNS record for `docs.luki-fitti.tony-luke.de`, and the domain added to the web
+  container in Coolify.
 
 ## Local environment (as left at handoff)
 
