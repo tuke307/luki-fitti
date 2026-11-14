@@ -13,7 +13,7 @@ Offline-first gym workout tracker, progressive overload engine, and stretching s
 - **Native Apple Watch & HealthKit Telemetry:** Standalone and companion watchOS 26 workout execution (`HKWorkoutSession`), 1 Hz optical heart rate curves, active/total calorie tracking, per-set peak & recovery BPM, and iOS 26 Dynamic Island Live Activities.
 - **Guided Stretching & Mobility Studio:** Timed stretching routines with transition bells and anatomical start/finish posture illustrations.
 - **Calorie & Macro Tracking:** Log meals by hand (offline-capable), daily goals, intake vs. estimated workout burn, 7-day trend.
-- **Admin Portal & Opt-in AI:** `/admin` for user access and AI settings; AI workout planner and meal-photo and meal-text calorie estimates for everyone with an OpenRouter key. See [docs/admin-ai-nutrition.md](docs/admin-ai-nutrition.md). Roadmap: [the public project board](https://github.com/users/tuke307/projects/4).
+- **Admin Portal & Opt-in AI:** `/admin` for user access and AI settings; AI workout planner and meal-photo and meal-text calorie estimates for everyone with an OpenRouter key. See [docs/admin-ai-nutrition.md](docs/admin-ai-nutrition.md). Roadmap: [GitHub project board](https://github.com/users/tuke307/projects/4).
 - **Bilingual (`EN` / `DE`):** Full English and German interface and exercise search aliases.
 
 ---

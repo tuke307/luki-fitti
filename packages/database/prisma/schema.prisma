@@ -638,7 +638,7 @@ model AppSettings {
   aiProgressTargetEnabled Boolean         @default(true)
   progressTargetModel     String          @default("google/gemini-nano-banana-2.1")
   progressTargetFallbacks String[]        @default(["bytedance-seed/seedream-5-0-flash"])
-  /// Social kill switch: off by default, enabled per rollout (see docs/social-2.0.md).
+  /// Social kill switch: off by default, enabled per rollout (see docs/adr/0001-social-features-2-0.md).
   socialEnabled           Boolean         @default(false)
   /// Beta allowlist; empty = everyone once socialEnabled is on.
   socialBetaUserIds       String[]        @default([])

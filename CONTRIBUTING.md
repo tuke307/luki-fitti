@@ -18,6 +18,14 @@ Thanks for your interest in LukiFitti! Bug reports, ideas, and pull requests are
 
 4. Open a pull request against `develop` and describe **why** the change is needed.
 
+## Documentation
+
+- Decisions worth keeping are recorded as an architecture decision record (ADR) in
+  `docs/adr/` — add one when you make or change a lasting decision.
+- Implementation plans and specs for a feature go in `docs/plans/` on the feature branch
+  and are deleted before the PR into `develop` is opened; they are branch guidance, not
+  permanent documentation.
+
 ## Commit messages
 
 Commits follow [Conventional Commits](https://www.conventionalcommits.org/) and are checked by
