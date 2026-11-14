@@ -58,6 +58,9 @@ requests for the docs tree on the other hosts redirect to the docs origin. Local
   `/api-reference`, grouped by tag with quiet method badges.
 - Every page shows an "Edit on GitHub" link and a "Last updated" date from the file's last
   git commit, computed at build time and degrading gracefully without history.
+- Diagrams are written in Mermaid — rendered client-side on the docs site and natively on
+  GitHub. `remarkMdxMermaid` turns ` ```mermaid ` blocks into a client component that
+  lazy-loads `mermaid` (12.3.0, `securityLevel: 'strict'`, `base` theme on the docs tokens).
 - `/llms.txt` and `/llms-full.txt` are generated for AI consumers; the docs host is
   indexable (own sitemap and robots), unlike the app host.
 - The roadmap lives on a GitHub Project board, shown on the docs site at `/roadmap` (fetched

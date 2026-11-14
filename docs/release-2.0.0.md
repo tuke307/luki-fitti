@@ -8,13 +8,13 @@ Last updated: 2026-11-14 (session 2).
 
 ## Branch model
 
-```
-main ◀── develop ◀── release/2.0.0  (version bump 2.0.0)        PR #106 → develop  (draft)
-                      ├── feat/social-2.0   (social features)    PR #100 → release/2.0.0
-                      │    └── #101 … #104 already merged into it
-                      └── feat/api-keys     (API keys)           PR #107 → release/2.0.0 (draft, docs only)
-                           └── feat/mcp-server (MCP server)      PR #108 → feat/api-keys (draft, docs only;
-                                                                  retarget to release/2.0.0 after #107)
+```mermaid
+flowchart LR
+    mcp["feat/mcp-server<br/>MCP server<br/>PR #108 → feat/api-keys (draft, docs only;<br/>retarget to release/2.0.0 after #107)"] --> keys["feat/api-keys<br/>API keys<br/>PR #107 → release/2.0.0 (draft, docs only)"]
+    keys --> rel["release/2.0.0<br/>version bump 2.0.0<br/>PR #106 → develop (draft)"]
+    social["feat/social-2.0<br/>social features<br/>PR #100 → release/2.0.0<br/>#101 … #104 merged into it"] --> rel
+    rel --> develop
+    develop -->|release PR| main
 ```
 
 - `release/2.0.0` was cut from `develop` and carries only the version bump (`yarn version:set
