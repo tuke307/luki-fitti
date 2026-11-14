@@ -1,3 +1,4 @@
+import { createElement } from 'react';
 import { BookOpen, FolderGit2, Terminal } from 'lucide-react';
 import type { Folder, Item, Node, Root } from 'fumadocs-core/page-tree';
 
@@ -87,6 +88,7 @@ export function docsTree(tree: Root): Root {
 
   const group = (name: string, children: Node[]): Folder => ({
     type: 'folder',
+    $id: `group-${name.toLowerCase().replace(/\W+/g, '-')}`,
     name,
     children,
   });
@@ -94,13 +96,13 @@ export function docsTree(tree: Root): Root {
   const overview = page('/');
   const guides: Folder = {
     type: 'folder',
+    $id: 'tab-guides',
     name: 'Guides',
     description: 'Move your data in and use the app',
-    icon: <BookOpen className="size-4" />,
+    icon: createElement(BookOpen, { className: 'size-4' }),
     root: true,
     index: overview,
     children: [
-      ...(overview ? [overview] : []),
       group(
         'Import',
         pages([
@@ -139,13 +141,13 @@ export function docsTree(tree: Root): Root {
   const mcpGuide = page('/mcp');
   const api: Folder = {
     type: 'folder',
+    $id: 'tab-api',
     name: 'API',
     description: 'Personal API keys and the v1 reference',
-    icon: <Terminal className="size-4" />,
+    icon: createElement(Terminal, { className: 'size-4' }),
     root: true,
     index: gettingStarted,
     children: [
-      ...(gettingStarted ? [gettingStarted] : []),
       ...API_GROUP_ORDER.filter((g) => apiGroups.has(g)).map((g) =>
         group(g, apiGroups.get(g) ?? []),
       ),
@@ -156,6 +158,7 @@ export function docsTree(tree: Root): Root {
   // ADRs present on this branch, in a fixed order; missing files are skipped.
   const decisions: Folder = {
     type: 'folder',
+    $id: 'group-decisions',
     name: 'Decisions',
     index: page('/adr'),
     children: ADRS.map(({ url, label }): Item | undefined => {
@@ -166,16 +169,16 @@ export function docsTree(tree: Root): Root {
 
   const contributing = page('/contributing');
   // The roadmap is a real route on the docs host, not a content page.
-  const roadmap: Item = { type: 'page', name: 'Roadmap', url: '/roadmap' };
+  const roadmap: Item = { type: 'page', $id: 'page-roadmap', name: 'Roadmap', url: '/roadmap' };
   const project: Folder = {
     type: 'folder',
+    $id: 'tab-project',
     name: 'Project',
     description: 'Contribute, release and follow the plans',
-    icon: <FolderGit2 className="size-4" />,
+    icon: createElement(FolderGit2, { className: 'size-4' }),
     root: true,
     index: contributing,
     children: [
-      ...pages(['/contributing']),
       roadmap,
       group('Releases', pages(['/release', '/app-store-release'])),
       ...(decisions.children.length > 0 ? [decisions] : []),
