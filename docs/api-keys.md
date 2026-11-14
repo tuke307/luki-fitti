@@ -110,16 +110,15 @@ API_KEY_CREATED
 
 ## Scopes
 
-| Scope            | Grants                                                                        |
-| :--------------- | :---------------------------------------------------------------------------- |
-| `read:profile`   | `GET /v1/me` (id, name, units, goals; never the email)                        |
-| `read:workouts`  | templates, folders, stretching routines, custom exercises                     |
-| `read:sessions`  | workout sessions with exercises and sets, personal records                    |
-| `read:nutrition` | meal entries and items (no photos in v1)                                      |
-| `read:body`      | body weight entries, progress check-ins (metadata, no photos)                 |
-| `read:activity`  | Apple Health daily energy and imported workouts                               |
-| `export`         | `GET /v1/export` (everything above as `luki-fitti-import@1`)                  |
-| `mcp`            | the MCP server (`/mcp`) and `GET /v1/key`; tools still need their read scopes |
+| Scope            | Grants                                                        |
+| :--------------- | :------------------------------------------------------------ |
+| `read:profile`   | `GET /v1/me` (id, name, units, goals; never the email)        |
+| `read:workouts`  | templates, folders, stretching routines, custom exercises     |
+| `read:sessions`  | workout sessions with exercises and sets, personal records    |
+| `read:nutrition` | meal entries and items (no photos in v1)                      |
+| `read:body`      | body weight entries, progress check-ins (metadata, no photos) |
+| `read:activity`  | Apple Health daily energy and imported workouts               |
+| `export`         | `GET /v1/export` (everything above as `luki-fitti-import@1`)  |
 
 Deny by default: a route without an `@ApiScope(...)` decorator is unreachable with a key.
 Progress and meal photos are excluded in v1 (large, sensitive, and they'd need signed URLs);
@@ -201,13 +200,12 @@ lf_pat_…`. Anything that doesn't start with `lf_pat_` is rejected there, and t
 - App Store: nothing user-generated is exposed to others, so no new review concerns. The
   privacy policy gets one paragraph (keys are stored hashed, last use is recorded, no IPs).
 
-## MCP server
+## MCP server (separate feature)
 
-Ships in 2.0 as a separate `apps/mcp-server` workspace, built like the MCP servers in
-marienmühle and kds-werkzeugbau. It forwards the user's API key to `/api/v1`, so all access
-control stays in the API. The full design is in [mcp-server.md](mcp-server.md). The key
-system adds one scope (`mcp`) and one endpoint (`GET /v1/key`, the presented key's scopes and
-expiry) for it.
+The MCP server is its own feature and PR (branch `feat/mcp-server`, design in
+`docs/mcp-server.md` there). It builds on this one: it forwards the user's API key to
+`/api/v1`. It also adds what only it needs: the `mcp` scope and `GET /v1/key`. Nothing in this
+feature depends on it.
 
 ## Architecture fit
 
@@ -224,13 +222,12 @@ expiry) for it.
 The boot spec from the social work (`app.module.boot.spec.ts`) covers the new modules'
 dependency injection automatically.
 
-## Delivery (three PRs into `release/2.0.0`)
+## Delivery (two PRs into `release/2.0.0`)
 
 1. **Keys + read API:** migration, key management routes, `ApiKeyGuard`/`ScopesGuard`, the v1
    endpoints except export, rate limits, email, web settings page, iOS list/revoke, tests.
 2. **Export + docs:** the shared export builder (web backup button switched to it), `/v1/export`,
    the public OpenAPI file, the `/developers` page, the privacy paragraph.
-3. **MCP server:** see [mcp-server.md](mcp-server.md#delivery).
 
 ## Tests
 
@@ -249,4 +246,5 @@ the settings, copy it, `curl /api/v1/sessions` with it, revoke it, get 401.
    in the create sheet and the "Last used" date in the list to spot forgotten keys.
 3. **Keys are created on the web only**; iPhone lists and revokes them.
 4. **No photos in v1** (progress and meal photos stay excluded).
-5. **MCP server ships in 2.0** (see [MCP server](#mcp-server)), as the third PR.
+5. **MCP server ships in 2.0 as a separate feature** (branch `feat/mcp-server`, see
+   [MCP server](#mcp-server-separate-feature)).
