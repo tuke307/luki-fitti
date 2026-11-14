@@ -66,258 +66,294 @@ export type PublicExerciseQueryDto = z.infer<typeof PublicExerciseQuerySchema>;
 
 // ── GET /v1/me (read:profile) ──
 
-export interface PublicMeGoalsDto {
-  weeklyGoalSessions: number;
-  dailyKcalGoal: number | null;
-  proteinGoalG: number | null;
-  carbsGoalG: number | null;
-  fatGoalG: number | null;
-  bodyWeightKg: number | null;
-  heightCm: number | null;
-  bodyGoal: BodyGoal | null;
-  trainingGoal: TrainingGoal | null;
-}
+export const PublicMeGoalsSchema = z.object({
+  weeklyGoalSessions: z.number().int(),
+  dailyKcalGoal: z.number().nullable(),
+  proteinGoalG: z.number().nullable(),
+  carbsGoalG: z.number().nullable(),
+  fatGoalG: z.number().nullable(),
+  bodyWeightKg: z.number().nullable(),
+  heightCm: z.number().nullable(),
+  bodyGoal: z.enum(BodyGoal).nullable(),
+  trainingGoal: z.enum(TrainingGoal).nullable(),
+});
+export type PublicMeGoalsDto = z.infer<typeof PublicMeGoalsSchema>;
 
 /** Own profile. Never includes the email address. */
-export interface PublicMeDto {
-  id: string;
-  name: string | null;
-  handle: string | null;
-  weightUnit: WeightUnit;
-  distanceUnit: DistanceUnit;
-  goals: PublicMeGoalsDto;
-}
+export const PublicMeSchema = z.object({
+  id: z.string(),
+  name: z.string().nullable(),
+  handle: z.string().nullable(),
+  weightUnit: z.enum(WeightUnit),
+  distanceUnit: z.enum(DistanceUnit),
+  goals: PublicMeGoalsSchema,
+});
+export type PublicMeDto = z.infer<typeof PublicMeSchema>;
 
 // ── Sessions (read:sessions) ──
 
-export interface PublicSessionSetDto {
-  setNumber: number;
-  setType: SetType;
+export const PublicSessionSetSchema = z.object({
+  setNumber: z.number().int(),
+  setType: z.enum(SetType),
   /** Always kg (converted when the set was logged in lbs). */
-  weightKg: number | null;
-  reps: number | null;
-  durationSeconds: number | null;
-  distanceMeters: number | null;
-  rpe: number | null;
-  completed: boolean;
-  completedAt: string | null;
-  isPersonalRecord: boolean;
-  notes: string | null;
-  avgHeartRateBpm: number | null;
-  peakHeartRateBpm: number | null;
-  restEndHeartRateBpm: number | null;
-}
+  weightKg: z.number().nullable(),
+  reps: z.number().nullable(),
+  durationSeconds: z.number().nullable(),
+  distanceMeters: z.number().nullable(),
+  rpe: z.number().nullable(),
+  completed: z.boolean(),
+  completedAt: z.string().nullable(),
+  isPersonalRecord: z.boolean(),
+  notes: z.string().nullable(),
+  avgHeartRateBpm: z.number().nullable(),
+  peakHeartRateBpm: z.number().nullable(),
+  restEndHeartRateBpm: z.number().nullable(),
+});
+export type PublicSessionSetDto = z.infer<typeof PublicSessionSetSchema>;
 
-export interface PublicSessionExerciseDto {
-  id: string;
-  exerciseId: string | null;
-  exerciseName: string;
-  primaryMuscle: MuscleGroup;
-  exerciseType: ExerciseType;
-  origin: SessionExerciseOrigin;
-  status: SessionExerciseStatus;
-  orderIndex: number;
-  plannedSets: number;
-  plannedWarmupSets: number;
-  targetRepsMin: number | null;
-  targetRepsMax: number | null;
+export const PublicSessionExerciseSchema = z.object({
+  id: z.string(),
+  exerciseId: z.string().nullable(),
+  exerciseName: z.string(),
+  primaryMuscle: z.enum(MuscleGroup),
+  exerciseType: z.enum(ExerciseType),
+  origin: z.enum(SessionExerciseOrigin),
+  status: z.enum(SessionExerciseStatus),
+  orderIndex: z.number().int(),
+  plannedSets: z.number().int(),
+  plannedWarmupSets: z.number().int(),
+  targetRepsMin: z.number().nullable(),
+  targetRepsMax: z.number().nullable(),
   /** Always kg. */
-  targetWeightKg: number | null;
-  targetDurationSeconds: number | null;
-  restSeconds: number;
-  notes: string | null;
-  sets: PublicSessionSetDto[];
-}
+  targetWeightKg: z.number().nullable(),
+  targetDurationSeconds: z.number().nullable(),
+  restSeconds: z.number().int(),
+  notes: z.string().nullable(),
+  sets: z.array(PublicSessionSetSchema),
+});
+export type PublicSessionExerciseDto = z.infer<typeof PublicSessionExerciseSchema>;
 
-export interface PublicSessionDto {
-  id: string;
-  templateId: string | null;
-  stretchingRoutineId: string | null;
-  sessionType: SessionType;
-  workoutName: string;
-  status: SessionStatus;
-  startedAt: string;
-  pausedAt: string | null;
-  completedAt: string | null;
-  activeDurationSeconds: number;
-  totalVolumeKg: number;
-  totalSetsCompleted: number;
-  totalRepsCompleted: number;
-  totalStretchSeconds: number;
-  notes: string | null;
-  sourceDevice: SessionSourceDevice;
-  activeCaloriesKcal: number | null;
-  totalCaloriesKcal: number | null;
-  estimatedCaloriesKcal: number | null;
-  avgHeartRateBpm: number | null;
-  maxHeartRateBpm: number | null;
-  minHeartRateBpm: number | null;
-  createdAt: string;
-  updatedAt: string;
-  exercises: PublicSessionExerciseDto[];
-}
+export const PublicSessionSchema = z.object({
+  id: z.string(),
+  templateId: z.string().nullable(),
+  stretchingRoutineId: z.string().nullable(),
+  sessionType: z.enum(SessionType),
+  workoutName: z.string(),
+  status: z.enum(SessionStatus),
+  startedAt: z.string(),
+  pausedAt: z.string().nullable(),
+  completedAt: z.string().nullable(),
+  activeDurationSeconds: z.number(),
+  totalVolumeKg: z.number(),
+  totalSetsCompleted: z.number().int(),
+  totalRepsCompleted: z.number().int(),
+  totalStretchSeconds: z.number().int(),
+  notes: z.string().nullable(),
+  sourceDevice: z.enum(SessionSourceDevice),
+  activeCaloriesKcal: z.number().nullable(),
+  totalCaloriesKcal: z.number().nullable(),
+  estimatedCaloriesKcal: z.number().nullable(),
+  avgHeartRateBpm: z.number().nullable(),
+  maxHeartRateBpm: z.number().nullable(),
+  minHeartRateBpm: z.number().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  exercises: z.array(PublicSessionExerciseSchema),
+});
+export type PublicSessionDto = z.infer<typeof PublicSessionSchema>;
 
 /** Summary row for `GET /v1/sessions` — `GET /v1/sessions/:id` adds `exercises`. */
-export type PublicSessionListItemDto = Omit<PublicSessionDto, 'exercises'>;
+export const PublicSessionListItemSchema = PublicSessionSchema.omit({ exercises: true });
+export type PublicSessionListItemDto = z.infer<typeof PublicSessionListItemSchema>;
 
-export interface PublicPersonalRecordDto {
-  exerciseId: string;
-  exerciseName: string;
-  primaryMuscle: MuscleGroup;
-  maxWeightKg: number;
-  repsAtMaxWeight: number;
-  estimatedOneRepMaxKg: number;
-  bestVolumeSetKg: number;
-  achievedAt: string;
-}
+export const PublicPersonalRecordSchema = z.object({
+  exerciseId: z.string(),
+  exerciseName: z.string(),
+  primaryMuscle: z.enum(MuscleGroup),
+  maxWeightKg: z.number(),
+  repsAtMaxWeight: z.number().int(),
+  estimatedOneRepMaxKg: z.number(),
+  bestVolumeSetKg: z.number(),
+  achievedAt: z.string(),
+});
+export type PublicPersonalRecordDto = z.infer<typeof PublicPersonalRecordSchema>;
 
 // ── Workouts (read:workouts) ──
 
-export interface PublicWorkoutTemplateExerciseDto {
-  exerciseId: string;
-  exerciseName: string;
-  orderIndex: number;
-  plannedSets: number;
-  warmupSets: number;
-  targetRepsMin: number | null;
-  targetRepsMax: number | null;
+export const PublicWorkoutTemplateExerciseSchema = z.object({
+  exerciseId: z.string(),
+  exerciseName: z.string(),
+  orderIndex: z.number().int(),
+  plannedSets: z.number().int(),
+  warmupSets: z.number().int(),
+  targetRepsMin: z.number().nullable(),
+  targetRepsMax: z.number().nullable(),
   /** Always kg. */
-  targetWeightKg: number | null;
-  restSeconds: number;
-  targetDurationSeconds: number | null;
-  targetDistanceMeters: number | null;
-  notes: string | null;
-}
+  targetWeightKg: z.number().nullable(),
+  restSeconds: z.number().int(),
+  targetDurationSeconds: z.number().nullable(),
+  targetDistanceMeters: z.number().nullable(),
+  notes: z.string().nullable(),
+});
+export type PublicWorkoutTemplateExerciseDto = z.infer<typeof PublicWorkoutTemplateExerciseSchema>;
 
-export interface PublicWorkoutTemplateDto {
-  id: string;
-  folderId: string | null;
-  name: string;
-  description: string | null;
-  estimatedDurationMinutes: number | null;
-  sortOrder: number;
-  trainingGoal: TrainingGoal | null;
-  exercises: PublicWorkoutTemplateExerciseDto[];
-  createdAt: string;
-  updatedAt: string;
-}
+export const PublicWorkoutTemplateSchema = z.object({
+  id: z.string(),
+  folderId: z.string().nullable(),
+  name: z.string(),
+  description: z.string().nullable(),
+  estimatedDurationMinutes: z.number().nullable(),
+  sortOrder: z.number().int(),
+  trainingGoal: z.enum(TrainingGoal).nullable(),
+  exercises: z.array(PublicWorkoutTemplateExerciseSchema),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type PublicWorkoutTemplateDto = z.infer<typeof PublicWorkoutTemplateSchema>;
 
-export interface PublicWorkoutFolderDto {
-  id: string;
-  name: string;
-  color: string;
-  sortOrder: number;
-  createdAt: string;
-  updatedAt: string;
-}
+export const PublicWorkoutFolderSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  color: z.string(),
+  sortOrder: z.number().int(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type PublicWorkoutFolderDto = z.infer<typeof PublicWorkoutFolderSchema>;
 
-export interface PublicStretchingRoutineExerciseDto {
-  exerciseId: string;
-  exerciseName: string;
-  orderIndex: number;
-  sets: number;
-  durationSeconds: number | null;
-  reps: number | null;
-  transitionSeconds: number;
-  notes: string | null;
-}
+export const PublicStretchingRoutineExerciseSchema = z.object({
+  exerciseId: z.string(),
+  exerciseName: z.string(),
+  orderIndex: z.number().int(),
+  sets: z.number().int(),
+  durationSeconds: z.number().nullable(),
+  reps: z.number().nullable(),
+  transitionSeconds: z.number().int(),
+  notes: z.string().nullable(),
+});
+export type PublicStretchingRoutineExerciseDto = z.infer<
+  typeof PublicStretchingRoutineExerciseSchema
+>;
 
-export interface PublicStretchingRoutineDto {
-  id: string;
-  name: string;
-  description: string | null;
-  targetArea: string;
-  estimatedDurationSeconds: number;
-  exercises: PublicStretchingRoutineExerciseDto[];
-  createdAt: string;
-  updatedAt: string;
-}
+export const PublicStretchingRoutineSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  targetArea: z.string(),
+  estimatedDurationSeconds: z.number().int(),
+  exercises: z.array(PublicStretchingRoutineExerciseSchema),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type PublicStretchingRoutineDto = z.infer<typeof PublicStretchingRoutineSchema>;
 
-export interface PublicExerciseDto {
-  id: string;
-  name: string;
-  description: string;
-  instructions: string[];
-  category: ExerciseCategory;
-  exerciseType: ExerciseType;
-  primaryMuscleGroup: MuscleGroup;
-  muscleGroups: MuscleGroup[];
-  equipment: EquipmentType;
-  tags: string[];
+export const PublicExerciseSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  instructions: z.array(z.string()),
+  category: z.enum(ExerciseCategory),
+  exerciseType: z.enum(ExerciseType),
+  primaryMuscleGroup: z.enum(MuscleGroup),
+  muscleGroups: z.array(z.enum(MuscleGroup)),
+  equipment: z.enum(EquipmentType),
+  tags: z.array(z.string()),
   /** true for user-created exercises, false for the system catalog. */
-  custom: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+  custom: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type PublicExerciseDto = z.infer<typeof PublicExerciseSchema>;
 
 // ── Nutrition (read:nutrition) — photos are excluded in v1 ──
 
-export interface PublicMealItemDto {
-  name: string;
-  grams: number | null;
-  amountUnit: MealAmountUnit;
-  kcal: number;
-  proteinG: number;
-  carbsG: number;
-  fatG: number;
-  fiberG: number | null;
-  sugarG: number | null;
-}
+export const PublicMealItemSchema = z.object({
+  name: z.string(),
+  grams: z.number().nullable(),
+  amountUnit: z.enum(MealAmountUnit),
+  kcal: z.number(),
+  proteinG: z.number(),
+  carbsG: z.number(),
+  fatG: z.number(),
+  fiberG: z.number().nullable(),
+  sugarG: z.number().nullable(),
+});
+export type PublicMealItemDto = z.infer<typeof PublicMealItemSchema>;
 
-export interface PublicMealEntryDto {
-  id: string;
-  eatenAt: string;
-  mealType: MealType;
-  label: string | null;
-  notes: string | null;
-  items: PublicMealItemDto[];
-  createdAt: string;
-  updatedAt: string;
-}
+export const PublicMealEntrySchema = z.object({
+  id: z.string(),
+  eatenAt: z.string(),
+  mealType: z.enum(MealType),
+  label: z.string().nullable(),
+  notes: z.string().nullable(),
+  items: z.array(PublicMealItemSchema),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type PublicMealEntryDto = z.infer<typeof PublicMealEntrySchema>;
 
 // ── Body (read:body) — progress photos are excluded in v1 ──
 
-export interface PublicBodyWeightEntryDto {
-  id: string;
-  measuredAt: string;
-  weightKg: number;
-  source: BodyWeightSource;
-  note: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+export const PublicBodyWeightEntrySchema = z.object({
+  id: z.string(),
+  measuredAt: z.string(),
+  weightKg: z.number(),
+  source: z.enum(BodyWeightSource),
+  note: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type PublicBodyWeightEntryDto = z.infer<typeof PublicBodyWeightEntrySchema>;
 
-export interface PublicProgressCheckInDto {
-  id: string;
-  takenAt: string;
-  note: string | null;
+export const PublicProgressCheckInSchema = z.object({
+  id: z.string(),
+  takenAt: z.string(),
+  note: z.string().nullable(),
   /** Photo metadata only — never storage keys or URLs. */
-  photos: Array<{
-    pose: ProgressPose;
-    kind: ProgressPhotoKind;
-    width: number | null;
-    height: number | null;
-  }>;
-  createdAt: string;
-  updatedAt: string;
-}
+  photos: z.array(
+    z.object({
+      pose: z.enum(ProgressPose),
+      kind: z.enum(ProgressPhotoKind),
+      width: z.number().nullable(),
+      height: z.number().nullable(),
+    }),
+  ),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type PublicProgressCheckInDto = z.infer<typeof PublicProgressCheckInSchema>;
 
 // ── Activity (read:activity) ──
 
-export interface PublicDailyEnergyDto {
+export const PublicDailyEnergySchema = z.object({
   /** Device-local calendar day, `YYYY-MM-DD`. */
-  day: string;
-  activeKcal: number;
-}
+  day: z.string(),
+  activeKcal: z.number(),
+});
+export type PublicDailyEnergyDto = z.infer<typeof PublicDailyEnergySchema>;
 
-export interface PublicActivityWorkoutDto {
-  id: string;
-  activityType: string;
-  sourceName: string;
+export const PublicActivityWorkoutSchema = z.object({
+  id: z.string(),
+  activityType: z.string(),
+  sourceName: z.string(),
   /** True when LukiFitti itself wrote the workout to Apple Health. */
-  isOwn: boolean;
-  startedAt: string;
-  endedAt: string;
-  activeKcal: number | null;
-  distanceMeters: number | null;
-}
+  isOwn: z.boolean(),
+  startedAt: z.string(),
+  endedAt: z.string(),
+  activeKcal: z.number().nullable(),
+  distanceMeters: z.number().nullable(),
+});
+export type PublicActivityWorkoutDto = z.infer<typeof PublicActivityWorkoutSchema>;
+
+/** Builds the `{ data, nextCursor }` list envelope schema for an item schema. */
+export const publicListSchema = <S extends z.ZodType>(item: S) =>
+  z.object({ data: z.array(item), nextCursor: z.string().nullable() });
+
+/** Shared v1 error body (`{ error, message, required?, retryAfterSeconds? }`). */
+export const PublicApiErrorSchema = z.object({
+  error: z.string(),
+  message: z.string(),
+  required: z.string().optional(),
+  retryAfterSeconds: z.number().optional(),
+});
+export type PublicApiErrorDto = z.infer<typeof PublicApiErrorSchema>;

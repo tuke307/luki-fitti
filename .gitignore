@@ -121,3 +121,8 @@ apps/apple/marketing/.xcresults/
 .claude/skills/
 .agents/skills/
 .github/skills/
+
+# Docs site content staged by scripts/prepare-docs.mjs + fumadocs generated index
+apps/web/content/
+apps/web/.source/
+apps/web/lib/docs/git-info.json

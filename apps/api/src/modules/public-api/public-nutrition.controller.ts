@@ -1,12 +1,14 @@
 import { Controller, Get, Query, UseFilters, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ApiKeyScope } from '@luki-fitti/common/enums';
 import {
+  PublicMealEntrySchema,
   PublicRangeQuerySchema,
   type PublicListDto,
   type PublicMealEntryDto,
   type PublicRangeQueryDto,
 } from '@luki-fitti/common/schemas';
+import { ApiPublicErrors, ApiRangeQueries, jsonSchemaOf, listJsonSchema } from './swagger.util';
 import { ApiScope } from '@/decorators/api-scope.decorator';
 import { CurrentUser, type AuthenticatedUser } from '@/decorators/current-user.decorator';
 import { ZodValidationPipe } from '@/pipes/zod-validation.pipe';
@@ -17,6 +19,7 @@ import { PublicApiExceptionFilter } from './public-api.filter';
 import { PublicApiService } from './public-api.service';
 
 @ApiTags('Public API v1')
+@ApiPublicErrors()
 @ApiBearerAuth()
 @Controller('v1')
 @UseGuards(ApiKeyGuard, ScopesGuard, ApiKeyRateLimitGuard)
@@ -26,6 +29,8 @@ export class PublicNutritionController {
 
   @Get('meals')
   @ApiScope(ApiKeyScope.READ_NUTRITION)
+  @ApiRangeQueries()
+  @ApiOkResponse({ schema: listJsonSchema(jsonSchemaOf(PublicMealEntrySchema)) })
   @ApiOperation({ summary: 'Meal entries with items (no photos)' })
   listMeals(
     @CurrentUser() user: AuthenticatedUser,

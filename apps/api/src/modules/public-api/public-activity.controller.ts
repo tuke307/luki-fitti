@@ -1,13 +1,16 @@
 import { Controller, Get, Query, UseFilters, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ApiKeyScope } from '@luki-fitti/common/enums';
 import {
+  PublicActivityWorkoutSchema,
+  PublicDailyEnergySchema,
   PublicRangeQuerySchema,
   type PublicActivityWorkoutDto,
   type PublicDailyEnergyDto,
   type PublicListDto,
   type PublicRangeQueryDto,
 } from '@luki-fitti/common/schemas';
+import { ApiPublicErrors, ApiRangeQueries, jsonSchemaOf, listJsonSchema } from './swagger.util';
 import { ApiScope } from '@/decorators/api-scope.decorator';
 import { CurrentUser, type AuthenticatedUser } from '@/decorators/current-user.decorator';
 import { ZodValidationPipe } from '@/pipes/zod-validation.pipe';
@@ -18,6 +21,7 @@ import { PublicApiExceptionFilter } from './public-api.filter';
 import { PublicApiService } from './public-api.service';
 
 @ApiTags('Public API v1')
+@ApiPublicErrors()
 @ApiBearerAuth()
 @Controller('v1')
 @UseGuards(ApiKeyGuard, ScopesGuard, ApiKeyRateLimitGuard)
@@ -27,6 +31,8 @@ export class PublicActivityController {
 
   @Get('activity/daily-energy')
   @ApiScope(ApiKeyScope.READ_ACTIVITY)
+  @ApiRangeQueries()
+  @ApiOkResponse({ schema: listJsonSchema(jsonSchemaOf(PublicDailyEnergySchema)) })
   @ApiOperation({ summary: 'Apple Health active energy per device-local day' })
   listDailyEnergy(
     @CurrentUser() user: AuthenticatedUser,
@@ -37,6 +43,8 @@ export class PublicActivityController {
 
   @Get('activity/workouts')
   @ApiScope(ApiKeyScope.READ_ACTIVITY)
+  @ApiRangeQueries()
+  @ApiOkResponse({ schema: listJsonSchema(jsonSchemaOf(PublicActivityWorkoutSchema)) })
   @ApiOperation({ summary: 'Imported Apple Health workouts' })
   listActivityWorkouts(
     @CurrentUser() user: AuthenticatedUser,

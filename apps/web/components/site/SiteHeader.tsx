@@ -1,6 +1,6 @@
 import { SiGithub } from '@icons-pack/react-simple-icons';
 
-import { APP_ORIGIN, APP_STORE_URL, GITHUB_URL } from '@/lib/site/config';
+import { APP_ORIGIN, APP_STORE_URL, DOCS_ORIGIN, GITHUB_URL } from '@/lib/site/config';
 import { type getSiteCopy } from '@/lib/site/content';
 
 export function SiteHeader({ t }: { t: ReturnType<typeof getSiteCopy> }) {
@@ -22,6 +22,14 @@ export function SiteHeader({ t }: { t: ReturnType<typeof getSiteCopy> }) {
           </a>
           <a href="#faq" className="hover:text-foreground transition-colors">
             {t.nav.faq}
+          </a>
+          <a
+            href={DOCS_ORIGIN}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground transition-colors"
+          >
+            Docs
           </a>
         </nav>
         <div className="ml-auto flex items-center gap-4">

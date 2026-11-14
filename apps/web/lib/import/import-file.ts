@@ -6,9 +6,9 @@ import {
   type ImportIssueDto,
 } from '@luki-fitti/common/schemas';
 import { ApiClientError } from '@/lib/api/client';
+import { DOCS_ORIGIN } from '@/lib/site/config';
 
-export const IMPORT_FORMAT_DOC_URL =
-  'https://github.com/tuke307/luki-fitti/blob/main/docs/import-format.md';
+export const IMPORT_FORMAT_DOC_URL = `${DOCS_ORIGIN}/import-format`;
 
 export type ImportFileCheck =
   | { ok: true }
