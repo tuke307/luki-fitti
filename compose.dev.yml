@@ -35,6 +35,7 @@ services:
     depends_on:
       - web
       - api
+      - mcp-server
     networks:
       - luki_fitti_network
   web:
@@ -74,6 +75,24 @@ services:
       - db-migrate
       - redis
       - mailpit
+    networks:
+      - luki_fitti_network
+  mcp-server:
+    build:
+      context: .
+      dockerfile: ./apps/mcp-server/Dockerfile
+    restart: always
+    environment:
+      - TZ=UTC
+      - NODE_ENV=production
+      - MCP_SERVER_PORT=3030
+      - API_BASE_URL=http://api:3001/api
+      - MCP_PUBLIC_URL=http://localhost:8082/mcp
+      - MCP_ALLOWED_HOSTS=localhost
+    ports:
+      - 3030:3030
+    depends_on:
+      - api
     networks:
       - luki_fitti_network
   mailpit:

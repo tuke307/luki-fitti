@@ -49,6 +49,7 @@ export interface AppSettingsRecord {
   raidHpPerActiveUser: number;
   raidMinHp: number;
   apiKeysEnabled: boolean;
+  mcpEnabled: boolean;
   updatedAt: Date;
 }
 
@@ -209,7 +210,7 @@ export class AppSettingsService {
 
   async getApiKeySettings(): Promise<ApiKeysSettingsDto> {
     const value = await this.get();
-    return { apiKeysEnabled: value.apiKeysEnabled };
+    return { apiKeysEnabled: value.apiKeysEnabled, mcpEnabled: value.mcpEnabled };
   }
 
   async updateApiKeySettings(dto: UpdateApiKeysSettingsDto): Promise<ApiKeysSettingsDto> {

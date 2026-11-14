@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { NotFoundException } from '@nestjs/common';
 import type { PrismaService } from '../database/prisma.service';
 import type { AnalyticsService } from '../analytics/analytics.service';
+import { PublicSessionListQuerySchema } from '@luki-fitti/common/schemas';
 import { PublicApiService } from './public-api.service';
 import { encodeCursor } from './pagination.util';
 
@@ -333,5 +334,38 @@ describe('PublicApiService DTO hygiene', () => {
     const set = s.exercises[0]!.sets[0]!;
     assert.ok(Math.abs(set.weightKg! - 220 * 0.45359237) < 1e-6);
     assert.ok(Math.abs(s.exercises[0]!.targetWeightKg! - 220 * 0.45359237) < 1e-6);
+  });
+});
+
+describe('PublicSessionListQuerySchema include=exercises', () => {
+  it('rejects limit > 50 when include=exercises is set', () => {
+    assert.throws(() => PublicSessionListQuerySchema.parse({ include: 'exercises', limit: 51 }));
+    // without include the regular limit cap (200) applies unchanged
+    assert.equal(PublicSessionListQuerySchema.parse({ limit: 51 }).limit, 51);
+    assert.equal(PublicSessionListQuerySchema.parse({ include: 'exercises' }).limit, 50);
+  });
+
+  it('returns full sessions with exercises and sets when include=exercises', async () => {
+    const captured: Record<string, unknown> = {};
+    const svc = service(captured);
+    const page = await svc.listSessions(OWNER, {
+      ...baseQuery,
+      include: 'exercises',
+    });
+    const args = captured['workoutSession'] as { include?: unknown };
+    assert.deepEqual(args.include, {
+      exercises: { include: { sets: true }, orderBy: { orderIndex: 'asc' } },
+    });
+    const row = page.data[0]!;
+    assert.ok('exercises' in row, 'include=exercises returns PublicSessionDto rows');
+  });
+
+  it('returns summary rows without exercises by default', async () => {
+    const captured: Record<string, unknown> = {};
+    const svc = service(captured);
+    const page = await svc.listSessions(OWNER, baseQuery);
+    const args = captured['workoutSession'] as { include?: unknown };
+    assert.equal(args.include, undefined);
+    assert.ok(!('exercises' in page.data[0]!));
   });
 });

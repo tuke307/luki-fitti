@@ -668,6 +668,8 @@ model AppSettings {
   raidMinHp               Int             @default(2000)
   /// Personal API keys kill switch: off → /api/v1/* 403 and key creation blocked.
   apiKeysEnabled          Boolean         @default(false)
+  /// MCP server kill switch: off → /api/v1/key 403, so AI assistants can't connect.
+  mcpEnabled              Boolean         @default(false)
   updatedAt               DateTime        @updatedAt
 }
 

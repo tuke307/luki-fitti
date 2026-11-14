@@ -37,7 +37,11 @@
     "GIT_SHA",
     "GITHUB_PROJECT_OWNER",
     "GITHUB_PROJECT_NUMBER",
-    "GITHUB_PROJECT_TOKEN"
+    "GITHUB_PROJECT_TOKEN",
+    "MCP_SERVER_PORT",
+    "API_BASE_URL",
+    "MCP_PUBLIC_URL",
+    "MCP_ALLOWED_HOSTS"
   ],
   "tasks": {
     "build": {

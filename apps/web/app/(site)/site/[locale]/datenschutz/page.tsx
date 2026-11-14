@@ -79,7 +79,9 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
               — nie den Schlüssel im Klartext. Für API-Zugriffe speichern wir keine IP-Adressen.
               Widerrufene und abgelaufene Schlüssel werden 30 Tage nach ihrem Ende gelöscht; mit dem
               Konto werden alle Schlüssel gelöscht. API-Schlüssel lesen nur deine eigenen Daten und
-              enthalten nie Fotos oder Social-Daten.
+              enthalten nie Fotos oder Social-Daten. Verbindest du einen KI-Assistenten über den
+              MCP-Server, werden die von ihm abgerufenen Daten auf deine Anfrage hin an den Anbieter
+              des Assistenten gesendet.
             </p>
           </section>
           <section>
@@ -150,7 +152,8 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
               store a keyed hash — never the secret in plain text. We do not store IP addresses for
               API access. Revoked and expired keys are deleted 30 days after they end; all keys are
               deleted with your account. API keys only read your own data and never include photos
-              or social data.
+              or social data. When you connect an AI assistant through the MCP server, the data it
+              fetches is sent to the assistant&rsquo;s provider at your request.
             </p>
           </section>
           <section>
