@@ -41,7 +41,8 @@
     "MCP_SERVER_PORT",
     "API_BASE_URL",
     "MCP_PUBLIC_URL",
-    "MCP_ALLOWED_HOSTS"
+    "MCP_ALLOWED_HOSTS",
+    "DOCS_GITHUB_TOKEN"
   ],
   "tasks": {
     "build": {

@@ -126,3 +126,4 @@ apps/apple/marketing/.xcresults/
 apps/web/content/
 apps/web/.source/
 apps/web/lib/docs/git-info.json
+apps/web/public/openapi/

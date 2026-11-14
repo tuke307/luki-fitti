@@ -8,8 +8,9 @@
  *   - links rewritten: relative .md links resolve against the source file's directory to
  *     docs routes, other repo paths -> GitHub blob URLs on main.
  *   - decision records under content/adr/.
- *   - git-info.json records each page's repo path and last git commit date for the
- *     "Edit on GitHub" link and "Last updated" line.
+ *   - git-info.json records each page's repo path and last commit date for the
+ *     "Edit on GitHub" link and "Last updated" line — from git locally, and from
+ *     the GitHub API (lib/docs/github-dates.mjs) where .git is missing (Docker).
  *
  * Branch plans and specs (`docs/plans/**`, and the plan files still at the top level on
  * this branch) are never published — they are branch-only guidance.
@@ -156,6 +157,7 @@ rmSync(CONTENT, { recursive: true, force: true });
 mkdirSync(path.join(CONTENT, 'adr'), { recursive: true });
 
 const gitInfo = {};
+const undated = [];
 for (const { repo, dest, slug } of sources) {
   const raw = readFileSync(path.join(ROOT, repo), 'utf8');
   const { title, titleIndex, description } = titleAndDescription(raw);
@@ -172,7 +174,23 @@ for (const { repo, dest, slug } of sources) {
   const file = path.join(CONTENT, dest);
   mkdirSync(path.dirname(file), { recursive: true });
   writeFileSync(file, fm);
-  gitInfo[slug] = { path: repo, lastModified: gitDate(repo) };
+  const lastModified = gitDate(repo);
+  gitInfo[slug] = { path: repo, lastModified };
+  if (!lastModified) undated.push({ repo, slug });
+}
+
+// No .git in the build image: ask GitHub for the last commit date of the files
+// that git could not date. Best-effort only — failures leave the date empty.
+if (undated.length) {
+  const { githubDatesFor } = await import('../lib/docs/github-dates.mjs');
+  const dates = await githubDatesFor(
+    undated.map((u) => u.repo),
+    { token: process.env.DOCS_GITHUB_TOKEN },
+  );
+  for (const { repo, slug } of undated) {
+    const date = dates.get(repo);
+    if (date) gitInfo[slug].lastModified = date;
+  }
 }
 
 writeFileSync(GIT_INFO, JSON.stringify(gitInfo, null, 2));
