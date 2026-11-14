@@ -31,7 +31,7 @@ main ◀── develop ◀── release/2.0.0  (version bump 2.0.0)        PR #
 | :--------------------------------------------------------------------- | :--------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------ |
 | Version bump 2.0.0                                                     | #106 (`release/2.0.0` → `develop`)                               | draft. Screenshots for 2.0 still missing (on purpose, done last)                                                        | `docs/release.md`                                                   |
 | Social: friends, leagues, duels, raids                                 | #100 (`feat/social-2.0` → `release/2.0.0`)                       | **all 4 sub-PRs merged** (#101–#104). **merged** into `release/2.0.0` (squash `4ae47c21`, 2026-11-14), all checks green | `docs/social-2.0.md` + `social-2.0-pr1…4.md` (on `feat/social-2.0`) |
-| Personal API keys                                                      | #107 (`feat/api-keys` → `release/2.0.0`)                         | **design approved, implementation not started**                                                                         | `docs/api-keys.md` (on `feat/api-keys`)                             |
+| Personal API keys                                                      | #107 (`feat/api-keys` → `release/2.0.0`)                         | **design approved, implementation not started**                                                                         | `docs/adr/0003-personal-api-keys.md`                                |
 | MCP server (separate feature)                                          | #108 (`feat/mcp-server` → `feat/api-keys`, then `release/2.0.0`) | **design approved, implementation not started**; starts after API keys                                                  | `docs/mcp-server.md` (on `feat/mcp-server`)                         |
 | Former "PR 5": beta, final privacy policy, App Store notes, release PR | —                                                                | **postponed** by the user; ships together with the next feature                                                         | `docs/social-2.0.md` → "Later"                                      |
 
@@ -44,7 +44,7 @@ main ◀── develop ◀── release/2.0.0  (version bump 2.0.0)        PR #
      the schema already contains the social models (User/AppSettings fields, migrations up to
      `20261116000000_raids`).
    - Name the API key migration later than that, e.g. `20261117000000_api_keys`.
-3. **API keys PR A: keys + read API** (`docs/api-keys.md` → "Delivery" 1).
+3. **API keys PR A: keys + read API** (`docs/adr/0003-personal-api-keys.md`).
    - Migration `ApiKey`, `AppSettings.apiKeysEnabled`, email template `API_KEY_CREATED`.
    - Key management routes (password re-auth, max 10 keys, expiry 30/90/365 days or none).
    - `ApiKeyGuard` + `ScopesGuard` (deny by default), `/api/v1` read endpoints except export,
