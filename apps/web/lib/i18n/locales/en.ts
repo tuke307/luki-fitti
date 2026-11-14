@@ -1105,6 +1105,8 @@ export const en = {
     pushRaidsSub: 'Boss phases, defeats and squad invites.',
     notStarted: 'No raid this week yet.',
     phaseLabel: 'Phase {phase}',
+    spotCardio: 'Cardio',
+    spotStretching: 'Stretching',
     markSeen: 'Continue',
   },
   invite: {

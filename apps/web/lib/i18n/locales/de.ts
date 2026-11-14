@@ -1113,6 +1113,8 @@ export const de = {
     pushRaidsSub: 'Boss-Phasen, Siege und Squad-Einladungen.',
     notStarted: 'Diese Woche noch kein Raid.',
     phaseLabel: 'Phase {phase}',
+    spotCardio: 'Cardio',
+    spotStretching: 'Dehnen',
     markSeen: 'Weiter',
   },
   invite: {

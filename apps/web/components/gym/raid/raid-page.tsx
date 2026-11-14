@@ -7,7 +7,7 @@ import { raidsApi } from '@/lib/social/social-api';
 import { MobileSheet } from '../mobile-sheet';
 import { UserAvatar } from '../social/user-avatar';
 import { BossCanvas, type BossHit } from './boss-canvas';
-import { RaidHpBar, bossBySlug } from './raid-card';
+import { RaidHpBar, bossBySlug, effectivePhase, useCountdown, weakSpotLabel } from './raid-card';
 
 const FEED_POLL_MS = 20_000;
 
@@ -19,7 +19,7 @@ export function RaidPage({
   raidId: string | null;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { t, locale, format } = useLocale();
+  const { t, locale, format, muscleLabel } = useLocale();
   const [detailFor, setDetailFor] = useState<{ id: string; data: RaidDetailDto } | null>(null);
   const [hit, setHit] = useState<BossHit | null>(null);
   const hitSeq = useRef(0);
@@ -87,6 +87,9 @@ export function RaidPage({
 
   const boss = detail ? bossBySlug(detail.bossSlug) : null;
   const name = boss ? (locale === 'de' ? boss.name.de : boss.name.en) : '…';
+  const lore = boss ? (locale === 'de' ? boss.lore.de : boss.lore.en) : null;
+  const phase = detail ? effectivePhase(detail) : 0;
+  const endsIn = useCountdown(detail?.endsAt);
 
   return (
     <MobileSheet
@@ -98,6 +101,7 @@ export function RaidPage({
     >
       {detail && boss ? (
         <div className="space-y-4 pb-4">
+          {lore && <p className="text-muted-foreground text-[0.8125rem] italic">{lore}</p>}
           <BossCanvas
             boss={boss}
             state={
@@ -107,7 +111,7 @@ export function RaidPage({
                   ? 'escaped'
                   : 'idle'
             }
-            phase={detail.phase}
+            phase={phase}
             hit={hit}
             label={name}
             className="mx-auto aspect-square w-full max-w-[320px]"
@@ -119,9 +123,10 @@ export function RaidPage({
                 {Math.max(0, detail.maxHp - detail.damage).toLocaleString()} /{' '}
                 {detail.maxHp.toLocaleString()} HP
               </span>
-              {detail.phase > 0 && (
-                <span>{t.raid.phaseLabel.replace('{phase}', String(detail.phase))}</span>
-              )}
+              <span>
+                {phase > 0 && `${t.raid.phaseLabel.replace('{phase}', String(phase))} · `}
+                {t.raid.endsIn.replace('{time}', endsIn)}
+              </span>
             </div>
           </div>
 
@@ -131,7 +136,7 @@ export function RaidPage({
                 key={spot}
                 className="bg-secondary text-muted-foreground rounded-full px-2 py-0.5 text-[0.6875rem] font-medium"
               >
-                {spot.replace(/_/g, ' ').toLowerCase()}
+                {weakSpotLabel(spot, t, muscleLabel)}
               </span>
             ))}
           </div>

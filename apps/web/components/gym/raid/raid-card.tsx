@@ -2,7 +2,8 @@
 
 import React from 'react';
 import type { RaidDto } from '@luki-fitti/common/schemas';
-import { RAID_BOSSES } from '@luki-fitti/common/raid';
+import { MuscleGroup } from '@luki-fitti/common/enums';
+import { RAID_BOSSES, raidPhaseFor, type WeakSpot } from '@luki-fitti/common/raid';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { BossCanvas } from './boss-canvas';
 
@@ -14,6 +15,23 @@ export function bossBySlug(slug: string) {
 export function bossName(slug: string, locale: string) {
   const boss = bossBySlug(slug);
   return locale === 'de' ? boss.name.de : boss.name.en;
+}
+
+/** Localized weak-spot label: real muscle groups via the locale helper,
+ *  CARDIO/STRETCHING pseudo spots via raid strings. */
+export function weakSpotLabel(
+  spot: WeakSpot,
+  t: { raid: { spotCardio: string; spotStretching: string } },
+  muscleLabel: (m: MuscleGroup) => string,
+): string {
+  if (spot === 'CARDIO') return t.raid.spotCardio;
+  if (spot === 'STRETCHING') return t.raid.spotStretching;
+  return muscleLabel(spot);
+}
+
+/** Effective enrage phase — max(server phase, HP-derived) so stale rows still enrage. */
+export function effectivePhase(raid: { damage: number; maxHp: number; phase: number }): number {
+  return Math.max(raid.phase, raidPhaseFor(raid.damage, raid.maxHp));
 }
 
 /** HP bar with tick marks at the 75/50/25 % enrage thresholds. */
@@ -43,13 +61,13 @@ export function RaidHpBar({ damage, maxHp }: { damage: number; maxHp: number }) 
   );
 }
 
-function useCountdown(endsAt: string): string {
+export function useCountdown(endsAt?: string): string {
   const [now, setNow] = React.useState(() => Date.now());
   React.useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 60_000);
     return () => window.clearInterval(id);
   }, []);
-  const ms = Math.max(0, Date.parse(endsAt) - now);
+  const ms = Math.max(0, (endsAt ? Date.parse(endsAt) : 0) - now);
   const days = Math.floor(ms / 86_400_000);
   const hours = Math.floor((ms % 86_400_000) / 3_600_000);
   const minutes = Math.floor((ms % 3_600_000) / 60_000);
@@ -68,7 +86,7 @@ export function RaidCard({
   yourDamage: number;
   onOpen: () => void;
 }) {
-  const { t, locale } = useLocale();
+  const { t, locale, muscleLabel } = useLocale();
   const boss = bossBySlug(raid.bossSlug);
   const name = locale === 'de' ? boss.name.de : boss.name.en;
   const endsIn = useCountdown(raid.endsAt);
@@ -83,8 +101,10 @@ export function RaidCard({
       <div className="flex items-center gap-3">
         <BossCanvas
           boss={boss}
-          state={raid.status === 'DEFEATED' ? 'defeated' : 'idle'}
-          phase={raid.phase}
+          state={
+            raid.status === 'DEFEATED' ? 'defeated' : raid.status === 'ESCAPED' ? 'escaped' : 'idle'
+          }
+          phase={effectivePhase(raid)}
           interactive={false}
           label={name}
           className="h-20 w-20 shrink-0"
@@ -110,7 +130,7 @@ export function RaidCard({
             key={spot}
             className="bg-secondary text-muted-foreground rounded-full px-2 py-0.5 text-[0.6875rem] font-medium"
           >
-            {spot.replace(/_/g, ' ').toLowerCase()}
+            {weakSpotLabel(spot, t, muscleLabel)}
           </span>
         ))}
       </div>

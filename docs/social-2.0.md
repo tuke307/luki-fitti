@@ -445,3 +445,8 @@ Append one line per session: date, what was done, what is next.
 |            | shading, all states, reduced motion, disposal), admin bosses preview, raid   |                                    |
 |            | card/page, squads card, defeat celebration, workout-summary damage, push     |                                    |
 |            | pref raids, /social/raids deep link, raid e2e, RaidDto.yourDamage            |                                    |
+| 2026-11-14 | PR 4 part B design-review fixes: bossBounds auto-framing (common + spec),  | PR 4 part C (iOS + Watch) —        |
+|            | soft blob shadow, RoundedBoxGeometry bevels, Titan/Golem personality,       | after design review                |
+|            | 3/4 pose + lighting, real enrage (body cracks, red-orange aura, angry       |                                    |
+|            | brows + small pupils), raid page phase + lore + countdown, localised        |                                    |
+|            | weak-spot chips, RaidDto.yourDamage, phase-3 e2e assert                     |                                    |

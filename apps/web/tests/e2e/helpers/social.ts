@@ -15,7 +15,7 @@ config({ path: resolve(__dirname, '../../../api/.env.local') });
 import bcrypt from 'bcrypt';
 import prisma from '@luki-fitti/database';
 import { berlinDayKey, berlinWeekKey, weekBounds } from '@luki-fitti/common/utils';
-import { bossForWeek } from '@luki-fitti/common/raid';
+import { bossForWeek, raidPhaseFor } from '@luki-fitti/common/raid';
 
 export interface SeededSocialUser {
   id: string;
@@ -249,9 +249,13 @@ export async function seedCommunityRaidForE2e(userId: string, damage = 120): Pro
       dayKey: berlinDayKey(new Date()),
     },
   });
-  await prisma.raid.update({
+  const updated = await prisma.raid.update({
     where: { id: raid.id },
     data: { damage: { increment: damage } },
+  });
+  await prisma.raid.update({
+    where: { id: raid.id },
+    data: { phase: raidPhaseFor(updated.damage, updated.maxHp) },
   });
   return raid.id;
 }

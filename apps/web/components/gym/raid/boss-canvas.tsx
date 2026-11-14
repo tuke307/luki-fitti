@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useReducedMotion } from 'framer-motion';
-import type { BossPart, RaidBoss, Slot } from '@luki-fitti/common/raid';
+import { bossBounds, type BossPart, type RaidBoss, type Slot } from '@luki-fitti/common/raid';
 
 export type BossVisualState = 'idle' | 'defeated' | 'escaped';
 
@@ -31,6 +31,8 @@ interface BossCanvasProps {
 }
 
 type Three = typeof import('three');
+type RoundedBox =
+  typeof import('three/examples/jsm/geometries/RoundedBoxGeometry.js').RoundedBoxGeometry;
 
 interface BuiltPart {
   part: BossPart;
@@ -41,6 +43,8 @@ interface BuiltPart {
 }
 
 const OUTLINE_SCALE = 1.045;
+/** default three-quarter pose (≈ −18°) */
+const BASE_YAW = -0.32;
 const PUPIL_TRACK = 0.045;
 const BLINK_MIN_MS = 3000;
 const BLINK_SPAN_MS = 2000;
@@ -50,7 +54,11 @@ const FLASH_MS = 120;
 const EXPLODE_MS = 1200;
 const ESCAPE_MS = 900;
 
-function geometryFor(THREE: Three, part: BossPart): import('three').BufferGeometry {
+function geometryFor(
+  THREE: Three,
+  RoundedBox: RoundedBox | null,
+  part: BossPart,
+): import('three').BufferGeometry {
   const [w, h, d] = part.size;
   switch (part.shape) {
     case 'sphere':
@@ -58,8 +66,9 @@ function geometryFor(THREE: Three, part: BossPart): import('three').BufferGeomet
     case 'capsule':
       return new THREE.CapsuleGeometry(w / 2, Math.max(0.01, h - w), 6, 18);
     case 'roundedBox': {
-      const radius = Math.min(w, h, d) * 0.25;
-      return RoundedBoxGeometry(THREE, w, h, d, 3, radius);
+      const radius = Math.min(w, h, d) * 0.18;
+      if (RoundedBox) return new RoundedBox(w, h, d, 4, radius);
+      return roundedBoxGeometry(THREE, w, h, d, radius);
     }
     case 'cone':
       return new THREE.ConeGeometry(w / 2, h, 20).scale(1, 1, d / w);
@@ -73,16 +82,13 @@ function geometryFor(THREE: Three, part: BossPart): import('three').BufferGeomet
   }
 }
 
-/** Minimal rounded-box: a box bevelled via a smoothed sphere blend is overkill;
- *  three ships RoundedBoxGeometry in examples, but to keep the lazy import to a
- *  single module we approximate with a subdivided box whose vertices are pulled
- *  toward the inscribed ellipsoid. */
-function RoundedBoxGeometry(
+/** Fallback rounded-box for when the examples addon fails to load: a subdivided
+ *  box whose vertices are pulled toward the inscribed rounded shape. */
+function roundedBoxGeometry(
   THREE: Three,
   w: number,
   h: number,
   d: number,
-  _segments: number,
   radius: number,
 ): import('three').BufferGeometry {
   const geo = new THREE.BoxGeometry(w, h, d, 4, 4, 4);
@@ -108,10 +114,32 @@ function RoundedBoxGeometry(
 }
 
 function toonGradient(THREE: Three): import('three').DataTexture {
-  const data = new Uint8Array([90, 160, 255]);
+  const data = new Uint8Array([70, 155, 255]);
   const tex = new THREE.DataTexture(data, 3, 1, THREE.RedFormat);
   tex.minFilter = THREE.NearestFilter;
   tex.magFilter = THREE.NearestFilter;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/** Soft radial blob: centre ~26 % alpha fading to 0, used as contact shadow. */
+function shadowTexture(THREE: Three): import('three').DataTexture {
+  const size = 128;
+  const data = new Uint8Array(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const dx = x / (size - 1) - 0.5;
+      const dy = y / (size - 1) - 0.5;
+      const r = Math.sqrt(dx * dx + dy * dy) * 2;
+      const a = Math.max(0, 1 - r) ** 1.7;
+      const i = (y * size + x) * 4;
+      data[i] = 0;
+      data[i + 1] = 0;
+      data[i + 2] = 0;
+      data[i + 3] = Math.round(a * 66);
+    }
+  }
+  const tex = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
   tex.needsUpdate = true;
   return tex;
 }
@@ -207,11 +235,19 @@ export function BossCanvas({
 
     const boot = async () => {
       let THREE: Three;
+      let RoundedBox: RoundedBox | null = null;
       try {
-        THREE = await import('three');
+        [THREE, { RoundedBoxGeometry: RoundedBox }] = await Promise.all([
+          import('three'),
+          import('three/examples/jsm/geometries/RoundedBoxGeometry.js'),
+        ]);
       } catch {
-        if (!disposed) setFailed(true);
-        return;
+        try {
+          THREE = await import('three');
+        } catch {
+          if (!disposed) setFailed(true);
+          return;
+        }
       }
       if (disposed) return;
 
@@ -224,17 +260,26 @@ export function BossCanvas({
       }
       renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
 
-      const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 20);
-      camera.position.set(0, 1.15, 3.4);
-      camera.lookAt(0, 0.95, 0);
+      const bounds = bossBounds(boss);
+      const [cx, cy, cz] = bounds.center;
 
-      scene.add(new THREE.AmbientLight(0xffffff, 1.1));
-      const key = new THREE.DirectionalLight(0xffffff, 2.2);
-      key.position.set(2.5, 4, 3);
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 30);
+      const frame = () => {
+        // fit the bounding sphere with ~12 % padding in both directions
+        const halfFov = ((camera.fov / 2) * Math.PI) / 180;
+        const dist = ((bounds.radius * 1.12) / Math.tan(halfFov)) * Math.max(1, 1 / camera.aspect);
+        camera.position.set(cx, cy + dist * 0.14, cz + dist);
+        camera.lookAt(cx, cy, cz);
+      };
+
+      // key light from the upper left + a subtle accent rim from behind
+      scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+      const key = new THREE.DirectionalLight(0xffffff, 2.6);
+      key.position.set(-2.5, 4.5, 3);
       scene.add(key);
-      const rim = new THREE.DirectionalLight(boss.palette.accent, 0.8);
-      rim.position.set(-3, 2, -2);
+      const rim = new THREE.DirectionalLight(boss.palette.accent, 1.1);
+      rim.position.set(2.5, 2.5, -3);
       scene.add(rim);
 
       const gradient = toonGradient(THREE);
@@ -243,14 +288,27 @@ export function BossCanvas({
 
       const disposables: Array<{ dispose: () => void }> = [gradient];
       const slotMaterials = new Map<Slot, import('three').MeshToonMaterial>();
+      /** extra materials (emissive clones) that still follow the palette lerp */
+      const extraMaterials: Array<{ mat: import('three').MeshToonMaterial; slot: Slot }> = [];
       const slotColor = (slot: Slot) => new THREE.Color(boss.palette[slot]);
-      const materialFor = (slot: Slot) => {
-        let mat = slotMaterials.get(slot);
-        if (!mat) {
-          mat = new THREE.MeshToonMaterial({ color: slotColor(slot), gradientMap: gradient });
-          slotMaterials.set(slot, mat);
-          disposables.push(mat);
+      const materialFor = (slot: Slot, emissive = false) => {
+        if (!emissive) {
+          let mat = slotMaterials.get(slot);
+          if (!mat) {
+            mat = new THREE.MeshToonMaterial({ color: slotColor(slot), gradientMap: gradient });
+            slotMaterials.set(slot, mat);
+            disposables.push(mat);
+          }
+          return mat;
         }
+        const mat = new THREE.MeshToonMaterial({
+          color: slotColor(slot),
+          gradientMap: gradient,
+          emissive: slotColor(slot),
+          emissiveIntensity: 0.85,
+        });
+        extraMaterials.push({ mat, slot });
+        disposables.push(mat);
         return mat;
       };
       const outlineMat = new THREE.MeshBasicMaterial({
@@ -269,11 +327,12 @@ export function BossCanvas({
       const built: BuiltPart[] = [];
       const pupils: import('three').Mesh[] = [];
       const eyes: import('three').Mesh[] = [];
+      const brows: Array<{ mesh: import('three').Mesh; side: number; baseRotZ: number }> = [];
       const partMeshes = new Map<string, import('three').Mesh>();
       for (const part of boss.parts) {
-        const geo = geometryFor(THREE, part);
+        const geo = geometryFor(THREE, RoundedBox, part);
         disposables.push(geo);
-        const mesh = new THREE.Mesh(geo, materialFor(part.slot));
+        const mesh = new THREE.Mesh(geo, materialFor(part.slot, part.emissive));
         mesh.position.set(...part.position);
         if (part.rotation) {
           mesh.rotation.set(
@@ -306,24 +365,32 @@ export function BossCanvas({
         });
         if (part.role === 'pupil') pupils.push(mesh);
         if (part.role === 'eye') eyes.push(mesh);
+        if (part.id.startsWith('brow')) {
+          const side = part.position[0] === 0 ? 0 : Math.sign(part.position[0]);
+          brows.push({ mesh, side, baseRotZ: mesh.rotation.z });
+        }
       }
 
-      // contact shadow blob
-      const shadowGeo = new THREE.CircleGeometry(0.85, 32);
+      // soft contact shadow blob, ~60 % of the body width, hugging the floor
+      const bodyWidth =
+        boss.parts.filter((p) => p.role === 'body').reduce((w, p) => Math.max(w, p.size[0]), 0) ||
+        bounds.radius;
+      const shadowTex = shadowTexture(THREE);
+      const shadowGeo = new THREE.PlaneGeometry(bodyWidth * 1.3, bodyWidth * 1.3);
       const shadowMat = new THREE.MeshBasicMaterial({
-        color: 0x000000,
+        map: shadowTex,
         transparent: true,
-        opacity: 0.18,
         depthWrite: false,
       });
       const shadow = new THREE.Mesh(shadowGeo, shadowMat);
       shadow.rotation.x = -Math.PI / 2;
-      shadow.position.y = -0.02;
+      const floorY = Math.min(...boss.parts.map((p) => p.position[1] - p.size[1] / 2));
+      shadow.position.set(cx, floorY + 0.01, cz);
       scene.add(shadow);
-      disposables.push(shadowGeo, shadowMat);
+      disposables.push(shadowGeo, shadowMat, shadowTex);
 
-      // enrage aura
-      const auraGeo = new THREE.SphereGeometry(1.5, 24, 18);
+      // enrage aura, fitted to the boss bounds (never fills the card)
+      const auraGeo = new THREE.SphereGeometry(bounds.radius * 0.95, 24, 18);
       const auraMat = new THREE.MeshBasicMaterial({
         color: boss.palette.accent,
         transparent: true,
@@ -332,7 +399,7 @@ export function BossCanvas({
         depthWrite: false,
       });
       const aura = new THREE.Mesh(auraGeo, auraMat);
-      aura.position.y = 0.95;
+      aura.position.set(cx, cy, cz);
       scene.add(aura);
       disposables.push(auraGeo, auraMat);
 
@@ -349,6 +416,7 @@ export function BossCanvas({
         renderer.setSize(w, h, false);
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
+        frame();
       };
       resize();
       const ro = new ResizeObserver(resize);
@@ -370,7 +438,7 @@ export function BossCanvas({
       const pointer = new THREE.Vector2(0, 0);
       let dragging = false;
       let lastX = 0;
-      let targetRotY = reduced ? -0.4 : 0;
+      let targetRotY = BASE_YAW;
       let rotY = targetRotY;
       let rotVel = 0;
       const onPointerMove = (e: PointerEvent) => {
@@ -455,7 +523,7 @@ export function BossCanvas({
 
         if (reduced) {
           // static three-quarter pose, state changes via opacity cross-fade
-          rotY += (-0.4 - rotY) * 0.12;
+          rotY += (BASE_YAW - rotY) * 0.12;
           group.rotation.y = rotY;
           const targetOpacity = state === 'idle' ? 1 : 0.25;
           for (const mat of slotMaterials.values()) {
@@ -466,18 +534,22 @@ export function BossCanvas({
           // idle bob + sway, faster when enraged
           const speed = 1 + phase * 0.35;
           const period = (boss.idle.periodMs / 1000) * Math.PI * 2;
-          group.position.y =
-            Math.sin(t * speed * (2000 / boss.idle.periodMs) * Math.PI) * boss.idle.bob;
+          const bob = Math.sin(t * speed * (2000 / boss.idle.periodMs) * Math.PI) * boss.idle.bob;
+          group.position.y = bob;
+          // shadow shrinks/fades a touch when the boss rises
+          shadow.scale.setScalar(Math.max(0.85, 1 - Math.max(0, bob) * 2));
+          shadowMat.opacity = Math.max(0.6, 1 - Math.max(0, bob) * 3);
           group.rotation.z = Math.sin(t * speed * (period / Math.PI) * 0.5) * boss.idle.sway;
 
-          // drag rotation with spring back
-          if (!dragging) targetRotY *= 0.9;
+          // drag rotation with spring back to the three-quarter pose
+          if (!dragging) targetRotY += (BASE_YAW - targetRotY) * 0.1;
           const spring = (targetRotY - rotY) * 14;
           rotVel = (rotVel + spring * dt) * Math.pow(0.0015, dt);
           rotY += rotVel * dt;
           group.rotation.y = rotY;
 
-          // pupils track the pointer
+          // pupils track the pointer; they shrink once enraged
+          const pupilScale = phase >= 2 ? 0.8 : 1;
           for (const p of pupils) {
             if (p.userData.baseX === undefined) {
               p.userData.baseX = p.position.x;
@@ -485,6 +557,13 @@ export function BossCanvas({
             }
             p.position.x = p.userData.baseX + pointer.x * PUPIL_TRACK;
             p.position.y = p.userData.baseY + pointer.y * PUPIL_TRACK;
+            p.scale.setScalar(pupilScale);
+          }
+
+          // eyebrows angle down from phase 2
+          const anger = phase >= 2 ? Math.min(1, (phase - 1) / 2) : 0;
+          for (const b of brows) {
+            b.mesh.rotation.z = b.baseRotZ + (b.side === 0 ? -0.12 : b.side * -0.25) * anger;
           }
 
           // blink
@@ -517,17 +596,27 @@ export function BossCanvas({
             if (k >= 1) flashStart = -1;
           }
 
-          // enrage palette lerp + aura pulse
+          // enrage palette lerp + red-orange aura pulse
           const f = phase / 3;
-          for (const [slot, mat] of slotMaterials) {
+          const enragedColor = (slot: Slot) => {
             const base = slotColor(slot);
-            const enraged = boss.enragedPalette[slot]
-              ? new THREE.Color(boss.enragedPalette[slot]!)
+            return boss.enragedPalette[slot]
+              ? base.lerp(new THREE.Color(boss.enragedPalette[slot]!), f)
               : base;
-            mat.color.copy(base.lerp(enraged, f));
+          };
+          for (const [slot, mat] of slotMaterials) mat.color.copy(enragedColor(slot));
+          for (const { mat, slot } of extraMaterials) {
+            const c = enragedColor(slot);
+            mat.color.copy(c);
+            mat.emissive.copy(c);
           }
-          auraMat.opacity = phase > 0 ? 0.1 + 0.05 * f + Math.sin(t * 4) * 0.03 * f : 0;
-          aura.scale.setScalar(1 + 0.08 * f + Math.sin(t * 4) * 0.03 * f);
+          if (phase > 0) {
+            auraMat.color.set(0xff4a1f);
+            auraMat.opacity = (0.08 + 0.1 * f) * (1 + 0.3 * Math.sin(t * 5));
+            aura.scale.setScalar(1 + 0.06 * f + 0.04 * f * Math.sin(t * 5));
+          } else {
+            auraMat.opacity = 0;
+          }
         }
 
         // defeated: parts fly out with gravity then fade
@@ -547,7 +636,7 @@ export function BossCanvas({
           }
           outlineMat.transparent = true;
           outlineMat.opacity = fade;
-          shadowMat.opacity = 0.18 * fade;
+          shadowMat.opacity = fade;
           if (k >= 1.4) group.visible = false;
         }
 
@@ -563,7 +652,7 @@ export function BossCanvas({
           }
           outlineMat.transparent = true;
           outlineMat.opacity = 1 - e;
-          shadowMat.opacity = 0.18 * (1 - e);
+          shadowMat.opacity = 1 - e;
         }
 
         renderer.render(scene, camera);
@@ -614,6 +703,9 @@ export function BossCanvas({
       className={`relative overflow-hidden ${className ?? ''}`}
       role="img"
       aria-label={accessibleLabel}
+      data-phase={phase}
+      data-state={state}
+      data-boss={boss.slug}
     >
       {damageFloats.map((f) => (
         <span

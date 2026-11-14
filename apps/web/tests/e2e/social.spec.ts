@@ -252,7 +252,7 @@ test.describe('Social: raids', () => {
   test('a finished workout shows as damage on the raid card and page', async ({ page }) => {
     const unique = Date.now().toString(36);
     const user = await seedSocialUser('raider', undefined, `raider_${unique}`);
-    await seedCommunityRaidForE2e(user.id, 120);
+    await seedCommunityRaidForE2e(user.id, 1900);
 
     await resetOfflineStore(page);
     await submitLoginPageForm(page, user.email, user.password);
@@ -263,7 +263,7 @@ test.describe('Social: raids', () => {
     // The raid card shows the user's damage against the weekly boss.
     const card = page.getByTestId('raid-card');
     await expect(card).toBeVisible({ timeout: 10_000 });
-    await expect(card).toContainText('120');
+    await expect(card).toContainText('1,900');
 
     // Opening the card shows the raid page with the boss render present
     // (WebGL canvas or the 2D fallback, not pixels).

@@ -5,6 +5,7 @@ import { RAID_BOSSES, type RaidBoss } from '@luki-fitti/common/raid';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { BossCanvas, type BossHit, type BossVisualState } from '@/components/gym/raid/boss-canvas';
+import { weakSpotLabel } from '@/components/gym/raid/raid-card';
 
 const STATE_BUTTONS: Array<{ key: string; state: BossVisualState; phase?: number; hit?: boolean }> =
   [
@@ -18,7 +19,7 @@ const STATE_BUTTONS: Array<{ key: string; state: BossVisualState; phase?: number
   ];
 
 function BossPreviewCard({ boss, reduced }: { boss: RaidBoss; reduced: boolean }) {
-  const { t, locale } = useLocale();
+  const { t, locale, muscleLabel } = useLocale();
   const [state, setState] = React.useState<BossVisualState>('idle');
   const [phase, setPhase] = React.useState(0);
   const [hit, setHit] = React.useState<BossHit | null>(null);
@@ -37,7 +38,9 @@ function BossPreviewCard({ boss, reduced }: { boss: RaidBoss; reduced: boolean }
         className="mx-auto aspect-square w-full max-w-[280px]"
       />
       <p className="mt-1 text-center text-[0.9375rem] font-semibold">{name}</p>
-      <p className="text-muted-foreground text-center text-[0.75rem]">{boss.weakTo.join(' · ')}</p>
+      <p className="text-muted-foreground text-center text-[0.75rem]">
+        {boss.weakTo.map((s) => weakSpotLabel(s, t, muscleLabel)).join(' · ')}
+      </p>
       <div className="mt-3 flex flex-wrap justify-center gap-1.5">
         {STATE_BUTTONS.map((b) => (
           <Button
