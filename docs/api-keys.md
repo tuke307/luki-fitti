@@ -1,6 +1,6 @@
 # Personal API keys (design)
 
-Status: **approved 2026-11-15** · Target: 2.0.0 (branch `feat/api-keys` → `release/2.0.0`)
+Status: **approved 2026-11-15, implementation not started** (next steps and handoff: `docs/release-2.0.0.md` on `release/2.0.0`) · Target: 2.0.0 (branch `feat/api-keys` → `release/2.0.0`)
 
 Users create personal API keys in their settings and use them to read their own LukiFitti data
 from scripts and tools (spreadsheets, Notion, Home Assistant, Apple Shortcuts, their own

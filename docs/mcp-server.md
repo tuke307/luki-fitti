@@ -1,6 +1,6 @@
 # LukiFitti MCP server (design)
 
-Status: **approved 2026-11-15** · Target: 2.0.0 (branch `feat/api-keys` → `release/2.0.0`) ·
+Status: **approved 2026-11-15, implementation not started** (next steps and handoff: `docs/release-2.0.0.md` on `release/2.0.0`) · Target: 2.0.0 (branch `feat/api-keys` → `release/2.0.0`) ·
 Depends on: [personal API keys](api-keys.md)
 
 AI assistants (Claude Desktop/Code, Cursor, VS Code, ChatGPT and other MCP clients) connect to
