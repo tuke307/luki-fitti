@@ -468,7 +468,24 @@ export class SocialService {
   /** Unfriend or cancel an outgoing request. Silent: no error when nothing exists. */
   async removeFriend(viewerId: string, targetId: string): Promise<void> {
     const [a, b] = pairKey(viewerId, targetId);
-    await this.prisma.friendship.deleteMany({ where: { userAId: a, userBId: b } });
+    await this.prisma.$transaction([
+      this.prisma.friendship.deleteMany({ where: { userAId: a, userBId: b } }),
+      this.cancelDuelsBetween(viewerId, targetId),
+    ]);
+  }
+
+  /** PENDING/ACTIVE duels between the pair are cancelled silently. */
+  private cancelDuelsBetween(userA: string, userB: string) {
+    return this.prisma.duel.updateMany({
+      where: {
+        status: { in: ['PENDING', 'ACTIVE'] },
+        OR: [
+          { challengerId: userA, opponentId: userB },
+          { challengerId: userB, opponentId: userA },
+        ],
+      },
+      data: { status: 'CANCELLED', respondedAt: new Date() },
+    });
   }
 
   // ── Invites ────────────────────────────────────────────────────────────────
@@ -612,6 +629,7 @@ export class SocialService {
         update: {},
       }),
       this.prisma.friendship.deleteMany({ where: { userAId: a, userBId: b } }),
+      this.cancelDuelsBetween(viewerId, targetId),
     ]);
   }
 

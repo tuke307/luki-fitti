@@ -38,6 +38,68 @@ const MESSAGES: Record<NotificationKind, Record<Locale, PushMessage>> = {
     en: { title: 'League week ends tonight', body: 'The league week ends tonight' },
     de: { title: 'Ligawoche endet heute', body: 'Die Ligawoche endet heute' },
   },
+  [NotificationKind.DUEL_INVITE]: {
+    en: { title: 'Duel challenge', body: '{actor} challenged you to a duel' },
+    de: { title: 'Duell-Herausforderung', body: '{actor} fordert dich zum Duell heraus' },
+  },
+  [NotificationKind.DUEL_ACCEPTED]: {
+    en: { title: 'Duel accepted', body: '{actor} accepted your duel — it starts tomorrow' },
+    de: {
+      title: 'Duell angenommen',
+      body: '{actor} hat dein Duell angenommen — es startet morgen',
+    },
+  },
+  // DUEL_STANDINGS is dispatched via duelStandingsMessage (two body variants).
+  [NotificationKind.DUEL_STANDINGS]: {
+    en: { title: 'Duel standings', body: 'Your duel with {actor} continues' },
+    de: { title: 'Duell-Zwischenstand', body: 'Dein Duell mit {actor} läuft weiter' },
+  },
+  // DUEL_RESULT is dispatched via duelResultMessage (three body variants).
+  [NotificationKind.DUEL_RESULT]: {
+    en: { title: 'Duel finished', body: 'Your duel with {actor} is over' },
+    de: { title: 'Duell beendet', body: 'Dein Duell mit {actor} ist vorbei' },
+  },
+  [NotificationKind.STREAK_INVITE]: {
+    en: { title: 'Streak invite', body: '{actor} wants to start a weekly streak with you' },
+    de: {
+      title: 'Streak-Einladung',
+      body: '{actor} möchte mit dir eine Wochen-Streak starten',
+    },
+  },
+  [NotificationKind.STREAK_STARTED]: {
+    en: { title: 'Streak started', body: '{actor} is in — your streak week starts now' },
+    de: { title: 'Streak gestartet', body: '{actor} ist dabei — deine Streak-Woche beginnt' },
+  },
+  [NotificationKind.STREAK_REMINDER]: {
+    en: {
+      title: 'Keep your streak alive',
+      body: 'Train today to keep your {count}-week streak with {actor}',
+    },
+    de: {
+      title: 'Halte deine Streak',
+      body: 'Trainiere heute, um deine {count}-Wochen-Streak mit {actor} zu halten',
+    },
+  },
+  [NotificationKind.STREAK_FROZEN]: {
+    en: {
+      title: 'Streak freeze used',
+      body: 'A freeze saved your {count}-week streak with {actor}',
+    },
+    de: {
+      title: 'Streak eingefroren',
+      body: 'Ein Freeze hat deine {count}-Wochen-Streak mit {actor} gerettet',
+    },
+  },
+  [NotificationKind.STREAK_BROKEN]: {
+    en: {
+      title: 'Streak starts fresh',
+      body: 'Your streak with {actor} starts fresh this week',
+    },
+    de: {
+      title: 'Streak beginnt neu',
+      body: 'Deine Streak mit {actor} startet diese Woche neu',
+    },
+  },
 };
 
 /** Arena names shown in push text, per locale. */
@@ -74,6 +136,53 @@ export function leagueEndingMessage(
 ): PushMessage {
   const lang: Locale = locale?.toLowerCase().startsWith('de') ? 'de' : 'en';
   return LEAGUE_ENDING_VARIANTS[inDemotionZone ? 'demotion' : 'promotion'][lang];
+}
+
+const DUEL_STANDINGS_VARIANTS: Record<'leading' | 'behind', Record<Locale, PushMessage>> = {
+  leading: {
+    en: { title: 'Duel standings', body: 'You lead {actor} {you}–{them} · {days} days left' },
+    de: { title: 'Duell-Zwischenstand', body: 'Du führst {actor} {you}–{them} · noch {days} Tage' },
+  },
+  behind: {
+    en: { title: 'Duel standings', body: '{actor} leads {them}–{you} · {days} days left' },
+    de: { title: 'Duell-Zwischenstand', body: '{actor} führt {them}–{you} · noch {days} Tage' },
+  },
+};
+
+/** Body variant for DUEL_STANDINGS, picked by whether the recipient is ahead. */
+export function duelStandingsMessage(
+  leading: boolean,
+  locale: string | null | undefined,
+): PushMessage {
+  const lang: Locale = locale?.toLowerCase().startsWith('de') ? 'de' : 'en';
+  return DUEL_STANDINGS_VARIANTS[leading ? 'leading' : 'behind'][lang];
+}
+
+const DUEL_RESULT_VARIANTS: Record<'WON' | 'LOST' | 'TIE', Record<Locale, PushMessage>> = {
+  WON: {
+    en: { title: 'Duel won', body: 'You beat {actor} {you}–{them} — nicely done' },
+    de: { title: 'Duell gewonnen', body: 'Du hast {actor} {you}–{them} geschlagen — stark' },
+  },
+  LOST: {
+    en: { title: 'Duel over', body: '{actor} took this one {them}–{you} — the rematch is yours' },
+    de: {
+      title: 'Duell vorbei',
+      body: '{actor} gewinnt {them}–{you} — die Revanche gehört dir',
+    },
+  },
+  TIE: {
+    en: { title: 'Duel tied', body: 'Dead heat with {actor} — {you}–{them} each' },
+    de: { title: 'Duell unentschieden', body: 'Patt mit {actor} — jeweils {you}–{them}' },
+  },
+};
+
+/** Body variant for DUEL_RESULT, picked by the recipient's outcome. */
+export function duelResultMessage(
+  outcome: 'WON' | 'LOST' | 'TIE',
+  locale: string | null | undefined,
+): PushMessage {
+  const lang: Locale = locale?.toLowerCase().startsWith('de') ? 'de' : 'en';
+  return DUEL_RESULT_VARIANTS[outcome][lang];
 }
 
 export function pushMessageFor(

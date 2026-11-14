@@ -52,11 +52,15 @@ struct SocialAvatarView: View {
     }
 }
 
-/// One row for a `SocialCardDto`: avatar, @handle (+ name for friends) and trailing content.
+/// One row for a `SocialCardDto`: avatar, @handle (+ name for friends), an optional
+/// streak chip (flame + count, snowflake pips for freezes, weekly progress) and trailing
+/// content.
 struct SocialPersonRow<Actions: View>: View {
     let person: SocialCardDto
     let social: SocialStore
+    var streak: FriendStreakDto? = nil
     @ViewBuilder var actions: () -> Actions
+    @Environment(\.lukiLocale) private var tr
 
     var body: some View {
         HStack(spacing: 12) {
@@ -71,9 +75,37 @@ struct SocialPersonRow<Actions: View>: View {
                 if let name = person.name, !name.isEmpty {
                     Text(name).font(.subheadline.weight(.semibold))
                 }
-                Text("@\(person.handle)")
-                    .font(.subheadline)
-                    .foregroundStyle(person.name.map { !$0.isEmpty } == true ? .secondary : .primary)
+                HStack(spacing: 6) {
+                    Text("@\(person.handle)")
+                        .font(.subheadline)
+                        .foregroundStyle(person.name.map { !$0.isEmpty } == true ? .secondary : .primary)
+                    if let streak, streak.status == .ACTIVE {
+                        HStack(spacing: 2) {
+                            Image(systemName: "flame.fill")
+                            Text("\(streak.count)")
+                            ForEach(0..<streak.freezes, id: \.self) { _ in
+                                Image(systemName: "snowflake")
+                                    .foregroundStyle(.cyan)
+                            }
+                        }
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.orange)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("ios.streak.chip.\(person.userId)")
+                    }
+                }
+                if let streak, streak.status == .ACTIVE {
+                    Text(
+                        tr(
+                            "this week %d/%d · %d/%d",
+                            streak.thisWeek.you.done, streak.thisWeek.you.target,
+                            streak.thisWeek.them.done, streak.thisWeek.them.target
+                        )
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("ios.streak.week.\(person.userId)")
+                }
             }
             Spacer()
             actions()

@@ -62,6 +62,13 @@ function makePrisma(seed: { users?: TestUser[] } = {}) {
     }
   >();
   const reports: Record<string, unknown>[] = [];
+  const duels: Array<{
+    id: string;
+    challengerId: string;
+    opponentId: string;
+    status: string;
+    respondedAt: Date | null;
+  }> = [];
 
   const prisma = {
     users,
@@ -69,6 +76,7 @@ function makePrisma(seed: { users?: TestUser[] } = {}) {
     blocks,
     invites,
     reports,
+    duels,
     user: {
       findUnique: async ({ where }: { where: Record<string, unknown> }) => {
         if (typeof where.id === 'string') return users.get(where.id) ?? null;
@@ -239,6 +247,30 @@ function makePrisma(seed: { users?: TestUser[] } = {}) {
         if (!row) throw new NotFoundException();
         Object.assign(row, data);
         return row;
+      },
+    },
+    duel: {
+      updateMany: async ({
+        where,
+        data,
+      }: {
+        where: {
+          status: { in: string[] };
+          OR: { challengerId: string; opponentId: string }[];
+        };
+        data: Record<string, unknown>;
+      }) => {
+        let count = 0;
+        for (const d of duels) {
+          if (!where.status.in.includes(d.status)) continue;
+          const hit = where.OR.some(
+            (c) => c.challengerId === d.challengerId && c.opponentId === d.opponentId,
+          );
+          if (!hit) continue;
+          Object.assign(d, data);
+          count += 1;
+        }
+        return { count };
       },
     },
     $transaction: async (arg: unknown) => {
@@ -455,5 +487,52 @@ describe('SocialService blocks', () => {
     // unblock restores visibility
     await svc.deleteBlock('me', 'x');
     assert.equal(await svc.relation('me', 'x'), 'NONE');
+  });
+});
+
+describe('SocialService duel cancellation', () => {
+  const seedDuel = (
+    prisma: ReturnType<typeof makePrisma>,
+    challengerId: string,
+    opponentId: string,
+    status = 'ACTIVE',
+  ) => {
+    prisma.duels.push({
+      id: `duel-${prisma.duels.length}`,
+      challengerId,
+      opponentId,
+      status,
+      respondedAt: null,
+    });
+  };
+
+  it('unfriending cancels pending and active duels in the same call', async () => {
+    const prisma = makePrisma({
+      users: [makeUser({ id: 'me', handle: 'me' }), makeUser({ id: 'x', handle: 'x' })],
+    });
+    const svc = makeService(prisma);
+    await svc.sendRequest('me', 'x');
+    await svc.acceptRequest('x', 'me');
+    seedDuel(prisma, 'me', 'x');
+    seedDuel(prisma, 'x', 'me', 'PENDING');
+    seedDuel(prisma, 'me', 'x', 'COMPLETED');
+
+    await svc.removeFriend('me', 'x');
+    assert.equal(prisma.duels[0]!.status, 'CANCELLED');
+    assert.equal(prisma.duels[1]!.status, 'CANCELLED');
+    assert.equal(prisma.duels[2]!.status, 'COMPLETED', 'finished duels keep their result');
+  });
+
+  it('blocking cancels open duels too', async () => {
+    const prisma = makePrisma({
+      users: [makeUser({ id: 'me', handle: 'me' }), makeUser({ id: 'x', handle: 'x' })],
+    });
+    const svc = makeService(prisma);
+    await svc.sendRequest('me', 'x');
+    await svc.acceptRequest('x', 'me');
+    seedDuel(prisma, 'me', 'x');
+
+    await svc.createBlock('me', 'x');
+    assert.equal(prisma.duels[0]!.status, 'CANCELLED');
   });
 });

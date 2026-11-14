@@ -4,7 +4,7 @@
  * section); anything else or malformed input falls back to home.
  */
 export type OpenTarget =
-  { tab: 'social'; section: 'friends' | 'requests' | 'inbox' | null } | { tab: 'home' };
+  { tab: 'social'; section: 'friends' | 'requests' | 'inbox' | 'duels' | null } | { tab: 'home' };
 
 export function parseOpenParam(search: string): OpenTarget | null {
   const value = new URLSearchParams(search).get('open');
@@ -19,6 +19,8 @@ export function parseOpenParam(search: string): OpenTarget | null {
         return { tab: 'social', section: 'requests' };
       case 'inbox':
         return { tab: 'social', section: 'inbox' };
+      case 'duels':
+        return { tab: 'social', section: 'duels' };
       default:
         return { tab: 'social', section: null };
     }

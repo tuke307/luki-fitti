@@ -21,6 +21,8 @@ export function PushSettingsCard() {
   const { t } = useLocale();
   const [friends, setFriends] = useState<boolean | null>(null);
   const [leagues, setLeagues] = useState<boolean | null>(null);
+  const [duels, setDuels] = useState<boolean | null>(null);
+  const [streaks, setStreaks] = useState<boolean | null>(null);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [deviceEnabled, setDeviceEnabled] = useState(
     () => isWebPushSupported() && thisDeviceEndpoint() !== null,
@@ -33,6 +35,8 @@ export function PushSettingsCard() {
       if (!cancelled && res.data) {
         setFriends(res.data.friends);
         setLeagues(res.data.leagues);
+        setDuels(res.data.duels);
+        setStreaks(res.data.streaks);
       }
     });
     if (isWebPushSupported()) {
@@ -71,6 +75,32 @@ export function PushSettingsCard() {
             if (res.data) setLeagues(res.data.leagues);
           }}
           data-testid="push-leagues-switch"
+        />
+      )}
+      {duels !== null && (
+        <SettingsSwitchRow
+          title={t.battle.pushDuelsLabel}
+          subtitle={t.battle.pushDuelsSub}
+          checked={duels}
+          onCheckedChange={async (enabled) => {
+            setDuels(enabled);
+            const res = await pushApi.updatePreferences({ duels: enabled });
+            if (res.data) setDuels(res.data.duels);
+          }}
+          data-testid="push-duels-switch"
+        />
+      )}
+      {streaks !== null && (
+        <SettingsSwitchRow
+          title={t.battle.pushStreaksLabel}
+          subtitle={t.battle.pushStreaksSub}
+          checked={streaks}
+          onCheckedChange={async (enabled) => {
+            setStreaks(enabled);
+            const res = await pushApi.updatePreferences({ streaks: enabled });
+            if (res.data) setStreaks(res.data.streaks);
+          }}
+          data-testid="push-streaks-switch"
         />
       )}
       {isWebPushSupported() && publicKey && !isIosStandaloneRequired() && !deviceEnabled && (

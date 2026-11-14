@@ -40,7 +40,8 @@ export function berlinDayKey(date: Date): string {
   return `${p.year}-${pad(p.month)}-${pad(p.day)}`;
 }
 
-function addDays(dayKey: string, days: number): string {
+/** Adds `days` calendar days to a `YYYY-MM-DD` day key (zone-agnostic). */
+export function addBerlinDays(dayKey: string, days: number): string {
   const [y, m, d] = dayKey.split('-').map(Number) as [number, number, number];
   const t = new Date(Date.UTC(y, m - 1, d + days));
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -51,15 +52,15 @@ function addDays(dayKey: string, days: number): string {
 export function berlinWeekKey(date: Date): string {
   const dayKey = berlinDayKey(date);
   const weekday = new Date(`${dayKey}T12:00:00Z`).getUTCDay(); // same weekday in any zone
-  return addDays(dayKey, -((weekday + 6) % 7));
+  return addBerlinDays(dayKey, -((weekday + 6) % 7));
 }
 
 export function previousWeekKey(weekKey: string): string {
-  return addDays(weekKey, -7);
+  return addBerlinDays(weekKey, -7);
 }
 
 export function nextWeekKey(weekKey: string): string {
-  return addDays(weekKey, 7);
+  return addBerlinDays(weekKey, 7);
 }
 
 /** Berlin wall-clock offset from UTC for the instant `utc`. */
@@ -69,8 +70,8 @@ function berlinOffsetMs(utc: Date): number {
   return wallAsUtc - utc.getTime();
 }
 
-/** UTC instant of Berlin wall time `dayKey` 00:00. */
-function berlinMidnightUtc(dayKey: string): Date {
+/** UTC instant of Berlin wall-clock midnight at the start of `dayKey`. */
+export function berlinMidnight(dayKey: string): Date {
   const [y, m, d] = dayKey.split('-').map(Number) as [number, number, number];
   const wall = Date.UTC(y, m - 1, d);
   // Iterate: utc = wall - offset(utc). Two passes converge across DST transitions.
@@ -81,5 +82,5 @@ function berlinMidnightUtc(dayKey: string): Date {
 
 /** UTC instants bounding the league week `weekKey` (Berlin Monday → next Monday). */
 export function weekBounds(weekKey: string): { start: Date; end: Date } {
-  return { start: berlinMidnightUtc(weekKey), end: berlinMidnightUtc(nextWeekKey(weekKey)) };
+  return { start: berlinMidnight(weekKey), end: berlinMidnight(nextWeekKey(weekKey)) };
 }

@@ -11,7 +11,9 @@ import { socialApi } from '@/lib/social/social-api';
 import { prepareImageForUpload } from '@/lib/images/prepare-image';
 import { MobileSheet } from '../mobile-sheet';
 import { UserAvatar } from './user-avatar';
+import { TrophyShelf } from './trophy-shelf';
 import { HandleField, type HandleStatus } from './handle-field';
+import { useAuth } from '@/providers/auth/auth-context';
 
 /**
  * Full social profile editor: handle (live availability, 30-day cooldown),
@@ -29,6 +31,7 @@ export function SocialProfileSheet({
   onSaved: () => void;
 }) {
   const { t } = useLocale();
+  const { user } = useAuth();
   const [handle, setHandle] = useState('');
   const [name, setName] = useState('');
   const [emailLookup, setEmailLookup] = useState(true);
@@ -183,6 +186,8 @@ export function SocialProfileSheet({
           </span>
           <Switch checked={paused} onCheckedChange={setPaused} data-testid="social-pause-switch" />
         </label>
+
+        <TrophyShelf userId={user?.id ?? null} />
       </div>
     </MobileSheet>
   );

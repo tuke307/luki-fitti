@@ -5,6 +5,8 @@ import { BullMQService } from '@luki-fitti/api/services/bullmq.service';
 import { PrismaService } from '@luki-fitti/api/services/prisma.service';
 import { PushSenderService } from '@luki-fitti/api/services/push-sender.service';
 import { LeagueService } from '@luki-fitti/api/services/league.service';
+import { DuelService } from '@luki-fitti/api/services/duel.service';
+import { StreakService } from '@luki-fitti/api/services/streak.service';
 import { SocialAccessService } from '@luki-fitti/api/services/social-access.service';
 import { NotificationService } from '@luki-fitti/api/services/notification.service';
 import { AppSettingsService } from '@luki-fitti/api/services/app-settings.service';
@@ -15,6 +17,7 @@ export class WorkerService implements OnModuleDestroy {
   private readonly emailService: EmailService;
   private readonly pushSender: PushSenderService;
   private readonly leagueService: LeagueService;
+  private readonly duelService: DuelService;
 
   constructor(private readonly prismaService: PrismaService) {
     this.bullmqService = BullMQService.getInstance();
@@ -27,7 +30,14 @@ export class WorkerService implements OnModuleDestroy {
       this.bullmqService,
       socialAccess,
     );
-    this.leagueService = new LeagueService(this.prismaService, appSettings, notifications);
+    const streakService = new StreakService(this.prismaService, notifications);
+    this.duelService = new DuelService(this.prismaService, appSettings, notifications);
+    this.leagueService = new LeagueService(
+      this.prismaService,
+      appSettings,
+      notifications,
+      streakService,
+    );
   }
 
   async startWorker(): Promise<void> {
@@ -45,8 +55,12 @@ export class WorkerService implements OnModuleDestroy {
     this.bullmqService.startLeagueWorker(async (kind) => {
       if (kind === 'rollover') {
         await this.leagueService.rollover();
-      } else {
+      } else if (kind === 'reminder') {
         await this.leagueService.reminder();
+      } else if (kind === 'duels-tick') {
+        await this.duelService.tick();
+      } else {
+        await this.duelService.standings();
       }
     });
 

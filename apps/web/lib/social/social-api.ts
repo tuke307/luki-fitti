@@ -9,6 +9,9 @@ import type {
   AdminReportsQueryDto,
   CreateBlockDto,
   CreateReportDto,
+  DuelDetailDto,
+  DuelItemDto,
+  DuelListDto,
   FriendInviteDto,
   FriendListsDto,
   HandleAvailabilityDto,
@@ -24,6 +27,8 @@ import type {
   SocialProfileDto,
   SocialSettingsDto,
   SocialUserDto,
+  StreakListDto,
+  TrophyListDto,
   UpdateLeagueSettingsDto,
   UpdatePushPreferencesDto,
   UpdateSocialProfileDto,
@@ -77,6 +82,34 @@ export const socialApi = {
   unblock: (userId: string) => fetchClient(`/social/blocks/${userId}`, { method: 'DELETE' }),
   report: (data: CreateReportDto) =>
     fetchClient('/social/reports', { method: 'POST', body: JSON.stringify(data) }),
+};
+
+export const duelsApi = {
+  list: () => fetchClient<DuelListDto>('/duels'),
+  detail: (duelId: string) => fetchClient<DuelDetailDto>(`/duels/${duelId}`),
+  challenge: (opponentId: string) =>
+    fetchClient<DuelItemDto>('/duels', { method: 'POST', body: JSON.stringify({ opponentId }) }),
+  accept: (duelId: string) =>
+    fetchClient<DuelItemDto>(`/duels/${duelId}/accept`, { method: 'POST', body: '{}' }),
+  decline: (duelId: string) =>
+    fetchClient(`/duels/${duelId}/decline`, { method: 'POST', body: '{}' }),
+  cancel: (duelId: string) =>
+    fetchClient(`/duels/${duelId}/cancel`, { method: 'POST', body: '{}' }),
+  markSeen: (duelId: string) =>
+    fetchClient(`/duels/${duelId}/seen`, { method: 'POST', body: '{}' }),
+};
+
+export const streaksApi = {
+  list: () => fetchClient<StreakListDto>('/streaks'),
+  invite: (friendId: string) =>
+    fetchClient('/streaks', { method: 'POST', body: JSON.stringify({ friendId }) }),
+  accept: (streakId: string) =>
+    fetchClient(`/streaks/${streakId}/accept`, { method: 'POST', body: '{}' }),
+  end: (streakId: string) => fetchClient(`/streaks/${streakId}`, { method: 'DELETE' }),
+};
+
+export const trophiesApi = {
+  list: (userId: string) => fetchClient<TrophyListDto>(`/trophies/${userId}`),
 };
 
 export const pointsApi = {

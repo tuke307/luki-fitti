@@ -57,6 +57,9 @@ public struct WatchHomeView: View {
 
                 if let snapshot = viewModel.socialSnapshot {
                     leagueRow(snapshot)
+                    if let duel = snapshot.duel {
+                        duelRow(duel)
+                    }
                 }
 
                 Section(tr("Workouts")) {
@@ -119,6 +122,30 @@ public struct WatchHomeView: View {
                 .foregroundStyle(LukiColors.accent)
         }
         .accessibilityIdentifier("watch.home.leagueRow")
+    }
+
+    /// Compact duel row: "vs @anna · 340–280 · 3 d", or "vs @anna · starts tmrw" before kick-off.
+    private func duelRow(_ duel: DuelWatchSnapshot) -> some View {
+        let locale = Locale(identifier: tr.rawValue)
+        return Label {
+            Text(
+                duel.startsTomorrow
+                    ? tr("vs @%@ · starts tmrw", duel.opponentHandle)
+                    : tr(
+                        "vs @%@ · %@–%@ · %d d",
+                        duel.opponentHandle,
+                        duel.you.formatted(.number.locale(locale)),
+                        duel.them.formatted(.number.locale(locale)),
+                        duel.daysLeft
+                    )
+            )
+            .font(.footnote)
+            .lineLimit(1)
+        } icon: {
+            Image(systemName: "figure.fencing")
+                .foregroundStyle(LukiColors.accent)
+        }
+        .accessibilityIdentifier("watch.home.duelRow")
     }
 
     /// Compact sync row: an icon whose shape matches the state, one status line, then the account.

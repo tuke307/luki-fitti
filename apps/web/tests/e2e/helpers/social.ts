@@ -67,9 +67,13 @@ export async function setLeagueStageModeForE2e(
  * Seeds one completed session + its EP ledger entry + the weekly score for the
  * current Berlin week, as if the user had just synced a real workout.
  */
-export async function seedPointsWeekForE2e(userId: string, points: number): Promise<string> {
+export async function seedPointsWeekForE2e(
+  userId: string,
+  points: number,
+  dayKey?: string,
+): Promise<string> {
   const weekKey = berlinWeekKey(new Date());
-  const dayKey = berlinDayKey(new Date());
+  dayKey ??= berlinDayKey(new Date());
   const session = await prisma.workoutSession.create({
     data: {
       clientSessionId: `e2e-${crypto.randomUUID()}`,
@@ -105,6 +109,72 @@ export async function seedPointsWeekForE2e(userId: string, points: number): Prom
     create: { userId, weekKey, points, rawPoints: points, sessions: 1, goalBonus: 0 },
   });
   return weekKey;
+}
+
+/** Direct ACCEPTED friendship so duel/streak specs skip the request dance. */
+export async function seedFriendshipForE2e(userAId: string, userBId: string): Promise<void> {
+  const [a, b] = userAId < userBId ? [userAId, userBId] : [userBId, userAId];
+  await prisma.friendship.create({
+    data: {
+      userAId: a,
+      userBId: b,
+      requestedById: userAId,
+      status: 'ACCEPTED',
+      acceptedAt: new Date(),
+    },
+  });
+}
+
+/**
+ * Completes the ACTIVE duel between two users the way `duels-tick` would:
+ * rescored from the EP ledger (per-day cap), winner + trophy writes. There is
+ * no e2e job trigger, so this mirrors `DuelService.complete` in the test DB.
+ */
+export async function completeDuelForE2e(userAId: string, userBId: string): Promise<string> {
+  const duel = await prisma.duel.findFirstOrThrow({
+    where: {
+      status: 'ACTIVE',
+      OR: [
+        { challengerId: userAId, opponentId: userBId },
+        { challengerId: userBId, opponentId: userAId },
+      ],
+    },
+  });
+  const cap = 600; // epDailyCap default; mirrors AppSettings seeded for e2e
+  const sum = async (userId: string) => {
+    const entries = await prisma.effortPointEntry.findMany({
+      where: { userId, dayKey: { gte: duel.startDayKey!, lt: duel.endDayKey! } },
+      select: { dayKey: true, points: true },
+    });
+    const byDay = new Map<string, number>();
+    for (const e of entries) byDay.set(e.dayKey, (byDay.get(e.dayKey) ?? 0) + e.points);
+    return [...byDay.values()].reduce((s, p) => s + Math.min(p, cap), 0);
+  };
+  const challengerPoints = await sum(duel.challengerId);
+  const opponentPoints = await sum(duel.opponentId);
+  const isTie = challengerPoints === opponentPoints;
+  const winnerId = isTie
+    ? null
+    : challengerPoints > opponentPoints
+      ? duel.challengerId
+      : duel.opponentId;
+  await prisma.duel.update({
+    where: { id: duel.id },
+    data: { status: 'COMPLETED', challengerPoints, opponentPoints, winnerId, isTie },
+  });
+  const winners = isTie
+    ? challengerPoints > 0
+      ? [duel.challengerId, duel.opponentId]
+      : []
+    : [winnerId!];
+  for (const userId of winners) {
+    await prisma.trophy.upsert({
+      where: { userId_kind_refId: { userId, kind: 'DUEL_WIN', refId: duel.id } },
+      create: { userId, kind: 'DUEL_WIN', refId: duel.id },
+      update: {},
+    });
+  }
+  return duel.id;
 }
 
 /** Puts every given user into one GLOBAL cohort for the current week. */

@@ -14,7 +14,7 @@ export interface PushJobData {
 }
 
 export interface LeagueJobData {
-  kind: 'rollover' | 'reminder';
+  kind: 'rollover' | 'reminder' | 'duels-tick' | 'duels-standings';
 }
 
 const EMAIL_QUEUE_NAME = 'email';
@@ -159,8 +159,9 @@ export class BullMQService {
   }
 
   /**
-   * Recurring league jobs in Berlin time: Monday 00:05 rollover, Sunday 18:00
-   * reminder. Idempotent — `upsertJobScheduler` updates rather than duplicates.
+   * Recurring league-queue jobs in Berlin time: Monday 00:05 rollover, Sunday
+   * 18:00 reminder, the 15-minute duel tick and the 19:00 duel standings push.
+   * Idempotent — `upsertJobScheduler` updates rather than duplicates.
    */
   async ensureLeagueSchedulers(): Promise<void> {
     const queue = this.ensureLeagueQueue();
@@ -174,7 +175,17 @@ export class BullMQService {
       { pattern: '0 18 * * 0', tz: LEAGUE_TZ },
       { name: 'reminder', data: { kind: 'reminder' } },
     );
-    logger.info('League schedulers registered (rollover + reminder)');
+    await queue.upsertJobScheduler(
+      'duels-tick',
+      { pattern: '*/15 * * * *', tz: LEAGUE_TZ },
+      { name: 'duels-tick', data: { kind: 'duels-tick' } },
+    );
+    await queue.upsertJobScheduler(
+      'duels-standings',
+      { pattern: '0 19 * * *', tz: LEAGUE_TZ },
+      { name: 'duels-standings', data: { kind: 'duels-standings' } },
+    );
+    logger.info('League schedulers registered (rollover + reminder + duels)');
   }
 
   startLeagueWorker(processor: (kind: LeagueJobData['kind']) => Promise<void>): void {

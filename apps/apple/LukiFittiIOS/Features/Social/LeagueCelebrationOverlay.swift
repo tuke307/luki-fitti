@@ -170,8 +170,9 @@ struct LeagueCelebrationOverlay: View {
 }
 
 /// Deterministic confetti: a dense burst out of the badge (~120 pieces over the first
-/// 2.5 s, then a light drizzle on a 3 s loop. Caller gates Reduce Motion.
-private struct ConfettiView: View {
+/// 2.5 s, then a light drizzle on a 3 s loop. Caller gates Reduce Motion. Shared with the
+/// duel result celebration.
+struct ConfettiView: View {
     let start: Date
 
     private struct Piece {

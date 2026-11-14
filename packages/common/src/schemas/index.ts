@@ -870,4 +870,5 @@ export * from './ai.schemas';
 export * from './ai-models.schemas';
 export * from './social.schemas';
 export * from './league.schemas';
+export * from './battle.schemas';
 export * from './import';

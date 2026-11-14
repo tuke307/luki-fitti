@@ -1177,7 +1177,74 @@ public final class LukiAppViewModel {
             seedLeagueCelebration(vm: vm, store: store)
         }
 
+        if args.contains("--uitesting-seed-duel-result") {
+            seedDuelCelebration(vm: vm, store: store)
+        }
+
         return vm
+    }
+
+    /// `--uitesting-seed-duel-result`: a signed-in social user with an unseen WON duel
+    /// result, so the duel celebration cover presents on the Social tab.
+    private static func seedDuelCelebration(vm: LukiAppViewModel, store: OfflineStore) {
+        store.currentUser = UserDto(
+            id: "uitest-social",
+            email: "uitest@lukifitti.test",
+            name: "UI Tester",
+            social: UserSocialDto(enabled: true, handle: "uitester", arena: .SILVER)
+        )
+        vm.social.profile = SocialProfileDto(handle: "uitester", name: "UI Tester")
+        let opponent = SocialCardDto(
+            userId: "uitest-opponent", handle: "anna", avatarUrl: nil, name: "Anna")
+        vm.social.friends = FriendListsDto(friends: [opponent])
+        vm.social.duels = DuelListDto(
+            active: [
+                DuelItemDto(
+                    id: "uitest-duel-active",
+                    status: .ACTIVE,
+                    opponent: opponent,
+                    you: 340,
+                    them: 280,
+                    daysLeft: 3,
+                    startDayKey: "2026-11-14",
+                    endDayKey: "2026-11-21",
+                    createdAt: ISO8601DateFormatter().string(from: Date())
+                )
+            ],
+            pendingResult: DuelItemDto(
+                id: "uitest-duel-1",
+                status: .COMPLETED,
+                opponent: opponent,
+                you: 1_240,
+                them: 980,
+                outcome: .WON,
+                createdAt: ISO8601DateFormatter().string(from: Date())
+            )
+        )
+        vm.social.streaks = StreakListDto(active: [
+            FriendStreakDto(
+                id: "uitest-streak-1",
+                status: .ACTIVE,
+                friend: opponent,
+                count: 5,
+                longest: 5,
+                freezes: 1,
+                thisWeek: FriendStreakDto.ThisWeek(
+                    you: StreakWeekProgressDto(done: 2, target: 4),
+                    them: StreakWeekProgressDto(done: 3, target: 3)
+                )
+            )
+        ])
+        vm.social.seededTrophies = [
+            "uitest-social": TrophyListDto(
+                items: [TrophyDto(kind: .DUEL_WIN, refId: "d1", createdAt: "2026-11-13T00:00:00Z")],
+                counts: ["DUEL_WIN": 3]
+            ),
+            opponent.userId: TrophyListDto(
+                items: [TrophyDto(kind: .DUEL_WIN, refId: "d2", createdAt: "2026-11-13T00:00:00Z")],
+                counts: ["DUEL_WIN": 1]
+            ),
+        ]
     }
 
     /// `--uitesting-seed-league-celebration`: a signed-in social user whose current week

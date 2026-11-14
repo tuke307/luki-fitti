@@ -1,7 +1,9 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  addBerlinDays,
   berlinDayKey,
+  berlinMidnight,
   berlinWeekKey,
   nextWeekKey,
   previousWeekKey,
@@ -47,5 +49,30 @@ describe('league-time Berlin keys', () => {
     assert.equal(previousWeekKey('2026-01-05'), '2025-12-29');
     assert.equal(nextWeekKey('2025-12-29'), '2026-01-05');
     assert.equal(nextWeekKey(previousWeekKey('2026-03-02')), '2026-03-02');
+  });
+});
+
+describe('berlinMidnight / addBerlinDays', () => {
+  it('midnight lands on the right UTC instant across DST changes', () => {
+    // CET (UTC+1): Berlin 2026-01-05 00:00 is 23:00 UTC the day before.
+    assert.equal(berlinMidnight('2026-01-05').toISOString(), '2026-01-04T23:00:00.000Z');
+    // CEST (UTC+2): Berlin 2026-07-05 00:00 is 22:00 UTC the day before.
+    assert.equal(berlinMidnight('2026-07-05').toISOString(), '2026-07-04T22:00:00.000Z');
+    // The switch Sundays themselves: CET→CEST on 2026-03-29, CEST→CET on 2026-10-25.
+    assert.equal(berlinMidnight('2026-03-29').toISOString(), '2026-03-28T23:00:00.000Z');
+    assert.equal(berlinMidnight('2026-03-30').toISOString(), '2026-03-29T22:00:00.000Z');
+    assert.equal(berlinMidnight('2026-10-25').toISOString(), '2026-10-24T22:00:00.000Z');
+    assert.equal(berlinMidnight('2026-10-26').toISOString(), '2026-10-25T23:00:00.000Z');
+  });
+
+  it('a 7-day duel window stays 7 calendar days across the switch', () => {
+    // Accept on the Saturday before the autumn switch: start Sunday 2026-10-25.
+    const start = '2026-10-25';
+    assert.equal(addBerlinDays(start, 7), '2026-11-01');
+    // The window contains the 25-hour Sunday but still spans exactly 7 midnights.
+    assert.equal(
+      berlinMidnight(addBerlinDays(start, 7)).getTime() - berlinMidnight(start).getTime(),
+      7 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000,
+    );
   });
 });

@@ -1,9 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
+import { addBerlinDays, berlinDayKey } from '@luki-fitti/common/utils';
 import { submitLoginPageForm } from './helpers/auth.js';
 import { gotoProfileTab, resetOfflineStore } from './helpers/offline-store.js';
 import { navigateToTab } from './helpers/shell.js';
 import {
+  completeDuelForE2e,
   enableSocialForE2e,
+  seedFriendshipForE2e,
   seedGlobalCohortForE2e,
   seedPointsWeekForE2e,
   seedSocialUser,
@@ -164,5 +167,76 @@ test.describe('Social: leagues and effort points', () => {
     await expect(
       page.getByTestId('league-friends-board').getByText(`@liga_${unique}`),
     ).toBeVisible();
+  });
+});
+
+test.describe('Social: duels', () => {
+  test.describe.configure({ mode: 'serial' });
+
+  test.beforeAll(async () => {
+    await enableSocialForE2e();
+  });
+
+  test('a challenge becomes an active duel and ends in the result celebration', async ({
+    page,
+  }) => {
+    const unique = Date.now().toString(36);
+    const [userA, userB] = await Promise.all([
+      seedSocialUser('duel.ana', undefined, `duelana_${unique}`),
+      seedSocialUser('duel.bob', undefined, `duelbob_${unique}`),
+    ]);
+    await seedFriendshipForE2e(userA.id, userB.id);
+
+    await resetOfflineStore(page);
+
+    // ── A challenges B from the friend row menu ──
+    await submitLoginPageForm(page, userA.email, userA.password);
+    await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+    await navigateToTab(page, 'social');
+    await dismissOnboardingIfShown(page);
+    await expect(page.getByTestId(`friend-row-${userB.id}`)).toBeVisible({ timeout: 10_000 });
+    await page.getByTestId(`friend-menu-${userB.id}`).click();
+    await page.getByTestId(`friend-challenge-${userB.id}`).click();
+    await expect(page.getByTestId('duels-outgoing')).toContainText(`@duelbob_${unique}`, {
+      timeout: 10_000,
+    });
+    await signOut(page);
+
+    // ── B accepts the incoming challenge; the duel goes active ──
+    await submitLoginPageForm(page, userB.email, userB.password);
+    await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+    await navigateToTab(page, 'social');
+    await dismissOnboardingIfShown(page);
+    const acceptBtn = page.getByTestId(/^duel-accept-/);
+    await expect(acceptBtn).toBeVisible({ timeout: 10_000 });
+    await acceptBtn.click();
+    await expect(page.getByTestId(/^duel-row-/)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('duels-card')).toContainText(/left|noch/i);
+    await signOut(page);
+
+    // ── A sees the active duel too ──
+    await submitLoginPageForm(page, userA.email, userA.password);
+    await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+    await navigateToTab(page, 'social');
+    await dismissOnboardingIfShown(page);
+    const duelRow = page.getByTestId(/^duel-row-/);
+    await expect(duelRow).toBeVisible({ timeout: 10_000 });
+    await expect(duelRow).toContainText(`@duelbob_${unique}`);
+
+    // ── The duel ends (tick equivalent) — the WON celebration shows once ──
+    // Duels start on the next Berlin day; seed EP inside the window so A wins.
+    const duelDay = addBerlinDays(berlinDayKey(new Date()), 1);
+    await seedPointsWeekForE2e(userA.id, 400, duelDay);
+    await seedPointsWeekForE2e(userB.id, 100, duelDay);
+    await completeDuelForE2e(userA.id, userB.id);
+    await page.reload();
+    await navigateToTab(page, 'social');
+    await dismissOnboardingIfShown(page);
+    const celebration = page.getByTestId('duel-celebration');
+    await expect(celebration).toBeVisible({ timeout: 10_000 });
+    await expect(celebration).toContainText(`@duelbob_${unique}`);
+    await expect(celebration).toContainText('400');
+    await page.getByTestId('duel-celebration-dismiss').click();
+    await expect(celebration).toHaveCount(0);
   });
 });

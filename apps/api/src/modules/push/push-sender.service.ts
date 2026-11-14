@@ -7,6 +7,8 @@ import { NotificationKind, PushPlatform } from '@luki-fitti/common/enums';
 import {
   anonymousActorName,
   arenaName,
+  duelResultMessage,
+  duelStandingsMessage,
   leagueEndingMessage,
   pushMessageFor,
   renderPushMessage,
@@ -118,12 +120,27 @@ export class PushSenderService {
       const template =
         kind === NotificationKind.LEAGUE_ENDING
           ? leagueEndingMessage(payloadJson.inDemotionZone === true, device.locale)
-          : pushMessageFor(kind, device.locale);
+          : kind === NotificationKind.DUEL_STANDINGS
+            ? duelStandingsMessage(payloadJson.leading === true, device.locale)
+            : kind === NotificationKind.DUEL_RESULT
+              ? duelResultMessage(
+                  payloadJson.outcome === 'WON'
+                    ? 'WON'
+                    : payloadJson.outcome === 'TIE'
+                      ? 'TIE'
+                      : 'LOST',
+                  device.locale,
+                )
+              : pushMessageFor(kind, device.locale);
       const message = renderPushMessage(template, {
         actor: actorHandle ? `@${actorHandle}` : anonymousActorName(device.locale),
         arena: arenaName(String(payloadJson.toArena ?? payloadJson.fromArena ?? ''), device.locale),
         rank: String(payloadJson.rank ?? ''),
         places: String(payloadJson.placesToPromotion ?? ''),
+        you: String(payloadJson.you ?? ''),
+        them: String(payloadJson.them ?? ''),
+        days: String(payloadJson.daysLeft ?? ''),
+        count: String(payloadJson.count ?? ''),
       });
       try {
         const outcome =

@@ -77,9 +77,14 @@ export class PushService {
   async getPreferences(userId: string): Promise<PushPreferencesDto> {
     const prefs = await this.prisma.userPreferences.findUnique({
       where: { userId },
-      select: { pushFriends: true, pushLeagues: true },
+      select: { pushFriends: true, pushLeagues: true, pushDuels: true, pushStreaks: true },
     });
-    return { friends: prefs?.pushFriends ?? true, leagues: prefs?.pushLeagues ?? true };
+    return {
+      friends: prefs?.pushFriends ?? true,
+      leagues: prefs?.pushLeagues ?? true,
+      duels: prefs?.pushDuels ?? true,
+      streaks: prefs?.pushStreaks ?? true,
+    };
   }
 
   async updatePreferences(
@@ -92,13 +97,22 @@ export class PushService {
         userId,
         ...(dto.friends !== undefined ? { pushFriends: dto.friends } : {}),
         ...(dto.leagues !== undefined ? { pushLeagues: dto.leagues } : {}),
+        ...(dto.duels !== undefined ? { pushDuels: dto.duels } : {}),
+        ...(dto.streaks !== undefined ? { pushStreaks: dto.streaks } : {}),
       },
       update: {
         ...(dto.friends !== undefined ? { pushFriends: dto.friends } : {}),
         ...(dto.leagues !== undefined ? { pushLeagues: dto.leagues } : {}),
+        ...(dto.duels !== undefined ? { pushDuels: dto.duels } : {}),
+        ...(dto.streaks !== undefined ? { pushStreaks: dto.streaks } : {}),
       },
-      select: { pushFriends: true, pushLeagues: true },
+      select: { pushFriends: true, pushLeagues: true, pushDuels: true, pushStreaks: true },
     });
-    return { friends: prefs.pushFriends, leagues: prefs.pushLeagues };
+    return {
+      friends: prefs.pushFriends,
+      leagues: prefs.pushLeagues,
+      duels: prefs.pushDuels,
+      streaks: prefs.pushStreaks,
+    };
   }
 }

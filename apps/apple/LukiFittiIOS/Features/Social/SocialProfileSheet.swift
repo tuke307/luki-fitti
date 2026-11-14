@@ -105,6 +105,14 @@ struct SocialProfileSheet: View {
                 .accessibilityIdentifier("ios.social.pauseToggle")
             }
 
+            Section {
+                TrophyShelfView(
+                    userId: viewModel.store.currentUser?.id ?? "me",
+                    social: viewModel.social
+                )
+                .padding(.vertical, 4)
+            }
+
             if let error {
                 Section { Text(error).foregroundStyle(LukiColors.destructive).font(.footnote) }
             }

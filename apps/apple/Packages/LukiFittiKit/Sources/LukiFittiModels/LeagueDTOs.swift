@@ -162,13 +162,23 @@ public struct SocialWatchSnapshot: Codable, Sendable, Equatable {
     public var rank: Int?
     public var cohortSize: Int?
     public var stage: LeagueStage
+    /// Active duel, if any (PR 3); nil for older iPhones and quiet weeks.
+    public var duel: DuelWatchSnapshot?
 
-    public init(weekPoints: Int, arena: Arena, rank: Int? = nil, cohortSize: Int? = nil, stage: LeagueStage) {
+    public init(
+        weekPoints: Int,
+        arena: Arena,
+        rank: Int? = nil,
+        cohortSize: Int? = nil,
+        stage: LeagueStage,
+        duel: DuelWatchSnapshot? = nil
+    ) {
         self.weekPoints = weekPoints
         self.arena = arena
         self.rank = rank
         self.cohortSize = cohortSize
         self.stage = stage
+        self.duel = duel
     }
 }
 

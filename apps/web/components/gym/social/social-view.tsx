@@ -6,12 +6,15 @@ import { Button } from '@luki-fitti/ui/components/ui/button';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import type {
+  DuelItemDto,
+  DuelListDto,
   FriendListsDto,
   LeaguePendingResultDto,
   SocialCardDto,
   SocialProfileDto,
+  StreakListDto,
 } from '@luki-fitti/common/schemas';
-import { notificationsApi, socialApi } from '@/lib/social/social-api';
+import { notificationsApi, socialApi, duelsApi, streaksApi } from '@/lib/social/social-api';
 import { PageTitle } from '../page-title';
 import { UserAvatar } from './user-avatar';
 import { FriendRow } from './friend-row';
@@ -19,12 +22,15 @@ import { AddFriendsSection } from './add-friends-section';
 import { ThisWeekCard } from './this-week-card';
 import { LeagueCard } from './league-card';
 import { LeagueCelebration, dismissLeagueResult, useLeagueResult } from './league-celebration';
+import { DuelCelebration, dismissDuelResult, useDuelResult } from './duel-celebration';
+import { DuelsCard } from './duels-card';
+import { FriendSheet } from './friend-sheet';
 import { InboxSheet } from './inbox-sheet';
 import { SocialProfileSheet } from './social-profile-sheet';
 import { SocialOnboardingSheet } from './social-onboarding-sheet';
 import { ReportSheet } from './report-sheet';
 
-export type SocialSection = 'friends' | 'requests' | 'inbox' | null;
+export type SocialSection = 'friends' | 'requests' | 'inbox' | 'duels' | null;
 
 const ONBOARDING_DISMISSED_KEY = 'luki.social.onboardingDismissed';
 const UNREAD_POLL_MS = 60_000;
@@ -34,7 +40,7 @@ const UNREAD_POLL_MS = 60_000;
  * in above Friends without restructuring.
  */
 export function SocialView({ section = null }: { section?: SocialSection }) {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
   const { isAuthenticated, user } = useAuth();
   const [profile, setProfile] = useState<SocialProfileDto | null>(null);
   const [lists, setLists] = useState<FriendListsDto | null>(null);
@@ -45,15 +51,31 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
   const [reportTarget, setReportTarget] = useState<SocialCardDto | null>(null);
   const [pendingResult, setPendingResult] = useState<LeaguePendingResultDto | null>(null);
   const [resultOverlay, setResultOverlay] = useState<LeaguePendingResultDto | null>(null);
+  const [duels, setDuels] = useState<DuelListDto | null>(null);
+  const [streaks, setStreaks] = useState<StreakListDto | null>(null);
+  const [duelPending, setDuelPending] = useState<DuelItemDto | null>(null);
+  const [duelOverlay, setDuelOverlay] = useState<DuelItemDto | null>(null);
+  const [friendSheet, setFriendSheet] = useState<SocialCardDto | null>(null);
   const friendsAnchor = useRef<HTMLDivElement>(null);
+  const duelsAnchor = useRef<HTMLDivElement>(null);
   const onboardingPrompted = useRef(false);
 
   useLeagueResult(pendingResult, setResultOverlay);
+  useDuelResult(duelPending, setDuelOverlay);
 
   const refresh = useCallback(async () => {
-    const [meRes, friendsRes] = await Promise.all([socialApi.me(), socialApi.friends()]);
+    const [meRes, friendsRes, duelsRes, streaksRes] = await Promise.all([
+      socialApi.me(),
+      socialApi.friends(),
+      // Duels/streaks 403 while their feature switch is off — the sections hide.
+      duelsApi.list().catch(() => null),
+      streaksApi.list().catch(() => null),
+    ]);
     if (meRes.data) setProfile(meRes.data);
     if (friendsRes.data) setLists(friendsRes.data);
+    setDuels(duelsRes?.data ?? null);
+    setStreaks(streaksRes?.data ?? null);
+    setDuelPending(duelsRes?.data?.pendingResult ?? null);
   }, []);
 
   useEffect(() => {
@@ -102,6 +124,8 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
   useEffect(() => {
     if (section === 'friends' || section === 'requests') {
       friendsAnchor.current?.scrollIntoView({ block: 'start' });
+    } else if (section === 'duels') {
+      duelsAnchor.current?.scrollIntoView({ block: 'start' });
     }
   }, [section]);
 
@@ -180,10 +204,23 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
         </Button>
       </div>
 
-      {/* PR 2: weekly EP + league cards. PR 3/4 add Duels and Raid above Friends. */}
+      {/* PR 2: weekly EP + league cards. PR 3: Duels. PR 4 adds Raid above Friends. */}
       <div className="mt-4 space-y-4">
         <ThisWeekCard />
         <LeagueCard onPendingResult={setPendingResult} />
+        <div ref={duelsAnchor} className="scroll-mt-20">
+          {duels && (
+            <DuelsCard
+              data={duels}
+              me={{
+                handle,
+                name: profile?.name ?? null,
+                avatarUrl: profile?.avatarUrl ?? null,
+              }}
+              onAction={(fn) => void run(fn)}
+            />
+          )}
+        </div>
       </div>
 
       <div ref={friendsAnchor} className="mt-6 scroll-mt-20">
@@ -254,15 +291,47 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
             </>
           ) : null}
           {lists?.friends.length ? (
-            lists.friends.map((u) => (
-              <FriendRow
-                key={u.userId}
-                user={u}
-                onRemove={(id) => void run(() => socialApi.removeFriend(id))}
-                onBlock={(id) => void run(() => socialApi.block({ userId: id }))}
-                onReport={setReportTarget}
-              />
-            ))
+            lists.friends.map((u) => {
+              const streak = streaks?.active.find((s) => s.friend.userId === u.userId) ?? null;
+              const streakIncoming =
+                streaks?.incoming.find((s) => s.friend.userId === u.userId) ?? null;
+              const streakOutgoing =
+                streaks?.outgoing.find((s) => s.friend.userId === u.userId) ?? null;
+              const openDuel = duels
+                ? [...duels.active, ...duels.incoming, ...duels.outgoing].find(
+                    (d) => d.opponent.userId === u.userId,
+                  )
+                : null;
+              const openCount = duels
+                ? duels.active.length + duels.incoming.length + duels.outgoing.length
+                : 0;
+              const duelBlockedReason = openDuel
+                ? format(t.battle.challengeExists, { handle: `@${u.handle}` })
+                : openCount >= 3
+                  ? t.battle.challengeLimit
+                  : null;
+              return (
+                <FriendRow
+                  key={u.userId}
+                  user={u}
+                  streak={streak ?? streakIncoming ?? streakOutgoing}
+                  streakPending={streakIncoming ? 'incoming' : streakOutgoing ? 'outgoing' : null}
+                  duelBlockedReason={duels ? duelBlockedReason : null}
+                  onChallenge={duels ? (id) => void run(() => duelsApi.challenge(id)) : undefined}
+                  onStreakInvite={
+                    streaks ? (id) => void run(() => streaksApi.invite(id)) : undefined
+                  }
+                  onStreakAccept={
+                    streaks ? (id) => void run(() => streaksApi.accept(id)) : undefined
+                  }
+                  onStreakEnd={streaks ? (id) => void run(() => streaksApi.end(id)) : undefined}
+                  onView={setFriendSheet}
+                  onRemove={(id) => void run(() => socialApi.removeFriend(id))}
+                  onBlock={(id) => void run(() => socialApi.block({ userId: id }))}
+                  onReport={setReportTarget}
+                />
+              );
+            })
           ) : lists && !lists.incoming.length && !lists.outgoing.length ? (
             <li className="text-muted-foreground px-4 py-6 text-center text-[0.9375rem]">
               {t.social.friendsEmpty}
@@ -299,6 +368,7 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
         profile={profile}
       />
       <ReportSheet user={reportTarget} onOpenChange={(open) => !open && setReportTarget(null)} />
+      <FriendSheet user={friendSheet} onOpenChange={(open) => !open && setFriendSheet(null)} />
       {resultOverlay && (
         <LeagueCelebration
           result={resultOverlay}
@@ -308,6 +378,25 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
               setPendingResult(null);
             })
           }
+        />
+      )}
+      {duelOverlay && (
+        <DuelCelebration
+          result={duelOverlay}
+          onDone={() =>
+            dismissDuelResult(duelOverlay, () => {
+              setDuelOverlay(null);
+              setDuelPending(null);
+            })
+          }
+          onRematch={(opponentId) => {
+            void duelsApi.challenge(opponentId).catch(() => undefined);
+            dismissDuelResult(duelOverlay, () => {
+              setDuelOverlay(null);
+              setDuelPending(null);
+              void refresh();
+            });
+          }}
         />
       )}
     </div>
