@@ -183,8 +183,43 @@ jobs:
             ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.version }}
 
+  build-mcp-server:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      GITHUB_REGISTRY: ghcr.io
+      IMAGE_NAME: tuke307/luki-fitti-mcp-server
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to ${{ env.GITHUB_REGISTRY }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GITHUB_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./apps/mcp-server/Dockerfile
+          platforms: linux/amd64
+          push: true
+          cache-from: type=gha,scope=build-mcp-server
+          cache-to: type=gha,mode=max,scope=build-mcp-server
+          tags: |
+            ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.version }}
+
   deploy:
-    needs: [build-api, build-web, build-email-worker, build-db-migrate]
+    needs: [build-api, build-web, build-email-worker, build-db-migrate, build-mcp-server]
     if: >-
       always() && !cancelled() &&
       !contains(needs.*.result, 'failure') &&

@@ -1,6 +1,6 @@
 # LukiFitti MCP server (design)
 
-Status: **approved 2026-11-15, implementation not started** (next steps and handoff: `docs/release-2.0.0.md` on `release/2.0.0`) · Target: 2.0.0 (branch `feat/mcp-server`, stacked on `feat/api-keys`, retargeted to
+Status: **implemented 2026-11-14, pending review** (next steps and handoff: `docs/release-2.0.0.md` on `release/2.0.0`) · Target: 2.0.0 (branch `feat/mcp-server`, stacked on `feat/api-keys`, retargeted to
 `release/2.0.0` once API keys is merged) · Depends on: [personal API keys](api-keys.md)
 
 AI assistants (Claude Desktop/Code, Cursor, VS Code, ChatGPT and other MCP clients) connect to
@@ -41,9 +41,11 @@ AI client ──HTTPS + Bearer lf_pat_…──▶ mcp-server (/mcp, :3030)
   more `GET /api/v1/...` requests carrying the caller's key, so all access control lives in one
   place, the API (`ApiKeyGuard`, `ScopesGuard`, owner filters, rate limits from the
   [API keys design](api-keys.md)). A bug in the MCP server can't read anyone else's data.
-- **Routing:** Coolify/Caddy labels add `handle /mcp/*` → `mcp-server:3030` on both
+- **Routing:** Coolify/Caddy labels add `handle /mcp` → `mcp-server:3030` on both
   `luki-fitti.tony-luke.de` and `app.luki-fitti.tony-luke.de`, next to the existing `/api/*`
-  route. Public URL: `https://app.luki-fitti.tony-luke.de/mcp`.
+  route. The matcher is exactly `/mcp`, not `/mcp/*` — the Streamable HTTP transport serves a
+  single endpoint at `POST /mcp`, so a wildcard would only claim paths that 404 anyway.
+  Public URL: `https://app.luki-fitti.tony-luke.de/mcp`.
 - **Internal call:** `API_BASE_URL=http://luki-fitti-api:3001/api` inside the compose network,
   not through the public proxy.
 
@@ -198,7 +200,7 @@ Contents:
   `docs/api-keys.md`), `GET /v1/key`, and `AppSettings.mcpEnabled`.
 - **The new app:** the `apps/mcp-server` workspace (copied scaffold), the adapted guard and the 9
   tools.
-- **Wiring:** compose/production (Caddy `/mcp/*`, fourth image), the Bruno collection, the
+- **Wiring:** compose/production (Caddy `/mcp`, fourth image), the Bruno collection, the
   `/developers` MCP section, and the tests.
 
 ## Decisions (2026-11-15)
@@ -207,3 +209,28 @@ Contents:
    path on `luki-fitti.tony-luke.de`).
 2. **`tools/list` requires the key**, so the list can be filtered by the key's scopes; only the
    handshake (`initialize`, `notifications/initialized`, `ping`) stays public.
+
+## Implementation notes (2026-11-14)
+
+Deviations and details worth knowing, recorded at implementation:
+
+- **`GET /v1/sessions?include=exercises` was added by this feature** (not part of the API keys
+  design): full session rows with exercises+sets, `limit` capped at 50, so the tools fetch sets
+  without one request per session.
+- **`exercise-progress` needs `read:sessions` + `read:workouts`** (table updated) — the free-text
+  exercise resolves against `/v1/exercises`, which is a `read:workouts` route.
+- **The Caddy matcher is exactly `/mcp`** (see Routing above).
+- **`X-Forwarded-For` forwarding:** the guard introspects via `/v1/key` and every tool call
+  forwards the key with `X-Forwarded-For: <caller ip>`. Without it the API's failed-key counter
+  (30 / 10 min per IP) would see only the MCP container's IP, and a few bogus keys would lock
+  out every MCP user. The API trusts exactly one proxy hop, so it takes our value.
+- **Truncated fetches are surfaced, never silent:** `getAll` reports a pending `nextCursor` at
+  the row cap and every tool sets `truncated: true` + a narrow-the-range hint (sessions 400
+  rows, streak lookback 600, exercises/meals/body-weight 1000).
+- **`/v1/me` once per tool call** via a request-memoised `profileFor`; without `read:profile`
+  the tools answer in kg and omit goals.
+- **Pitfalls hit:** `@nestjs/microservices` must be pinned `12.1.2` (12.5.x needs a newer
+  `@nestjs/core`); tool constructors need explicit `@Inject(...)` because tsx/esbuild drops
+  `design:paramtypes` in tests.
+- **Still open:** the `/developers` MCP section and the privacy paragraph land with API keys
+  PR B (which creates `/developers`); OAuth stays out of 2.0.
