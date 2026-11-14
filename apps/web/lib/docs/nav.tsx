@@ -18,20 +18,22 @@ const SHORT_LABELS: Record<string, string> = {
   '/exercise-catalog': 'Exercise catalog',
   '/admin-ai-nutrition': 'AI & nutrition',
   '/public-api': 'Getting started',
+  '/mcp': 'Connect an AI assistant',
   '/contributing': 'Contributing',
-  '/possible-features': 'Roadmap',
+  '/possible-features': 'Possible features',
+  '/roadmap': 'Roadmap',
   '/release': 'Release flow',
   '/app-store-release': 'App Store',
-  '/specs/release-2.0.0': '2.0.0 plan',
-  '/specs/social-2.0': 'Social',
-  '/specs/social-2.0-pr1': 'Foundation',
-  '/specs/social-2.0-pr2': 'Leagues',
-  '/specs/social-2.0-pr3': 'Duels',
-  '/specs/social-2.0-pr4': 'Raids',
-  '/specs/api-keys': 'API keys',
-  '/specs/privacy-social': 'Privacy (draft)',
-  '/specs/mcp-server': 'MCP server',
 };
+
+/** ADR routes -> short labels, in sidebar order. Missing files are skipped. */
+const ADRS: { url: string; label: string }[] = [
+  { url: '/adr/0001-social-features-2-0', label: 'Social' },
+  { url: '/adr/0002-privacy-for-social-features', label: 'Social privacy' },
+  { url: '/adr/0003-personal-api-keys', label: 'API keys' },
+  { url: '/adr/0004-docs-site', label: 'Docs site' },
+  { url: '/adr/0005-mcp-server', label: 'MCP server' },
+];
 
 const API_OPS: Record<string, { group: string; label: string }> = {
   '/api-reference/v1/me/get': { group: 'Profile', label: 'Get profile' },
@@ -135,6 +137,7 @@ export function docsTree(tree: Root): Root {
     }
   }
   const gettingStarted = page('/public-api');
+  const mcpGuide = page('/mcp');
   const api: Folder = {
     type: 'folder',
     name: 'API',
@@ -147,38 +150,49 @@ export function docsTree(tree: Root): Root {
       ...API_GROUP_ORDER.filter((g) => apiGroups.has(g)).map((g) =>
         group(g, apiGroups.get(g) ?? []),
       ),
+      ...(mcpGuide ? [group('MCP', [mcpGuide])] : []),
     ],
   };
 
-  const socialIndex = page('/specs/social-2.0');
-  const specs: Folder = {
+  // ADRs present on this branch, in a fixed order; missing files are skipped.
+  const decisions: Folder = {
     type: 'folder',
-    name: 'Plans & specs',
-    defaultOpen: false,
-    collapsible: true,
-    children: [
-      ...pages(['/specs/release-2.0.0']),
-      ...(socialIndex
-        ? [
-            {
-              type: 'folder',
-              name: 'Social',
-              defaultOpen: false,
-              collapsible: true,
-              index: socialIndex,
-              children: pages([
-                '/specs/social-2.0-pr1',
-                '/specs/social-2.0-pr2',
-                '/specs/social-2.0-pr3',
-                '/specs/social-2.0-pr4',
-              ]),
-            } satisfies Folder,
-          ]
-        : []),
-      ...pages(['/specs/api-keys', '/specs/privacy-social', '/specs/mcp-server']),
-    ],
+    name: 'Decisions',
+    index: page('/adr'),
+    children: ADRS.map(({ url, label }): Item | undefined => {
+      const node = items.get(url);
+      return node ? { ...node, name: label } : undefined;
+    }).filter((n): n is Item => Boolean(n)),
   };
+
+  // Plan/spec docs that still exist on this branch; empty folders disappear when the
+  // files are deleted, so the nav never breaks.
+  const socialIndex = page('/specs/social-2.0');
+  const specChildren: Node[] = [
+    ...pages(['/specs/release-2.0.0']),
+    ...(socialIndex
+      ? [
+          {
+            type: 'folder',
+            name: 'Social',
+            defaultOpen: false,
+            collapsible: true,
+            index: socialIndex,
+            children: pages([
+              '/specs/social-2.0-pr1',
+              '/specs/social-2.0-pr2',
+              '/specs/social-2.0-pr3',
+              '/specs/social-2.0-pr4',
+            ]),
+          } satisfies Folder,
+        ]
+      : []),
+    ...pages(['/specs/api-keys', '/specs/privacy-social', '/specs/mcp-server']),
+  ];
+
   const contributing = page('/contributing');
+  // The roadmap is a real route on the docs host, not a content page.
+  const roadmap: Item = { type: 'page', name: 'Roadmap', url: '/roadmap' };
   const project: Folder = {
     type: 'folder',
     name: 'Project',
@@ -188,8 +202,20 @@ export function docsTree(tree: Root): Root {
     index: contributing,
     children: [
       ...pages(['/contributing', '/possible-features']),
+      roadmap,
       group('Releases', pages(['/release', '/app-store-release'])),
-      specs,
+      ...(decisions.children.length > 0 ? [decisions] : []),
+      ...(specChildren.length > 0
+        ? [
+            {
+              type: 'folder',
+              name: 'Plans & specs',
+              defaultOpen: false,
+              collapsible: true,
+              children: specChildren,
+            } satisfies Folder,
+          ]
+        : []),
     ],
   };
 
@@ -202,7 +228,8 @@ export function docsTree(tree: Root): Root {
       ...guides.children,
       ...api.children.flatMap((f: Node) => (f.type === 'folder' ? f.children : [])),
       ...project.children,
-      ...specs.children,
+      ...specChildren,
+      ...decisions.children,
     ]
       .flatMap((n) => (n && n.type === 'folder' ? [n, ...n.children] : n ? [n] : []))
       .map((n: Node | undefined) => (n && n.type === 'page' ? n.url : '')),

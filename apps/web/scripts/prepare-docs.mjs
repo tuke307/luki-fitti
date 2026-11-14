@@ -5,14 +5,15 @@
  * apps/web/content/ for fumadocs-mdx:
  *   - frontmatter { title, description } injected into the staged copies — the source files
  *     stay untouched (GitHub would render frontmatter as a table).
- *   - links rewritten: `foo.md` / `docs/foo.md` -> docs routes, other repo paths -> GitHub
- *     blob URLs on main.
- *   - spec documents are grouped under content/specs/ ("Plans & specs").
+ *   - links rewritten: relative .md links resolve against the source file's directory to
+ *     docs routes, other repo paths -> GitHub blob URLs on main.
+ *   - spec documents are grouped under content/specs/ ("Plans & specs"), decision records
+ *     under content/adr/.
  *   - git-info.json records each page's repo path and last git commit date for the
  *     "Edit on GitHub" link and "Last updated" line.
  */
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -32,23 +33,42 @@ const SPECS = new Set([
   'social-2.0-pr4.md',
   'api-keys.md',
   'privacy-social.md',
+  'mcp-server.md',
 ]);
 
 const sources = [];
-for (const name of readdirSync(path.join(ROOT, 'docs'))) {
-  if (!name.endsWith('.md') || name === 'meta.json') continue;
-  sources.push({ repo: `docs/${name}`, base: name });
-}
-sources.push({ repo: 'README.md', base: 'index.md' });
-sources.push({ repo: 'CONTRIBUTING.md', base: 'contributing.md' });
+const stagedRepos = new Set(['README.md', 'CONTRIBUTING.md']);
 
-/** repo-relative .md file name -> docs route slug (no leading slash). */
-const slugOf = (repo) => {
-  if (repo === 'README.md') return '';
-  if (repo === 'CONTRIBUTING.md') return 'contributing';
-  const name = path.basename(repo, '.md');
-  return SPECS.has(path.basename(repo)) ? `specs/${name}` : name;
-};
+/** repo path -> { dest (content-relative file), slug (docs route, no leading slash) } */
+function targetFor(repo) {
+  const base = path.basename(repo);
+  if (repo === 'README.md') return { dest: 'index.md', slug: '' };
+  if (repo === 'CONTRIBUTING.md') return { dest: 'contributing.md', slug: 'contributing' };
+  const name = base.replace(/\.md$/, '');
+  if (repo.startsWith('docs/adr/')) {
+    if (base === 'README.md') return { dest: 'adr/index.md', slug: 'adr' };
+    return { dest: `adr/${base}`, slug: `adr/${name}` };
+  }
+  if (SPECS.has(base)) return { dest: `specs/${base}`, slug: `specs/${name}` };
+  return { dest: base, slug: name };
+}
+
+function collect(dir) {
+  const abs = path.join(ROOT, dir);
+  if (!existsSync(abs)) return;
+  for (const name of readdirSync(abs)) {
+    if (!name.endsWith('.md') || name === 'meta.json') continue;
+    stagedRepos.add(`${dir}/${name}`);
+  }
+}
+collect('docs');
+collect('docs/adr');
+
+for (const repo of stagedRepos) {
+  sources.push({ repo, ...targetFor(repo) });
+}
+
+const byRepo = new Map(sources.map((s) => [s.repo, s.slug]));
 
 const LINK = /\[([^\]]*)\]\(([^)\s]+)([^)]*)\)/g;
 function rewriteLinks(body, sourceRepo) {
@@ -59,15 +79,20 @@ function rewriteLinks(body, sourceRepo) {
     const clean = target.replace(/^\.\//, '');
     const base = path.basename(clean);
     if (base.endsWith('.md')) {
-      const repo = clean.startsWith('docs/')
-        ? clean
-        : clean.startsWith('../')
-          ? clean.slice(3)
-          : `docs/${base}`;
-      if (base === 'CONTRIBUTING.md' || base === 'README.md') {
-        return `[${text}](/${slugOf(base)}${anchor ? '#' + anchor : ''}${rest})`;
+      // Resolve relative to the source file, then the repo root, then docs/.
+      const candidates = [path.posix.normalize(path.posix.join(sourceDir, clean))];
+      if (clean.startsWith('../')) candidates.push(clean.slice(3));
+      if (clean.startsWith('docs/')) candidates.push(clean);
+      if (!clean.includes('/')) candidates.push(`docs/${clean}`);
+      const repo = candidates.find((c) => byRepo.has(c));
+      if (repo) {
+        return `[${text}](/${byRepo.get(repo)}${anchor ? '#' + anchor : ''}${rest})`;
       }
-      return `[${text}](/${slugOf(repo)}${anchor ? '#' + anchor : ''}${rest})`;
+      // Markdown that is not staged stays a GitHub link.
+      const repoPath = candidates[0].startsWith('.')
+        ? clean
+        : (candidates.find((c) => !c.startsWith('.')) ?? candidates[0]);
+      return `[${text}](${GITHUB_BLOB}/${repoPath}${anchor ? '#' + anchor : ''}${rest})`;
     }
     // Other repo-relative paths resolve against the source file's directory.
     const repoPath = clean.startsWith('../')
@@ -122,24 +147,26 @@ function titleAndDescription(md) {
 
 rmSync(CONTENT, { recursive: true, force: true });
 mkdirSync(path.join(CONTENT, 'specs'), { recursive: true });
+mkdirSync(path.join(CONTENT, 'adr'), { recursive: true });
 
 const gitInfo = {};
-for (const { repo, base } of sources) {
+for (const { repo, dest, slug } of sources) {
   const raw = readFileSync(path.join(ROOT, repo), 'utf8');
   const { title, titleIndex, description } = titleAndDescription(raw);
   const bodyLines = raw.split('\n').filter((_, i) => i !== titleIndex);
   const body = rewriteLinks(bodyLines.join('\n').replace(/^\n+/, ''), repo);
   const fm = [
     '---',
-    `title: ${JSON.stringify(title ?? base.replace(/\.md$/, ''))}`,
+    `title: ${JSON.stringify(title ?? path.basename(dest, '.md'))}`,
     ...(description ? [`description: ${JSON.stringify(description)}`] : []),
     '---',
     '',
     body,
   ].join('\n');
-  const dest = SPECS.has(base) ? path.join('specs', base) : base;
-  writeFileSync(path.join(CONTENT, dest), fm);
-  gitInfo[slugOf(repo)] = { path: repo, lastModified: gitDate(repo) };
+  const file = path.join(CONTENT, dest);
+  mkdirSync(path.dirname(file), { recursive: true });
+  writeFileSync(file, fm);
+  gitInfo[slug] = { path: repo, lastModified: gitDate(repo) };
 }
 
 writeFileSync(GIT_INFO, JSON.stringify(gitInfo, null, 2));
@@ -151,24 +178,7 @@ try {
 }
 writeFileSync(
   path.join(CONTENT, 'specs/meta.json'),
-  JSON.stringify(
-    {
-      title: 'Plans & specs',
-      defaultOpen: false,
-      pages: [
-        'release-2.0.0',
-        'social-2.0',
-        'social-2.0-pr1',
-        'social-2.0-pr2',
-        'social-2.0-pr3',
-        'social-2.0-pr4',
-        'api-keys',
-        'privacy-social',
-      ],
-    },
-    null,
-    2,
-  ),
+  JSON.stringify({ title: 'Plans & specs', defaultOpen: false }, null, 2),
 );
 // Serve the generated public OpenAPI spec on the docs host at /openapi/public-api-v1.json.
 try {
