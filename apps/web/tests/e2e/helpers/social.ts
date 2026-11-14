@@ -14,7 +14,8 @@ config({ path: resolve(__dirname, '../../../api/.env.local') });
 
 import bcrypt from 'bcrypt';
 import prisma from '@luki-fitti/database';
-import { berlinDayKey, berlinWeekKey } from '@luki-fitti/common/utils';
+import { berlinDayKey, berlinWeekKey, weekBounds } from '@luki-fitti/common/utils';
+import { bossForWeek } from '@luki-fitti/common/raid';
 
 export interface SeededSocialUser {
   id: string;
@@ -193,4 +194,64 @@ export async function seedGlobalCohortForE2e(userIds: string[]): Promise<string>
     });
   }
   return weekKey;
+}
+
+/** Enables `raidsEnabled` alongside social on the singleton AppSettings row. */
+export async function enableRaidsForE2e(): Promise<void> {
+  await prisma.appSettings.upsert({
+    where: { id: 1 },
+    update: { raidsEnabled: true },
+    create: { id: 1, socialEnabled: true, raidsEnabled: true },
+  });
+}
+
+/**
+ * Seeds the current week's ACTIVE community raid with one hit by the user, as
+ * if they had just finished a workout against it.
+ */
+export async function seedCommunityRaidForE2e(userId: string, damage = 120): Promise<string> {
+  const weekKey = berlinWeekKey(new Date());
+  const { start, end } = weekBounds(weekKey);
+  const bossSlug = bossForWeek(weekKey).slug;
+  const existing = await prisma.raid.findFirst({
+    where: { kind: 'COMMUNITY', weekKey },
+  });
+  const raid =
+    existing ??
+    (await prisma.raid.create({
+      data: {
+        kind: 'COMMUNITY',
+        bossSlug,
+        weekKey,
+        startsAt: start,
+        endsAt: end,
+        maxHp: 2000,
+      },
+    }));
+  const session = await prisma.workoutSession.create({
+    data: {
+      clientSessionId: `e2e-raid-${crypto.randomUUID()}`,
+      userId,
+      workoutNameSnapshot: 'E2E Raid Workout',
+      status: 'COMPLETED',
+      completedAt: new Date(),
+      activeDurationSeconds: 1800,
+    },
+  });
+  await prisma.raidHit.create({
+    data: {
+      raidId: raid.id,
+      userId,
+      sessionId: session.id,
+      damage,
+      firstDamage: damage,
+      weakSpotDamage: 0,
+      dayKey: berlinDayKey(new Date()),
+    },
+  });
+  await prisma.raid.update({
+    where: { id: raid.id },
+    data: { damage: { increment: damage } },
+  });
+  return raid.id;
 }

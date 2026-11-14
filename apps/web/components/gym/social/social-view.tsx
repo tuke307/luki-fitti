@@ -10,11 +10,21 @@ import type {
   DuelListDto,
   FriendListsDto,
   LeaguePendingResultDto,
+  RaidListDto,
+  RaidResultDto,
   SocialCardDto,
   SocialProfileDto,
+  SquadListDto,
   StreakListDto,
 } from '@luki-fitti/common/schemas';
-import { notificationsApi, socialApi, duelsApi, streaksApi } from '@/lib/social/social-api';
+import {
+  notificationsApi,
+  socialApi,
+  duelsApi,
+  streaksApi,
+  raidsApi,
+  squadsApi,
+} from '@/lib/social/social-api';
 import { PageTitle } from '../page-title';
 import { UserAvatar } from './user-avatar';
 import { FriendRow } from './friend-row';
@@ -24,13 +34,17 @@ import { LeagueCard } from './league-card';
 import { LeagueCelebration, dismissLeagueResult, useLeagueResult } from './league-celebration';
 import { DuelCelebration, dismissDuelResult, useDuelResult } from './duel-celebration';
 import { DuelsCard } from './duels-card';
+import { RaidCard } from '../raid/raid-card';
+import { RaidPage } from '../raid/raid-page';
+import { SquadsCard } from '../raid/squads-card';
+import { RaidCelebration, useRaidResult } from '../raid/raid-celebration';
 import { FriendSheet } from './friend-sheet';
 import { InboxSheet } from './inbox-sheet';
 import { SocialProfileSheet } from './social-profile-sheet';
 import { SocialOnboardingSheet } from './social-onboarding-sheet';
 import { ReportSheet } from './report-sheet';
 
-export type SocialSection = 'friends' | 'requests' | 'inbox' | 'duels' | null;
+export type SocialSection = 'friends' | 'requests' | 'inbox' | 'duels' | 'raids' | null;
 
 const ONBOARDING_DISMISSED_KEY = 'luki.social.onboardingDismissed';
 const UNREAD_POLL_MS = 60_000;
@@ -55,27 +69,39 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
   const [streaks, setStreaks] = useState<StreakListDto | null>(null);
   const [duelPending, setDuelPending] = useState<DuelItemDto | null>(null);
   const [duelOverlay, setDuelOverlay] = useState<DuelItemDto | null>(null);
+  const [raids, setRaids] = useState<RaidListDto | null>(null);
+  const [squads, setSquads] = useState<SquadListDto | null>(null);
+  const [raidPending, setRaidPending] = useState<RaidResultDto | null>(null);
+  const [raidOverlay, setRaidOverlay] = useState<RaidResultDto | null>(null);
+  const [raidPage, setRaidPage] = useState<string | null>(null);
   const [friendSheet, setFriendSheet] = useState<SocialCardDto | null>(null);
   const friendsAnchor = useRef<HTMLDivElement>(null);
   const duelsAnchor = useRef<HTMLDivElement>(null);
+  const raidsAnchor = useRef<HTMLDivElement>(null);
   const onboardingPrompted = useRef(false);
 
   useLeagueResult(pendingResult, setResultOverlay);
   useDuelResult(duelPending, setDuelOverlay);
+  useRaidResult(raidPending, setRaidOverlay);
 
   const refresh = useCallback(async () => {
-    const [meRes, friendsRes, duelsRes, streaksRes] = await Promise.all([
+    const [meRes, friendsRes, duelsRes, streaksRes, raidsRes, squadsRes] = await Promise.all([
       socialApi.me(),
       socialApi.friends(),
-      // Duels/streaks 403 while their feature switch is off — the sections hide.
+      // Duels/streaks/raids 403 while their feature switch is off — the sections hide.
       duelsApi.list().catch(() => null),
       streaksApi.list().catch(() => null),
+      raidsApi.current().catch(() => null),
+      squadsApi.list().catch(() => null),
     ]);
     if (meRes.data) setProfile(meRes.data);
     if (friendsRes.data) setLists(friendsRes.data);
     setDuels(duelsRes?.data ?? null);
     setStreaks(streaksRes?.data ?? null);
     setDuelPending(duelsRes?.data?.pendingResult ?? null);
+    setRaids(raidsRes?.data ?? null);
+    setSquads(squadsRes?.data ?? null);
+    setRaidPending(raidsRes?.data?.pendingResults[0] ?? null);
   }, []);
 
   useEffect(() => {
@@ -126,6 +152,8 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
       friendsAnchor.current?.scrollIntoView({ block: 'start' });
     } else if (section === 'duels') {
       duelsAnchor.current?.scrollIntoView({ block: 'start' });
+    } else if (section === 'raids') {
+      raidsAnchor.current?.scrollIntoView({ block: 'start' });
     }
   }, [section]);
 
@@ -204,10 +232,23 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
         </Button>
       </div>
 
-      {/* PR 2: weekly EP + league cards. PR 3: Duels. PR 4 adds Raid above Friends. */}
+      {/* PR 2: weekly EP + league cards. PR 3: Duels. PR 4: Raids above Duels. */}
       <div className="mt-4 space-y-4">
         <ThisWeekCard />
         <LeagueCard onPendingResult={setPendingResult} />
+        <div ref={raidsAnchor} className="scroll-mt-20">
+          {raids?.community && (
+            <RaidCard
+              raid={raids.community}
+              yourDamage={raids.community!.yourDamage}
+              onOpen={() => setRaidPage(raids.community!.id)}
+            />
+          )}
+          {raids?.squads.map((r) => (
+            <RaidCard key={r.id} raid={r} yourDamage={r.yourDamage} onOpen={() => setRaidPage(r.id)} />
+          ))}
+          {squads && <SquadsCard data={squads} friends={lists} onAction={(fn) => void run(fn)} />}
+        </div>
         <div ref={duelsAnchor} className="scroll-mt-20">
           {duels && (
             <DuelsCard
@@ -378,6 +419,17 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
               setPendingResult(null);
             })
           }
+        />
+      )}
+      <RaidPage raidId={raidPage} onOpenChange={(open) => !open && setRaidPage(null)} />
+      {raidOverlay && (
+        <RaidCelebration
+          result={raidOverlay}
+          onDone={() => {
+            setRaidOverlay(null);
+            setRaidPending(null);
+            void refresh();
+          }}
         />
       )}
       {duelOverlay && (

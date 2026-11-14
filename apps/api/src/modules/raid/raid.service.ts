@@ -624,6 +624,7 @@ export class RaidService {
       phase: raid.phase,
       status: raid.status as RaidStatus,
       defeatedAt: raid.defeatedAt?.toISOString() ?? null,
+      yourDamage: await this.userDamage(raid.id, viewerId),
       finalBlow,
     };
   }

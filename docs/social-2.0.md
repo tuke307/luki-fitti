@@ -439,3 +439,9 @@ Append one line per session: date, what was done, what is next.
 |            | unique index, raid/squad modules + routes, pointsByWeakSpot EP attribution + fixtures,       |                                   |
 |            | damage hooks in PointsService, spawn/escape in rollover + lazy spawn, push pref raids,       |                                   |
 |            | boot spec covers PointsService.raids/LeagueService.raids                                     |                                   |
+| 2026-11-14 | PR 4 step 0: locked-row phase transitions (one push per hit, highest        | PR 4 part C (iOS + Watch) —        |
+|            | phase only) + eligibility guards on community/squad hits; part B: 8 boss     | after design review                |
+|            | recipes + validateBossRecipe + export/check, three.js boss-canvas (toon      |                                    |
+|            | shading, all states, reduced motion, disposal), admin bosses preview, raid   |                                    |
+|            | card/page, squads card, defeat celebration, workout-summary damage, push     |                                    |
+|            | pref raids, /social/raids deep link, raid e2e, RaidDto.yourDamage            |                                    |

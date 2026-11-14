@@ -2,6 +2,7 @@
  * Typed wrappers for the social / push / notifications API endpoints.
  * Server responses stay authoritative; these only shape the calls.
  */
+import { RaidDifficulty } from '@luki-fitti/common/enums';
 import { fetchClient } from '@/lib/api/client';
 import type {
   AdminLeaguePreviewDto,
@@ -23,7 +24,12 @@ import type {
   PointsWeekDto,
   PushConfigDto,
   PushPreferencesDto,
+  RaidBossDto,
+  RaidDetailDto,
+  RaidFeedDto,
+  RaidListDto,
   ResolveReportDto,
+  SquadListDto,
   SocialProfileDto,
   SocialSettingsDto,
   SocialUserDto,
@@ -175,6 +181,40 @@ export const pushApi = {
     fetchClient<PushPreferencesDto>('/push/preferences', {
       method: 'PATCH',
       body: JSON.stringify(data),
+    }),
+};
+
+export const raidsApi = {
+  current: () => fetchClient<RaidListDto>('/raids/current'),
+  bosses: () => fetchClient<RaidBossDto[]>('/raids/bosses'),
+  detail: (raidId: string) => fetchClient<RaidDetailDto>(`/raids/${raidId}`),
+  feed: (raidId: string, cursor?: string | null) =>
+    fetchClient<RaidFeedDto>(`/raids/${raidId}/feed${cursor ? `?cursor=${cursor}` : ''}`),
+  markSeen: (raidId: string) =>
+    fetchClient(`/raids/${raidId}/seen`, { method: 'POST', body: '{}' }),
+};
+
+export const squadsApi = {
+  list: () => fetchClient<SquadListDto>('/squads'),
+  create: (name: string) =>
+    fetchClient('/squads', { method: 'POST', body: JSON.stringify({ name }) }),
+  invite: (squadId: string, userId: string) =>
+    fetchClient(`/squads/${squadId}/invites`, { method: 'POST', body: JSON.stringify({ userId }) }),
+  acceptInvite: (squadId: string) =>
+    fetchClient(`/squads/${squadId}/invites/accept`, { method: 'POST', body: '{}' }),
+  declineInvite: (squadId: string) =>
+    fetchClient(`/squads/${squadId}/invites/decline`, { method: 'POST', body: '{}' }),
+  leave: (squadId: string) =>
+    fetchClient(`/squads/${squadId}/leave`, { method: 'POST', body: '{}' }),
+  kick: (squadId: string, userId: string) =>
+    fetchClient(`/squads/${squadId}/members/${userId}`, { method: 'DELETE' }),
+  rename: (squadId: string, name: string) =>
+    fetchClient(`/squads/${squadId}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
+  remove: (squadId: string) => fetchClient(`/squads/${squadId}`, { method: 'DELETE' }),
+  startRaid: (squadId: string, bossSlug: string, difficulty: RaidDifficulty) =>
+    fetchClient(`/squads/${squadId}/raids`, {
+      method: 'POST',
+      body: JSON.stringify({ bossSlug, difficulty }),
     }),
 };
 

@@ -2,6 +2,7 @@ import {
   BotIcon,
   FlagIcon,
   LayoutGridIcon,
+  SwordsIcon,
   TrophyIcon,
   UsersIcon,
   type LucideIcon,
@@ -45,6 +46,12 @@ export function getAdminMenu(t: TranslationDictionary, held: readonly string[]):
       href: '/admin/social',
       label: t.admin.navSocial,
       icon: UsersIcon,
+      permissions: [AdminPermission.AI_SETTINGS_MANAGE],
+    },
+    {
+      href: '/admin/bosses',
+      label: t.admin.navBosses,
+      icon: SwordsIcon,
       permissions: [AdminPermission.AI_SETTINGS_MANAGE],
     },
     {

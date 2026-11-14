@@ -25,6 +25,8 @@ export interface RaidDto {
   phase: number;
   status: RaidStatus;
   defeatedAt: string | null;
+  /** The caller's total damage in this raid. */
+  yourDamage: number;
   /** Hitter who landed the final blow, once DEFEATED. */
   finalBlow: SocialCardDto | null;
 }
