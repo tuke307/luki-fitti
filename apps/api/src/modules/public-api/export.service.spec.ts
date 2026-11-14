@@ -218,7 +218,10 @@ describe('PublicExportService.buildExport', () => {
   it('scopes every upstream query to the key owner', async () => {
     const { service, calls } = stubDeps();
     await service.buildExport(OTHER, 'en');
-    assert.ok(calls.every((c) => c.endsWith(`:${OTHER}`)), JSON.stringify(calls));
+    assert.ok(
+      calls.every((c) => c.endsWith(`:${OTHER}`)),
+      JSON.stringify(calls),
+    );
   });
 });
 
