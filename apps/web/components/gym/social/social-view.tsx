@@ -245,7 +245,12 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
             />
           )}
           {raids?.squads.map((r) => (
-            <RaidCard key={r.id} raid={r} yourDamage={r.yourDamage} onOpen={() => setRaidPage(r.id)} />
+            <RaidCard
+              key={r.id}
+              raid={r}
+              yourDamage={r.yourDamage}
+              onOpen={() => setRaidPage(r.id)}
+            />
           ))}
           {squads && <SquadsCard data={squads} friends={lists} onAction={(fn) => void run(fn)} />}
         </div>
