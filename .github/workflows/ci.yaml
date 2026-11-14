@@ -152,6 +152,7 @@ jobs:
         run: |
           JWT_SECRET_VALUE="$(openssl rand -hex 32)"
           JWT_REFRESH_SECRET_VALUE="$(openssl rand -hex 32)"
+          API_KEY_PEPPER_VALUE="$(openssl rand -hex 32)"
 
           cat > apps/api/.env.local <<EOF
           API_PORT=3001
@@ -162,6 +163,7 @@ jobs:
           ACCESS_TOKEN_EXPIRY_MS=900000
           REFRESH_TOKEN_EXPIRY_MS=7776000000
           REFRESH_TOKEN_REUSE_GRACE_MS=30000
+          API_KEY_PEPPER=${API_KEY_PEPPER_VALUE}
           DATABASE_URL=postgresql://postgres:postgres@localhost:5432/luki_fitti
           FRONTEND_URL=http://localhost:3000
           REDIS_URL=redis://localhost:6379

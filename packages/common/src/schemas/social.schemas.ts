@@ -205,6 +205,15 @@ export interface SocialSettingsDto {
   socialBetaUserIds: string[];
 }
 
+export const UpdateApiKeysSettingsSchema = z.object({
+  apiKeysEnabled: z.boolean(),
+});
+export type UpdateApiKeysSettingsDto = z.infer<typeof UpdateApiKeysSettingsSchema>;
+
+export interface ApiKeysSettingsDto {
+  apiKeysEnabled: boolean;
+}
+
 export const AdminReportsQuerySchema = z.object({
   status: z.enum(ReportStatus).optional(),
   page: z.coerce.number().int().min(1).default(1),

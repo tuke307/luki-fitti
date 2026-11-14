@@ -211,6 +211,8 @@ model User {
   aiRuns             AiRun[]
   /// Encrypted OpenRouter keys (never select with the user; see UserAiKey).
   aiKeys             UserAiKey[]
+  /// Personal API keys for the read-only public API (hashed secrets only).
+  apiKeys            ApiKey[]
   importJobs         ImportJob[]
   progressCheckIns   ProgressCheckIn[]
 
@@ -664,6 +666,8 @@ model AppSettings {
   raidHpPerActiveUser     Int             @default(400)
   /// Community raid HP floor.
   raidMinHp               Int             @default(2000)
+  /// Personal API keys kill switch: off → /api/v1/* 403 and key creation blocked.
+  apiKeysEnabled          Boolean         @default(false)
   updatedAt               DateTime        @updatedAt
 }
 
@@ -696,6 +700,29 @@ model UserAiKey {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, slot])
+}
+
+/// Personal API key (`lf_pat_<id>_<secret>`) for the read-only public API /api/v1.
+/// Only the HMAC-SHA256(API_KEY_PEPPER, secret) hash is stored; the secret is shown once.
+model ApiKey {
+  /// The 8-char public id embedded in the key (lookup key, shown in the UI).
+  id         String    @id
+  userId     String
+  /// 1–40 chars.
+  name       String
+  /// hex(HMAC-SHA256(API_KEY_PEPPER, secret)).
+  secretHash String
+  /// ApiKeyScope values, validated in zod.
+  scopes     String[]
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  /// Updated at most once per minute per key (Redis-gated, fire-and-forget).
+  lastUsedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 enum AiRunStatus {
@@ -837,6 +864,7 @@ enum EmailTemplateType {
   ACCOUNT_CONFIRMATION
   PASSWORD_RESET
   ACCOUNT_DELETION
+  API_KEY_CREATED
 }
 
 enum EmailStatus {

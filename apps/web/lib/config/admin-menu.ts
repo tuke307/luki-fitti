@@ -1,5 +1,6 @@
 import {
   BotIcon,
+  KeyRoundIcon,
   FlagIcon,
   LayoutGridIcon,
   SwordsIcon,
@@ -40,6 +41,12 @@ export function getAdminMenu(t: TranslationDictionary, held: readonly string[]):
       href: '/admin/ai',
       label: t.admin.navAi,
       icon: BotIcon,
+      permissions: [AdminPermission.AI_SETTINGS_MANAGE],
+    },
+    {
+      href: '/admin/api-keys',
+      label: t.admin.navApiKeys,
+      icon: KeyRoundIcon,
       permissions: [AdminPermission.AI_SETTINGS_MANAGE],
     },
     {
