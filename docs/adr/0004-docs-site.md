@@ -50,6 +50,8 @@ requests for the docs tree on the other hosts redirect to the docs origin. Local
 - Content: every markdown file in `docs/`, plus `README.md` as the home page ("Overview") and
   `CONTRIBUTING.md` as "Contributing". English only. No frontmatter in the source files —
   titles come from the first H1, descriptions from the first paragraph, injected at staging.
+  Branch plans and specs are never published: they live in `docs/plans/` on the feature
+  branch and are deleted before the PR into `develop`; lasting decisions become ADRs.
 - Navigation: three sidebar tabs — **Guides**, **API**, **Project** — with short nav labels
   from one map in `apps/web/lib/docs/nav.tsx`; page titles stay untouched. A **Decisions**
   group lists the ADRs present on the branch.

@@ -164,31 +164,6 @@ export function docsTree(tree: Root): Root {
     }).filter((n): n is Item => Boolean(n)),
   };
 
-  // Plan/spec docs that still exist on this branch; empty folders disappear when the
-  // files are deleted, so the nav never breaks.
-  const socialIndex = page('/specs/social-2.0');
-  const specChildren: Node[] = [
-    ...pages(['/specs/release-2.0.0']),
-    ...(socialIndex
-      ? [
-          {
-            type: 'folder',
-            name: 'Social',
-            defaultOpen: false,
-            collapsible: true,
-            index: socialIndex,
-            children: pages([
-              '/specs/social-2.0-pr1',
-              '/specs/social-2.0-pr2',
-              '/specs/social-2.0-pr3',
-              '/specs/social-2.0-pr4',
-            ]),
-          } satisfies Folder,
-        ]
-      : []),
-    ...pages(['/specs/api-keys', '/specs/privacy-social', '/specs/mcp-server']),
-  ];
-
   const contributing = page('/contributing');
   // The roadmap is a real route on the docs host, not a content page.
   const roadmap: Item = { type: 'page', name: 'Roadmap', url: '/roadmap' };
@@ -204,17 +179,6 @@ export function docsTree(tree: Root): Root {
       roadmap,
       group('Releases', pages(['/release', '/app-store-release'])),
       ...(decisions.children.length > 0 ? [decisions] : []),
-      ...(specChildren.length > 0
-        ? [
-            {
-              type: 'folder',
-              name: 'Plans & specs',
-              defaultOpen: false,
-              collapsible: true,
-              children: specChildren,
-            } satisfies Folder,
-          ]
-        : []),
     ],
   };
 
@@ -227,7 +191,6 @@ export function docsTree(tree: Root): Root {
       ...guides.children,
       ...api.children.flatMap((f: Node) => (f.type === 'folder' ? f.children : [])),
       ...project.children,
-      ...specChildren,
       ...decisions.children,
     ]
       .flatMap((n) => (n && n.type === 'folder' ? [n, ...n.children] : n ? [n] : []))

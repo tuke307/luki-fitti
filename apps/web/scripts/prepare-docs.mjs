@@ -7,10 +7,12 @@
  *     stay untouched (GitHub would render frontmatter as a table).
  *   - links rewritten: relative .md links resolve against the source file's directory to
  *     docs routes, other repo paths -> GitHub blob URLs on main.
- *   - spec documents are grouped under content/specs/ ("Plans & specs"), decision records
- *     under content/adr/.
+ *   - decision records under content/adr/.
  *   - git-info.json records each page's repo path and last git commit date for the
  *     "Edit on GitHub" link and "Last updated" line.
+ *
+ * Branch plans and specs (`docs/plans/**`, and the plan files still at the top level on
+ * this branch) are never published — they are branch-only guidance.
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -23,8 +25,12 @@ const CONTENT = path.join(WEB, 'content');
 const GIT_INFO = path.join(WEB, 'lib/docs/git-info.json');
 const GITHUB_BLOB = 'https://github.com/tuke307/luki-fitti/blob/main';
 
-/** Docs that live in the nested "Plans & specs" sidebar folder. */
-const SPECS = new Set([
+/**
+ * Plan/spec documents that still sit at the top level of docs/ on this branch —
+ * branch-only guidance, unpublished (the convention is docs/plans/, and these are
+ * deleted on release/2.0.0).
+ */
+const PLANS = new Set([
   'release-2.0.0.md',
   'social-2.0.md',
   'social-2.0-pr1.md',
@@ -49,7 +55,6 @@ function targetFor(repo) {
     if (base === 'README.md') return { dest: 'adr/index.md', slug: 'adr' };
     return { dest: `adr/${base}`, slug: `adr/${name}` };
   }
-  if (SPECS.has(base)) return { dest: `specs/${base}`, slug: `specs/${name}` };
   return { dest: base, slug: name };
 }
 
@@ -57,7 +62,9 @@ function collect(dir) {
   const abs = path.join(ROOT, dir);
   if (!existsSync(abs)) return;
   for (const name of readdirSync(abs)) {
-    if (!name.endsWith('.md') || name === 'meta.json') continue;
+    // docs/plans/** is never collected: subdirectory reads don't happen here, and the
+    // top-level plan files on this branch are filtered out below.
+    if (!name.endsWith('.md') || name === 'meta.json' || PLANS.has(name)) continue;
     stagedRepos.add(`${dir}/${name}`);
   }
 }
@@ -146,7 +153,6 @@ function titleAndDescription(md) {
 }
 
 rmSync(CONTENT, { recursive: true, force: true });
-mkdirSync(path.join(CONTENT, 'specs'), { recursive: true });
 mkdirSync(path.join(CONTENT, 'adr'), { recursive: true });
 
 const gitInfo = {};
@@ -176,10 +182,6 @@ try {
 } catch {
   // meta.json is optional; the staged tree falls back to file order.
 }
-writeFileSync(
-  path.join(CONTENT, 'specs/meta.json'),
-  JSON.stringify({ title: 'Plans & specs', defaultOpen: false }, null, 2),
-);
 // Serve the generated public OpenAPI spec on the docs host at /openapi/public-api-v1.json.
 try {
   const spec = readFileSync(path.join(ROOT, 'docs/openapi/public-api-v1.json'));
