@@ -5,6 +5,7 @@ import defaultMdxComponents from 'fumadocs-ui/mdx';
 import { pageGitInfo, source } from '@/lib/docs/source';
 import { OpenAPIPage } from '@/components/docs/api-page';
 import { DocsHomeHero } from '@/components/docs/docs-home-hero';
+import { Mermaid } from '@/components/docs/mermaid';
 
 interface PageProps {
   params: Promise<{ slug?: string[] }>;
@@ -45,7 +46,7 @@ export default async function Page({ params }: PageProps) {
       {/* The derived description repeats the first paragraph; it stays for
           meta/OG/search only. */}
       <DocsBody>
-        <Mdx components={defaultMdxComponents} />
+        <Mdx components={{ ...defaultMdxComponents, Mermaid }} />
       </DocsBody>
     </DocsPage>
   );

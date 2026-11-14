@@ -667,3 +667,24 @@ a.docs-roadmap-title:hover {
 .docs-roadmap-done > summary:hover {
   color: var(--foreground);
 }
+
+/* Mermaid diagrams: card surface, horizontal scroll on narrow screens. */
+.docs-mermaid {
+  overflow-x: auto;
+  margin: 1.25rem 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.docs-mermaid svg {
+  max-width: none;
+  height: auto;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .docs-mermaid svg {
+    transition: opacity 150ms ease-out;
+  }
+}

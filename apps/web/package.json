@@ -49,6 +49,7 @@
     "jose": "^6.2.12",
     "js-cookie": "^3.0.8",
     "lucide-react": "^1.52.0",
+    "mermaid": "12.3.0",
     "next": "^16.3.8",
     "next-intl": "^4.14.9",
     "qrcode": "1.5.4",

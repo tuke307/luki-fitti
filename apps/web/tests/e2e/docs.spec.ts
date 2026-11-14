@@ -39,6 +39,12 @@ test.describe('docs site', () => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   });
 
+  test('a mermaid diagram renders as svg', async ({ page }) => {
+    await page.goto(`${DOCS}/release`);
+    // The diagram renders client-side; on failure the source shows as a code block.
+    await expect(page.locator('.docs-mermaid svg').first()).toBeVisible({ timeout: 15_000 });
+  });
+
   test('the app host redirects the docs tree to the docs host', async ({ page }) => {
     await page.goto('http://localhost:3000/docs/import-format');
     await expect(page).toHaveURL(/docs\.localhost:3000\/import-format/);
