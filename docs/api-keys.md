@@ -1,6 +1,6 @@
 # Personal API keys (design)
 
-Status: **draft for review** · Target: 2.0.0 (branch `feat/api-keys` → `release/2.0.0`)
+Status: **approved 2026-11-15** · Target: 2.0.0 (branch `feat/api-keys` → `release/2.0.0`)
 
 Users create personal API keys in their settings and use them to read their own LukiFitti data
 from scripts and tools (spreadsheets, Notion, Home Assistant, Apple Shortcuts, their own
@@ -232,13 +232,11 @@ headers and 429. Keys rejected by the normal `AuthGuard` and app tokens rejected
 `ImportFileSchema` and re-imports with zero new entries (idempotency). e2e: create a key in
 the settings, copy it, `curl /api/v1/sessions` with it, revoke it, get 401.
 
-## Open questions
+## Decisions (2026-11-15)
 
-1. **Read-only for v1:** is that enough, or do you want `write:sessions` (e.g. logging a
-   workout from Shortcuts) in 2.0 already?
-2. **Expiry options:** offer "No expiry", or cap at 1 year?
-3. **Creating keys on iPhone:** web-only creation as proposed, or the full flow on iPhone too?
-4. **Photos:** exclude them in v1 (proposed), or include them as signed, short-lived URLs?
-5. **Later idea:** a LukiFitti MCP server that wraps `/api/v1` with a key, so AI assistants
-   (Claude, ChatGPT) can answer "how did my bench press develop this year?". Worth noting as
-   the follow-up?
+1. **Read-only for v1.** `write:*` scopes are a later version.
+2. **"No expiry" is allowed**, alongside 30 days / 90 days (default) / 1 year, with a warning
+   in the create sheet and the "Last used" date in the list to spot forgotten keys.
+3. **Keys are created on the web only**; iPhone lists and revokes them.
+4. **No photos in v1** (progress and meal photos stay excluded).
+5. **MCP server** wrapping `/api/v1` is noted as the follow-up after 2.0.
