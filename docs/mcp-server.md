@@ -67,17 +67,17 @@ AI client ──HTTPS + Bearer lf_pat_…──▶ mcp-server (/mcp, :3030)
 Names in kebab-case, like the existing projects. Descriptions in English (assistants work in
 any language); answers use the user's units from `get-profile`.
 
-| Tool                                                           | Scope            | Calls                           | Returns (`structuredContent`)                              |
-| :------------------------------------------------------------- | :--------------- | :------------------------------ | :--------------------------------------------------------- |
-| `get-profile`                                                  | `read:profile`   | `/v1/me`                        | units, weekly session goal, training goal, nutrition goals |
-| `list-sessions` (`from`, `to`, `limit ≤ 50`)                   | `read:sessions`  | `/v1/sessions`                  | date, workout, duration, volume, sets, PR count            |
-| `get-session` (`id`)                                           | `read:sessions`  | `/v1/sessions/:id`              | exercises with all sets                                    |
-| `exercise-progress` (`exercise`, `from`, `to`)                 | `read:sessions`  | `/v1/exercises`, `/v1/sessions` | per session: best set, e1RM, volume; plus the trend        |
-| `personal-records` (`exercise?`)                               | `read:sessions`  | `/v1/personal-records`          | current PRs                                                |
-| `training-summary` (`period: week \| month \| year`, `offset`) | `read:sessions`  | `/v1/sessions`                  | sessions vs goal, volume per muscle group, streak          |
-| `list-workouts`                                                | `read:workouts`  | `/v1/workouts`                  | templates with exercises and targets                       |
-| `nutrition-summary` (`from`, `to`)                             | `read:nutrition` | `/v1/meals`, `/v1/me`           | per day: kcal/protein/carbs/fat vs goals, averages         |
-| `body-weight-trend` (`from`, `to`)                             | `read:body`      | `/v1/body-weight`               | entries, 7-day average, change                             |
+| Tool                                                           | Scope                             | Calls                           | Returns (`structuredContent`)                              |
+| :------------------------------------------------------------- | :-------------------------------- | :------------------------------ | :--------------------------------------------------------- |
+| `get-profile`                                                  | `read:profile`                    | `/v1/me`                        | units, weekly session goal, training goal, nutrition goals |
+| `list-sessions` (`from`, `to`, `limit ≤ 50`)                   | `read:sessions`                   | `/v1/sessions`                  | date, workout, duration, volume, sets, PR count            |
+| `get-session` (`id`)                                           | `read:sessions`                   | `/v1/sessions/:id`              | exercises with all sets                                    |
+| `exercise-progress` (`exercise`, `from`, `to`)                 | `read:sessions` + `read:workouts` | `/v1/exercises`, `/v1/sessions` | per session: best set, e1RM, volume; plus the trend        |
+| `personal-records` (`exercise?`)                               | `read:sessions`                   | `/v1/personal-records`          | current PRs                                                |
+| `training-summary` (`period: week \| month \| year`, `offset`) | `read:sessions`                   | `/v1/sessions`                  | sessions vs goal, volume per muscle group, streak          |
+| `list-workouts`                                                | `read:workouts`                   | `/v1/workouts`                  | templates with exercises and targets                       |
+| `nutrition-summary` (`from`, `to`)                             | `read:nutrition`                  | `/v1/meals`, `/v1/me`           | per day: kcal/protein/carbs/fat vs goals, averages         |
+| `body-weight-trend` (`from`, `to`)                             | `read:body`                       | `/v1/body-weight`               | entries, 7-day average, change                             |
 
 - **Calculations reuse `@luki-fitti/common`** (`history-insights`, `muscle-volume`,
   `nutrition`, `body-weight`, `progression` e1RM), so assistant answers match the app.

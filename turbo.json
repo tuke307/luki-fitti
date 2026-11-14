@@ -33,7 +33,11 @@
     "PASSWORD_RESET_EXPIRY_MS",
     "ACCOUNT_DELETION_EXPIRY_MS",
     "NEXT_RUNTIME",
-    "GIT_SHA"
+    "GIT_SHA",
+    "MCP_SERVER_PORT",
+    "API_BASE_URL",
+    "MCP_PUBLIC_URL",
+    "MCP_ALLOWED_HOSTS"
   ],
   "tasks": {
     "build": {
