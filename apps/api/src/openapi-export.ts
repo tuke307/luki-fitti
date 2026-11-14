@@ -48,15 +48,29 @@ async function exportOpenApiSpec() {
     )
     .setVersion('1')
     .addBearerAuth(
-      { type: 'http', scheme: 'bearer', description: 'Personal API key `lf_pat_…`' },
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'lf_pat_…',
+        description: 'Personal API key `lf_pat_…`',
+      },
       'bearer',
     )
-    .addServer('/')
+    // The docs playground calls this origin directly (CORS is `*`); locally
+    // `PUBLIC_API_SERVER_URL` points it at a dev API instead.
+    .addServer(
+      process.env.PUBLIC_API_SERVER_URL ?? 'https://app.luki-fitti.tony-luke.de/api',
+    )
     .build();
 
   const publicDocument = SwaggerModule.createDocument(app, publicConfig, {
     include: [PublicApiModule],
   });
+  // Paths carry the Nest `/api` mount prefix; the server URL already ends in
+  // `/api`, so drop it or playground calls would hit `/api/api/v1/…`.
+  publicDocument.paths = Object.fromEntries(
+    Object.entries(publicDocument.paths).map(([p, item]) => [p.replace(/^\/api/, ''), item]),
+  ) as typeof publicDocument.paths;
   const publicOutDir = path.resolve(process.cwd(), '../../docs/openapi');
   await fs.mkdir(publicOutDir, { recursive: true });
   const publicOutFile = path.join(publicOutDir, 'public-api-v1.json');
