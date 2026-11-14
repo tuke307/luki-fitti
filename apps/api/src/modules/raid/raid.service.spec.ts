@@ -47,7 +47,7 @@ function makeState() {
       socialPaused: boolean;
     }
   >();
-  const addUser = (id: string, handle = `@${id}`) => {
+  const addUser = (id: string, handle: string | null = `@${id}`) => {
     users.set(id, {
       id,
       handle,
@@ -130,8 +130,10 @@ function makePrisma(state: State): PrismaService {
         include?: unknown;
       }) =>
         state.raids.filter((r) => match(r as unknown as Record<string, unknown>, where))[0] ?? null,
-      findUnique: async ({ where }: { where: { id?: string } }) =>
-        state.raids.find((r) => r.id === where.id) ?? null,
+      findUnique: async ({ where }: { where: { id?: string } }) => {
+        const row = state.raids.find((r) => r.id === where.id);
+        return row ? { ...row } : null;
+      },
       findMany: async ({ where }: { where?: Record<string, unknown> }) => {
         let rows = state.raids.filter((r) =>
           match(r as unknown as Record<string, unknown>, where ?? {}),
@@ -892,6 +894,74 @@ describe('RaidService', () => {
     assert.equal(raid.phase, 2);
     const phases = state.notifications.filter((n) => n.kind === NotificationKind.RAID_PHASE);
     assert.equal(phases.length, 2);
+  });
+
+  it('notifies only the transaction that crosses a phase', async () => {
+    const { state, svc } = setup();
+    seedRaid(state, { maxHp: 1000 });
+    const today = new Date();
+    seedSession(state, 's1', 'u1', 260, {}, today);
+    await svc.applySession('u1', 's1'); // phase 0 → 1
+    seedSession(state, 's2', 'u1', 40, {}, today);
+    await svc.applySession('u1', 's2'); // stays in phase 1
+    const phases = state.notifications.filter((n) => n.kind === NotificationKind.RAID_PHASE);
+    assert.equal(phases.length, 1);
+    assert.equal(phases[0]!.payload.percent, 75);
+  });
+
+  it('sends one push for the highest phase when a hit jumps two', async () => {
+    const { state, svc } = setup();
+    const raid = seedRaid(state, { maxHp: 1000 });
+    const today = new Date();
+    seedSession(state, 's1', 'u1', 600, {}, today);
+    await svc.applySession('u1', 's1'); // phase 0 → 2 in one hit
+    assert.equal(raid.phase, 2);
+    const phases = state.notifications.filter((n) => n.kind === NotificationKind.RAID_PHASE);
+    assert.equal(phases.length, 1);
+    assert.equal(phases[0]!.payload.percent, 50);
+  });
+
+  it('applies league-style eligibility: community hits need a handle and no pause', async () => {
+    const { state, svc } = setup();
+    const raid = seedRaid(state, { maxHp: 10000 });
+    state.addUser('nohandle', null);
+    state.addUser('paused');
+    state.users.get('paused')!.socialPaused = true;
+    const today = new Date();
+    seedSession(state, 's1', 'nohandle', 100, {}, today);
+    seedSession(state, 's2', 'paused', 100, {}, today);
+    seedSession(state, 's3', 'u1', 100, {}, today);
+    await svc.applySession('nohandle', 's1');
+    await svc.applySession('paused', 's2');
+    await svc.applySession('u1', 's3');
+    assert.equal(raid.damage, 100);
+    assert.deepEqual(
+      state.hits.map((h) => h.userId),
+      ['u1'],
+    );
+  });
+
+  it('squad hits need a handle but not the pause check', async () => {
+    const { state, svc } = setup();
+    state.addUser('nohandle', null);
+    state.addUser('paused');
+    state.users.get('paused')!.socialPaused = true;
+    state.squads.push({ id: 'sq1', name: 'Sq', createdById: 'u1' });
+    state.members.push(
+      { squadId: 'sq1', userId: 'nohandle', role: 'MEMBER', joinedAt: new Date() },
+      { squadId: 'sq1', userId: 'paused', role: 'MEMBER', joinedAt: new Date() },
+    );
+    const raid = seedRaid(state, { kind: 'SQUAD', squadId: 'sq1', maxHp: 10000 });
+    const today = new Date();
+    seedSession(state, 's1', 'nohandle', 100, {}, today);
+    seedSession(state, 's2', 'paused', 100, {}, today);
+    await svc.applySession('nohandle', 's1');
+    await svc.applySession('paused', 's2');
+    assert.equal(raid.damage, 100);
+    assert.deepEqual(
+      state.hits.map((h) => h.userId),
+      ['paused'],
+    );
   });
 
   it('rollover escapes expired raids and notifies participants', async () => {

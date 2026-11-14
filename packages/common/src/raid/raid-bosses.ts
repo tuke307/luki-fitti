@@ -128,7 +128,7 @@ const weekStartMs = (weekKey: string): number => {
 export function bossForWeek(weekKey: string): RaidBoss {
   const weeks = Math.floor((weekStartMs(weekKey) - weekStartMs(ROSTER_EPOCH_WEEK)) / WEEK_MS);
   const index = ((weeks % RAID_BOSSES.length) + RAID_BOSSES.length) % RAID_BOSSES.length;
-  return RAID_BOSSES[index];
+  return RAID_BOSSES[index]!;
 }
 
 /** Damage dealt by one session entry against a boss (weak spots count twice). */

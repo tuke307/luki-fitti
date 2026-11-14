@@ -277,14 +277,26 @@ export class RaidService {
       },
     });
 
+    const actor = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { handle: true, socialPaused: true },
+    });
+    // Community raids use league-style eligibility (handle + not paused); squad
+    // raids only require a handle — membership was already checked in the query.
+    const eligible = raids.filter((raid) =>
+      raid.kind === 'COMMUNITY'
+        ? Boolean(actor?.handle) && !actor?.socialPaused
+        : Boolean(actor?.handle),
+    );
+
     const dayKey = berlinDayKey(completedAt);
     const dayCap = DAILY_DAMAGE_FACTOR * settings.epDailyCap;
-    for (const raid of raids) {
+    for (const raid of eligible) {
       const boss = RAID_BOSSES.find((b) => b.slug === raid.bossSlug);
       if (!boss) continue;
       const weakBonus = boss.weakTo.reduce((sum, w) => sum + (weakSpot[w] ?? 0), 0);
       const raw = raidDamage(entry.points, weakSpot, boss);
-      const { applied, defeated } = await this.applyHit(
+      const { applied, defeated, previousPhase, newPhase } = await this.applyHit(
         raid.id,
         userId,
         sessionId,
@@ -295,7 +307,7 @@ export class RaidService {
         dayCap,
       );
       if (applied > 0) {
-        await this.postHitNotifications(raid as RaidRow, defeated);
+        await this.postHitNotifications(raid.id, raid.bossSlug, defeated, previousPhase, newPhase);
       }
     }
   }
@@ -429,11 +441,13 @@ export class RaidService {
     topExercise: string | null,
     dayKey: string,
     dayCap: number,
-  ): Promise<{ applied: number; defeated: boolean }> {
+  ): Promise<{ applied: number; defeated: boolean; previousPhase: number; newPhase: number }> {
     return this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM "Raid" WHERE id = ${raidId} FOR UPDATE`;
       const raid = await tx.raid.findUnique({ where: { id: raidId } });
-      if (!raid || raid.status !== 'ACTIVE') return { applied: 0, defeated: false };
+      if (!raid || raid.status !== 'ACTIVE') {
+        return { applied: 0, defeated: false, previousPhase: 0, newPhase: 0 };
+      }
 
       const [existing, dayUsed] = await Promise.all([
         tx.raidHit.findUnique({ where: { raidId_sessionId: { raidId, sessionId } } }),
@@ -471,35 +485,44 @@ export class RaidService {
         (t) => raid.maxHp - damage <= raid.maxHp * (1 - t),
       ).length;
       const defeated = damage >= raid.maxHp;
+      const newPhase = Math.max(raid.phase, phase);
       await tx.raid.update({
         where: { id: raidId },
         data: {
           damage,
-          phase: Math.max(raid.phase, phase),
+          phase: newPhase,
           ...(defeated
             ? { status: 'DEFEATED', defeatedAt: new Date(), finalBlowUserId: userId }
             : {}),
         },
       });
-      return { applied: capped, defeated };
+      return { applied: capped, defeated, previousPhase: raid.phase, newPhase };
     }, TX_OPTIONS);
   }
 
-  /** Post-commit side effects of a hit: phase pushes + defeat processing. */
-  private async postHitNotifications(raid: RaidRow, defeated: boolean): Promise<void> {
-    const fresh = await this.prisma.raid.findUnique({ where: { id: raid.id } });
-    if (!fresh) return;
+  /**
+   * Post-commit side effects of a hit: phase pushes + defeat processing. The
+   * phase transition is reported by the locked transaction, so concurrent hits
+   * can't both fan out the same RAID_PHASE push. One push per hit, for the
+   * highest newly crossed phase.
+   */
+  private async postHitNotifications(
+    raidId: string,
+    bossSlug: string,
+    defeated: boolean,
+    previousPhase: number,
+    newPhase: number,
+  ): Promise<void> {
     if (defeated) {
-      await this.processDefeat(fresh.id);
+      await this.processDefeat(raidId);
       return;
     }
-    const newPhases = fresh.phase - raid.phase;
-    if (newPhases > 0) {
-      const participants = await this.participantIds(fresh.id);
-      const percent = (PHASE_THRESHOLDS[fresh.phase - 1] ?? 0) * 100;
+    if (newPhase > previousPhase) {
+      const participants = await this.participantIds(raidId);
+      const percent = (PHASE_THRESHOLDS[newPhase - 1] ?? 0) * 100;
       for (const userId of participants) {
         await this.notify(userId, NotificationKind.RAID_PHASE, null, {
-          ...bossPayload(fresh.bossSlug),
+          ...bossPayload(bossSlug),
           percent,
           url: '/social/raids',
         });
