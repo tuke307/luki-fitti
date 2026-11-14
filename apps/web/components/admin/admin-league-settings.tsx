@@ -94,9 +94,7 @@ export function AdminLeagueSettings() {
             data-testid="league-stage-mode"
             disabled={busy}
             value={s.leagueStageMode}
-            onChange={(e) =>
-              void save({ leagueStageMode: e.target.value as LeagueStageMode })
-            }
+            onChange={(e) => void save({ leagueStageMode: e.target.value as LeagueStageMode })}
             className="border-border bg-background h-10 w-full rounded-lg border px-3 text-[0.9375rem]"
           >
             {STAGE_MODES.map((mode) => (
@@ -179,10 +177,7 @@ export function AdminLeagueSettings() {
                 <dt className="text-muted-foreground">{t.admin.previewOutcomes}</dt>
                 <dd className="font-medium">
                   {preview.data.openWeekOutcomes.cohorts
-                    .map(
-                      (c) =>
-                        `${c.size} (↑${c.promoteCount} ↓${c.demoteCount})`,
-                    )
+                    .map((c) => `${c.size} (↑${c.promoteCount} ↓${c.demoteCount})`)
                     .join(' · ')}
                 </dd>
               </div>
