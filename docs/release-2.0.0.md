@@ -55,7 +55,8 @@ main ◀── develop ◀── release/2.0.0  (version bump 2.0.0)        PR #
    - **Docs site `docs.luki-fitti.tony-luke.de`** (decided 2026-11-14, replaces the planned
      `/developers` page):
      - Fumadocs inside `apps/web`, as a third host in `proxy.ts` next to site and app.
-     - Publishes every file in `docs/`, English only.
+     - Publishes every file in `docs/` plus README (home) and CONTRIBUTING, English only.
+     - Dark mode only, with no light theme and no toggle.
      - API reference via `fumadocs-openapi`.
      - App, iOS and site links point there.
      - Details: `docs/api-keys.md` → "Docs site".
