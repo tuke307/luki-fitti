@@ -58,9 +58,7 @@ async function exportOpenApiSpec() {
     )
     // The docs playground calls this origin directly (CORS is `*`); locally
     // `PUBLIC_API_SERVER_URL` points it at a dev API instead.
-    .addServer(
-      process.env.PUBLIC_API_SERVER_URL ?? 'https://app.luki-fitti.tony-luke.de/api',
-    )
+    .addServer(process.env.PUBLIC_API_SERVER_URL ?? 'https://app.luki-fitti.tony-luke.de/api')
     .build();
 
   const publicDocument = SwaggerModule.createDocument(app, publicConfig, {
