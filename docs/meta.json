@@ -19,6 +19,7 @@
     "---Project---",
     "contributing",
     "possible-features",
-    "specs"
+    "specs",
+    "adr"
   ]
 }

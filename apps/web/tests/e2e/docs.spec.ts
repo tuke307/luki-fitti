@@ -49,9 +49,10 @@ test.describe('docs site', () => {
     await page.goto(`${DOCS}/api-reference/v1/sessions/get`);
     await expect(page.locator('article')).toContainText('/api/v1/sessions');
     await expect(page.locator('article')).toContainText('Authorization');
-    // The sidebar shows the API tab with the operation under its tag group.
+    // The sidebar shows the API tab with the operation under its tag group (on mobile
+    // the sidebar sits in the closed drawer, so assert presence, not visibility).
     await expect(
-      page.locator('#nd-sidebar a[href="/api-reference/v1/sessions/get"]'),
-    ).toBeVisible();
+      page.locator('#nd-sidebar a[href="/api-reference/v1/sessions/get"]').first(),
+    ).toBeAttached();
   });
 });
