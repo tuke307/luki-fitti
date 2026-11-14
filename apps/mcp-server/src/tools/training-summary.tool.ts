@@ -60,7 +60,9 @@ export class TrainingSummaryTool {
 
       const scopes = scopesOf(req);
       const profile = await profileFor(this.api, req);
-      const profileGoal = profile?.goals.weeklyGoalSessions ?? null;
+      const rawGoal = profile?.goals.weeklyGoalSessions ?? null;
+      // 0 means "no goal set"; never report a goal as met when there is none.
+      const profileGoal = rawGoal !== null && rawGoal > 0 ? rawGoal : null;
       // Secondary muscles need the exercise catalog (read:workouts); without it
       // volume counts primary muscles only.
       const catalog = scopes.includes('read:workouts')
