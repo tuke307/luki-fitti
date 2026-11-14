@@ -55,7 +55,7 @@ test.describe('docs site', () => {
     const res = await page.request.get(`${DOCS}/sitemap.xml`);
     expect(res.ok()).toBeTruthy();
     const urls = [...(await res.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map(
-      (m) => new URL(m[1]).pathname,
+      (m) => new URL(m[1]!).pathname,
     );
     expect(urls.length).toBeGreaterThan(0);
 

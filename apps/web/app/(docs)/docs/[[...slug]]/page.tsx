@@ -34,7 +34,7 @@ function AdrMeta({ slug }: { slug: string }) {
         continue;
       }
       const m = /^- ([^:]+):\s*(.+)$/.exec(line);
-      if (m) meta[m[1].trim()] = m[2].trim();
+      if (m) meta[m[1]!.trim()] = m[2]!.trim();
     }
   } catch {
     return null;
@@ -92,7 +92,7 @@ export default async function Page({ params }: PageProps) {
       {isHome ? <DocsHomeHero title={page.data.title} /> : <DocsTitle>{page.data.title}</DocsTitle>}
       {/* The derived description repeats the first paragraph; it stays for
           meta/OG/search only. */}
-      {isAdr && <AdrMeta slug={page.slugs[1]} />}
+      {isAdr && <AdrMeta slug={page.slugs[1]!} />}
       <DocsBody className={isAdr ? 'docs-adr' : undefined}>
         <Mdx components={{ ...defaultMdxComponents, Mermaid }} />
       </DocsBody>

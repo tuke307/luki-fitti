@@ -22,7 +22,11 @@ async function lastCommitDate(repoPath, fetchImpl, headers) {
   }
 }
 
-/** repo paths -> Map<repo path, ISO date | null>, fetched in small batches. */
+/**
+ * repo paths -> Map<repo path, ISO date | null>, fetched in small batches.
+ * @param {string[]} repoPaths
+ * @param {{ fetchImpl?: typeof fetch, token?: string }} [options]
+ */
 export async function githubDatesFor(repoPaths, { fetchImpl = fetch, token } = {}) {
   const headers = { Accept: 'application/vnd.github+json' };
   if (token) headers.Authorization = `Bearer ${token}`;
