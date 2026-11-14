@@ -88,6 +88,7 @@ let package = Package(
             name: "LukiFittiModelsTests",
             dependencies: [
                 "LukiFittiModels",
+                "LukiFittiDesign",
             ]
         ),
         .testTarget(

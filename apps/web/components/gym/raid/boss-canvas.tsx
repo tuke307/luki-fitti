@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { useReducedMotion } from 'framer-motion';
-import { bossBounds, type BossPart, type RaidBoss, type Slot } from '@luki-fitti/common/raid';
+import { bossBounds, type RaidBoss, type Slot } from '@luki-fitti/common/raid';
+import { buildBossParts, type RoundedBoxCtor, type Three } from '@/lib/raid/boss-geometry';
 
 export type BossVisualState = 'idle' | 'defeated' | 'escaped';
 
@@ -30,18 +31,6 @@ interface BossCanvasProps {
   className?: string;
 }
 
-type Three = typeof import('three');
-type RoundedBox =
-  typeof import('three/examples/jsm/geometries/RoundedBoxGeometry.js').RoundedBoxGeometry;
-
-interface BuiltPart {
-  part: BossPart;
-  mesh: import('three').Mesh;
-  basePosition: import('three').Vector3;
-  velocity: import('three').Vector3;
-  spin: import('three').Vector3;
-}
-
 const OUTLINE_SCALE = 1.045;
 /** default three-quarter pose (≈ −18°) */
 const BASE_YAW = -0.32;
@@ -53,65 +42,6 @@ const HIT_MS = 250;
 const FLASH_MS = 120;
 const EXPLODE_MS = 1200;
 const ESCAPE_MS = 900;
-
-function geometryFor(
-  THREE: Three,
-  RoundedBox: RoundedBox | null,
-  part: BossPart,
-): import('three').BufferGeometry {
-  const [w, h, d] = part.size;
-  switch (part.shape) {
-    case 'sphere':
-      return new THREE.SphereGeometry(0.5, 24, 18).scale(w, h, d);
-    case 'capsule':
-      return new THREE.CapsuleGeometry(w / 2, Math.max(0.01, h - w), 6, 18);
-    case 'roundedBox': {
-      const radius = Math.min(w, h, d) * 0.18;
-      if (RoundedBox) return new RoundedBox(w, h, d, 4, radius);
-      return roundedBoxGeometry(THREE, w, h, d, radius);
-    }
-    case 'cone':
-      return new THREE.ConeGeometry(w / 2, h, 20).scale(1, 1, d / w);
-    case 'cylinder':
-      return new THREE.CylinderGeometry(w / 2, w / 2, h, 20).scale(1, 1, d / w);
-    case 'torus':
-      return new THREE.TorusGeometry(w / 2, Math.max(0.02, d / 2), 10, 28);
-    case 'box':
-    default:
-      return new THREE.BoxGeometry(w, h, d);
-  }
-}
-
-/** Fallback rounded-box for when the examples addon fails to load: a subdivided
- *  box whose vertices are pulled toward the inscribed rounded shape. */
-function roundedBoxGeometry(
-  THREE: Three,
-  w: number,
-  h: number,
-  d: number,
-  radius: number,
-): import('three').BufferGeometry {
-  const geo = new THREE.BoxGeometry(w, h, d, 4, 4, 4);
-  const pos = geo.attributes.position!;
-  const half = new THREE.Vector3(w / 2 - radius, h / 2 - radius, d / 2 - radius);
-  const v = new THREE.Vector3();
-  const inner = new THREE.Vector3();
-  for (let i = 0; i < pos.count; i++) {
-    v.fromBufferAttribute(pos, i);
-    inner.set(
-      Math.sign(v.x) * Math.min(Math.abs(v.x), half.x),
-      Math.sign(v.y) * Math.min(Math.abs(v.y), half.y),
-      Math.sign(v.z) * Math.min(Math.abs(v.z), half.z),
-    );
-    const delta = v.clone().sub(inner);
-    if (delta.lengthSq() > 0) {
-      delta.setLength(Math.min(radius, delta.length()));
-      pos.setXYZ(i, inner.x + delta.x, inner.y + delta.y, inner.z + delta.z);
-    }
-  }
-  geo.computeVertexNormals();
-  return geo;
-}
 
 function toonGradient(THREE: Three): import('three').DataTexture {
   const data = new Uint8Array([70, 155, 255]);
@@ -257,7 +187,7 @@ export function BossCanvas({
 
     const boot = async () => {
       let THREE: Three;
-      let RoundedBox: RoundedBox | null = null;
+      let RoundedBox: RoundedBoxCtor | null = null;
       try {
         [THREE, { RoundedBoxGeometry: RoundedBox }] = await Promise.all([
           import('three'),
@@ -361,52 +291,15 @@ export function BossCanvas({
       });
       disposables.push(flashMat);
 
-      const built: BuiltPart[] = [];
-      const pupils: import('three').Mesh[] = [];
-      const eyes: import('three').Mesh[] = [];
-      const brows: Array<{ mesh: import('three').Mesh; side: number; baseRotZ: number }> = [];
-      const partMeshes = new Map<string, import('three').Mesh>();
-      for (const part of boss.parts) {
-        const geo = geometryFor(THREE, RoundedBox, part);
-        disposables.push(geo);
-        const mesh = new THREE.Mesh(geo, materialFor(part.slot, part.emissive));
-        mesh.position.set(...part.position);
-        if (part.rotation) {
-          mesh.rotation.set(
-            (part.rotation[0] * Math.PI) / 180,
-            (part.rotation[1] * Math.PI) / 180,
-            (part.rotation[2] * Math.PI) / 180,
-          );
-        }
-        mesh.userData.minPhase = part.minPhase ?? 0;
-        mesh.userData.slot = part.slot;
-        mesh.userData.role = part.role;
-        // inverted-hull outline
-        const outline = new THREE.Mesh(geo, outlineMat);
-        outline.scale.setScalar(OUTLINE_SCALE);
-        outline.raycast = () => undefined;
-        mesh.add(outline);
-        // white flash hull for hits
-        const flash = new THREE.Mesh(geo, flashMat);
-        flash.scale.setScalar(OUTLINE_SCALE + 0.01);
-        flash.raycast = () => undefined;
-        mesh.add(flash);
-        group.add(mesh);
-        partMeshes.set(part.id, mesh);
-        built.push({
-          part,
-          mesh,
-          basePosition: mesh.position.clone(),
-          velocity: new THREE.Vector3(),
-          spin: new THREE.Vector3(),
-        });
-        if (part.role === 'pupil') pupils.push(mesh);
-        if (part.role === 'eye') eyes.push(mesh);
-        if (part.id.startsWith('brow')) {
-          const side = part.position[0] === 0 ? 0 : Math.sign(part.position[0]);
-          brows.push({ mesh, side, baseRotZ: mesh.rotation.z });
-        }
-      }
+      const {
+        built,
+        pupils,
+        eyes,
+        brows,
+        group: partsGroup,
+      } = buildBossParts(THREE, RoundedBox, boss, materialFor, outlineMat, flashMat, OUTLINE_SCALE);
+      group.add(partsGroup);
+      for (const b of built) disposables.push(b.mesh.geometry);
 
       // soft contact shadow blob, ~60 % of the body width, hugging the floor
       const bodyWidth =

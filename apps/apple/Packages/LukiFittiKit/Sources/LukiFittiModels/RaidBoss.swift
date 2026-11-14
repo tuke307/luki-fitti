@@ -146,6 +146,70 @@ public enum RaidBossMath {
         if left <= 0.75 { return 1 }
         return 0
     }
+
+    // MARK: - Recipe geometry math (mirrors packages/common/src/raid/raid-bosses.ts)
+
+    private static let deg = Double.pi / 180
+
+    /// `rotation` degrees → matrix, XYZ intrinsic (three.js 'XYZ'): M = Rx·Ry·Rz.
+    /// Applied to column vectors, as simd does.
+    public static func rotationMatrix(_ rotation: SIMD3<Double>?) -> simd_double3x3 {
+        let r = rotation ?? .zero
+        let cx = Foundation.cos(r.x * deg), sx = Foundation.sin(r.x * deg)
+        let cy = Foundation.cos(r.y * deg), sy = Foundation.sin(r.y * deg)
+        let cz = Foundation.cos(r.z * deg), sz = Foundation.sin(r.z * deg)
+        let rx = simd_double3x3(columns: (
+            SIMD3(1, 0, 0), SIMD3(0, cx, sx), SIMD3(0, -sx, cx)))
+        let ry = simd_double3x3(columns: (
+            SIMD3(cy, 0, -sy), SIMD3(0, 1, 0), SIMD3(sy, 0, cy)))
+        let rz = simd_double3x3(columns: (
+            SIMD3(cz, sz, 0), SIMD3(-sz, cz, 0), SIMD3(0, 0, 1)))
+        return rx * ry * rz
+    }
+
+    /// A part's local axis-aligned bounding box before rotation/translation.
+    public static func partLocalBounds(_ part: RaidBossRecipe.Part) -> (min: SIMD3<Double>, max: SIMD3<Double>) {
+        let w = part.size.x, h = part.size.y, d = part.size.z
+        switch part.shape {
+        case .torus:
+            let r = (w + d) / 2
+            return (SIMD3(-r, -r, -d / 2), SIMD3(r, r, d / 2))
+        case .capsule:
+            return (SIMD3(-w / 2, -h / 2, -w / 2), SIMD3(w / 2, h / 2, w / 2))
+        default:
+            return (SIMD3(-w / 2, -h / 2, -d / 2), SIMD3(w / 2, h / 2, d / 2))
+        }
+    }
+
+    public struct LocalTransform: Sendable, Equatable {
+        public var position: SIMD3<Double>
+        /// rest rotation (XYZ intrinsic, M = Rx·Ry·Rz) — apply via a transform
+        /// matrix, NOT `eulerAngles`: SceneKit's euler order composes Rz·Ry·Rx.
+        public var rotation: simd_double3x3
+    }
+
+    /// Node-local transforms for a nested scene graph: a child part's
+    /// transform is the parent's inverse rest transform composed with the
+    /// child's rest transform. Attaching children this way reproduces the
+    /// boss-space rest pose exactly while letting parents drive animation.
+    /// Mirrors `bossLocalTransforms` in raid-bosses.ts.
+    public static func localTransforms(_ boss: RaidBossRecipe) -> [String: LocalTransform] {
+        let byId = Dictionary(uniqueKeysWithValues: boss.parts.map { ($0.id, $0) })
+        var out: [String: LocalTransform] = [:]
+        for part in boss.parts {
+            let rot = rotationMatrix(part.rotation)
+            guard let parentId = part.parent, let parent = byId[parentId] else {
+                out[part.id] = LocalTransform(position: part.position, rotation: rot)
+                continue
+            }
+            let rp = rotationMatrix(parent.rotation)
+            let inv = rp.transpose
+            let delta = part.position - parent.position
+            out[part.id] = LocalTransform(
+                position: inv * delta, rotation: inv * rot)
+        }
+        return out
+    }
 }
 
 /// Loads the bundled boss roster. Returns an empty array if the resource is

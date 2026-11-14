@@ -17,9 +17,8 @@ const swiftResources = join(
 );
 const checkOnly = process.argv.includes('--check');
 
-const { RAID_BOSSES, validateBossRecipe, bossBounds, raidPhaseFor } = await import(
-  join(root, 'dist/raid/raid-bosses.js')
-);
+const { RAID_BOSSES, validateBossRecipe, bossBounds, raidPhaseFor, bossPartWorldBounds } =
+  await import(join(root, 'dist/raid/raid-bosses.js'));
 
 const problems = RAID_BOSSES.flatMap((boss) =>
   validateBossRecipe(boss).map((p) => `${boss.slug}: ${p}`),
@@ -54,6 +53,9 @@ const vectors = {
     maxHp: 2000,
     phase: raidPhaseFor(damage, 2000),
   })),
+  // Analytic rest-pose world AABBs per part — the geometry parity tests on
+  // web (three.js Box3) and iOS (SCNNode boundingBox) compare against these.
+  partBounds: Object.fromEntries(RAID_BOSSES.map((boss) => [boss.slug, bossPartWorldBounds(boss)])),
 };
 const vectorsJson = JSON.stringify(vectors, null, 2) + '\n';
 

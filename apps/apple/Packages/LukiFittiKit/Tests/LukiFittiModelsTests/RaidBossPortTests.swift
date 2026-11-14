@@ -1,4 +1,7 @@
+#if canImport(SceneKit)
+import SceneKit
 import XCTest
+@testable import LukiFittiDesign
 @testable import LukiFittiModels
 
 /// Verifies the bundled boss recipes decode and that `bossBounds`/`raidPhaseFor`
@@ -18,8 +21,13 @@ final class RaidBossPortTests: XCTestCase {
             var maxHp: Double
             var phase: Int
         }
+        struct PartBound: Decodable {
+            var min: [Double]
+            var max: [Double]
+        }
         var bounds: [String: Bound]
         var phases: [PhaseCase]
+        var partBounds: [String: [String: PartBound]]
     }
 
     private func loadVectors() throws -> Vectors {
@@ -53,6 +61,66 @@ final class RaidBossPortTests: XCTestCase {
         }
     }
 
+    /// Builds the real SceneKit node graph (`BossSceneBuilder`) and compares
+    /// each part's world-space AABB with the analytic bounds exported from the
+    /// TypeScript implementation — nails shapes, sizes, axes, euler order and
+    /// parenting. Tolerance covers tessellation chord error (~0.005 worst).
+    @MainActor
+    func testSceneBoundsMatchTypeScript() throws {
+        let vectors = try loadVectors()
+        let tol = 0.01
+        let outline = SCNMaterial(), flash = SCNMaterial()
+        for boss in RaidBossCatalog.bosses {
+            let graph = BossSceneBuilder.build(
+                boss: boss,
+                materialFor: { _ in SCNMaterial() },
+                outlineMat: outline,
+                flashMat: flash)
+            let scene = SCNScene()
+            scene.rootNode.addChildNode(graph.group)
+            let expected = try XCTUnwrap(vectors.partBounds[boss.slug], boss.slug)
+            for part in boss.parts {
+                let holder = try XCTUnwrap(graph.nodes[part.id], part.id)
+                let b = BossSceneBuilder.worldBounds(of: holder)
+                let exp = try XCTUnwrap(expected[part.id], part.id)
+                let got = [b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z]
+                let want = [exp.min[0], exp.min[1], exp.min[2], exp.max[0], exp.max[1], exp.max[2]]
+                for i in 0..<6 {
+                    XCTAssertEqual(
+                        got[i], want[i], accuracy: tol,
+                        "\(boss.slug)/\(part.id) axis \(i)")
+                }
+            }
+        }
+    }
+
+    /// Every part's diffuse colour must equal its palette slot (phase 0) and
+    /// the lerped enraged colour at phase 3.
+    @MainActor
+    func testPartColoursMatchPalette() {
+        for boss in RaidBossCatalog.bosses {
+            let graph = BossSceneBuilder.build(
+                boss: boss,
+                materialFor: { part in
+                    let mat = SCNMaterial()
+                    mat.diffuse.contents = BossSceneBuilder.hex(boss.palette[part.slot.rawValue] ?? "#888888")
+                    return mat
+                },
+                outlineMat: SCNMaterial(),
+                flashMat: SCNMaterial())
+            for part in boss.parts {
+                let shape = try? XCTUnwrap(graph.shapes[part.id])
+                let mat = shape?.geometry?.materials.first
+                let got = mat?.diffuse.contents as? BossColor
+                let want = BossSceneBuilder.hex(boss.palette[part.slot.rawValue] ?? "#888888")
+                XCTAssertEqual(got, want, "\(boss.slug)/\(part.id) slot \(part.slot.rawValue)")
+                let enraged = BossSceneBuilder.enragedColor(boss: boss, slot: part.slot.rawValue, f: 1)
+                let wantEnraged = boss.enragedPalette[part.slot.rawValue].map { BossSceneBuilder.hex($0) } ?? want
+                XCTAssertEqual(enraged, wantEnraged, "\(boss.slug)/\(part.id) enraged")
+            }
+        }
+    }
+
     func testRaidPhaseForMatchesTypeScript() throws {
         let vectors = try loadVectors()
         for c in vectors.phases {
@@ -64,3 +132,4 @@ final class RaidBossPortTests: XCTestCase {
         XCTAssertEqual(RaidBossMath.raidPhaseFor(damage: 0, maxHp: 0), 0)
     }
 }
+#endif

@@ -15,17 +15,45 @@ export type Slot = 'primary' | 'secondary' | 'accent' | 'eyeWhite' | 'pupil' | '
 export type Role =
   'body' | 'limb' | 'eye' | 'pupil' | 'horn' | 'armor' | 'crack' | 'aura' | 'detail';
 
+/**
+ * Canonical recipe convention — every renderer (web three.js, iOS SceneKit,
+ * tests) must map a part identically:
+ *
+ * - `size`/`position` are in boss space (unit-less, body ≈ 1, +Y up, +Z
+ *   towards the camera). A part is rotated about its own centre, then
+ *   translated by `position`.
+ * - `size` semantics per shape:
+ *     sphere     — x/y/z ellipsoid diameters
+ *     capsule    — x = diameter, y = total height incl. caps (axis Y);
+ *                  z is ignored (round cross-section)
+ *     box        — x/y/z extents
+ *     roundedBox — x/y/z outer extents, bevel ≈ 0.18·min(size)
+ *     cone       — x = base diameter, y = height (axis Y, apex at +Y),
+ *                  z = depth scale (elliptical base d = size[2])
+ *     cylinder   — like cone, with a flat top
+ *     torus      — x = ring diameter (centre-to-tube-centre × 2),
+ *                  z = tube diameter; the ring lies in the XY plane
+ *                  (hole axis Z); y is ignored
+ * - `rotation` is in degrees, applied XYZ intrinsic (the three.js 'XYZ'
+ *   order, i.e. the composed matrix Rx·Ry·Rz).
+ * - `parent` nests the part under another part's scene node so animation
+ *   (blink scaling, limb sway, explosions) propagates. `position` and
+ *   `rotation` stay authored in boss space: renderers attach the node under
+ *   its parent by compensating with the parent's inverse rest transform —
+ *   see `bossLocalTransforms` — so the rest pose is identical whether a
+ *   renderer builds a flat or a nested scene.
+ */
 export interface BossPart {
   id: string;
   shape: Shape;
-  /** unit-less, body ≈ 1 */
+  /** unit-less, body ≈ 1 — see the shape table above */
   size: [number, number, number];
   position: [number, number, number];
-  /** degrees */
+  /** degrees, XYZ intrinsic */
   rotation?: [number, number, number];
   slot: Slot;
   role: Role;
-  /** hierarchy for limbs/eyes so parents drive them */
+  /** animation hierarchy — see the convention note above */
   parent?: string;
   /** cracks/extra armour appear per enrage phase */
   minPhase?: 0 | 1 | 2 | 3;
@@ -2189,4 +2217,184 @@ export function raidPhaseFor(damage: number, maxHp: number): number {
   if (left <= 0.5) return 2;
   if (left <= 0.75) return 1;
   return 0;
+}
+
+// ---------------------------------------------------------------------------
+// Shared recipe geometry math (pure — no three/SceneKit dependencies)
+
+export type Vec3 = [number, number, number];
+/** row-major 3x3 */
+export type Mat3 = [Vec3, Vec3, Vec3];
+
+const DEG = Math.PI / 180;
+
+/**
+ * `rotation` degrees → matrix, XYZ intrinsic (three.js 'XYZ'): M = Rx·Ry·Rz.
+ * Applied to column vectors.
+ */
+export function bossRotationMatrix(rotation?: Vec3): Mat3 {
+  const [x, y, z] = rotation ?? [0, 0, 0];
+  const cx = Math.cos(x * DEG),
+    sx = Math.sin(x * DEG),
+    cy = Math.cos(y * DEG),
+    sy = Math.sin(y * DEG),
+    cz = Math.cos(z * DEG),
+    sz = Math.sin(z * DEG);
+  const rx: Mat3 = [
+    [1, 0, 0],
+    [0, cx, -sx],
+    [0, sx, cx],
+  ];
+  const ry: Mat3 = [
+    [cy, 0, sy],
+    [0, 1, 0],
+    [-sy, 0, cy],
+  ];
+  const rz: Mat3 = [
+    [cz, -sz, 0],
+    [sz, cz, 0],
+    [0, 0, 1],
+  ];
+  return mat3Mul(rx, mat3Mul(ry, rz));
+}
+
+function mat3Mul(a: Mat3, b: Mat3): Mat3 {
+  const m = [
+    [0, 0, 0],
+    [0, 0, 0],
+    [0, 0, 0],
+  ] as Mat3;
+  for (let i = 0; i < 3; i++)
+    for (let j = 0; j < 3; j++) for (let k = 0; k < 3; k++) m[i]![j]! += a[i]![k]! * b[k]![j]!;
+  return m;
+}
+
+function mat3Vec(m: Mat3, v: Vec3): Vec3 {
+  return [
+    m[0][0] * v[0] + m[0][1] * v[1] + m[0][2] * v[2],
+    m[1][0] * v[0] + m[1][1] * v[1] + m[1][2] * v[2],
+    m[2][0] * v[0] + m[2][1] * v[1] + m[2][2] * v[2],
+  ];
+}
+
+function mat3Transpose(m: Mat3): Mat3 {
+  return [
+    [m[0][0], m[1][0], m[2][0]],
+    [m[0][1], m[1][1], m[2][1]],
+    [m[0][2], m[1][2], m[2][2]],
+  ];
+}
+
+/** rotation matrix → XYZ-intrinsic euler degrees (inverse of bossRotationMatrix) */
+function matrixToEulerXYZ(m: Mat3): Vec3 {
+  // M = Rx·Ry·Rz  ⇒  m[0][2] = sin(y)
+  const sy = Math.max(-1, Math.min(1, m[0][2]));
+  const y = Math.asin(sy);
+  const cy = Math.cos(y);
+  let x: number, z: number;
+  if (Math.abs(cy) > 1e-6) {
+    x = Math.atan2(-m[1][2], m[2][2]);
+    z = Math.atan2(-m[0][1], m[0][0]);
+  } else {
+    // gimbal lock: take x = 0 and solve z
+    x = 0;
+    z = Math.atan2(m[1][0], m[1][1]);
+  }
+  return [x / DEG, y / DEG, z / DEG];
+}
+
+/** A part's local axis-aligned bounding box before rotation/translation. */
+export function bossPartLocalBounds(part: BossPart): { min: Vec3; max: Vec3 } {
+  const [w, h, d] = part.size;
+  switch (part.shape) {
+    case 'torus': {
+      const r = (w + d) / 2;
+      return { min: [-r, -r, -d / 2], max: [r, r, d / 2] };
+    }
+    case 'capsule':
+      return { min: [-w / 2, -h / 2, -w / 2], max: [w / 2, h / 2, w / 2] };
+    default:
+      return { min: [-w / 2, -h / 2, -d / 2], max: [w / 2, h / 2, d / 2] };
+  }
+}
+
+/**
+ * Rest-pose world transform of a part: R·v + position (positions and the
+ * local AABB are in boss space — `parent` does not change the rest pose).
+ */
+export function bossPartWorldTransform(part: BossPart): { rot: Mat3; pos: Vec3 } {
+  return { rot: bossRotationMatrix(part.rotation), pos: [...part.position] };
+}
+
+/**
+ * World-space AABB of every part in the rest pose — what the parity tests on
+ * both renderers compare against. No animation applied.
+ */
+export function bossPartWorldBounds(boss: RaidBoss): Record<string, { min: Vec3; max: Vec3 }> {
+  const out: Record<string, { min: Vec3; max: Vec3 }> = {};
+  for (const part of boss.parts) {
+    const local = bossPartLocalBounds(part);
+    const { rot, pos } = bossPartWorldTransform(part);
+    const min: Vec3 = [Infinity, Infinity, Infinity];
+    const max: Vec3 = [-Infinity, -Infinity, -Infinity];
+    for (let i = 0; i < 8; i++) {
+      const corner: Vec3 = [
+        i & 1 ? local.max[0] : local.min[0],
+        i & 2 ? local.max[1] : local.min[1],
+        i & 4 ? local.max[2] : local.min[2],
+      ];
+      const w = mat3Vec(rot, corner);
+      for (let j = 0; j < 3; j++) {
+        const v = w[j]! + pos[j]!;
+        min[j] = Math.min(min[j]!, v);
+        max[j] = Math.max(max[j]!, v);
+      }
+    }
+    out[part.id] = { min, max };
+  }
+  return out;
+}
+
+export interface BossLocalTransform {
+  position: Vec3;
+  /** degrees, XYZ intrinsic — feed straight into Euler 'XYZ'/SCN eulerAngles */
+  rotation: Vec3;
+}
+
+/**
+ * Node-local transforms for a nested scene graph: root parts keep their
+ * authored transform; a child part's transform is the parent's inverse rest
+ * transform composed with the child's rest transform. Attaching children this
+ * way reproduces the boss-space rest pose exactly, while letting parents drive
+ * their children's animation.
+ */
+export function bossLocalTransforms(boss: RaidBoss): Record<string, BossLocalTransform> {
+  const byId = new Map(boss.parts.map((p) => [p.id, p]));
+  const out: Record<string, BossLocalTransform> = {};
+  for (const part of boss.parts) {
+    const rot = bossRotationMatrix(part.rotation);
+    if (!part.parent) {
+      out[part.id] = { position: [...part.position], rotation: part.rotation ?? [0, 0, 0] };
+      continue;
+    }
+    const parent = byId.get(part.parent);
+    if (!parent) {
+      out[part.id] = { position: [...part.position], rotation: part.rotation ?? [0, 0, 0] };
+      continue;
+    }
+    // local = inv(Tp·Rp) · (Tc·Rc)  ⇒  pos = Rpᵀ·(pc − pp), rot = Rpᵀ·Rc
+    const rp = bossRotationMatrix(parent.rotation);
+    const inv = mat3Transpose(rp);
+    const delta: Vec3 = [
+      part.position[0] - parent.position[0],
+      part.position[1] - parent.position[1],
+      part.position[2] - parent.position[2],
+    ];
+    const localRot = mat3Mul(inv, rot);
+    out[part.id] = {
+      position: mat3Vec(inv, delta),
+      rotation: matrixToEulerXYZ(localRot),
+    };
+  }
+  return out;
 }
