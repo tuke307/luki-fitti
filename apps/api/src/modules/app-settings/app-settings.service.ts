@@ -43,6 +43,9 @@ export interface AppSettingsRecord {
   epWeeklyGoalBonus: number;
   duelsEnabled: boolean;
   streaksEnabled: boolean;
+  raidsEnabled: boolean;
+  raidHpPerActiveUser: number;
+  raidMinHp: number;
   updatedAt: Date;
 }
 

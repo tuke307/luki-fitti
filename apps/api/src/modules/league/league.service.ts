@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { logger } from '@luki-fitti/logger';
 import { Arena, LeagueOutcome, LeagueStage, NotificationKind } from '@luki-fitti/common/enums';
 import { berlinWeekKey, previousWeekKey, weekBounds } from '@luki-fitti/common/utils';
@@ -21,6 +21,7 @@ import { PrismaService } from '../database/prisma.service';
 import { AppSettingsService } from '../app-settings/app-settings.service';
 import { NotificationService } from '../notifications/notification.service';
 import { StreakService } from '../battle/streak.service';
+import { RaidService } from '../raid/raid.service';
 import { cardFor, resolveRelation, type CardSource } from '../social/relation.util';
 import {
   ARENA_ORDER,
@@ -70,6 +71,8 @@ export class LeagueService {
     private readonly appSettings: AppSettingsService,
     private readonly notifications: NotificationService,
     private readonly streaks: StreakService,
+    /** Optional so specs and the email-worker can run without the raid module. */
+    @Optional() private readonly raids?: RaidService,
   ) {}
 
   /**
@@ -207,6 +210,10 @@ export class LeagueService {
     // one counts as closed for evaluation.
     if (settings.streaksEnabled && settings.socialEnabled) {
       await this.streaks.evaluateClosedWeeks(currentWeek);
+    }
+    // Raids: escape last week's survivors, then spawn the new community boss.
+    if (settings.raidsEnabled && settings.socialEnabled) {
+      await this.raids?.rollover(currentWeek);
     }
   }
 

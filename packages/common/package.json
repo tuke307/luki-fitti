@@ -23,6 +23,10 @@
       "types": "./dist/league/index.d.ts",
       "default": "./dist/league/index.js"
     },
+    "./raid": {
+      "types": "./dist/raid/index.d.ts",
+      "default": "./dist/raid/index.js"
+    },
     "./catalog": {
       "types": "./dist/catalog/index.d.ts",
       "default": "./dist/catalog/index.js"

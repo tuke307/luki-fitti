@@ -28,6 +28,7 @@ describe('computeSessionEffortPoints (shared fixtures)', () => {
       const result = computeSessionEffortPoints(fixture.session);
       assert.deepEqual(result.breakdown, fixture.expected.breakdown);
       assert.equal(result.total, fixture.expected.total);
+      assert.deepEqual(result.pointsByWeakSpot, fixture.expected.pointsByWeakSpot ?? {});
       // The total must always agree with the breakdown.
       const b = result.breakdown;
       assert.equal(

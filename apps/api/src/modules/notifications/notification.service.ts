@@ -15,7 +15,7 @@ import { quietHoursDelayMs } from './quiet-hours.util';
 /** NotificationKind → UserPreferences push toggle that gates the push job. */
 const KIND_PREF: Record<
   NotificationKind,
-  'pushFriends' | 'pushLeagues' | 'pushDuels' | 'pushStreaks'
+  'pushFriends' | 'pushLeagues' | 'pushDuels' | 'pushStreaks' | 'pushRaids'
 > = {
   [NotificationKind.FRIEND_REQUEST]: 'pushFriends',
   [NotificationKind.FRIEND_ACCEPTED]: 'pushFriends',
@@ -31,6 +31,12 @@ const KIND_PREF: Record<
   [NotificationKind.STREAK_REMINDER]: 'pushStreaks',
   [NotificationKind.STREAK_FROZEN]: 'pushStreaks',
   [NotificationKind.STREAK_BROKEN]: 'pushStreaks',
+  [NotificationKind.RAID_SPAWNED]: 'pushRaids',
+  [NotificationKind.RAID_PHASE]: 'pushRaids',
+  [NotificationKind.RAID_DEFEATED]: 'pushRaids',
+  [NotificationKind.RAID_ESCAPED]: 'pushRaids',
+  [NotificationKind.SQUAD_INVITE]: 'pushRaids',
+  [NotificationKind.SQUAD_RAID_STARTED]: 'pushRaids',
 };
 
 const PAIR = (a: string, b: string) => (a < b ? ([a, b] as const) : ([b, a] as const));

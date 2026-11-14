@@ -211,6 +211,30 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return prisma.friendStreak;
   }
 
+  get raid(): typeof prisma.raid {
+    return prisma.raid;
+  }
+
+  get raidHit(): typeof prisma.raidHit {
+    return prisma.raidHit;
+  }
+
+  get raidParticipantSeen(): typeof prisma.raidParticipantSeen {
+    return prisma.raidParticipantSeen;
+  }
+
+  get squad(): typeof prisma.squad {
+    return prisma.squad;
+  }
+
+  get squadMember(): typeof prisma.squadMember {
+    return prisma.squadMember;
+  }
+
+  get squadInvite(): typeof prisma.squadInvite {
+    return prisma.squadInvite;
+  }
+
   get trophy(): typeof prisma.trophy {
     return prisma.trophy;
   }

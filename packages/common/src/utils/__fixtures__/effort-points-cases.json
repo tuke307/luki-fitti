@@ -54,7 +54,8 @@
         "stretchMinutes": 0,
         "finishBonus": 20,
         "droppedSets": 0
-      }
+      },
+      "pointsByWeakSpot": {}
     }
   },
   {
@@ -105,7 +106,8 @@
         "stretchMinutes": 0,
         "finishBonus": 0,
         "droppedSets": 0
-      }
+      },
+      "pointsByWeakSpot": {}
     }
   },
   {
@@ -156,7 +158,8 @@
         "stretchMinutes": 0,
         "finishBonus": 0,
         "droppedSets": 0
-      }
+      },
+      "pointsByWeakSpot": {}
     }
   },
   {
@@ -207,7 +210,8 @@
         "stretchMinutes": 0,
         "finishBonus": 0,
         "droppedSets": 0
-      }
+      },
+      "pointsByWeakSpot": {}
     }
   },
   {
@@ -265,7 +269,8 @@
         "stretchMinutes": 0,
         "finishBonus": 20,
         "droppedSets": 0
-      }
+      },
+      "pointsByWeakSpot": {}
     }
   },
   {
@@ -316,7 +321,8 @@
         "stretchMinutes": 0,
         "finishBonus": 20,
         "droppedSets": 0
-      }
+      },
+      "pointsByWeakSpot": {}
     }
   },
   {
@@ -360,6 +366,9 @@
         "stretchMinutes": 0,
         "finishBonus": 20,
         "droppedSets": 0
+      },
+      "pointsByWeakSpot": {
+        "CARDIO": 40
       }
     }
   },
@@ -397,6 +406,9 @@
         "stretchMinutes": 30,
         "finishBonus": 20,
         "droppedSets": 0
+      },
+      "pointsByWeakSpot": {
+        "STRETCHING": 60
       }
     }
   },
@@ -453,6 +465,9 @@
         "stretchMinutes": 5,
         "finishBonus": 20,
         "droppedSets": 0
+      },
+      "pointsByWeakSpot": {
+        "STRETCHING": 10
       }
     }
   },
@@ -798,7 +813,8 @@
         "stretchMinutes": 0,
         "finishBonus": 20,
         "droppedSets": 5
-      }
+      },
+      "pointsByWeakSpot": {}
     }
   },
   {
@@ -849,7 +865,8 @@
         "stretchMinutes": 0,
         "finishBonus": 20,
         "droppedSets": 1
-      }
+      },
+      "pointsByWeakSpot": {}
     }
   },
   {
@@ -912,6 +929,9 @@
         "stretchMinutes": 0,
         "finishBonus": 20,
         "droppedSets": 0
+      },
+      "pointsByWeakSpot": {
+        "CARDIO": 4
       }
     }
   },
@@ -949,7 +969,8 @@
         "stretchMinutes": 0,
         "finishBonus": 0,
         "droppedSets": 0
-      }
+      },
+      "pointsByWeakSpot": {}
     }
   },
   {
@@ -1000,7 +1021,8 @@
         "stretchMinutes": 0,
         "finishBonus": 20,
         "droppedSets": 0
-      }
+      },
+      "pointsByWeakSpot": {}
     }
   },
   {
@@ -1077,7 +1099,8 @@
         "stretchMinutes": 0,
         "finishBonus": 20,
         "droppedSets": 0
-      }
+      },
+      "pointsByWeakSpot": {}
     }
   },
   {
@@ -1140,7 +1163,8 @@
         "stretchMinutes": 0,
         "finishBonus": 20,
         "droppedSets": 0
-      }
+      },
+      "pointsByWeakSpot": {}
     }
   },
   {
@@ -1189,6 +1213,179 @@
         "stretchMinutes": 0,
         "finishBonus": 20,
         "droppedSets": 1
+      },
+      "pointsByWeakSpot": {}
+    }
+  },
+  {
+    "name": "weak spots: set and PR points attributed per muscle",
+    "session": {
+      "status": "COMPLETED",
+      "sessionType": "STRENGTH",
+      "sourceDevice": "WEB",
+      "activeDurationSeconds": 1500,
+      "totalStretchSeconds": 0,
+      "completedAt": "2026-11-09T13:00:00.000Z",
+      "exercises": [
+        {
+          "exerciseTypeSnapshot": "STRENGTH",
+          "primaryMuscleSnapshot": "CHEST",
+          "sets": [
+            {
+              "setType": "WORKING",
+              "completed": true,
+              "completedAt": "2026-11-09T12:00:00.000Z",
+              "isPersonalRecord": true,
+              "durationSeconds": null
+            },
+            {
+              "setType": "WORKING",
+              "completed": true,
+              "completedAt": "2026-11-09T12:05:00.000Z",
+              "isPersonalRecord": false,
+              "durationSeconds": null
+            }
+          ]
+        },
+        {
+          "exerciseTypeSnapshot": "STRENGTH",
+          "primaryMuscleSnapshot": "BACK",
+          "sets": [
+            {
+              "setType": "WORKING",
+              "completed": true,
+              "completedAt": "2026-11-09T12:10:00.000Z",
+              "isPersonalRecord": false,
+              "durationSeconds": null
+            },
+            {
+              "setType": "WARMUP",
+              "completed": true,
+              "completedAt": "2026-11-09T11:55:00.000Z",
+              "isPersonalRecord": false,
+              "durationSeconds": null
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "total": 77,
+      "breakdown": {
+        "sets": 3,
+        "warmups": 1,
+        "prs": 1,
+        "cardioMinutes": 0,
+        "stretchMinutes": 0,
+        "finishBonus": 20,
+        "droppedSets": 0
+      },
+      "pointsByWeakSpot": {
+        "CHEST": 45,
+        "BACK": 12
+      }
+    }
+  },
+  {
+    "name": "weak spots: cardio minutes and stretch minutes",
+    "session": {
+      "status": "COMPLETED",
+      "sessionType": "CARDIO",
+      "sourceDevice": "IOS",
+      "activeDurationSeconds": 1800,
+      "totalStretchSeconds": 0,
+      "completedAt": "2026-11-09T13:00:00.000Z",
+      "exercises": [
+        {
+          "exerciseTypeSnapshot": "CARDIO",
+          "primaryMuscleSnapshot": null,
+          "sets": [
+            {
+              "setType": "WORKING",
+              "completed": true,
+              "completedAt": "2026-11-09T12:00:00.000Z",
+              "isPersonalRecord": false,
+              "durationSeconds": 1500
+            }
+          ]
+        },
+        {
+          "exerciseTypeSnapshot": "STRETCHING",
+          "primaryMuscleSnapshot": "HIP_FLEXORS",
+          "sets": [
+            {
+              "setType": "STRETCH",
+              "completed": true,
+              "completedAt": "2026-11-09T12:30:00.000Z",
+              "isPersonalRecord": false,
+              "durationSeconds": 300
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "total": 80,
+      "breakdown": {
+        "sets": 0,
+        "warmups": 0,
+        "prs": 0,
+        "cardioMinutes": 25,
+        "stretchMinutes": 5,
+        "finishBonus": 20,
+        "droppedSets": 0
+      },
+      "pointsByWeakSpot": {
+        "CARDIO": 50,
+        "STRETCHING": 10
+      }
+    }
+  },
+  {
+    "name": "weak spots: dropped implausible sets earn no attribution",
+    "session": {
+      "status": "COMPLETED",
+      "sessionType": "STRENGTH",
+      "sourceDevice": "WEB",
+      "activeDurationSeconds": 900,
+      "totalStretchSeconds": 0,
+      "completedAt": "2026-11-09T13:00:00.000Z",
+      "exercises": [
+        {
+          "exerciseTypeSnapshot": "STRENGTH",
+          "primaryMuscleSnapshot": "QUADRICEPS",
+          "sets": [
+            {
+              "setType": "WORKING",
+              "completed": true,
+              "completedAt": "2026-11-09T12:00:00.000Z",
+              "isPersonalRecord": false,
+              "durationSeconds": null
+            },
+            {
+              "setType": "WORKING",
+              "completed": true,
+              "completedAt": "2026-11-09T12:00:05.000Z",
+              "isPersonalRecord": false,
+              "durationSeconds": null
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "total": 30,
+      "breakdown": {
+        "sets": 1,
+        "warmups": 0,
+        "prs": 0,
+        "cardioMinutes": 0,
+        "stretchMinutes": 0,
+        "finishBonus": 20,
+        "droppedSets": 1
+      },
+      "pointsByWeakSpot": {
+        "QUADRICEPS": 10
       }
     }
   }

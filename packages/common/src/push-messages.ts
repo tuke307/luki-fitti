@@ -1,4 +1,5 @@
 import { Arena, NotificationKind } from './enums';
+import { RAID_BOSSES } from './raid/raid-bosses';
 
 /**
  * Localised push title/body per notification kind. `{actor}` is replaced with the
@@ -100,6 +101,36 @@ const MESSAGES: Record<NotificationKind, Record<Locale, PushMessage>> = {
       body: 'Deine Streak mit {actor} startet diese Woche neu',
     },
   },
+  [NotificationKind.RAID_SPAWNED]: {
+    en: { title: 'A new raid boss appeared', body: '{boss} is here — take it down this week' },
+    de: { title: 'Neuer Raid-Boss', body: '{boss} ist da — besiegt ihn diese Woche' },
+  },
+  [NotificationKind.RAID_PHASE]: {
+    en: { title: 'The boss is enraged', body: '{boss} is below {percent}% HP — keep pushing' },
+    de: { title: 'Der Boss rastet', body: '{boss} hat unter {percent} % KP — weiter so' },
+  },
+  [NotificationKind.RAID_DEFEATED]: {
+    en: { title: 'Boss defeated', body: 'You brought {boss} down — trophy earned' },
+    de: { title: 'Boss besiegt', body: 'Ihr habt {boss} besiegt — Trophäe verdient' },
+  },
+  [NotificationKind.RAID_ESCAPED]: {
+    en: {
+      title: 'The boss escaped',
+      body: '{boss} slipped away — the next one is already waiting',
+    },
+    de: {
+      title: 'Der Boss ist entkommen',
+      body: '{boss} ist entwischt — der nächste wartet schon',
+    },
+  },
+  [NotificationKind.SQUAD_INVITE]: {
+    en: { title: 'Squad invite', body: '{actor} invited you to join {squad}' },
+    de: { title: 'Squad-Einladung', body: '{actor} lädt dich in {squad} ein' },
+  },
+  [NotificationKind.SQUAD_RAID_STARTED]: {
+    en: { title: 'Squad raid started', body: '{squad} is raiding {boss} — join the fight' },
+    de: { title: 'Squad-Raid gestartet', body: '{squad} kämpft gegen {boss} — mach mit' },
+  },
 };
 
 /** Arena names shown in push text, per locale. */
@@ -116,6 +147,13 @@ export function arenaName(arena: string, locale: string | null | undefined): str
   };
   const pair = names[arena];
   return pair ? (de ? pair[1] : pair[0]) : arena;
+}
+
+/** Raid boss display name in push text, per locale. */
+export function raidBossName(slug: string, locale: string | null | undefined): string {
+  const boss = RAID_BOSSES.find((b) => b.slug === slug);
+  if (!boss) return slug;
+  return locale?.toLowerCase().startsWith('de') ? boss.name.de : boss.name.en;
 }
 
 const LEAGUE_ENDING_VARIANTS: Record<'promotion' | 'demotion', Record<Locale, PushMessage>> = {

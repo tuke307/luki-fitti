@@ -424,6 +424,12 @@ export enum NotificationKind {
   STREAK_REMINDER = 'STREAK_REMINDER',
   STREAK_FROZEN = 'STREAK_FROZEN',
   STREAK_BROKEN = 'STREAK_BROKEN',
+  RAID_SPAWNED = 'RAID_SPAWNED',
+  RAID_PHASE = 'RAID_PHASE',
+  RAID_DEFEATED = 'RAID_DEFEATED',
+  RAID_ESCAPED = 'RAID_ESCAPED',
+  SQUAD_INVITE = 'SQUAD_INVITE',
+  SQUAD_RAID_STARTED = 'SQUAD_RAID_STARTED',
 }
 
 export enum DuelStatus {
@@ -442,6 +448,31 @@ export enum FriendStreakStatus {
 
 export enum TrophyKind {
   DUEL_WIN = 'DUEL_WIN',
+  RAID_DEFEATED = 'RAID_DEFEATED',
+  RAID_CROWN = 'RAID_CROWN',
+  RAID_FINAL_BLOW = 'RAID_FINAL_BLOW',
+}
+
+export enum RaidKind {
+  COMMUNITY = 'COMMUNITY',
+  SQUAD = 'SQUAD',
+}
+
+export enum RaidStatus {
+  ACTIVE = 'ACTIVE',
+  DEFEATED = 'DEFEATED',
+  ESCAPED = 'ESCAPED',
+}
+
+export enum RaidDifficulty {
+  NORMAL = 'NORMAL',
+  HARD = 'HARD',
+  HEROIC = 'HEROIC',
+}
+
+export enum SquadRole {
+  OWNER = 'OWNER',
+  MEMBER = 'MEMBER',
 }
 
 export enum Arena {

@@ -37,6 +37,8 @@ final class EffortPointsTests: XCTestCase {
             }
             var total: Int
             var breakdown: Breakdown
+            // Raid weak-spot attribution arrives with the Swift mirror in a later part.
+            var pointsByWeakSpot: [String: Int]?
         }
         var name: String
         var session: Session
@@ -57,7 +59,7 @@ final class EffortPointsTests: XCTestCase {
 
     func testSharedFixtureCases() throws {
         let cases = try loadCases()
-        XCTAssertEqual(cases.count, 17, "fixture should cover 17 cases")
+        XCTAssertEqual(cases.count, 20, "fixture should cover 20 cases")
         for c in cases {
             let input = EffortPoints.SessionInput(
                 status: c.session.status,

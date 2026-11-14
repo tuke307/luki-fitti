@@ -34,7 +34,9 @@ NestFactory.createApplicationContext(AppModule, { logger: ['error'] })
     const missing = [];
     if (!session.pointsService) missing.push('SessionService.pointsService');
     if (!points.duels) missing.push('PointsService.duels');
+    if (!points.raids) missing.push('PointsService.raids');
     if (!league.streaks) missing.push('LeagueService.streaks');
+    if (!league.raids) missing.push('LeagueService.raids');
     await app.close();
     if (missing.length) {
       console.error('UNRESOLVED ' + missing.join(','));
