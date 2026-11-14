@@ -203,50 +203,11 @@ lf_pat_…`. Anything that doesn't start with `lf_pat_` is rejected there, and t
 
 ## MCP server
 
-AI assistants (Claude Desktop/Code, Cursor, VS Code, ChatGPT and other MCP clients) can
-answer questions about your own training ("How did my bench press develop this year?",
-"Did I hit my protein goal last week?") by connecting to LukiFitti with an API key.
-
-- **Hosted, not a download:** a remote MCP endpoint at `POST /api/mcp` using the
-  Streamable HTTP transport from the official TypeScript SDK (`@modelcontextprotocol/sdk`,
-  pinned exact version, vetted like any new dependency). It's stateless: one request, one
-  response; no server-side session storage.
-- **Auth:** the same personal API key (`Authorization: Bearer lf_pat_…`) and the same
-  `ApiKeyGuard`, scopes and rate limits. A tool whose scope the key lacks isn't listed in
-  `tools/list` at all, and calling it returns a scope error. New scope `mcp` to allow the
-  endpoint at all, so a key made for a spreadsheet can't be used by an assistant unless
-  the user ticks it.
-- **Tools (read-only, small typed outputs, all owner-scoped):**
-
-| Tool                                          | Scope            | Returns                                    |
-| :-------------------------------------------- | :--------------- | :----------------------------------------- |
-| `get_profile`                                 | `read:profile`   | units, goals, weekly session goal          |
-| `list_sessions(from, to, limit)`              | `read:sessions`  | date, workout name, duration, volume, sets |
-| `get_session(id)`                             | `read:sessions`  | exercises with all sets                    |
-| `exercise_progress(exercise, from, to)`       | `read:sessions`  | per-session best set, e1RM, volume         |
-| `personal_records(exercise?)`                 | `read:sessions`  | current PRs                                |
-| `training_summary(period: week\|month\|year)` | `read:sessions`  | sessions, volume per muscle group, streak  |
-| `list_workouts()`                             | `read:workouts`  | templates with exercises and targets       |
-| `nutrition_summary(from, to)`                 | `read:nutrition` | daily kcal/protein/carbs/fat vs goals      |
-| `body_weight_trend(from, to)`                 | `read:body`      | entries plus 7-day average                 |
-
-The tools reuse the `/api/v1` services and the existing calculations in
-`@luki-fitti/common` (`history-insights`, `muscle-volume`, `nutrition`, `body-weight`
-utils), so numbers match the app. `exercise` accepts a name and is resolved with the
-existing exercise search, with an "ambiguous, did you mean …" result listing candidates.
-
-- **Output limits:** at most 200 rows per call, dates as ISO, a `truncated` flag; no free text
-  from the user (notes) in v1, which keeps prompt-injection surface small.
-- **Client setup** on `/developers`: copy-paste snippets for Claude Desktop (via
-  `mcp-remote` with the header), Claude Code (`claude mcp add --transport http …
---header "Authorization: Bearer …"`), Cursor and VS Code.
-- **Not in 2.0:** OAuth for one-click connectors (claude.ai / ChatGPT "add connector" need an
-  OAuth flow instead of a pasted key). Noted for later; the key-based endpoint works with
-  every client that supports custom headers.
-- **Kill switch:** `mcpEnabled` in AppSettings (default off), on top of `apiKeysEnabled`.
-- **Tests:** `tools/list` filtered by scopes, each tool's owner isolation, the scope error,
-  rate limits shared with `/api/v1`, an end-to-end call with the SDK client against the
-  running API.
+Ships in 2.0 as a separate `apps/mcp-server` workspace, built like the MCP servers in
+marienmühle and kds-werkzeugbau. It forwards the user's API key to `/api/v1`, so all access
+control stays in the API. The full design is in [mcp-server.md](mcp-server.md). The key
+system adds one scope (`mcp`) and one endpoint (`GET /v1/key`, the presented key's scopes and
+expiry) for it.
 
 ## Architecture fit
 
@@ -269,8 +230,7 @@ dependency injection automatically.
    endpoints except export, rate limits, email, web settings page, iOS list/revoke, tests.
 2. **Export + docs:** the shared export builder (web backup button switched to it), `/v1/export`,
    the public OpenAPI file, the `/developers` page, the privacy paragraph.
-3. **MCP server:** the `/api/mcp` endpoint and read-only tools described below, the
-   `/developers` section with client setup snippets, tests.
+3. **MCP server:** see [mcp-server.md](mcp-server.md#delivery).
 
 ## Tests
 
