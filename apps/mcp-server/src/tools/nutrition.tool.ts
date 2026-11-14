@@ -5,14 +5,7 @@ import { z } from 'zod';
 import type { PublicMealEntryDto } from '@luki-fitti/common/schemas';
 import { goalProgress, sumMacros, type MacroValues } from '@luki-fitti/common/utils';
 import { LukiFittiApiClient } from '../lukifitti-api.client';
-import {
-  MAX_ROWS,
-  okResult,
-  runTool,
-  ToolRateLimiter,
-  truncateRows,
-  type ToolResult,
-} from './tool-utils';
+import { okResult, runTool, ToolRateLimiter, truncateRows, type ToolResult } from './tool-utils';
 import {
   addDaysToDayKey,
   DEFAULT_TIME_ZONE,
@@ -96,46 +89,50 @@ export class NutritionTool {
   ): Promise<ToolResult> {
     return runTool(this.limiter, req, async () => {
       const range = resolveRange(input);
-      const [goals, meals] = await Promise.all([
+      const [goals, fetched] = await Promise.all([
         nutritionGoalsFor(this.api, req),
         this.api.getAll<PublicMealEntryDto>(
           '/v1/meals',
           { from: range.from, to: range.to, limit: 200 },
           req,
-          { maxRows: MAX_ROWS },
+          { maxRows: 1000 },
         ),
       ]);
       const days = nutritionByDay(
-        meals,
+        fetched.rows,
         {
           dailyKcalGoal: goals?.dailyKcalGoal ?? null,
           proteinGoalG: goals?.proteinGoalG ?? null,
         },
         DEFAULT_TIME_ZONE,
       );
-      const { rows, truncated } = truncateRows(days);
+      const { rows, truncated: rowsTruncated } = truncateRows(days);
+      const truncated = rowsTruncated || fetched.truncated;
       const n = Math.max(1, days.length);
       const average = (f: (d: NutritionDay) => number) =>
         Math.round(days.reduce((s, d) => s + f(d), 0) / n);
-      return okResult(`${days.length} day(s) with meals, avg ${average((d) => d.kcal)} kcal.`, {
-        goals: goals
-          ? {
-              dailyKcalGoal: goals.dailyKcalGoal,
-              proteinGoalG: goals.proteinGoalG,
-              carbsGoalG: goals.carbsGoalG,
-              fatGoalG: goals.fatGoalG,
-            }
-          : null,
-        days: rows,
-        averages: {
-          kcal: average((d) => d.kcal),
-          proteinG: average((d) => d.proteinG),
-          carbsG: average((d) => d.carbsG),
-          fatG: average((d) => d.fatG),
+      return okResult(
+        `${days.length} day(s) with meals, avg ${average((d) => d.kcal)} kcal${fetched.truncated ? ' (partial range — truncated)' : ''}.`,
+        {
+          goals: goals
+            ? {
+                dailyKcalGoal: goals.dailyKcalGoal,
+                proteinGoalG: goals.proteinGoalG,
+                carbsGoalG: goals.carbsGoalG,
+                fatGoalG: goals.fatGoalG,
+              }
+            : null,
+          days: rows,
+          averages: {
+            kcal: average((d) => d.kcal),
+            proteinG: average((d) => d.proteinG),
+            carbsG: average((d) => d.carbsG),
+            fatG: average((d) => d.fatG),
+          },
+          truncated,
+          hint: truncated ? 'Narrow the date range' : undefined,
         },
-        truncated,
-        hint: truncated ? 'Narrow the date range.' : undefined,
-      });
+      );
     });
   }
 }

@@ -8,7 +8,6 @@ import { LukiFittiApiClient } from '../lukifitti-api.client';
 import {
   clipName,
   errorResult,
-  MAX_ROWS,
   okResult,
   runTool,
   ToolRateLimiter,
@@ -50,13 +49,16 @@ export class ExerciseProgressTool {
   ): Promise<ToolResult> {
     return runTool(this.limiter, req, async () => {
       const range = resolveRange({ from: input.from ?? 'last-90-days', to: input.to }, undefined);
-      const exercises = await this.api.getAll<PublicExerciseDto>(
+      const catalog = await this.api.getAll<PublicExerciseDto>(
         '/v1/exercises',
         { limit: 200 },
         req,
         { maxRows: 1000 },
       );
-      const resolution = resolveExercise(exerciseIndex(exercises), input.exercise);
+      const resolution = resolveExercise(
+        exerciseIndex(catalog.rows, (e) => e.tags),
+        input.exercise,
+      );
       if (resolution.kind === 'none') {
         return errorResult(`No exercise matches "${clipName(input.exercise)}".`);
       }
@@ -72,31 +74,34 @@ export class ExerciseProgressTool {
         );
       }
       const exercise = resolution.exercise;
-      const [unit, sessions] = await Promise.all([
+      const [unit, fetched] = await Promise.all([
         weightUnitFor(this.api, req),
         this.api.getAll<PublicSessionDto>(
           '/v1/sessions',
           { include: 'exercises', from: range.from, to: range.to, limit: 50 },
           req,
-          { maxRows: MAX_ROWS },
+          { maxRows: 400 },
         ),
       ]);
-      const stats = sessions
+      const stats = fetched.rows
         .filter((s) => s.status === SessionStatus.COMPLETED)
         .sort((a, b) => a.startedAt.localeCompare(b.startedAt))
         .map((s) => exerciseStatInSession(s, exercise.id, unit))
         .filter((s) => s !== null);
       const trend = e1rmTrend(stats);
+      const truncated = fetched.truncated || catalog.truncated;
       const summary =
         stats.length === 0
           ? `No sessions with ${clipName(exercise.name)} in the range.`
-          : `${clipName(exercise.name)}: ${stats.length} session(s), e1RM ${trend.firstE1rm}→${trend.lastE1rm} ${unit}.`;
+          : `${clipName(exercise.name)}: ${stats.length} session(s), e1RM ${trend.firstE1rm}→${trend.lastE1rm} ${unit}${truncated ? ' (partial range — truncated)' : ''}.`;
       return okResult(summary, {
         weightUnit: unit,
         exercise: { id: exercise.id, name: clipName(exercise.name) },
         range: { from: range.fromDayKey, to: range.toDayKey },
         sessions: stats,
         trend,
+        truncated,
+        hint: truncated ? 'Narrow the date range' : undefined,
       });
     });
   }

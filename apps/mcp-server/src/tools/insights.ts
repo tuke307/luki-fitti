@@ -1,5 +1,6 @@
 import { ExerciseType, MuscleGroup, SetType, WeightUnit } from '@luki-fitti/common/enums';
 import type {
+  ExerciseDto,
   PublicExerciseDto,
   PublicSessionDto,
   PublicSessionExerciseDto,
@@ -29,40 +30,56 @@ export const weightInUnit = (kg: number, unit: OutputWeightUnit): number =>
 
 // ── Exercise resolution ──
 
-export type ExerciseResolution =
-  | { kind: 'resolved'; exercise: PublicExerciseDto }
-  | { kind: 'none' }
-  | { kind: 'ambiguous'; candidates: PublicExerciseDto[] };
+export type ExerciseResolution<T> =
+  { kind: 'resolved'; exercise: T } | { kind: 'none' } | { kind: 'ambiguous'; candidates: T[] };
 
-/**
- * Maps the public exercise DTO onto the search index's minimal needs
- * (the index only reads `name` and `tags` off the exercise).
- */
-export function exerciseIndex(exercises: PublicExerciseDto[]): ExerciseSearchIndex {
-  return buildExerciseSearchIndex(
-    exercises.map((e) => ({ id: e.id, name: e.name, tags: e.tags })) as never,
-  ) as unknown as ExerciseSearchIndex;
+/** Search index plus the id→row map to translate hits back to the caller's DTO. */
+export interface ExerciseLookup<T extends { id: string; name: string }> {
+  index: ExerciseSearchIndex;
+  byId: Map<string, T>;
 }
 
 /**
- * Resolves a free-text exercise name. Rule: an exact folded-name match always
- * wins; otherwise the top hit wins only when it is clearly ahead (score at
- * least 25% above the runner-up); anything else is ambiguous and the caller
- * should list the candidates instead of guessing.
+ * Builds the search index plus a lookup that maps hits back to the caller's
+ * own rows. `buildExerciseSearchIndex` is typed on the full internal
+ * `ExerciseDto`, but it only ever reads `id`, `name` and `tags` — the minimal
+ * stand-in below is the one place a cast is needed.
  */
-export function resolveExercise(index: ExerciseSearchIndex, query: string): ExerciseResolution {
-  const results = searchExercises(index, query, { limit: 5, matchAllWords: false });
+export function exerciseIndex<T extends { id: string; name: string }>(
+  exercises: T[],
+  tags: (e: T) => string[],
+): ExerciseLookup<T> {
+  const stubs = exercises.map((e) => ({ id: e.id, name: e.name, tags: tags(e) }));
+  return {
+    index: buildExerciseSearchIndex(stubs as unknown as ExerciseDto[]),
+    byId: new Map(exercises.map((e) => [e.id, e])),
+  };
+}
+
+/**
+ * Resolves a free-text exercise name. Rule: an exact folded-name match
+ * anywhere in the results wins (not only the top score); otherwise the top
+ * hit wins only when it is clearly ahead (score at least 25% above the
+ * runner-up); anything else is ambiguous and the caller should list the
+ * candidates instead of guessing.
+ */
+export function resolveExercise<T extends { id: string; name: string }>(
+  lookup: ExerciseLookup<T>,
+  query: string,
+): ExerciseResolution<T> {
+  const results = searchExercises(lookup.index, query, { limit: 5, matchAllWords: false });
   if (results.length === 0) return { kind: 'none' };
+  const folded = foldSearchText(query);
+  const exact = results.find((r) => foldSearchText(r.exercise.name) === folded);
+  if (exact) return { kind: 'resolved', exercise: lookup.byId.get(exact.exercise.id)! };
   const top = results[0]!;
-  const topExercise = top.exercise as unknown as PublicExerciseDto;
-  if (foldSearchText(topExercise.name) === foldSearchText(query)) {
-    return { kind: 'resolved', exercise: topExercise };
-  }
   const second = results[1]?.score ?? 0;
-  if (top.score >= second * 1.25) return { kind: 'resolved', exercise: topExercise };
+  if (top.score >= second * 1.25) {
+    return { kind: 'resolved', exercise: lookup.byId.get(top.exercise.id)! };
+  }
   return {
     kind: 'ambiguous',
-    candidates: results.map((r) => r.exercise as unknown as PublicExerciseDto),
+    candidates: results.map((r) => lookup.byId.get(r.exercise.id)!),
   };
 }
 

@@ -3,18 +3,11 @@ import { McpController, McpRawRequest, Tool, ToolScopes } from '@rekog/mcp-nest'
 import { Payload } from '@nestjs/microservices';
 import { z } from 'zod';
 import { SessionStatus } from '@luki-fitti/common/enums';
-import type { PublicMeDto, PublicSessionDto, PublicExerciseDto } from '@luki-fitti/common/schemas';
+import type { PublicSessionDto, PublicExerciseDto } from '@luki-fitti/common/schemas';
 import { LukiFittiApiClient } from '../lukifitti-api.client';
-import {
-  MAX_ROWS,
-  okResult,
-  runTool,
-  scopesOf,
-  ToolRateLimiter,
-  type ToolResult,
-} from './tool-utils';
+import { okResult, runTool, scopesOf, ToolRateLimiter, type ToolResult } from './tool-utils';
 import { addDaysToDayKey, DEFAULT_TIME_ZONE, periodDayRange, zoneMidnight } from './mcp-date-utils';
-import { weightUnitFor } from './unit';
+import { profileFor, weightUnitFor } from './unit';
 import {
   completedStrengthSessions,
   muscleVolume,
@@ -66,39 +59,36 @@ export class TrainingSummaryTool {
       ).toISOString();
 
       const scopes = scopesOf(req);
-      const profileGoal = scopes.includes('read:profile')
-        ? await this.api
-            .get<PublicMeDto>('/v1/me', {}, req)
-            .then((me) => me.goals.weeklyGoalSessions)
-            .catch(() => null)
-        : null;
+      const profile = await profileFor(this.api, req);
+      const profileGoal = profile?.goals.weeklyGoalSessions ?? null;
       // Secondary muscles need the exercise catalog (read:workouts); without it
       // volume counts primary muscles only.
-      const exercises = scopes.includes('read:workouts')
+      const catalog = scopes.includes('read:workouts')
         ? await this.api
             .getAll<PublicExerciseDto>('/v1/exercises', { limit: 200 }, req, { maxRows: 1000 })
-            .catch(() => [] as PublicExerciseDto[])
-        : [];
+            .catch(() => ({ rows: [] as PublicExerciseDto[], truncated: false }))
+        : { rows: [] as PublicExerciseDto[], truncated: false };
 
-      const [unit, sessions] = await Promise.all([
+      const [unit, fetched] = await Promise.all([
         weightUnitFor(this.api, req),
         this.api.getAll<PublicSessionDto>(
           '/v1/sessions',
           { include: 'exercises', from, to, limit: 50 },
           req,
-          { maxRows: MAX_ROWS },
+          { maxRows: 400 },
         ),
       ]);
-      const completed = completedStrengthSessions(sessions).filter(
+      const completed = completedStrengthSessions(fetched.rows).filter(
         (s) => s.status === SessionStatus.COMPLETED,
       );
 
       const weeks = weeksInRange(span.startDayKey, span.endDayKey);
-      const volume = muscleVolume(completed, exercises, weeks, now);
+      const volume = muscleVolume(completed, catalog.rows, weeks, now);
 
       // Streak walks back up to 52 ISO weeks before the period end and only
       // needs summary rows (no exercises), so it stays cheap.
       let streak: number | null = null;
+      let historyTruncated = false;
       if (profileGoal !== null && profileGoal > 0) {
         const lookbackFrom = zoneMidnight(
           addDaysToDayKey(span.endDayKey, -7 * 52),
@@ -108,10 +98,11 @@ export class TrainingSummaryTool {
           '/v1/sessions',
           { from: lookbackFrom, to, limit: 200 },
           req,
-          { maxRows: 2000 },
+          { maxRows: 600 },
         );
+        historyTruncated = history.truncated;
         streak = weeklyGoalStreak(
-          history.filter((s) => s.status === SessionStatus.COMPLETED).map((s) => s.startedAt),
+          history.rows.filter((s) => s.status === SessionStatus.COMPLETED).map((s) => s.startedAt),
           profileGoal,
           new Date(to),
           tz,
@@ -119,11 +110,12 @@ export class TrainingSummaryTool {
         );
       }
 
+      const truncated = fetched.truncated || catalog.truncated || historyTruncated;
       const periodEnd = zoneMidnight(addDaysToDayKey(span.endDayKey, 1), tz);
       const isCurrent = now.getTime() < periodEnd.getTime();
       const goalSessions = profileGoal === null ? null : profileGoal * weeks;
       return okResult(
-        `${completed.length} session(s) in ${input.period} ${span.startDayKey}…${span.endDayKey}.`,
+        `${completed.length} session(s) in ${input.period} ${span.startDayKey}…${span.endDayKey}${truncated ? ' (partial range — truncated)' : ''}.`,
         {
           weightUnit: unit,
           period: input.period,
@@ -141,6 +133,8 @@ export class TrainingSummaryTool {
             directSetsPerWeek: v.directSetsPerWeek,
             status: v.status,
           })),
+          truncated,
+          hint: truncated ? 'Narrow the date range' : undefined,
         },
       );
     });
