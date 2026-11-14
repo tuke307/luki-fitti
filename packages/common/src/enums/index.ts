@@ -237,6 +237,7 @@ export enum EmailTemplateType {
   ACCOUNT_CONFIRMATION = 'ACCOUNT_CONFIRMATION',
   PASSWORD_RESET = 'PASSWORD_RESET',
   ACCOUNT_DELETION = 'ACCOUNT_DELETION',
+  API_KEY_CREATED = 'API_KEY_CREATED',
 }
 
 export enum EmailStatus {
@@ -503,3 +504,21 @@ export enum LeagueOutcome {
   STAYED = 'STAYED',
   DEMOTED = 'DEMOTED',
 }
+
+/**
+ * Personal API key scopes (`lf_pat_…` bearer tokens for the read-only public API
+ * `/api/v1`). Deny by default: a route without an `@ApiScope(...)` decorator is
+ * unreachable with a key.
+ */
+export enum ApiKeyScope {
+  READ_PROFILE = 'read:profile',
+  READ_WORKOUTS = 'read:workouts',
+  READ_SESSIONS = 'read:sessions',
+  READ_NUTRITION = 'read:nutrition',
+  READ_BODY = 'read:body',
+  READ_ACTIVITY = 'read:activity',
+  EXPORT = 'export',
+}
+
+/** All scopes a user can grant when creating a key. */
+export const API_KEY_SCOPES: readonly ApiKeyScope[] = Object.values(ApiKeyScope);
