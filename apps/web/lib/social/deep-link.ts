@@ -5,12 +5,16 @@
  */
 export type OpenTarget =
   | { tab: 'social'; section: 'friends' | 'requests' | 'inbox' | 'duels' | 'raids' | null }
+  | { tab: 'profile'; page: 'apiKeys' }
   | { tab: 'home' };
 
 export function parseOpenParam(search: string): OpenTarget | null {
   const value = new URLSearchParams(search).get('open');
   if (!value) return null;
   if (!value.startsWith('/')) return { tab: 'home' };
+  if (value === '/profile/api-keys') {
+    return { tab: 'profile', page: 'apiKeys' };
+  }
   if (value === '/social' || value.startsWith('/social/')) {
     const sub = value.slice('/social'.length).replace(/^\//, '').split('/')[0];
     switch (sub) {
