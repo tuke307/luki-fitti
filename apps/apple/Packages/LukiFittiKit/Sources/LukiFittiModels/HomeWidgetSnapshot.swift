@@ -32,6 +32,23 @@ public struct HomeWidgetSnapshot: Codable, Sendable, Equatable {
         }
     }
 
+    public struct Raid: Codable, Sendable, Equatable {
+        public var bossSlug: String
+        /// Localised at write time — the extension renders the string as stored.
+        public var bossName: String
+        public var hpFraction: Double
+        public var phase: Int
+        public var endsAt: String
+
+        public init(bossSlug: String, bossName: String, hpFraction: Double, phase: Int, endsAt: String) {
+            self.bossSlug = bossSlug
+            self.bossName = bossName
+            self.hpFraction = hpFraction
+            self.phase = phase
+            self.endsAt = endsAt
+        }
+    }
+
     public var generatedAt: String
     public var locale: SupportedLocale
     public var nextWorkout: NextWorkout?
@@ -40,6 +57,8 @@ public struct HomeWidgetSnapshot: Codable, Sendable, Equatable {
     /// ISO week start the count belongs to; a stale snapshot must not report last week as done.
     public var weekStartISO: String
     public var nutrition: Nutrition?
+    /// Active community raid + a rendered boss image file (`raid_boss.png`) in the group container.
+    public var raid: Raid?
 
     public init(
         generatedAt: String,
@@ -48,7 +67,8 @@ public struct HomeWidgetSnapshot: Codable, Sendable, Equatable {
         weekSessionsDone: Int = 0,
         weeklyGoal: Int = 4,
         weekStartISO: String,
-        nutrition: Nutrition? = nil
+        nutrition: Nutrition? = nil,
+        raid: Raid? = nil
     ) {
         self.generatedAt = generatedAt
         self.locale = locale
@@ -57,6 +77,7 @@ public struct HomeWidgetSnapshot: Codable, Sendable, Equatable {
         self.weeklyGoal = weeklyGoal
         self.weekStartISO = weekStartISO
         self.nutrition = nutrition
+        self.raid = raid
     }
 
     /// Eaten calories for `dayKey` ("YYYY-MM-DD"); 0 when the snapshot is from another day.
@@ -80,6 +101,8 @@ public struct HomeWidgetSnapshot: Codable, Sendable, Equatable {
 /// `LukiFittiAppGroupID` Info.plist key, so whatever bundle calls this resolves its own.
 public enum SharedSnapshotStore {
     public static let fileName = "home_widget_snapshot.json"
+    /// Boss still rendered by the app for the raid widget, next to the JSON.
+    public static let raidImageFileName = "raid_boss.png"
 
     public static func containerURL(fileManager: FileManager = .default, bundle: Bundle = .main) -> URL? {
         guard let groupId = bundle.object(forInfoDictionaryKey: "LukiFittiAppGroupID") as? String,

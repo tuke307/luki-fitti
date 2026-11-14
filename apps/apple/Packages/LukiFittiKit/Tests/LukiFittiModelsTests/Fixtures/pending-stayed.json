@@ -1,0 +1,58 @@
+{
+  "success": true,
+  "data": {
+    "weekKey": "2026-11-09",
+    "stage": "GLOBAL",
+    "endsAt": "2026-11-15T23:00:00.000Z",
+    "arena": "BRONZE",
+    "cohort": {
+      "members": [
+        {
+          "rank": 1,
+          "card": {
+            "userId": "d0fbbb5a-21be-4002-8ed2-6434bca256b9",
+            "handle": "iossocial",
+            "avatarUrl": null,
+            "name": "iOS Social"
+          },
+          "points": 420,
+          "isSelf": true,
+          "zone": "SAFE"
+        },
+        {
+          "rank": 2,
+          "card": {
+            "userId": "133725ed-c82a-45c3-9150-6ab211bafd5c",
+            "handle": "cleo_mwfahu1n",
+            "avatarUrl": null
+          },
+          "points": 310,
+          "isSelf": false,
+          "zone": "SAFE"
+        },
+        {
+          "rank": 3,
+          "card": {
+            "userId": "53257d56-72e0-4e32-9e2b-8cc897a7c431",
+            "handle": "bert_mwfahu1n",
+            "avatarUrl": null
+          },
+          "points": 95,
+          "isSelf": false,
+          "zone": "SAFE"
+        }
+      ],
+      "promoteCount": 0,
+      "demoteCount": 0
+    },
+    "pendingResult": {
+      "weekKey": "2026-11-02",
+      "outcome": "STAYED",
+      "fromArena": "BRONZE",
+      "toArena": "BRONZE",
+      "rank": 2,
+      "points": 1240
+    }
+  },
+  "error": null
+}

@@ -380,3 +380,126 @@ export enum ProgressPhotoKind {
 }
 
 export const PROGRESS_PHOTO_KINDS: ProgressPhotoKind[] = Object.values(ProgressPhotoKind);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Social (mirrors the Prisma enums in packages/database)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export enum FriendshipStatus {
+  PENDING = 'PENDING',
+  ACCEPTED = 'ACCEPTED',
+}
+
+export enum PushPlatform {
+  APNS = 'APNS',
+  WEBPUSH = 'WEBPUSH',
+}
+
+export enum ReportReason {
+  SPAM = 'SPAM',
+  HARASSMENT = 'HARASSMENT',
+  INAPPROPRIATE_NAME = 'INAPPROPRIATE_NAME',
+  INAPPROPRIATE_AVATAR = 'INAPPROPRIATE_AVATAR',
+  OTHER = 'OTHER',
+}
+
+export enum ReportStatus {
+  OPEN = 'OPEN',
+  RESOLVED = 'RESOLVED',
+  DISMISSED = 'DISMISSED',
+}
+
+export enum NotificationKind {
+  FRIEND_REQUEST = 'FRIEND_REQUEST',
+  FRIEND_ACCEPTED = 'FRIEND_ACCEPTED',
+  LEAGUE_PROMOTED = 'LEAGUE_PROMOTED',
+  LEAGUE_DEMOTED = 'LEAGUE_DEMOTED',
+  LEAGUE_ENDING = 'LEAGUE_ENDING',
+  DUEL_INVITE = 'DUEL_INVITE',
+  DUEL_ACCEPTED = 'DUEL_ACCEPTED',
+  DUEL_STANDINGS = 'DUEL_STANDINGS',
+  DUEL_RESULT = 'DUEL_RESULT',
+  STREAK_INVITE = 'STREAK_INVITE',
+  STREAK_STARTED = 'STREAK_STARTED',
+  STREAK_REMINDER = 'STREAK_REMINDER',
+  STREAK_FROZEN = 'STREAK_FROZEN',
+  STREAK_BROKEN = 'STREAK_BROKEN',
+  RAID_SPAWNED = 'RAID_SPAWNED',
+  RAID_PHASE = 'RAID_PHASE',
+  RAID_DEFEATED = 'RAID_DEFEATED',
+  RAID_ESCAPED = 'RAID_ESCAPED',
+  SQUAD_INVITE = 'SQUAD_INVITE',
+  SQUAD_RAID_STARTED = 'SQUAD_RAID_STARTED',
+}
+
+export enum DuelStatus {
+  PENDING = 'PENDING',
+  ACTIVE = 'ACTIVE',
+  COMPLETED = 'COMPLETED',
+  DECLINED = 'DECLINED',
+  CANCELLED = 'CANCELLED',
+  EXPIRED = 'EXPIRED',
+}
+
+export enum FriendStreakStatus {
+  PENDING = 'PENDING',
+  ACTIVE = 'ACTIVE',
+}
+
+export enum TrophyKind {
+  DUEL_WIN = 'DUEL_WIN',
+  RAID_DEFEATED = 'RAID_DEFEATED',
+  RAID_CROWN = 'RAID_CROWN',
+  RAID_FINAL_BLOW = 'RAID_FINAL_BLOW',
+}
+
+export enum RaidKind {
+  COMMUNITY = 'COMMUNITY',
+  SQUAD = 'SQUAD',
+}
+
+export enum RaidStatus {
+  ACTIVE = 'ACTIVE',
+  DEFEATED = 'DEFEATED',
+  ESCAPED = 'ESCAPED',
+}
+
+export enum RaidDifficulty {
+  NORMAL = 'NORMAL',
+  HARD = 'HARD',
+  HEROIC = 'HEROIC',
+}
+
+export enum SquadRole {
+  OWNER = 'OWNER',
+  MEMBER = 'MEMBER',
+}
+
+export enum Arena {
+  BRONZE = 'BRONZE',
+  SILVER = 'SILVER',
+  GOLD = 'GOLD',
+  PLATINUM = 'PLATINUM',
+  DIAMOND = 'DIAMOND',
+  OBSIDIAN = 'OBSIDIAN',
+  TITAN = 'TITAN',
+}
+
+export enum LeagueStage {
+  FRIENDS = 'FRIENDS',
+  GLOBAL = 'GLOBAL',
+  ARENAS = 'ARENAS',
+}
+
+export enum LeagueStageMode {
+  AUTO = 'AUTO',
+  FRIENDS = 'FRIENDS',
+  GLOBAL = 'GLOBAL',
+  ARENAS = 'ARENAS',
+}
+
+export enum LeagueOutcome {
+  PROMOTED = 'PROMOTED',
+  STAYED = 'STAYED',
+  DEMOTED = 'DEMOTED',
+}

@@ -55,6 +55,16 @@ public struct WatchHomeView: View {
                     .accessibilityIdentifier("watch.home.nextUp")
                 }
 
+                if let snapshot = viewModel.socialSnapshot {
+                    leagueRow(snapshot)
+                    if let duel = snapshot.duel {
+                        duelRow(duel)
+                    }
+                    if let raid = snapshot.raid {
+                        raidRow(raid)
+                    }
+                }
+
                 Section(tr("Workouts")) {
                     ForEach(viewModel.store.folders) { folder in
                         NavigationLink {
@@ -94,6 +104,83 @@ public struct WatchHomeView: View {
             }
             .navigationTitle("LukiFitti")
         }
+    }
+
+    /// Compact league row: "Gold · #4 · 820 EP", or just the weekly EP on friends weeks.
+    private func leagueRow(_ snapshot: SocialWatchSnapshot) -> some View {
+        Label {
+            Text(
+                snapshot.stage == .FRIENDS
+                    ? tr("%d EP this week", snapshot.weekPoints)
+                    : [
+                        arenaName(snapshot.arena, tr),
+                        snapshot.rank.map { "#\($0)" },
+                        "\(snapshot.weekPoints) EP",
+                    ].compactMap { $0 }.joined(separator: " · ")
+            )
+            .font(.footnote)
+            .lineLimit(1)
+        } icon: {
+            Image(systemName: "shield.fill")
+                .foregroundStyle(LukiColors.accent)
+        }
+        .accessibilityIdentifier("watch.home.leagueRow")
+    }
+
+    /// Compact duel row: "vs @anna · 340–280 · 3 d", or "vs @anna · starts tmrw" before kick-off.
+    private func duelRow(_ duel: DuelWatchSnapshot) -> some View {
+        let locale = Locale(identifier: tr.rawValue)
+        return Label {
+            Text(
+                duel.startsTomorrow
+                    ? tr("vs @%@ · starts tmrw", duel.opponentHandle)
+                    : tr(
+                        "vs @%@ · %@–%@ · %d d",
+                        duel.opponentHandle,
+                        duel.you.formatted(.number.locale(locale)),
+                        duel.them.formatted(.number.locale(locale)),
+                        duel.daysLeft
+                    )
+            )
+            .font(.footnote)
+            .lineLimit(1)
+        } icon: {
+            Image(systemName: "figure.fencing")
+                .foregroundStyle(LukiColors.accent)
+        }
+        .accessibilityIdentifier("watch.home.duelRow")
+    }
+
+    /// Compact raid row: an HP ring tinted with the boss's primary colour + the
+    /// boss name. No 3D on the Watch.
+    private func raidRow(_ raid: RaidWatchSnapshot) -> some View {
+        let boss = RaidBossCatalog.boss(slug: raid.bossSlug)
+        let name = boss.map { tr == .de ? $0.name.de : $0.name.en } ?? raid.bossSlug
+        return Label {
+            Text("\(name) · \(Int(max(0, raid.hpFraction) * 100))%")
+                .font(.footnote)
+                .lineLimit(1)
+        } icon: {
+            Gauge(value: max(0, min(1, raid.hpFraction)), in: 0...1) {
+                Image(systemName: "bolt.fill")
+            }
+            .gaugeStyle(.accessoryCircularCapacity)
+            .tint(bossTint(boss))
+            .frame(width: 20, height: 20)
+        }
+        .accessibilityIdentifier("watch.home.raidRow")
+    }
+
+    private func bossTint(_ boss: RaidBossRecipe?) -> Color {
+        guard let hex = boss?.palette["primary"] else { return LukiColors.accent }
+        var s = hex.trimmingCharacters(in: .init(charactersIn: "#"))
+        if s.count == 6 { s += "FF" }
+        var v: UInt64 = 0
+        Scanner(string: s).scanHexInt64(&v)
+        return Color(
+            red: Double((v >> 24) & 0xFF) / 255,
+            green: Double((v >> 16) & 0xFF) / 255,
+            blue: Double((v >> 8) & 0xFF) / 255)
     }
 
     /// Compact sync row: an icon whose shape matches the state, one status line, then the account.

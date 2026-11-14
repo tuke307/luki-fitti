@@ -2,5 +2,6 @@ export * from './schemas';
 export * from './enums';
 export * from './catalog';
 export * from './utils';
+export * from './push-messages';
 export * from './api/responses/api.response';
 export * from './api/params/order-by.params';

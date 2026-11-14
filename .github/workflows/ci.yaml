@@ -2,9 +2,14 @@ name: CI
 
 on:
   pull_request:
+    # Stacked feature PRs (e.g. feat/social-2-leagues → feat/social-2.0) get the same
+    # lint, test, build and e2e gates as PRs into develop.
     branches:
       - develop
       - main
+      - 'feat/**'
+      - 'fix/**'
+      - 'release/**'
   workflow_dispatch:
 
 permissions:
@@ -91,7 +96,8 @@ jobs:
 
       - run: yarn install --frozen-lockfile
 
-      - run: yarn turbo run build --filter='./packages/*'
+      # The API build lets app.module.boot.spec.ts check the full DI graph instead of skipping.
+      - run: yarn turbo run build --filter='./packages/*' --filter=@luki-fitti/api
 
       - run: yarn turbo run test --filter='!@luki-fitti/apple'
 

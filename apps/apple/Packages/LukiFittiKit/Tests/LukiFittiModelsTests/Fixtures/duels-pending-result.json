@@ -1,0 +1,66 @@
+{
+  "success": true,
+  "data": {
+    "active": [
+      {
+        "id": "b0004a38-2c00-48f1-8c6d-6533a0d02ea1",
+        "status": "ACTIVE",
+        "opponent": {
+          "userId": "8e1c30d2-cbbd-4c49-94e5-ccf67a6d6a00",
+          "handle": "shotanna_mwflew0b",
+          "avatarUrl": null,
+          "name": "E2E Social shot.a"
+        },
+        "you": 0,
+        "them": 0,
+        "daysLeft": 8,
+        "outcome": null,
+        "seenAt": null,
+        "startDayKey": "2026-11-15",
+        "endDayKey": "2026-11-22",
+        "createdAt": "2026-11-13T23:22:47.914Z"
+      }
+    ],
+    "incoming": [],
+    "outgoing": [],
+    "recent": [
+      {
+        "id": "3f2f3c92-a24d-4d07-99ea-3bdca2bfecb7",
+        "status": "COMPLETED",
+        "opponent": {
+          "userId": "8e1c30d2-cbbd-4c49-94e5-ccf67a6d6a00",
+          "handle": "shotanna_mwflew0b",
+          "avatarUrl": null,
+          "name": "E2E Social shot.a"
+        },
+        "you": 280,
+        "them": 340,
+        "daysLeft": null,
+        "outcome": "LOST",
+        "seenAt": null,
+        "startDayKey": "2026-11-15",
+        "endDayKey": "2026-11-22",
+        "createdAt": "2026-11-13T23:13:25.504Z"
+      }
+    ],
+    "pendingResult": {
+      "id": "3f2f3c92-a24d-4d07-99ea-3bdca2bfecb7",
+      "status": "COMPLETED",
+      "opponent": {
+        "userId": "8e1c30d2-cbbd-4c49-94e5-ccf67a6d6a00",
+        "handle": "shotanna_mwflew0b",
+        "avatarUrl": null,
+        "name": "E2E Social shot.a"
+      },
+      "you": 280,
+      "them": 340,
+      "daysLeft": null,
+      "outcome": "LOST",
+      "seenAt": null,
+      "startDayKey": "2026-11-15",
+      "endDayKey": "2026-11-22",
+      "createdAt": "2026-11-13T23:13:25.504Z"
+    }
+  },
+  "error": null
+}

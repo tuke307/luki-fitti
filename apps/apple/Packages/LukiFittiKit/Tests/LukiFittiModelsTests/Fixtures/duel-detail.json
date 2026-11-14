@@ -1,0 +1,23 @@
+{
+  "success": true,
+  "data": {
+    "id": "b0004a38-2c00-48f1-8c6d-6533a0d02ea1",
+    "status": "ACTIVE",
+    "opponent": {
+      "userId": "804dc174-c3ad-4fa8-af3c-2c348aa1ec6e",
+      "handle": "shotbob_mwflew0b",
+      "avatarUrl": null,
+      "name": "E2E Social shot.b"
+    },
+    "you": 0,
+    "them": 0,
+    "daysLeft": 8,
+    "outcome": null,
+    "seenAt": null,
+    "startDayKey": "2026-11-15",
+    "endDayKey": "2026-11-22",
+    "createdAt": "2026-11-13T23:22:47.914Z",
+    "days": [{ "dayKey": "2026-11-15", "you": 340, "them": 280 }]
+  },
+  "error": null
+}

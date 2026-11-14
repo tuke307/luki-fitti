@@ -23,6 +23,13 @@ import { ProgressModule } from './modules/progress/progress.module';
 import { ActivityModule } from './modules/activity/activity.module';
 import { AiModule } from './modules/ai/ai.module';
 import { ImportModule } from './modules/import/import.module';
+import { SocialModule } from './modules/social/social.module';
+import { SocialAccessModule } from './modules/social/social-access.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { PushModule } from './modules/push/push.module';
+import { LeagueModule } from './modules/league/league.module';
+import { BattleModule } from './modules/battle/battle.module';
+import { RaidModule } from './modules/raid/raid.module';
 import { NODE_ENV } from './config/env.config';
 
 @Module({
@@ -57,6 +64,13 @@ import { NODE_ENV } from './config/env.config';
     ActivityModule,
     AiModule,
     ImportModule,
+    SocialAccessModule,
+    SocialModule,
+    NotificationsModule,
+    PushModule,
+    LeagueModule,
+    BattleModule,
+    RaidModule,
   ],
   providers: [
     {
