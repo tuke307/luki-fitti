@@ -1,6 +1,6 @@
 # Personal API keys (design)
 
-Status: **approved 2026-11-15, implementation not started** (next steps and handoff: `docs/release-2.0.0.md` on `release/2.0.0`) · Target: 2.0.0 (branch `feat/api-keys` → `release/2.0.0`)
+Status: **implemented: PR A #109 (keys + read API), PR B (export + docs), not yet released** · Target: 2.0.0 (branch `feat/api-keys` → `release/2.0.0`)
 
 Users create personal API keys in their settings and use them to read their own LukiFitti data
 from scripts and tools (spreadsheets, Notion, Home Assistant, Apple Shortcuts, their own
@@ -159,8 +159,8 @@ they could come later as `read:photos`.
   which), `403` (valid key, missing scope: `{"error":"insufficient_scope","required":"read:meals"}`),
   `429` (rate limit, with `Retry-After`).
 - **Docs:** an OpenAPI document for `/api/v1` only (the existing `openapi-export.ts` gets a
-  second output filtered to the public controllers), served as a docs page on the web
-  (`/developers`) with curl examples.
+  second output filtered to the public controllers), published on the docs site
+  `docs.luki-fitti.tony-luke.de` with curl examples.
 
 ## Authentication
 
@@ -209,15 +209,15 @@ feature depends on it.
 
 ## Architecture fit
 
-| Piece                                               | Where                                                                                |
-| :-------------------------------------------------- | :----------------------------------------------------------------------------------- |
-| Key management routes (`GET/POST/DELETE /api-keys`) | new `api-keys` module, `AuthGuard` + `CsrfGuard` (session auth, the app UI)          |
-| Public read API                                     | new `public-api` module with `ApiKeyGuard` + `ScopesGuard`                           |
-| DTOs + scope enum + key format helpers              | `@luki-fitti/common` (`api-key.util.ts`, `schemas/public-api.ts`)                    |
-| Export builder                                      | `@luki-fitti/common/utils/export-file.util.ts`, reused by the web backup button      |
-| Email                                               | new `API_KEY_CREATED` template through the existing email worker                     |
-| Settings UI                                         | `apps/web/components/gym/settings/api-keys-page.tsx`; iOS list in `Features/Profile` |
-| Docs                                                | `apps/web/app/(site)/site/[locale]/developers` + `docs/public-api.md`                |
+| Piece                                               | Where                                                                                                                   |
+| :-------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------- |
+| Key management routes (`GET/POST/DELETE /api-keys`) | new `api-keys` module, `AuthGuard` + `CsrfGuard` (session auth, the app UI)                                             |
+| Public read API                                     | new `public-api` module with `ApiKeyGuard` + `ScopesGuard`                                                              |
+| DTOs + scope enum + key format helpers              | `@luki-fitti/common` (`api-key.util.ts`, `schemas/public-api.ts`)                                                       |
+| Export builder                                      | `@luki-fitti/common/utils/export-file.util.ts`, reused by the web backup button                                         |
+| Email                                               | new `API_KEY_CREATED` template through the existing email worker                                                        |
+| Settings UI                                         | `apps/web/components/gym/settings/api-keys-page.tsx`; iOS list in `Features/Profile`                                    |
+| Docs                                                | `docs/public-api.md` + generated `docs/openapi/public-api-v1.json`, published on the docs site (Fumadocs in `apps/web`) |
 
 The boot spec from the social work (`app.module.boot.spec.ts`) covers the new modules'
 dependency injection automatically.
@@ -227,7 +227,7 @@ dependency injection automatically.
 1. **Keys + read API:** migration, key management routes, `ApiKeyGuard`/`ScopesGuard`, the v1
    endpoints except export, rate limits, email, web settings page, iOS list/revoke, tests.
 2. **Export + docs:** the shared export builder (web backup button switched to it), `/v1/export`,
-   the public OpenAPI file, the `/developers` page, the privacy paragraph.
+   the public OpenAPI file, the docs site `docs.luki-fitti.tony-luke.de` (see [Docs site](#docs-site-docsluki-fittitony-lukede)), the privacy paragraph.
 
 ## Tests
 
@@ -239,6 +239,33 @@ headers and 429. Keys rejected by the normal `AuthGuard` and app tokens rejected
 `ImportFileSchema` and re-imports with zero new entries (idempotency). e2e: create a key in
 the settings, copy it, `curl /api/v1/sessions` with it, revoke it, get 401.
 
+## Docs site (`docs.luki-fitti.tony-luke.de`)
+
+Decided 2026-11-14; part of PR B.
+
+- A third host on the existing web app, next to `luki-fitti.tony-luke.de` (site) and
+  `app.luki-fitti.tony-luke.de` (app). `apps/web/proxy.ts` routes the docs host to an internal
+  `/docs` tree, the same way the site host maps to `/site`. Local dev host: `docs.localhost:3000`.
+- Built with [Fumadocs](https://fumadocs.dev) (`fumadocs-core`, `fumadocs-ui`, `fumadocs-mdx`,
+  `fumadocs-openapi`) inside `apps/web`. Versions are vetted and pinned exactly, each at least
+  7 days old. There is no separate docs app or container.
+- Content: every markdown file in the repository's `docs/` folder, published as-is, English
+  only. Links between the files (`foo.md`) resolve to docs routes. User guides (import format,
+  import guides, public API) come first in the sidebar; plans and specs follow.
+- The repository's README.md is the docs home page ("Overview") and CONTRIBUTING.md is published
+  as "Contributing".
+- Every page shows an "Edit on GitHub" link and a "Last updated" date taken from its last git
+  commit.
+- API reference: rendered by `fumadocs-openapi` from the generated
+  `docs/openapi/public-api-v1.json`.
+- Search: Fumadocs' built-in local search, with no external service. The theme follows the
+  LukiFitti design tokens.
+- Links: the web app's import-guide links (today GitHub `blob/main/docs/…`), the API keys
+  settings page, the iOS links and a "Docs" link in the site footer all point to the docs host.
+  There is no `/developers` page.
+- Ops (user): a DNS record for `docs.luki-fitti.tony-luke.de`, and the domain added to the web
+  container in Coolify.
+
 ## Decisions (2026-11-15)
 
 1. **Read-only for v1.** `write:*` scopes are a later version.
@@ -248,3 +275,15 @@ the settings, copy it, `curl /api/v1/sessions` with it, revoke it, get 401.
 4. **No photos in v1** (progress and meal photos stay excluded).
 5. **MCP server ships in 2.0 as a separate feature** (branch `feat/mcp-server`, see
    [MCP server](#mcp-server-separate-feature)).
+6. **Docs live on `docs.luki-fitti.tony-luke.de`** (Fumadocs in the web app); no `/developers`
+   page.
+
+## Implementation notes (2026-11-14)
+
+- `GET /v1/export` covers **workouts only** (`luki-fitti-import@1` format limit): custom
+  exercises, folders, templates and completed sessions. Meals, body weight, check-ins and
+  activity come through their own endpoints.
+- `/v1/deletions` is deferred — not implemented.
+- Date-only `from`/`to` are whole UTC calendar days (`to` inclusive); datetimes are exact.
+- The admin kill switch lives at `/admin/api-keys` (`GET/PUT /api/admin/settings/api-keys`).
+- `API_KEY_PEPPER` (≥32 chars) is required in production — boot fails without it.
