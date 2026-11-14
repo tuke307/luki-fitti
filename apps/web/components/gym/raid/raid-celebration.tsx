@@ -28,15 +28,22 @@ export async function dismissRaidResult(raidId: string) {
 function Confetti() {
   const pieces = React.useMemo(
     () =>
-      Array.from({ length: 120 }, (_, i) => ({
-        id: i,
-        x: Math.random() * 100,
-        delay: Math.random() * 0.6,
-        duration: 2 + Math.random() * 1.2,
-        size: 5 + Math.random() * 7,
-        hue: Math.floor(Math.random() * 360),
-        drift: (Math.random() - 0.5) * 30,
-      })),
+      Array.from({ length: 120 }, (_, i) => {
+        // deterministic scatter — Math.random is impure during render
+        const h = (n: number) => {
+          const s = Math.sin(i * 127.1 + n * 311.7) * 43758.5453;
+          return s - Math.floor(s);
+        };
+        return {
+          id: i,
+          x: h(1) * 100,
+          delay: h(2) * 0.6,
+          duration: 2 + h(3) * 1.2,
+          size: 5 + h(4) * 7,
+          hue: Math.floor(h(5) * 360),
+          drift: (h(6) - 0.5) * 30,
+        };
+      }),
     [],
   );
   return (
