@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { DocsBody, DocsDescription, DocsPage, DocsTitle } from 'fumadocs-ui/page';
+import { DocsBody, DocsPage, DocsTitle } from 'fumadocs-ui/page';
 import defaultMdxComponents from 'fumadocs-ui/mdx';
 import { pageGitInfo, source } from '@/lib/docs/source';
 import { OpenAPIPage } from '@/components/docs/api-page';
@@ -42,9 +42,8 @@ export default async function Page({ params }: PageProps) {
       }
     >
       {isHome ? <DocsHomeHero title={page.data.title} /> : <DocsTitle>{page.data.title}</DocsTitle>}
-      {page.data.description && !isHome ? (
-        <DocsDescription>{page.data.description}</DocsDescription>
-      ) : null}
+      {/* The derived description repeats the first paragraph; it stays for
+          meta/OG/search only. */}
       <DocsBody>
         <Mdx components={defaultMdxComponents} />
       </DocsBody>

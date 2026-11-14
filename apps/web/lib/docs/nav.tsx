@@ -134,13 +134,6 @@ export function docsTree(tree: Root): Root {
       apiGroups.set('Other', list);
     }
   }
-  const reference: Folder = {
-    type: 'folder',
-    name: 'Reference',
-    children: API_GROUP_ORDER.filter((g) => apiGroups.has(g)).map((g) =>
-      group(g, apiGroups.get(g) ?? []),
-    ),
-  };
   const gettingStarted = page('/public-api');
   const api: Folder = {
     type: 'folder',
@@ -149,7 +142,12 @@ export function docsTree(tree: Root): Root {
     icon: <Terminal className="size-4" />,
     root: true,
     index: gettingStarted,
-    children: [...(gettingStarted ? [gettingStarted] : []), reference],
+    children: [
+      ...(gettingStarted ? [gettingStarted] : []),
+      ...API_GROUP_ORDER.filter((g) => apiGroups.has(g)).map((g) =>
+        group(g, apiGroups.get(g) ?? []),
+      ),
+    ],
   };
 
   const socialIndex = page('/specs/social-2.0');
@@ -202,7 +200,7 @@ export function docsTree(tree: Root): Root {
       gettingStarted,
       contributing,
       ...guides.children,
-      ...reference.children.flatMap((f: Node) => (f.type === 'folder' ? f.children : [])),
+      ...api.children.flatMap((f: Node) => (f.type === 'folder' ? f.children : [])),
       ...project.children,
       ...specs.children,
     ]

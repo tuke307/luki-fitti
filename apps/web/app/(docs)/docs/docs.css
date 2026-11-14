@@ -117,6 +117,18 @@ body.docs-site {
   text-decoration: underline;
 }
 
+/* Heading anchors are permalinks, not links — keep them in the foreground. */
+.prose :is(h1, h2, h3, h4, h5, h6) a {
+  color: inherit;
+}
+
+/* The breadcrumb above the title stays quiet; ember is for links and focus. */
+#nd-page > div:first-child .text-fd-primary,
+[data-toc-popover-trigger] .text-fd-primary {
+  color: var(--muted-foreground);
+  font-weight: 400;
+}
+
 /* Tables: tabular numbers, scroll horizontally inside their container. */
 .prose table {
   font-variant-numeric: tabular-nums;
@@ -199,8 +211,7 @@ body.docs-site {
 }
 
 .docs-header-inner {
-  margin-inline: auto;
-  max-width: 76rem;
+  max-width: none;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -384,124 +395,112 @@ body.docs-site {
   justify-content: center;
 }
 
+.docs-hero-shot {
+  position: relative;
+}
+
+/* Soft ambient glow behind the device; the bezel carries the frame. */
+.docs-hero-shot::before {
+  content: '';
+  position: absolute;
+  inset: -12% -18%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in oklch, var(--primary) 14%, transparent),
+    transparent 65%
+  );
+  z-index: -1;
+}
+
 .docs-hero-shot img {
   width: 15rem;
   max-width: 60%;
   height: auto;
   border-radius: var(--radius);
-  border: 1px solid var(--border);
-  box-shadow:
-    0 1px 2px rgb(0 0 0 / 0.06),
-    0 12px 32px -8px rgb(0 0 0 / 0.18);
 }
 
+/* Entry paths: one typographic list, not a card grid. The primary path is
+   larger and carries its guide links inline; the two quiet rows sit under
+   a hairline. */
 .docs-hero-paths {
-  display: grid;
-  gap: 0.5rem;
-  margin-top: 2rem;
+  margin-top: 2.5rem;
+  max-width: 44rem;
 }
 
-@media (min-width: 768px) {
-  .docs-hero-paths {
-    grid-template-columns: 1.15fr 1fr 0.85fr;
-    gap: 0.75rem;
-  }
+.docs-hero-path-main {
+  padding-bottom: 1.25rem;
 }
 
-.docs-hero-path {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.875rem 1rem;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background-color: var(--card);
+.docs-hero-path-main > .docs-hero-path-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--foreground);
   text-decoration: none;
-  transition:
-    border-color 150ms var(--ease-out-quart, ease-out),
-    background-color 150ms var(--ease-out-quart, ease-out);
 }
 
-.docs-hero-path:hover {
-  border-color: color-mix(in oklch, var(--primary) 40%, var(--border));
-  background-color: color-mix(in oklch, var(--card) 92%, var(--muted));
-}
-
-.docs-hero-path > svg {
+.docs-hero-path-main > .docs-hero-path-title:hover {
   color: var(--primary);
-  margin-top: 0.125rem;
-}
-
-.docs-hero-path-title {
-  display: block;
-  font-weight: 600;
-  font-size: 0.9375rem;
-  letter-spacing: -0.01em;
 }
 
 .docs-hero-path-body {
-  display: block;
   color: var(--muted-foreground);
-  font-size: 0.8125rem;
-  line-height: 1.45;
-  margin-top: 0.125rem;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  margin: 0.375rem 0 0;
+  display: block;
+}
+
+.docs-hero-path-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 1.25rem;
+  margin: 0.625rem 0 0;
+  font-size: 0.9375rem;
+}
+
+.docs-hero-path-links a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.docs-hero-path-links a:hover {
+  text-decoration: underline;
+}
+
+.docs-hero-path-row {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.875rem 0;
+  border-top: 1px solid var(--border);
+  color: var(--foreground);
+  text-decoration: none;
+}
+
+.docs-hero-path-row-title {
+  font-weight: 550;
+  font-size: 1rem;
+  display: block;
+}
+
+.docs-hero-path-row:hover .docs-hero-path-row-title {
+  color: var(--primary);
 }
 
 .docs-hero-path-arrow {
-  margin-left: auto;
-  color: var(--muted-foreground);
+  margin-inline-start: auto;
   align-self: center;
-}
-
-.docs-hero-path:hover .docs-hero-path-arrow {
-  color: var(--primary);
-}
-
-.docs-hero-search {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 1.25rem;
-  padding: 0.625rem 0.875rem;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background-color: var(--card);
   color: var(--muted-foreground);
-  font-size: 0.9375rem;
-  cursor: pointer;
   transition:
-    border-color 150ms var(--ease-out-quart, ease-out),
+    transform 150ms var(--ease-out-quart, ease-out),
     color 150ms var(--ease-out-quart, ease-out);
 }
 
-.docs-hero-search:hover {
-  border-color: color-mix(in oklch, var(--primary) 40%, var(--border));
-  color: var(--foreground);
-}
-
-.docs-hero-search:active {
-  transform: scale(0.97);
-}
-
-.docs-hero-search kbd {
-  margin-left: 0.5rem;
-  padding: 0.125rem 0.375rem;
-  border-radius: 0.375rem;
-  border: 1px solid var(--border);
-  background-color: var(--background);
-  font-family: inherit;
-  font-size: 0.75rem;
-}
-
-.docs-hero-meta {
-  margin-top: 1.5rem;
-  color: var(--muted-foreground);
-  font-size: 0.8125rem;
-}
-
-.docs-hero-meta a {
+.docs-hero-path-row:hover .docs-hero-path-arrow {
   color: var(--primary);
+  transform: translateX(2px);
 }
 
 .docs-skip {
@@ -556,4 +555,12 @@ body.docs-site {
 #nd-sidebar a[data-active='true'],
 #nd-sidebar-mobile a[data-active='true'] {
   color: color-mix(in oklch, var(--primary) 80%, white);
+}
+
+/* Search lives once in the header; the sidebar keeps its trigger only in the
+   mobile drawer, where the header field is a single icon. */
+@media (min-width: 768px) {
+  #nd-sidebar [data-search-full] {
+    display: none;
+  }
 }
