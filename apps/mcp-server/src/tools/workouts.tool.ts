@@ -6,7 +6,6 @@ import type { PublicWorkoutTemplateDto } from '@luki-fitti/common/schemas';
 import { LukiFittiApiClient } from '../lukifitti-api.client';
 import {
   clipName,
-  MAX_ROWS,
   okResult,
   runTool,
   ToolRateLimiter,
@@ -38,33 +37,37 @@ export class WorkoutsTool {
     @McpRawRequest() req: unknown,
   ): Promise<ToolResult> {
     return runTool(this.limiter, req, async () => {
-      const [unit, templates] = await Promise.all([
+      const [unit, fetched] = await Promise.all([
         weightUnitFor(this.api, req),
         this.api.getAll<PublicWorkoutTemplateDto>('/v1/workouts', { limit: 200 }, req, {
-          maxRows: MAX_ROWS,
+          maxRows: 200,
         }),
       ]);
-      const { rows, truncated } = truncateRows(templates);
-      return okResult(`${rows.length} workout template(s).`, {
-        weightUnit: unit,
-        workouts: rows.map((t) => ({
-          id: t.id,
-          name: clipName(t.name),
-          estimatedDurationMinutes: t.estimatedDurationMinutes,
-          exercises: t.exercises.map((e) => ({
-            name: clipName(e.exerciseName),
-            plannedSets: e.plannedSets,
-            warmupSets: e.warmupSets,
-            targetRepsMin: e.targetRepsMin,
-            targetRepsMax: e.targetRepsMax,
-            targetWeight: e.targetWeightKg === null ? null : weightInUnit(e.targetWeightKg, unit),
-            targetDurationSeconds: e.targetDurationSeconds,
-            targetDistanceMeters: e.targetDistanceMeters,
-            restSeconds: e.restSeconds,
+      const { rows, truncated: rowsTruncated } = truncateRows(fetched.rows);
+      const truncated = rowsTruncated || fetched.truncated;
+      return okResult(
+        `${rows.length} workout template(s)${fetched.truncated ? ' (truncated)' : ''}.`,
+        {
+          weightUnit: unit,
+          workouts: rows.map((t) => ({
+            id: t.id,
+            name: clipName(t.name),
+            estimatedDurationMinutes: t.estimatedDurationMinutes,
+            exercises: t.exercises.map((e) => ({
+              name: clipName(e.exerciseName),
+              plannedSets: e.plannedSets,
+              warmupSets: e.warmupSets,
+              targetRepsMin: e.targetRepsMin,
+              targetRepsMax: e.targetRepsMax,
+              targetWeight: e.targetWeightKg === null ? null : weightInUnit(e.targetWeightKg, unit),
+              targetDurationSeconds: e.targetDurationSeconds,
+              targetDistanceMeters: e.targetDistanceMeters,
+              restSeconds: e.restSeconds,
+            })),
           })),
-        })),
-        truncated,
-      });
+          truncated,
+        },
+      );
     });
   }
 }

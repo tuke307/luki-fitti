@@ -5,14 +5,7 @@ import { z } from 'zod';
 import type { PublicBodyWeightEntryDto } from '@luki-fitti/common/schemas';
 import { movingAverageWeights, weightTrend } from '@luki-fitti/common/utils';
 import { LukiFittiApiClient } from '../lukifitti-api.client';
-import {
-  MAX_ROWS,
-  okResult,
-  runTool,
-  ToolRateLimiter,
-  truncateRows,
-  type ToolResult,
-} from './tool-utils';
+import { okResult, runTool, ToolRateLimiter, truncateRows, type ToolResult } from './tool-utils';
 import { resolveRange, RELATIVE_WORDS } from './mcp-date-utils';
 import { weightUnitFor } from './unit';
 import { weightInUnit } from './insights';
@@ -48,15 +41,16 @@ export class BodyWeightTool {
   ): Promise<ToolResult> {
     return runTool(this.limiter, req, async () => {
       const range = resolveRange({ from: input.from ?? 'last-90-days', to: input.to });
-      const [unit, entries] = await Promise.all([
+      const [unit, fetched] = await Promise.all([
         weightUnitFor(this.api, req),
         this.api.getAll<PublicBodyWeightEntryDto>(
           '/v1/body-weight',
           { from: range.from, to: range.to, limit: 200 },
           req,
-          { maxRows: MAX_ROWS },
+          { maxRows: 1000 },
         ),
       ]);
+      const entries = fetched.rows;
       const withAverage = movingAverageWeights(entries, 7);
       const trend = weightTrend(entries);
       const rows = withAverage.map(({ entry, averageKg }) => ({
@@ -73,9 +67,10 @@ export class BodyWeightTool {
         null,
       );
       const change = first && last ? weightInUnit(last.weightKg - first.weightKg, unit) : null;
-      const { rows: page, truncated } = truncateRows(rows);
+      const { rows: page, truncated: rowsTruncated } = truncateRows(rows);
+      const truncated = rowsTruncated || fetched.truncated;
       return okResult(
-        `${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}, latest ${trend.latestKg === null ? '—' : weightInUnit(trend.latestKg, unit)} ${unit}.`,
+        `${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}, latest ${trend.latestKg === null ? '—' : weightInUnit(trend.latestKg, unit)} ${unit}${fetched.truncated ? ' (partial range — truncated)' : ''}.`,
         {
           weightUnit: unit,
           entries: page,
@@ -84,6 +79,7 @@ export class BodyWeightTool {
           change7d: trend.change7dKg === null ? null : weightInUnit(trend.change7dKg, unit),
           change30d: trend.change30dKg === null ? null : weightInUnit(trend.change30dKg, unit),
           truncated,
+          hint: truncated ? 'Narrow the date range' : undefined,
         },
       );
     });

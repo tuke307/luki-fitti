@@ -57,14 +57,17 @@ export class LukiFittiApiClient {
   /**
    * Follows `nextCursor` until the list is exhausted or `maxRows` is reached.
    * Lists are ordered by `updatedAt`, not by event date — callers that need
-   * chronological data must sort afterwards.
+   * chronological data must sort afterwards. `truncated` is true when a
+   * `nextCursor` was still pending at the cap: the range then contains rows
+   * the caller never saw, so aggregates over the result are partial and the
+   * tool MUST flag it instead of answering silently.
    */
   async getAll<T>(
     path: string,
     query: Record<string, string | number | undefined>,
     req: unknown,
     { maxRows = 200 }: { maxRows?: number } = {},
-  ): Promise<T[]> {
+  ): Promise<{ rows: T[]; truncated: boolean }> {
     const rows: T[] = [];
     let cursor: string | undefined;
     do {
@@ -72,7 +75,7 @@ export class LukiFittiApiClient {
       rows.push(...page.data);
       cursor = page.nextCursor ?? undefined;
     } while (cursor && rows.length < maxRows);
-    return rows.slice(0, maxRows);
+    return { rows: rows.slice(0, maxRows), truncated: cursor !== undefined };
   }
 
   private async toError(res: Response): Promise<ApiRequestError> {

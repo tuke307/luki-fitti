@@ -4,12 +4,10 @@ import { Payload } from '@nestjs/microservices';
 import { z } from 'zod';
 import { SessionStatus, SetType } from '@luki-fitti/common/enums';
 import type { PublicPersonalRecordDto, PublicSessionDto } from '@luki-fitti/common/schemas';
-import { buildExerciseSearchIndex } from '@luki-fitti/common/utils';
 import { LukiFittiApiClient } from '../lukifitti-api.client';
 import {
   clipName,
   errorResult,
-  MAX_ROWS,
   okResult,
   runTool,
   ToolRateLimiter,
@@ -18,7 +16,7 @@ import {
 } from './tool-utils';
 import { resolveRange, RELATIVE_WORDS } from './mcp-date-utils';
 import { weightUnitFor } from './unit';
-import { resolveExercise, weightInUnit, type OutputWeightUnit } from './insights';
+import { exerciseIndex, resolveExercise, weightInUnit, type OutputWeightUnit } from './insights';
 
 const dateInput = z
   .string()
@@ -113,26 +111,27 @@ export class SessionsTool {
     return runTool(this.limiter, req, async () => {
       const range = resolveRange(input);
       const unit = await weightUnitFor(this.api, req);
-      const sessions = await this.api.getAll<PublicSessionDto>(
+      const fetched = await this.api.getAll<PublicSessionDto>(
         '/v1/sessions',
         { include: 'exercises', from: range.from, to: range.to, limit: 50 },
         req,
-        { maxRows: MAX_ROWS },
+        { maxRows: 400 },
       );
-      const rows = sessions
+      const rows = fetched.rows
         .filter((s) => s.status === SessionStatus.COMPLETED)
         .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
-      const { rows: page, truncated } = truncateRows(
+      const { rows: page, truncated: rowsTruncated } = truncateRows(
         rows.map((s) => sessionRow(s, unit)),
         input.limit,
       );
+      const truncated = rowsTruncated || fetched.truncated;
       return okResult(
         `${page.length} session(s), newest first${truncated ? ' (truncated)' : ''}.`,
         {
           weightUnit: unit,
           sessions: page,
           truncated,
-          hint: truncated ? 'Narrow the date range or lower the limit.' : undefined,
+          hint: truncated ? 'Narrow the date range' : undefined,
         },
       );
     });
@@ -180,10 +179,11 @@ export class SessionsTool {
       let records = page.data;
       if (input.exercise) {
         // Resolve against the PR list itself — the tool stays read:sessions-only.
-        const index = buildExerciseSearchIndex(
-          records.map((r) => ({ id: r.exerciseId, name: r.exerciseName, tags: [] })) as never,
+        const lookup = exerciseIndex(
+          records.map((r) => ({ id: r.exerciseId, name: r.exerciseName })),
+          () => [],
         );
-        const resolution = resolveExercise(index, input.exercise);
+        const resolution = resolveExercise(lookup, input.exercise);
         if (resolution.kind === 'none') {
           return errorResult(`No exercise matches "${clipName(input.exercise)}".`);
         }

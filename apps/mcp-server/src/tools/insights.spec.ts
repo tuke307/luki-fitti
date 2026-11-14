@@ -61,7 +61,7 @@ const set = (n: number, setType: string, weightKg: number | null, reps: number |
 });
 
 describe('resolveExercise', () => {
-  const index = exerciseIndex(EXERCISES);
+  const index = exerciseIndex(EXERCISES, (e) => e.tags);
 
   it('resolves an exact folded-name match even when siblings exist', () => {
     const r = resolveExercise(index, 'bench press barbell');
@@ -88,6 +88,18 @@ describe('resolveExercise', () => {
 
   it('returns none when nothing matches', () => {
     assert.equal(resolveExercise(index, 'zzz-no-such-lift').kind, 'none');
+  });
+
+  it('prefers an exact folded-name match even when another result scores higher', () => {
+    const boosted = exerciseIndex(
+      [exercise('e5', 'Deep Squat'), exercise('e6', 'Squat')],
+      (e) => e.tags,
+    );
+    // The scorer's optional boost pushes the non-exact hit above the exact one.
+    boosted.index.boost = (e) => (e.name === 'Deep Squat' ? 0.5 : 0);
+    const r = resolveExercise(boosted, 'squat');
+    assert.equal(r.kind, 'resolved');
+    if (r.kind === 'resolved') assert.equal(r.exercise.id, 'e6');
   });
 });
 
