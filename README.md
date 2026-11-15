@@ -1,12 +1,50 @@
+<div align="center">
+
 # LukiFitti
 
-Offline-first gym workout tracker, progressive overload engine, and stretching studio for **Web (PWA)**, **iPhone (iOS 26+)**, and **Apple Watch (watchOS 26+)**.
+**The free, open-source workout tracker you train with your friends.**
 
-[Download on the App Store](https://apps.apple.com/app/lukifitti/id6831508360) · [Open the web app](https://app.luki-fitti.tony-luke.de)
+Offline-first workouts, progressive overload, stretching, nutrition and a social layer with
+leagues, duels and raid bosses, for **Web (PWA)**, **iPhone (iOS 26+)** and
+**Apple Watch (watchOS 26+)**. No subscription, no ads, no paywall. Ever.
+
+[![CI](https://github.com/tuke307/luki-fitti/actions/workflows/ci.yaml/badge.svg)](https://github.com/tuke307/luki-fitti/actions/workflows/ci.yaml)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/tuke307/luki-fitti?style=flat)](https://github.com/tuke307/luki-fitti/stargazers)
+[![Contributors](https://img.shields.io/github/contributors/tuke307/luki-fitti)](https://github.com/tuke307/luki-fitti/graphs/contributors)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+[Download on the App Store](https://apps.apple.com/app/lukifitti/id6831508360) ·
+[Open the web app](https://app.luki-fitti.tony-luke.de) ·
+[Documentation](https://docs.luki-fitti.tony-luke.de) ·
+[Roadmap](https://github.com/users/tuke307/projects/4) ·
+[Contributing](CONTRIBUTING.md)
+
+</div>
 
 ---
 
+## Why LukiFitti
+
+Most good workout apps hide progression, history export or AI behind a monthly subscription.
+LukiFitti is built in the open by people who lift, and it stays free for everyone: the code is
+AGPL-3.0, your data is exportable at any time, and AI runs on your own key. If something is
+missing, you can build it — and it ships to everyone in the next release.
+
 ## Features
+
+### Train with friends (new in 2.0)
+
+- **Friends:** add people by username, invite link, QR code or (hashed, on-device) contact
+  matching. Profiles are friends-only by default.
+- **Effort points and leagues:** fair points relative to your own goal, a friends leaderboard
+  and weekly leagues from Bronze to Titan with promotion and demotion.
+- **Duels and streaks:** 1v1 weekly duels and shared weekly streaks with a friend.
+- **Raid bosses:** a community boss every week and squad raids with your friends, rendered as
+  procedural 3D bosses on web (three.js) and iPhone (SceneKit).
+- **Push notifications** that roast you into training, with a switch for every type.
+
+### Train
 
 - **Offline-First Workout Execution:** Start, pause, swap backup exercises, and log sets without an internet connection on Web (`IndexedDB`) or Apple devices (`LukiFittiStore`).
 - **Statistical Progressive Overload:** Blended Epley + Brzycki 1RM estimation, EWMA smoothing, OLS trend slope, and inline set progression suggestions (`+2.5 kg`, `+1 rep`) with Apple Watch Heart Rate Recovery fatigue detection.
@@ -15,6 +53,33 @@ Offline-first gym workout tracker, progressive overload engine, and stretching s
 - **Calorie & Macro Tracking:** Log meals by hand (offline-capable), daily goals, intake vs. estimated workout burn, 7-day trend.
 - **Admin Portal & Opt-in AI:** `/admin` for user access and AI settings; AI workout planner and meal-photo and meal-text calorie estimates for everyone with an OpenRouter key. See [docs/admin-ai-nutrition.md](docs/admin-ai-nutrition.md). Roadmap: [GitHub project board](https://github.com/users/tuke307/projects/4).
 - **Bilingual (`EN` / `DE`):** Full English and German interface and exercise search aliases.
+
+### Build on it
+
+- **Public API and personal API keys:** scoped, read-only keys and a stable `/api/v1` for your
+  sessions, workouts, nutrition and body data. See the
+  [API reference](https://docs.luki-fitti.tony-luke.de).
+- **MCP server:** let AI assistants answer questions about your own training. See
+  [docs/mcp.md](docs/mcp.md).
+- **Import from other apps:** GymLife, Alpha Progression and a documented import format. See
+  [docs/import-format.md](docs/import-format.md).
+
+---
+
+## Community
+
+LukiFitti is a community project and every kind of help counts:
+
+- **Use it and tell us what's missing:** open an
+  [issue](https://github.com/tuke307/luki-fitti/issues/new/choose) for bugs and feature ideas.
+- **Pick something from the [roadmap](https://github.com/users/tuke307/projects/4):** issues
+  labelled `good first issue` are a good start.
+- **Contribute code, translations or docs:** see [CONTRIBUTING.md](CONTRIBUTING.md). Regular
+  contributors get access to the KPI dashboard and analytics.
+- **Leave a star** if you like the project — it helps others find it.
+
+Design decisions are recorded as ADRs in [`docs/adr/`](docs/adr/README.md), so you can see why
+things are the way they are before you change them.
 
 ---
 
@@ -25,7 +90,8 @@ luki-fitti/
 ├── apps/
 │   ├── web/            # Next.js 16 + React 19 + Tailwind CSS v4 PWA
 │   ├── api/            # NestJS 12 REST API (Express 5, Swagger, Cookie + Bearer Auth)
-│   ├── email-worker/   # BullMQ transactional email worker (MJML templates)
+│   ├── email-worker/   # BullMQ worker for transactional email and push notifications
+│   ├── mcp-server/     # MCP server for AI assistants (uses personal API keys)
 │   └── apple/          # Native Swift 6 workspace (iOS 26, watchOS 26, WidgetKit)
 └── packages/
     ├── common/         # Shared Zod schemas, DTOs, enums, starter catalog & 1RM math
