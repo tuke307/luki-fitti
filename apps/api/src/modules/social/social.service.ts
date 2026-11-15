@@ -494,7 +494,7 @@ export class SocialService {
     });
 
     return {
-      week: week ? { workouts: week.goal.done, goal: week.goal.target, points: week.points } : null,
+      week: week ? { workouts: yourWorkouts, goal: week.goal.target, points: week.points } : null,
       badge,
       nextMove,
       friendsWeek,

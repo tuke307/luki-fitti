@@ -680,6 +680,7 @@ describe('SocialService.summary', () => {
     });
     prisma.blocks.add('f4|me');
     prisma.entries.push(
+      weekEntry('me'),
       weekEntry('f1'),
       weekEntry('f1'),
       weekEntry('f2'),
@@ -707,13 +708,15 @@ describe('SocialService.summary', () => {
         ['zoe', 2],
       ],
     );
-    assert.deepEqual(res.week, { workouts: 2, goal: 4, points: 300 });
-    // Me at 0 ledger workouts → the top friend (amy, tie-break by username) wins.
+    // week.workouts is the ledger count (matches friendsWeek and FRIEND_AHEAD's "you"),
+    // not the weekly-goal session counter.
+    assert.deepEqual(res.week, { workouts: 1, goal: 4, points: 300 });
+    // Me at 1 ledger workout → the top friend (amy, tie-break by username) wins.
     assert.deepEqual(res.nextMove, {
       kind: 'FRIEND_AHEAD',
       actor: card('f2', 'amy'),
       them: 2,
-      you: 0,
+      you: 1,
     });
   });
 
