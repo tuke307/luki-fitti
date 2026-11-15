@@ -19,11 +19,11 @@ final class MarketingScreenshotsUITests: XCTestCase {
         // The seeded active workout shows sets, heart rate and the rest timer.
         sleep(8)
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
-        attachment.name = "03-watch"
+        attachment.name = "04-watch"
         attachment.lifetime = .keepAlways
         add(attachment)
     }
 
-    @MainActor func test03WatchWorkoutEn() { shot() }
-    @MainActor func test03WatchWorkoutDe() { shot() }
+    @MainActor func test04WatchWorkoutEn() { shot() }
+    @MainActor func test04WatchWorkoutDe() { shot() }
 }

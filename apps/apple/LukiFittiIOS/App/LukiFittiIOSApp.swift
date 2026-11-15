@@ -1421,6 +1421,35 @@ public final class LukiAppViewModel {
             }
         }
 
+        // Daily goals so the food ring shows "Übrig …" instead of the set-a-goal prompt.
+        store.preferences.dailyKcalGoal = 2200
+        store.preferences.proteinGoalG = 150
+        store.preferences.carbsGoalG = 230
+        store.preferences.fatGoalG = 70
+
+        // A completed session earlier today gives the food tab a plausible ~350 kcal burn
+        // without HealthKit (the server estimate wins over the MET fallback).
+        var todayWorkout = SessionCalculator.createOfflineSessionFromTemplate(
+            template: template,
+            catalog: store.catalog,
+            userId: "local-user",
+            weightUnit: .KG,
+            sourceDevice: .IPHONE
+        )
+        for exIdx in todayWorkout.exercises.indices {
+            for sIdx in todayWorkout.exercises[exIdx].sets.indices {
+                todayWorkout.exercises[exIdx].sets[sIdx].completed = true
+            }
+            todayWorkout.exercises[exIdx].status = .COMPLETED
+        }
+        todayWorkout.status = .COMPLETED
+        todayWorkout.startedAt = iso.string(from: Date().addingTimeInterval(-4 * 3600))
+        todayWorkout.completedAt = iso.string(from: Date().addingTimeInterval(-3 * 3600))
+        todayWorkout.activeDurationSeconds = 2700
+        todayWorkout = SessionCalculator.recalculateSessionTotals(todayWorkout)
+        todayWorkout.estimatedCaloriesKcal = 350
+        store.saveHistorySession(todayWorkout)
+
         // Active session mid-workout only when the shot needs it — otherwise it covers the tabs.
         if args.contains("--uitesting-marketing-session") {
             vm.startSession(from: template, sourceDevice: .IPHONE)
@@ -1453,12 +1482,15 @@ public final class LukiAppViewModel {
     /// the test sends the JPEG base64-encoded (`LUKIFITTI_REVIEW_MEAL_PHOTO_B64`).
     static func seedDemoMeal(vm: LukiAppViewModel, store: OfflineStore) {
         let iso = ISO8601DateFormatter()
-        let mealItems = [
-            MealItemDto(name: "Chicken breast", grams: 150, kcal: 248, proteinG: 46.5, carbsG: 0, fatG: 5.4, source: .AI, confidence: 0.92),
-            MealItemDto(name: "Rice", grams: 200, kcal: 260, proteinG: 5.4, carbsG: 56, fatG: 0.6, source: .AI, confidence: 0.88),
-            MealItemDto(name: "Broccoli", grams: 120, kcal: 41, proteinG: 3.4, carbsG: 8, fatG: 0.4, source: .AI, confidence: 0.85),
-        ]
         let env = ProcessInfo.processInfo.environment
+        // Item names in the app's marketing language; English when unset (App Review seed).
+        let de = env["LUKIFITTI_MARKETING_LANG"] == "de"
+        let mealItems = [
+            MealItemDto(name: de ? "Hähnchenbrust" : "Grilled chicken breast", grams: 150, kcal: 248, proteinG: 46.5, carbsG: 0, fatG: 5.4, source: .AI, confidence: 0.92),
+            MealItemDto(name: de ? "Reis" : "Rice", grams: 180, kcal: 234, proteinG: 4.9, carbsG: 50, fatG: 0.5, source: .AI, confidence: 0.88),
+            MealItemDto(name: de ? "Ofengemüse" : "Roasted vegetables", grams: 120, kcal: 110, proteinG: 3.2, carbsG: 11, fatG: 6.0, source: .AI, confidence: 0.85),
+            MealItemDto(name: de ? "Joghurt-Dressing" : "Yogurt sauce", grams: 40, kcal: 52, proteinG: 2.8, carbsG: 3.4, fatG: 3.0, source: .AI, confidence: 0.4),
+        ]
         var photoData: Data?
         if let photoPath = env["LUKIFITTI_MARKETING_MEAL_PHOTO"] {
             photoData = try? Data(contentsOf: URL(fileURLWithPath: photoPath))
@@ -1471,12 +1503,14 @@ public final class LukiAppViewModel {
             MealPhotoCache.shared.store(photoData, for: "marketing-photo")
         }
 
+        // Fixed 12:30 today so the editor's time row never shows the real clock; no label —
+        // the list and editor fall back to the localized meal type + item names.
+        let noon = Calendar.current.date(bySettingHour: 12, minute: 30, second: 0, of: Date()) ?? Date()
         var meal = MealEntryDto(
             id: "marketing-meal",
             clientEntryId: "marketing-meal",
-            eatenAt: iso.string(from: Date()),
+            eatenAt: iso.string(from: noon),
             mealType: .LUNCH,
-            label: "Lunch",
             items: mealItems,
             photos: photos
         )

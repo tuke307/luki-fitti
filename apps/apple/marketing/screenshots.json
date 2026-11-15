@@ -66,8 +66,42 @@
       }
     },
     {
+      "id": "meal",
+      "captureTest": "test02MealPhoto",
+      "headline": {
+        "en": "Snap it. See your macros.",
+        "de": "Foto machen. Makros sehen."
+      },
+      "subline": {
+        "en": "AI estimates calories and macros – you check and save.",
+        "de": "Die KI schätzt Kalorien und Makros – du prüfst und speicherst."
+      },
+      "overlays": {
+        "photo": {
+          "src": "assets/demo-meal-square.jpg",
+          "x": 0.6,
+          "y": 0.155,
+          "w": 0.33,
+          "rotate": 4
+        },
+        "card": { "raw": "meal-goal", "crop": [0.036, 0.316, 0.928, 0.227], "y": 0.74, "w": 0.94 }
+      },
+      "overlaysByDevice": {
+        "ipad-13": {
+          "photo": {
+            "src": "assets/demo-meal-square.jpg",
+            "x": 0.66,
+            "y": 0.24,
+            "w": 0.28,
+            "rotate": 4
+          },
+          "card": { "raw": "meal-goal", "crop": [0.016, 0.198, 0.969, 0.159], "y": 0.72, "w": 0.94 }
+        }
+      }
+    },
+    {
       "id": "suggestion",
-      "captureTest": "test02SetSuggestion",
+      "captureTest": "test03SetSuggestion",
       "headline": { "en": "Know when to add weight", "de": "Wissen, wann mehr Gewicht drin ist" },
       "subline": {
         "en": "Suggestions from your last session, right where you log.",
@@ -76,7 +110,7 @@
     },
     {
       "id": "watch",
-      "captureTest": "test03WatchWorkout",
+      "captureTest": "test04WatchWorkout",
       "raw": "raw/watch-{lang}",
       "frame": "watch-ultra.png",
       "devices": ["iphone-6.9", "iphone-6.3", "watch"],
@@ -88,7 +122,7 @@
     },
     {
       "id": "exercises",
-      "captureTest": "test04ExerciseLibrary",
+      "captureTest": "test05ExerciseLibrary",
       "headline": {
         "en": "1,100+ exercises with guides",
         "de": "Über 1.100 Übungen mit Anleitung"
@@ -100,23 +134,11 @@
     },
     {
       "id": "history",
-      "captureTest": "test05HistoryProgress",
+      "captureTest": "test06HistoryProgress",
       "headline": { "en": "See your progress week by week", "de": "Fortschritt Woche für Woche" },
       "subline": {
         "en": "History, streaks and totals — without the noise.",
         "de": "Verlauf, Serien und Summen — ohne das Rauschen."
-      }
-    },
-    {
-      "id": "meal",
-      "captureTest": "test06MealPhoto",
-      "headline": {
-        "en": "Snap your meal, get the macros",
-        "de": "Mahlzeit fotografieren, Makros erhalten"
-      },
-      "subline": {
-        "en": "Optional AI on your own OpenRouter key.",
-        "de": "Optionale KI mit deinem eigenen OpenRouter-Schlüssel."
       }
     }
   ]
