@@ -22,7 +22,7 @@ test('prepare-docs strips github-only blocks and keeps the docs home title', () 
   // The README wraps its badge/logo/marketing header in github-only markers;
   // none of it may reach the docs home (external assets 400 on the docs host).
   assert.equal(index.includes('github-only'), false);
-  assert.equal(index.includes('img.shields.io'), false);
+  assert.doesNotMatch(index, /img\.shields\.io/);
   assert.equal(index.includes('/badge.svg'), false);
   assert.equal(index.includes('appstore'), false);
   assert.match(index, /^title: "LukiFitti"$/m);
