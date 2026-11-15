@@ -81,7 +81,7 @@
     "eslint": "^10.12.0",
     "nestgo": "^0.0.7",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "6.0.3",
+    "typescript": "7.0.2",
     "winston": "^3.19.0"
   }
 }
