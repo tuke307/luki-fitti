@@ -42,7 +42,6 @@ import { ProfileImportView, requestSettingsPage } from './profile-import-view';
 import { NutritionView } from './nutrition/nutrition-view';
 import { GlassIconButton } from './settings/settings-row';
 import { AI_KEY_NAVIGATE_EVENT } from '@/lib/ai/ai-key-required';
-import { OPEN_SETTINGS_EVENT } from '@/lib/settings/open-settings';
 import { migrateToAppOrigin, shouldMigrateToAppOrigin } from '@/lib/site/app-origin-migration';
 import { APP_ORIGIN, SITE_HOSTNAMES } from '@/lib/site/config';
 import { parseOpenParam } from '@/lib/social/deep-link';
@@ -291,18 +290,6 @@ export function PwaShell() {
     const onOpenAiKey = () => setProfileOpen(true);
     window.addEventListener(AI_KEY_NAVIGATE_EVENT, onOpenAiKey);
     return () => window.removeEventListener(AI_KEY_NAVIGATE_EVENT, onOpenAiKey);
-  }, []);
-
-  // Cross-feature "open Settings on <page>" requests (e.g. Social → account).
-  useEffect(() => {
-    const onOpenSettings = (event: Event) => {
-      const page = (event as CustomEvent<{ page?: Parameters<typeof requestSettingsPage>[0] }>)
-        .detail?.page;
-      if (page) requestSettingsPage(page);
-      setProfileOpen(true);
-    };
-    window.addEventListener(OPEN_SETTINGS_EVENT, onOpenSettings);
-    return () => window.removeEventListener(OPEN_SETTINGS_EVENT, onOpenSettings);
   }, []);
 
   useEffect(() => {

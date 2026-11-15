@@ -1072,6 +1072,7 @@ public enum LukiStrings {
         "Nothing here yet.": "Noch nichts hier.",
         "Pause friends features": "Freunde-Funktionen pausieren",
         "Pick a username so friends can find you.": "Wähle einen Benutzernamen, damit Freunde dich finden können.",
+        "Choose username": "Benutzernamen wählen",
         "Push enabled on this device": "Push auf diesem Gerät aktiviert",
         "Reason": "Grund",
         "Remove @%@ as a friend?": "@%@ als Freund entfernen?",

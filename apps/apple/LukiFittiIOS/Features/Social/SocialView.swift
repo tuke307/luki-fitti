@@ -220,41 +220,19 @@ public struct SocialView: View {
 
     @ViewBuilder
     private var ownCardSection: some View {
-        Section {
-            HStack(spacing: 12) {
-                if let profile = social.profile {
-                    SocialAvatarView(
-                        userId: viewModel.store.currentUser?.id ?? "me",
-                        handle: profile.handle ?? "",
-                        name: profile.name,
-                        avatarUrl: profile.avatarUrl,
-                        social: social,
-                        size: 52
-                    )
-                    VStack(alignment: .leading, spacing: 2) {
-                        if let handle = profile.handle {
-                            Text("@\(handle)").font(.headline)
-                        } else {
-                            Text(tr("Pick a username so friends can find you."))
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        if let name = profile.name, !name.isEmpty {
-                            Text(name).font(.subheadline).foregroundStyle(.secondary)
-                        }
-                    }
+        if let profile = social.profile, profile.handle == nil {
+            Section {
+                HStack(spacing: 12) {
+                    Text(tr("Pick a username so friends can find you."))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                     Spacer()
-                    Button(tr("Edit profile")) {
-                        if profile.handle != nil { viewModel.openAccountSettings() } else { showOnboarding = true }
-                    }
-                    .font(.subheadline)
-                    .accessibilityIdentifier("ios.social.editProfileButton")
-                } else {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, alignment: .center)
+                    Button(tr("Choose username")) { showOnboarding = true }
+                        .font(.subheadline)
+                        .accessibilityIdentifier("ios.social.chooseUsernameButton")
                 }
+                .padding(.vertical, 2)
             }
-            .padding(.vertical, 2)
         }
         Section {
             TrophyShelfView(
