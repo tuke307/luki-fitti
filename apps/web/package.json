@@ -21,7 +21,7 @@
     "docs:screenshots": "playwright test doc-screenshots --project=chromium"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.9.1",
+    "@hookform/resolvers": "^7.0.3",
     "@icons-pack/react-simple-icons": "^13.15.1",
     "@luki-fitti/common": "*",
     "@luki-fitti/logger": "*",
