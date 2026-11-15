@@ -1,18 +1,19 @@
 # Writing migrations and API changes
 
 Publishing a release deploys the database, API and web app within minutes. The iOS app follows
-about a day later, after App Review, and many users update days or weeks after that. Every schema
-and API change therefore has to work for clients that are older than the server.
+once App Review and App Store processing are done — often a day, sometimes several — and many
+users update days or weeks after that. Every schema and API change therefore has to work for
+clients that are older than the server.
 
 ## Who talks to the server at the same time
 
-| Client                             | How long it stays old                                                  |
-| :--------------------------------- | :--------------------------------------------------------------------- |
-| iOS + Watch app, previous version  | at least the ~1 day of App Review, then until each user updates        |
-| Older iOS versions                 | until the user updates (the update notice asks; nothing forces it yet) |
-| Web PWA with a cached bundle       | until the service worker picks up the new build and the page reloads   |
-| Offline outboxes (web, iOS, Watch) | queued changes are replayed later, in the shape of the old client      |
-| Previous API container             | briefly during a deploy, and again if you roll back to an older tag    |
+| Client                             | How long it stays old                                                             |
+| :--------------------------------- | :-------------------------------------------------------------------------------- |
+| iOS + Watch app, previous version  | while App Review and processing run (a day or more), then until each user updates |
+| Older iOS versions                 | until the user updates (the update notice asks; nothing forces it yet)            |
+| Web PWA with a cached bundle       | until the service worker picks up the new build and the page reloads              |
+| Offline outboxes (web, iOS, Watch) | queued changes are replayed later, in the shape of the old client                 |
+| Previous API container             | briefly during a deploy, and again if you roll back to an older tag               |
 
 `db-migrate` runs `prisma migrate deploy` before the new API starts. Prisma has no down migrations:
 rolling back means redeploying the old tag against the **new** schema.
