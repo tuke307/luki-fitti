@@ -23,7 +23,7 @@ public final class SocialStore {
     public var requestedSection: SocialSectionTarget?
     /// Invite token received via universal link while signed out — accepted after sign-in.
     public var pendingInviteToken: String?
-    /// One onboarding presentation per launch while the user has no handle.
+    /// One onboarding presentation per launch while the user has no username.
     public var onboardingDismissedThisLaunch = false
     public var lastError: String?
 
@@ -66,7 +66,7 @@ public final class SocialStore {
         user?.social?.enabled ?? false
     }
 
-    public var hasHandle: Bool { profile?.handle != nil }
+    public var hasUsername: Bool { profile?.username != nil }
 
     // MARK: - Refresh
 
@@ -279,7 +279,7 @@ public final class SocialStore {
         let rank = league.cohort?.members.first(where: { $0.isSelf })?.rank
         let duel = duels?.active.first.map {
             DuelWatchSnapshot(
-                opponentHandle: $0.opponent.handle,
+                opponentUsername: $0.opponent.username,
                 you: $0.you,
                 them: $0.them,
                 daysLeft: $0.daysLeft ?? 0,

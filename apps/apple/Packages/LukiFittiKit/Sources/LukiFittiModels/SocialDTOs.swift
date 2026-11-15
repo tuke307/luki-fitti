@@ -33,81 +33,81 @@ public enum SocialNotificationKind: String, Codable, Sendable, Equatable, Hashab
 /// The `social` block of `GET /auth/me` — gates the Social tab and push features.
 public struct UserSocialDto: Codable, Sendable, Equatable, Hashable {
     public var enabled: Bool
-    public var handle: String?
+    public var username: String?
     /// League arena (PR 2); nil for servers predating the field or league-less users.
     public var arena: Arena?
 
-    public init(enabled: Bool, handle: String? = nil, arena: Arena? = nil) {
+    public init(enabled: Bool, username: String? = nil, arena: Arena? = nil) {
         self.enabled = enabled
-        self.handle = handle
+        self.username = username
         self.arena = arena
     }
 }
 
 public struct SocialProfileDto: Codable, Sendable, Equatable, Hashable {
-    public var handle: String?
+    public var username: String?
     public var name: String?
     public var avatarUrl: String?
     public var discoverableByEmail: Bool
     public var socialPaused: Bool
-    /// ISO date until which the handle is locked (nil = changeable now).
-    public var handleChangeAvailableAt: String?
+    /// ISO date until which the username is locked (nil = changeable now).
+    public var usernameChangeAvailableAt: String?
 
     public init(
-        handle: String? = nil,
+        username: String? = nil,
         name: String? = nil,
         avatarUrl: String? = nil,
         discoverableByEmail: Bool = true,
         socialPaused: Bool = false,
-        handleChangeAvailableAt: String? = nil
+        usernameChangeAvailableAt: String? = nil
     ) {
-        self.handle = handle
+        self.username = username
         self.name = name
         self.avatarUrl = avatarUrl
         self.discoverableByEmail = discoverableByEmail
         self.socialPaused = socialPaused
-        self.handleChangeAvailableAt = handleChangeAvailableAt
+        self.usernameChangeAvailableAt = usernameChangeAvailableAt
     }
 }
 
 public struct UpdateSocialProfileDto: Encodable, Sendable {
-    public var handle: String?
+    public var username: String?
     public var name: String?
     public var discoverableByEmail: Bool?
     public var socialPaused: Bool?
 
-    public init(handle: String? = nil, name: String? = nil, discoverableByEmail: Bool? = nil, socialPaused: Bool? = nil) {
-        self.handle = handle
+    public init(username: String? = nil, name: String? = nil, discoverableByEmail: Bool? = nil, socialPaused: Bool? = nil) {
+        self.username = username
         self.name = name
         self.discoverableByEmail = discoverableByEmail
         self.socialPaused = socialPaused
     }
 }
 
-public enum HandleUnavailableReason: String, Codable, Sendable, Equatable, Hashable {
+public enum UsernameUnavailableReason: String, Codable, Sendable, Equatable, Hashable {
     case invalid
     case reserved
     case blocked
     case taken
 }
 
-public struct HandleAvailabilityDto: Codable, Sendable, Equatable, Hashable {
+public struct UsernameAvailabilityDto: Codable, Sendable, Equatable, Hashable {
     public var available: Bool
-    public var reason: HandleUnavailableReason?
+    public var reason: UsernameUnavailableReason?
 }
 
 /// Public card — the only shape strangers ever see. `name` is friends/self-only.
 public struct SocialCardDto: Codable, Sendable, Equatable, Hashable, Identifiable {
     public var userId: String
-    public var handle: String
+    public var username: String
     public var avatarUrl: String?
     public var name: String?
 
     public var id: String { userId }
 
-    public init(userId: String, handle: String, avatarUrl: String? = nil, name: String? = nil) {
+    public init(userId: String, username: String, avatarUrl: String? = nil, name: String? = nil) {
         self.userId = userId
-        self.handle = handle
+        self.username = username
         self.avatarUrl = avatarUrl
         self.name = name
     }
@@ -115,16 +115,16 @@ public struct SocialCardDto: Codable, Sendable, Equatable, Hashable, Identifiabl
 
 public struct SocialUserDto: Codable, Sendable, Equatable, Hashable, Identifiable {
     public var userId: String
-    public var handle: String
+    public var username: String
     public var avatarUrl: String?
     public var name: String?
     public var relation: SocialRelation
 
     public var id: String { userId }
 
-    public init(userId: String, handle: String, avatarUrl: String? = nil, name: String? = nil, relation: SocialRelation) {
+    public init(userId: String, username: String, avatarUrl: String? = nil, name: String? = nil, relation: SocialRelation) {
         self.userId = userId
-        self.handle = handle
+        self.username = username
         self.avatarUrl = avatarUrl
         self.name = name
         self.relation = relation

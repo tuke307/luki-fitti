@@ -14,7 +14,7 @@ function textFor(
   t: ReturnType<typeof useLocale>['t'],
   format: (tpl: string, p: Record<string, string | number>) => string,
 ): string {
-  const actor = n.actor ? `@${n.actor.handle}` : '';
+  const actor = n.actor ? `@${n.actor.username}` : '';
   switch (n.kind) {
     case NotificationKind.FRIEND_REQUEST:
       return format(t.social.kindFriendRequest, { actor });
@@ -113,7 +113,7 @@ export function InboxSheet({
             <UserAvatar
               avatarUrl={n.actor?.avatarUrl}
               name={n.actor?.name}
-              handle={n.actor?.handle}
+              username={n.actor?.username}
             />
             <div className="min-w-0 flex-1">
               <p className={`text-[0.9375rem] ${n.readAt ? 'text-muted-foreground' : ''}`}>

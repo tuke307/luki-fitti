@@ -36,13 +36,13 @@ struct SocialInviteSheet: View {
                 } else if let inviter {
                     SocialAvatarView(
                         userId: inviter.userId,
-                        handle: inviter.handle,
+                        username: inviter.username,
                         name: inviter.name,
                         avatarUrl: inviter.avatarUrl,
                         social: viewModel.social,
                         size: 72
                     )
-                    Text(tr("@%@ invited you to be friends on LukiFitti", inviter.handle))
+                    Text(tr("@%@ invited you to be friends on LukiFitti", inviter.username))
                         .font(.headline)
                         .multilineTextAlignment(.center)
                     Button(tr("Accept invite")) {

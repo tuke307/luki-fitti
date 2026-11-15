@@ -36,7 +36,7 @@ interface FriendRowProps {
 }
 
 /**
- * One user row: avatar + @handle (+ streak chip and weekly progress) + inline
+ * One user row: avatar + @username (+ streak chip and weekly progress) + inline
  * actions + a ⋯ menu. The menu carries duel/streak actions first, then
  * Remove friend / Block / Report (both confirm destructively).
  */
@@ -81,10 +81,10 @@ export function FriendRow({
         onClick={() => onView?.(user)}
         disabled={!onView}
       >
-        <UserAvatar avatarUrl={user.avatarUrl} name={user.name} handle={user.handle} />
+        <UserAvatar avatarUrl={user.avatarUrl} name={user.name} username={user.username} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <p className="truncate text-[0.9375rem] font-medium">@{user.handle}</p>
+            <p className="truncate text-[0.9375rem] font-medium">@{user.username}</p>
             {streak?.status === FriendStreakStatus.ACTIVE && (
               <span
                 className="flex items-center gap-0.5 rounded-full bg-orange-500/15 px-1.5 py-0.5 text-[0.75rem] font-semibold text-orange-500"
@@ -121,7 +121,7 @@ export function FriendRow({
             <button
               type="button"
               data-testid={`friend-menu-${user.userId}`}
-              aria-label={format(t.social.menuAria, { handle: `@${user.handle}` })}
+              aria-label={format(t.social.menuAria, { username: `@${user.username}` })}
               className="text-muted-foreground hover:text-foreground flex size-9 items-center justify-center rounded-full transition-colors"
             >
               <MoreHorizontal className="h-5 w-5" />
@@ -198,7 +198,7 @@ export function FriendRow({
         <ConfirmDestructiveDialog
           open={removeOpen}
           onOpenChange={setRemoveOpen}
-          title={format(t.social.removeFriendTitle, { handle: `@${user.handle}` })}
+          title={format(t.social.removeFriendTitle, { username: `@${user.username}` })}
           description={t.social.removeFriendBody}
           confirmLabel={t.common.remove}
           onConfirm={() => onRemove(user.userId)}
@@ -209,7 +209,7 @@ export function FriendRow({
         <ConfirmDestructiveDialog
           open={blockOpen}
           onOpenChange={setBlockOpen}
-          title={format(t.social.blockTitle, { handle: `@${user.handle}` })}
+          title={format(t.social.blockTitle, { username: `@${user.username}` })}
           description={t.social.blockBody}
           confirmLabel={t.social.block}
           onConfirm={() => onBlock(user.userId)}
@@ -220,7 +220,7 @@ export function FriendRow({
         <ConfirmDestructiveDialog
           open={streakEndOpen}
           onOpenChange={setStreakEndOpen}
-          title={format(t.battle.endStreakTitle, { handle: `@${user.handle}` })}
+          title={format(t.battle.endStreakTitle, { username: `@${user.username}` })}
           description={t.battle.endStreakBody}
           confirmLabel={t.battle.endStreak}
           onConfirm={() => onStreakEnd(streak.id)}

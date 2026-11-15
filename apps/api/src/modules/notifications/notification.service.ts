@@ -105,7 +105,7 @@ export class NotificationService {
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,
       include: {
-        actor: { select: { id: true, handle: true, avatarKey: true, avatarUpdatedAt: true } },
+        actor: { select: { id: true, username: true, avatarKey: true, avatarUpdatedAt: true } },
       },
     });
 
@@ -127,10 +127,10 @@ export class NotificationService {
       items.push({
         id: n.id,
         kind: n.kind as NotificationKind,
-        actor: n.actor?.handle
+        actor: n.actor?.username
           ? {
               userId: n.actor.id,
-              handle: n.actor.handle,
+              username: n.actor.username,
               avatarUrl: avatarUrlFor(n.actor),
             }
           : null,

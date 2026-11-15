@@ -7,7 +7,7 @@
         "status": "ACTIVE",
         "opponent": {
           "userId": "804dc174-c3ad-4fa8-af3c-2c348aa1ec6e",
-          "handle": "shotbob_mwflew0b",
+          "username": "shotbob_mwflew0b",
           "avatarUrl": null,
           "name": "E2E Social shot.b"
         },
@@ -29,7 +29,7 @@
         "status": "COMPLETED",
         "opponent": {
           "userId": "804dc174-c3ad-4fa8-af3c-2c348aa1ec6e",
-          "handle": "shotbob_mwflew0b",
+          "username": "shotbob_mwflew0b",
           "avatarUrl": null,
           "name": "E2E Social shot.b"
         },
@@ -48,7 +48,7 @@
       "status": "COMPLETED",
       "opponent": {
         "userId": "804dc174-c3ad-4fa8-af3c-2c348aa1ec6e",
-        "handle": "shotbob_mwflew0b",
+        "username": "shotbob_mwflew0b",
         "avatarUrl": null,
         "name": "E2E Social shot.b"
       },

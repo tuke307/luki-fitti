@@ -15,7 +15,7 @@ const settings = (
     get: async () => ({ socialEnabled, socialBetaUserIds, leaguesEnabled }),
   }) as unknown as AppSettingsService;
 
-const prismaWith = (users: Record<string, { handle: string | null; socialPaused: boolean }>) =>
+const prismaWith = (users: Record<string, { username: string | null; socialPaused: boolean }>) =>
   ({
     user: { findUnique: async ({ where }: { where: { id: string } }) => users[where.id] ?? null },
   }) as unknown as PrismaService;
@@ -59,9 +59,9 @@ describe('SocialEnabledGuard', () => {
 });
 
 describe('SocialAccessService.isEligibleForLeagues', () => {
-  const users = { u1: { handle: 'u1', socialPaused: false } };
+  const users = { u1: { username: 'u1', socialPaused: false } };
 
-  it('requires leaguesEnabled, social enabled, a handle and no pause', async () => {
+  it('requires leaguesEnabled, social enabled, a username and no pause', async () => {
     const prisma = prismaWith(users);
     assert.equal(
       await new SocialAccessService(settings(true), prisma).isEligibleForLeagues('u1'),
@@ -78,14 +78,14 @@ describe('SocialAccessService.isEligibleForLeagues', () => {
     assert.equal(
       await new SocialAccessService(
         settings(true),
-        prismaWith({ u1: { handle: null, socialPaused: false } }),
+        prismaWith({ u1: { username: null, socialPaused: false } }),
       ).isEligibleForLeagues('u1'),
       false,
     );
     assert.equal(
       await new SocialAccessService(
         settings(true),
-        prismaWith({ u1: { handle: 'u1', socialPaused: true } }),
+        prismaWith({ u1: { username: 'u1', socialPaused: true } }),
       ).isEligibleForLeagues('u1'),
       false,
     );

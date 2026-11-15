@@ -11,9 +11,9 @@ export function resolveApiAssetUrl(url: string | null | undefined): string | nul
 /** Up to two initials for the avatar fallback circle. */
 export function initialsFor(
   name: string | null | undefined,
-  handle: string | null | undefined,
+  username: string | null | undefined,
 ): string {
-  const source = name?.trim() || handle?.trim() || '';
+  const source = name?.trim() || username?.trim() || '';
   return source
     .split(' ')
     .filter(Boolean)

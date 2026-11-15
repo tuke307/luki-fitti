@@ -88,7 +88,7 @@ export class PushSenderService {
     const notification = await this.prisma.notification.findUnique({
       where: { id: notificationId },
       include: {
-        actor: { select: { handle: true } },
+        actor: { select: { username: true } },
         user: {
           select: {
             pushDevices: true,
@@ -101,9 +101,9 @@ export class PushSenderService {
       return;
     }
 
-    // Display names are friends-only: push text uses @handle, else a locale
+    // Display names are friends-only: push text uses @username, else a locale
     // placeholder (a friend request comes from a non-friend).
-    const actorHandle = notification.actor?.handle ?? null;
+    const actorUsername = notification.actor?.username ?? null;
     const payloadJson = (notification.payload ?? {}) as Record<string, unknown>;
     const payload = {
       kind: notification.kind,
@@ -134,7 +134,7 @@ export class PushSenderService {
                 )
               : pushMessageFor(kind, device.locale);
       const message = renderPushMessage(template, {
-        actor: actorHandle ? `@${actorHandle}` : anonymousActorName(device.locale),
+        actor: actorUsername ? `@${actorUsername}` : anonymousActorName(device.locale),
         arena: arenaName(String(payloadJson.toArena ?? payloadJson.fromArena ?? ''), device.locale),
         rank: String(payloadJson.rank ?? ''),
         places: String(payloadJson.placesToPromotion ?? ''),

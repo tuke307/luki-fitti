@@ -300,7 +300,7 @@ describe('PointsService.recordSession', () => {
     await svc.recordSession('u1', 's1');
     assert.deepEqual(leagueStub.placed, [], 'not placed while ineligible');
 
-    opts.eligible = true; // e.g. picked a handle after the first session
+    opts.eligible = true; // e.g. picked a username after the first session
     state.sessions.set('s2', makeSession('s2'));
     await svc.recordSession('u1', 's2');
     assert.deepEqual(leagueStub.placed, ['u1'], 'placed once eligible with a positive score');

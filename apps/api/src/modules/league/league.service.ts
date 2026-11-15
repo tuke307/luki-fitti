@@ -136,7 +136,7 @@ export class LeagueService {
       JOIN "User" u ON u."id" = ws."userId"
       WHERE ws."weekKey" = ${weekKey}
         AND ws."points" > 0
-        AND u."handle" IS NOT NULL
+        AND u."username" IS NOT NULL
         AND u."socialPaused" = false
         AND (cardinality(${betaUserIds}::text[]) = 0 OR u."id" = ANY(${betaUserIds}::text[]))
       GROUP BY u."arena"
@@ -361,7 +361,7 @@ export class LeagueService {
     const beta = settings.socialBetaUserIds;
     const eligible = await tx.user.findMany({
       where: {
-        handle: { not: null },
+        username: { not: null },
         socialPaused: false,
         ...(beta.length > 0 ? { id: { in: beta } } : {}),
       },
@@ -570,8 +570,8 @@ export class LeagueService {
     const [scores, users] = await Promise.all([
       this.prisma.weeklyScore.findMany({ where: { weekKey: key, userId: { in: ids } } }),
       this.prisma.user.findMany({
-        where: { id: { in: ids }, handle: { not: null } },
-        select: { id: true, handle: true, name: true, avatarKey: true, avatarUpdatedAt: true },
+        where: { id: { in: ids }, username: { not: null } },
+        select: { id: true, username: true, name: true, avatarKey: true, avatarUpdatedAt: true },
       }),
     ]);
     const scoreMap = new Map(scores.map((s) => [s.userId, s]));
@@ -667,8 +667,8 @@ export class LeagueService {
     stage: LeagueStage,
   ): Promise<LeagueMemberDto[]> {
     const users = await this.prisma.user.findMany({
-      where: { id: { in: ranked.map((m) => m.userId) }, handle: { not: null } },
-      select: { id: true, handle: true, name: true, avatarKey: true, avatarUpdatedAt: true },
+      where: { id: { in: ranked.map((m) => m.userId) }, username: { not: null } },
+      select: { id: true, username: true, name: true, avatarKey: true, avatarUpdatedAt: true },
     });
     const cards = await this.cardsFor(viewerId, users);
     const n = ranked.length;
@@ -718,7 +718,7 @@ export class LeagueService {
     );
     const cards = new Map<string, ReturnType<typeof cardFor>>();
     for (const user of users) {
-      if (!user.handle) continue;
+      if (!user.username) continue;
       const friendship = friends.get(user.id);
       const relation = resolveRelation(viewerId, user.id, {
         friendship: friendship

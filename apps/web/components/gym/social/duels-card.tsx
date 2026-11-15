@@ -63,14 +63,19 @@ function ActiveDuelRow({
         data-testid={`duel-row-${duel.id}`}
         className="hover:bg-secondary/40 flex w-full items-center gap-3 px-4 py-3 text-left transition-colors"
       >
-        <UserAvatar avatarUrl={me.avatarUrl} name={me.name} handle={me.handle} className="size-9" />
+        <UserAvatar
+          avatarUrl={me.avatarUrl}
+          name={me.name}
+          username={me.username}
+          className="size-9"
+        />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
             <span className="text-[0.9375rem] font-semibold tabular-nums">
               {duel.you.toLocaleString(bcp47)}
             </span>
             <span className="text-muted-foreground truncate text-[0.8125rem]">
-              @{duel.opponent.handle}
+              @{duel.opponent.username}
             </span>
             <span className="text-[0.9375rem] font-semibold tabular-nums">
               {duel.them.toLocaleString(bcp47)}
@@ -83,7 +88,7 @@ function ActiveDuelRow({
         <UserAvatar
           avatarUrl={duel.opponent.avatarUrl}
           name={duel.opponent.name}
-          handle={duel.opponent.handle}
+          username={duel.opponent.username}
           className="size-9"
         />
       </button>
@@ -147,10 +152,10 @@ export function DuelsCard({
                 <UserAvatar
                   avatarUrl={duel.opponent.avatarUrl}
                   name={duel.opponent.name}
-                  handle={duel.opponent.handle}
+                  username={duel.opponent.username}
                 />
                 <p className="min-w-0 flex-1 truncate text-[0.9375rem] font-medium">
-                  @{duel.opponent.handle}
+                  @{duel.opponent.username}
                 </p>
                 <div className="flex gap-1">
                   <Button
@@ -186,10 +191,10 @@ export function DuelsCard({
                 <UserAvatar
                   avatarUrl={duel.opponent.avatarUrl}
                   name={duel.opponent.name}
-                  handle={duel.opponent.handle}
+                  username={duel.opponent.username}
                 />
                 <p className="min-w-0 flex-1 truncate text-[0.9375rem] font-medium">
-                  @{duel.opponent.handle}
+                  @{duel.opponent.username}
                 </p>
                 <Button
                   size="sm"

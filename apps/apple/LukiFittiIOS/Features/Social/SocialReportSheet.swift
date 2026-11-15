@@ -51,7 +51,7 @@ struct SocialReportSheet: View {
                 }
             }
         }
-        .navigationTitle(tr("Report @%@", target.handle))
+        .navigationTitle(tr("Report @%@", target.username))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {

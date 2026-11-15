@@ -176,9 +176,9 @@ model User {
   lastLoginAt              DateTime?
   /// Admin portal permissions (AdminPermission values). Empty = regular user.
   permissions              String[]  @default([])
-  /// Social: unique @handle, stored lowercase; null = invisible to other users.
-  handle                   String?   @unique
-  handleChangedAt          DateTime?
+  /// Social: unique @username, stored lowercase; null = invisible to other users.
+  username                 String?   @unique
+  usernameChangedAt        DateTime?
   /// Storage key of the re-encoded 512px JPEG avatar (private, streamed by the API).
   avatarKey                String?
   avatarUpdatedAt          DateTime?
@@ -1167,7 +1167,7 @@ model UserReport {
   reason            ReportReason
   /// Free-text context, max 500 chars (validated in zod).
   details           String?
-  handleSnapshot    String?
+  usernameSnapshot  String?
   nameSnapshot      String?
   avatarKeySnapshot String?
   status            ReportStatus @default(OPEN)

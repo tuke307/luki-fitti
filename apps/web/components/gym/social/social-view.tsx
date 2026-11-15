@@ -137,9 +137,9 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
     };
   }, [isAuthenticated]);
 
-  // Onboarding: once per browser session when social is on and no handle yet.
+  // Onboarding: once per browser session when social is on and no username yet.
   useEffect(() => {
-    if (!profile || profile.handle !== null || onboardingPrompted.current) return;
+    if (!profile || profile.username !== null || onboardingPrompted.current) return;
     if (sessionStorage.getItem(ONBOARDING_DISMISSED_KEY)) return;
     onboardingPrompted.current = true;
     queueMicrotask(() => setOnboardingOpen(true));
@@ -169,7 +169,7 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
     );
   }
 
-  const handle = user?.social?.handle ?? profile?.handle ?? null;
+  const username = user?.social?.username ?? profile?.username ?? null;
 
   const run = async (fn: () => Promise<unknown>) => {
     try {
@@ -207,7 +207,7 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
         }
       />
 
-      {profile && !handle && (
+      {profile && !username && (
         <div className="bg-card mt-4 flex items-center gap-3 rounded-[1.25rem] p-4">
           <p className="text-muted-foreground min-w-0 flex-1 text-[0.9375rem]">
             {t.social.onboardingBody}
@@ -255,7 +255,7 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
             <DuelsCard
               data={duels}
               me={{
-                handle,
+                username,
                 name: profile?.name ?? null,
                 avatarUrl: profile?.avatarUrl ?? null,
               }}
@@ -348,7 +348,7 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
                 ? duels.active.length + duels.incoming.length + duels.outgoing.length
                 : 0;
               const duelBlockedReason = openDuel
-                ? format(t.battle.challengeExists, { handle: `@${u.handle}` })
+                ? format(t.battle.challengeExists, { username: `@${u.username}` })
                 : openCount >= 3
                   ? t.battle.challengeLimit
                   : null;

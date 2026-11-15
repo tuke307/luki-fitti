@@ -7,14 +7,14 @@ import { cn } from '@luki-fitti/ui/lib/utils';
 interface UserAvatarProps {
   avatarUrl: string | null | undefined;
   name?: string | null;
-  handle?: string | null;
+  username?: string | null;
   className?: string;
 }
 
 /** Avatar image with an initials-circle fallback, keyed off `avatarUpdatedAt` via `?v=`. */
-export function UserAvatar({ avatarUrl, name, handle, className }: UserAvatarProps) {
+export function UserAvatar({ avatarUrl, name, username, className }: UserAvatarProps) {
   const src = resolveApiAssetUrl(avatarUrl);
-  const initials = initialsFor(name, handle);
+  const initials = initialsFor(name, username);
   return (
     <span
       className={cn(

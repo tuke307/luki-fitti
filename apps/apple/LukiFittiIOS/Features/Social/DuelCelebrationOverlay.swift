@@ -23,11 +23,11 @@ struct DuelCelebrationOverlay: View {
     private var loud: Bool { won && !reduceMotion }
     private var title: String {
         if won {
-            return tr("You beat @%@", result.opponent.handle)
+            return tr("You beat @%@", result.opponent.username)
         } else if tie {
             return tr("Even match")
         }
-        return tr("@%@ won this one", result.opponent.handle)
+        return tr("@%@ won this one", result.opponent.username)
     }
     private var score: String {
         func fmt(_ n: Int) -> String {

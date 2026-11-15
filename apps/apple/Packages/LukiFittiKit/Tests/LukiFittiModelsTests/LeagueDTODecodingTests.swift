@@ -78,6 +78,6 @@ final class LeagueDTODecodingTests: XCTestCase {
         let dto = try decode(Resp.self, fixture: "friends")
         XCTAssertEqual(dto.entries.count, 1)
         XCTAssertTrue(dto.entries[0].isSelf)
-        XCTAssertEqual(dto.entries[0].card.handle, "iossocial")
+        XCTAssertEqual(dto.entries[0].card.username, "iossocial")
     }
 }

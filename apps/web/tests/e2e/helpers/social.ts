@@ -49,7 +49,7 @@ export async function setApiKeysEnabledForE2e(enabled: boolean): Promise<void> {
 export async function seedSocialUser(
   prefix: string,
   password = 'SocialE2ePass123!',
-  handle?: string,
+  username?: string,
 ): Promise<SeededSocialUser> {
   const unique = `${Date.now()}-${Math.floor(Math.random() * 100_000)}`;
   const email = `e2e.social.${prefix}.${unique}@lukifitti.test`;
@@ -59,7 +59,7 @@ export async function seedSocialUser(
       name: `E2E Social ${prefix}`,
       passwordHash: await bcrypt.hash(password, 10),
       emailVerified: true,
-      ...(handle ? { handle, handleChangedAt: new Date() } : {}),
+      ...(username ? { username, usernameChangedAt: new Date() } : {}),
     },
   });
   return { id: user.id, email, password, name: `E2E Social ${prefix}` };

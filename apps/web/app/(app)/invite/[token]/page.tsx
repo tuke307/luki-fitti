@@ -17,7 +17,7 @@ const PENDING_INVITE_KEY = 'luki.social.pendingInvite';
 type PageState =
   | { kind: 'loading' }
   | { kind: 'invalid' }
-  | { kind: 'preview'; inviter: { handle: string; avatarUrl: string | null } }
+  | { kind: 'preview'; inviter: { username: string; avatarUrl: string | null } }
   | { kind: 'accepted' };
 
 /**
@@ -50,7 +50,7 @@ export default function InvitePage() {
       .invitePreview(token)
       .then((res) => {
         if (cancelled) return;
-        setState(res.data?.handle ? { kind: 'preview', inviter: res.data } : { kind: 'invalid' });
+        setState(res.data?.username ? { kind: 'preview', inviter: res.data } : { kind: 'invalid' });
       })
       .catch(() => {
         if (!cancelled) setState({ kind: 'invalid' });
@@ -126,11 +126,11 @@ export default function InvitePage() {
         <div className="bg-card w-full max-w-sm space-y-4 rounded-[1.25rem] p-6 text-center">
           <UserAvatar
             avatarUrl={state.inviter.avatarUrl}
-            handle={state.inviter.handle}
+            username={state.inviter.username}
             className="mx-auto size-16"
           />
           <p className="text-[0.9375rem]" data-testid="invite-preview-text">
-            {format(t.invite.invitedBy, { handle: `@${state.inviter.handle}` })}
+            {format(t.invite.invitedBy, { username: `@${state.inviter.username}` })}
           </p>
           <Button
             className="w-full"

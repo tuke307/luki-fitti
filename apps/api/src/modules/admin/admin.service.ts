@@ -322,10 +322,10 @@ export class AdminService {
       });
       // The report's own copy under reports/ keeps the evidence; drop the live object.
       if (target?.avatarKey) await this.storage.deleteMany([target.avatarKey]);
-    } else if (dto.action === 'RESET_HANDLE') {
+    } else if (dto.action === 'RESET_USERNAME') {
       await this.prisma.user.update({
         where: { id: report.reportedId },
-        data: { handle: null, handleChangedAt: null },
+        data: { username: null, usernameChangedAt: null },
       });
     }
 
@@ -343,7 +343,7 @@ function toAdminReportDto(report: {
   reportedId: string;
   reason: string;
   details: string | null;
-  handleSnapshot: string | null;
+  usernameSnapshot: string | null;
   nameSnapshot: string | null;
   avatarKeySnapshot: string | null;
   status: string;
@@ -357,7 +357,7 @@ function toAdminReportDto(report: {
     reportedId: report.reportedId,
     reason: report.reason as AdminReportDto['reason'],
     details: report.details,
-    handleSnapshot: report.handleSnapshot,
+    usernameSnapshot: report.usernameSnapshot,
     nameSnapshot: report.nameSnapshot,
     avatarKeySnapshot: report.avatarKeySnapshot,
     status: report.status as AdminReportDto['status'],

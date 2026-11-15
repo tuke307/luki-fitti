@@ -13,11 +13,11 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import { logger } from '@luki-fitti/logger';
 import { NotificationKind, ReportReason } from '@luki-fitti/common/enums';
-import { checkHandle, nextHandleChangeAt, normalizeHandle } from '@luki-fitti/common/utils';
+import { checkUsername, nextUsernameChangeAt, normalizeUsername } from '@luki-fitti/common/utils';
 import type {
   FriendInviteDto,
   FriendListsDto,
-  HandleAvailabilityDto,
+  UsernameAvailabilityDto,
   SocialCardDto,
   SocialProfileDto,
   SocialRelation,
@@ -51,7 +51,7 @@ type UserRow = CardSource;
 
 const CARD_SELECT = {
   id: true,
-  handle: true,
+  username: true,
   name: true,
   avatarKey: true,
   avatarUpdatedAt: true,
@@ -89,30 +89,30 @@ export class SocialService {
         ...CARD_SELECT,
         discoverableByEmail: true,
         socialPaused: true,
-        handleChangedAt: true,
+        usernameChangedAt: true,
       },
     });
     return this.toProfileDto(user);
   }
 
   private toProfileDto(user: {
-    handle: string | null;
+    username: string | null;
     name: string | null;
     avatarKey: string | null;
     avatarUpdatedAt: Date | null;
     discoverableByEmail: boolean;
     socialPaused: boolean;
-    handleChangedAt: Date | null;
+    usernameChangedAt: Date | null;
     id: string;
   }): SocialProfileDto {
-    const next = nextHandleChangeAt(user.handleChangedAt);
+    const next = nextUsernameChangeAt(user.usernameChangedAt);
     return {
-      handle: user.handle,
+      username: user.username,
       name: user.name,
       avatarUrl: avatarUrlFor(user),
       discoverableByEmail: user.discoverableByEmail,
       socialPaused: user.socialPaused,
-      handleChangeAvailableAt: next && next.getTime() > Date.now() ? next.toISOString() : null,
+      usernameChangeAvailableAt: next && next.getTime() > Date.now() ? next.toISOString() : null,
     };
   }
 
@@ -121,8 +121,8 @@ export class SocialService {
       where: { id: userId },
       select: {
         id: true,
-        handle: true,
-        handleChangedAt: true,
+        username: true,
+        usernameChangedAt: true,
         name: true,
         avatarKey: true,
         avatarUpdatedAt: true,
@@ -136,22 +136,22 @@ export class SocialService {
     if (dto.discoverableByEmail !== undefined) data.discoverableByEmail = dto.discoverableByEmail;
     if (dto.socialPaused !== undefined) data.socialPaused = dto.socialPaused;
 
-    if (dto.handle !== undefined) {
-      const check = checkHandle(dto.handle);
-      if (!check.ok) throw new BadRequestException(`Handle is not allowed (${check.reason})`);
-      const next = nextHandleChangeAt(user.handleChangedAt);
-      const changing = check.handle !== user.handle;
+    if (dto.username !== undefined) {
+      const check = checkUsername(dto.username);
+      if (!check.ok) throw new BadRequestException(`Username is not allowed (${check.reason})`);
+      const next = nextUsernameChangeAt(user.usernameChangedAt);
+      const changing = check.username !== user.username;
       if (changing && next && next.getTime() > Date.now()) {
-        throw new ForbiddenException(`Handle can next be changed at ${next.toISOString()}`);
+        throw new ForbiddenException(`Username can next be changed at ${next.toISOString()}`);
       }
       if (changing) {
         const taken = await this.prisma.user.findUnique({
-          where: { handle: check.handle },
+          where: { username: check.username },
           select: { id: true },
         });
-        if (taken && taken.id !== userId) throw new ConflictException('Handle is taken');
-        data.handle = check.handle;
-        data.handleChangedAt = new Date();
+        if (taken && taken.id !== userId) throw new ConflictException('Username is taken');
+        data.username = check.username;
+        data.usernameChangedAt = new Date();
       }
     }
 
@@ -162,8 +162,8 @@ export class SocialService {
         data,
         select: {
           id: true,
-          handle: true,
-          handleChangedAt: true,
+          username: true,
+          usernameChangedAt: true,
           name: true,
           avatarKey: true,
           avatarUpdatedAt: true,
@@ -172,17 +172,20 @@ export class SocialService {
         },
       });
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('Handle is taken');
+      if (isUniqueViolation(err)) throw new ConflictException('Username is taken');
       throw err;
     }
     return this.toProfileDto(updated);
   }
 
-  async handleAvailability(viewerId: string, rawHandle: string): Promise<HandleAvailabilityDto> {
-    const check = checkHandle(rawHandle);
+  async usernameAvailability(
+    viewerId: string,
+    rawUsername: string,
+  ): Promise<UsernameAvailabilityDto> {
+    const check = checkUsername(rawUsername);
     if (!check.ok) return { available: false, reason: check.reason };
     const taken = await this.prisma.user.findUnique({
-      where: { handle: check.handle },
+      where: { username: check.username },
       select: { id: true },
     });
     if (taken && taken.id !== viewerId) return { available: false, reason: 'taken' };
@@ -251,7 +254,7 @@ export class SocialService {
       where: { id: targetUserId },
       select: CARD_SELECT,
     });
-    if (!target?.handle || !target.avatarKey) throw new NotFoundException();
+    if (!target?.username || !target.avatarKey) throw new NotFoundException();
     const relation = await this.relation(viewerId, targetUserId);
     if (relation === 'BLOCKED') throw new NotFoundException();
     const { body } = await this.storage.get(target.avatarKey);
@@ -284,12 +287,12 @@ export class SocialService {
     return resolveRelation(viewerId, targetId, await this.relationFacts(viewerId, targetId));
   }
 
-  /** Card for a target user, or null when invisible (blocked or no handle). */
+  /** Card for a target user, or null when invisible (blocked or no username). */
   private async visibleCard(
     viewerId: string,
     target: UserRow,
   ): Promise<{ card: SocialCardDto; relation: SocialRelation } | null> {
-    if (!target.handle) return null;
+    if (!target.username) return null;
     const relation = await this.relation(viewerId, target.id);
     if (relation === 'BLOCKED') return null;
     return { card: cardFor(target, relation), relation };
@@ -297,9 +300,9 @@ export class SocialService {
 
   // ── Discovery ──────────────────────────────────────────────────────────────
 
-  async getUserByHandle(viewerId: string, rawHandle: string): Promise<SocialUserDto> {
+  async getUserByUsername(viewerId: string, rawUsername: string): Promise<SocialUserDto> {
     const target = await this.prisma.user.findUnique({
-      where: { handle: normalizeHandle(rawHandle) },
+      where: { username: normalizeUsername(rawUsername) },
       select: CARD_SELECT,
     });
     const visible = target ? await this.visibleCard(viewerId, target) : null;
@@ -318,9 +321,9 @@ export class SocialService {
     hidden.add(viewerId);
 
     const matches = await this.prisma.user.findMany({
-      where: { handle: { startsWith: q }, id: { notIn: [...hidden] } },
+      where: { username: { startsWith: q }, id: { notIn: [...hidden] } },
       select: CARD_SELECT,
-      orderBy: { handle: 'asc' },
+      orderBy: { username: 'asc' },
       take: 20,
     });
     return Promise.all(
@@ -349,7 +352,7 @@ export class SocialService {
     const dto: FriendListsDto = { friends: [], incoming: [], outgoing: [] };
     for (const row of rows) {
       const other = row.userAId === viewerId ? row.userB : row.userA;
-      if (!other.handle) continue; // users without a handle are invisible
+      if (!other.username) continue; // users without a username are invisible
       if (row.status === 'ACCEPTED') {
         dto.friends.push({ ...cardFor(other, 'FRIEND') });
       } else if (row.requestedById === viewerId) {
@@ -370,23 +373,23 @@ export class SocialService {
     });
   }
 
-  /** Handle-less users are invisible — they can't start or accept friendships either. */
-  private async requireHandle(userId: string): Promise<void> {
+  /** Username-less users are invisible — they can't start or accept friendships either. */
+  private async requireUsername(userId: string): Promise<void> {
     const me = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { handle: true },
+      select: { username: true },
     });
-    if (!me?.handle) throw new NotFoundException('User not found');
+    if (!me?.username) throw new NotFoundException('User not found');
   }
 
   async sendRequest(viewerId: string, targetId: string): Promise<{ relation: SocialRelation }> {
     if (viewerId === targetId) throw new BadRequestException('Cannot friend yourself');
-    await this.requireHandle(viewerId);
+    await this.requireUsername(viewerId);
     const target = await this.prisma.user.findUnique({
       where: { id: targetId },
       select: CARD_SELECT,
     });
-    if (!target?.handle) throw new NotFoundException('User not found');
+    if (!target?.username) throw new NotFoundException('User not found');
 
     const [a, b] = pairKey(viewerId, targetId);
     const facts = await this.relationFacts(viewerId, targetId);
@@ -446,7 +449,7 @@ export class SocialService {
   }
 
   async acceptRequest(viewerId: string, requesterId: string): Promise<void> {
-    await this.requireHandle(viewerId);
+    await this.requireUsername(viewerId);
     const facts = await this.relationFacts(viewerId, requesterId);
     if (facts.blocked) throw new NotFoundException('No incoming request');
     await this.acceptPending(viewerId, requesterId, {
@@ -516,7 +519,7 @@ export class SocialService {
   }
 
   async acceptInvite(viewerId: string, token: string): Promise<{ relation: SocialRelation }> {
-    await this.requireHandle(viewerId);
+    await this.requireUsername(viewerId);
     const invite = await this.findValidInvite(token);
     if (!invite) throw new NotFoundException('Invite not found or expired');
     if (invite.createdById === viewerId) {
@@ -525,7 +528,8 @@ export class SocialService {
 
     const inviter = invite.createdBy;
     const relation = await this.relation(viewerId, inviter.id);
-    if (relation === 'BLOCKED' || !inviter.handle) throw new NotFoundException('Invite not found');
+    if (relation === 'BLOCKED' || !inviter.username)
+      throw new NotFoundException('Invite not found');
     if ((await this.friendCount(viewerId)) >= MAX_FRIENDS) {
       throw new BadRequestException('Friend limit reached');
     }
@@ -565,7 +569,7 @@ export class SocialService {
 
   /**
    * Hashes are matched in memory and discarded — never logged, never persisted.
-   * Only opted-in users (discoverableByEmail) with a handle are returned.
+   * Only opted-in users (discoverableByEmail) with a username are returned.
    */
   async matchContacts(viewerId: string, hashes: string[]): Promise<SocialUserDto[]> {
     const count = await this.incrementCounter(`social:cmatch:${viewerId}`, DAY_SECONDS);
@@ -577,7 +581,7 @@ export class SocialService {
       where: {
         emailLookupHash: { in: unique },
         discoverableByEmail: true,
-        handle: { not: null },
+        username: { not: null },
         id: { not: viewerId },
       },
       select: CARD_SELECT,
@@ -606,7 +610,7 @@ export class SocialService {
     });
     return rows.map((r) => ({
       userId: r.blockedId,
-      handle: r.blocked.handle,
+      username: r.blocked.username,
       avatarUrl: avatarUrlFor(r.blocked),
       blockedAt: r.createdAt.toISOString(),
     }));
@@ -650,7 +654,7 @@ export class SocialService {
     if (viewerId === targetId) throw new BadRequestException('Cannot report yourself');
     const target = await this.prisma.user.findUnique({
       where: { id: targetId },
-      select: { id: true, handle: true, name: true, avatarKey: true },
+      select: { id: true, username: true, name: true, avatarKey: true },
     });
     if (!target) throw new NotFoundException('User not found');
 
@@ -665,7 +669,7 @@ export class SocialService {
         reportedId: targetId,
         reason,
         details,
-        handleSnapshot: target.handle,
+        usernameSnapshot: target.username,
         nameSnapshot: target.name,
       },
       select: { id: true },

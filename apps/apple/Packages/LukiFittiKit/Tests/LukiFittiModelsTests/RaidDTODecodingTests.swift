@@ -40,7 +40,7 @@ final class RaidDTODecodingTests: XCTestCase {
     func testRaidFeed() throws {
         let feed = try decode(RaidFeedDto.self, fixture: "raid-feed")
         XCTAssertFalse(feed.items.isEmpty)
-        let own = try XCTUnwrap(feed.items.first { $0.card.handle.hasPrefix("fx_raider") })
+        let own = try XCTUnwrap(feed.items.first { $0.card.username.hasPrefix("fx_raider") })
         XCTAssertEqual(own.damage, 1300)
         XCTAssertEqual(own.weakSpotDamage, 650)
         XCTAssertEqual(own.topExercise, "Plank")

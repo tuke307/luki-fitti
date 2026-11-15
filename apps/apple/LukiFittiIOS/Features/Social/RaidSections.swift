@@ -358,7 +358,7 @@ struct RaidDetailView: View {
                             .font(.caption.monospacedDigit())
                             .foregroundStyle(.secondary)
                             .frame(width: 28, alignment: .leading)
-                        Text("@\(entry.card.handle)")
+                        Text("@\(entry.card.username)")
                             .font(.subheadline)
                             .lineLimit(1)
                         Spacer()
@@ -381,7 +381,7 @@ struct RaidDetailView: View {
                     .textCase(.uppercase)
                 ForEach(Array(feed.prefix(20).enumerated()), id: \.offset) { _, hit in
                     HStack {
-                        Text("@\(hit.card.handle)")
+                        Text("@\(hit.card.username)")
                             .font(.subheadline)
                             .lineLimit(1)
                         Spacer()
@@ -431,7 +431,7 @@ struct SquadsView: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(invite.squadName).font(.subheadline.weight(.semibold))
-                                    Text(tr("from @%@", invite.invitedBy.handle))
+                                    Text(tr("from @%@", invite.invitedBy.username))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
@@ -542,7 +542,7 @@ struct SquadsView: View {
             }
             ForEach(Array(squad.members.enumerated()), id: \.offset) { _, member in
                 HStack {
-                    Text("@\(member.card.handle)")
+                    Text("@\(member.card.username)")
                         .font(.subheadline)
                         .lineLimit(1)
                     if member.role == .OWNER {
@@ -648,7 +648,7 @@ struct SquadInviteSheet: View {
                         dismiss()
                     }
                 } label: {
-                    Text("@\(friend.handle)")
+                    Text("@\(friend.username)")
                         .foregroundStyle(.primary)
                 }
             }

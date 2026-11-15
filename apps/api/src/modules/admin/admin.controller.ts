@@ -185,7 +185,7 @@ export class AdminController {
   @Patch('reports/:id')
   @UseGuards(CsrfGuard)
   @RequirePermissions(AdminPermission.USERS_MANAGE)
-  @ApiOperation({ summary: 'Resolve/dismiss a report, optionally clearing avatar or handle' })
+  @ApiOperation({ summary: 'Resolve/dismiss a report, optionally clearing avatar or username' })
   resolveReport(
     @CurrentUser() actor: AuthenticatedUser,
     @Param('id', new ParseUUIDPipe()) id: string,

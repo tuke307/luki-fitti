@@ -5,7 +5,7 @@ import { Switch } from '@luki-fitti/ui/components/ui/switch';
 import { toast } from '@luki-fitti/ui/components/ui/sonner';
 import { useLocale } from '@/providers/i18n/locale-context';
 import type { SocialProfileDto } from '@luki-fitti/common/schemas';
-import { normalizeHandle } from '@luki-fitti/common/utils';
+import { normalizeUsername } from '@luki-fitti/common/utils';
 import { socialApi } from '@/lib/social/social-api';
 import { prepareImageForUpload } from '@/lib/images/prepare-image';
 import {
@@ -16,10 +16,10 @@ import {
 } from '@/lib/push/web-push';
 import { MobileSheet } from '../mobile-sheet';
 import { UserAvatar } from './user-avatar';
-import { HandleField, type HandleStatus } from './handle-field';
+import { UsernameField, type UsernameStatus } from './username-field';
 
 /**
- * First-run social setup: handle with live availability, optional avatar,
+ * First-run social setup: username with live availability, optional avatar,
  * "Find me by email" (default on) and a push opt-in button.
  */
 export function SocialOnboardingSheet({
@@ -32,9 +32,9 @@ export function SocialOnboardingSheet({
   profile: SocialProfileDto | null;
 }) {
   const { t } = useLocale();
-  const [handle, setHandle] = useState('');
+  const [username, setUsername] = useState('');
   const [emailLookup, setEmailLookup] = useState(true);
-  const [status, setStatus] = useState<HandleStatus>({ state: 'idle' });
+  const [status, setStatus] = useState<UsernameStatus>({ state: 'idle' });
   const [saving, setSaving] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [pushKey, setPushKey] = useState<string | null>(null);
@@ -46,7 +46,7 @@ export function SocialOnboardingSheet({
   if (open !== prevOpen) {
     setPrevOpen(open);
     if (open) {
-      setHandle(profile?.handle ?? '');
+      setUsername(profile?.username ?? '');
       setEmailLookup(profile?.discoverableByEmail ?? true);
       setAvatarUrl(profile?.avatarUrl ?? null);
       setStatus({ state: 'idle' });
@@ -59,12 +59,12 @@ export function SocialOnboardingSheet({
   }, [open]);
 
   const save = async () => {
-    const normalized = normalizeHandle(handle);
+    const normalized = normalizeUsername(username);
     if (!normalized) return;
     setSaving(true);
     try {
       const res = await socialApi.updateMe({
-        handle: normalized,
+        username: normalized,
         discoverableByEmail: emailLookup,
       });
       if (res.success) onOpenChange(false);
@@ -92,7 +92,7 @@ export function SocialOnboardingSheet({
   };
 
   const canSave =
-    normalizeHandle(handle).length > 0 &&
+    normalizeUsername(username).length > 0 &&
     status.state !== 'checking' &&
     status.state !== 'unavailable';
 
@@ -113,7 +113,7 @@ export function SocialOnboardingSheet({
       <p className="text-muted-foreground mb-5 text-[0.9375rem]">{t.social.onboardingBody}</p>
       <div className="space-y-5">
         <div className="flex items-center gap-4">
-          <UserAvatar avatarUrl={avatarUrl} handle={handle} className="size-16" />
+          <UserAvatar avatarUrl={avatarUrl} username={username} className="size-16" />
           <input
             ref={fileRef}
             type="file"
@@ -135,7 +135,7 @@ export function SocialOnboardingSheet({
           </button>
         </div>
 
-        <HandleField value={handle} onChange={setHandle} onStatus={setStatus} />
+        <UsernameField value={username} onChange={setUsername} onStatus={setStatus} />
 
         <label className="flex items-start justify-between gap-4">
           <span>

@@ -18,8 +18,8 @@ import {
 
 /**
  * Covers the PR 1 social flows end to end: admin enables social (via the DB —
- * no admin credentials ship in the repo), a user picks a handle in onboarding,
- * a second user finds them via handle search, and a third user joins friends
+ * no admin credentials ship in the repo), a user picks a username in onboarding,
+ * a second user finds them via username search, and a third user joins friends
  * through an invite link.
  */
 
@@ -30,12 +30,12 @@ async function signOut(page: Page): Promise<void> {
   await expect(page.getByTestId('header-sync-status')).toContainText(/Guest/i);
 }
 
-/** Fills the onboarding sheet's handle field and confirms — waits for availability. */
-async function completeOnboardingWithHandle(page: Page, handle: string): Promise<void> {
+/** Fills the onboarding sheet's username field and confirms — waits for availability. */
+async function completeOnboardingWithUsername(page: Page, username: string): Promise<void> {
   const sheet = page.getByTestId('social-onboarding-sheet');
   await expect(sheet).toBeVisible({ timeout: 10_000 });
-  await page.getByTestId('handle-input').fill(handle);
-  await expect(page.getByTestId('handle-hint')).toContainText(/Available|Verfügbar/i, {
+  await page.getByTestId('username-input').fill(username);
+  await expect(page.getByTestId('username-hint')).toContainText(/Available|Verfügbar/i, {
     timeout: 10_000,
   });
   await sheet.getByRole('button', { name: /^Done$|^Fertig$/i }).click();
@@ -57,30 +57,30 @@ test.describe('Social: friends, requests and invites', () => {
     await enableSocialForE2e();
   });
 
-  test('users become friends via handle search and via invite link', async ({ page }) => {
+  test('users become friends via username search and via invite link', async ({ page }) => {
     const unique = Date.now().toString(36);
     const [userA, userB, userC] = await Promise.all([
       seedSocialUser('anna'),
       seedSocialUser('bert', undefined, `bert_${unique}`),
       seedSocialUser('cleo', undefined, `cleo_${unique}`),
     ]);
-    const handleA = `anna_${unique}`;
+    const usernameA = `anna_${unique}`;
 
     await resetOfflineStore(page);
 
-    // ── User A signs in and picks a handle in the onboarding sheet ──
+    // ── User A signs in and picks a username in the onboarding sheet ──
     await submitLoginPageForm(page, userA.email, userA.password);
     await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
     await navigateToTab(page, 'social');
-    await completeOnboardingWithHandle(page, handleA);
-    await expect(page.getByText(`@${handleA}`)).toBeVisible({ timeout: 10_000 });
+    await completeOnboardingWithUsername(page, usernameA);
+    await expect(page.getByText(`@${usernameA}`)).toBeVisible({ timeout: 10_000 });
     await signOut(page);
 
-    // ── User B finds A via handle search and sends a request ──
+    // ── User B finds A via username search and sends a request ──
     await signInSeededUser(page, userB);
     await navigateToTab(page, 'social');
     await dismissOnboardingIfShown(page);
-    await page.getByTestId('social-search-input').fill(handleA);
+    await page.getByTestId('social-search-input').fill(usernameA);
     const addBtn = page.getByTestId(`search-add-${userA.id}`);
     await expect(addBtn).toBeVisible({ timeout: 10_000 });
     await addBtn.click();
@@ -109,7 +109,7 @@ test.describe('Social: friends, requests and invites', () => {
     await dismissOnboardingIfShown(page);
 
     await page.goto(invitePath);
-    await expect(page.getByTestId('invite-preview-text')).toContainText(`@${handleA}`, {
+    await expect(page.getByTestId('invite-preview-text')).toContainText(`@${usernameA}`, {
       timeout: 10_000,
     });
     await page.getByTestId('invite-accept-btn').click();

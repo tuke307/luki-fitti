@@ -5,19 +5,19 @@ import LukiFittiDesign
 import LukiFittiStore
 
 /// Edit social profile as plain List/Form sections for Settings → Profile & account:
-/// avatar (PhotosPicker, downscaled to ≤512 px JPEG), handle with live availability,
+/// avatar (PhotosPicker, downscaled to ≤512 px JPEG), username with live availability,
 /// display name, "find me by email" and pause.
 struct SocialProfileSections: View {
     @Bindable var viewModel: LukiAppViewModel
     @Environment(\.lukiLocale) private var tr
 
-    @State private var handle: String
+    @State private var username: String
     @State private var name: String
     @State private var discoverableByEmail: Bool
     @State private var socialPaused: Bool
-    @State private var availability: HandleAvailabilityDto?
-    @State private var checkingHandle = false
-    @State private var handleCheckTask: Task<Void, Never>?
+    @State private var availability: UsernameAvailabilityDto?
+    @State private var checkingUsername = false
+    @State private var usernameCheckTask: Task<Void, Never>?
     @State private var pickedPhoto: PhotosPickerItem?
     @State private var saving = false
     @State private var error: String?
@@ -27,19 +27,19 @@ struct SocialProfileSections: View {
     init(viewModel: LukiAppViewModel) {
         self.viewModel = viewModel
         let p = viewModel.social.profile
-        _handle = State(initialValue: p?.handle ?? "")
+        _username = State(initialValue: p?.username ?? "")
         _name = State(initialValue: p?.name ?? "")
         _discoverableByEmail = State(initialValue: p?.discoverableByEmail ?? true)
         _socialPaused = State(initialValue: p?.socialPaused ?? false)
-        lockedUntil = p?.handleChangeAvailableAt.flatMap { LukiDate.parseISO($0) }
+        lockedUntil = p?.usernameChangeAvailableAt.flatMap { LukiDate.parseISO($0) }
     }
 
     private var social: SocialStore { viewModel.social }
-    private var handleLocked: Bool { (lockedUntil ?? .distantPast) > Date() }
-    private var handleChanged: Bool { handle.lowercased() != (social.profile?.handle ?? "") }
+    private var usernameLocked: Bool { (lockedUntil ?? .distantPast) > Date() }
+    private var usernameChanged: Bool { username.lowercased() != (social.profile?.username ?? "") }
     private var canSave: Bool {
         guard !saving else { return false }
-        if handleChanged && (handleLocked || availability?.available != true) { return false }
+        if usernameChanged && (usernameLocked || availability?.available != true) { return false }
         return true
     }
 
@@ -47,27 +47,27 @@ struct SocialProfileSections: View {
         avatarSection
 
         Section {
-            TextField(tr("Username"), text: $handle)
+            TextField(tr("Username"), text: $username)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
-                .disabled(handleLocked)
-                .accessibilityIdentifier("ios.social.handleField")
-                .onChange(of: handle) { _, value in
+                .disabled(usernameLocked)
+                .accessibilityIdentifier("ios.social.usernameField")
+                .onChange(of: username) { _, value in
                     availability = nil
-                    handleCheckTask?.cancel()
+                    usernameCheckTask?.cancel()
                     let normalized = value.lowercased()
-                    guard normalized.count >= 3, handleChanged else { return }
-                    handleCheckTask = Task {
-                        checkingHandle = true
-                        defer { checkingHandle = false }
+                    guard normalized.count >= 3, usernameChanged else { return }
+                    usernameCheckTask = Task {
+                        checkingUsername = true
+                        defer { checkingUsername = false }
                         try? await Task.sleep(nanoseconds: 400_000_000)
                         guard !Task.isCancelled else { return }
-                        availability = try? await viewModel.store.apiClient.handleAvailability(normalized)
+                        availability = try? await viewModel.store.apiClient.usernameAvailability(normalized)
                     }
                 }
-            handleStatus
+            usernameStatus
         } footer: {
-            if handleLocked, let lockedUntil {
+            if usernameLocked, let lockedUntil {
                 Text(tr("You can change your username again on %@.", lockedUntil.formatted(date: .abbreviated, time: .omitted)))
             } else {
                 Text(tr("3–20 characters: a–z, 0–9, underscore."))
@@ -117,8 +117,8 @@ struct SocialProfileSections: View {
     }
 
     @ViewBuilder
-    private var handleStatus: some View {
-        if checkingHandle {
+    private var usernameStatus: some View {
+        if checkingUsername {
             Text(tr("Checking…")).font(.footnote).foregroundStyle(.secondary)
         } else if let availability {
             if availability.available {
@@ -131,7 +131,7 @@ struct SocialProfileSections: View {
         }
     }
 
-    private func reasonText(_ reason: HandleUnavailableReason?) -> String {
+    private func reasonText(_ reason: UsernameUnavailableReason?) -> String {
         switch reason {
         case .taken: return tr("This username is taken.")
         case .reserved: return tr("This username is reserved.")
@@ -145,7 +145,7 @@ struct SocialProfileSections: View {
             HStack(spacing: 12) {
                 SocialAvatarView(
                     userId: viewModel.store.currentUser?.id ?? "me",
-                    handle: social.profile?.handle ?? "",
+                    username: social.profile?.username ?? "",
                     name: name,
                     avatarUrl: social.profile?.avatarUrl,
                     social: social,
@@ -183,8 +183,8 @@ struct SocialProfileSections: View {
         saving = true
         defer { saving = false }
         var dto = UpdateSocialProfileDto()
-        let normalizedHandle = handle.lowercased()
-        if handleChanged && !normalizedHandle.isEmpty { dto.handle = normalizedHandle }
+        let normalizedUsername = username.lowercased()
+        if usernameChanged && !normalizedUsername.isEmpty { dto.username = normalizedUsername }
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
         if trimmedName != (social.profile?.name ?? "") {
             dto.name = trimmedName.isEmpty ? nil : trimmedName

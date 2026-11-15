@@ -153,7 +153,7 @@ export class RaidService {
     });
     const users = await this.prisma.user.findMany({
       where: { id: { in: grouped.map((g) => g.userId) } },
-      select: { id: true, handle: true, name: true, avatarKey: true, avatarUpdatedAt: true },
+      select: { id: true, username: true, name: true, avatarKey: true, avatarUpdatedAt: true },
     });
     const byId = new Map(users.map((u) => [u.id, u]));
 
@@ -161,7 +161,7 @@ export class RaidService {
     const ranked: RaidTopEntryDto[] = [];
     for (const g of grouped) {
       const user = byId.get(g.userId);
-      if (!user?.handle) continue;
+      if (!user?.username) continue;
       const relation = await relationBetween(this.prisma, userId, g.userId);
       if (relation === 'BLOCKED') continue;
       ranked.push({ card: cardFor(user, relation), damage: g._sum.damage ?? 0, rank: 0 });
@@ -211,7 +211,7 @@ export class RaidService {
       take: 21,
       include: {
         user: {
-          select: { id: true, handle: true, name: true, avatarKey: true, avatarUpdatedAt: true },
+          select: { id: true, username: true, name: true, avatarKey: true, avatarUpdatedAt: true },
         },
       },
     });
@@ -219,7 +219,7 @@ export class RaidService {
     const items: RaidFeedHitDto[] = [];
     for (const hit of hits) {
       const user = hit.user as CardSource;
-      if (!user.handle) continue;
+      if (!user.username) continue;
       const relation = await relationBetween(this.prisma, userId, user.id);
       if (relation === 'BLOCKED') continue;
       items.push({
@@ -279,14 +279,14 @@ export class RaidService {
 
     const actor = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { handle: true, socialPaused: true },
+      select: { username: true, socialPaused: true },
     });
-    // Community raids use league-style eligibility (handle + not paused); squad
-    // raids only require a handle — membership was already checked in the query.
+    // Community raids use league-style eligibility (username + not paused); squad
+    // raids only require a username — membership was already checked in the query.
     const eligible = raids.filter((raid) =>
       raid.kind === 'COMMUNITY'
-        ? Boolean(actor?.handle) && !actor?.socialPaused
-        : Boolean(actor?.handle),
+        ? Boolean(actor?.username) && !actor?.socialPaused
+        : Boolean(actor?.username),
     );
 
     const dayKey = berlinDayKey(completedAt);
@@ -389,7 +389,7 @@ export class RaidService {
     const candidates = await this.prisma.user.findMany({
       where: {
         id: { in: active.map((a) => a.userId) },
-        handle: { not: null },
+        username: { not: null },
         socialPaused: false,
       },
       select: { id: true },
@@ -604,9 +604,9 @@ export class RaidService {
     if (raid.finalBlowUserId) {
       const user = await this.prisma.user.findUnique({
         where: { id: raid.finalBlowUserId },
-        select: { id: true, handle: true, name: true, avatarKey: true, avatarUpdatedAt: true },
+        select: { id: true, username: true, name: true, avatarKey: true, avatarUpdatedAt: true },
       });
-      if (user?.handle) {
+      if (user?.username) {
         const relation = await relationBetween(this.prisma, viewerId, user.id);
         if (relation !== 'BLOCKED') finalBlow = cardFor(user, relation);
       }

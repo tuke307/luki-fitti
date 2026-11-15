@@ -5,16 +5,16 @@
  * `crypto.util.ts`, exported via `@luki-fitti/common/utils/crypto`).
  */
 
-export const HANDLE_REGEX = /^[a-z0-9_]{3,20}$/;
+export const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
 
-export const HANDLE_MIN_LENGTH = 3;
-export const HANDLE_MAX_LENGTH = 20;
+export const USERNAME_MIN_LENGTH = 3;
+export const USERNAME_MAX_LENGTH = 20;
 
-/** Days between handle changes; the very first handle is always allowed. */
-export const HANDLE_CHANGE_COOLDOWN_DAYS = 30;
+/** Days between username changes; the very first username is always allowed. */
+export const USERNAME_CHANGE_COOLDOWN_DAYS = 30;
 
-/** Handles that would collide with product routes or impersonate the service. */
-export const RESERVED_HANDLES = new Set([
+/** Usernames that would collide with product routes or impersonate the service. */
+export const RESERVED_USERNAMES = new Set([
   'admin',
   'administrator',
   'api',
@@ -37,10 +37,10 @@ export const RESERVED_HANDLES = new Set([
 ]);
 
 /**
- * Small EN/DE blocklist, matched as substring on the normalised handle.
+ * Small EN/DE blocklist, matched as substring on the normalised username.
  * Deliberately short — this is a courtesy filter, not a classifier.
  */
-const BLOCKED_HANDLE_SUBSTRINGS = [
+const BLOCKED_USERNAME_SUBSTRINGS = [
   'adolf',
   'arsch',
   'bitch',
@@ -68,47 +68,47 @@ const BLOCKED_HANDLE_SUBSTRINGS = [
   'wichser',
 ];
 
-/** Lowercases and trims; returns the canonical stored form of a handle. */
-export function normalizeHandle(input: string): string {
+/** Lowercases and trims; returns the canonical stored form of a username. */
+export function normalizeUsername(input: string): string {
   return input.trim().toLowerCase();
 }
 
-export type HandleCheck =
-  { ok: true; handle: string } | { ok: false; reason: 'invalid' | 'reserved' | 'blocked' };
+export type UsernameCheck =
+  { ok: true; username: string } | { ok: false; reason: 'invalid' | 'reserved' | 'blocked' };
 
 /** Format + reserved + profanity check. Uniqueness is a DB concern, checked separately. */
-export function checkHandle(input: string): HandleCheck {
-  const handle = normalizeHandle(input);
-  if (!HANDLE_REGEX.test(handle)) return { ok: false, reason: 'invalid' };
-  if (RESERVED_HANDLES.has(handle)) return { ok: false, reason: 'reserved' };
-  if (BLOCKED_HANDLE_SUBSTRINGS.some((bad) => handle.includes(bad))) {
+export function checkUsername(input: string): UsernameCheck {
+  const username = normalizeUsername(input);
+  if (!USERNAME_REGEX.test(username)) return { ok: false, reason: 'invalid' };
+  if (RESERVED_USERNAMES.has(username)) return { ok: false, reason: 'reserved' };
+  if (BLOCKED_USERNAME_SUBSTRINGS.some((bad) => username.includes(bad))) {
     return { ok: false, reason: 'blocked' };
   }
-  return { ok: true, handle };
+  return { ok: true, username };
 }
 
 /** Convenience wrapper for callers that only need the boolean. */
-export function isHandleAllowed(input: string): boolean {
-  return checkHandle(input).ok;
+export function isUsernameAllowed(input: string): boolean {
+  return checkUsername(input).ok;
 }
 
 /**
  * Word-level profanity check for free-text names (squad names, display names):
- * every alphanumeric word is matched against the same blocklist as handles,
- * without the handle format/length restrictions.
+ * every alphanumeric word is matched against the same blocklist as usernames,
+ * without the username format/length restrictions.
  */
 export function isNameAllowed(input: string): boolean {
   const words = input
     .toLowerCase()
     .split(/[^a-z0-9äöüß]+/i)
     .filter(Boolean);
-  return words.every((word) => !BLOCKED_HANDLE_SUBSTRINGS.some((bad) => word.includes(bad)));
+  return words.every((word) => !BLOCKED_USERNAME_SUBSTRINGS.some((bad) => word.includes(bad)));
 }
 
-/** Earliest date a user who last changed at `changedAt` may pick a new handle. */
-export function nextHandleChangeAt(changedAt: Date | null): Date | null {
+/** Earliest date a user who last changed at `changedAt` may pick a new username. */
+export function nextUsernameChangeAt(changedAt: Date | null): Date | null {
   if (!changedAt) return null;
-  return new Date(changedAt.getTime() + HANDLE_CHANGE_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
+  return new Date(changedAt.getTime() + USERNAME_CHANGE_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
 }
 
 /** Canonical form used for contact matching: trim + lowercase, UTF-8. */

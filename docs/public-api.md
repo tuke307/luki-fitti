@@ -48,22 +48,22 @@ insufficient_scope` with the required scope in the `required` field.
 
 All endpoints are `GET` and return only your own data.
 
-| Method | Path                        | Scope            | Notes                                  |
-| ------ | --------------------------- | ---------------- | -------------------------------------- |
-| GET    | `/v1/me`                    | `read:profile`   | Name, handle, units, goals (no email). |
-| GET    | `/v1/sessions`              | `read:sessions`  | Session summaries, paginated.          |
-| GET    | `/v1/sessions/:id`          | `read:sessions`  | One session with exercises and sets.   |
-| GET    | `/v1/personal-records`      | `read:sessions`  | Computed personal records.             |
-| GET    | `/v1/workouts`              | `read:workouts`  | Workout templates with exercises.      |
-| GET    | `/v1/folders`               | `read:workouts`  | Workout folders.                       |
-| GET    | `/v1/stretching-routines`   | `read:workouts`  | Stretching routines with exercises.    |
-| GET    | `/v1/exercises`             | `read:workouts`  | Your custom exercises + the catalog.   |
-| GET    | `/v1/meals`                 | `read:nutrition` | Meal entries with items (no photos).   |
-| GET    | `/v1/body-weight`           | `read:body`      | Body weight entries in kg.             |
-| GET    | `/v1/progress/check-ins`    | `read:body`      | Check-in metadata (no photo URLs).     |
-| GET    | `/v1/activity/daily-energy` | `read:activity`  | Active energy per day.                 |
-| GET    | `/v1/activity/workouts`     | `read:activity`  | Imported Apple Health workouts.        |
-| GET    | `/v1/export`                | `export`         | Full workout backup file.              |
+| Method | Path                        | Scope            | Notes                                    |
+| ------ | --------------------------- | ---------------- | ---------------------------------------- |
+| GET    | `/v1/me`                    | `read:profile`   | Name, username, units, goals (no email). |
+| GET    | `/v1/sessions`              | `read:sessions`  | Session summaries, paginated.            |
+| GET    | `/v1/sessions/:id`          | `read:sessions`  | One session with exercises and sets.     |
+| GET    | `/v1/personal-records`      | `read:sessions`  | Computed personal records.               |
+| GET    | `/v1/workouts`              | `read:workouts`  | Workout templates with exercises.        |
+| GET    | `/v1/folders`               | `read:workouts`  | Workout folders.                         |
+| GET    | `/v1/stretching-routines`   | `read:workouts`  | Stretching routines with exercises.      |
+| GET    | `/v1/exercises`             | `read:workouts`  | Your custom exercises + the catalog.     |
+| GET    | `/v1/meals`                 | `read:nutrition` | Meal entries with items (no photos).     |
+| GET    | `/v1/body-weight`           | `read:body`      | Body weight entries in kg.               |
+| GET    | `/v1/progress/check-ins`    | `read:body`      | Check-in metadata (no photo URLs).       |
+| GET    | `/v1/activity/daily-energy` | `read:activity`  | Active energy per day.                   |
+| GET    | `/v1/activity/workouts`     | `read:activity`  | Imported Apple Health workouts.          |
+| GET    | `/v1/export`                | `export`         | Full workout backup file.                |
 
 `/v1/exercises?custom=true` returns only your custom exercises.
 

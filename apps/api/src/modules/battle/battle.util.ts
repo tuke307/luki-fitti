@@ -45,7 +45,7 @@ export async function cardBetween(
   viewerId: string,
   target: CardSource,
 ): Promise<SocialCardDto | null> {
-  if (!target.handle) return null;
+  if (!target.username) return null;
   const relation = await relationBetween(prisma, viewerId, target.id);
   if (relation === 'BLOCKED') return null;
   return cardFor(target, relation);

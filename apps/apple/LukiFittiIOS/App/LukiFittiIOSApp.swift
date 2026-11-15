@@ -1204,11 +1204,11 @@ public final class LukiAppViewModel {
             id: "uitest-social",
             email: "uitest@lukifitti.test",
             name: "UI Tester",
-            social: UserSocialDto(enabled: true, handle: "uitester", arena: .SILVER)
+            social: UserSocialDto(enabled: true, username: "uitester", arena: .SILVER)
         )
-        vm.social.profile = SocialProfileDto(handle: "uitester", name: "UI Tester")
+        vm.social.profile = SocialProfileDto(username: "uitester", name: "UI Tester")
         let opponent = SocialCardDto(
-            userId: "uitest-opponent", handle: "anna", avatarUrl: nil, name: "Anna")
+            userId: "uitest-opponent", username: "anna", avatarUrl: nil, name: "Anna")
         vm.social.friends = FriendListsDto(friends: [opponent])
         vm.social.duels = DuelListDto(
             active: [
@@ -1267,9 +1267,9 @@ public final class LukiAppViewModel {
             id: "uitest-social",
             email: "uitest@lukifitti.test",
             name: "UI Tester",
-            social: UserSocialDto(enabled: true, handle: "uitester", arena: .SILVER)
+            social: UserSocialDto(enabled: true, username: "uitester", arena: .SILVER)
         )
-        vm.social.profile = SocialProfileDto(handle: "uitester", name: "UI Tester")
+        vm.social.profile = SocialProfileDto(username: "uitester", name: "UI Tester")
         let endsAt = ISO8601DateFormatter().string(from: Date().addingTimeInterval(46 * 3600))
         vm.social.raids = RaidListDto(
             community: RaidDto(
@@ -1285,8 +1285,8 @@ public final class LukiAppViewModel {
                 yourDamage: 1_240
             )
         )
-        let anna = SocialCardDto(userId: "uitest-anna", handle: "anna", avatarUrl: nil, name: "Anna")
-        let max = SocialCardDto(userId: "uitest-max", handle: "max", avatarUrl: nil, name: "Max")
+        let anna = SocialCardDto(userId: "uitest-anna", username: "anna", avatarUrl: nil, name: "Anna")
+        let max = SocialCardDto(userId: "uitest-max", username: "max", avatarUrl: nil, name: "Max")
         vm.social.seededRaidDetails["uitest-raid-1"] = RaidDetailDto(
             id: "uitest-raid-1",
             kind: .COMMUNITY,
@@ -1302,7 +1302,7 @@ public final class LukiAppViewModel {
                 RaidTopEntryDto(card: anna, damage: 1_500, rank: 1),
                 RaidTopEntryDto(
                     card: SocialCardDto(
-                        userId: "uitest-social", handle: "uitester", avatarUrl: nil,
+                        userId: "uitest-social", username: "uitester", avatarUrl: nil,
                         name: "UI Tester"),
                     damage: 1_240, rank: 2),
                 RaidTopEntryDto(card: max, damage: 400, rank: 3),
@@ -1325,9 +1325,9 @@ public final class LukiAppViewModel {
             id: "uitest-social",
             email: "uitest@lukifitti.test",
             name: "UI Tester",
-            social: UserSocialDto(enabled: true, handle: "uitester", arena: .SILVER)
+            social: UserSocialDto(enabled: true, username: "uitester", arena: .SILVER)
         )
-        vm.social.profile = SocialProfileDto(handle: "uitester", name: "UI Tester")
+        vm.social.profile = SocialProfileDto(username: "uitester", name: "UI Tester")
         vm.social.raids = RaidListDto(
             pendingResults: [
                 RaidResultDto(
@@ -1351,9 +1351,9 @@ public final class LukiAppViewModel {
             id: "uitest-social",
             email: "uitest@lukifitti.test",
             name: "UI Tester",
-            social: UserSocialDto(enabled: true, handle: "uitester", arena: .SILVER)
+            social: UserSocialDto(enabled: true, username: "uitester", arena: .SILVER)
         )
-        vm.social.profile = SocialProfileDto(handle: "uitester", name: "UI Tester")
+        vm.social.profile = SocialProfileDto(username: "uitester", name: "UI Tester")
         vm.social.league = LeagueCurrentDto(
             weekKey: "2026-W45",
             stage: .GLOBAL,

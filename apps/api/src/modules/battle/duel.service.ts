@@ -50,10 +50,10 @@ export class DuelService {
       relationBetween(this.prisma, challengerId, opponentId),
       this.prisma.user.findUnique({
         where: { id: opponentId },
-        select: { id: true, handle: true, name: true, avatarKey: true, avatarUpdatedAt: true },
+        select: { id: true, username: true, name: true, avatarKey: true, avatarUpdatedAt: true },
       }),
     ]);
-    if (relation !== 'FRIEND' || !opponent?.handle) {
+    if (relation !== 'FRIEND' || !opponent?.username) {
       throw new NotFoundException('Duels are for friends');
     }
 
@@ -469,15 +469,15 @@ export class DuelService {
     const opponentId = iAmChallenger ? duel.opponentId : duel.challengerId;
     const opponent = await this.prisma.user.findUnique({
       where: { id: opponentId },
-      select: { id: true, handle: true, name: true, avatarKey: true, avatarUpdatedAt: true },
+      select: { id: true, username: true, name: true, avatarKey: true, avatarUpdatedAt: true },
     });
     const card = opponent
       ? ((await cardBetween(this.prisma, userId, opponent)) ?? {
           userId: opponent.id,
-          handle: opponent.handle ?? '',
+          username: opponent.username ?? '',
           avatarUrl: null,
         })
-      : { userId: opponentId, handle: '', avatarUrl: null };
+      : { userId: opponentId, username: '', avatarUrl: null };
 
     let outcome: DuelOutcome | null = null;
     if (duel.status === DuelStatus.COMPLETED) {

@@ -142,7 +142,9 @@ const prismaMock = (captured: Record<string, unknown> = {}) =>
         if (model === 'user') {
           return {
             findUnique: async ({ where }: { where: { id: string } }) =>
-              where.id === OWNER ? { id: OWNER, name: 'O', handle: 'oh', preferences: null } : null,
+              where.id === OWNER
+                ? { id: OWNER, name: 'O', username: 'oh', preferences: null }
+                : null,
           };
         }
         return {
@@ -270,7 +272,7 @@ describe('PublicApiService DTO hygiene', () => {
     const me = await svc.getMe(OWNER);
     assert.deepEqual(
       Object.keys(me).sort(),
-      ['goals', 'handle', 'id', 'name', 'distanceUnit', 'weightUnit'].sort(),
+      ['goals', 'username', 'id', 'name', 'distanceUnit', 'weightUnit'].sort(),
     );
     assert.ok(!('email' in me), 'email must never be exposed');
 

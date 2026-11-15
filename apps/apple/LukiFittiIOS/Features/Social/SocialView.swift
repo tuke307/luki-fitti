@@ -49,7 +49,7 @@ public struct SocialView: View {
             Section {
                 DuelsSection(
                     social: social,
-                    myHandle: social.profile?.handle,
+                    myUsername: social.profile?.username,
                     myName: social.profile?.name,
                     myAvatarUrl: social.profile?.avatarUrl,
                     myUserId: viewModel.store.currentUser?.id ?? "me"
@@ -162,7 +162,7 @@ public struct SocialView: View {
         }
         .animation(.easeInOut(duration: 0.25), value: social.league?.pendingResult != nil)
         .confirmationDialog(
-            tr("Remove @%@ as a friend?", removeTarget?.handle ?? ""),
+            tr("Remove @%@ as a friend?", removeTarget?.username ?? ""),
             isPresented: Binding(get: { removeTarget != nil }, set: { if !$0 { removeTarget = nil } }),
             titleVisibility: .visible
         ) {
@@ -174,7 +174,7 @@ public struct SocialView: View {
             Text(tr("You can send a new request any time."))
         }
         .confirmationDialog(
-            tr("Block @%@?", blockTarget?.handle ?? ""),
+            tr("Block @%@?", blockTarget?.username ?? ""),
             isPresented: Binding(get: { blockTarget != nil }, set: { if !$0 { blockTarget = nil } }),
             titleVisibility: .visible
         ) {
@@ -186,7 +186,7 @@ public struct SocialView: View {
             Text(tr("They can no longer find you or send you requests."))
         }
         .confirmationDialog(
-            tr("End the streak with @%@?", streakEndTarget?.handle ?? ""),
+            tr("End the streak with @%@?", streakEndTarget?.username ?? ""),
             isPresented: Binding(get: { streakEndTarget != nil }, set: { if !$0 { streakEndTarget = nil } }),
             titleVisibility: .visible
         ) {
@@ -203,7 +203,7 @@ public struct SocialView: View {
     }
 
     private func maybeShowOnboarding() {
-        guard let profile = social.profile, profile.handle == nil,
+        guard let profile = social.profile, profile.username == nil,
               !social.onboardingDismissedThisLaunch else { return }
         social.onboardingDismissedThisLaunch = true
         showOnboarding = true
@@ -220,7 +220,7 @@ public struct SocialView: View {
 
     @ViewBuilder
     private var ownCardSection: some View {
-        if let profile = social.profile, profile.handle == nil {
+        if let profile = social.profile, profile.username == nil {
             Section {
                 HStack(spacing: 12) {
                     Text(tr("Pick a username so friends can find you."))
@@ -323,7 +323,7 @@ public struct SocialView: View {
         Menu {
             if social.duels != nil {
                 let blocked = social.openDuel(with: friend.userId) != nil
-                    ? tr("A duel with @%@ is already open", friend.handle)
+                    ? tr("A duel with @%@ is already open", friend.username)
                     : social.openDuelCount >= 3 ? tr("You already have 3 open duels") : nil
                 Button {
                     Task { await social.challengeDuel(opponentId: friend.userId) }
@@ -370,7 +370,7 @@ public struct SocialView: View {
             Image(systemName: "ellipsis.circle")
                 .foregroundStyle(.secondary)
         }
-        .accessibilityLabel(tr("More options for @%@", friend.handle))
+        .accessibilityLabel(tr("More options for @%@", friend.username))
         .accessibilityIdentifier("ios.social.menu.\(friend.userId)")
     }
 
@@ -400,7 +400,7 @@ public struct SocialView: View {
                 }
             }
             ForEach(searchResults) { user in
-                SocialPersonRow(person: SocialCardDto(userId: user.userId, handle: user.handle, avatarUrl: user.avatarUrl, name: user.name), social: social) {
+                SocialPersonRow(person: SocialCardDto(userId: user.userId, username: user.username, avatarUrl: user.avatarUrl, name: user.name), social: social) {
                     switch user.relation {
                     case .FRIEND:
                         Text(tr("Friends")).font(.footnote).foregroundStyle(.secondary)

@@ -9,7 +9,7 @@ import LukiFittiStore
 /// friendly empty state.
 struct DuelsSection: View {
     @Bindable var social: SocialStore
-    let myHandle: String?
+    let myUsername: String?
     let myName: String?
     let myAvatarUrl: String?
     let myUserId: String
@@ -36,7 +36,7 @@ struct DuelsSection: View {
                         detailId = SheetId(id: duel.id)
                     } label: {
                         ActiveDuelRow(duel: duel, social: social, myUserId: myUserId,
-                                    myHandle: myHandle, myName: myName, myAvatarUrl: myAvatarUrl)
+                                    myUsername: myUsername, myName: myName, myAvatarUrl: myAvatarUrl)
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("ios.duel.row.\(duel.id)")
@@ -50,10 +50,10 @@ struct DuelsSection: View {
                     ForEach(duels.incoming) { duel in
                         HStack(spacing: 10) {
                             SocialAvatarView(
-                                userId: duel.opponent.userId, handle: duel.opponent.handle,
+                                userId: duel.opponent.userId, username: duel.opponent.username,
                                 name: duel.opponent.name, avatarUrl: duel.opponent.avatarUrl,
                                 social: social, size: 34)
-                            Text("@\(duel.opponent.handle)")
+                            Text("@\(duel.opponent.username)")
                                 .font(.subheadline.weight(.semibold))
                                 .lineLimit(1)
                             Spacer()
@@ -77,10 +77,10 @@ struct DuelsSection: View {
                     ForEach(duels.outgoing) { duel in
                         HStack(spacing: 10) {
                             SocialAvatarView(
-                                userId: duel.opponent.userId, handle: duel.opponent.handle,
+                                userId: duel.opponent.userId, username: duel.opponent.username,
                                 name: duel.opponent.name, avatarUrl: duel.opponent.avatarUrl,
                                 social: social, size: 34)
-                            Text("@\(duel.opponent.handle)")
+                            Text("@\(duel.opponent.username)")
                                 .font(.subheadline.weight(.semibold))
                                 .lineLimit(1)
                             Spacer()
@@ -109,7 +109,7 @@ private struct ActiveDuelRow: View {
     let duel: DuelItemDto
     let social: SocialStore
     let myUserId: String
-    let myHandle: String?
+    let myUsername: String?
     let myName: String?
     let myAvatarUrl: String?
     @Environment(\.lukiLocale) private var tr
@@ -128,14 +128,14 @@ private struct ActiveDuelRow: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 10) {
                 SocialAvatarView(
-                    userId: myUserId, handle: myHandle ?? "", name: myName,
+                    userId: myUserId, username: myUsername ?? "", name: myName,
                     avatarUrl: myAvatarUrl, social: social, size: 34)
                 VStack(alignment: .leading, spacing: 3) {
                     HStack {
                         Text(score(duel.you))
                             .font(.subheadline.weight(.semibold).monospacedDigit())
                         Spacer()
-                        Text("@\(duel.opponent.handle)")
+                        Text("@\(duel.opponent.username)")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
@@ -166,7 +166,7 @@ private struct ActiveDuelRow: View {
                     }
                 }
                 SocialAvatarView(
-                    userId: duel.opponent.userId, handle: duel.opponent.handle,
+                    userId: duel.opponent.userId, username: duel.opponent.username,
                     name: duel.opponent.name, avatarUrl: duel.opponent.avatarUrl,
                     social: social, size: 34)
             }
@@ -257,7 +257,7 @@ private struct DuelDetailSheet: View {
                 ProgressView()
             }
         }
-        .navigationTitle(detail.map { tr("Duel vs @%@", $0.opponent.handle) } ?? "…")
+        .navigationTitle(detail.map { tr("Duel vs @%@", $0.opponent.username) } ?? "…")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -339,10 +339,10 @@ struct FriendSheet: View {
             Section {
                 HStack(spacing: 12) {
                     SocialAvatarView(
-                        userId: friend.userId, handle: friend.handle, name: friend.name,
+                        userId: friend.userId, username: friend.username, name: friend.name,
                         avatarUrl: friend.avatarUrl, social: social, size: 52)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("@\(friend.handle)").font(.headline)
+                        Text("@\(friend.username)").font(.headline)
                         if let name = friend.name, !name.isEmpty {
                             Text(name).font(.subheadline).foregroundStyle(.secondary)
                         }

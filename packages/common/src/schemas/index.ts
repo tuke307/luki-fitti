@@ -201,11 +201,11 @@ export const UserSchema = z.object({
   features: z.array(z.enum(FeatureGrant)).optional(),
   /** Whether the user has a usable OpenRouter key (own or admin-assigned). */
   aiKeyConfigured: z.boolean().optional(),
-  /** Social feature gate + chosen handle and league arena for this user. */
+  /** Social feature gate + chosen username and league arena for this user. */
   social: z
     .object({
       enabled: z.boolean(),
-      handle: z.string().nullable(),
+      username: z.string().nullable(),
       arena: z.string().nullable().optional(),
       /** Own avatar (API-relative, cache-busted), for the header profile button. */
       avatarUrl: z.string().nullable().optional(),

@@ -133,10 +133,10 @@ public struct WatchHomeView: View {
         return Label {
             Text(
                 duel.startsTomorrow
-                    ? tr("vs @%@ · starts tmrw", duel.opponentHandle)
+                    ? tr("vs @%@ · starts tmrw", duel.opponentUsername)
                     : tr(
                         "vs @%@ · %@–%@ · %d d",
-                        duel.opponentHandle,
+                        duel.opponentUsername,
                         duel.you.formatted(.number.locale(locale)),
                         duel.them.formatted(.number.locale(locale)),
                         duel.daysLeft

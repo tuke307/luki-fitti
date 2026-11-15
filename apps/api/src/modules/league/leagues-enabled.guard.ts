@@ -6,7 +6,7 @@ import type { AuthenticatedUser } from '@/decorators/current-user.decorator';
 /**
  * Deny-by-default gate for league endpoints: the rollout flag must be on and
  * the user must be an eligible league participant (social enabled for them,
- * handle set, not paused).
+ * username set, not paused).
  */
 @Injectable()
 export class LeaguesEnabledGuard implements CanActivate {

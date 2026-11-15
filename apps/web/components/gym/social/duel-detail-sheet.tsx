@@ -47,7 +47,9 @@ export function DuelDetailSheet({
     <MobileSheet
       open={duelId !== null}
       onOpenChange={onOpenChange}
-      title={detail ? t.battle.detailTitle.replace('{handle}', `@${detail.opponent.handle}`) : '…'}
+      title={
+        detail ? t.battle.detailTitle.replace('{username}', `@${detail.opponent.username}`) : '…'
+      }
       hideCancel
       data-testid="duel-detail-sheet"
     >
@@ -58,7 +60,7 @@ export function DuelDetailSheet({
               <UserAvatar
                 avatarUrl={me.avatarUrl}
                 name={me.name}
-                handle={me.handle}
+                username={me.username}
                 className="size-10"
               />
               <span className="text-[1.25rem] font-bold tabular-nums">
@@ -78,7 +80,7 @@ export function DuelDetailSheet({
               <UserAvatar
                 avatarUrl={detail.opponent.avatarUrl}
                 name={detail.opponent.name}
-                handle={detail.opponent.handle}
+                username={detail.opponent.username}
                 className="size-10"
               />
             </div>

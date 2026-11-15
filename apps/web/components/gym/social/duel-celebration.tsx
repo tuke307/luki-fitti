@@ -12,7 +12,7 @@ import { UserAvatar } from './user-avatar';
 
 /** The signed-in user's identity for avatar spots in duel UI. */
 export interface MyProfile {
-  handle: string | null;
+  username: string | null;
   name: string | null;
   avatarUrl: string | null;
 }
@@ -41,14 +41,14 @@ export function DuelCelebration({
   const won = result.outcome === 'WON';
   const tie = result.outcome === 'TIE';
   const loud = won && !reduced;
-  const handle = `@${result.opponent.handle}`;
+  const username = `@${result.opponent.username}`;
   const score = `${formatScore(result.you, bcp47)}–${formatScore(result.them, bcp47)}`;
 
   const title = won
-    ? `${t.battle.wonTitle.replace('{handle}', handle)} ${score}`
+    ? `${t.battle.wonTitle.replace('{username}', username)} ${score}`
     : tie
       ? `${t.battle.tieTitle} ${score}`
-      : `${t.battle.lostTitle.replace('{handle}', handle)} ${formatScore(result.them, bcp47)}–${formatScore(result.you, bcp47)}`;
+      : `${t.battle.lostTitle.replace('{username}', username)} ${formatScore(result.them, bcp47)}–${formatScore(result.you, bcp47)}`;
 
   return (
     <motion.div
@@ -92,7 +92,7 @@ export function DuelCelebration({
               <UserAvatar
                 avatarUrl={result.opponent.avatarUrl}
                 name={result.opponent.name}
-                handle={result.opponent.handle}
+                username={result.opponent.username}
                 className="size-24"
               />
             )}

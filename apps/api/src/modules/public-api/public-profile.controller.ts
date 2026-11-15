@@ -24,7 +24,7 @@ export class PublicProfileController {
   @Get('me')
   @ApiScope(ApiKeyScope.READ_PROFILE)
   @ApiOkResponse({ schema: jsonSchemaOf(PublicMeSchema) })
-  @ApiOperation({ summary: 'Own profile: id, name, handle, units and goals (never email)' })
+  @ApiOperation({ summary: 'Own profile: id, name, username, units and goals (never email)' })
   getMe(@CurrentUser() user: AuthenticatedUser): Promise<PublicMeDto> {
     return this.publicApi.getMe(user.id);
   }

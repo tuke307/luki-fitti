@@ -84,8 +84,8 @@ export function AdminReports() {
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="text-[0.9375rem] font-medium">
-                    {r.handleSnapshot
-                      ? `@${r.handleSnapshot}`
+                    {r.usernameSnapshot
+                      ? `@${r.usernameSnapshot}`
                       : (r.nameSnapshot ?? t.admin.reportUnknownUser)}
                   </p>
                   <p className="text-muted-foreground text-[0.8125rem]">
@@ -128,10 +128,10 @@ export function AdminReports() {
                     variant="secondary"
                     disabled={busyId === r.id}
                     onClick={() =>
-                      void resolve(r, { status: ReportStatus.RESOLVED, action: 'RESET_HANDLE' })
+                      void resolve(r, { status: ReportStatus.RESOLVED, action: 'RESET_USERNAME' })
                     }
                   >
-                    {t.admin.reportResolveResetHandle}
+                    {t.admin.reportResolveResetUsername}
                   </Button>
                 </div>
               )}

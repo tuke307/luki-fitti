@@ -3,10 +3,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Input } from '@luki-fitti/ui/components/ui/input';
 import { useLocale } from '@/providers/i18n/locale-context';
-import { checkHandle, normalizeHandle } from '@luki-fitti/common/utils';
+import { checkUsername, normalizeUsername } from '@luki-fitti/common/utils';
 import { socialApi } from '@/lib/social/social-api';
 
-export type HandleStatus =
+export type UsernameStatus =
   | { state: 'idle' }
   | { state: 'checking' }
   | { state: 'available' }
@@ -15,62 +15,62 @@ export type HandleStatus =
 const DEBOUNCE_MS = 350;
 
 /**
- * Handle input with debounced live availability. `value` is the raw input;
+ * Username input with debounced live availability. `value` is the raw input;
  * `normalized` is what would be submitted.
  */
-export function HandleField({
+export function UsernameField({
   value,
   onChange,
-  currentHandle,
+  currentUsername,
   cooldownUntil,
   onStatus,
 }: {
   value: string;
   onChange: (value: string) => void;
-  currentHandle?: string | null;
+  currentUsername?: string | null;
   cooldownUntil?: string | null;
-  onStatus?: (status: HandleStatus) => void;
+  onStatus?: (status: UsernameStatus) => void;
 }) {
   const { t, bcp47 } = useLocale();
-  // Remote availability keyed by the handle it belongs to; everything else is derived.
-  const [lookup, setLookup] = useState<{ handle: string; status: HandleStatus } | null>(null);
+  // Remote availability keyed by the username it belongs to; everything else is derived.
+  const [lookup, setLookup] = useState<{ username: string; status: UsernameStatus } | null>(null);
   const debounceRef = useRef<number | null>(null);
   const seq = useRef(0);
 
-  const status: HandleStatus = useMemo(() => {
-    const normalized = normalizeHandle(value);
-    const check = checkHandle(normalized);
-    if (!normalized || normalized === currentHandle) return { state: 'idle' };
+  const status: UsernameStatus = useMemo(() => {
+    const normalized = normalizeUsername(value);
+    const check = checkUsername(normalized);
+    if (!normalized || normalized === currentUsername) return { state: 'idle' };
     if (!check.ok) return { state: 'unavailable', reason: check.reason };
-    return lookup?.handle === normalized ? lookup.status : { state: 'checking' };
-  }, [value, currentHandle, lookup]);
+    return lookup?.username === normalized ? lookup.status : { state: 'checking' };
+  }, [value, currentUsername, lookup]);
 
   useEffect(() => {
     if (debounceRef.current !== null) window.clearTimeout(debounceRef.current);
-    const n = normalizeHandle(value);
-    if (!n || n === currentHandle || !checkHandle(n).ok) return;
+    const n = normalizeUsername(value);
+    if (!n || n === currentUsername || !checkUsername(n).ok) return;
     const mySeq = ++seq.current;
     debounceRef.current = window.setTimeout(() => {
       socialApi
-        .handleAvailability(n)
+        .usernameAvailability(n)
         .then((res) => {
           if (seq.current !== mySeq) return;
           const data = res.data;
           setLookup({
-            handle: n,
+            username: n,
             status: data?.available
               ? { state: 'available' }
               : { state: 'unavailable', reason: data?.reason ?? 'taken' },
           });
         })
         .catch(() => {
-          if (seq.current === mySeq) setLookup({ handle: n, status: { state: 'idle' } });
+          if (seq.current === mySeq) setLookup({ username: n, status: { state: 'idle' } });
         });
     }, DEBOUNCE_MS);
     return () => {
       if (debounceRef.current !== null) window.clearTimeout(debounceRef.current);
     };
-  }, [value, currentHandle]);
+  }, [value, currentUsername]);
 
   useEffect(() => {
     onStatus?.(status);
@@ -81,34 +81,34 @@ export function HandleField({
   const locked = Boolean(cooldownUntil && Date.parse(cooldownUntil) > nowMs);
 
   const hint = locked
-    ? t.social.handleCooldown.replace(
+    ? t.social.usernameCooldown.replace(
         '{date}',
         new Date(cooldownUntil!).toLocaleDateString(bcp47, { dateStyle: 'medium' }),
       )
     : status.state === 'checking'
-      ? t.social.handleChecking
+      ? t.social.usernameChecking
       : status.state === 'available'
-        ? t.social.handleAvailable
+        ? t.social.usernameAvailable
         : status.state === 'unavailable'
           ? {
-              invalid: t.social.handleInvalid,
-              reserved: t.social.handleReserved,
-              blocked: t.social.handleBlocked,
-              taken: t.social.handleTaken,
+              invalid: t.social.usernameInvalid,
+              reserved: t.social.usernameReserved,
+              blocked: t.social.usernameBlocked,
+              taken: t.social.usernameTaken,
             }[status.reason]
           : null;
 
   return (
     <div>
-      <label htmlFor="social-handle" className="text-muted-foreground mb-1 block text-[0.8125rem]">
-        {t.social.handleLabel}
+      <label htmlFor="social-username" className="text-muted-foreground mb-1 block text-[0.8125rem]">
+        {t.social.usernameLabel}
       </label>
       <div className="relative">
         <span className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[0.9375rem]">
           @
         </span>
         <Input
-          id="social-handle"
+          id="social-username"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           autoCapitalize="none"
@@ -116,7 +116,7 @@ export function HandleField({
           spellCheck={false}
           disabled={locked}
           className="pl-7"
-          data-testid="handle-input"
+          data-testid="username-input"
         />
       </div>
       {hint && (
@@ -124,7 +124,7 @@ export function HandleField({
           className={`mt-1 text-[0.8125rem] ${
             status.state === 'available' ? 'text-success' : 'text-muted-foreground'
           }`}
-          data-testid="handle-hint"
+          data-testid="username-hint"
         >
           {hint}
         </p>

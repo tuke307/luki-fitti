@@ -15,7 +15,7 @@ import type {
   DuelListDto,
   FriendInviteDto,
   FriendListsDto,
-  HandleAvailabilityDto,
+  UsernameAvailabilityDto,
   LeagueCurrentDto,
   LeagueFriendRowDto,
   LeagueHistoryEntryDto,
@@ -45,9 +45,9 @@ export const socialApi = {
   me: () => fetchClient<SocialProfileDto>('/social/me'),
   updateMe: (data: UpdateSocialProfileDto) =>
     fetchClient<SocialProfileDto>('/social/me', { method: 'PATCH', body: JSON.stringify(data) }),
-  handleAvailability: (handle: string) =>
-    fetchClient<HandleAvailabilityDto>(
-      `/social/handles/${encodeURIComponent(handle)}/availability`,
+  usernameAvailability: (username: string) =>
+    fetchClient<UsernameAvailabilityDto>(
+      `/social/usernames/${encodeURIComponent(username)}/availability`,
     ),
   uploadAvatar: (file: Blob) => {
     const form = new FormData();
@@ -55,8 +55,8 @@ export const socialApi = {
     return fetchClient<SocialProfileDto>('/social/me/avatar', { method: 'PUT', body: form });
   },
   removeAvatar: () => fetchClient<SocialProfileDto>('/social/me/avatar', { method: 'DELETE' }),
-  lookupUser: (handle: string) =>
-    fetchClient<SocialUserDto>(`/social/users/${encodeURIComponent(handle)}`),
+  lookupUser: (username: string) =>
+    fetchClient<SocialUserDto>(`/social/users/${encodeURIComponent(username)}`),
   search: (q: string) => fetchClient<SocialUserDto[]>(`/social/search?q=${encodeURIComponent(q)}`),
   friends: () => fetchClient<FriendListsDto>('/social/friends'),
   sendRequest: (userId: string) =>
