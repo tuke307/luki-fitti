@@ -73,7 +73,7 @@ test.describe('Social: friends, requests and invites', () => {
     await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
     await navigateToTab(page, 'social');
     await completeOnboardingWithUsername(page, usernameA);
-    await expect(page.getByText(`@${usernameA}`)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('social-finish-setup')).toHaveCount(0, { timeout: 10_000 });
     await signOut(page);
 
     // ── User B finds A via username search and sends a request ──
