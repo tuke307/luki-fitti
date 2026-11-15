@@ -70,8 +70,8 @@ into `develop`.
 - Strangers are never named: league and raid copy has no actor. Only friends appear by
   `@username`.
 - Celebrations may be mean too ("You won. Don't let it go to your head.").
-- `PRODUCT.md` gets an explicit exception: push and inbox text use the mean voice; the workout
-  flow and the rest of the app stay calm.
+- `PRODUCT.md` → "Notification voice" (updated with this plan) is the source of truth for the
+  tone.
 - App Store: the age-rating questionnaire needs "Infrequent/Mild Profanity or Crude Humor"
   (waiting on user).
 
