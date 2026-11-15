@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Bell, Pencil } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
@@ -26,8 +26,6 @@ import {
   squadsApi,
 } from '@/lib/social/social-api';
 import { PageTitle } from '../page-title';
-import { openSettingsPage } from '@/lib/settings/open-settings';
-import { UserAvatar } from './user-avatar';
 import { FriendRow } from './friend-row';
 import { AddFriendsSection } from './add-friends-section';
 import { ThisWeekCard } from './this-week-card';
@@ -209,28 +207,22 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
         }
       />
 
-      {/* Own card: @handle + profile editor entry. */}
-      <div className="bg-card mt-4 flex items-center gap-3 rounded-[1.25rem] p-4">
-        <UserAvatar avatarUrl={profile?.avatarUrl} name={profile?.name} handle={handle} />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[1.0625rem] font-semibold">
-            {handle ? `@${handle}` : t.social.onboardingTitle}
+      {profile && !handle && (
+        <div className="bg-card mt-4 flex items-center gap-3 rounded-[1.25rem] p-4">
+          <p className="text-muted-foreground min-w-0 flex-1 text-[0.9375rem]">
+            {t.social.onboardingBody}
           </p>
-          {profile?.name && (
-            <p className="text-muted-foreground truncate text-[0.8125rem]">{profile.name}</p>
-          )}
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            data-testid="social-finish-setup"
+            onClick={() => setOnboardingOpen(true)}
+          >
+            {t.social.chooseUsername}
+          </Button>
         </div>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          data-testid={handle ? 'social-edit-profile-2' : 'social-finish-setup'}
-          onClick={() => (handle ? openSettingsPage('account') : setOnboardingOpen(true))}
-        >
-          <Pencil className="h-4 w-4" />
-          {handle ? t.social.editProfile : t.social.onboardingDone}
-        </Button>
-      </div>
+      )}
 
       <div className="mt-4">
         <TrophyShelf userId={user?.id ?? null} />

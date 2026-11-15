@@ -110,9 +110,6 @@ public struct ProfileAndAuthView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .navigationDestination(isPresented: $viewModel.isAccountSettingsPresented) {
-            AccountSettingsPage(viewModel: viewModel, statusMessage: $statusMessage)
-        }
         .alert(tr("No mail app found"), isPresented: $showsNoMailAlert) {
             Button(tr("Copy address")) {
                 UIPasteboard.general.string = FeedbackMail.feedbackEmail

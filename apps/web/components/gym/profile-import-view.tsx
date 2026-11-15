@@ -111,7 +111,7 @@ const SETTINGS_PAGES = [
   'sources',
 ] as const;
 
-export type SettingsPage = (typeof SETTINGS_PAGES)[number];
+type SettingsPage = (typeof SETTINGS_PAGES)[number];
 
 const AUTH_ONLY_PAGES: ReadonlySet<SettingsPage> = new Set([
   'account',
