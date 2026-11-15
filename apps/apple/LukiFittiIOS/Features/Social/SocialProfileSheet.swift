@@ -49,7 +49,7 @@ struct SocialProfileSheet: View {
             avatarSection
 
             Section {
-                TextField(tr("Handle"), text: $handle)
+                TextField(tr("Username"), text: $handle)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .disabled(handleLocked)
@@ -70,7 +70,7 @@ struct SocialProfileSheet: View {
                 handleStatus
             } footer: {
                 if handleLocked, let lockedUntil {
-                    Text(tr("You can change your handle again on %@.", lockedUntil.formatted(date: .abbreviated, time: .omitted)))
+                    Text(tr("You can change your username again on %@.", lockedUntil.formatted(date: .abbreviated, time: .omitted)))
                 } else {
                     Text(tr("3–20 characters: a–z, 0–9, underscore."))
                 }
@@ -149,9 +149,9 @@ struct SocialProfileSheet: View {
 
     private func reasonText(_ reason: HandleUnavailableReason?) -> String {
         switch reason {
-        case .taken: return tr("This handle is taken.")
-        case .reserved: return tr("This handle is reserved.")
-        case .blocked: return tr("This handle is not allowed.")
+        case .taken: return tr("This username is taken.")
+        case .reserved: return tr("This username is reserved.")
+        case .blocked: return tr("This username is not allowed.")
         default: return tr("3–20 characters: a–z, 0–9, underscore.")
         }
     }
