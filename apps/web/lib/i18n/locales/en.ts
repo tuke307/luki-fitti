@@ -298,8 +298,7 @@ export const en = {
     notesFocusLabel: 'Notes',
     notesFocusPlaceholder: 'Optional',
     estDurationLabel: 'Duration (min)',
-    trainingGoalHint:
-      'Overrides your profile goal for this workout. Sets rep ranges, rest times and how weight and rep suggestions progress.',
+    trainingGoalHint: 'Overrides your profile goal for this workout.',
     orderedExercisesTitle: 'Exercises ({count})',
     addExerciseSlotBtn: 'Add Exercise',
     supersetWithActive: 'Superset with #{index}',

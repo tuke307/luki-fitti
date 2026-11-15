@@ -149,8 +149,8 @@ public enum LukiStrings {
         "The profile goal applies to all workouts. In the workout editor you can override it for a single workout.":
             "Das Ziel im Profil gilt für alle Workouts. Im Workout-Editor kannst du es für ein einzelnes Workout überschreiben.",
         "Default rep ranges and rest times": "Standard-Wiederholungsbereiche und Pausen",
-        "Overrides your profile goal for this workout. Sets rep ranges, rest times and how weight and rep suggestions progress.":
-            "Überschreibt das Ziel aus deinem Profil für dieses Workout. Bestimmt Wiederholungsbereiche, Pausen und die Gewichts- und Wiederholungsvorschläge.",
+        "Overrides your profile goal for this workout.":
+            "Überschreibt das Ziel aus deinem Profil für dieses Workout.",
         "Profile default": "Profil-Standard",
         "Profile default (%@)": "Profil-Standard (%@)",
         "Hypertrophy": "Muskelaufbau",

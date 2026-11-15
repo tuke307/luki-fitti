@@ -876,7 +876,7 @@ private struct TemplateBuilderSheetView: View {
                         .pickerStyle(.menu)
                         .accessibilityIdentifier("ios.workouts.trainingGoalPicker")
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(tr("Overrides your profile goal for this workout. Sets rep ranges, rest times and how weight and rep suggestions progress."))
+                            Text(tr("Overrides your profile goal for this workout."))
                             Text((trainingGoal ?? profileGoal)
                                 .map { TrainingGoalLabels.caption($0, tr) }
                                 ?? tr("Default rep ranges and rest times"))

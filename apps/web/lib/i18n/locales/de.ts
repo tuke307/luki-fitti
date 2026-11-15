@@ -299,8 +299,7 @@ export const de = {
     notesFocusLabel: 'Notizen',
     notesFocusPlaceholder: 'Optional',
     estDurationLabel: 'Dauer (Min.)',
-    trainingGoalHint:
-      'Überschreibt das Ziel aus deinem Profil für dieses Workout. Bestimmt Wiederholungsbereiche, Pausen und die Gewichts- und Wiederholungsvorschläge.',
+    trainingGoalHint: 'Überschreibt das Ziel aus deinem Profil für dieses Workout.',
     orderedExercisesTitle: 'Übungen ({count})',
     addExerciseSlotBtn: 'Übung hinzufügen',
     supersetWithActive: 'Supersatz mit #{index}',
