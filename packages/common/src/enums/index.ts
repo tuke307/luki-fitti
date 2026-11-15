@@ -431,6 +431,7 @@ export enum NotificationKind {
   RAID_ESCAPED = 'RAID_ESCAPED',
   SQUAD_INVITE = 'SQUAD_INVITE',
   SQUAD_RAID_STARTED = 'SQUAD_RAID_STARTED',
+  FRIEND_PULLED_AHEAD = 'FRIEND_PULLED_AHEAD',
 }
 
 export enum DuelStatus {

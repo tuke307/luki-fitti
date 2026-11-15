@@ -7,6 +7,11 @@
       "kinds": ["FRIEND_REQUEST", "FRIEND_ACCEPTED"]
     },
     {
+      "id": "nudges",
+      "pref": "pushNudges",
+      "kinds": ["FRIEND_PULLED_AHEAD"]
+    },
+    {
       "id": "leagues",
       "pref": "pushLeagues",
       "kinds": ["LEAGUE_PROMOTED", "LEAGUE_DEMOTED", "LEAGUE_ENDING"]
@@ -127,6 +132,10 @@
     {
       "kind": "SQUAD_RAID_STARTED",
       "key": null
+    },
+    {
+      "kind": "FRIEND_PULLED_AHEAD",
+      "key": "pulled-ahead:W1"
     }
   ]
 }

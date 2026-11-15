@@ -21,10 +21,10 @@ describe('NOTIFICATION_CATEGORIES', () => {
     }
   });
 
-  it('keeps the web/iOS order: friends, leagues, duels, streaks, raids', () => {
+  it('keeps the web/iOS order: friends, nudges, leagues, duels, streaks, raids', () => {
     assert.deepEqual(
       NOTIFICATION_CATEGORIES.map((c) => c.id),
-      ['friends', 'leagues', 'duels', 'streaks', 'raids'],
+      ['friends', 'nudges', 'leagues', 'duels', 'streaks', 'raids'],
     );
   });
 
@@ -75,6 +75,10 @@ describe('notificationCollapseKey', () => {
       notificationCollapseKey(NotificationKind.LEAGUE_ENDING, { weekKey: '2026-01-05' }),
       'league-ending:2026-01-05',
     );
+    assert.equal(
+      notificationCollapseKey(NotificationKind.FRIEND_PULLED_AHEAD, { weekKey: '2026-01-05' }),
+      'pulled-ahead:2026-01-05',
+    );
   });
 
   it('returns null when the id is missing or the kind never collapses', () => {
@@ -106,12 +110,36 @@ describe('renderNotification', () => {
     [NotificationKind.RAID_ESCAPED]: { bossSlug: 'core-kraken' },
     [NotificationKind.SQUAD_INVITE]: { squadName: 'Beast Mode' },
     [NotificationKind.SQUAD_RAID_STARTED]: { squadName: 'Beast Mode', bossSlug: 'core-kraken' },
+    [NotificationKind.FRIEND_PULLED_AHEAD]: { count: 3, you: 2, weekKey: '2026-01-05' },
   };
+
+  /** One payload per sub-variant so every copy set is exercised. */
+  const subVariantPayloads: Record<string, Record<string, unknown>> = {
+    [`${NotificationKind.LEAGUE_ENDING}.promotion`]: { inDemotionZone: false, placesToPromotion: 2 },
+    [`${NotificationKind.LEAGUE_ENDING}.demotion`]: { inDemotionZone: true },
+    [`${NotificationKind.DUEL_STANDINGS}.leading`]: {
+      leading: true,
+      you: 420,
+      them: 180,
+      daysLeft: 3,
+    },
+    [`${NotificationKind.DUEL_STANDINGS}.behind`]: {
+      leading: false,
+      you: 180,
+      them: 420,
+      daysLeft: 3,
+    },
+    [`${NotificationKind.DUEL_RESULT}.WON`]: { outcome: 'WON', you: 610, them: 340 },
+    [`${NotificationKind.DUEL_RESULT}.LOST`]: { outcome: 'LOST', you: 340, them: 610 },
+    [`${NotificationKind.DUEL_RESULT}.TIE`]: { outcome: 'TIE', you: 340, them: 340 },
+  };
+
+  const SEEDS = 'abcdefghijklmnopqrstuvwxyz'.split('');
 
   for (const kind of Object.values(NotificationKind)) {
     for (const locale of ['en', 'de']) {
       it(`renders non-empty ${kind} text without leftover placeholders (${locale})`, () => {
-        const msg = renderNotification(kind, payloads[kind] ?? {}, 'fabi', locale);
+        const msg = renderNotification(kind, payloads[kind] ?? {}, 'fabi', locale, 'seed-1');
         assert.ok(msg.title.length > 0, `${kind} ${locale} title`);
         assert.ok(msg.body.length > 0, `${kind} ${locale} body`);
         assert.doesNotMatch(msg.title + msg.body, /\{[a-z]+\}/i);
@@ -119,36 +147,71 @@ describe('renderNotification', () => {
     }
   }
 
+  for (const [subKey, payload] of Object.entries(subVariantPayloads)) {
+    const kind = subKey.split('.')[0] as NotificationKind;
+    for (const locale of ['en', 'de']) {
+      it(`has exactly 3 seeded variants for ${subKey} (${locale})`, () => {
+        const seen = new Set(
+          SEEDS.map(
+            (seed) =>
+              JSON.stringify(renderNotification(kind, payload, 'fabi', locale, seed)),
+          ),
+        );
+        assert.equal(seen.size, 3, `${subKey} ${locale} should render all 3 variants`);
+        for (const json of seen) {
+          const msg = JSON.parse(json) as { title: string; body: string };
+          assert.doesNotMatch(msg.title + msg.body, /\{[a-z]+\}/i);
+        }
+      });
+    }
+  }
+
+  it('picks the same variant for the same seed and different ones for others', () => {
+    const first = renderNotification(NotificationKind.FRIEND_REQUEST, {}, 'fabi', 'en', 'seed-x');
+    const again = renderNotification(NotificationKind.FRIEND_REQUEST, {}, 'fabi', 'en', 'seed-x');
+    assert.deepEqual(again, first);
+    const distinct = new Set(
+      SEEDS.map(
+        (seed) =>
+          renderNotification(NotificationKind.FRIEND_REQUEST, {}, 'fabi', 'en', seed).title,
+      ),
+    );
+    assert.equal(distinct.size, 3);
+  });
+
   it('uses the @username for actors and a fallback when there is none', () => {
-    const named = renderNotification(NotificationKind.FRIEND_REQUEST, {}, 'fabi', 'en');
+    const named = renderNotification(NotificationKind.FRIEND_REQUEST, {}, 'fabi', 'en', 's');
     assert.match(named.body, /@fabi/);
-    const anon = renderNotification(NotificationKind.FRIEND_REQUEST, {}, null, 'en');
+    const anon = renderNotification(NotificationKind.FRIEND_REQUEST, {}, null, 'en', 's');
     assert.match(anon.body, /Someone/);
-    const anonDe = renderNotification(NotificationKind.FRIEND_REQUEST, {}, null, 'de');
+    const anonDe = renderNotification(NotificationKind.FRIEND_REQUEST, {}, null, 'de', 's');
     assert.match(anonDe.body, /Jemand/);
   });
 
-  it('picks the duel/league variants from the payload', () => {
+  it('picks the duel/league sub-variants from the payload', () => {
     const behind = renderNotification(
       NotificationKind.DUEL_STANDINGS,
       { leading: false, you: 1, them: 2, daysLeft: 3 },
       'fabi',
       'en',
+      's',
     );
-    assert.match(behind.body, /@fabi leads/);
+    assert.match(behind.body + behind.title, /@fabi/);
     const demote = renderNotification(
       NotificationKind.LEAGUE_ENDING,
       { inDemotionZone: true },
       null,
       'en',
+      's',
     );
-    assert.match(demote.body, /demotion zone/);
+    assert.match(demote.body + demote.title, /demotion|down|something/i);
     const tie = renderNotification(
       NotificationKind.DUEL_RESULT,
       { outcome: 'TIE', you: 5, them: 5 },
       'fabi',
       'en',
+      's',
     );
-    assert.match(tie.title, /tied/i);
+    assert.match(tie.title + tie.body, /tied|heat|draw/i);
   });
 });

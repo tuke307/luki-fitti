@@ -139,6 +139,7 @@ export interface PushConfigDto {
 
 export const UpdatePushPreferencesSchema = z.object({
   friends: z.boolean().optional(),
+  nudges: z.boolean().optional(),
   leagues: z.boolean().optional(),
   duels: z.boolean().optional(),
   streaks: z.boolean().optional(),
@@ -150,6 +151,7 @@ export type UpdatePushPreferencesDto = z.infer<typeof UpdatePushPreferencesSchem
 
 export interface PushPreferencesDto {
   friends: boolean;
+  nudges: boolean;
   leagues: boolean;
   duels: boolean;
   streaks: boolean;
