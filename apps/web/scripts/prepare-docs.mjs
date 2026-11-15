@@ -138,10 +138,17 @@ function titleAndDescription(md) {
 rmSync(CONTENT, { recursive: true, force: true });
 mkdirSync(path.join(CONTENT, 'adr'), { recursive: true });
 
+// Sections between the markers render only on GitHub (badges, the marketing
+// header, repo-relative images) — the docs host cannot load those assets.
+const GITHUB_ONLY = /<!--\s*github-only:start\s*-->[\s\S]*?<!--\s*github-only:end\s*-->\s*/g;
+
 const gitInfo = {};
 const undated = [];
 for (const { repo, dest, slug } of sources) {
-  const raw = readFileSync(path.join(ROOT, repo), 'utf8');
+  let raw = readFileSync(path.join(ROOT, repo), 'utf8').replace(GITHUB_ONLY, '');
+  // README's only h1 lives inside the github-only block; give the docs home a
+  // title the same way every other page gets one — a leading h1.
+  if (repo === 'README.md' && !/^# /m.test(raw)) raw = `# LukiFitti\n\n${raw}`;
   const { title, titleIndex, description } = titleAndDescription(raw);
   const bodyLines = raw.split('\n').filter((_, i) => i !== titleIndex);
   const body = rewriteLinks(bodyLines.join('\n').replace(/^\n+/, ''), repo);

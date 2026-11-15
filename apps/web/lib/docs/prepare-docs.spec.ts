@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -10,7 +10,28 @@ const ROOT = path.resolve(WEB, '../..');
 const PLANS_DIR = path.join(ROOT, 'docs/plans');
 const PLAN_FILE = path.join(PLANS_DIR, 'spec-only-plan.md');
 
+const runPrepareDocs = () =>
+  execFileSync(process.execPath, [path.join(WEB, 'scripts/prepare-docs.mjs')], {
+    cwd: WEB,
+    stdio: 'pipe',
+  });
+
+test('prepare-docs strips github-only blocks and keeps the docs home title', () => {
+  runPrepareDocs();
+  const index = readFileSync(path.join(WEB, 'content/index.md'), 'utf8');
+  // The README wraps its badge/logo/marketing header in github-only markers;
+  // none of it may reach the docs home (external assets 400 on the docs host).
+  assert.equal(index.includes('github-only'), false);
+  assert.equal(index.includes('img.shields.io'), false);
+  assert.equal(index.includes('/badge.svg'), false);
+  assert.equal(index.includes('appstore'), false);
+  assert.match(index, /^title: "LukiFitti"$/m);
+});
+
 test('prepare-docs never stages docs/plans/** or the top-level plan files', () => {
+  // Only remove the dir afterwards when this test created it — branch plan
+  // files are tracked while the branch lives and must not be wiped.
+  const dirExisted = existsSync(PLANS_DIR);
   mkdirSync(PLANS_DIR, { recursive: true });
   writeFileSync(PLAN_FILE, '# Branch plan\n\nThis must stay unpublished.\n');
   try {
@@ -34,7 +55,7 @@ test('prepare-docs never stages docs/plans/** or the top-level plan files', () =
     );
   } finally {
     rmSync(PLAN_FILE, { force: true });
-    rmSync(PLANS_DIR, { recursive: true, force: true });
+    if (!dirExisted) rmSync(PLANS_DIR, { recursive: true, force: true });
     execFileSync(process.execPath, [path.join(WEB, 'scripts/prepare-docs.mjs')], {
       cwd: WEB,
       stdio: 'pipe',
