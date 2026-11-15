@@ -1,0 +1,77 @@
+# Dependabot version and security updates.
+# PRs target the default branch (develop), like every feature branch (docs/release.md).
+# target-branch is intentionally not set: on a non-default branch, commit-message and labels
+# would no longer apply to security updates, which always target the default branch.
+version: 2
+updates:
+  # yarn workspaces: the root manifest covers apps/* and packages/*.
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Berlin
+    # Version updates only; security updates are opened immediately.
+    cooldown:
+      default-days: 7
+    # Raise the range in package.json too, like `yarn update` (ncu -u).
+    versioning-strategy: increase
+    open-pull-requests-limit: 5
+    # -> build(deps): … / build(deps-dev): … (commitlint config-conventional)
+    commit-message:
+      prefix: build
+      prefix-development: build
+      include: scope
+    labels:
+      - dependencies
+    groups:
+      npm-minor-patch:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+      npm-security:
+        applies-to: security-updates
+        patterns:
+          - '*'
+
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Berlin
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: ci
+      include: scope
+    labels:
+      - dependencies
+    groups:
+      actions:
+        patterns:
+          - '*'
+
+  - package-ecosystem: docker
+    directories:
+      - '/apps/api'
+      - '/apps/web'
+      - '/apps/email-worker'
+      - '/apps/mcp-server'
+      - '/packages/database'
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Europe/Berlin
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: build
+      include: scope
+    labels:
+      - dependencies
+    groups:
+      docker:
+        patterns:
+          - '*'
