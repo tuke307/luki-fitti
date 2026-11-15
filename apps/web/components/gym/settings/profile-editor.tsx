@@ -38,7 +38,7 @@ export function ProfileEditor() {
   }, []);
 
   useEffect(() => {
-    void refresh().catch(() => undefined);
+    queueMicrotask(() => void refresh().catch(() => undefined));
   }, [refresh]);
 
   useEffect(() => {

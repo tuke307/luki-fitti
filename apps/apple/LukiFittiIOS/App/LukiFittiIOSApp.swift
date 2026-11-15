@@ -1766,14 +1766,32 @@ public struct AppShellView: View {
                         Button {
                             viewModel.selectedTab = .profile
                         } label: {
-                            Label(
-                                tr("Profile and settings"),
-                                systemImage: viewModel.store.currentUser == nil ? "person.crop.circle" : "person.crop.circle.fill"
-                            )
+                            if let user = viewModel.store.currentUser,
+                               let profile = viewModel.social.profile,
+                               profile.avatarUrl != nil {
+                                SocialAvatarView(
+                                    userId: user.id,
+                                    handle: profile.handle ?? "",
+                                    name: profile.name ?? user.name,
+                                    avatarUrl: profile.avatarUrl,
+                                    social: viewModel.social,
+                                    size: 28
+                                )
+                            } else {
+                                Label(
+                                    tr("Profile and settings"),
+                                    systemImage: viewModel.store.currentUser == nil ? "person.crop.circle" : "person.crop.circle.fill"
+                                )
+                            }
                         }
                         // Sync status stays available to VoiceOver even while the icon is hidden.
                         .accessibilityLabel(profileAccessibilityLabel)
                         .accessibilityIdentifier("ios.header.profileButton")
+                        .task(id: viewModel.store.currentUser?.id) {
+                            if viewModel.socialEnabled, viewModel.social.profile == nil {
+                                _ = await viewModel.social.fetchProfile()
+                            }
+                        }
                     }
                 }
         }
