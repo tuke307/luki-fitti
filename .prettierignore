@@ -36,4 +36,6 @@ packages/common/src/catalog/extended/records.ts
 
 # Generated raid fixtures (byte-compared by yarn raid:check)
 packages/common/src/raid/__fixtures__/
+# Generated notification category fixture (byte-compared by yarn categories:check)
+packages/common/src/__fixtures__/notification-categories.json
 apps/apple/Packages/LukiFittiKit/Sources/LukiFittiModels/Resources/
