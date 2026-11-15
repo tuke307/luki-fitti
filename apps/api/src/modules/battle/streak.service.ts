@@ -276,10 +276,10 @@ export class StreakService {
     const card = friend
       ? ((await cardBetween(this.prisma, userId, friend)) ?? {
           userId: friend.id,
-          handle: friend.handle ?? '',
+          username: friend.username ?? '',
           avatarUrl: null,
         })
-      : { userId: friendId, handle: '', avatarUrl: null };
+      : { userId: friendId, username: '', avatarUrl: null };
 
     const [youDone, themDone, youPrefs, themPrefs] = await Promise.all([
       this.sessionsDone(userId, weekKey),
@@ -311,7 +311,7 @@ export class StreakService {
   private async friendUser(userId: string) {
     return this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, handle: true, name: true, avatarKey: true, avatarUpdatedAt: true },
+      select: { id: true, username: true, name: true, avatarKey: true, avatarUpdatedAt: true },
     });
   }
 

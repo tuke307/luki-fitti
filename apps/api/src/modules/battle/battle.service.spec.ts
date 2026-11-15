@@ -18,7 +18,7 @@ import { TrophyService } from './trophy.service';
 
 interface User {
   id: string;
-  handle: string | null;
+  username: string | null;
   name: string | null;
   avatarKey: string | null;
   avatarUpdatedAt: Date | null;
@@ -77,7 +77,7 @@ interface Score {
 
 const makeUser = (id: string): User => ({
   id,
-  handle: id,
+  username: id,
   name: `User ${id}`,
   avatarKey: null,
   avatarUpdatedAt: null,

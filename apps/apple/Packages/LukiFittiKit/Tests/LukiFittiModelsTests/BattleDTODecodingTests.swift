@@ -21,7 +21,7 @@ final class BattleDTODecodingTests: XCTestCase {
         let dto = try decode(DuelListDto.self, fixture: "duels-list-active")
         let active = try XCTUnwrap(dto.active.first)
         XCTAssertEqual(active.status, .ACTIVE)
-        XCTAssertEqual(active.opponent.handle, "shotbob_mwflew0b")
+        XCTAssertEqual(active.opponent.username, "shotbob_mwflew0b")
         XCTAssertEqual(active.daysLeft, 8)
         XCTAssertNil(active.outcome)
         XCTAssertEqual(active.startDayKey, "2026-11-15")
@@ -51,7 +51,7 @@ final class BattleDTODecodingTests: XCTestCase {
         let dto = try decode(DuelListDto.self, fixture: "duels-pending-result")
         let pending = try XCTUnwrap(dto.pendingResult)
         XCTAssertEqual(pending.outcome, .LOST)
-        XCTAssertEqual(pending.opponent.handle, "shotanna_mwflew0b")
+        XCTAssertEqual(pending.opponent.username, "shotanna_mwflew0b")
         XCTAssertEqual(pending.you, 280)
         XCTAssertEqual(pending.them, 340)
         XCTAssertNil(pending.seenAt)
@@ -63,7 +63,7 @@ final class BattleDTODecodingTests: XCTestCase {
         XCTAssertEqual(streak.status, .ACTIVE)
         XCTAssertEqual(streak.count, 5)
         XCTAssertEqual(streak.freezes, 1)
-        XCTAssertEqual(streak.friend.handle, "shotbob_mwflew0b")
+        XCTAssertEqual(streak.friend.username, "shotbob_mwflew0b")
         XCTAssertEqual(streak.thisWeek.you.target, 4)
     }
 
@@ -80,13 +80,13 @@ final class BattleDTODecodingTests: XCTestCase {
             rank: 4,
             cohortSize: 20,
             stage: .GLOBAL,
-            duel: DuelWatchSnapshot(opponentHandle: "anna", you: 340, them: 280, daysLeft: 3)
+            duel: DuelWatchSnapshot(opponentUsername: "anna", you: 340, them: 280, daysLeft: 3)
         )
         let data = try JSONEncoder().encode(snapshot)
         // Stays comfortably under the ~1 KB context budget.
         XCTAssertLessThan(data.count, 400)
         let back = try JSONDecoder().decode(SocialWatchSnapshot.self, from: data)
-        XCTAssertEqual(back.duel?.opponentHandle, "anna")
+        XCTAssertEqual(back.duel?.opponentUsername, "anna")
         XCTAssertEqual(back.duel?.daysLeft, 3)
     }
 }

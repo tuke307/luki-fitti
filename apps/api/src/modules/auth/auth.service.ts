@@ -677,7 +677,7 @@ export class AuthService {
         progressAiConsentAt?: Date | null;
       } | null;
       permissions?: string[];
-      handle?: string | null;
+      username?: string | null;
       arena?: string | null;
       avatarKey?: string | null;
       avatarUpdatedAt?: Date | null;
@@ -686,7 +686,7 @@ export class AuthService {
     aiKeyConfigured = false,
     social?: {
       enabled: boolean;
-      handle: string | null;
+      username: string | null;
       arena: string | null;
       avatarUrl: string | null;
     },
@@ -770,7 +770,7 @@ export class AuthService {
         settings?.socialEnabled &&
         (settings.socialBetaUserIds.length === 0 || settings.socialBetaUserIds.includes(user.id)),
       ),
-      handle: user.handle ?? null,
+      username: user.username ?? null,
       arena: user.arena ?? null,
       avatarUrl: avatarUrlFor({
         id: user.id,

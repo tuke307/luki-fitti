@@ -18,7 +18,7 @@ export function FriendSheet({
     <MobileSheet
       open={user !== null}
       onOpenChange={onOpenChange}
-      title={user ? `@${user.handle}` : '…'}
+      title={user ? `@${user.username}` : '…'}
       hideCancel
       data-testid="friend-sheet"
     >
@@ -28,11 +28,11 @@ export function FriendSheet({
             <UserAvatar
               avatarUrl={user.avatarUrl}
               name={user.name}
-              handle={user.handle}
+              username={user.username}
               className="size-16"
             />
             <div className="min-w-0">
-              <p className="truncate text-[1.0625rem] font-semibold">@{user.handle}</p>
+              <p className="truncate text-[1.0625rem] font-semibold">@{user.username}</p>
               {user.name && (
                 <p className="text-muted-foreground truncate text-[0.8125rem]">{user.name}</p>
               )}

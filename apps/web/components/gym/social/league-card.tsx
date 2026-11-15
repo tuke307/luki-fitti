@@ -56,7 +56,7 @@ function LeaderboardRow({
   bcp47,
 }: {
   rank: number;
-  card: { userId: string; handle: string; avatarUrl: string | null; name?: string | null };
+  card: { userId: string; username: string; avatarUrl: string | null; name?: string | null };
   points: number;
   isSelf: boolean;
   zone?: 'PROMOTE' | 'SAFE' | 'DEMOTE';
@@ -81,11 +81,11 @@ function LeaderboardRow({
       <UserAvatar
         avatarUrl={card.avatarUrl}
         name={card.name}
-        handle={card.handle}
+        username={card.username}
         className="size-8"
       />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[0.9375rem] font-medium">@{card.handle}</p>
+        <p className="truncate text-[0.9375rem] font-medium">@{card.username}</p>
       </div>
       {zone === 'PROMOTE' && (
         <ChevronUp aria-label="promotion" className="h-4 w-4 text-emerald-500" />

@@ -46,7 +46,7 @@ describe('resolveRelation', () => {
 describe('cardFor visibility', () => {
   const user: CardSource = {
     id: target,
-    handle: 'lukas',
+    username: 'lukas',
     name: 'Lukas Private',
     avatarKey: 'avatars/x/1.jpg',
     avatarUpdatedAt: new Date('2026-01-01T00:00:00Z'),

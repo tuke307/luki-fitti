@@ -21,7 +21,7 @@ export class SocialAccessService {
   }
 
   /**
-   * League eligibility: social enabled for the user + a handle + not paused.
+   * League eligibility: social enabled for the user + a username + not paused.
    * Paused users keep friends but are invisible to leagues and earn no points.
    */
   async isEligibleForLeagues(userId: string): Promise<boolean> {
@@ -33,8 +33,8 @@ export class SocialAccessService {
     }
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { handle: true, socialPaused: true },
+      select: { username: true, socialPaused: true },
     });
-    return Boolean(user?.handle && !user.socialPaused);
+    return Boolean(user?.username && !user.socialPaused);
   }
 }

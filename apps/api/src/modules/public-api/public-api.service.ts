@@ -89,7 +89,7 @@ export class PublicApiService {
     return {
       id: user.id,
       name: user.name,
-      handle: user.handle,
+      username: user.username,
       weightUnit: (p?.weightUnit as WeightUnit | undefined) ?? WeightUnit.KG,
       distanceUnit: (p?.distanceUnit as DistanceUnit | undefined) ?? DistanceUnit.KM,
       goals: {

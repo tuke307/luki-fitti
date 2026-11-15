@@ -618,7 +618,7 @@ public final class WatchWorkoutViewModel {
                 rank: 4,
                 cohortSize: 20,
                 stage: .GLOBAL,
-                duel: DuelWatchSnapshot(opponentHandle: "anna", you: 340, them: 280, daysLeft: 3),
+                duel: DuelWatchSnapshot(opponentUsername: "anna", you: 340, them: 280, daysLeft: 3),
                 raid: RaidWatchSnapshot(
                     bossSlug: "core-kraken", hpFraction: 0.3, phase: 2,
                     endsAt: "2026-11-15T23:00:00.000Z")

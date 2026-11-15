@@ -18,26 +18,26 @@ const pair = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 
 interface TestUser {
   id: string;
-  handle: string | null;
+  username: string | null;
   name: string | null;
   emailLookupHash: string | null;
   discoverableByEmail: boolean;
   socialPaused: boolean;
   avatarKey: string | null;
   avatarUpdatedAt: Date | null;
-  handleChangedAt: Date | null;
+  usernameChangedAt: Date | null;
 }
 
 function makeUser(partial: Partial<TestUser> & { id: string }): TestUser {
   return {
-    handle: null,
+    username: null,
     name: 'Test User',
     emailLookupHash: null,
     discoverableByEmail: true,
     socialPaused: false,
     avatarKey: null,
     avatarUpdatedAt: null,
-    handleChangedAt: null,
+    usernameChangedAt: null,
     ...partial,
   };
 }
@@ -80,8 +80,8 @@ function makePrisma(seed: { users?: TestUser[] } = {}) {
     user: {
       findUnique: async ({ where }: { where: Record<string, unknown> }) => {
         if (typeof where.id === 'string') return users.get(where.id) ?? null;
-        if (typeof where.handle === 'string') {
-          return [...users.values()].find((u) => u.handle === where.handle) ?? null;
+        if (typeof where.username === 'string') {
+          return [...users.values()].find((u) => u.username === where.username) ?? null;
         }
         return null;
       },
@@ -95,15 +95,15 @@ function makePrisma(seed: { users?: TestUser[] } = {}) {
       }: {
         where: {
           id?: { not?: string; notIn?: string[] };
-          handle?: { not?: null; startsWith?: string };
+          username?: { not?: null; startsWith?: string };
           discoverableByEmail?: boolean;
           emailLookupHash?: { in?: string[] };
         };
       }) => {
         return [...users.values()].filter((u) => {
           if (where.id?.not === u.id || where.id?.notIn?.includes(u.id)) return false;
-          if (where.handle?.not === null && u.handle === null) return false;
-          if (where.handle?.startsWith && !u.handle?.startsWith(where.handle.startsWith))
+          if (where.username?.not === null && u.username === null) return false;
+          if (where.username?.startsWith && !u.username?.startsWith(where.username.startsWith))
             return false;
           if (where.discoverableByEmail === true && !u.discoverableByEmail) return false;
           if (
@@ -118,8 +118,8 @@ function makePrisma(seed: { users?: TestUser[] } = {}) {
         const u = users.get(where.id);
         if (!u) throw new NotFoundException();
         if (
-          typeof data.handle === 'string' &&
-          [...users.values()].some((x) => x.handle === data.handle && x.id !== u.id)
+          typeof data.username === 'string' &&
+          [...users.values()].some((x) => x.username === data.username && x.id !== u.id)
         ) {
           const err = new Error('unique') as Error & { code: string };
           err.code = 'P2002';
@@ -305,35 +305,35 @@ function makeService(
   });
 }
 
-describe('SocialService handle update', () => {
-  it('first handle is exempt from the cooldown; the second change honours it', async () => {
+describe('SocialService username update', () => {
+  it('first username is exempt from the cooldown; the second change honours it', async () => {
     const prisma = makePrisma({ users: [makeUser({ id: 'me' })] });
     const svc = makeService(prisma);
 
-    const first = await svc.updateMe('me', { handle: 'Lukas' });
-    assert.equal(first.handle, 'lukas');
-    assert.ok(first.handleChangeAvailableAt);
+    const first = await svc.updateMe('me', { username: 'Lukas' });
+    assert.equal(first.username, 'lukas');
+    assert.ok(first.usernameChangeAvailableAt);
 
-    await assert.rejects(svc.updateMe('me', { handle: 'other' }), ForbiddenException);
-    // Same handle again is a no-op, not an error.
-    assert.equal((await svc.updateMe('me', { handle: 'lukas' })).handle, 'lukas');
+    await assert.rejects(svc.updateMe('me', { username: 'other' }), ForbiddenException);
+    // Same username again is a no-op, not an error.
+    assert.equal((await svc.updateMe('me', { username: 'lukas' })).username, 'lukas');
   });
 
-  it('rejects taken, invalid and reserved handles', async () => {
+  it('rejects taken, invalid and reserved usernames', async () => {
     const prisma = makePrisma({
-      users: [makeUser({ id: 'me' }), makeUser({ id: 'other', handle: 'taken' })],
+      users: [makeUser({ id: 'me' }), makeUser({ id: 'other', username: 'taken' })],
     });
     const svc = makeService(prisma);
-    await assert.rejects(svc.updateMe('me', { handle: 'taken' }), ConflictException);
-    await assert.rejects(svc.updateMe('me', { handle: 'ab' }), BadRequestException);
-    await assert.rejects(svc.updateMe('me', { handle: 'admin' }), BadRequestException);
+    await assert.rejects(svc.updateMe('me', { username: 'taken' }), ConflictException);
+    await assert.rejects(svc.updateMe('me', { username: 'ab' }), BadRequestException);
+    await assert.rejects(svc.updateMe('me', { username: 'admin' }), BadRequestException);
   });
 });
 
 describe('SocialService friend requests', () => {
   it('a reverse pending request auto-accepts instead of creating a second row', async () => {
-    const a = makeUser({ id: 'a', handle: 'aaa' });
-    const b = makeUser({ id: 'b', handle: 'bbb' });
+    const a = makeUser({ id: 'a', username: 'aaa' });
+    const b = makeUser({ id: 'b', username: 'bbb' });
     const prisma = makePrisma({ users: [a, b] });
     const svc = makeService(prisma);
 
@@ -345,26 +345,29 @@ describe('SocialService friend requests', () => {
     assert.equal(prisma.friendships.size, 1);
   });
 
-  it('users without a handle and blocked pairs are invisible (404)', async () => {
+  it('users without a username and blocked pairs are invisible (404)', async () => {
     const prisma = makePrisma({
       users: [
         makeUser({ id: 'me' }),
-        makeUser({ id: 'nohandle' }),
-        makeUser({ id: 'x', handle: 'xxx' }),
+        makeUser({ id: 'nousername' }),
+        makeUser({ id: 'x', username: 'xxx' }),
       ],
     });
     prisma.blocks.add('me|x');
     const svc = makeService(prisma);
-    await assert.rejects(svc.sendRequest('me', 'nohandle'), NotFoundException);
+    await assert.rejects(svc.sendRequest('me', 'nousername'), NotFoundException);
     await assert.rejects(svc.sendRequest('me', 'x'), NotFoundException);
-    await assert.rejects(svc.getUserByHandle('me', 'xxx'), NotFoundException);
+    await assert.rejects(svc.getUserByUsername('me', 'xxx'), NotFoundException);
   });
 });
 
 describe('SocialService invites', () => {
   it('stores only the SHA-256 of the token and accepts once', async () => {
     const prisma = makePrisma({
-      users: [makeUser({ id: 'inviter', handle: 'inviter' }), makeUser({ id: 'me', handle: 'me' })],
+      users: [
+        makeUser({ id: 'inviter', username: 'inviter' }),
+        makeUser({ id: 'me', username: 'me' }),
+      ],
     });
     const svc = makeService(prisma);
     const { url } = await svc.createInvite('inviter');
@@ -373,13 +376,13 @@ describe('SocialService invites', () => {
     assert.equal(prisma.invites.has(token), false);
 
     const preview = await svc.previewInvite('me', token);
-    assert.equal(preview.handle, 'inviter');
+    assert.equal(preview.username, 'inviter');
     assert.deepEqual(await svc.acceptInvite('me', token), { relation: 'FRIEND' });
     assert.equal(prisma.friendships.get(pair('me', 'inviter'))?.status, 'ACCEPTED');
   });
 
   it('rejects self-accept and expired/used-up/unknown tokens', async () => {
-    const prisma = makePrisma({ users: [makeUser({ id: 'me', handle: 'me' })] });
+    const prisma = makePrisma({ users: [makeUser({ id: 'me', username: 'me' })] });
     const svc = makeService(prisma);
     const { url } = await svc.createInvite('me');
     const token = url.split('/invite/')[1]!;
@@ -398,19 +401,19 @@ describe('SocialService invites', () => {
 });
 
 describe('SocialService contact matching', () => {
-  it('returns only opted-in users with a handle, excluding self and blocked', async () => {
+  it('returns only opted-in users with a username, excluding self and blocked', async () => {
     const h = (s: string) => sha256Hex(s);
     const users = [
-      makeUser({ id: 'me', handle: 'me' }),
-      makeUser({ id: 'ok', handle: 'ok', emailLookupHash: h('ok@x.de') }),
+      makeUser({ id: 'me', username: 'me' }),
+      makeUser({ id: 'ok', username: 'ok', emailLookupHash: h('ok@x.de') }),
       makeUser({
         id: 'optout',
-        handle: 'optout',
+        username: 'optout',
         emailLookupHash: h('out@x.de'),
         discoverableByEmail: false,
       }),
-      makeUser({ id: 'nohandle', emailLookupHash: h('nh@x.de') }),
-      makeUser({ id: 'blockee', handle: 'blockee', emailLookupHash: h('b@x.de') }),
+      makeUser({ id: 'nousername', emailLookupHash: h('nh@x.de') }),
+      makeUser({ id: 'blockee', username: 'blockee', emailLookupHash: h('b@x.de') }),
     ];
     const prisma = makePrisma({ users });
     prisma.blocks.add('blockee|me'); // blocked in either direction
@@ -430,7 +433,7 @@ describe('SocialService contact matching', () => {
   });
 
   it('never persists the submitted hashes', async () => {
-    const prisma = makePrisma({ users: [makeUser({ id: 'me', handle: 'me' })] });
+    const prisma = makePrisma({ users: [makeUser({ id: 'me', username: 'me' })] });
     const svc = makeService(prisma);
     const submitted = [sha256Hex('a@x.de'), sha256Hex('b@x.de')];
     await svc.matchContacts('me', submitted);
@@ -440,18 +443,18 @@ describe('SocialService contact matching', () => {
 });
 
 describe('SocialService reports', () => {
-  it('snapshots handle, name and a copied avatar object', async () => {
+  it('snapshots username, name and a copied avatar object', async () => {
     const prisma = makePrisma({
       users: [
-        makeUser({ id: 'me', handle: 'me' }),
-        makeUser({ id: 'bad', handle: 'bad', name: 'Bad Name', avatarKey: 'avatars/bad/1.jpg' }),
+        makeUser({ id: 'me', username: 'me' }),
+        makeUser({ id: 'bad', username: 'bad', name: 'Bad Name', avatarKey: 'avatars/bad/1.jpg' }),
       ],
     });
     const objects = new Map([['avatars/bad/1.jpg', Buffer.from('jpeg-bytes')]]);
     const svc = makeService(prisma, objects);
     await svc.createReport('me', 'bad', ReportReason.INAPPROPRIATE_NAME, 'offensive');
     const report = prisma.reports[0]!;
-    assert.equal(report.handleSnapshot, 'bad');
+    assert.equal(report.usernameSnapshot, 'bad');
     assert.equal(report.nameSnapshot, 'Bad Name');
     assert.equal(report.avatarKeySnapshot, 'reports/rep-1.jpg');
     // The evidence copy survives the live object being deleted.
@@ -461,8 +464,8 @@ describe('SocialService reports', () => {
   it('leaves the snapshot null when the copy fails', async () => {
     const prisma = makePrisma({
       users: [
-        makeUser({ id: 'me', handle: 'me' }),
-        makeUser({ id: 'bad', handle: 'bad', avatarKey: 'avatars/bad/gone.jpg' }),
+        makeUser({ id: 'me', username: 'me' }),
+        makeUser({ id: 'bad', username: 'bad', avatarKey: 'avatars/bad/gone.jpg' }),
       ],
     });
     const svc = makeService(prisma); // empty storage: get() throws
@@ -474,7 +477,7 @@ describe('SocialService reports', () => {
 describe('SocialService blocks', () => {
   it('blocking removes the friendship in the same call', async () => {
     const prisma = makePrisma({
-      users: [makeUser({ id: 'me', handle: 'me' }), makeUser({ id: 'x', handle: 'x' })],
+      users: [makeUser({ id: 'me', username: 'me' }), makeUser({ id: 'x', username: 'x' })],
     });
     const svc = makeService(prisma);
     await svc.sendRequest('me', 'x');
@@ -508,7 +511,7 @@ describe('SocialService duel cancellation', () => {
 
   it('unfriending cancels pending and active duels in the same call', async () => {
     const prisma = makePrisma({
-      users: [makeUser({ id: 'me', handle: 'me' }), makeUser({ id: 'x', handle: 'x' })],
+      users: [makeUser({ id: 'me', username: 'me' }), makeUser({ id: 'x', username: 'x' })],
     });
     const svc = makeService(prisma);
     await svc.sendRequest('me', 'x');
@@ -525,7 +528,7 @@ describe('SocialService duel cancellation', () => {
 
   it('blocking cancels open duels too', async () => {
     const prisma = makePrisma({
-      users: [makeUser({ id: 'me', handle: 'me' }), makeUser({ id: 'x', handle: 'x' })],
+      users: [makeUser({ id: 'me', username: 'me' }), makeUser({ id: 'x', username: 'x' })],
     });
     const svc = makeService(prisma);
     await svc.sendRequest('me', 'x');

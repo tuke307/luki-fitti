@@ -14,8 +14,8 @@ extension APIClient {
         try await request(path: "/api/social/me", method: "PATCH", body: dto)
     }
 
-    public func handleAvailability(_ handle: String) async throws -> HandleAvailabilityDto {
-        try await request(path: "/api/social/handles/\(Self.pathComponent(handle))/availability", method: "GET")
+    public func usernameAvailability(_ username: String) async throws -> UsernameAvailabilityDto {
+        try await request(path: "/api/social/usernames/\(Self.pathComponent(username))/availability", method: "GET")
     }
 
     /// Uploads one JPEG avatar (multipart/form-data; ≤ 2 MB — downscale before calling).
@@ -53,7 +53,7 @@ extension APIClient {
         struct Body: Encodable { let userId: String }
         struct Resp: Decodable { let relation: SocialRelation }
         let res: Resp = try await request(path: "/api/social/friends/requests", method: "POST", body: Body(userId: userId))
-        return SocialUserDto(userId: userId, handle: "", avatarUrl: nil, name: nil, relation: res.relation)
+        return SocialUserDto(userId: userId, username: "", avatarUrl: nil, name: nil, relation: res.relation)
     }
 
     public func acceptFriendRequest(userId: String) async throws {
@@ -98,7 +98,7 @@ extension APIClient {
 
     // MARK: - Blocks & reports
 
-    /// Rows carry `userId`/`handle`/`avatarUrl` (+ `blockedAt`), which decode onto `SocialCardDto`.
+    /// Rows carry `userId`/`username`/`avatarUrl` (+ `blockedAt`), which decode onto `SocialCardDto`.
     public func fetchBlocks() async throws -> [SocialCardDto] {
         try await request(path: "/api/social/blocks", method: "GET")
     }

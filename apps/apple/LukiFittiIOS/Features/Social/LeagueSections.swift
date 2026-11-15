@@ -233,13 +233,13 @@ struct LeagueCard: View {
                 .frame(width: 22, alignment: .trailing)
             SocialAvatarView(
                 userId: card.userId,
-                handle: card.handle,
+                username: card.username,
                 name: card.name,
                 avatarUrl: card.avatarUrl,
                 social: social,
                 size: 30
             )
-            Text("@\(card.handle)")
+            Text("@\(card.username)")
                 .font(.subheadline.weight(isSelf ? .semibold : .regular))
                 .lineLimit(1)
             Spacer()

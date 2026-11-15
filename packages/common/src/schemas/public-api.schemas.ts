@@ -104,7 +104,7 @@ export type PublicMeGoalsDto = z.infer<typeof PublicMeGoalsSchema>;
 export const PublicMeSchema = z.object({
   id: z.string(),
   name: z.string().nullable(),
-  handle: z.string().nullable(),
+  username: z.string().nullable(),
   weightUnit: z.enum(WeightUnit),
   distanceUnit: z.enum(DistanceUnit),
   goals: PublicMeGoalsSchema,

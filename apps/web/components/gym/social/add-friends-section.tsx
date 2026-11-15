@@ -33,7 +33,7 @@ export function contactsSupported(): boolean {
 }
 
 /**
- * "Add friends": debounced handle search, invite link (share/copy) + QR, and
+ * "Add friends": debounced username search, invite link (share/copy) + QR, and
  * contact sync where the Contact Picker API exists.
  */
 export function AddFriendsSection({

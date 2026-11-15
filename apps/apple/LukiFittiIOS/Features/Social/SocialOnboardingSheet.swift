@@ -4,17 +4,17 @@ import LukiFittiModels
 import LukiFittiDesign
 import LukiFittiStore
 
-/// One-time-per-launch sheet while the user has no handle: pick a handle, an optional avatar,
+/// One-time-per-launch sheet while the user has no username: pick a username, an optional avatar,
 /// the email-lookup switch and the push opt-in. Reopenable from the Social tab's own card.
 struct SocialOnboardingSheet: View {
     @Bindable var viewModel: LukiAppViewModel
     @Binding var isPresented: Bool
     @Environment(\.lukiLocale) private var tr
 
-    @State private var handle = ""
-    @State private var availability: HandleAvailabilityDto?
-    @State private var checkingHandle = false
-    @State private var handleCheckTask: Task<Void, Never>?
+    @State private var username = ""
+    @State private var availability: UsernameAvailabilityDto?
+    @State private var checkingUsername = false
+    @State private var usernameCheckTask: Task<Void, Never>?
     @State private var discoverableByEmail = true
     @State private var pickedPhoto: PhotosPickerItem?
     @State private var pendingAvatar: Data?
@@ -31,24 +31,24 @@ struct SocialOnboardingSheet: View {
                     Text(tr("Pick a username so friends can find you."))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    TextField(tr("Username"), text: $handle)
+                    TextField(tr("Username"), text: $username)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                        .accessibilityIdentifier("ios.social.onboarding.handleField")
-                        .onChange(of: handle) { _, value in
+                        .accessibilityIdentifier("ios.social.onboarding.usernameField")
+                        .onChange(of: username) { _, value in
                             availability = nil
-                            handleCheckTask?.cancel()
+                            usernameCheckTask?.cancel()
                             let normalized = value.lowercased()
                             guard normalized.count >= 3 else { return }
-                            handleCheckTask = Task {
-                                checkingHandle = true
-                                defer { checkingHandle = false }
+                            usernameCheckTask = Task {
+                                checkingUsername = true
+                                defer { checkingUsername = false }
                                 try? await Task.sleep(nanoseconds: 400_000_000)
                                 guard !Task.isCancelled else { return }
-                                availability = try? await viewModel.store.apiClient.handleAvailability(normalized)
+                                availability = try? await viewModel.store.apiClient.usernameAvailability(normalized)
                             }
                         }
-                    if checkingHandle {
+                    if checkingUsername {
                         Text(tr("Checking…")).font(.footnote).foregroundStyle(.secondary)
                     } else if let availability {
                         if availability.available {
@@ -131,7 +131,7 @@ struct SocialOnboardingSheet: View {
         .presentationDetents([.large])
     }
 
-    private func reasonText(_ reason: HandleUnavailableReason?) -> String {
+    private func reasonText(_ reason: UsernameUnavailableReason?) -> String {
         switch reason {
         case .taken: return tr("This username is taken.")
         case .reserved: return tr("This username is reserved.")
@@ -145,7 +145,7 @@ struct SocialOnboardingSheet: View {
         defer { saving = false }
         do {
             _ = try await viewModel.store.apiClient.updateSocialMe(
-                UpdateSocialProfileDto(handle: handle.lowercased(), discoverableByEmail: discoverableByEmail)
+                UpdateSocialProfileDto(username: username.lowercased(), discoverableByEmail: discoverableByEmail)
             )
             if let pendingAvatar {
                 _ = try? await viewModel.store.apiClient.uploadAvatar(jpeg: pendingAvatar)

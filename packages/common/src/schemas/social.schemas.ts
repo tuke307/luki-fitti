@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { NotificationKind, PushPlatform, ReportReason, ReportStatus } from '../enums';
-import { HANDLE_REGEX, isWebPushEndpointAllowed } from '../utils/social.util';
+import { USERNAME_REGEX, isWebPushEndpointAllowed } from '../utils/social.util';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Social: profile, friends, invites, contacts, blocks, reports
@@ -10,7 +10,7 @@ import { HANDLE_REGEX, isWebPushEndpointAllowed } from '../utils/social.util';
 export type SocialRelation = 'SELF' | 'FRIEND' | 'INCOMING' | 'OUTGOING' | 'NONE' | 'BLOCKED';
 
 export const UpdateSocialProfileSchema = z.object({
-  handle: z.string().trim().toLowerCase().regex(HANDLE_REGEX).optional(),
+  username: z.string().trim().toLowerCase().regex(USERNAME_REGEX).optional(),
   name: z.string().trim().min(1).max(40).optional(),
   discoverableByEmail: z.boolean().optional(),
   socialPaused: z.boolean().optional(),
@@ -18,26 +18,26 @@ export const UpdateSocialProfileSchema = z.object({
 export type UpdateSocialProfileDto = z.infer<typeof UpdateSocialProfileSchema>;
 
 export interface SocialProfileDto {
-  handle: string | null;
+  username: string | null;
   name: string | null;
   avatarUrl: string | null;
   discoverableByEmail: boolean;
   socialPaused: boolean;
-  /** ISO date until which the handle is locked (null = changeable now). */
-  handleChangeAvailableAt: string | null;
+  /** ISO date until which the username is locked (null = changeable now). */
+  usernameChangeAvailableAt: string | null;
 }
 
-export type HandleUnavailableReason = 'invalid' | 'reserved' | 'blocked' | 'taken';
+export type UsernameUnavailableReason = 'invalid' | 'reserved' | 'blocked' | 'taken';
 
-export interface HandleAvailabilityDto {
+export interface UsernameAvailabilityDto {
   available: boolean;
-  reason?: HandleUnavailableReason;
+  reason?: UsernameUnavailableReason;
 }
 
 /** Public card — the only shape strangers ever see. `name` is friends/self-only. */
 export interface SocialCardDto {
   userId: string;
-  handle: string;
+  username: string;
   avatarUrl: string | null;
   name?: string | null;
 }
@@ -76,7 +76,7 @@ export const ContactMatchSchema = z.object({
 export type ContactMatchDto = z.infer<typeof ContactMatchSchema>;
 
 export const SocialSearchQuerySchema = z.object({
-  // Handle characters only (an optional leading @ is dropped), so the prefix search
+  // Username characters only (an optional leading @ is dropped), so the prefix search
   // never receives LIKE wildcards such as `%`.
   q: z
     .string()
@@ -230,7 +230,7 @@ export type AdminReportsQueryDto = z.infer<typeof AdminReportsQuerySchema>;
 export const ResolveReportSchema = z.object({
   status: z.enum([ReportStatus.RESOLVED, ReportStatus.DISMISSED] as const),
   /** Optional moderation action applied to the reported user. */
-  action: z.enum(['CLEAR_AVATAR', 'RESET_HANDLE']).optional(),
+  action: z.enum(['CLEAR_AVATAR', 'RESET_USERNAME']).optional(),
 });
 export type ResolveReportDto = z.infer<typeof ResolveReportSchema>;
 
@@ -240,7 +240,7 @@ export interface AdminReportDto {
   reportedId: string;
   reason: ReportReason;
   details: string | null;
-  handleSnapshot: string | null;
+  usernameSnapshot: string | null;
   nameSnapshot: string | null;
   avatarKeySnapshot: string | null;
   status: ReportStatus;

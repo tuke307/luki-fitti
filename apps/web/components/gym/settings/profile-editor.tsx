@@ -7,27 +7,27 @@ import { toast } from '@luki-fitti/ui/components/ui/sonner';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { useAuth } from '@/providers/auth/auth-context';
 import type { SocialProfileDto } from '@luki-fitti/common/schemas';
-import { normalizeHandle } from '@luki-fitti/common/utils';
+import { normalizeUsername } from '@luki-fitti/common/utils';
 import { socialApi } from '@/lib/social/social-api';
 import { prepareImageForUpload } from '@/lib/images/prepare-image';
 import { UserAvatar } from '../social/user-avatar';
-import { HandleField, type HandleStatus } from '../social/handle-field';
+import { UsernameField, type UsernameStatus } from '../social/username-field';
 import { SettingsSection, SettingsSwitchRow } from './settings-row';
 
 /**
  * Inline social profile editor on Settings → account: avatar (upload/remove),
- * handle (live availability, 30-day cooldown), display name, find-me-by-email, pause.
+ * username (live availability, 30-day cooldown), display name, find-me-by-email, pause.
  * Saves through `updateMe`, so the display name here is `user.name`.
  */
 export function ProfileEditor() {
   const { t } = useLocale();
   const { refreshUser } = useAuth();
   const [profile, setProfile] = useState<SocialProfileDto | null>(null);
-  const [handle, setHandle] = useState('');
+  const [username, setUsername] = useState('');
   const [name, setName] = useState('');
   const [emailLookup, setEmailLookup] = useState(true);
   const [paused, setPaused] = useState(false);
-  const [status, setStatus] = useState<HandleStatus>({ state: 'idle' });
+  const [status, setStatus] = useState<UsernameStatus>({ state: 'idle' });
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const initialized = useRef(false);
@@ -44,7 +44,7 @@ export function ProfileEditor() {
   useEffect(() => {
     if (!profile || initialized.current) return;
     initialized.current = true;
-    setHandle(profile.handle ?? '');
+    setUsername(profile.username ?? '');
     setName(profile.name ?? '');
     setEmailLookup(profile.discoverableByEmail ?? true);
     setPaused(profile.socialPaused ?? false);
@@ -56,11 +56,11 @@ export function ProfileEditor() {
   };
 
   const save = async () => {
-    const normalized = normalizeHandle(handle);
+    const normalized = normalizeUsername(username);
     setSaving(true);
     try {
       const res = await socialApi.updateMe({
-        ...(normalized && normalized !== profile?.handle ? { handle: normalized } : {}),
+        ...(normalized && normalized !== profile?.username ? { username: normalized } : {}),
         ...(name.trim() && name.trim() !== profile?.name ? { name: name.trim() } : {}),
         discoverableByEmail: emailLookup,
         socialPaused: paused,
@@ -86,7 +86,7 @@ export function ProfileEditor() {
   const canSave =
     status.state !== 'checking' &&
     status.state !== 'unavailable' &&
-    (normalizeHandle(handle) !== '' || Boolean(profile?.handle));
+    (normalizeUsername(username) !== '' || Boolean(profile?.username));
 
   return (
     <SettingsSection title={t.social.editProfileTitle}>
@@ -95,7 +95,7 @@ export function ProfileEditor() {
           <UserAvatar
             avatarUrl={profile?.avatarUrl}
             name={name || profile?.name}
-            handle={handle || profile?.handle}
+            username={username || profile?.username}
             className="size-16"
           />
           <div className="flex gap-2">
@@ -137,11 +137,11 @@ export function ProfileEditor() {
           </div>
         </div>
 
-        <HandleField
-          value={handle}
-          onChange={setHandle}
-          currentHandle={profile?.handle}
-          cooldownUntil={profile?.handleChangeAvailableAt}
+        <UsernameField
+          value={username}
+          onChange={setUsername}
+          currentUsername={profile?.username}
+          cooldownUntil={profile?.usernameChangeAvailableAt}
           onStatus={setStatus}
         />
 

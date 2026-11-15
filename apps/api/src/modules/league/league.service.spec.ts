@@ -45,7 +45,7 @@ const makeState = () => ({
   scores: [] as Array<{ userId: string; weekKey: string; points: number; updatedAt: Date }>,
   users: new Map<
     string,
-    { handle: string | null; socialPaused: boolean; arena: Arena; leagueInactiveWeeks: number }
+    { username: string | null; socialPaused: boolean; arena: Arena; leagueInactiveWeeks: number }
   >(),
   notifications: [] as Array<{ userId: string; kind: NotificationKind; payload: unknown }>,
   arenaCounts: [] as Array<{ arena: Arena; n: bigint }>,
@@ -206,7 +206,7 @@ const makePrisma = (state: ReturnType<typeof makeState>) => {
         [...state.users.entries()]
           .filter(
             ([id, u]) =>
-              u.handle !== null && !u.socialPaused && (!where.id || where.id.in.includes(id)),
+              u.username !== null && !u.socialPaused && (!where.id || where.id.in.includes(id)),
           )
           .map(([id, u]) => ({ id, arena: u.arena, leagueInactiveWeeks: u.leagueInactiveWeeks })),
       update: async ({
@@ -300,7 +300,7 @@ const addUsers = (
   arena: Arena = Arena.GOLD,
 ) => {
   for (const id of ids) {
-    state.users.set(id, { handle: id, socialPaused: false, arena, leagueInactiveWeeks: 0 });
+    state.users.set(id, { username: id, socialPaused: false, arena, leagueInactiveWeeks: 0 });
   }
 };
 
@@ -479,14 +479,14 @@ describe('rollover', () => {
       closedAt: null,
     });
     state.users.set(userIds[0]!, {
-      handle: 'u0',
+      username: 'u0',
       socialPaused: false,
       arena: Arena.TITAN,
       leagueInactiveWeeks: 0,
     });
     addUsers(state, userIds.slice(1, 4), Arena.GOLD);
     state.users.set(userIds[4]!, {
-      handle: 'u4',
+      username: 'u4',
       socialPaused: false,
       arena: Arena.BRONZE,
       leagueInactiveWeeks: 0,

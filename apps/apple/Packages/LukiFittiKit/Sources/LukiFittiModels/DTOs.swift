@@ -146,7 +146,7 @@ public struct UserDto: Codable, Sendable, Equatable, Hashable, Identifiable {
     public var features: [String]? = nil
     /// Whether the user has a usable OpenRouter key (own or admin-assigned).
     public var aiKeyConfigured: Bool = false
-    /// Social feature gate + own handle (absent on older servers).
+    /// Social feature gate + own username (absent on older servers).
     public var social: UserSocialDto? = nil
 
     public func hasFeature(_ feature: FeatureGrant) -> Bool {

@@ -40,17 +40,17 @@ function makeState() {
     string,
     {
       id: string;
-      handle: string | null;
+      username: string | null;
       name: string | null;
       avatarKey: null;
       avatarUpdatedAt: null;
       socialPaused: boolean;
     }
   >();
-  const addUser = (id: string, handle: string | null = `@${id}`) => {
+  const addUser = (id: string, username: string | null = `@${id}`) => {
     users.set(id, {
       id,
-      handle,
+      username,
       name: `Name ${id}`,
       avatarKey: null,
       avatarUpdatedAt: null,
@@ -881,7 +881,7 @@ describe('RaidService', () => {
     assert.equal(phases[0]!.payload.percent, 50);
   });
 
-  it('applies league-style eligibility: community hits need a handle and no pause', async () => {
+  it('applies league-style eligibility: community hits need a username and no pause', async () => {
     const { state, svc } = setup();
     const raid = seedRaid(state, { maxHp: 10000 });
     state.addUser('nohandle', null);
@@ -901,7 +901,7 @@ describe('RaidService', () => {
     );
   });
 
-  it('squad hits need a handle but not the pause check', async () => {
+  it('squad hits need a username but not the pause check', async () => {
     const { state, svc } = setup();
     state.addUser('nohandle', null);
     state.addUser('paused');

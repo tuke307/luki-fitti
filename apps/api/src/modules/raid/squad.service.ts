@@ -213,7 +213,7 @@ export class SquadService {
     return { kicked: true };
   }
 
-  /** PATCH /squads/:id — OWNER renames (same profanity rules as handles). */
+  /** PATCH /squads/:id — OWNER renames (same profanity rules as usernames). */
   async rename(userId: string, squadId: string, name: string): Promise<{ renamed: true }> {
     await this.ownedSquad(userId, squadId);
     if (!isNameAllowed(name)) {

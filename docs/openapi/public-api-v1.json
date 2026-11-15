@@ -20,7 +20,7 @@
                     "name": {
                       "type": ["string", "null"]
                     },
-                    "handle": {
+                    "username": {
                       "type": ["string", "null"]
                     },
                     "weightUnit": {
@@ -94,7 +94,7 @@
                       "additionalProperties": false
                     }
                   },
-                  "required": ["id", "name", "handle", "weightUnit", "distanceUnit", "goals"],
+                  "required": ["id", "name", "username", "weightUnit", "distanceUnit", "goals"],
                   "additionalProperties": false
                 }
               }
@@ -187,7 +187,7 @@
             "bearer": []
           }
         ],
-        "summary": "Own profile: id, name, handle, units and goals (never email)",
+        "summary": "Own profile: id, name, username, units and goals (never email)",
         "tags": ["Public API v1"]
       }
     },

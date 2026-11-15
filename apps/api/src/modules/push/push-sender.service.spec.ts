@@ -22,7 +22,7 @@ function makePrisma(devices: Device[]) {
         id: 'n1',
         kind: 'FRIEND_REQUEST',
         payload: { url: '/social/friends' },
-        actor: { handle: 'lukas', name: 'Lukas Meier' },
+        actor: { username: 'lukas', name: 'Lukas Meier' },
         user: { pushDevices: devices },
       }),
     },
@@ -179,7 +179,7 @@ describe('PushSenderService dead-token cleanup', () => {
     assert.deepEqual(prisma.deleted, ['dead']);
   });
 
-  it('uses @handle in push text and never the display name', async () => {
+  it('uses @username in push text and never the display name', async () => {
     const prisma = makePrisma([webDevice('d1')]);
     let sentBody = '';
     const svc = sender(prisma, {

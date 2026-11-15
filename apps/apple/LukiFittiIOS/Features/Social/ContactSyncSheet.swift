@@ -77,7 +77,7 @@ struct ContactSyncSheet: View {
             }
             ForEach(matches) { user in
                 SocialPersonRow(
-                    person: SocialCardDto(userId: user.userId, handle: user.handle, avatarUrl: user.avatarUrl, name: user.name),
+                    person: SocialCardDto(userId: user.userId, username: user.username, avatarUrl: user.avatarUrl, name: user.name),
                     social: social
                 ) {
                     if requested.contains(user.userId) || user.relation == .OUTGOING || user.relation == .FRIEND {

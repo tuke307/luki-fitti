@@ -165,11 +165,11 @@ export function RaidPage({
                     <UserAvatar
                       avatarUrl={row.card.avatarUrl}
                       name={row.card.name}
-                      handle={row.card.handle}
+                      username={row.card.username}
                       className="size-7"
                     />
                     <span className="flex-1 truncate text-[0.875rem] font-medium">
-                      @{row.card.handle}
+                      @{row.card.username}
                     </span>
                     <span className="text-[0.875rem] font-semibold">
                       {row.damage.toLocaleString()}
@@ -194,11 +194,11 @@ export function RaidPage({
                     <UserAvatar
                       avatarUrl={item.card.avatarUrl}
                       name={item.card.name}
-                      handle={item.card.handle}
+                      username={item.card.username}
                       className="size-7"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[0.875rem] font-medium">@{item.card.handle}</p>
+                      <p className="truncate text-[0.875rem] font-medium">@{item.card.username}</p>
                       {item.topExercise && (
                         <p className="text-muted-foreground truncate text-[0.75rem]">
                           {item.topExercise}

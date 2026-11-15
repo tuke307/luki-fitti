@@ -26,7 +26,7 @@ struct SocialInboxSheet: View {
                     if let actor = item.actor {
                         SocialAvatarView(
                             userId: actor.userId,
-                            handle: actor.handle,
+                            username: actor.username,
                             name: actor.name,
                             avatarUrl: actor.avatarUrl,
                             social: social,
@@ -72,7 +72,7 @@ struct SocialInboxSheet: View {
 
     private func text(for item: SocialNotificationDto) -> String {
         var actor = tr("Someone")
-        if let handle = item.actor?.handle { actor = "@\(handle)" }
+        if let username = item.actor?.username { actor = "@\(username)" }
         switch item.kind {
         case SocialNotificationKind.FRIEND_REQUEST.rawValue:
             return tr("%@ sent you a friend request.", actor)

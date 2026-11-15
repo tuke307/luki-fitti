@@ -8,7 +8,7 @@ import LukiFittiStore
 /// `/social/avatars/...` URL) with an initials circle as fallback.
 struct SocialAvatarView: View {
     let userId: String
-    let handle: String
+    let username: String
     let name: String?
     let avatarUrl: String?
     let social: SocialStore
@@ -18,7 +18,7 @@ struct SocialAvatarView: View {
     @State private var didLoad = false
 
     private var initials: String {
-        let source = (name?.trimmingCharacters(in: .whitespaces).isEmpty == false ? name : handle) ?? ""
+        let source = (name?.trimmingCharacters(in: .whitespaces).isEmpty == false ? name : username) ?? ""
         return source
             .split(separator: " ")
             .prefix(2)
@@ -52,7 +52,7 @@ struct SocialAvatarView: View {
     }
 }
 
-/// One row for a `SocialCardDto`: avatar, @handle (+ name for friends), an optional
+/// One row for a `SocialCardDto`: avatar, @username (+ name for friends), an optional
 /// streak chip (flame + count, snowflake pips for freezes, weekly progress) and trailing
 /// content.
 struct SocialPersonRow<Actions: View>: View {
@@ -66,7 +66,7 @@ struct SocialPersonRow<Actions: View>: View {
         HStack(spacing: 12) {
             SocialAvatarView(
                 userId: person.userId,
-                handle: person.handle,
+                username: person.username,
                 name: person.name,
                 avatarUrl: person.avatarUrl,
                 social: social
@@ -76,7 +76,7 @@ struct SocialPersonRow<Actions: View>: View {
                     Text(name).font(.subheadline.weight(.semibold))
                 }
                 HStack(spacing: 6) {
-                    Text("@\(person.handle)")
+                    Text("@\(person.username)")
                         .font(.subheadline)
                         .foregroundStyle(person.name.map { !$0.isEmpty } == true ? .secondary : .primary)
                     if let streak, streak.status == .ACTIVE {

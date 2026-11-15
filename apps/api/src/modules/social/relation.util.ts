@@ -27,7 +27,7 @@ export function resolveRelation(
 
 export interface CardSource {
   id: string;
-  handle: string | null;
+  username: string | null;
   name: string | null;
   avatarKey: string | null;
   avatarUpdatedAt: Date | null;
@@ -44,14 +44,14 @@ export function avatarUrlFor(user: Pick<CardSource, 'id' | 'avatarKey' | 'avatar
 }
 
 /**
- * Card projection by relation: strangers get `{ userId, handle, avatarUrl }`,
+ * Card projection by relation: strangers get `{ userId, username, avatarUrl }`,
  * friends and self additionally get `name`. Callers must not invoke this for
- * BLOCKED or for users without a handle.
+ * BLOCKED or for users without a username.
  */
 export function cardFor(user: CardSource, relation: SocialRelation): SocialCardDto {
   const card: SocialCardDto = {
     userId: user.id,
-    handle: user.handle ?? '',
+    username: user.username ?? '',
     avatarUrl: avatarUrlFor(user),
   };
   if (relation === 'FRIEND' || relation === 'SELF') card.name = user.name;

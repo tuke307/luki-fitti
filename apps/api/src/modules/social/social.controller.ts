@@ -56,7 +56,7 @@ export class SocialController {
 
   @Patch('me')
   @UseGuards(CsrfGuard)
-  @ApiOperation({ summary: 'Update handle (30-day cooldown), name, discovery and pause flags' })
+  @ApiOperation({ summary: 'Update username (30-day cooldown), name, discovery and pause flags' })
   updateMe(
     @CurrentUser() user: AuthenticatedUser,
     @Body(new ZodValidationPipe(UpdateSocialProfileSchema)) body: UpdateSocialProfileDto,
@@ -64,11 +64,14 @@ export class SocialController {
     return this.social.updateMe(user.id, body);
   }
 
-  @Get('handles/:handle/availability')
+  @Get('usernames/:username/availability')
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Check whether a handle is free and allowed' })
-  handleAvailability(@CurrentUser() user: AuthenticatedUser, @Param('handle') handle: string) {
-    return this.social.handleAvailability(user.id, handle);
+  @ApiOperation({ summary: 'Check whether a username is free and allowed' })
+  usernameAvailability(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('username') username: string,
+  ) {
+    return this.social.usernameAvailability(user.id, username);
   }
 
   @Put('me/avatar')
@@ -93,7 +96,7 @@ export class SocialController {
   }
 
   @Get('avatars/:userId')
-  @ApiOperation({ summary: "Stream a user's avatar (hidden when blocked/no handle)" })
+  @ApiOperation({ summary: "Stream a user's avatar (hidden when blocked/no username)" })
   async getAvatar(
     @CurrentUser() user: AuthenticatedUser,
     @Param('userId') userId: string,
@@ -106,15 +109,15 @@ export class SocialController {
     return new StreamableFile(body, { type: 'image/jpeg', disposition: 'inline' });
   }
 
-  @Get('users/:handle')
-  @ApiOperation({ summary: 'Public card + relation for a @handle' })
-  getUser(@CurrentUser() user: AuthenticatedUser, @Param('handle') handle: string) {
-    return this.social.getUserByHandle(user.id, handle);
+  @Get('users/:username')
+  @ApiOperation({ summary: 'Public card + relation for a @username' })
+  getUser(@CurrentUser() user: AuthenticatedUser, @Param('username') username: string) {
+    return this.social.getUserByUsername(user.id, username);
   }
 
   @Get('search')
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Handle prefix search (min 2 chars, max 20 results)' })
+  @ApiOperation({ summary: 'Username prefix search (min 2 chars, max 20 results)' })
   search(
     @CurrentUser() user: AuthenticatedUser,
     @Query(new ZodValidationPipe(SocialSearchQuerySchema)) query: SocialSearchQueryDto,
@@ -217,7 +220,7 @@ export class SocialController {
 
   @Post('reports')
   @UseGuards(CsrfGuard)
-  @ApiOperation({ summary: 'Report a user for moderation (snapshots handle/name/avatar)' })
+  @ApiOperation({ summary: 'Report a user for moderation (snapshots username/name/avatar)' })
   createReport(
     @CurrentUser() user: AuthenticatedUser,
     @Body(new ZodValidationPipe(CreateReportSchema)) body: CreateReportDto,

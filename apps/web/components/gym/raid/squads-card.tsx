@@ -70,13 +70,13 @@ export function SquadsCard({
               <UserAvatar
                 avatarUrl={inv.invitedBy.avatarUrl}
                 name={inv.invitedBy.name}
-                handle={inv.invitedBy.handle}
+                username={inv.invitedBy.username}
                 className="size-7"
               />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[0.875rem] font-medium">{inv.squadName}</p>
                 <p className="text-muted-foreground text-[0.75rem]">
-                  {t.raid.invitedBy.replace('{handle}', `@${inv.invitedBy.handle}`)}
+                  {t.raid.invitedBy.replace('{username}', `@${inv.invitedBy.username}`)}
                 </p>
               </div>
               <Button
@@ -205,10 +205,10 @@ export function SquadsCard({
                   <UserAvatar
                     avatarUrl={m.card.avatarUrl}
                     name={m.card.name}
-                    handle={m.card.handle}
+                    username={m.card.username}
                     className="size-7"
                   />
-                  <span className="flex-1 truncate text-[0.875rem]">@{m.card.handle}</span>
+                  <span className="flex-1 truncate text-[0.875rem]">@{m.card.username}</span>
                   {m.role === SquadRole.OWNER ? (
                     <span className="text-muted-foreground text-[0.6875rem] uppercase">
                       {t.raid.ownerBadge}
@@ -245,10 +245,10 @@ export function SquadsCard({
                         <UserAvatar
                           avatarUrl={f.avatarUrl}
                           name={f.name}
-                          handle={f.handle}
+                          username={f.username}
                           className="size-7"
                         />
-                        <span className="flex-1 truncate text-[0.875rem]">@{f.handle}</span>
+                        <span className="flex-1 truncate text-[0.875rem]">@{f.username}</span>
                         <Button
                           size="sm"
                           variant="secondary"

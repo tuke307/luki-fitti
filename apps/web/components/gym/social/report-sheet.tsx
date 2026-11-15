@@ -69,7 +69,9 @@ export function ReportSheet({
     <MobileSheet
       open={user !== null}
       onOpenChange={onOpenChange}
-      title={user ? format(t.social.reportTitle, { handle: `@${user.handle}` }) : t.social.report}
+      title={
+        user ? format(t.social.reportTitle, { username: `@${user.username}` }) : t.social.report
+      }
       confirm={{
         label: t.social.reportSubmit,
         onConfirm: () => void submit(),

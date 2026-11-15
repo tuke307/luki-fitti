@@ -253,15 +253,15 @@ public struct TrophyListDto: Codable, Sendable, Equatable {
 
 /// The one active duel worth glancing at, pushed inside `SocialWatchSnapshot`.
 public struct DuelWatchSnapshot: Codable, Sendable, Equatable {
-    public var opponentHandle: String
+    public var opponentUsername: String
     public var you: Int
     public var them: Int
     public var daysLeft: Int
     /// Window counts from the next Berlin midnight; the row shows "starts tmrw" meanwhile.
     public var startsTomorrow: Bool
 
-    public init(opponentHandle: String, you: Int, them: Int, daysLeft: Int, startsTomorrow: Bool = false) {
-        self.opponentHandle = opponentHandle
+    public init(opponentUsername: String, you: Int, them: Int, daysLeft: Int, startsTomorrow: Bool = false) {
+        self.opponentUsername = opponentUsername
         self.you = you
         self.them = them
         self.daysLeft = daysLeft
@@ -271,7 +271,7 @@ public struct DuelWatchSnapshot: Codable, Sendable, Equatable {
     /// Tolerates contexts from older iPhones that predate `startsTomorrow`.
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        opponentHandle = try c.decode(String.self, forKey: .opponentHandle)
+        opponentUsername = try c.decode(String.self, forKey: .opponentUsername)
         you = try c.decode(Int.self, forKey: .you)
         them = try c.decode(Int.self, forKey: .them)
         daysLeft = try c.decode(Int.self, forKey: .daysLeft)

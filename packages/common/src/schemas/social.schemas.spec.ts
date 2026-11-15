@@ -7,13 +7,13 @@ describe('SocialSearchQuerySchema', () => {
     assert.equal(SocialSearchQuerySchema.parse({ q: '  @Anna_K ' }).q, 'anna_k');
   });
 
-  it('rejects LIKE wildcards and other non-handle characters', () => {
+  it('rejects LIKE wildcards and other non-username characters', () => {
     for (const q of ['an%', 'a b', 'anna!', '%%']) {
       assert.equal(SocialSearchQuerySchema.safeParse({ q }).success, false, q);
     }
   });
 
-  it('enforces the handle length', () => {
+  it('enforces the username length', () => {
     assert.equal(SocialSearchQuerySchema.safeParse({ q: 'a' }).success, false);
     assert.equal(SocialSearchQuerySchema.safeParse({ q: 'a'.repeat(21) }).success, false);
   });

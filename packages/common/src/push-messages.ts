@@ -3,8 +3,8 @@ import { RAID_BOSSES } from './raid/raid-bosses';
 
 /**
  * Localised push title/body per notification kind. `{actor}` is replaced with the
- * actor's `@handle` by the sender — display names are friends-only and never go
- * into push text. Actors without a handle render as `anonymousActorName(locale)`.
+ * actor's `@username` by the sender — display names are friends-only and never go
+ * into push text. Actors without a username render as `anonymousActorName(locale)`.
  * Unknown locales fall back to English.
  */
 export interface PushMessage {
@@ -231,7 +231,7 @@ export function pushMessageFor(
   return MESSAGES[kind][lang] ?? MESSAGES[kind].en;
 }
 
-/** Push text for an actor without a handle (display names stay friends-only). */
+/** Push text for an actor without a username (display names stay friends-only). */
 export function anonymousActorName(locale: string | null | undefined): string {
   return locale?.toLowerCase().startsWith('de') ? 'Jemand' : 'Someone';
 }
