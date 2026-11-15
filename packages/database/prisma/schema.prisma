@@ -297,6 +297,8 @@ model UserPreferences {
   pushStreaks                Boolean       @default(true)
   /// Push category toggle: raid spawns, phases, outcomes and squad activity.
   pushRaids                  Boolean       @default(true)
+  /// Per-kind mutes inside enabled categories; empty = every kind allowed.
+  pushDisabledKinds          NotificationKind[] @default([])
   createdAt                  DateTime      @default(now())
   updatedAt                  DateTime      @updatedAt
 
@@ -1215,6 +1217,9 @@ model Notification {
   actorId   String?
   /// Extra data for the client (deep-link url, etc.); never PII beyond the actor.
   payload   Json
+  /// Local delivery day (YYYY-MM-DD, device time zone) of the push, for the
+  /// daily-cap count. Null on inbox-only rows and cap-exempt pushes.
+  pushDayKey String?
   readAt    DateTime?
   createdAt DateTime         @default(now())
 
@@ -1222,6 +1227,7 @@ model Notification {
   actor User? @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+  @@index([userId, pushDayKey])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
