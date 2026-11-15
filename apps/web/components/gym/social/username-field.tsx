@@ -100,7 +100,10 @@ export function UsernameField({
 
   return (
     <div>
-      <label htmlFor="social-username" className="text-muted-foreground mb-1 block text-[0.8125rem]">
+      <label
+        htmlFor="social-username"
+        className="text-muted-foreground mb-1 block text-[0.8125rem]"
+      >
         {t.social.usernameLabel}
       </label>
       <div className="relative">
