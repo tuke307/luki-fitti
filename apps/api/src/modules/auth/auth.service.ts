@@ -49,6 +49,7 @@ import {
   type UserDto,
 } from '@luki-fitti/common/schemas';
 import { emailLookupHash } from '@luki-fitti/common/utils';
+import { avatarUrlFor } from '../social/relation.util';
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
@@ -678,10 +679,17 @@ export class AuthService {
       permissions?: string[];
       handle?: string | null;
       arena?: string | null;
+      avatarKey?: string | null;
+      avatarUpdatedAt?: Date | null;
     },
     features: FeatureGrant[] = [],
     aiKeyConfigured = false,
-    social?: { enabled: boolean; handle: string | null; arena: string | null },
+    social?: {
+      enabled: boolean;
+      handle: string | null;
+      arena: string | null;
+      avatarUrl: string | null;
+    },
   ): UserDto {
     const rawLang = user.preferences?.language;
     const normalizedLang: LanguagePreference =
@@ -764,6 +772,11 @@ export class AuthService {
       ),
       handle: user.handle ?? null,
       arena: user.arena ?? null,
+      avatarUrl: avatarUrlFor({
+        id: user.id,
+        avatarKey: user.avatarKey ?? null,
+        avatarUpdatedAt: user.avatarUpdatedAt ?? null,
+      }),
     };
     return this.formatUserDto(user, features, aiKeyConfigured, social);
   }
