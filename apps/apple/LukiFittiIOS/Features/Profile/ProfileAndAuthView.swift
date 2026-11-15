@@ -631,22 +631,26 @@ private struct TrainingSettingsPage: View {
         @Bindable var store = viewModel.store
         return List {
             Section {
-                Picker(selection: $store.preferences.trainingGoal) {
-                    Text(tr("Not set")).tag(TrainingGoal?.none)
-                    ForEach(TrainingGoal.allCases, id: \.self) { goal in
-                        Text(TrainingGoalLabels.name(goal, tr)).tag(TrainingGoal?.some(goal))
-                    }
-                } label: {
+                HStack(alignment: .center) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(tr("Training goal"))
+                        HStack(spacing: 2) { Text(tr("Training goal")); TrainingGoalInfoButton() }
                         Text(store.preferences.trainingGoal
                             .map { TrainingGoalLabels.caption($0, tr) }
                             ?? tr("Default rep ranges and rest times"))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
+                    Spacer(minLength: 8)
+                    Picker(tr("Training goal"), selection: $store.preferences.trainingGoal) {
+                        Text(tr("Not set")).tag(TrainingGoal?.none)
+                        ForEach(TrainingGoal.allCases, id: \.self) { goal in
+                            Text(TrainingGoalLabels.name(goal, tr)).tag(TrainingGoal?.some(goal))
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .accessibilityIdentifier("ios.profile.trainingGoalPicker")
                 }
-                .accessibilityIdentifier("ios.profile.trainingGoalPicker")
 
                 Picker(selection: $store.preferences.defaultRestSeconds) {
                     ForEach(Self.restOptions(current: store.preferences.defaultRestSeconds), id: \.self) { seconds in
