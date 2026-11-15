@@ -45,7 +45,7 @@ test('site host: app paths 308 to APP_ORIGIN', async () => {
     const d = decision(res);
     if (path === '/site/en') continue; // internal path passes through
     assert.equal(d.kind, 'redirect', path);
-    assert.ok(d.dest?.startsWith('https://app.luki-fitti.tony-luke.de'), `${path}: ${d.dest}`);
+    assert.equal(new URL(d.dest!).origin, 'https://app.luki-fitti.tony-luke.de', path);
   }
 });
 
