@@ -27,24 +27,33 @@ final class LukiNotificationCenterDelegate: NSObject, UNUserNotificationCenterDe
 
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification
-    ) async -> UNNotificationPresentationOptions {
-        notification.request.content.categoryIdentifier == WeighInReminderScheduler.categoryIdentifier
-            || notification.request.identifier == Self.testNotificationIdentifier
-            ? [.banner, .list, .sound]
-            : []
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler(
+            notification.request.content.categoryIdentifier == WeighInReminderScheduler.categoryIdentifier
+                || notification.request.identifier == Self.testNotificationIdentifier
+                ? [.banner, .list, .sound]
+                : []
+        )
     }
 
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
-        didReceive response: UNNotificationResponse
-    ) async {
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
         guard response.notification.request.content.categoryIdentifier == WeighInReminderScheduler.categoryIdentifier else {
+            completionHandler()
             return
         }
         let action = response.actionIdentifier
         let text = (response as? UNTextInputNotificationResponse)?.userText
-        await handleWeighIn(action: action, text: text)
+        nonisolated(unsafe) let done = completionHandler
+        Task { @MainActor in
+            await self.handleWeighIn(action: action, text: text)
+            done()
+        }
     }
 
     private func handleWeighIn(action: String, text: String?) async {
