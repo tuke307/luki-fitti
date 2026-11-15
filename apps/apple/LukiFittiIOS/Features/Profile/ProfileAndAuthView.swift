@@ -110,6 +110,9 @@ public struct ProfileAndAuthView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .navigationDestination(isPresented: $viewModel.isAccountSettingsPresented) {
+            AccountSettingsPage(viewModel: viewModel, statusMessage: $statusMessage)
+        }
         .alert(tr("No mail app found"), isPresented: $showsNoMailAlert) {
             Button(tr("Copy address")) {
                 UIPasteboard.general.string = FeedbackMail.feedbackEmail
@@ -544,6 +547,12 @@ private struct AccountSettingsPage: View {
 
     var body: some View {
         List {
+            if viewModel.socialEnabled {
+                // Re-init the field state once the social profile lands (it may still be
+                // loading when this page opens before the Social tab was visited).
+                SocialProfileSections(viewModel: viewModel)
+                    .id(viewModel.social.profile == nil)
+            }
             if let user = viewModel.store.currentUser {
                 Section {
                     VStack(alignment: .leading, spacing: 2) {
@@ -632,6 +641,11 @@ private struct AccountSettingsPage: View {
         .listStyle(.insetGrouped)
         .navigationTitle(tr("Profile & account"))
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            if viewModel.socialEnabled, viewModel.social.profile == nil {
+                await viewModel.social.fetchProfile()
+            }
+        }
         .modifier(PopOnDeepLink(viewModel: viewModel))
         .onChange(of: viewModel.store.currentUser == nil) { _, signedOut in
             if signedOut { dismiss() }

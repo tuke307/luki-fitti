@@ -65,6 +65,7 @@ import { AiKeyCard } from './ai-key-card';
 import { AiModelsPage } from './settings/ai-models-page';
 import { ImportPage } from './settings/import-page';
 import { ApiKeysPage } from './settings/api-keys-page';
+import { ProfileEditor } from './settings/profile-editor';
 import { buildFeatureRequestMailto, buildImportFile } from '@luki-fitti/common/utils';
 import { AI_KEY_NAVIGATE_EVENT } from '@/lib/ai/ai-key-required';
 import {
@@ -110,7 +111,7 @@ const SETTINGS_PAGES = [
   'sources',
 ] as const;
 
-type SettingsPage = (typeof SETTINGS_PAGES)[number];
+export type SettingsPage = (typeof SETTINGS_PAGES)[number];
 
 const AUTH_ONLY_PAGES: ReadonlySet<SettingsPage> = new Set([
   'account',
@@ -583,7 +584,12 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
   const subpageContent = (): React.ReactNode => {
     switch (visiblePage) {
       case 'account':
-        return accountCard;
+        return (
+          <div className="space-y-4">
+            {isAuthenticated && user?.social?.enabled && <ProfileEditor />}
+            {accountCard}
+          </div>
+        );
       case 'training':
         return (
           <SettingsSection footer={t.profile.exerciseSuggestionsSub}>

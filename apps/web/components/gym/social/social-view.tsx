@@ -26,6 +26,7 @@ import {
   squadsApi,
 } from '@/lib/social/social-api';
 import { PageTitle } from '../page-title';
+import { openSettingsPage } from '@/lib/settings/open-settings';
 import { UserAvatar } from './user-avatar';
 import { FriendRow } from './friend-row';
 import { AddFriendsSection } from './add-friends-section';
@@ -40,8 +41,8 @@ import { SquadsCard } from '../raid/squads-card';
 import { RaidCelebration, useRaidResult } from '../raid/raid-celebration';
 import { FriendSheet } from './friend-sheet';
 import { InboxSheet } from './inbox-sheet';
-import { SocialProfileSheet } from './social-profile-sheet';
 import { SocialOnboardingSheet } from './social-onboarding-sheet';
+import { TrophyShelf } from './trophy-shelf';
 import { ReportSheet } from './report-sheet';
 
 export type SocialSection = 'friends' | 'requests' | 'inbox' | 'duels' | 'raids' | null;
@@ -60,7 +61,6 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
   const [lists, setLists] = useState<FriendListsDto | null>(null);
   const [unread, setUnread] = useState(0);
   const [inboxOpen, setInboxOpen] = useState(section === 'inbox');
-  const [profileOpen, setProfileOpen] = useState(false);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [reportTarget, setReportTarget] = useState<SocialCardDto | null>(null);
   const [pendingResult, setPendingResult] = useState<LeaguePendingResultDto | null>(null);
@@ -225,11 +225,15 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
           variant="secondary"
           size="sm"
           data-testid={handle ? 'social-edit-profile-2' : 'social-finish-setup'}
-          onClick={() => (handle ? setProfileOpen(true) : setOnboardingOpen(true))}
+          onClick={() => (handle ? openSettingsPage('account') : setOnboardingOpen(true))}
         >
           <Pencil className="h-4 w-4" />
           {handle ? t.social.editProfile : t.social.onboardingDone}
         </Button>
+      </div>
+
+      <div className="mt-4">
+        <TrophyShelf userId={user?.id ?? null} />
       </div>
 
       {/* PR 2: weekly EP + league cards. PR 3: Duels. PR 4: Raids above Duels. */}
@@ -394,12 +398,6 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
           setInboxOpen(open);
           if (!open) setUnread(0);
         }}
-      />
-      <SocialProfileSheet
-        open={profileOpen}
-        onOpenChange={setProfileOpen}
-        profile={profile}
-        onSaved={() => void refresh()}
       />
       <SocialOnboardingSheet
         open={onboardingOpen}
