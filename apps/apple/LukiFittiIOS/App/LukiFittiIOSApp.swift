@@ -1245,6 +1245,7 @@ public struct LukiFittiIOSApp: App {
                     viewModel.pullFromWatchAndServer()
                 }
                 .task { await viewModel.requestNotificationPermissionIfNeeded() }
+                .modifier(AppUpdateNotice())
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
                         viewModel.pullFromWatchAndServer()
