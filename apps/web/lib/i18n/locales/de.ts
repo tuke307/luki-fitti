@@ -1081,6 +1081,8 @@ export const de = {
     pushFriendsSub: 'Freundschaftsanfragen und angenommene Anfragen.',
     pushLeaguesLabel: 'Ligen',
     pushLeaguesSub: 'Aufstieg, Abstieg und Erinnerungen zum Wochenende.',
+    pushNudgesLabel: 'Sticheleien',
+    pushNudgesSub: 'Wenn dich ein Freund diese Woche überholt.',
     pushKinds: {
       FRIEND_REQUEST: 'Freundschaftsanfragen',
       FRIEND_ACCEPTED: 'Angenommene Anfragen',
@@ -1102,6 +1104,7 @@ export const de = {
       RAID_ESCAPED: 'Boss entkommen',
       SQUAD_INVITE: 'Squad-Einladungen',
       SQUAD_RAID_STARTED: 'Squad-Raid gestartet',
+      FRIEND_PULLED_AHEAD: 'Freund zieht vorbei',
     },
     pushEnable: 'Push auf diesem Gerät aktivieren',
     pushEnableHint:
