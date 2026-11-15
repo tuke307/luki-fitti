@@ -16,16 +16,21 @@ export async function migrateToAppOrigin(opts: {
   navigate: (url: string) => void;
   path: string;
 }): Promise<boolean> {
-  const timeout = new Promise<'timeout'>((r) =>
-    setTimeout(() => r('timeout'), opts.timeoutMs ?? MIGRATION_TIMEOUT_MS),
-  );
-  await Promise.race([
-    opts
-      .flush()
-      .then(() => 'flushed' as const)
-      .catch(() => 'failed' as const),
-    timeout,
-  ]);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<'timeout'>((r) => {
+    timer = setTimeout(() => r('timeout'), opts.timeoutMs ?? MIGRATION_TIMEOUT_MS);
+  });
+  try {
+    await Promise.race([
+      opts
+        .flush()
+        .then(() => 'flushed' as const)
+        .catch(() => 'failed' as const),
+      timeout,
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
   opts.navigate(opts.appOrigin + opts.path);
   return true;
 }
