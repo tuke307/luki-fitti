@@ -13,6 +13,7 @@ http:
         "name": "Day 2 - Beine",
         "description": "Quad, hamstring, glute, and calf hypertrophy session.",
         "folderId": null,
+        "trainingGoal": "HYPERTROPHY",
         "estimatedDurationMinutes": 75,
         "exercises": [
           {

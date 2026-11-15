@@ -24,6 +24,7 @@ import {
   SessionType,
   SetType,
   TargetRegion,
+  TrainingGoal,
   WeightUnit,
 } from '../enums';
 import { AiModelChoicesSchema } from './ai-models.schemas';
@@ -141,6 +142,7 @@ export const UpdatePreferencesSchema = z.object({
   weighInReminderWeekday: z.number().int().min(1).max(7).optional(),
   weighInReminderMinutes: z.number().int().min(0).max(1439).optional(),
   bodyGoal: z.enum(BODY_GOALS).nullable().optional(),
+  trainingGoal: z.enum(TrainingGoal).nullable().optional(),
   goalHorizonMonths: z
     .union([z.literal(3), z.literal(6), z.literal(12)])
     .nullable()
@@ -179,6 +181,7 @@ export const UserPreferencesSchema = z.object({
   weighInReminderMinutes: z.number().default(450).optional(),
   aiModels: z.record(z.string(), z.string()).nullable().optional(),
   bodyGoal: z.enum(BODY_GOALS).nullable().optional(),
+  trainingGoal: z.enum(TrainingGoal).nullable().optional(),
   goalHorizonMonths: z.number().int().nullable().optional(),
   progressPhotoCloudBackup: z.boolean().default(false).optional(),
   progressAiConsentAt: z.string().nullable().optional(),
@@ -391,6 +394,8 @@ const TemplateFieldsSchema = z.object({
   name: z.string().trim().min(1, 'Workout name is required').max(100),
   description: z.string().trim().max(500).nullable().optional(),
   folderId: z.string().nullable().optional(),
+  /** Per-template goal override; null falls back to the profile goal. */
+  trainingGoal: z.enum(TrainingGoal).nullable().optional(),
   estimatedDurationMinutes: z.number().int().min(5).max(360).default(60).optional(),
   sortOrder: z.number().int().min(0).default(0).optional(),
   exercises: z.array(TemplateExerciseInputSchema).default([]),
@@ -445,6 +450,8 @@ export interface WorkoutTemplateDto {
   folderId: string | null;
   name: string;
   description: string | null;
+  /** Per-template goal override; null/undefined = profile default. */
+  trainingGoal?: TrainingGoal | null;
   estimatedDurationMinutes: number | null;
   sortOrder: number;
   createdAt: string;
@@ -579,6 +586,8 @@ export const SyncSessionPayloadSchema = z.object({
   templateId: z.string().nullable().optional(),
   stretchingRoutineId: z.string().nullable().optional(),
   sessionType: z.enum(SessionType).default(SessionType.STRENGTH),
+  /** Goal resolved at session creation (template ?? profile); null = legacy progression. */
+  trainingGoalSnapshot: z.enum(TrainingGoal).nullable().optional(),
   workoutNameSnapshot: z.string().min(1).max(160),
   status: z.enum(SessionStatus).default(SessionStatus.IN_PROGRESS),
   startedAt: z.string(),
@@ -675,6 +684,8 @@ export interface WorkoutSessionDto {
   templateId: string | null;
   stretchingRoutineId: string | null;
   sessionType: SessionType;
+  /** Goal resolved at session creation (template ?? profile); null = legacy progression. */
+  trainingGoalSnapshot?: TrainingGoal | null;
   workoutNameSnapshot: string;
   status: SessionStatus;
   startedAt: string;

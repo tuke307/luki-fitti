@@ -50,8 +50,15 @@ import {
   requestWorkoutNotificationPermission,
   triggerWorkoutNotification,
 } from '@/lib/notifications/notification-manager';
-import { type LanguagePreference, WeightUnit } from '@luki-fitti/common/enums';
+import {
+  type LanguagePreference,
+  TRAINING_GOALS,
+  type TrainingGoal,
+  WeightUnit,
+} from '@luki-fitti/common/enums';
+import { TRAINING_GOAL_PROFILES } from '@luki-fitti/common/utils/client';
 import { ProfileHealthCard, ProfileNutritionGoalsCard } from './profile-body-card';
+import { formatGoalRest, TrainingGoalInfoButton } from './training-goal-info-button';
 import { AiUsageView } from './ai-usage/ai-usage-view';
 import { AiKeyCard } from './ai-key-card';
 import { AiModelsPage } from './settings/ai-models-page';
@@ -109,6 +116,8 @@ const AUTH_ONLY_PAGES: ReadonlySet<SettingsPage> = new Set([
 ]);
 
 const REST_OPTIONS = [60, 75, 90, 120, 150, 180] as const;
+/** Radix Select treats `''` as "no selection" and rejects it as an item value. */
+const GOAL_UNSET = 'UNSET';
 
 interface ProfileImportViewProps {
   /** `sheet`: the phone Profile drawer with an inline title bar and a Done button. */
@@ -556,6 +565,32 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
               }))}
               onValueChange={(val) => void updatePreferences({ defaultRestSeconds: Number(val) })}
               data-testid="profile-default-rest-select"
+            />
+            <SettingsSelectRow
+              title={t.profile.trainingGoalLabel}
+              value={user?.preferences?.trainingGoal ?? GOAL_UNSET}
+              options={[
+                { value: GOAL_UNSET, label: t.profile.trainingGoalUnset },
+                ...TRAINING_GOALS.map((goal) => {
+                  const p = TRAINING_GOAL_PROFILES[goal];
+                  return {
+                    value: goal as TrainingGoal | typeof GOAL_UNSET,
+                    label: `${t.profile.trainingGoals[goal]} — ${format(
+                      t.profile.trainingGoalSummary,
+                      {
+                        compound: `${p.compound.min}–${p.compound.max}`,
+                        isolation: `${p.isolation.min}–${p.isolation.max}`,
+                        rest: formatGoalRest(p.restSeconds, t.common.sec, t.common.min),
+                      },
+                    )}`,
+                  };
+                }),
+              ]}
+              onValueChange={(val) =>
+                void updatePreferences({ trainingGoal: val === GOAL_UNSET ? null : val })
+              }
+              data-testid="profile-training-goal-select"
+              accessory={<TrainingGoalInfoButton />}
             />
             <SettingsStepperRow
               title={t.profile.weeklyGoalLabel}

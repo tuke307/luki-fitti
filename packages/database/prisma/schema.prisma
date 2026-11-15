@@ -153,6 +153,12 @@ enum SessionSourceDevice {
   IMPORT
 }
 
+enum TrainingGoal {
+  STRENGTH
+  HYPERTROPHY
+  ENDURANCE
+}
+
 model User {
   id                       String    @id @default(uuid())
   email                    String    @unique
@@ -194,17 +200,17 @@ model User {
 }
 
 model UserPreferences {
-  id                         String       @id @default(uuid())
-  userId                     String       @unique
-  weightUnit                 WeightUnit   @default(KG)
-  distanceUnit               DistanceUnit @default(KM)
-  defaultRestSeconds         Int          @default(90)
-  theme                      String       @default("system")
-  language                   String       @default("system")
-  restTimerSound             Boolean      @default(true)
-  notificationsEnabled       Boolean      @default(true)
-  exerciseSuggestionsEnabled Boolean      @default(true)
-  weeklyGoalSessions         Int          @default(4)
+  id                         String        @id @default(uuid())
+  userId                     String        @unique
+  weightUnit                 WeightUnit    @default(KG)
+  distanceUnit               DistanceUnit  @default(KM)
+  defaultRestSeconds         Int           @default(90)
+  theme                      String        @default("system")
+  language                   String        @default("system")
+  restTimerSound             Boolean       @default(true)
+  notificationsEnabled       Boolean       @default(true)
+  exerciseSuggestionsEnabled Boolean       @default(true)
+  weeklyGoalSessions         Int           @default(4)
   bodyWeightKg               Float?
   heightCm                   Float?
   birthYear                  Int?
@@ -218,23 +224,25 @@ model UserPreferences {
   proteinGoalG               Int?
   carbsGoalG                 Int?
   fatGoalG                   Int?
-  weighInReminderEnabled     Boolean      @default(false)
+  weighInReminderEnabled     Boolean       @default(false)
   /// Calendar weekday (1 = Sunday … 7 = Saturday) for the weekly weigh-in reminder.
-  weighInReminderWeekday     Int          @default(2)
+  weighInReminderWeekday     Int           @default(2)
   /// Minutes after local midnight for the weekly weigh-in reminder (450 = 07:30).
-  weighInReminderMinutes     Int          @default(450)
+  weighInReminderMinutes     Int           @default(450)
   /// Body goal driving progress tracking (part of the goal section).
   bodyGoal                   BodyGoal?
+  /// Training goal driving progression rep bands/rest; null = legacy behaviour.
+  trainingGoal               TrainingGoal?
   /// 3, 6 or 12 — validated in the zod schema.
   goalHorizonMonths          Int?
   /// Opt-in cloud backup of progress photos (device-only by default).
-  progressPhotoCloudBackup   Boolean      @default(false)
+  progressPhotoCloudBackup   Boolean       @default(false)
   /// Consent timestamp for AI target-image generation (part B).
   progressAiConsentAt        DateTime?
   /// Per-skill OpenRouter model choice: Partial<Record<AiSkillName, modelId>>; null = defaults.
   aiModels                   Json?
-  createdAt                  DateTime     @default(now())
-  updatedAt                  DateTime     @updatedAt
+  createdAt                  DateTime      @default(now())
+  updatedAt                  DateTime      @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -353,17 +361,19 @@ model WorkoutFolder {
 }
 
 model WorkoutTemplate {
-  id                       String   @id @default(uuid())
+  id                       String        @id @default(uuid())
   userId                   String
   /// Starter template id from the catalog while untouched; text is then served from the catalog.
   systemKey                String?
   folderId                 String?
   name                     String
   description              String?
-  estimatedDurationMinutes Int?     @default(60)
-  sortOrder                Int      @default(0)
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  estimatedDurationMinutes Int?          @default(60)
+  sortOrder                Int           @default(0)
+  /// Optional per-template goal override; null falls back to the profile goal.
+  trainingGoal             TrainingGoal?
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime      @updatedAt
 
   user      User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
   folder    WorkoutFolder?            @relation(fields: [folderId], references: [id], onDelete: SetNull)
@@ -444,6 +454,8 @@ model WorkoutSession {
   templateId            String?
   stretchingRoutineId   String?
   sessionType           SessionType         @default(STRENGTH)
+  /// Goal resolved at session creation (template ?? profile); null = legacy progression.
+  trainingGoalSnapshot  TrainingGoal?
   workoutNameSnapshot   String
   status                SessionStatus       @default(IN_PROGRESS)
   startedAt             DateTime            @default(now())

@@ -223,6 +223,7 @@ public enum WorkoutOutbox {
             folderId: template.folderId.flatMap { isServerId($0) ? $0 : nil },
             sortOrder: max(0, template.sortOrder),
             estimatedDurationMinutes: min(360, max(5, template.estimatedDurationMinutes ?? 60)),
+            trainingGoal: template.trainingGoal,
             text: template.systemKey != nil ? nil : .init(
                 name: name.isEmpty ? "Workout" : name,
                 description: description.flatMap { $0.isEmpty ? nil : String($0.prefix(500)) },

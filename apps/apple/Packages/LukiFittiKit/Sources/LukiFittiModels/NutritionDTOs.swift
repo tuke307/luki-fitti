@@ -286,10 +286,13 @@ public struct UpsertMealEntryDto: Codable, Sendable, Equatable, Hashable {
 public struct WorkoutBuilderRequestDto: Codable, Sendable, Equatable {
     public var prompt: String
     public var durationMinutes: Int?
+    /// Requested focus; nil falls back to the profile goal on the server.
+    public var trainingGoal: TrainingGoal?
 
-    public init(prompt: String, durationMinutes: Int? = nil) {
+    public init(prompt: String, durationMinutes: Int? = nil, trainingGoal: TrainingGoal? = nil) {
         self.prompt = prompt
         self.durationMinutes = durationMinutes
+        self.trainingGoal = trainingGoal
     }
 }
 

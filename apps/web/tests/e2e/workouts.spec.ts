@@ -103,3 +103,25 @@ test.describe('Workout Folders & Template Builder CRUD', () => {
     await deleteTemplateByName(page, TPL_EDITED);
   });
 });
+
+test('sets a per-workout training goal in the template editor', async ({ page }) => {
+  const TPL_NAME = 'E2E Goal Workout';
+
+  await resetOfflineStore(page);
+  await gotoWorkoutsTab(page);
+  await createWorkoutTemplate(page, { name: TPL_NAME });
+
+  await chooseTemplateAction(page, TPL_NAME, 'template-action-edit');
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await dialog.getByTestId('template-training-goal-select').selectOption('STRENGTH');
+  await clickDialogButton(page, /^(Save|Speichern)$/);
+
+  // The saved override survives a reopen of the editor.
+  await chooseTemplateAction(page, TPL_NAME, 'template-action-edit');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByTestId('template-training-goal-select')).toHaveValue('STRENGTH');
+  await clickDialogButton(page, /^(Cancel|Abbrechen)$/);
+
+  await deleteTemplateByName(page, TPL_NAME);
+});

@@ -127,6 +127,37 @@ public enum LukiStrings {
         "Finish Workout": "Training beenden",
         "First time doing this exercise": "Zum ersten Mal dabei",
         "Fix the set type, weight or reps, then save.": "Korrigiere Satzart, Gewicht oder Wiederholungen und speichere.",
+        "Training goal": "Trainingsziel",
+        "About training goals": "Über Trainingsziele",
+        "Your training goal tunes the weight and rep suggestions to what you train for. Without a goal, suggestions work as before.":
+            "Dein Trainingsziel passt die Gewichts- und Wiederholungsvorschläge an das an, wofür du trainierst. Ohne Ziel bleiben die Vorschläge wie bisher.",
+        "Bigger weight steps on barbell compound lifts. After a max-effort session the weight stays the same.":
+            "Größere Gewichtssprünge bei Langhantel-Grundübungen. Nach einer Einheit mit maximaler Anstrengung bleibt das Gewicht gleich.",
+        "More weight once every set reaches the top of the range, even at max effort.":
+            "Mehr Gewicht, sobald alle Sätze das obere Ende des Bereichs erreichen – auch bei maximaler Anstrengung.",
+        "More weight only while the last session stayed below RPE 9.":
+            "Mehr Gewicht nur, solange die letzte Einheit unter RPE 9 blieb.",
+        "Good to know": "Gut zu wissen",
+        "The goal's rep range replaces the rep targets of your exercises.":
+            "Der Wiederholungsbereich des Ziels ersetzt die Wiederholungsziele deiner Übungen.",
+        "Rest only changes where it is still at the 90 s default. Rest times you set yourself stay.":
+            "Die Pause ändert sich nur dort, wo noch der Standard von 90 s steht. Selbst gesetzte Pausen bleiben.",
+        "The number of sets doesn't change.":
+            "Die Anzahl der Sätze ändert sich nicht.",
+        "The AI workout builder follows your goal too.":
+            "Auch der KI-Workout-Builder richtet sich nach deinem Ziel.",
+        "The profile goal applies to all workouts. In the workout editor you can override it for a single workout.":
+            "Das Ziel im Profil gilt für alle Workouts. Im Workout-Editor kannst du es für ein einzelnes Workout überschreiben.",
+        "Default rep ranges and rest times": "Standard-Wiederholungsbereiche und Pausen",
+        "Overrides your profile goal for this workout.":
+            "Überschreibt das Ziel aus deinem Profil für dieses Workout.",
+        "Profile default": "Profil-Standard",
+        "Profile default (%@)": "Profil-Standard (%@)",
+        "Hypertrophy": "Muskelaufbau",
+        "Endurance": "Kraftausdauer",
+        "3–6 reps compound · 6–10 isolation · 3 min rest": "3–6 Wdh. Verbund · 6–10 Isolation · 3 Min. Pause",
+        "6–10 reps compound · 10–15 isolation · 90 s rest": "6–10 Wdh. Verbund · 10–15 Isolation · 90 s Pause",
+        "12–20 reps compound · 15–25 isolation · 60 s rest": "12–20 Wdh. Verbund · 15–25 Isolation · 60 s Pause",
         "Folder": "Ordner",
         "Folder Details": "Ordner",
         "Folder Name (e.g. 4er Split)": "Ordnername (z. B. 4er Split)",
@@ -178,6 +209,7 @@ public enum LukiStrings {
         "Never trained": "Noch nie trainiert",
         "New Folder": "Neuer Ordner",
         "New Password (min. 8 chars)": "Neues Passwort (mind. 8 Zeichen)",
+        "New version available": "Neue Version verfügbar",
         "New Workout": "Neues Workout",
         "Next: %@": "Weiter: %@",
         "Nice work. It’s in your history now.": "Gute Arbeit. Es ist jetzt in deinem Verlauf.",
@@ -324,6 +356,7 @@ public enum LukiStrings {
         "AI progress target": "KI-Fortschrittsziel",
         "See a realistic version of yourself after reaching your goal.": "Sieh eine realistische Version von dir nach Erreichen deines Ziels.",
         "LukiFitti creates an AI-edited version of your front photo that shows a realistic result at your goal.": "LukiFitti erstellt eine KI-bearbeitete Version deines Frontfotos, die ein realistisches Ergebnis bei deinem Ziel zeigt.",
+        "LukiFitti %@ is out. Update now, or use the web app in the meantime.": "LukiFitti %@ ist da. Jetzt aktualisieren oder so lange die Web-App verwenden.",
         "AI-generated illustration, not a prediction.": "KI-generierte Illustration, keine Vorhersage.",
         "Your front photo, goal, horizon, height, weight, body fat, sex and age are sent to the AI model you selected, via OpenRouter. LukiFitti doesn't store the photo for this.": "Dein Frontfoto, Ziel, Zeitraum, Größe, Gewicht, Körperfett, Geschlecht und Alter werden an das von dir gewählte KI-Modell über OpenRouter gesendet. LukiFitti speichert das Foto dafür nicht.",
         "I understand, continue": "Verstanden, weiter",
@@ -364,7 +397,9 @@ public enum LukiStrings {
         "Unfiled": "Ohne Ordner",
         "Unfiled (No Folder)": "Ohne Ordner",
         "Unfiled Workouts": "Workouts ohne Ordner",
+        "Update now": "Jetzt aktualisieren",
         "Use other device": "Anderes Gerät verwenden",
+        "Use the web app": "Web-App verwenden",
         "View in History": "Im Verlauf ansehen",
         "Volume": "Volumen",
         "Volume (%@)": "Volumen (%@)",

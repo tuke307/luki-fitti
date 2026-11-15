@@ -5,14 +5,44 @@
     "repMin": 8,
     "repMax": 12,
     "historySets": [
-      { "weight": 42.5, "reps": 12, "rpe": null },
-      { "weight": 42.5, "reps": 12, "rpe": null },
-      { "weight": 42.5, "reps": 12, "rpe": null }
+      {
+        "weight": 42.5,
+        "reps": 12,
+        "rpe": null
+      },
+      {
+        "weight": 42.5,
+        "reps": 12,
+        "rpe": null
+      },
+      {
+        "weight": 42.5,
+        "reps": 12,
+        "rpe": null
+      }
     ],
     "currentSets": [
-      { "setType": "WORKING", "weight": 65, "reps": 11, "rpe": null, "completed": true },
-      { "setType": "WORKING", "weight": 65, "reps": 11, "rpe": null, "completed": true },
-      { "setType": "WORKING", "weight": 65, "reps": null, "rpe": null, "completed": false }
+      {
+        "setType": "WORKING",
+        "weight": 65,
+        "reps": 11,
+        "rpe": null,
+        "completed": true
+      },
+      {
+        "setType": "WORKING",
+        "weight": 65,
+        "reps": 11,
+        "rpe": null,
+        "completed": true
+      },
+      {
+        "setType": "WORKING",
+        "weight": 65,
+        "reps": null,
+        "rpe": null,
+        "completed": false
+      }
     ],
     "expect": {
       "workingSetIndex": 2,
@@ -29,14 +59,44 @@
     "repMin": 8,
     "repMax": 12,
     "historySets": [
-      { "weight": 42.5, "reps": 12, "rpe": null },
-      { "weight": 42.5, "reps": 12, "rpe": null },
-      { "weight": 42.5, "reps": 12, "rpe": null }
+      {
+        "weight": 42.5,
+        "reps": 12,
+        "rpe": null
+      },
+      {
+        "weight": 42.5,
+        "reps": 12,
+        "rpe": null
+      },
+      {
+        "weight": 42.5,
+        "reps": 12,
+        "rpe": null
+      }
     ],
     "currentSets": [
-      { "setType": "WORKING", "weight": 65, "reps": 12, "rpe": null, "completed": true },
-      { "setType": "WORKING", "weight": 65, "reps": 12, "rpe": null, "completed": true },
-      { "setType": "WORKING", "weight": null, "reps": null, "rpe": null, "completed": false }
+      {
+        "setType": "WORKING",
+        "weight": 65,
+        "reps": 12,
+        "rpe": null,
+        "completed": true
+      },
+      {
+        "setType": "WORKING",
+        "weight": 65,
+        "reps": 12,
+        "rpe": null,
+        "completed": true
+      },
+      {
+        "setType": "WORKING",
+        "weight": null,
+        "reps": null,
+        "rpe": null,
+        "completed": false
+      }
     ],
     "expect": {
       "workingSetIndex": 2,
@@ -53,14 +113,44 @@
     "repMin": 8,
     "repMax": 12,
     "historySets": [
-      { "weight": 42.5, "reps": 12, "rpe": null },
-      { "weight": 42.5, "reps": 12, "rpe": null },
-      { "weight": 42.5, "reps": 12, "rpe": null }
+      {
+        "weight": 42.5,
+        "reps": 12,
+        "rpe": null
+      },
+      {
+        "weight": 42.5,
+        "reps": 12,
+        "rpe": null
+      },
+      {
+        "weight": 42.5,
+        "reps": 12,
+        "rpe": null
+      }
     ],
     "currentSets": [
-      { "setType": "WORKING", "weight": 65, "reps": 12, "rpe": 10, "completed": true },
-      { "setType": "WORKING", "weight": 65, "reps": 12, "rpe": 10, "completed": true },
-      { "setType": "WORKING", "weight": null, "reps": null, "rpe": null, "completed": false }
+      {
+        "setType": "WORKING",
+        "weight": 65,
+        "reps": 12,
+        "rpe": 10,
+        "completed": true
+      },
+      {
+        "setType": "WORKING",
+        "weight": 65,
+        "reps": 12,
+        "rpe": 10,
+        "completed": true
+      },
+      {
+        "setType": "WORKING",
+        "weight": null,
+        "reps": null,
+        "rpe": null,
+        "completed": false
+      }
     ],
     "expect": {
       "workingSetIndex": 2,
@@ -78,8 +168,20 @@
     "repMax": 12,
     "historySets": [],
     "currentSets": [
-      { "setType": "WORKING", "weight": 60, "reps": 12, "rpe": null, "completed": true },
-      { "setType": "WORKING", "weight": null, "reps": null, "rpe": null, "completed": false }
+      {
+        "setType": "WORKING",
+        "weight": 60,
+        "reps": 12,
+        "rpe": null,
+        "completed": true
+      },
+      {
+        "setType": "WORKING",
+        "weight": null,
+        "reps": null,
+        "rpe": null,
+        "completed": false
+      }
     ],
     "expect": {
       "workingSetIndex": 1,
@@ -96,13 +198,37 @@
     "repMin": 8,
     "repMax": 12,
     "historySets": [
-      { "weight": 42.5, "reps": 12, "rpe": null },
-      { "weight": 42.5, "reps": 12, "rpe": null },
-      { "weight": 42.5, "reps": 12, "rpe": null }
+      {
+        "weight": 42.5,
+        "reps": 12,
+        "rpe": null
+      },
+      {
+        "weight": 42.5,
+        "reps": 12,
+        "rpe": null
+      },
+      {
+        "weight": 42.5,
+        "reps": 12,
+        "rpe": null
+      }
     ],
     "currentSets": [
-      { "setType": "WORKING", "weight": null, "reps": null, "rpe": null, "completed": false },
-      { "setType": "WORKING", "weight": null, "reps": null, "rpe": null, "completed": false }
+      {
+        "setType": "WORKING",
+        "weight": null,
+        "reps": null,
+        "rpe": null,
+        "completed": false
+      },
+      {
+        "setType": "WORKING",
+        "weight": null,
+        "reps": null,
+        "rpe": null,
+        "completed": false
+      }
     ],
     "expect": {
       "workingSetIndex": 0,
@@ -119,14 +245,44 @@
     "repMin": 8,
     "repMax": 12,
     "historySets": [
-      { "weight": 42.5, "reps": 12, "rpe": null },
-      { "weight": 42.5, "reps": 12, "rpe": null },
-      { "weight": 42.5, "reps": 12, "rpe": null }
+      {
+        "weight": 42.5,
+        "reps": 12,
+        "rpe": null
+      },
+      {
+        "weight": 42.5,
+        "reps": 12,
+        "rpe": null
+      },
+      {
+        "weight": 42.5,
+        "reps": 12,
+        "rpe": null
+      }
     ],
     "currentSets": [
-      { "setType": "WARMUP", "weight": 30, "reps": 15, "rpe": null, "completed": true },
-      { "setType": "WORKING", "weight": 65, "reps": 11, "rpe": null, "completed": true },
-      { "setType": "WORKING", "weight": null, "reps": null, "rpe": null, "completed": false }
+      {
+        "setType": "WARMUP",
+        "weight": 30,
+        "reps": 15,
+        "rpe": null,
+        "completed": true
+      },
+      {
+        "setType": "WORKING",
+        "weight": 65,
+        "reps": 11,
+        "rpe": null,
+        "completed": true
+      },
+      {
+        "setType": "WORKING",
+        "weight": null,
+        "reps": null,
+        "rpe": null,
+        "completed": false
+      }
     ],
     "expect": {
       "workingSetIndex": 1,
@@ -143,13 +299,37 @@
     "repMin": 8,
     "repMax": 12,
     "historySets": [
-      { "weight": 42.5, "reps": 12, "rpe": null },
-      { "weight": 42.5, "reps": 12, "rpe": null },
-      { "weight": 42.5, "reps": 12, "rpe": null }
+      {
+        "weight": 42.5,
+        "reps": 12,
+        "rpe": null
+      },
+      {
+        "weight": 42.5,
+        "reps": 12,
+        "rpe": null
+      },
+      {
+        "weight": 42.5,
+        "reps": 12,
+        "rpe": null
+      }
     ],
     "currentSets": [
-      { "setType": "WARMUP", "weight": 30, "reps": 15, "rpe": null, "completed": true },
-      { "setType": "WORKING", "weight": null, "reps": null, "rpe": null, "completed": false }
+      {
+        "setType": "WARMUP",
+        "weight": 30,
+        "reps": 15,
+        "rpe": null,
+        "completed": true
+      },
+      {
+        "setType": "WORKING",
+        "weight": null,
+        "reps": null,
+        "rpe": null,
+        "completed": false
+      }
     ],
     "expect": {
       "workingSetIndex": 0,
@@ -157,6 +337,307 @@
       "suggestedReps": 8,
       "weightDelta": 2.5,
       "repsDelta": -4,
+      "phase": "INCREASE_WEIGHT"
+    }
+  },
+  {
+    "name": "strength goal doubles the barbell step and resets reps to the band floor",
+    "exerciseId": "ex-barbell-bench-press-medium-grip",
+    "trainingGoal": "STRENGTH",
+    "repMin": 3,
+    "repMax": 6,
+    "historySets": [
+      {
+        "weight": 100,
+        "reps": 6,
+        "rpe": 8
+      },
+      {
+        "weight": 100,
+        "reps": 6,
+        "rpe": 8
+      },
+      {
+        "weight": 100,
+        "reps": 6,
+        "rpe": 8
+      }
+    ],
+    "currentSets": [
+      {
+        "setType": "WORKING",
+        "weight": null,
+        "reps": null,
+        "rpe": null,
+        "completed": false
+      }
+    ],
+    "expect": {
+      "workingSetIndex": 0,
+      "suggestedWeight": 105,
+      "suggestedReps": 3,
+      "weightDelta": 5,
+      "repsDelta": -3,
+      "phase": "INCREASE_WEIGHT"
+    }
+  },
+  {
+    "name": "strength goal holds the weight when the last session was max effort",
+    "exerciseId": "ex-barbell-bench-press-medium-grip",
+    "trainingGoal": "STRENGTH",
+    "repMin": 3,
+    "repMax": 6,
+    "historySets": [
+      {
+        "weight": 100,
+        "reps": 6,
+        "rpe": 9.5
+      },
+      {
+        "weight": 100,
+        "reps": 6,
+        "rpe": 9.5
+      },
+      {
+        "weight": 100,
+        "reps": 6,
+        "rpe": 9.5
+      }
+    ],
+    "currentSets": [
+      {
+        "setType": "WORKING",
+        "weight": null,
+        "reps": null,
+        "rpe": null,
+        "completed": false
+      }
+    ],
+    "expect": {
+      "workingSetIndex": 0,
+      "suggestedWeight": 100,
+      "suggestedReps": 6,
+      "weightDelta": 0,
+      "repsDelta": 0,
+      "phase": "MAINTAIN"
+    }
+  },
+  {
+    "name": "hypertrophy uses the isolation band for curls",
+    "exerciseId": "ex-barbell-curl",
+    "trainingGoal": "HYPERTROPHY",
+    "repMin": 10,
+    "repMax": 15,
+    "historySets": [
+      {
+        "weight": 10,
+        "reps": 15,
+        "rpe": 8
+      },
+      {
+        "weight": 10,
+        "reps": 15,
+        "rpe": 8
+      },
+      {
+        "weight": 10,
+        "reps": 15,
+        "rpe": 8
+      }
+    ],
+    "currentSets": [
+      {
+        "setType": "WORKING",
+        "weight": null,
+        "reps": null,
+        "rpe": null,
+        "completed": false
+      }
+    ],
+    "expect": {
+      "workingSetIndex": 0,
+      "suggestedWeight": 11.5,
+      "suggestedReps": 10,
+      "weightDelta": 1.5,
+      "repsDelta": -5,
+      "phase": "INCREASE_WEIGHT"
+    }
+  },
+  {
+    "name": "endurance adds weight while effort stays below the cap",
+    "exerciseId": "ex-barbell-bench-press-medium-grip",
+    "trainingGoal": "ENDURANCE",
+    "repMin": 12,
+    "repMax": 20,
+    "historySets": [
+      {
+        "weight": 50,
+        "reps": 20,
+        "rpe": 8
+      },
+      {
+        "weight": 50,
+        "reps": 20,
+        "rpe": 8
+      },
+      {
+        "weight": 50,
+        "reps": 20,
+        "rpe": 8
+      }
+    ],
+    "currentSets": [
+      {
+        "setType": "WORKING",
+        "weight": null,
+        "reps": null,
+        "rpe": null,
+        "completed": false
+      }
+    ],
+    "expect": {
+      "workingSetIndex": 0,
+      "suggestedWeight": 52.5,
+      "suggestedReps": 12,
+      "weightDelta": 2.5,
+      "repsDelta": -8,
+      "phase": "INCREASE_WEIGHT"
+    }
+  },
+  {
+    "name": "endurance holds the weight when the last session hit the effort cap",
+    "exerciseId": "ex-barbell-bench-press-medium-grip",
+    "trainingGoal": "ENDURANCE",
+    "repMin": 12,
+    "repMax": 20,
+    "historySets": [
+      {
+        "weight": 50,
+        "reps": 20,
+        "rpe": 9
+      },
+      {
+        "weight": 50,
+        "reps": 20,
+        "rpe": 9
+      },
+      {
+        "weight": 50,
+        "reps": 20,
+        "rpe": 9
+      }
+    ],
+    "currentSets": [
+      {
+        "setType": "WORKING",
+        "weight": null,
+        "reps": null,
+        "rpe": null,
+        "completed": false
+      }
+    ],
+    "expect": {
+      "workingSetIndex": 0,
+      "suggestedWeight": 50,
+      "suggestedReps": 20,
+      "weightDelta": 0,
+      "repsDelta": 0,
+      "phase": "MAINTAIN"
+    }
+  },
+  {
+    "name": "endurance in-session anchor holds the bump at the effort cap",
+    "exerciseId": "ex-barbell-bench-press-medium-grip",
+    "trainingGoal": "ENDURANCE",
+    "repMin": 12,
+    "repMax": 20,
+    "historySets": [
+      {
+        "weight": 50,
+        "reps": 20,
+        "rpe": 8
+      },
+      {
+        "weight": 50,
+        "reps": 20,
+        "rpe": 8
+      },
+      {
+        "weight": 50,
+        "reps": 20,
+        "rpe": 8
+      }
+    ],
+    "currentSets": [
+      {
+        "setType": "WORKING",
+        "weight": 50,
+        "reps": 20,
+        "rpe": 9,
+        "completed": true
+      },
+      {
+        "setType": "WORKING",
+        "weight": null,
+        "reps": null,
+        "rpe": null,
+        "completed": false
+      }
+    ],
+    "expect": {
+      "workingSetIndex": 1,
+      "suggestedWeight": 50,
+      "suggestedReps": 20,
+      "weightDelta": 0,
+      "repsDelta": 0,
+      "phase": "MAINTAIN"
+    }
+  },
+  {
+    "name": "strength in-session anchor bumps by the doubled barbell step",
+    "exerciseId": "ex-barbell-bench-press-medium-grip",
+    "trainingGoal": "STRENGTH",
+    "repMin": 3,
+    "repMax": 6,
+    "historySets": [
+      {
+        "weight": 100,
+        "reps": 5,
+        "rpe": 8
+      },
+      {
+        "weight": 100,
+        "reps": 5,
+        "rpe": 8
+      },
+      {
+        "weight": 100,
+        "reps": 5,
+        "rpe": 8
+      }
+    ],
+    "currentSets": [
+      {
+        "setType": "WORKING",
+        "weight": 100,
+        "reps": 6,
+        "rpe": 8,
+        "completed": true
+      },
+      {
+        "setType": "WORKING",
+        "weight": null,
+        "reps": null,
+        "rpe": null,
+        "completed": false
+      }
+    ],
+    "expect": {
+      "workingSetIndex": 1,
+      "suggestedWeight": 105,
+      "suggestedReps": 3,
+      "weightDelta": 5,
+      "repsDelta": -3,
       "phase": "INCREASE_WEIGHT"
     }
   }

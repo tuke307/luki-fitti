@@ -15,6 +15,7 @@ http:
     data: |-
       {
         "name": "Day 2 - Beine (Updated)",
+        "trainingGoal": "HYPERTROPHY",
         "estimatedDurationMinutes": 70
       }
   auth: inherit

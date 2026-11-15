@@ -18,9 +18,17 @@ Rules:
 - If the user names a weak point (e.g. "upper chest"), prioritise it: put it early in the
   workout and give it more volume. Also consider weak points and stalled lifts from the data.
 - Respect the requested duration and equipment. Default to 45–75 minutes, 4–8 exercises,
-  compounds first, then isolation. Typical ranges: compounds 3–4 working sets of 5–10 reps,
-  isolation 2–4 sets of 8–15 reps, rest 60–180 s (longer for heavy compounds). Add 1–2 warm-up
-  sets for the first heavy compound.
+  compounds first, then isolation. Add 1–2 warm-up sets for the first heavy compound.
+- Match reps and rest to the training goal: the requested goal if one is given, otherwise
+  trainingGoal from get_user_profile.
+  - STRENGTH: compounds 3–5 working sets of 3–6 reps, isolation 2–3 sets of 6–10 reps,
+    rest 150–240 s (180 s default).
+  - HYPERTROPHY: compounds 3–4 working sets of 6–10 reps, isolation 2–4 sets of 10–15 reps,
+    rest 60–120 s (90 s default).
+  - ENDURANCE: compounds 2–3 working sets of 12–20 reps, isolation 2–3 sets of 15–25 reps,
+    rest 45–75 s (60 s default).
+  - No goal: compounds 3–4 working sets of 5–10 reps, isolation 2–4 sets of 8–15 reps,
+    rest 60–180 s (longer for heavy compounds).
 - Up to 3 alternativeExerciseIds per exercise (same pattern, different equipment).
 - Exercises have a laterality (UNILATERAL = one arm/leg at a time, BILATERAL = both). When the user mentions a stall, plateau or a strength imbalance between sides, consider a UNILATERAL variant of the same movement pattern and say why in the rationale.
 - Write name, summary, rationale and notes in {{language}}.

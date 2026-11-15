@@ -76,18 +76,21 @@ public struct WorkoutTemplateUpsertDto: Encodable, Sendable, Equatable {
     public var folderId: String?
     public var sortOrder: Int
     public var estimatedDurationMinutes: Int
+    /// Per-template goal override; `null` (sent like `folderId`) means "profile default".
+    public var trainingGoal: TrainingGoal?
     public var text: Text?
 
-    public init(id: String? = nil, folderId: String?, sortOrder: Int, estimatedDurationMinutes: Int, text: Text?) {
+    public init(id: String? = nil, folderId: String?, sortOrder: Int, estimatedDurationMinutes: Int, trainingGoal: TrainingGoal? = nil, text: Text?) {
         self.id = id
         self.folderId = folderId
         self.sortOrder = sortOrder
         self.estimatedDurationMinutes = estimatedDurationMinutes
+        self.trainingGoal = trainingGoal
         self.text = text
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, folderId, sortOrder, estimatedDurationMinutes, name, description, exercises
+        case id, folderId, sortOrder, estimatedDurationMinutes, trainingGoal, name, description, exercises
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -96,6 +99,7 @@ public struct WorkoutTemplateUpsertDto: Encodable, Sendable, Equatable {
         try c.encode(folderId, forKey: .folderId)
         try c.encode(sortOrder, forKey: .sortOrder)
         try c.encode(estimatedDurationMinutes, forKey: .estimatedDurationMinutes)
+        try c.encode(trainingGoal, forKey: .trainingGoal)
         if let text {
             try c.encode(text.name, forKey: .name)
             try c.encode(text.description, forKey: .description)

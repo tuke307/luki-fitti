@@ -12,6 +12,7 @@ import {
   SessionStatus,
   SessionType,
   SetType,
+  TrainingGoal,
   WeightUnit,
   type SupportedLocale,
 } from '@luki-fitti/common/enums';
@@ -22,8 +23,14 @@ import {
   getStarterTemplateText,
 } from '@luki-fitti/common/catalog';
 import { TemplateSetSchema } from '@luki-fitti/common/schemas';
-import { estimateWorkoutEnergy } from '@luki-fitti/common/utils';
+import {
+  estimateWorkoutEnergy,
+  goalRepRange,
+  resolveRestSeconds,
+  resolveTrainingGoal,
+} from '@luki-fitti/common/utils';
 import type {
+  ExerciseDto,
   HeartRateSampleDto,
   SessionExerciseSyncDto,
   SessionSetSyncDto,
@@ -124,6 +131,14 @@ export class SessionService {
     let sessionType = dto.sessionType ?? SessionType.STRENGTH;
     const exercisesToCreate: SessionExerciseSyncDto[] = [];
 
+    const prefs = await this.prisma.userPreferences.findUnique({
+      where: { userId },
+      select: { trainingGoal: true },
+    });
+    const profileGoal = (prefs?.trainingGoal as TrainingGoal | null) ?? null;
+    // Ad-hoc sessions use the profile goal; stretching routines stay goal-free.
+    let resolvedGoal: TrainingGoal | null = dto.stretchingRoutineId ? null : profileGoal;
+
     if (dto.templateId) {
       const tpl = await this.prisma.workoutTemplate.findUnique({
         where: { id: dto.templateId },
@@ -140,6 +155,10 @@ export class SessionService {
       workoutName =
         (tpl.systemKey && getStarterTemplateText(tpl.systemKey, locale)?.name) || tpl.name;
       sessionType = SessionType.STRENGTH;
+      resolvedGoal = resolveTrainingGoal(
+        (tpl.trainingGoal as TrainingGoal | null) ?? null,
+        profileGoal,
+      );
 
       const templateExerciseIds = tpl.exercises.map((te) => te.exerciseId);
       const latestCompletedExercises =
@@ -175,6 +194,13 @@ export class SessionService {
       for (const [idx, te] of tpl.exercises.entries()) {
         const lastEx = latestByExerciseId.get(te.exerciseId);
         const primaryLastWeight = lastEx?.sets[0]?.weight ?? te.targetWeight ?? null;
+        const isStretchExercise = te.exercise.exerciseType === ExerciseType.STRETCHING;
+        const band =
+          resolvedGoal && !isStretchExercise
+            ? goalRepRange(resolvedGoal, {
+                category: te.exercise.category as ExerciseDto['category'],
+              })
+            : null;
         const sets: SessionSetSyncDto[] = [];
         let setNum = 1;
         const explicit = TemplateSetSchema.array().safeParse(te.sets ?? []);
@@ -200,7 +226,7 @@ export class SessionService {
               setType: SetType.WARMUP,
               weight: primaryLastWeight ? Math.round(primaryLastWeight * 0.6 * 2) / 2 : null,
               weightUnit: te.weightUnit as WeightUnit,
-              reps: te.targetRepsMin ?? 10,
+              reps: band?.min ?? te.targetRepsMin ?? 10,
               completed: false,
             });
           }
@@ -212,7 +238,7 @@ export class SessionService {
               setType: SetType.WORKING,
               weight: histSet?.weight ?? te.targetWeight ?? null,
               weightUnit: te.weightUnit as WeightUnit,
-              reps: histSet?.reps ?? te.targetRepsMin ?? 10,
+              reps: histSet?.reps ?? band?.min ?? te.targetRepsMin ?? 10,
               durationSeconds: te.targetDurationSeconds ?? null,
               completed: false,
             });
@@ -232,11 +258,13 @@ export class SessionService {
           orderIndex: idx,
           plannedSets: te.plannedSets,
           plannedWarmupSets: te.warmupSets ?? 0,
-          targetRepsMin: te.targetRepsMin,
-          targetRepsMax: te.targetRepsMax,
+          targetRepsMin: band?.min ?? te.targetRepsMin,
+          targetRepsMax: band?.max ?? te.targetRepsMax,
           targetWeight: primaryLastWeight ?? te.targetWeight,
           targetDurationSeconds: te.targetDurationSeconds,
-          restSeconds: te.restSeconds,
+          restSeconds: isStretchExercise
+            ? te.restSeconds
+            : resolveRestSeconds(te.restSeconds, resolvedGoal),
           alternativeExerciseIds: te.alternativeExerciseIds ?? [],
           notes:
             (tpl.systemKey &&
@@ -312,6 +340,7 @@ export class SessionService {
           stretchingRoutineId: dto.stretchingRoutineId ?? null,
           sessionType,
           workoutNameSnapshot: workoutName,
+          trainingGoalSnapshot: resolvedGoal,
           status: SessionStatus.IN_PROGRESS,
           weightUnit: dto.weightUnit ?? WeightUnit.KG,
           sourceDevice: dto.sourceDevice ?? SessionSourceDevice.WEB,
@@ -555,6 +584,9 @@ export class SessionService {
           maxHeartRateBpm,
           minHeartRateBpm,
           ...(heartRateSamplesJson !== undefined ? { heartRateSamplesJson } : {}),
+          ...(payload.trainingGoalSnapshot !== undefined
+            ? { trainingGoalSnapshot: payload.trainingGoalSnapshot }
+            : {}),
           version: nextVersion,
           lastWriterDeviceId,
           lastSyncedAt: new Date(),
@@ -566,6 +598,7 @@ export class SessionService {
           stretchingRoutineId: resolvedStretchingRoutineId,
           sessionType: payload.sessionType,
           workoutNameSnapshot: payload.workoutNameSnapshot,
+          trainingGoalSnapshot: payload.trainingGoalSnapshot ?? null,
           status: payload.status,
           startedAt: new Date(payload.startedAt),
           pausedAt: payload.pausedAt ? new Date(payload.pausedAt) : null,
@@ -833,6 +866,7 @@ export class SessionService {
       templateId: session.templateId,
       stretchingRoutineId: session.stretchingRoutineId,
       sessionType: session.sessionType as SessionType,
+      trainingGoalSnapshot: (session.trainingGoalSnapshot as TrainingGoal | null) ?? null,
       workoutNameSnapshot: session.workoutNameSnapshot,
       status: session.status as SessionStatus,
       startedAt: toIsoString(session.startedAt),

@@ -130,3 +130,13 @@ in web settings after the deploy.
 2. In App Store Connect: add the build to TestFlight, and for an App Store release upload the
    screenshots from `apps/apple/marketing/appstore/` (English and German) and write the release
    notes.
+
+### In-app update notice
+
+Once the App Store is live with a newer version, the app shows a "New version available" alert
+on every launch and return to the foreground until the user updates. It offers the App Store or
+the web app; there is no "Later". The version comes from Apple's iTunes lookup, which is
+CDN-cached and can lag a few hours behind the release going live.
+
+Schema and API changes must keep working with the app version in the App Store — see
+[migrations.md](migrations.md).

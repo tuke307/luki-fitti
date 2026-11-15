@@ -311,6 +311,14 @@ public enum BodyGoal: String, Codable, Sendable, CaseIterable, Equatable, Hashab
     case MAINTAIN
 }
 
+/// Training focus that reshapes rep bands, rest times and progression steps.
+/// Mirrors `TrainingGoal` in `packages/common/src/enums` — keep raw values in sync.
+public enum TrainingGoal: String, Codable, Sendable, CaseIterable, Equatable, Hashable {
+    case STRENGTH
+    case HYPERTROPHY
+    case ENDURANCE
+}
+
 public enum ProgressPose: String, Codable, Sendable, CaseIterable, Equatable, Hashable {
     case FRONT
     case SIDE

@@ -10,6 +10,7 @@ import {
   SessionStatus,
   SessionType,
   SetType,
+  TrainingGoal,
   WeightUnit,
 } from '@luki-fitti/common/enums';
 import type { WorkoutSessionDto } from '@luki-fitti/common/schemas';
@@ -158,6 +159,54 @@ function createMockWorkoutPrisma(): PrismaService {
 
   return prisma as unknown as PrismaService;
 }
+
+describe('WorkoutService — training goal', () => {
+  it('persists, updates and clears the per-template training goal', async () => {
+    const prisma = createMockWorkoutPrisma();
+    const service = new WorkoutService(prisma);
+
+    const tpl = await service.createTemplate(
+      'user-a',
+      {
+        name: 'Strength Day',
+        folderId: null,
+        trainingGoal: TrainingGoal.STRENGTH,
+        exercises: [],
+      },
+      'en',
+    );
+    assert.equal(tpl.trainingGoal, TrainingGoal.STRENGTH);
+
+    const updated = await service.updateTemplate(
+      'user-a',
+      tpl.id,
+      { trainingGoal: TrainingGoal.ENDURANCE },
+      'en',
+    );
+    assert.equal(updated.trainingGoal, TrainingGoal.ENDURANCE);
+
+    const cleared = await service.updateTemplate('user-a', tpl.id, { trainingGoal: null }, 'en');
+    assert.equal(cleared.trainingGoal, null);
+  });
+
+  it('keeps the goal when duplicating a template', async () => {
+    const prisma = createMockWorkoutPrisma();
+    const service = new WorkoutService(prisma);
+
+    const tpl = await service.createTemplate(
+      'user-a',
+      {
+        name: 'Endurance Day',
+        folderId: null,
+        trainingGoal: TrainingGoal.ENDURANCE,
+        exercises: [],
+      },
+      'en',
+    );
+    const copy = await service.duplicateTemplate('user-a', tpl.id, 'en');
+    assert.equal(copy.trainingGoal, TrainingGoal.ENDURANCE);
+  });
+});
 
 describe('WorkoutService — Folders, Templates, Alternatives & User Isolation', () => {
   it('enforces strict user isolation across folders and workout templates', async () => {

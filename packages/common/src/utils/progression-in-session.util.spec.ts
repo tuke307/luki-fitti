@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   ExerciseType,
+  TrainingGoal,
   SessionExerciseOrigin,
   SessionExerciseStatus,
   SessionStatus,
@@ -31,6 +32,7 @@ interface InSessionCase {
   exerciseId: string;
   repMin: number;
   repMax: number;
+  trainingGoal?: keyof typeof TrainingGoal;
   historySets: Array<{ weight: number; reps: number; rpe: number | null }>;
   currentSets: FixtureSet[];
   expect: {
@@ -165,6 +167,7 @@ describe('computeExerciseProgression — in-session anchors', () => {
         targetRepsMax: c.repMax,
         weightUnit: WeightUnit.KG,
         currentSets: buildCurrentSets(c.exerciseId, c.currentSets),
+        trainingGoal: c.trainingGoal ? TrainingGoal[c.trainingGoal] : null,
       });
 
       const suggestion = insight.setSuggestions[c.expect.workingSetIndex];

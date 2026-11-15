@@ -7,6 +7,7 @@ import {
   MealType,
   MuscleGroup,
   EquipmentType,
+  TrainingGoal,
 } from '../enums';
 import type { MealEntryDto, MealItemDto } from './nutrition.schemas';
 
@@ -106,6 +107,7 @@ export const WorkoutBuilderRequestSchema = z.object({
   prompt: z.string().trim().min(3, 'Describe the workout you want').max(AI_PROMPT_MAX_LENGTH),
   durationMinutes: z.number().int().min(10).max(180).optional(),
   equipment: z.array(z.enum(EquipmentType)).max(13).optional(),
+  trainingGoal: z.enum(TrainingGoal).optional(),
 });
 
 /**

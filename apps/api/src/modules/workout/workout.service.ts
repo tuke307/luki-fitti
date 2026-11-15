@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { localizeFolder, localizeTemplate, resolveExerciseMedia } from '@luki-fitti/common/catalog';
-import type { SupportedLocale } from '@luki-fitti/common/enums';
+import type { SupportedLocale, TrainingGoal } from '@luki-fitti/common/enums';
 import {
   buildTemplateExercisesFromSession,
   DEFAULT_FOLDER_COLOR,
@@ -321,6 +321,7 @@ export class WorkoutService {
           folderId: dto.folderId ?? null,
           name: dto.name.trim(),
           description: dto.description ?? null,
+          trainingGoal: dto.trainingGoal ?? null,
           estimatedDurationMinutes: dto.estimatedDurationMinutes ?? 60,
           sortOrder: dto.sortOrder ?? 0,
         },
@@ -392,6 +393,7 @@ export class WorkoutService {
           ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
           ...(dto.description !== undefined ? { description: dto.description } : {}),
           ...(dto.folderId !== undefined ? { folderId: dto.folderId } : {}),
+          ...(dto.trainingGoal !== undefined ? { trainingGoal: dto.trainingGoal } : {}),
           ...(dto.estimatedDurationMinutes !== undefined
             ? { estimatedDurationMinutes: dto.estimatedDurationMinutes }
             : {}),
@@ -452,6 +454,7 @@ export class WorkoutService {
       {
         name: `${source.name} (Copy)`,
         description: source.description,
+        trainingGoal: source.trainingGoal ?? null,
         folderId: source.folderId,
         estimatedDurationMinutes: source.estimatedDurationMinutes ?? 60,
         sortOrder: targetSortOrder,
@@ -596,6 +599,7 @@ export class WorkoutService {
     folderId: string | null;
     name: string;
     description: string | null;
+    trainingGoal?: string | null;
     estimatedDurationMinutes: number | null;
     sortOrder: number;
     createdAt: Date | string;
@@ -641,6 +645,7 @@ export class WorkoutService {
       folderId: tpl.folderId,
       name: tpl.name,
       description: tpl.description,
+      trainingGoal: (tpl.trainingGoal as TrainingGoal | null) ?? null,
       estimatedDurationMinutes: tpl.estimatedDurationMinutes,
       sortOrder: tpl.sortOrder,
       createdAt: tpl.createdAt instanceof Date ? tpl.createdAt.toISOString() : tpl.createdAt,

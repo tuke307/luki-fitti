@@ -295,6 +295,7 @@ export function ActiveSessionView({
           historySessions,
           weightUnit: activeSession.weightUnit,
           dismissed: dismissedSuggestions,
+          trainingGoal: activeSession.trainingGoalSnapshot ?? null,
         })
       : null;
 
@@ -435,6 +436,7 @@ export function ActiveSessionView({
       targetWeight: ex.targetWeight,
       weightUnit: activeSession.weightUnit,
       currentSets: ex.sets,
+      trainingGoal: activeSession.trainingGoalSnapshot ?? null,
     });
     return {
       catEx,

@@ -299,6 +299,7 @@ export const de = {
     notesFocusLabel: 'Notizen',
     notesFocusPlaceholder: 'Optional',
     estDurationLabel: 'Dauer (Min.)',
+    trainingGoalHint: 'Überschreibt das Ziel aus deinem Profil für dieses Workout.',
     orderedExercisesTitle: 'Übungen ({count})',
     addExerciseSlotBtn: 'Übung hinzufügen',
     supersetWithActive: 'Supersatz mit #{index}',
@@ -684,6 +685,36 @@ export const de = {
     testNotificationBody: 'Mitteilungen sind aktiviert.',
     exerciseSuggestionsLabel: 'Übungsvorschläge',
     exerciseSuggestionsSub: 'Gelegentlich eine neue Übung vorschlagen',
+    trainingGoalLabel: 'Trainingsziel',
+    trainingGoalSub: 'Steuert Wiederholungsbereiche, Pausen und Progression',
+    trainingGoalUnset: 'Nicht festgelegt',
+    trainingGoalProfileDefault: 'Profil-Standard ({name})',
+    trainingGoals: {
+      STRENGTH: 'Kraft',
+      HYPERTROPHY: 'Muskelaufbau',
+      ENDURANCE: 'Kraftausdauer',
+    },
+    trainingGoalSummary: '{compound} Wdh. Grundübungen · {isolation} Isolation · {rest} Pause',
+    trainingGoalInfo: {
+      button: 'Über Trainingsziele',
+      intro:
+        'Dein Trainingsziel passt die Gewichts- und Wiederholungsvorschläge an das an, wofür du trainierst. Ohne Ziel bleiben die Vorschläge wie bisher.',
+      rules: {
+        STRENGTH:
+          'Größere Gewichtssprünge bei Langhantel-Grundübungen. Nach einer Einheit mit maximaler Anstrengung bleibt das Gewicht gleich.',
+        HYPERTROPHY:
+          'Mehr Gewicht, sobald alle Sätze das obere Ende des Bereichs erreichen – auch bei maximaler Anstrengung.',
+        ENDURANCE: 'Mehr Gewicht nur, solange die letzte Einheit unter RPE 9 blieb.',
+      },
+      goodToKnowTitle: 'Gut zu wissen',
+      goodToKnow: [
+        'Der Wiederholungsbereich des Ziels ersetzt die Wiederholungsziele deiner Übungen.',
+        'Die Pause ändert sich nur dort, wo noch der Standard von 90 s steht. Selbst gesetzte Pausen bleiben.',
+        'Die Anzahl der Sätze ändert sich nicht.',
+        'Auch der KI-Workout-Builder richtet sich nach deinem Ziel.',
+        'Das Ziel im Profil gilt für alle Workouts. Im Workout-Editor kannst du es für ein einzelnes Workout überschreiben.',
+      ],
+    },
     exportTitle: 'Exportieren',
     exportSub: 'Lade eine Kopie deiner Workouts und deines Verlaufs herunter.',
     exportedStatus: '{fileName} exportiert',

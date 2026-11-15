@@ -48,6 +48,8 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
     /// Per-skill OpenRouter model choice keyed by `AiSkillName` raw value; missing = admin default.
     public var aiModels: [String: String]? = nil
     public var bodyGoal: BodyGoal? = nil
+    /// Training focus; nil = legacy hypertrophy-like behaviour.
+    public var trainingGoal: TrainingGoal? = nil
     /// 3, 6 or 12 months.
     public var goalHorizonMonths: Int? = nil
     /// Opt-in cloud backup of progress photos (device-only by default).
@@ -88,6 +90,7 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
         case weighInReminderEnabled, weighInReminderWeekday, weighInReminderMinutes
         case aiModels
         case bodyGoal, goalHorizonMonths, progressPhotoCloudBackup, progressAiConsentAt
+        case trainingGoal
     }
 
     public init(from decoder: Decoder) throws {
@@ -119,6 +122,7 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
         self.weighInReminderMinutes = try c.decodeIfPresent(Int.self, forKey: .weighInReminderMinutes) ?? 450
         self.aiModels = (try? c.decodeIfPresent([String: String].self, forKey: .aiModels)).flatMap { $0 }
         self.bodyGoal = (try? c.decodeIfPresent(String.self, forKey: .bodyGoal)).flatMap { $0 }.flatMap(BodyGoal.init(rawValue:))
+        self.trainingGoal = (try? c.decodeIfPresent(String.self, forKey: .trainingGoal)).flatMap { $0 }.flatMap(TrainingGoal.init(rawValue:))
         self.goalHorizonMonths = try c.decodeIfPresent(Int.self, forKey: .goalHorizonMonths)
         self.progressPhotoCloudBackup = try c.decodeIfPresent(Bool.self, forKey: .progressPhotoCloudBackup) ?? false
         self.progressAiConsentAt = try c.decodeIfPresent(String.self, forKey: .progressAiConsentAt)
@@ -216,6 +220,7 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
     /// Replaces the stored per-skill model choices (an empty map clears them all).
     public var aiModels: [String: String]? = nil
     public var bodyGoal: BodyGoal? = nil
+    public var trainingGoal: TrainingGoal? = nil
     public var goalHorizonMonths: Int? = nil
     public var progressPhotoCloudBackup: Bool? = nil
     /// Fields sent as JSON `null` so the server clears them. A `nil` property is otherwise left
@@ -253,7 +258,7 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
         case dailyKcalGoal, proteinGoalG, carbsGoalG, fatGoalG
         case weighInReminderEnabled, weighInReminderWeekday, weighInReminderMinutes
         case aiModels
-        case bodyGoal, goalHorizonMonths, progressPhotoCloudBackup
+        case bodyGoal, trainingGoal, goalHorizonMonths, progressPhotoCloudBackup
     }
 
     /// Sets `value` for the request, or marks the field to be cleared on the server when `nil`.
@@ -288,6 +293,7 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
         weighInReminderWeekday = try c.decodeIfPresent(Int.self, forKey: .weighInReminderWeekday)
         weighInReminderMinutes = try c.decodeIfPresent(Int.self, forKey: .weighInReminderMinutes)
         aiModels = try c.decodeIfPresent([String: String].self, forKey: .aiModels)
+        trainingGoal = try c.decodeIfPresent(TrainingGoal.self, forKey: .trainingGoal)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -323,6 +329,7 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
         try put(weighInReminderMinutes, forKey: .weighInReminderMinutes)
         try put(aiModels, forKey: .aiModels)
         try put(bodyGoal, forKey: .bodyGoal)
+        try put(trainingGoal, forKey: .trainingGoal)
         try put(goalHorizonMonths, forKey: .goalHorizonMonths)
         try put(progressPhotoCloudBackup, forKey: .progressPhotoCloudBackup)
         // Sorted so the request body is stable (Set order isn't).
@@ -534,6 +541,8 @@ public struct WorkoutTemplateDto: Codable, Sendable, Equatable, Hashable, Identi
     public var folderId: String?
     public var name: String
     public var description: String?
+    /// Per-template goal override; nil falls back to the profile goal.
+    public var trainingGoal: TrainingGoal? = nil
     public var estimatedDurationMinutes: Int?
     public var sortOrder: Int
     public var createdAt: String
@@ -549,6 +558,7 @@ public struct WorkoutTemplateDto: Codable, Sendable, Equatable, Hashable, Identi
         folderId: String? = nil,
         name: String,
         description: String? = nil,
+        trainingGoal: TrainingGoal? = nil,
         estimatedDurationMinutes: Int? = 60,
         sortOrder: Int = 0,
         createdAt: String = ISO8601DateFormatter().string(from: Date()),
@@ -561,6 +571,7 @@ public struct WorkoutTemplateDto: Codable, Sendable, Equatable, Hashable, Identi
         self.folderId = folderId
         self.name = name
         self.description = description
+        self.trainingGoal = trainingGoal
         self.estimatedDurationMinutes = estimatedDurationMinutes
         self.sortOrder = sortOrder
         self.createdAt = createdAt
@@ -860,6 +871,8 @@ public struct WorkoutSessionDto: Codable, Sendable, Equatable, Hashable, Identif
     public var heartRateSamples: [HeartRateSampleDto]?
     public var version: Int
     public var lastSyncedAt: String
+    /// Goal resolved at session start (template override ?? profile goal); nil = legacy.
+    public var trainingGoalSnapshot: TrainingGoal? = nil
     public var exercises: [SessionExerciseDto]
 
     public init(
@@ -894,6 +907,7 @@ public struct WorkoutSessionDto: Codable, Sendable, Equatable, Hashable, Identif
         heartRateSamples: [HeartRateSampleDto]? = nil,
         version: Int = 1,
         lastSyncedAt: String = ISO8601DateFormatter().string(from: Date()),
+        trainingGoalSnapshot: TrainingGoal? = nil,
         exercises: [SessionExerciseDto] = []
     ) {
         self.id = id
@@ -927,6 +941,7 @@ public struct WorkoutSessionDto: Codable, Sendable, Equatable, Hashable, Identif
         self.heartRateSamples = heartRateSamples
         self.version = version
         self.lastSyncedAt = lastSyncedAt
+        self.trainingGoalSnapshot = trainingGoalSnapshot
         self.exercises = exercises
     }
 }
@@ -957,6 +972,7 @@ public struct SyncSessionPayloadDto: Codable, Sendable, Equatable, Hashable {
     public var minHeartRateBpm: Int?
     public var heartRateSamples: [HeartRateSampleDto]?
     public var version: Int
+    public var trainingGoalSnapshot: TrainingGoal?
     /// Stable random id of this app install; lets the server recognise its own retried syncs.
     public var deviceId: String?
     /// Last server version this device acknowledged; used for optimistic concurrency.
@@ -990,6 +1006,7 @@ public struct SyncSessionPayloadDto: Codable, Sendable, Equatable, Hashable {
         self.minHeartRateBpm = session.minHeartRateBpm
         self.heartRateSamples = session.heartRateSamples
         self.version = session.version
+        self.trainingGoalSnapshot = session.trainingGoalSnapshot
         self.forceOverwrite = forceOverwrite
         self.exercises = session.exercises
     }

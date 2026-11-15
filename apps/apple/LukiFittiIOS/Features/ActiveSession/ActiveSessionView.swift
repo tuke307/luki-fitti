@@ -647,7 +647,8 @@ public struct ActiveSessionView: View {
             targetRepsMax: exercise.targetRepsMax,
             targetWeight: exercise.targetWeight,
             weightUnit: session.weightUnit,
-            currentSets: exercise.sets
+            currentSets: exercise.sets,
+            trainingGoal: session.trainingGoalSnapshot
         )
     }
 
@@ -1132,7 +1133,8 @@ public struct ActiveSessionView: View {
                catalog: viewModel.store.catalog,
                historySessions: viewModel.store.historySessions,
                weightUnit: session.weightUnit,
-               dismissed: dismissedSuggestions(session)
+               dismissed: dismissedSuggestions(session),
+               trainingGoal: session.trainingGoalSnapshot
            ) {
             let stallingExercise = session.exercises.first {
                 $0.exerciseId != nil && $0.exerciseId == suggestion.stallingExerciseId

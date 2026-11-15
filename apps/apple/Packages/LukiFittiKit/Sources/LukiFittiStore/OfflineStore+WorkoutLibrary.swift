@@ -80,7 +80,8 @@ extension OfflineStore {
         description: String,
         folderId: String?,
         durationMinutes: Int,
-        exercises: [WorkoutTemplateExerciseDto]
+        exercises: [WorkoutTemplateExerciseDto],
+        trainingGoal: TrainingGoal? = nil
     ) -> WorkoutTemplateDto? {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return nil }
@@ -112,6 +113,7 @@ extension OfflineStore {
             createdAt: now
         )
         template.folderId = folderId
+        template.trainingGoal = trainingGoal
         template.name = trimmedName
         template.description = trimmedDescription.isEmpty ? nil : description
         template.estimatedDurationMinutes = durationMinutes
