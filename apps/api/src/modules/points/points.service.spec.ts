@@ -185,14 +185,26 @@ const service = (
     eligible?: boolean;
     stage?: LeagueStage;
     leaguesEnabled?: boolean;
+    nudges?: { calls: Array<{ userId: string; weekKey: string }>; fail?: boolean };
   } = {},
 ) => {
   const leagueStub = leagues(state, opts.stage ?? LeagueStage.GLOBAL);
+  const nudgeStub = opts.nudges
+    ? {
+        afterEntry: async (userId: string, weekKey: string) => {
+          if (opts.nudges!.fail) throw new Error('nudge boom');
+          opts.nudges!.calls.push({ userId, weekKey });
+        },
+      }
+    : undefined;
   const svc = new PointsService(
     makePrisma(state),
     settings({ leaguesEnabled: opts.leaguesEnabled ?? true }),
     access(opts),
     leagueStub,
+    undefined,
+    undefined,
+    nudgeStub as never,
   );
   return { svc, leagueStub };
 };
@@ -318,6 +330,39 @@ describe('PointsService.recordSession', () => {
     state2.sessions.set('s1', makeSession('s1'));
     await res2.svc.recordSession('u1', 's1');
     assert.deepEqual(res2.leagueStub.placed, []);
+  });
+});
+
+describe('PointsService.recordSession → friend nudges', () => {
+  it('runs the nudge check after a fresh >0-point entry', async () => {
+    const state = makeState();
+    const nudges = { calls: [] as Array<{ userId: string; weekKey: string }> };
+    const { svc } = service(state, { nudges });
+    state.sessions.set('s1', makeSession('s1'));
+    await svc.recordSession('u1', 's1');
+    assert.deepEqual(nudges.calls, [{ userId: 'u1', weekKey: currentWeekKey() }]);
+  });
+
+  it('never nudges on resyncs or 0-point sessions', async () => {
+    const state = makeState();
+    const nudges = { calls: [] as Array<{ userId: string; weekKey: string }> };
+    const { svc } = service(state, { nudges });
+    state.sessions.set('s1', makeSession('s1'));
+    state.sessions.set('zero', makeSession('zero', { activeDurationSeconds: 60 }));
+    await svc.recordSession('u1', 's1');
+    await svc.recordSession('u1', 's1'); // resync of the same session
+    await svc.recordSession('u1', 'zero'); // creates a 0-point entry
+    assert.equal(nudges.calls.length, 1);
+    assert.equal(state.entries.length, 2);
+  });
+
+  it('a nudge failure does not fail the sync', async () => {
+    const state = makeState();
+    const nudges = { calls: [] as Array<{ userId: string; weekKey: string }>, fail: true };
+    const { svc } = service(state, { nudges });
+    state.sessions.set('s1', makeSession('s1'));
+    await svc.recordSession('u1', 's1');
+    assert.equal(state.entries.length, 1);
   });
 });
 

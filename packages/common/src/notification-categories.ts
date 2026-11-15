@@ -1,9 +1,10 @@
 import { NotificationKind } from './enums';
 
-export type NotificationCategoryId = 'friends' | 'leagues' | 'duels' | 'streaks' | 'raids';
+export type NotificationCategoryId =
+  'friends' | 'nudges' | 'leagues' | 'duels' | 'streaks' | 'raids';
 
 export type NotificationCategoryPref =
-  'pushFriends' | 'pushLeagues' | 'pushDuels' | 'pushStreaks' | 'pushRaids';
+  'pushFriends' | 'pushNudges' | 'pushLeagues' | 'pushDuels' | 'pushStreaks' | 'pushRaids';
 
 export interface NotificationCategory {
   id: NotificationCategoryId;
@@ -18,6 +19,11 @@ export const NOTIFICATION_CATEGORIES: readonly NotificationCategory[] = [
     id: 'friends',
     pref: 'pushFriends',
     kinds: [NotificationKind.FRIEND_REQUEST, NotificationKind.FRIEND_ACCEPTED],
+  },
+  {
+    id: 'nudges',
+    pref: 'pushNudges',
+    kinds: [NotificationKind.FRIEND_PULLED_AHEAD],
   },
   {
     id: 'leagues',
@@ -109,6 +115,10 @@ export function notificationCollapseKey(
     case NotificationKind.LEAGUE_ENDING: {
       const id = str(payload.weekKey);
       return id ? `league-ending:${id}` : null;
+    }
+    case NotificationKind.FRIEND_PULLED_AHEAD: {
+      const id = str(payload.weekKey);
+      return id ? `pulled-ahead:${id}` : null;
     }
     default:
       return null;

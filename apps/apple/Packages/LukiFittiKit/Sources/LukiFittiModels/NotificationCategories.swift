@@ -6,6 +6,7 @@ import Foundation
 /// `NotificationCategoriesPortTests` fails when the two drift apart.
 public enum NotificationCategoryId: String, Codable, Sendable, Equatable, Hashable, CaseIterable {
     case friends
+    case nudges
     case leagues
     case duels
     case streaks
@@ -15,6 +16,7 @@ public enum NotificationCategoryId: String, Codable, Sendable, Equatable, Hashab
 /// The `UserPreferences` boolean that gates every kind of a category.
 public enum NotificationCategoryPref: String, Codable, Sendable, Equatable, Hashable {
     case pushFriends
+    case pushNudges
     case pushLeagues
     case pushDuels
     case pushStreaks
@@ -36,6 +38,11 @@ public enum NotificationCategories {
             id: .friends,
             pref: .pushFriends,
             kinds: [.FRIEND_REQUEST, .FRIEND_ACCEPTED]
+        ),
+        NotificationCategory(
+            id: .nudges,
+            pref: .pushNudges,
+            kinds: [.FRIEND_PULLED_AHEAD]
         ),
         NotificationCategory(
             id: .leagues,

@@ -30,6 +30,7 @@ const CATEGORY_COPY: Record<
   }
 > = {
   friends: { label: (t) => t.social.pushFriendsLabel, sub: (t) => t.social.pushFriendsSub },
+  nudges: { label: (t) => t.social.pushNudgesLabel, sub: (t) => t.social.pushNudgesSub },
   leagues: { label: (t) => t.social.pushLeaguesLabel, sub: (t) => t.social.pushLeaguesSub },
   duels: { label: (t) => t.battle.pushDuelsLabel, sub: (t) => t.battle.pushDuelsSub },
   streaks: { label: (t) => t.battle.pushStreaksLabel, sub: (t) => t.battle.pushStreaksSub },
@@ -68,8 +69,8 @@ export function PushSettingsCard() {
   }, []);
 
   const setCategory = async (cat: NotificationCategory, enabled: boolean) => {
-    const key = cat.pref.replace('push', '').toLowerCase() as
-      'friends' | 'leagues' | 'duels' | 'streaks' | 'raids';
+    // Category ids double as the DTO field names (friends, nudges, leagues, …).
+    const key = cat.id;
     setPrefs((p) => (p ? { ...p, [key]: enabled } : p));
     const res = await pushApi.updatePreferences({ [key]: enabled });
     if (res.data) setPrefs(res.data);

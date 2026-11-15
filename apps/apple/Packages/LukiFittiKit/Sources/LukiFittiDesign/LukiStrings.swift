@@ -1228,6 +1228,9 @@ public enum LukiStrings {
         "Boss defeated": "Boss besiegt",
         "Boss escaped": "Boss entkommen",
         "Squad raid started": "Squad-Raid gestartet",
+        "Friend nudges": "Sticheleien",
+        "When a friend pulls ahead of you this week.": "Wenn dich ein Freund diese Woche überholt.",
+        "Friend pulled ahead": "Freund zieht vorbei",
     ]
 }
 

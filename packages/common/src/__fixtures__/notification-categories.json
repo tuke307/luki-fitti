@@ -4,17 +4,36 @@
     {
       "id": "friends",
       "pref": "pushFriends",
-      "kinds": ["FRIEND_REQUEST", "FRIEND_ACCEPTED"]
+      "kinds": [
+        "FRIEND_REQUEST",
+        "FRIEND_ACCEPTED"
+      ]
+    },
+    {
+      "id": "nudges",
+      "pref": "pushNudges",
+      "kinds": [
+        "FRIEND_PULLED_AHEAD"
+      ]
     },
     {
       "id": "leagues",
       "pref": "pushLeagues",
-      "kinds": ["LEAGUE_PROMOTED", "LEAGUE_DEMOTED", "LEAGUE_ENDING"]
+      "kinds": [
+        "LEAGUE_PROMOTED",
+        "LEAGUE_DEMOTED",
+        "LEAGUE_ENDING"
+      ]
     },
     {
       "id": "duels",
       "pref": "pushDuels",
-      "kinds": ["DUEL_INVITE", "DUEL_ACCEPTED", "DUEL_STANDINGS", "DUEL_RESULT"]
+      "kinds": [
+        "DUEL_INVITE",
+        "DUEL_ACCEPTED",
+        "DUEL_STANDINGS",
+        "DUEL_RESULT"
+      ]
     },
     {
       "id": "streaks",
@@ -127,6 +146,10 @@
     {
       "kind": "SQUAD_RAID_STARTED",
       "key": null
+    },
+    {
+      "kind": "FRIEND_PULLED_AHEAD",
+      "key": "pulled-ahead:W1"
     }
   ]
 }

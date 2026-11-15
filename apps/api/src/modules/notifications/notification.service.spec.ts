@@ -210,10 +210,17 @@ describe('NotificationService.list', () => {
       ],
     });
     const en = await svc.list('u1', undefined, 20, 'en');
-    assert.equal(en.items[0]!.title, 'Duel challenge');
-    assert.match(en.items[0]!.body, /challenged you/);
+    // The notification id seeds the variant, so assert membership, not a fixed line.
+    assert.ok(
+      ['Duel challenge', "You've been called out", '1v1 incoming'].includes(en.items[0]!.title),
+    );
+    assert.doesNotMatch(en.items[0]!.body, /\{/);
     const de = await svc.list('u1', undefined, 20, 'de');
-    assert.equal(de.items[0]!.title, 'Duell-Herausforderung');
+    assert.ok(
+      ['Duell-Herausforderung', 'Du wurdest herausgefordert', '1 gegen 1'].includes(
+        de.items[0]!.title,
+      ),
+    );
   });
 
   it('falls back to the profile language, then the device locale', async () => {
@@ -229,8 +236,9 @@ describe('NotificationService.list', () => {
         },
       ],
     });
+    const deTitles = ['Freundschaftsanfrage', 'Jemand hat dich bemerkt', 'Neuer Rivale'];
     const res = await svc.list('u1', undefined, 20);
-    assert.match(res.items[0]!.body, /befreundet/);
+    assert.ok(deTitles.includes(res.items[0]!.title));
 
     const { svc: svc2 } = makeDeps({
       prefs: { language: 'system' },
@@ -246,6 +254,6 @@ describe('NotificationService.list', () => {
       ],
     });
     const res2 = await svc2.list('u1', undefined, 20);
-    assert.match(res2.items[0]!.body, /befreundet/);
+    assert.ok(deTitles.includes(res2.items[0]!.title));
   });
 });

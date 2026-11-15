@@ -1073,6 +1073,8 @@ export const en = {
     pushFriendsSub: 'Friend requests and accepted requests.',
     pushLeaguesLabel: 'Leagues',
     pushLeaguesSub: 'Promotion, demotion and end-of-week reminders.',
+    pushNudgesLabel: 'Friend nudges',
+    pushNudgesSub: 'When a friend pulls ahead of you this week.',
     pushKinds: {
       FRIEND_REQUEST: 'Friend requests',
       FRIEND_ACCEPTED: 'Accepted requests',
@@ -1094,6 +1096,7 @@ export const en = {
       RAID_ESCAPED: 'Boss escaped',
       SQUAD_INVITE: 'Squad invites',
       SQUAD_RAID_STARTED: 'Squad raid started',
+      FRIEND_PULLED_AHEAD: 'Friend pulled ahead',
     },
     pushEnable: 'Enable push on this device',
     pushEnableHint: 'So a new friend request reaches you even when the app is closed.',

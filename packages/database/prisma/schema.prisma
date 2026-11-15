@@ -297,6 +297,8 @@ model UserPreferences {
   pushStreaks                Boolean       @default(true)
   /// Push category toggle: raid spawns, phases, outcomes and squad activity.
   pushRaids                  Boolean       @default(true)
+  /// Push category toggle: nudges when a friend pulls ahead in the week.
+  pushNudges                 Boolean       @default(true)
   /// Per-kind mutes inside enabled categories; empty = every kind allowed.
   pushDisabledKinds          NotificationKind[] @default([])
   createdAt                  DateTime      @default(now())
@@ -1107,6 +1109,7 @@ enum NotificationKind {
   RAID_ESCAPED
   SQUAD_INVITE
   SQUAD_RAID_STARTED
+  FRIEND_PULLED_AHEAD
 }
 
 /// Mutual friendship. The pair is stored once with userAId < userBId;

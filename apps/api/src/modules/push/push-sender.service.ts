@@ -117,7 +117,13 @@ export class PushSenderService {
     let handled = 0;
     let transientFailures = 0;
     for (const device of notification.user.pushDevices) {
-      const message = renderNotification(kind, payloadJson, actorUsername, device.locale);
+      const message = renderNotification(
+        kind,
+        payloadJson,
+        actorUsername,
+        device.locale,
+        notification.id,
+      );
       try {
         const outcome =
           device.platform === PushPlatform.APNS

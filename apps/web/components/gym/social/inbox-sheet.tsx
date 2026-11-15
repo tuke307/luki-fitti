@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Button } from '@luki-fitti/ui/components/ui/button';
-import { Flame, Shield, Swords, Trophy, Users } from 'lucide-react';
+import { Flame, Shield, Swords, TrendingUp, Trophy, Users } from 'lucide-react';
 import type { NotificationDto } from '@luki-fitti/common/schemas';
 import {
   notificationCategoryOf,
@@ -17,6 +17,7 @@ import type { SocialSection } from './social-view';
 
 const CATEGORY_ICONS: Record<NotificationCategoryId, typeof Users> = {
   friends: Users,
+  nudges: TrendingUp,
   leagues: Trophy,
   duels: Swords,
   streaks: Flame,
