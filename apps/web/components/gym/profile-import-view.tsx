@@ -59,6 +59,7 @@ import {
 } from '@luki-fitti/common/enums';
 import { TRAINING_GOAL_PROFILES } from '@luki-fitti/common/utils/client';
 import { ProfileHealthCard, ProfileNutritionGoalsCard } from './profile-body-card';
+import { formatGoalRest, TrainingGoalInfoButton } from './training-goal-info-button';
 import { AiUsageView } from './ai-usage/ai-usage-view';
 import { AiKeyCard } from './ai-key-card';
 import { AiModelsPage } from './settings/ai-models-page';
@@ -120,9 +121,8 @@ const AUTH_ONLY_PAGES: ReadonlySet<SettingsPage> = new Set([
 ]);
 
 const REST_OPTIONS = [60, 75, 90, 120, 150, 180] as const;
-
-const formatGoalRest = (seconds: number, secLabel: string, minLabel: string) =>
-  seconds % 60 === 0 ? `${seconds / 60} ${minLabel}` : `${seconds} ${secLabel}`;
+/** Radix Select treats `''` as "no selection" and rejects it as an item value. */
+const GOAL_UNSET = 'UNSET';
 
 interface ProfileImportViewProps {
   /** `sheet`: the phone Profile drawer with an inline title bar and a Done button. */
@@ -599,13 +599,13 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
             />
             <SettingsSelectRow
               title={t.profile.trainingGoalLabel}
-              value={user?.preferences?.trainingGoal ?? ''}
+              value={user?.preferences?.trainingGoal ?? GOAL_UNSET}
               options={[
-                { value: '' as const, label: t.profile.trainingGoalUnset },
+                { value: GOAL_UNSET, label: t.profile.trainingGoalUnset },
                 ...TRAINING_GOALS.map((goal) => {
                   const p = TRAINING_GOAL_PROFILES[goal];
                   return {
-                    value: goal as TrainingGoal | '',
+                    value: goal as TrainingGoal | typeof GOAL_UNSET,
                     label: `${t.profile.trainingGoals[goal]} — ${format(
                       t.profile.trainingGoalSummary,
                       {
@@ -618,9 +618,10 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
                 }),
               ]}
               onValueChange={(val) =>
-                void updatePreferences({ trainingGoal: (val || null) as TrainingGoal | null })
+                void updatePreferences({ trainingGoal: val === GOAL_UNSET ? null : val })
               }
               data-testid="profile-training-goal-select"
+              accessory={<TrainingGoalInfoButton />}
             />
             <SettingsStepperRow
               title={t.profile.weeklyGoalLabel}

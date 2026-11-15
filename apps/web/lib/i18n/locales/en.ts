@@ -299,6 +299,7 @@ export const en = {
     notesFocusLabel: 'Notes',
     notesFocusPlaceholder: 'Optional',
     estDurationLabel: 'Duration (min)',
+    trainingGoalHint: 'Overrides your profile goal for this workout.',
     orderedExercisesTitle: 'Exercises ({count})',
     addExerciseSlotBtn: 'Add Exercise',
     supersetWithActive: 'Superset with #{index}',
@@ -693,6 +694,25 @@ export const en = {
       ENDURANCE: 'Endurance',
     },
     trainingGoalSummary: '{compound} reps compound · {isolation} isolation · {rest} rest',
+    trainingGoalInfo: {
+      button: 'About training goals',
+      intro:
+        'Your training goal tunes the weight and rep suggestions to what you train for. Without a goal, suggestions work as before.',
+      rules: {
+        STRENGTH:
+          'Bigger weight steps on barbell compound lifts. After a max-effort session the weight stays the same.',
+        HYPERTROPHY: 'More weight once every set reaches the top of the range, even at max effort.',
+        ENDURANCE: 'More weight only while the last session stayed below RPE 9.',
+      },
+      goodToKnowTitle: 'Good to know',
+      goodToKnow: [
+        "The goal's rep range replaces the rep targets of your exercises.",
+        'Rest only changes where it is still at the 90 s default. Rest times you set yourself stay.',
+        "The number of sets doesn't change.",
+        'The AI workout builder follows your goal too.',
+        'The profile goal applies to all workouts. In the workout editor you can override it for a single workout.',
+      ],
+    },
     exportTitle: 'Export',
     exportSub: 'Download a copy of your workouts and history.',
     exportedStatus: 'Exported {fileName}',

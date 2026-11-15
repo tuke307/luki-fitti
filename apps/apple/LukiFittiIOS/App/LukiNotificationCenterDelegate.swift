@@ -27,29 +27,42 @@ final class LukiNotificationCenterDelegate: NSObject, UNUserNotificationCenterDe
 
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification
-    ) async -> UNNotificationPresentationOptions {
-        notification.request.content.categoryIdentifier == WeighInReminderScheduler.categoryIdentifier
-            || notification.request.identifier == Self.testNotificationIdentifier
-            ? [.banner, .list, .sound]
-            : []
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler(
+            notification.request.content.categoryIdentifier == WeighInReminderScheduler.categoryIdentifier
+                || notification.request.identifier == Self.testNotificationIdentifier
+                ? [.banner, .list, .sound]
+                : []
+        )
     }
 
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
-        didReceive response: UNNotificationResponse
-    ) async {
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
         let content = response.notification.request.content
+        nonisolated(unsafe) let done = completionHandler
         guard content.categoryIdentifier == WeighInReminderScheduler.categoryIdentifier else {
             // Remote (APNs) push: route the `url` userInfo key like the web `?open=` link.
-            if let url = content.userInfo["url"] as? String {
-                await handlePushUrl(url)
+            guard let url = content.userInfo["url"] as? String else {
+                completionHandler()
+                return
+            }
+            Task { @MainActor in
+                await self.handlePushUrl(url)
+                done()
             }
             return
         }
         let action = response.actionIdentifier
         let text = (response as? UNTextInputNotificationResponse)?.userText
-        await handleWeighIn(action: action, text: text)
+        Task { @MainActor in
+            await self.handleWeighIn(action: action, text: text)
+            done()
+        }
     }
 
     private func handlePushUrl(_ url: String) async {

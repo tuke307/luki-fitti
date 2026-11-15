@@ -12,6 +12,9 @@ yarn db:seed
 
 ## Migrations
 
+Read [docs/migrations.md](../../docs/migrations.md) before writing one: every migration has to
+keep working with older app versions and with a rolled-back API.
+
 ```bash
 # Create a new migration in development
 yarn db:migrate:local -- <migration-name>
