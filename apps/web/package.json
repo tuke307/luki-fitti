@@ -40,7 +40,7 @@
     "jose": "^6.2.12",
     "js-cookie": "^3.0.8",
     "lucide-react": "^1.52.0",
-    "next": "^16.3.8",
+    "next": "^16.4.1",
     "next-intl": "^4.14.9",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
@@ -51,7 +51,7 @@
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.7.0",
     "tailwindcss-animate": "^1.0.7",
-    "zod": "^4.6.5"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@luki-fitti/eslint-config": "*",
@@ -65,7 +65,7 @@
     "eslint": "^10.12.0",
     "eslint-config-next": "16.3.8",
     "globals": "^17.13.0",
-    "postcss": "^8.5.29",
+    "postcss": "^8.5.33",
     "tailwindcss": "^4.3.3",
     "typescript": "6.0.3"
   }
