@@ -182,7 +182,6 @@ public enum LukiStrings {
         "Keep this device": "Dieses Gerät behalten",
         "Language": "Sprache",
         "Last %@": "Zuletzt %@",
-        "Later": "Später",
         "Last 12 months": "Letzte 12 Monate",
         "Last 30 days": "Letzte 30 Tage",
         "Last 7 days": "Letzte 7 Tage",
