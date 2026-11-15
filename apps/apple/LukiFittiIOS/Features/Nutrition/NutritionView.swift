@@ -256,6 +256,7 @@ public struct NutritionView: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("ios.nutrition.entry.\(entry.id)")
                 .contextMenu {
                     Button(role: .destructive) {
                         Task { await nutrition.remove(entry, isSignedIn: isSignedIn) }

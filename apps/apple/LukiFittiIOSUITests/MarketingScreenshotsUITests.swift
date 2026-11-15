@@ -11,6 +11,7 @@ final class MarketingScreenshotsUITests: XCTestCase {
     private var tabHistory: String { lang == "de" ? "Verlauf" : "History" }
     private var tabFood: String { lang == "de" ? "Essen" : "Food" }
     private var neverTrained: String { lang == "de" ? "Noch nie trainiert" : "Never trained" }
+    private var estimatedLabel: String { lang == "de" ? "Geschätzt" : "Estimated" }
 
     @MainActor
     private func launch(session: Bool) -> XCUIApplication {
@@ -33,10 +34,7 @@ final class MarketingScreenshotsUITests: XCTestCase {
         // Guard the locale before any capture — the wrong language fails the test.
         // iPhone shows a TabBar; on iPad the same tabs live in the sidebar/top bar.
         let expectedTab = lang == "de" ? "Heute" : "Today"
-        let tabButton =
-            app.tabBars.buttons[expectedTab].firstMatch.exists
-                ? app.tabBars.buttons[expectedTab].firstMatch
-                : app.buttons[expectedTab].firstMatch
+        let tabButton = app.descendants(matching: .any)[expectedTab].firstMatch
         XCTAssertTrue(
             tabButton.waitForExistence(timeout: 15),
             "expected \(lang) tab '\(expectedTab)'"
@@ -48,7 +46,7 @@ final class MarketingScreenshotsUITests: XCTestCase {
     private func tabElement(_ app: XCUIApplication, _ name: String) -> XCUIElement {
         app.tabBars.buttons[name].firstMatch.exists
             ? app.tabBars.buttons[name].firstMatch
-            : app.buttons[name].firstMatch
+            : app.descendants(matching: .any)[name].firstMatch
     }
 
     @MainActor private func save(_ name: String) {
@@ -65,13 +63,75 @@ final class MarketingScreenshotsUITests: XCTestCase {
         )
     }
 
-    @MainActor private func shot01() {
+    @MainActor private func shot01ActiveWorkout() {
         let app = launch(session: true)
         assertSession(app)
         save("01-active-workout")
     }
 
-    @MainActor private func shot02() {
+    @MainActor private func shot02Meal() {
+        let app = launch(session: false)
+        let tab = tabElement(app, tabFood)
+        XCTAssertTrue(tab.waitForExistence(timeout: 15), "Food tab missing")
+        tab.tap()
+        // The seeded meal carries the demo photo + AI items; assert the meal is visible.
+        let entryRow = app.descendants(matching: .any)["ios.nutrition.entry.marketing-meal"]
+            .firstMatch
+        XCTAssertTrue(
+            entryRow.waitForExistence(timeout: 10),
+            "seeded meal row must be visible"
+        )
+        sleep(1)
+        // Goal card + meal list on the Food tab — the composer crops the goal card region
+        // from this capture for the floating card overlay.
+        save("02-meal-goal")
+
+        // Open the seeded meal into the editor: photo strip on top, AI items below.
+        let entry = app.descendants(matching: .any)["ios.nutrition.entry.marketing-meal"]
+            .firstMatch
+        XCTAssertTrue(entry.waitForExistence(timeout: 10), "seeded meal row missing")
+        entry.tap()
+        XCTAssertTrue(
+            app.buttons["ios.nutrition.saveMealButton"].firstMatch.waitForExistence(timeout: 10),
+            "meal editor must be open"
+        )
+        // On iPhone, scroll the editor until the "Estimate with AI" button and the first
+        // item's "Estimated" badge both sit in the upper part of the screen — above where
+        // the composed goal-card overlay lands. Short, slow drags avoid momentum flings.
+        let estimated = app.staticTexts.matching(
+            NSPredicate(format: "label == %@", estimatedLabel)
+        )
+        func estimatedVisible() -> [XCUIElement] {
+            estimated.allElementsBoundByIndex.filter(\.isHittable)
+        }
+        if app.frame.width < 700 {
+            let estimate = app.buttons["ios.nutrition.estimateButton"].firstMatch
+            let badgeTarget = app.frame.height * 0.56
+            let navBottom = app.frame.height * 0.13
+            for _ in 0..<12 {
+                let badge = estimatedVisible().first
+                if let badge, badge.frame.minY < badgeTarget { break }
+                // Once the estimate button reaches the nav bar, further scrolling only
+                // pushes it off screen — stop there.
+                guard estimate.isHittable, estimate.frame.minY > navBottom else { break }
+                let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.72))
+                let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.64))
+                start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .slow,
+                            thenHoldForDuration: 0)
+                usleep(300_000)
+            }
+            XCTAssertTrue(
+                estimate.isHittable && estimate.frame.minY > navBottom,
+                "AI estimate button must be fully visible below the nav bar"
+            )
+            XCTAssertGreaterThanOrEqual(
+                estimatedVisible().count, 1, "an AI 'Estimated' badge must be visible"
+            )
+        }
+        save("02-meal")
+    }
+
+    @MainActor private func shot03Suggestion() {
         let app = launch(session: true)
         assertSession(app)
         // The seeded regression on the first exercise produces the exercise-suggestion card at
@@ -122,16 +182,19 @@ final class MarketingScreenshotsUITests: XCTestCase {
             cardBottom(), restDock.frame.minY,
             "suggestion card incl. its buttons must sit fully above the rest dock"
         )
-        save("02-suggestion")
+        save("03-suggestion")
     }
 
-    @MainActor private func shot04() {
+    @MainActor private func shot05Exercises() {
         let app = launch(session: false)
-        IOSUITestHelpers.openLibrary(
-            app,
-            workoutsLabel: "Workouts",
-            libraryLabel: tabLibrary
-        )
+        // The library lives in the Workouts tab behind a segment — the tab bar is a
+        // UITabBar on iPhone and a sidebar on iPad, so go through tabElement.
+        let workoutsTab = tabElement(app, "Workouts")
+        XCTAssertTrue(workoutsTab.waitForExistence(timeout: 15), "Workouts tab missing")
+        workoutsTab.tap()
+        let segment = app.buttons[tabLibrary].firstMatch
+        XCTAssertTrue(segment.waitForExistence(timeout: 10), "Library segment missing")
+        segment.tap()
         XCTAssertTrue(
             app.buttons.matching(
                 NSPredicate(format: "identifier BEGINSWITH 'ios.library.exerciseRow.'")
@@ -139,10 +202,10 @@ final class MarketingScreenshotsUITests: XCTestCase {
             "exercise library list must be visible"
         )
         sleep(2)
-        save("04-exercises")
+        save("05-exercises")
     }
 
-    @MainActor private func shot05() {
+    @MainActor private func shot06History() {
         let app = launch(session: false)
         let tab = tabElement(app, tabHistory)
         XCTAssertTrue(tab.waitForExistence(timeout: 15), "History tab missing")
@@ -152,37 +215,22 @@ final class MarketingScreenshotsUITests: XCTestCase {
             "history must show seeded sessions"
         )
         sleep(2)
-        save("05-history")
-    }
-
-    @MainActor private func shot06() {
-        let app = launch(session: false)
-        let tab = tabElement(app, tabFood)
-        XCTAssertTrue(tab.waitForExistence(timeout: 15), "Food tab missing")
-        tab.tap()
-        // The seeded meal carries the demo photo + AI items; assert the meal is visible.
-        XCTAssertTrue(
-            app.images["ios.nutrition.photoThumbnail"].firstMatch.waitForExistence(timeout: 10) ||
-                app.staticTexts["Lunch"].firstMatch.waitForExistence(timeout: 2),
-            "meal photo section must be visible"
-        )
-        sleep(1)
-        save("06-meal")
+        save("06-history")
     }
 
     // MARK: - EN
 
-    @MainActor func test01ActiveWorkoutEn() { shot01() }
-    @MainActor func test02SetSuggestionEn() { shot02() }
-    @MainActor func test04ExerciseLibraryEn() { shot04() }
-    @MainActor func test05HistoryProgressEn() { shot05() }
-    @MainActor func test06MealPhotoEn() { shot06() }
+    @MainActor func test01ActiveWorkoutEn() { shot01ActiveWorkout() }
+    @MainActor func test02MealPhotoEn() { shot02Meal() }
+    @MainActor func test03SetSuggestionEn() { shot03Suggestion() }
+    @MainActor func test05ExerciseLibraryEn() { shot05Exercises() }
+    @MainActor func test06HistoryProgressEn() { shot06History() }
 
     // MARK: - DE
 
-    @MainActor func test01ActiveWorkoutDe() { shot01() }
-    @MainActor func test02SetSuggestionDe() { shot02() }
-    @MainActor func test04ExerciseLibraryDe() { shot04() }
-    @MainActor func test05HistoryProgressDe() { shot05() }
-    @MainActor func test06MealPhotoDe() { shot06() }
+    @MainActor func test01ActiveWorkoutDe() { shot01ActiveWorkout() }
+    @MainActor func test02MealPhotoDe() { shot02Meal() }
+    @MainActor func test03SetSuggestionDe() { shot03Suggestion() }
+    @MainActor func test05ExerciseLibraryDe() { shot05Exercises() }
+    @MainActor func test06HistoryProgressDe() { shot06History() }
 }

@@ -53,7 +53,7 @@ xcrun simctl ui "$IPHONE_UDID" appearance dark || true
 xcrun simctl ui "$WATCH_UDID" appearance dark || true
 xcrun simctl ui "$IPAD_UDID" appearance dark || true
 
-IOS_SHOTS="01ActiveWorkout 02SetSuggestion 04ExerciseLibrary 05HistoryProgress 06MealPhoto"
+IOS_SHOTS="01ActiveWorkout 02MealPhoto 03SetSuggestion 05ExerciseLibrary 06HistoryProgress"
 
 # Apply the 09:41 marketing status bar. Must run AFTER the device is fully booted —
 # an override issued mid-boot is silently dropped, which is how real clocks leaked in.
@@ -101,7 +101,7 @@ run_watch() {
   xcodebuild test \
     -project "$XCODEPROJ" -scheme LukiFittiWatch \
     -destination "platform=watchOS Simulator,id=$WATCH_UDID" \
-    "-only-testing:LukiFittiWatchUITests/MarketingScreenshotsUITests/test03WatchWorkout${suffix}" \
+    "-only-testing:LukiFittiWatchUITests/MarketingScreenshotsUITests/test04WatchWorkout${suffix}" \
     -resultBundlePath "$result" \
     CODE_SIGNING_ALLOWED=NO
   export_attachments "$result" "$RAW_DIR/watch-$lang"
@@ -149,8 +149,8 @@ run_ipad en En || echo "warn: iPad en capture failed — ipad-13 outputs will be
 run_ipad de De || echo "warn: iPad de capture failed — ipad-13 outputs will be missing"
 
 echo "== Watch screenshots =="
-run_watch en En || echo "warn: watch en capture failed — 03-watch (en) will be missing"
-run_watch de De || echo "warn: watch de capture failed — 03-watch (de) will be missing"
+run_watch en En || echo "warn: watch en capture failed — 04-watch (en) will be missing"
+run_watch de De || echo "warn: watch de capture failed — 04-watch (de) will be missing"
 
 xcrun simctl status_bar "$IPHONE_UDID" clear || true
 xcrun simctl status_bar "$IPAD_UDID" clear || true

@@ -19,29 +19,29 @@ export const SCREENSHOTS: ScreenShot[] = [
     alt: { de: 'Aktives Training: Sätze abhaken', en: 'Active workout: checking off sets' },
   },
   {
+    id: 'meal',
+    file: '02-meal.png',
+    alt: { de: 'Mahlzeiten-Foto mit KI-Analyse', en: 'Meal photo with AI analysis' },
+  },
+  {
     id: 'suggestion',
-    file: '02-suggestion.png',
+    file: '03-suggestion.png',
     alt: { de: 'Satzvorschlag mit Gewichtsempfehlung', en: 'Set suggestion with weight hint' },
   },
   {
     id: 'watch',
-    file: '03-watch.png',
+    file: '04-watch.png',
     alt: { de: 'Training auf der Apple Watch', en: 'Workout on Apple Watch' },
   },
   {
     id: 'exercises',
-    file: '04-exercises.png',
+    file: '05-exercises.png',
     alt: { de: 'Übungsbibliothek mit Fotos', en: 'Exercise library with photos' },
   },
   {
     id: 'history',
-    file: '05-history.png',
+    file: '06-history.png',
     alt: { de: 'Trainingsverlauf und Fortschritt', en: 'Workout history and progress' },
-  },
-  {
-    id: 'meal',
-    file: '06-meal.png',
-    alt: { de: 'Mahlzeiten-Foto mit KI-Analyse', en: 'Meal photo with AI analysis' },
   },
 ];
 
@@ -64,7 +64,7 @@ export const HERO_DEVICES = [
   {
     id: 'watch',
     label: 'Apple Watch',
-    file: '03-watch.png',
+    file: '04-watch.png',
     width: 260,
     alt: { de: 'Aktives Training auf der Apple Watch', en: 'Active workout on Apple Watch' },
   },

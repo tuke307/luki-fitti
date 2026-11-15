@@ -36,7 +36,8 @@ const ACCENT = '#E8590C';
 const LANGS = ['en', 'de'];
 const LOCALE_DIR = { en: 'en-US', de: 'de-DE' };
 
-const dataUri = (p) => `data:image/png;base64,${fs.readFileSync(p).toString('base64')}`;
+const dataUri = (p) =>
+  `data:image/${p.endsWith('.png') ? 'png' : 'jpeg'};base64,${fs.readFileSync(p).toString('base64')}`;
 
 /** Ensure a frame is portrait; fail loudly otherwise. */
 function checkPortrait(file) {
@@ -221,6 +222,62 @@ async function pixelVariance(file) {
   return Math.round((v / n) * 10) / 10;
 }
 
+/**
+ * Per-shot floating overlays (screenshots.json `overlays`, optional `overlaysByDevice`
+ * override). Positions are canvas fractions so all device canvases keep proportions:
+ *   photo: { src, x, y, w, rotate } — top-left + width as canvas fractions, orange glow
+ *   card:  { raw, crop:[x,y,w,h], y, w } — crop of another raw capture (e.g. the goal
+ *          card), centred horizontally, top as a canvas-height fraction
+ * Returns { html } to layer after the device (z-order: phone < photo < card) and the
+ * rects in canvas coords so landing can remap them relative to the phone.
+ */
+async function shotOverlays(ov, { canvasW, canvasH, s, rawDir, num }) {
+  if (!ov) return null;
+  const els = [];
+  const rects = {};
+  if (ov.photo) {
+    const px = Math.round(ov.photo.x * canvasW);
+    const py = Math.round(ov.photo.y * canvasH);
+    const pw = Math.round(ov.photo.w * canvasW);
+    const rot = ov.photo.rotate ?? 0;
+    const uri = dataUri(path.join(MARKETING, ov.photo.src));
+    const glow = Math.round(pw * 1.8);
+    els.push(
+      `<div style="position:absolute;left:${px + pw / 2 - glow / 2}px;top:${py + pw / 2 - glow / 2}px;width:${glow}px;height:${glow}px;background:radial-gradient(closest-side, ${ACCENT}59, transparent);"></div>`,
+      `<img src="${uri}" style="position:absolute;left:${px}px;top:${py}px;width:${pw}px;height:${pw}px;border-radius:${Math.round(pw * 0.07)}px;transform:rotate(${rot}deg);box-shadow:0 ${Math.round(30 * s)}px ${Math.round(80 * s)}px rgba(0,0,0,.6);" />`,
+    );
+    rects.photo = { x: px, y: py, w: pw, h: pw };
+    rects.glow = { x: px + pw / 2 - glow / 2, y: py + pw / 2 - glow / 2, w: glow, h: glow };
+  }
+  if (ov.card) {
+    const cardSrc = rawFileFor(rawDir, ov.card.raw, `${num}-${ov.card.raw}.png`);
+    if (!cardSrc || !fs.existsSync(cardSrc)) {
+      console.warn(`warn: no card raw '${ov.card.raw}' in ${rawDir} — overlay skipped`);
+    } else {
+      const meta = await sharp(cardSrc).metadata();
+      const [fx, fy, fw, fh] = ov.card.crop;
+      const crop = {
+        left: Math.round(fx * meta.width),
+        top: Math.round(fy * meta.height),
+        width: Math.round(fw * meta.width),
+        height: Math.round(fh * meta.height),
+      };
+      const buf = await sharp(cardSrc).extract(crop).png().toBuffer();
+      const uri = `data:image/png;base64,${buf.toString('base64')}`;
+      const cw = Math.round(ov.card.w * canvasW);
+      const ch = Math.round((cw * crop.height) / crop.width);
+      const cx = Math.round((canvasW - cw) / 2);
+      const cy = Math.round(ov.card.y * canvasH);
+      els.push(
+        `<img src="${uri}" style="position:absolute;left:${cx}px;top:${cy}px;width:${cw}px;height:${ch}px;border-radius:${Math.round(cw * 0.04)}px;box-shadow:0 0 0 1px rgba(255,255,255,0.10), 0 ${Math.round(30 * s)}px ${Math.round(80 * s)}px rgba(0,0,0,.6);" />`,
+      );
+      rects.card = { x: cx, y: cy, w: cw, h: ch };
+    }
+  }
+  if (!els.length) return null;
+  return { html: els.join(''), rects };
+}
+
 async function decodeImages(page) {
   return page.evaluate(async () => {
     const imgs = [...document.images];
@@ -341,6 +398,17 @@ async function main() {
         const textBottom = padTop + Math.round(h1 * 1.25) + gap + Math.round(sub * 1.25);
         const devTop = Math.max(canvasH - visH + bleed, textBottom + Math.round(canvasH * 0.03));
 
+        // Optional floating overlays (meal shot): photo tile + cropped card over the
+        // device — appended after it so the z-order is phone < photo < card.
+        const overlaySpec = shot.overlaysByDevice?.[deviceId] ?? shot.overlays;
+        const overlays = await shotOverlays(overlaySpec, {
+          canvasW,
+          canvasH,
+          s,
+          rawDir,
+          num,
+        });
+
         await page.setViewportSize({ width: canvasW, height: canvasH });
         await page.setContent(
           `<!doctype html><body style="margin:0;width:${canvasW}px;height:${canvasH}px;background:#0a0a0a;font-family:-apple-system,'SF Pro Display',system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;padding-top:${padTop}px;box-sizing:border-box;position:relative;">
@@ -349,6 +417,7 @@ async function main() {
           <div style="position:absolute;left:${Math.round((canvasW - visW) / 2)}px;top:${Math.round(devTop)}px;width:${Math.round(visW)}px;height:${Math.round(visH)}px;">
             <div style="transform:scale(${scale});transform-origin:top left;">${composed.html}</div>
           </div>
+          ${overlays?.html ?? ''}
         </body>`,
           { waitUntil: 'load' },
         );
@@ -384,6 +453,71 @@ async function main() {
           const landDir = path.join(LANDING_DIR, lang);
           fs.mkdirSync(landDir, { recursive: true });
           const landFile = path.join(landDir, `${num}-${landShot.id}.png`);
+          // Shots with overlays get a dedicated landing layout: the phone shrinks and
+          // the overlay rects are remapped from the reference 6.9" canvas into
+          // phone-relative coordinates, so the composition keeps the App Store look.
+          const landOv = shot.overlaysByDevice?.['iphone-6.9'] ?? shot.overlays ?? null;
+          if (landOv) {
+            const R_W = 1320;
+            const R_H = 2868;
+            const rScale = Math.min((R_W * 0.85) / landComposed.w, (R_H * 1.1) / landComposed.h);
+            const rVisW = landComposed.w * rScale;
+            const rVisH = landComposed.h * rScale;
+            const rTextBottom = 170 + Math.round(88 * 1.25) + 26 + Math.round(46 * 1.25);
+            const rDevTop = Math.max(
+              R_H - rVisH + Math.round(R_H * 0.081),
+              rTextBottom + Math.round(R_H * 0.03),
+            );
+            const k = (LAND_W * 0.74) / rVisW;
+            const vcw = Math.round(R_W * k);
+            const vch = Math.round(R_H * k);
+            const overlays = await shotOverlays(landOv, {
+              canvasW: vcw,
+              canvasH: vch,
+              s: k,
+              rawDir: landRawDir,
+              num,
+            });
+            const phoneX = Math.round(((R_W - rVisW) / 2) * k);
+            const phoneY = Math.round(rDevTop * k);
+            const phoneW = Math.round(rVisW * k);
+            const phoneH = Math.round(rVisH * k);
+            const pad = Math.round(LAND_W * 0.08);
+            const all = [
+              { x: phoneX, y: phoneY, w: phoneW, h: phoneH },
+              ...Object.values(overlays?.rects ?? {}),
+            ];
+            const minX = Math.min(...all.map((r) => r.x)) - pad;
+            const minY = Math.min(...all.map((r) => r.y)) - pad;
+            const bw = Math.max(...all.map((r) => r.x + r.w)) - minX + pad;
+            const bh = Math.max(...all.map((r) => r.y + r.h)) - minY + pad;
+            const landScale = phoneW / landComposed.w;
+            await page.setViewportSize({ width: Math.round(bw), height: Math.round(bh) });
+            await page.setContent(
+              `<!doctype html><body style="margin:0;background:transparent;position:relative;width:${Math.round(bw)}px;height:${Math.round(bh)}px;">
+              <div style="position:absolute;left:${Math.round(phoneX - minX)}px;top:${Math.round(phoneY - minY)}px;width:${phoneW}px;height:${phoneH}px;"><div style="transform:scale(${landScale});transform-origin:top left;">${landComposed.html}</div></div>
+              <div style="position:absolute;left:${Math.round(-minX)}px;top:${Math.round(-minY)}px;width:${vcw}px;height:${vch}px;">${overlays?.html ?? ''}</div>
+            </body>`,
+              { waitUntil: 'load' },
+            );
+            if (await decodeImages(page)) {
+              await page.screenshot({ path: landFile, type: 'png', omitBackground: true });
+              const v = await pixelVariance(landFile);
+              if (!(v > 50)) throw new Error(`landing ${landFile} looks blank (variance ${v})`);
+              const { corners, centre } = await alphaAt(landFile);
+              if (corners.some((a) => a > 0))
+                throw new Error(`${landFile} corner is opaque — the frame must be the edge`);
+              if (centre < 200) throw new Error(`${landFile} centre is transparent`);
+              const hash = execSync(`md5 -q "${landFile}"`).toString().trim();
+              const key = `landing/${lang}:${hash}`;
+              if (seenHashes.has(key)) {
+                throw new Error(`landing ${landFile} is identical to ${seenHashes.get(key)}`);
+              }
+              seenHashes.set(key, landFile);
+              console.log(`${lang} landing ${landShot.id} ✓ (overlays)`);
+            }
+            continue;
+          }
           const scale = LAND_W / landComposed.w;
           const landH = Math.ceil((landFrame ? landFrame.fh : landComposed.h) * scale) + 16;
           await page.setViewportSize({ width: LAND_W, height: landH });
@@ -471,7 +605,7 @@ async function main() {
         const device = DEVICES.get(deviceId);
         const rawDir = path.join(MARKETING, (shot.raw ?? device.raw).replace('{lang}', lang));
         const attId = deviceId === 'watch' ? 'watch' : shot.id;
-        const attName = deviceId === 'watch' ? '03-watch.png' : `01-${shot.id}.png`;
+        const attName = deviceId === 'watch' ? '04-watch.png' : `01-${shot.id}.png`;
         const src = rawFileFor(rawDir, attId, attName);
         if (!src || !fs.existsSync(src)) {
           if (deviceId === 'ipad-13') missingIpad = true;
