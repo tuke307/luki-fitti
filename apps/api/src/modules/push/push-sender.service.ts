@@ -1,7 +1,7 @@
 import { Injectable, Optional } from '@nestjs/common';
 import * as http2 from 'node:http2';
 import jwt from 'jsonwebtoken';
-import webpush from 'web-push';
+import * as webpush from 'web-push';
 import { logger } from '@luki-fitti/logger';
 import { NotificationKind, PushPlatform } from '@luki-fitti/common/enums';
 import {
