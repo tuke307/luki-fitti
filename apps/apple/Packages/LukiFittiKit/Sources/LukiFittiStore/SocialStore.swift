@@ -54,7 +54,8 @@ public final class SocialStore {
     public var seededRaidDetails: [String: RaidDetailDto] = [:]
     public var seededRaidFeeds: [String: [RaidFeedHitDto]] = [:]
 
-    /// Avatar JPEG bytes keyed by user id, fetched through the authenticated API client.
+    /// Avatar JPEG bytes keyed by avatar URL. The URL carries `?v=<updatedAt>`, so a new picture
+    /// gets a new entry instead of the stale one. Fetched through the authenticated API client.
     @ObservationIgnored public private(set) var avatarCache: [String: Data] = [:]
 
     public init(apiClient: APIClient) {
@@ -377,12 +378,12 @@ public final class SocialStore {
     // MARK: - Avatars (authenticated fetch through the API base URL)
 
     /// JPEG bytes for `/social/avatars/<userId>`-shaped URLs; nil hides the avatar.
-    public func avatarData(for userId: String, url: String?) async -> Data? {
-        if let hit = avatarCache[userId] { return hit }
+    public func avatarData(url: String?) async -> Data? {
         guard let url else { return nil }
+        if let hit = avatarCache[url] { return hit }
         let path = url.hasPrefix("/api/") ? url : "/api\(url)"
         guard let data = try? await apiClient.fetchData(path: path) else { return nil }
-        avatarCache[userId] = data
+        avatarCache[url] = data
         return data
     }
 

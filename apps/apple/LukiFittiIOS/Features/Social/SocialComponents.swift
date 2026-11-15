@@ -42,10 +42,7 @@ struct SocialAvatarView: View {
         .background(LukiColors.fill)
         .clipShape(Circle())
         .task(id: avatarUrl) {
-            if let data = await social.avatarData(for: userId, url: avatarUrl),
-               let loaded = UIImage(data: data) {
-                image = loaded
-            }
+            image = await social.avatarData(url: avatarUrl).flatMap { UIImage(data: $0) }
             didLoad = true
         }
         .accessibilityHidden(true)
