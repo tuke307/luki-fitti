@@ -350,6 +350,7 @@ public struct SocialView: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .buttonStyle(.plain)
         .accessibilityIdentifier("ios.social.hubRaids")
     }
 

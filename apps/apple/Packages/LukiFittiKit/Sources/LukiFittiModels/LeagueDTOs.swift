@@ -153,6 +153,13 @@ public struct LeagueFriendRowDto: Codable, Sendable, Equatable, Identifiable {
     public var isSelf: Bool
 
     public var id: String { card.userId }
+
+    public init(rank: Int, card: SocialCardDto, points: Int, isSelf: Bool) {
+        self.rank = rank
+        self.card = card
+        self.points = points
+        self.isSelf = isSelf
+    }
 }
 
 /// Compact league state pushed to the watch over WatchConnectivity (≤ ~200 B).

@@ -89,6 +89,7 @@ struct SocialWeekCardView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .buttonStyle(.plain)
             .accessibilityIdentifier("ios.social.nextMove")
         }
     }
@@ -132,7 +133,7 @@ struct FriendsWeekStripView: View {
                                     Text("@\(entry.card.username)")
                                         .font(.caption.weight(.medium))
                                         .lineLimit(1)
-                                    Text(tr("%d× this week", entry.workouts))
+                                    Text(tr("%d×", entry.workouts))
                                         .font(.caption2)
                                         .foregroundStyle(.secondary)
                                 }
@@ -182,6 +183,7 @@ struct HubCompactRow<Icon: View>: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .buttonStyle(.plain)
         .accessibilityIdentifier(testId)
     }
 }
@@ -219,6 +221,7 @@ struct TrophyHubRow: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .buttonStyle(.plain)
         .accessibilityIdentifier("ios.social.trophiesRow")
         .task {
             if let seeded = social.seededTrophies?[userId] {

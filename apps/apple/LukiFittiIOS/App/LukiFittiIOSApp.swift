@@ -1321,6 +1321,17 @@ public final class LukiAppViewModel {
             arena: .SILVER,
             cohort: nil
         )
+        vm.social.leagueFriends = [
+            LeagueFriendRowDto(rank: 1, card: anna, points: 300, isSelf: false),
+            LeagueFriendRowDto(
+                rank: 2,
+                card: SocialCardDto(
+                    userId: "uitest-social", username: "uitester", avatarUrl: nil,
+                    name: "UI Tester"),
+                points: 210,
+                isSelf: true),
+            LeagueFriendRowDto(rank: 3, card: max, points: 150, isSelf: false),
+        ]
     }
 
     /// `--uitesting-seed-raid`: a signed-in social user with a live community raid at
