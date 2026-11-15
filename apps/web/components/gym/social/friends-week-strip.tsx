@@ -64,7 +64,7 @@ export function FriendsWeekStrip({
               @{card.username}
             </p>
             <p className="text-muted-foreground text-[0.6875rem]">
-              {format(t.social.timesThisWeek, { n: workouts })}
+              {format(t.social.timesWeek, { n: workouts })}
             </p>
           </button>
         ))}

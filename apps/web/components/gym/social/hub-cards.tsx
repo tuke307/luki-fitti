@@ -25,7 +25,7 @@ function CompactRow({
   testId,
 }: {
   icon: React.ReactNode;
-  title: string;
+  title: React.ReactNode;
   sub?: React.ReactNode;
   onOpen: () => void;
   testId: string;
@@ -115,7 +115,15 @@ export function DuelsCompactCard({
       <CompactRow
         testId="hub-duels-card"
         icon={icon}
-        title={`vs @${best.opponent.username} · ${best.you}–${best.them}${days}`}
+        title={
+          <span className="flex items-baseline gap-1.5">
+            <span className="min-w-0 truncate">vs @{best.opponent.username}</span>
+            <span className="shrink-0">
+              · {best.you}–{best.them}
+              {days}
+            </span>
+          </span>
+        }
         onOpen={onOpen}
       />
     );

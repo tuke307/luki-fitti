@@ -64,10 +64,9 @@ export function FriendRow({
               </span>
             )}
           </div>
-          <p className="text-muted-foreground truncate text-[0.8125rem]">
-            @{user.username}
-            {user.name ? ` · ${user.name}` : ''}
-          </p>
+          {user.name && (
+            <p className="text-muted-foreground truncate text-[0.8125rem]">@{user.username}</p>
+          )}
           {weekCount !== null && (
             <p
               className="text-muted-foreground truncate text-[0.75rem]"

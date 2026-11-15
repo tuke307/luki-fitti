@@ -1109,6 +1109,7 @@ export const en = {
     friendsThisWeek: 'Friends this week',
     seeAll: 'See all',
     timesThisWeek: '{n}× this week',
+    timesWeek: '{n}×',
     moveFriendRequestsOne: '1 friend request waiting',
     moveFriendRequests: '{count} friend requests waiting',
     moveDuelInvite: '@{actor} challenged you to a duel',
