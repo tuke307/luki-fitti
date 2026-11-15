@@ -37,7 +37,7 @@ export function DocsHomeHero({ title }: { title: string }) {
         </div>
         <div className="docs-hero-shot" aria-hidden>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/screens/en/05-history.png" alt="" width={660} height={1363} loading="eager" />
+          <img src="/screens/en/06-history.png" alt="" width={660} height={1363} loading="eager" />
         </div>
       </div>
       <nav className="docs-hero-paths" aria-label="Where to start">
