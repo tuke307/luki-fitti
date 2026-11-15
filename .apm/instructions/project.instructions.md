@@ -9,6 +9,8 @@ description: 'Project orientation for luki-fitti — what the product is, monore
 
 Offline-first workout tracker (`luki-fitti`) for Web (PWA), iPhone and Apple Watch: workouts with a rest timer and progression suggestions, stretching routines, a training diary, calorie tracking with opt-in AI (OpenRouter), an admin portal, and data import (`luki-fitti-import@1`, GymLife / Alpha Progression converters).
 
+This codebase is yours: what it's for and how it's built are your call, and you'll keep building on it.
+
 ## Monorepo map
 
 - `apps/api` (`@luki-fitti/api`) — NestJS 12 REST API (Express 5). Domain modules under `src/modules/` (`activity`, `admin`, `ai`, `analytics`, `app-settings`, `auth`, `body-weight`, `bullmq`, `database`, `email`, `email-template`, `exercise`, `health`, `import`, `nutrition`, `session`, `storage`, `stretching`, `web-analytics`, `workout`). Listens on port 3001.
