@@ -155,11 +155,18 @@ extension APIClient {
 
     // MARK: - Inbox
 
-    public func fetchNotifications(cursor: String? = nil, limit: Int = 20) async throws -> NotificationListDto {
+    public func fetchNotifications(
+        cursor: String? = nil,
+        limit: Int = 20,
+        locale: SupportedLocale? = nil
+    ) async throws -> NotificationListDto {
         var path = "/api/notifications?limit=\(limit)"
         if let cursor {
             let c = cursor.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? cursor
             path += "&cursor=\(c)"
+        }
+        if let locale {
+            path += "&locale=\(locale.rawValue)"
         }
         return try await request(path: path, method: "GET")
     }

@@ -1203,6 +1203,31 @@ public enum LukiStrings {
         "Effort points": "Effort-Punkte",
         "%d EP this week": "%d EP diese Woche",
         "Promotion, demotion and end-of-week reminders.": "Aufstieg, Abstieg und Erinnerungen zum Wochenende.",
+
+        // PR — notification categories & per-kind push settings
+        "Allow Notifications": "Mitteilungen erlauben",
+        "Challenges, standings and results.": "Herausforderungen, Zwischenstände und Ergebnisse.",
+        "Streaks": "Streaks",
+        "Streak invites, freezes and broken streaks.": "Streak-Einladungen, Freezes und gerissene Streaks.",
+        "Boss phases, defeats and squad invites.": "Boss-Phasen, Siege und Squad-Einladungen.",
+        "Friend requests": "Freundschaftsanfragen",
+        "Accepted requests": "Angenommene Anfragen",
+        "Promotions": "Aufstiege",
+        "Demotions": "Abstiege",
+        "Week ending reminder": "Erinnerung zum Wochenende",
+        "Accepted challenges": "Angenommene Herausforderungen",
+        "Daily standings": "Täglicher Zwischenstand",
+        "Results": "Ergebnisse",
+        "Streak invites": "Streak-Einladungen",
+        "Streak started": "Streak gestartet",
+        "Sunday reminder": "Sonntags-Erinnerung",
+        "Freeze used": "Freeze eingesetzt",
+        "Streak reset": "Streak zurückgesetzt",
+        "New boss": "Neuer Boss",
+        "Boss enraged": "Boss rastet aus",
+        "Boss defeated": "Boss besiegt",
+        "Boss escaped": "Boss entkommen",
+        "Squad raid started": "Squad-Raid gestartet",
     ]
 }
 
