@@ -170,6 +170,7 @@ export class NotificationService {
         payloadJson,
         actorUsername,
         resolvedLocale,
+        n.id,
       );
       items.push({
         id: n.id,

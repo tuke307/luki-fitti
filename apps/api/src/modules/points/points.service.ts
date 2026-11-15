@@ -15,6 +15,7 @@ import { SocialAccessService } from '../social/social-access.service';
 import { LeagueService } from '../league/league.service';
 import { DuelService } from '../battle/duel.service';
 import { RaidService } from '../raid/raid.service';
+import { NudgeService } from './nudge.service';
 
 /** Sessions older than this at sync time never earn points. */
 const SYNC_WINDOW_MS = 72 * 60 * 60 * 1000;
@@ -32,6 +33,8 @@ export class PointsService {
     @Optional() private readonly duels?: DuelService,
     /** Optional so specs and the email-worker can run without the raid module. */
     @Optional() private readonly raids?: RaidService,
+    /** Optional for the same reason; missing ⇒ no friend nudges. */
+    @Optional() private readonly nudges?: NudgeService,
   ) {}
 
   /**
@@ -130,6 +133,15 @@ export class PointsService {
     }
 
     const weekPoints = await this.recomputeWeeklyScore(userId, weekKey);
+
+    // Best-effort: a fresh >0-point entry may nudge friends this user just
+    // passed in this week's workout count. Resyncs and 0-point sessions never
+    // nudge; a failure must never lose the session.
+    if (!existing && total > 0) {
+      await this.nudges
+        ?.afterEntry(userId, weekKey)
+        .catch((err) => logger.warn(`friend nudge after recordSession failed: ${String(err)}`));
+    }
 
     // Best-effort: active duels of this user pick up the new points. A failure
     // here must never lose the session's own entry.

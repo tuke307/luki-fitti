@@ -80,6 +80,7 @@ export class PushService {
       where: { userId },
       select: {
         pushFriends: true,
+        pushNudges: true,
         pushLeagues: true,
         pushDuels: true,
         pushStreaks: true,
@@ -89,6 +90,7 @@ export class PushService {
     });
     return {
       friends: prefs?.pushFriends ?? true,
+      nudges: prefs?.pushNudges ?? true,
       leagues: prefs?.pushLeagues ?? true,
       duels: prefs?.pushDuels ?? true,
       streaks: prefs?.pushStreaks ?? true,
@@ -108,6 +110,7 @@ export class PushService {
       create: {
         userId,
         ...(dto.friends !== undefined ? { pushFriends: dto.friends } : {}),
+        ...(dto.nudges !== undefined ? { pushNudges: dto.nudges } : {}),
         ...(dto.leagues !== undefined ? { pushLeagues: dto.leagues } : {}),
         ...(dto.duels !== undefined ? { pushDuels: dto.duels } : {}),
         ...(dto.streaks !== undefined ? { pushStreaks: dto.streaks } : {}),
@@ -116,6 +119,7 @@ export class PushService {
       },
       update: {
         ...(dto.friends !== undefined ? { pushFriends: dto.friends } : {}),
+        ...(dto.nudges !== undefined ? { pushNudges: dto.nudges } : {}),
         ...(dto.leagues !== undefined ? { pushLeagues: dto.leagues } : {}),
         ...(dto.duels !== undefined ? { pushDuels: dto.duels } : {}),
         ...(dto.streaks !== undefined ? { pushStreaks: dto.streaks } : {}),
@@ -124,6 +128,7 @@ export class PushService {
       },
       select: {
         pushFriends: true,
+        pushNudges: true,
         pushLeagues: true,
         pushDuels: true,
         pushStreaks: true,
@@ -133,6 +138,7 @@ export class PushService {
     });
     return {
       friends: prefs.pushFriends,
+      nudges: prefs.pushNudges,
       leagues: prefs.pushLeagues,
       duels: prefs.pushDuels,
       streaks: prefs.pushStreaks,
