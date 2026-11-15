@@ -38,6 +38,7 @@ import { WorkoutsView, type WorkoutsSegment } from './workouts-view';
 import { ActiveSessionView } from './active-session-view';
 import { DiaryAnalyticsView } from './diary-analytics-view';
 import { SocialView, type SocialSection } from './social/social-view';
+import { UserAvatar } from './social/user-avatar';
 import { ProfileImportView, requestSettingsPage } from './profile-import-view';
 import { NutritionView } from './nutrition/nutrition-view';
 import { GlassIconButton } from './settings/settings-row';
@@ -475,7 +476,9 @@ export function PwaShell() {
               : 'text-foreground'
         } ${showProfilePage ? 'ring-primary ring-offset-background ring-2 ring-offset-2' : ''}`}
       >
-        {isAuthenticated && initials ? (
+        {isAuthenticated && user?.social?.avatarUrl ? (
+          <UserAvatar avatarUrl={user.social.avatarUrl} name={user.name} className="size-9" />
+        ) : isAuthenticated && initials ? (
           initials
         ) : (
           <UserRound className="h-[20px] w-[20px]" strokeWidth={2.25} />

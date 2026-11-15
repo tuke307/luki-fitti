@@ -207,6 +207,8 @@ export const UserSchema = z.object({
       enabled: z.boolean(),
       handle: z.string().nullable(),
       arena: z.string().nullable().optional(),
+      /** Own avatar (API-relative, cache-busted), for the header profile button. */
+      avatarUrl: z.string().nullable().optional(),
     })
     .optional(),
 });
