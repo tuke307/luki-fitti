@@ -1190,6 +1190,17 @@ public final class LukiAppViewModel {
         if args.contains("--uitesting-seed-raid") {
             seedRaid(vm: vm, store: store)
         }
+        if args.contains("--uitesting-seed-social-hub") {
+            seedSocialHub(vm: vm, store: store)
+        }
+        if args.contains("--uitesting-tab-social") {
+            vm.selectedTab = .social
+        }
+        if let sectionArg = args.first(where: { $0.hasPrefix("--uitesting-social-section=") }),
+           let section = SocialSectionTarget(rawValue: String(sectionArg.dropFirst(27))) {
+            vm.selectedTab = .social
+            vm.social.requestedSection = section
+        }
         if args.contains("--uitesting-seed-raid-result") {
             seedRaidResult(vm: vm, store: store)
         }
@@ -1258,6 +1269,58 @@ public final class LukiAppViewModel {
                 counts: ["DUEL_WIN": 1]
             ),
         ]
+    }
+
+    /// `--uitesting-seed-social-hub`: a signed-in social user with a populated hub — week
+    /// summary, next move, friends-this-week strip, an active duel, a live raid and an
+    /// active streak — so review screenshots show the real social hub and Friends page.
+    private static func seedSocialHub(vm: LukiAppViewModel, store: OfflineStore) {
+        seedDuelCelebration(vm: vm, store: store)
+        // No pending duel result — the hub itself is the subject, not the celebration.
+        vm.social.duels?.pendingResult = nil
+
+        let anna = SocialCardDto(userId: "uitest-anna", username: "anna", avatarUrl: nil, name: "Anna")
+        let max = SocialCardDto(userId: "uitest-max", username: "max", avatarUrl: nil, name: "Max")
+        let opponent = SocialCardDto(
+            userId: "uitest-opponent", username: "lena", avatarUrl: nil, name: "Lena")
+        vm.social.friends = FriendListsDto(
+            friends: [opponent, anna, max],
+            incoming: [SocialCardDto(
+                userId: "uitest-req", username: "jonas", avatarUrl: nil, name: "Jonas")],
+            outgoing: []
+        )
+        vm.social.summary = SocialSummaryDto(
+            week: SocialSummaryWeekDto(workouts: 2, goal: 4, points: 210),
+            badge: 2,
+            nextMove: .friendAhead(actor: anna, them: 3, you: 2),
+            friendsWeek: [
+                FriendWeekDto(card: anna, workouts: 3),
+                FriendWeekDto(card: opponent, workouts: 2),
+                FriendWeekDto(card: max, workouts: 1),
+            ]
+        )
+        let endsAt = ISO8601DateFormatter().string(from: Date().addingTimeInterval(46 * 3600))
+        vm.social.raids = RaidListDto(
+            community: RaidDto(
+                id: "uitest-raid-1",
+                kind: .COMMUNITY,
+                bossSlug: "core-kraken",
+                weekKey: "2026-W46",
+                endsAt: endsAt,
+                maxHp: 2_000,
+                damage: 1_900,
+                phase: 3,
+                status: .ACTIVE,
+                yourDamage: 620
+            )
+        )
+        vm.social.league = LeagueCurrentDto(
+            weekKey: "2026-W46",
+            stage: .FRIENDS,
+            endsAt: endsAt,
+            arena: .SILVER,
+            cohort: nil
+        )
     }
 
     /// `--uitesting-seed-raid`: a signed-in social user with a live community raid at
@@ -1562,6 +1625,7 @@ public struct AppShellView: View {
     @State private var isSessionPresented = false
     @State private var isProfilePresented = false
     @Environment(\.lukiLocale) private var tr
+    @Environment(\.scenePhase) private var scenePhase
 
     public init(viewModel: LukiAppViewModel) {
         self.viewModel = viewModel
@@ -1589,6 +1653,7 @@ public struct AppShellView: View {
                 Tab(tr("Social"), systemImage: "person.2", value: LukiMainTab.social) {
                     tabRoot(title: tr("Social")) { SocialView(viewModel: viewModel) }
                 }
+                .badge(viewModel.social.summary?.badge ?? 0)
             }
         }
         .tint(LukiColors.accent)
@@ -1654,6 +1719,22 @@ public struct AppShellView: View {
         }
         .onChange(of: contentTab, initial: true) { _, newTab in
             viewModel.analytics.screen(Self.screenPath(for: newTab))
+        }
+        // Social summary powers the tab badge and the Home card: refresh on shell
+        // load, when the app returns to the foreground, and every 60 s while open.
+        .task(id: viewModel.socialEnabled) {
+            guard viewModel.socialEnabled else { return }
+            await viewModel.social.refreshSummary()
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 60_000_000_000)
+                guard !Task.isCancelled else { return }
+                await viewModel.social.refreshSummary()
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active, viewModel.socialEnabled {
+                Task { await viewModel.social.refreshSummary() }
+            }
         }
         .onChange(of: isSessionPresented) { _, presented in
             if presented { viewModel.analytics.screen("/session") }

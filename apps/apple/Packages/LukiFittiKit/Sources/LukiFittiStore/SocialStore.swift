@@ -48,6 +48,11 @@ public final class SocialStore {
     public var raids: RaidListDto?
     public var squadList: SquadListDto?
 
+    // MARK: - Hub summary (PR 5)
+
+    /// `/social/summary` — weekly counts, tab badge, next move, friends-week strip.
+    public var summary: SocialSummaryDto?
+
     /// UI-test seed: trophy shelves prefer this over a live fetch when set.
     public var seededTrophies: [String: TrophyListDto]?
     /// UI-test seeds: canned raid detail + feed so the detail page renders without an API.
@@ -79,7 +84,8 @@ public final class SocialStore {
         async let l = refreshLeagues()
         async let b = refreshBattles()
         async let r = refreshRaids()
-        _ = await (p, f, u, l, b, r)
+        async let s = refreshSummary()
+        _ = await (p, f, u, l, b, r, s)
     }
 
     /// Points, league state and friends board. 403s (leagues disabled or user ineligible) are
@@ -103,6 +109,14 @@ public final class SocialStore {
         } catch let error as APIClientError where isForbidden(error) {
         } catch { recordLeagueError("league/friends", error) }
         if changed { onLeagueDataChanged?() }
+    }
+
+    /// Hub summary. Same failure policy: 403 (social off) hides it, other errors log.
+    public func refreshSummary() async {
+        do {
+            summary = try await apiClient.fetchSocialSummary()
+        } catch let error as APIClientError where isForbidden(error) {
+        } catch { recordLeagueError("social/summary", error) }
     }
 
     private func isForbidden(_ error: APIClientError) -> Bool {
@@ -323,6 +337,8 @@ public final class SocialStore {
         } catch {
             lastError = error.localizedDescription
         }
+        // Friend actions change the hub badge/next-move — keep them fresh.
+        await refreshSummary()
     }
 
     public func refreshUnread() async {
