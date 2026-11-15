@@ -90,6 +90,7 @@ import { RainbowExerciseSuggestionCard } from './rainbow-suggestion-card';
 import { SwipeRow } from './swipe-row';
 import { TemplateSetsEditor } from './template-sets-editor';
 import { AiWorkoutBuilderDialog } from './ai-workout-builder-dialog';
+import { TrainingGoalInfoButton } from './training-goal-info-button';
 import { showsAiFeature } from '@/lib/ai/ai-access';
 import { MobileSheet } from './mobile-sheet';
 import { PageTitle } from './page-title';
@@ -1207,9 +1208,12 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="tpl-training-goal" className="text-xs font-semibold">
-                {t.profile.trainingGoalLabel}
-              </Label>
+              <div className="flex items-center gap-1">
+                <Label htmlFor="tpl-training-goal" className="text-xs font-semibold">
+                  {t.profile.trainingGoalLabel}
+                </Label>
+                <TrainingGoalInfoButton />
+              </div>
               <NativeSelect
                 id="tpl-training-goal"
                 value={tplTrainingGoal ?? ''}
@@ -1217,6 +1221,7 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                   setTplTrainingGoal((e.target.value || null) as TrainingGoal | null)
                 }
                 className="w-full"
+                aria-describedby="tpl-training-goal-hint"
                 data-testid="template-training-goal-select"
               >
                 <option value="">
@@ -1232,6 +1237,9 @@ export function WorkoutsView({ onStartSessionNavigation }: WorkoutsViewProps) {
                   </option>
                 ))}
               </NativeSelect>
+              <p id="tpl-training-goal-hint" className="text-muted-foreground text-xs">
+                {t.workouts.trainingGoalHint}
+              </p>
             </div>
 
             {/* Ordered Exercises Editor */}

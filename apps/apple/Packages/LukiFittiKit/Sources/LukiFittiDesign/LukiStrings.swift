@@ -128,7 +128,29 @@ public enum LukiStrings {
         "First time doing this exercise": "Zum ersten Mal dabei",
         "Fix the set type, weight or reps, then save.": "Korrigiere Satzart, Gewicht oder Wiederholungen und speichere.",
         "Training goal": "Trainingsziel",
+        "About training goals": "Über Trainingsziele",
+        "Your training goal tunes the weight and rep suggestions to what you train for. Without a goal, suggestions work as before.":
+            "Dein Trainingsziel passt die Gewichts- und Wiederholungsvorschläge an das an, wofür du trainierst. Ohne Ziel bleiben die Vorschläge wie bisher.",
+        "Bigger weight steps on barbell compound lifts. After a max-effort session the weight stays the same.":
+            "Größere Gewichtssprünge bei Langhantel-Grundübungen. Nach einer Einheit mit maximaler Anstrengung bleibt das Gewicht gleich.",
+        "More weight once every set reaches the top of the range, even at max effort.":
+            "Mehr Gewicht, sobald alle Sätze das obere Ende des Bereichs erreichen – auch bei maximaler Anstrengung.",
+        "More weight only while the last session stayed below RPE 9.":
+            "Mehr Gewicht nur, solange die letzte Einheit unter RPE 9 blieb.",
+        "Good to know": "Gut zu wissen",
+        "The goal's rep range replaces the rep targets of your exercises.":
+            "Der Wiederholungsbereich des Ziels ersetzt die Wiederholungsziele deiner Übungen.",
+        "Rest only changes where it is still at the 90 s default. Rest times you set yourself stay.":
+            "Die Pause ändert sich nur dort, wo noch der Standard von 90 s steht. Selbst gesetzte Pausen bleiben.",
+        "The number of sets doesn't change.":
+            "Die Anzahl der Sätze ändert sich nicht.",
+        "The AI workout builder follows your goal too.":
+            "Auch der KI-Workout-Builder richtet sich nach deinem Ziel.",
+        "The profile goal applies to all workouts. In the workout editor you can override it for a single workout.":
+            "Das Ziel im Profil gilt für alle Workouts. Im Workout-Editor kannst du es für ein einzelnes Workout überschreiben.",
         "Default rep ranges and rest times": "Standard-Wiederholungsbereiche und Pausen",
+        "Overrides your profile goal for this workout. Sets rep ranges, rest times and how weight and rep suggestions progress.":
+            "Überschreibt das Ziel aus deinem Profil für dieses Workout. Bestimmt Wiederholungsbereiche, Pausen und die Gewichts- und Wiederholungsvorschläge.",
         "Profile default": "Profil-Standard",
         "Profile default (%@)": "Profil-Standard (%@)",
         "Hypertrophy": "Muskelaufbau",

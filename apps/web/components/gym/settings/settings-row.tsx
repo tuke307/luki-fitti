@@ -99,11 +99,23 @@ function IconTile({ icon: Icon, tone }: { icon: LucideIcon; tone: SettingsTone }
   );
 }
 
-function RowLabel({ title, subtitle, id }: { title: string; subtitle?: string; id?: string }) {
+function RowLabel({
+  title,
+  subtitle,
+  id,
+  accessory,
+}: {
+  title: string;
+  subtitle?: string;
+  id?: string;
+  /** Small inline control next to the title, e.g. an info button. */
+  accessory?: React.ReactNode;
+}) {
   return (
     <span className="min-w-0 flex-1 py-1">
-      <span id={id} className="block">
+      <span id={id} className="flex items-center gap-1">
         {title}
+        {accessory}
       </span>
       {subtitle && <span className="text-muted-foreground block text-[0.8125rem]">{subtitle}</span>}
     </span>
@@ -217,6 +229,8 @@ interface SettingsSelectRowProps<T extends string> {
   value: T;
   options: ReadonlyArray<{ value: T; label: string }>;
   onValueChange: (value: T) => void;
+  /** Inline control next to the title, outside the select trigger. */
+  accessory?: React.ReactNode;
   'data-testid'?: string;
 }
 
@@ -228,13 +242,14 @@ export function SettingsSelectRow<T extends string>({
   value,
   options,
   onValueChange,
+  accessory,
   ...rest
 }: SettingsSelectRowProps<T>) {
   return (
     <RowItem inset={Boolean(icon)}>
       <div className={ROW_CLASS}>
         {icon && <IconTile icon={icon} tone={tone} />}
-        <RowLabel title={title} />
+        <RowLabel title={title} accessory={accessory} />
         <Select value={value} onValueChange={(v) => onValueChange(v as T)}>
           <SelectTrigger
             aria-label={title}

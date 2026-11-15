@@ -859,24 +859,31 @@ private struct TemplateBuilderSheetView: View {
                             .font(.subheadline)
                             .foregroundStyle(.primary)
 
-                        Picker(selection: $trainingGoal) {
+                        HStack(spacing: 2) {
+                            Text(tr("Training goal"))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                            TrainingGoalInfoButton()
+                        }
+                        Picker(tr("Training goal"), selection: $trainingGoal) {
                             Text(profileGoal.map { tr("Profile default (%@)", TrainingGoalLabels.name($0, tr)) }
                                 ?? tr("Profile default"))
                                 .tag(TrainingGoal?.none)
                             ForEach(TrainingGoal.allCases, id: \.self) { goal in
                                 Text(TrainingGoalLabels.name(goal, tr)).tag(TrainingGoal?.some(goal))
                             }
-                        } label: {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(tr("Training goal"))
-                                Text((trainingGoal ?? profileGoal)
-                                    .map { TrainingGoalLabels.caption($0, tr) }
-                                    ?? tr("Default rep ranges and rest times"))
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                            }
                         }
+                        .pickerStyle(.menu)
                         .accessibilityIdentifier("ios.workouts.trainingGoalPicker")
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(tr("Overrides your profile goal for this workout. Sets rep ranges, rest times and how weight and rep suggestions progress."))
+                            Text((trainingGoal ?? profileGoal)
+                                .map { TrainingGoalLabels.caption($0, tr) }
+                                ?? tr("Default rep ranges and rest times"))
+                        }
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                     }
                     .padding(14)
                     .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
