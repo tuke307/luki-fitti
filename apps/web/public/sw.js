@@ -96,12 +96,15 @@ self.addEventListener('push', (event) => {
   } catch {
     payload = {};
   }
-  // The API sends a flat payload ({ title, body, kind, notificationId, url }).
+  // The API sends a flat payload ({ title, body, kind, notificationId, url, collapseKey? }).
   const data = payload.data && typeof payload.data === 'object' ? payload.data : payload;
+  const tag = data.collapseKey || data.notificationId || 'luki-fitti-notification';
   event.waitUntil(
     self.registration.showNotification(payload.title || 'LukiFitti', {
       body: payload.body || '',
-      tag: payload.tag || 'luki-fitti-notification',
+      tag,
+      // Alerts re-surface when a collapsed notification replaces itself.
+      renotify: Boolean(data.collapseKey || data.notificationId),
       icon: '/icon-192.svg',
       badge: '/icon-192.svg',
       data: { url: typeof data.url === 'string' ? data.url : '/' },

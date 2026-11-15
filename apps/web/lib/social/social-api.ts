@@ -148,10 +148,11 @@ export const adminLeagueApi = {
 };
 
 export const notificationsApi = {
-  list: (cursor?: string | null, limit = 20) => {
+  list: (cursor?: string | null, limit = 20, locale?: 'en' | 'de') => {
     const params = new URLSearchParams();
     if (cursor) params.set('cursor', cursor);
     params.set('limit', String(limit));
+    if (locale) params.set('locale', locale);
     return fetchClient<NotificationListDto>(`/notifications?${params.toString()}`);
   },
   markRead: (all = true) =>

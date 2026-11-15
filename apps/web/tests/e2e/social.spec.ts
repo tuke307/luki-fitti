@@ -266,3 +266,40 @@ test.describe('Social: raids', () => {
     await expect(raidPage.locator('canvas, [role="img"]').first()).toBeVisible({ timeout: 15_000 });
   });
 });
+
+test.describe('Social: per-kind push settings', () => {
+  test.beforeAll(async () => {
+    await enableSocialForE2e();
+  });
+
+  test('muting a notification kind survives a reload', async ({ page }) => {
+    const unique = Date.now().toString(36);
+    const user = await seedSocialUser('pushk', undefined, `pushk_${unique}`);
+
+    await resetOfflineStore(page);
+    await signInSeededUser(page, user);
+    await gotoProfileTab(page);
+    await page.getByTestId('settings-row-notifications').click();
+    await page.getByTestId('push-friends-row').click();
+
+    const kind = page.getByTestId('push-kind-FRIEND_ACCEPTED');
+    await expect(kind).toHaveAttribute('aria-checked', 'true', { timeout: 10_000 });
+    const saved = page.waitForResponse(
+      (res) => res.url().includes('/push/preferences') && res.request().method() === 'PATCH',
+    );
+    await kind.click();
+    await saved;
+    await expect(kind).toHaveAttribute('aria-checked', 'false');
+    await page.getByRole('button', { name: /^Done$|^Fertig$/i }).click();
+
+    await page.reload();
+    await gotoProfileTab(page);
+    await page.getByTestId('settings-row-notifications').click();
+    await page.getByTestId('push-friends-row').click();
+    await expect(page.getByTestId('push-kind-FRIEND_ACCEPTED')).toHaveAttribute(
+      'aria-checked',
+      'false',
+      { timeout: 10_000 },
+    );
+  });
+});
