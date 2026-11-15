@@ -4,16 +4,11 @@ import jwt from 'jsonwebtoken';
 import * as webpush from 'web-push';
 import { logger } from '@luki-fitti/logger';
 import { NotificationKind, PushPlatform } from '@luki-fitti/common/enums';
+import { renderNotification } from '@luki-fitti/common/push-messages';
 import {
-  anonymousActorName,
-  arenaName,
-  raidBossName,
-  duelResultMessage,
-  duelStandingsMessage,
-  leagueEndingMessage,
-  pushMessageFor,
-  renderPushMessage,
-} from '@luki-fitti/common/push-messages';
+  notificationCategoryOf,
+  notificationCollapseKey,
+} from '@luki-fitti/common/notification-categories';
 import { PrismaService } from '../database/prisma.service';
 import {
   APNS_BUNDLE_ID,
@@ -43,6 +38,8 @@ export interface PushSenderDeps {
     /** Lazily mints the provider JWT so tests need no real .p8 key. */
     jwt: () => string;
     body: string;
+    /** `apns-collapse-id` header value (≤64 bytes), when the notification collapses. */
+    collapseKey: string | null;
   }) => Promise<ApnsResult>;
   webPushSend?: (args: {
     endpoint: string;
@@ -105,10 +102,13 @@ export class PushSenderService {
     // placeholder (a friend request comes from a non-friend).
     const actorUsername = notification.actor?.username ?? null;
     const payloadJson = (notification.payload ?? {}) as Record<string, unknown>;
+    const kind = notification.kind as NotificationKind;
+    const collapseKey = notificationCollapseKey(kind, payloadJson);
     const payload = {
       kind: notification.kind,
       notificationId: notification.id,
       ...(typeof payloadJson.url === 'string' ? { url: payloadJson.url } : {}),
+      ...(collapseKey ? { collapseKey } : {}),
     };
 
     // Every device is tried: one transient failure must not starve the rest, and
@@ -117,39 +117,19 @@ export class PushSenderService {
     let handled = 0;
     let transientFailures = 0;
     for (const device of notification.user.pushDevices) {
-      const kind = notification.kind as NotificationKind;
-      const template =
-        kind === NotificationKind.LEAGUE_ENDING
-          ? leagueEndingMessage(payloadJson.inDemotionZone === true, device.locale)
-          : kind === NotificationKind.DUEL_STANDINGS
-            ? duelStandingsMessage(payloadJson.leading === true, device.locale)
-            : kind === NotificationKind.DUEL_RESULT
-              ? duelResultMessage(
-                  payloadJson.outcome === 'WON'
-                    ? 'WON'
-                    : payloadJson.outcome === 'TIE'
-                      ? 'TIE'
-                      : 'LOST',
-                  device.locale,
-                )
-              : pushMessageFor(kind, device.locale);
-      const message = renderPushMessage(template, {
-        actor: actorUsername ? `@${actorUsername}` : anonymousActorName(device.locale),
-        arena: arenaName(String(payloadJson.toArena ?? payloadJson.fromArena ?? ''), device.locale),
-        rank: String(payloadJson.rank ?? ''),
-        places: String(payloadJson.placesToPromotion ?? ''),
-        you: String(payloadJson.you ?? ''),
-        them: String(payloadJson.them ?? ''),
-        days: String(payloadJson.daysLeft ?? ''),
-        count: String(payloadJson.count ?? ''),
-        boss: raidBossName(String(payloadJson.bossSlug ?? ''), device.locale),
-        squad: String(payloadJson.squadName ?? ''),
-        percent: String(payloadJson.percent ?? ''),
-      });
+      const message = renderNotification(kind, payloadJson, actorUsername, device.locale);
       try {
         const outcome =
           device.platform === PushPlatform.APNS
-            ? await this.sendApns(device.token, device.apnsSandbox, message, payload, device.id)
+            ? await this.sendApns(
+                device.token,
+                device.apnsSandbox,
+                message,
+                payload,
+                device.id,
+                collapseKey,
+                notificationCategoryOf(kind).id,
+              )
             : await this.sendWebPush(device, message, payload);
         if (outcome !== 'skipped') handled += 1;
       } catch (err) {
@@ -195,6 +175,8 @@ export class PushSenderService {
     message: { title: string; body: string },
     payload: Record<string, unknown>,
     deviceId: string,
+    collapseKey: string | null,
+    threadId: string,
   ): Promise<'sent' | 'dead' | 'skipped'> {
     if (!this.isApnsConfigured()) {
       this.warnOnce('APNs');
@@ -209,9 +191,12 @@ export class PushSenderService {
           alert: { title: message.title, body: message.body },
           sound: 'default',
           'mutable-content': 1,
+          'thread-id': threadId,
         },
         ...payload,
       }),
+      // apns-collapse-id is capped at 64 bytes by Apple; truncate defensively.
+      collapseKey: collapseKey ? collapseKey.slice(0, 64) : null,
     });
     if (
       result.status === 410 ||
@@ -251,6 +236,7 @@ export class PushSenderService {
     token: string;
     jwt: () => string;
     body: string;
+    collapseKey: string | null;
   }): Promise<ApnsResult> {
     const host = args.sandbox ? APNS_SANDBOX_HOST : APNS_PROD_HOST;
     return new Promise((resolve, reject) => {
@@ -264,6 +250,7 @@ export class PushSenderService {
         'apns-priority': '10',
         'apns-expiration': '0',
         'content-type': 'application/json',
+        ...(args.collapseKey ? { 'apns-collapse-id': args.collapseKey } : {}),
       });
       let status = 0;
       let body = '';
