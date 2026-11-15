@@ -22,9 +22,9 @@ ALTER TABLE "User" ADD COLUMN     "avatarKey" TEXT,
 ADD COLUMN     "avatarUpdatedAt" TIMESTAMP(3),
 ADD COLUMN     "discoverableByEmail" BOOLEAN NOT NULL DEFAULT true,
 ADD COLUMN     "emailLookupHash" TEXT,
-ADD COLUMN     "handle" TEXT,
-ADD COLUMN     "handleChangedAt" TIMESTAMP(3),
-ADD COLUMN     "socialPaused" BOOLEAN NOT NULL DEFAULT false;
+ADD COLUMN     "socialPaused" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "username" TEXT,
+ADD COLUMN     "usernameChangedAt" TIMESTAMP(3);
 
 -- AlterTable
 ALTER TABLE "UserPreferences" ADD COLUMN     "pushFriends" BOOLEAN NOT NULL DEFAULT true;
@@ -72,7 +72,7 @@ CREATE TABLE "UserReport" (
     "reportedId" TEXT NOT NULL,
     "reason" "ReportReason" NOT NULL,
     "details" TEXT,
-    "handleSnapshot" TEXT,
+    "usernameSnapshot" TEXT,
     "nameSnapshot" TEXT,
     "avatarKeySnapshot" TEXT,
     "status" "ReportStatus" NOT NULL DEFAULT 'OPEN',
@@ -144,7 +144,7 @@ CREATE INDEX "PushDevice_userId_idx" ON "PushDevice"("userId");
 CREATE INDEX "Notification_userId_createdAt_idx" ON "Notification"("userId", "createdAt");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_handle_key" ON "User"("handle");
+CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_emailLookupHash_key" ON "User"("emailLookupHash");
