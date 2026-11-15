@@ -522,7 +522,11 @@ struct SquadsView: View {
                 Spacer()
                 Menu {
                     Button(tr("Invite friend")) { inviteSquad = squad }
-                    Button(tr("Start this week's raid")) { startRaidSquad = squad }
+                    Button { startRaidSquad = squad } label: {
+                        Text(tr("Start this week's raid"))
+                        if squad.members.count < 2 { Text(tr("Invite a friend first")) }
+                    }
+                    .disabled(squad.members.count < 2)
                     if squad.role == .OWNER {
                         Button(tr("Rename")) {
                             renameText = squad.name

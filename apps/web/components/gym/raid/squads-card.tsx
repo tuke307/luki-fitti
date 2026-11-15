@@ -119,7 +119,10 @@ export function SquadsCard({
                 )}
               </p>
               <p className="text-muted-foreground text-[0.75rem]">
-                {t.raid.members.replace('{count}', String(squad.members.length))}
+                {(squad.members.length === 1 ? t.raid.member : t.raid.members).replace(
+                  '{count}',
+                  String(squad.members.length),
+                )}
               </p>
             </div>
             <Button

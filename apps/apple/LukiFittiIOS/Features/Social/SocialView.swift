@@ -239,7 +239,7 @@ public struct SocialView: View {
                         if let handle = profile.handle {
                             Text("@\(handle)").font(.headline)
                         } else {
-                            Text(tr("Pick a handle so friends can find you."))
+                            Text(tr("Pick a username so friends can find you."))
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
@@ -272,7 +272,7 @@ public struct SocialView: View {
     private var friendsSection: some View {
         Section {
             if social.friends.friends.isEmpty {
-                Text(tr("No friends yet. Search for a handle or send an invite."))
+                Text(tr("No friends yet. Search for a username or send an invite."))
                     .foregroundStyle(.secondary)
             }
             ForEach(social.friends.friends) { friend in
@@ -395,7 +395,7 @@ public struct SocialView: View {
 
     private var addFriendsSection: some View {
         Section {
-            TextField(tr("Search by @handle"), text: $searchText)
+            TextField(tr("Search by username"), text: $searchText)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .accessibilityIdentifier("ios.social.searchField")
@@ -413,7 +413,7 @@ public struct SocialView: View {
                 if searchText.trimmingCharacters(in: .whitespaces).count < 2 {
                     Text(tr("Type at least 2 characters.")).font(.footnote).foregroundStyle(.secondary)
                 } else if searchResults.isEmpty {
-                    Text(tr("Nobody found with that handle.")).font(.footnote).foregroundStyle(.secondary)
+                    Text(tr("Nobody found with that username.")).font(.footnote).foregroundStyle(.secondary)
                 }
             }
             ForEach(searchResults) { user in

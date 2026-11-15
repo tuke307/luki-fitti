@@ -28,10 +28,10 @@ struct SocialOnboardingSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Text(tr("Pick a handle so friends can find you."))
+                    Text(tr("Pick a username so friends can find you."))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    TextField(tr("Handle"), text: $handle)
+                    TextField(tr("Username"), text: $handle)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .accessibilityIdentifier("ios.social.onboarding.handleField")
@@ -133,9 +133,9 @@ struct SocialOnboardingSheet: View {
 
     private func reasonText(_ reason: HandleUnavailableReason?) -> String {
         switch reason {
-        case .taken: return tr("This handle is taken.")
-        case .reserved: return tr("This handle is reserved.")
-        case .blocked: return tr("This handle is not allowed.")
+        case .taken: return tr("This username is taken.")
+        case .reserved: return tr("This username is reserved.")
+        case .blocked: return tr("This username is not allowed.")
         default: return tr("3–20 characters: a–z, 0–9, underscore.")
         }
     }

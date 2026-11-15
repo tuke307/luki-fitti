@@ -236,7 +236,7 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
       <div className="mt-4 space-y-4">
         <ThisWeekCard />
         <LeagueCard onPendingResult={setPendingResult} />
-        <div ref={raidsAnchor} className="scroll-mt-20">
+        <div ref={raidsAnchor} className="scroll-mt-20 space-y-4">
           {raids?.community && (
             <RaidCard
               raid={raids.community}
