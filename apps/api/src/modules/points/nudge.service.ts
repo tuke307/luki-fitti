@@ -4,6 +4,7 @@ import { berlinDayKey, berlinMidnight, berlinWeekKey, weekBounds } from '@luki-f
 import { PrismaService } from '../database/prisma.service';
 import { SocialAccessService } from '../social/social-access.service';
 import { NotificationService } from '../notifications/notification.service';
+import { weeklyWorkoutCounts } from './workout-counts.util';
 
 /** Max nudges per (recipient, actor) pair within one league week. */
 const NUDGES_PER_PAIR_PER_WEEK = 2;
@@ -40,7 +41,7 @@ export class NudgeService {
     if (friendIds.length === 0) return;
 
     const week = weekBounds(weekKey);
-    const [blocks, weekCounts, trainedToday, paused, goalReached, todayNudges, pairNudges] =
+    const [blocks, counts, trainedToday, paused, goalReached, todayNudges, pairNudges] =
       await Promise.all([
         this.prisma.userBlock.findMany({
           where: {
@@ -51,11 +52,7 @@ export class NudgeService {
           },
           select: { blockerId: true, blockedId: true },
         }),
-        this.prisma.effortPointEntry.groupBy({
-          by: ['userId'],
-          where: { weekKey, points: { gt: 0 }, userId: { in: [userId, ...friendIds] } },
-          _count: { _all: true },
-        }),
+        weeklyWorkoutCounts(this.prisma, weekKey, [userId, ...friendIds]),
         this.prisma.effortPointEntry.findMany({
           where: { userId: { in: friendIds }, dayKey, points: { gt: 0 } },
           select: { userId: true },
@@ -91,7 +88,6 @@ export class NudgeService {
     const blockedIds = new Set(
       blocks.map((b) => (b.blockerId === userId ? b.blockedId : b.blockerId)),
     );
-    const counts = new Map(weekCounts.map((c) => [c.userId, c._count._all]));
     const trainedIds = new Set(trainedToday.map((e) => e.userId));
     const pausedIds = new Set(paused.map((u) => u.id));
     const goalIds = new Set(goalReached.map((s) => s.userId));

@@ -12,8 +12,14 @@ import {
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import { logger } from '@luki-fitti/logger';
-import { NotificationKind, ReportReason } from '@luki-fitti/common/enums';
-import { checkUsername, nextUsernameChangeAt, normalizeUsername } from '@luki-fitti/common/utils';
+import { NotificationKind, RaidStatus, ReportReason } from '@luki-fitti/common/enums';
+import {
+  berlinWeekKey,
+  checkUsername,
+  nextUsernameChangeAt,
+  normalizeUsername,
+  pickNextMove,
+} from '@luki-fitti/common/utils';
 import type {
   FriendInviteDto,
   FriendListsDto,
@@ -21,6 +27,7 @@ import type {
   SocialCardDto,
   SocialProfileDto,
   SocialRelation,
+  SocialSummaryDto,
   SocialUserDto,
   UpdateSocialProfileDto,
 } from '@luki-fitti/common/schemas';
@@ -28,6 +35,15 @@ import type { Prisma } from '@luki-fitti/database';
 import { PrismaService } from '../database/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { NotificationService } from '../notifications/notification.service';
+import { AppSettingsService } from '../app-settings/app-settings.service';
+import { SocialAccessService } from './social-access.service';
+import { PointsService } from '../points/points.service';
+import { weeklyWorkoutCounts } from '../points/workout-counts.util';
+import { DuelService } from '../battle/duel.service';
+import { StreakService } from '../battle/streak.service';
+import { SquadService } from '../raid/squad.service';
+import { RaidService } from '../raid/raid.service';
+import { LeagueService } from '../league/league.service';
 import { FRONTEND_URL } from '@/config/env.config';
 import { detectImageType } from '@/utils/image.util';
 import { incrementUserCounter } from '@/utils/rate-limit.util';
@@ -76,6 +92,15 @@ export class SocialService {
     private readonly storage: StorageService,
     private readonly notifications: NotificationService,
     @Optional() deps: SocialServiceDeps = {},
+    /** Summary aggregation; all optional so existing specs construct 4 args. */
+    @Optional() private readonly appSettings?: AppSettingsService,
+    @Optional() private readonly points?: PointsService,
+    @Optional() private readonly duels?: DuelService,
+    @Optional() private readonly streaks?: StreakService,
+    @Optional() private readonly squads?: SquadService,
+    @Optional() private readonly raids?: RaidService,
+    @Optional() private readonly leagues?: LeagueService,
+    @Optional() private readonly access?: SocialAccessService,
   ) {
     this.incrementCounter = deps.incrementCounter ?? incrementUserCounter;
   }
@@ -362,6 +387,118 @@ export class SocialService {
       }
     }
     return dto;
+  }
+
+  // ── Hub summary ───────────────────────────────────────────────────────────
+
+  /**
+   * GET /social/summary — one aggregate for the hub header cards, badge and
+   * next-move line. Every disabled feature contributes nothing; per-feature
+   * calls are best-effort so a broken one never sinks the hub.
+   */
+  async summary(userId: string): Promise<SocialSummaryDto> {
+    if (!this.appSettings) throw new NotFoundException('Summary unavailable');
+    const settings = await this.appSettings.get();
+    const pointsOn = settings.leaguesEnabled || settings.duelsEnabled || settings.streaksEnabled;
+    const weekKey = berlinWeekKey(new Date());
+
+    const lists = await this.listFriends(userId);
+    const friendIds = lists.friends.map((c) => c.userId);
+
+    const [paused, blocks] = await Promise.all([
+      friendIds.length
+        ? this.prisma.user.findMany({
+            where: { id: { in: friendIds }, socialPaused: true },
+            select: { id: true },
+          })
+        : [],
+      friendIds.length
+        ? this.prisma.userBlock.findMany({
+            where: {
+              OR: [
+                { blockerId: userId, blockedId: { in: friendIds } },
+                { blockerId: { in: friendIds }, blockedId: userId },
+              ],
+            },
+            select: { blockerId: true, blockedId: true },
+          })
+        : [],
+    ]);
+    const pausedIds = new Set(paused.map((u) => u.id));
+    const blockedIds = new Set(
+      blocks.map((b) => (b.blockerId === userId ? b.blockedId : b.blockerId)),
+    );
+    const visible = lists.friends.filter(
+      (c) => !pausedIds.has(c.userId) && !blockedIds.has(c.userId),
+    );
+
+    const counts = await weeklyWorkoutCounts(this.prisma, weekKey, [
+      userId,
+      ...visible.map((c) => c.userId),
+    ]);
+    const yourWorkouts = counts.get(userId) ?? 0;
+    const friendsWeek = visible
+      .map((card) => ({ card, workouts: counts.get(card.userId) ?? 0 }))
+      .sort((a, b) => b.workouts - a.workouts || a.card.username.localeCompare(b.card.username))
+      .slice(0, 30);
+
+    const guarded = <T>(on: boolean, call?: () => Promise<T> | undefined) =>
+      on && call ? (call()?.catch(() => null) ?? Promise.resolve(null)) : Promise.resolve(null);
+    const leagueEligible = this.access ? await this.access.isEligibleForLeagues(userId) : true;
+    const [duels, streaks, squads, raids, league, week] = await Promise.all([
+      guarded(settings.duelsEnabled, () => this.duels?.list(userId)),
+      guarded(settings.streaksEnabled, () => this.streaks?.list(userId)),
+      guarded(settings.raidsEnabled, () => this.squads?.list(userId)),
+      guarded(settings.raidsEnabled, () => this.raids?.current(userId)),
+      guarded(settings.leaguesEnabled && leagueEligible, () => this.leagues?.current(userId)),
+      guarded(pointsOn, () => this.points?.getWeek(userId, weekKey)),
+    ]);
+
+    const badge =
+      lists.incoming.length +
+      (duels?.incoming.length ?? 0) +
+      (streaks?.incoming.length ?? 0) +
+      (squads?.invites.length ?? 0);
+
+    const ownMember = league?.cohort?.members.find((m) => m.isSelf);
+    const nextMove = pickNextMove({
+      friendRequests: lists.incoming.length,
+      duelInvites:
+        duels?.incoming.map((d) => ({
+          duelId: d.id,
+          actor: d.opponent,
+          createdAt: d.createdAt,
+        })) ?? [],
+      streakInvites: streaks?.incoming.map((s) => ({ streakId: s.id, actor: s.friend })) ?? [],
+      squadInvites:
+        squads?.invites.map((i) => ({
+          squadName: i.squadName,
+          actor: i.invitedBy,
+          createdAt: i.createdAt,
+        })) ?? [],
+      friendsWeek,
+      yourWorkouts,
+      activeDuels:
+        duels?.active.map((d) => ({
+          duelId: d.id,
+          actor: d.opponent,
+          you: d.you,
+          them: d.them,
+          daysLeft: d.daysLeft ?? 0,
+        })) ?? [],
+      demotionArena: league && ownMember?.zone === 'DEMOTE' && league.cohort ? league.arena : null,
+      raidBossSlug:
+        raids?.community?.status === RaidStatus.ACTIVE && raids.community.yourDamage === 0
+          ? raids.community.bossSlug
+          : null,
+    });
+
+    return {
+      week: week ? { workouts: week.goal.done, goal: week.goal.target, points: week.points } : null,
+      badge,
+      nextMove,
+      friendsWeek,
+    };
   }
 
   private async friendCount(userId: string): Promise<number> {

@@ -54,6 +54,12 @@ export class SocialController {
     return this.social.getMe(user.id);
   }
 
+  @Get('summary')
+  @ApiOperation({ summary: 'Hub summary: week, badge, next move and friends this week' })
+  getSummary(@CurrentUser() user: AuthenticatedUser) {
+    return this.social.summary(user.id);
+  }
+
   @Patch('me')
   @UseGuards(CsrfGuard)
   @ApiOperation({ summary: 'Update username (30-day cooldown), name, discovery and pause flags' })

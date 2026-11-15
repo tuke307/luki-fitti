@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { ReportReason } from '@luki-fitti/common/enums';
+import { berlinWeekKey } from '@luki-fitti/common/utils';
 import type { NotificationService } from '../notifications/notification.service';
 import type { PrismaService } from '../database/prisma.service';
 import type { StorageService } from '../storage/storage.service';
@@ -69,6 +70,7 @@ function makePrisma(seed: { users?: TestUser[] } = {}) {
     status: string;
     respondedAt: Date | null;
   }> = [];
+  const entries: Array<{ userId: string; weekKey: string; dayKey: string; points: number }> = [];
 
   const prisma = {
     users,
@@ -77,6 +79,7 @@ function makePrisma(seed: { users?: TestUser[] } = {}) {
     invites,
     reports,
     duels,
+    entries,
     user: {
       findUnique: async ({ where }: { where: Record<string, unknown> }) => {
         if (typeof where.id === 'string') return users.get(where.id) ?? null;
@@ -110,6 +113,8 @@ function makePrisma(seed: { users?: TestUser[] } = {}) {
             where.emailLookupHash?.in &&
             !(u.emailLookupHash !== null && where.emailLookupHash.in.includes(u.emailLookupHash))
           )
+            return false;
+          if ((where as { socialPaused?: boolean }).socialPaused === true && !u.socialPaused)
             return false;
           return true;
         });
@@ -222,11 +227,18 @@ function makePrisma(seed: { users?: TestUser[] } = {}) {
       },
       findMany: async ({ where }: { where: Record<string, unknown> }) => {
         const out: { blockerId: string; blockedId: string; createdAt: Date }[] = [];
-        for (const key of blocks) {
-          const [blockerId, blockedId] = key.split('|') as [string, string];
-          if (where.blockerId && blockerId !== where.blockerId) continue;
-          out.push({ blockerId, blockedId, createdAt: new Date() });
-        }
+        const match = (cond: { blockerId?: unknown; blockedId?: unknown }) => {
+          const fits = (val: string, c: unknown) =>
+            c === undefined || c === val || ((c as { in?: string[] }).in?.includes(val) ?? false);
+          for (const key of blocks) {
+            const [blockerId, blockedId] = key.split('|') as [string, string];
+            if (fits(blockerId, cond.blockerId) && fits(blockedId, cond.blockedId)) {
+              out.push({ blockerId, blockedId, createdAt: new Date() });
+            }
+          }
+        };
+        if (Array.isArray(where.OR)) where.OR.forEach(match);
+        else match(where as { blockerId?: unknown; blockedId?: unknown });
         return out;
       },
       upsert: async ({ create }: { create: { blockerId: string; blockedId: string } }) => {
@@ -247,6 +259,26 @@ function makePrisma(seed: { users?: TestUser[] } = {}) {
         if (!row) throw new NotFoundException();
         Object.assign(row, data);
         return row;
+      },
+    },
+    effortPointEntry: {
+      groupBy: async ({
+        where,
+      }: {
+        by: string[];
+        where: { weekKey: string; points: { gt: number }; userId: { in: string[] } };
+      }) => {
+        const counts = new Map<string, number>();
+        for (const e of prisma.entries) {
+          if (
+            e.weekKey === where.weekKey &&
+            e.points > where.points.gt &&
+            where.userId.in.includes(e.userId)
+          ) {
+            counts.set(e.userId, (counts.get(e.userId) ?? 0) + 1);
+          }
+        }
+        return [...counts].map(([userId, n]) => ({ userId, _count: { _all: n } }));
       },
     },
     duel: {
@@ -537,5 +569,232 @@ describe('SocialService duel cancellation', () => {
 
     await svc.createBlock('me', 'x');
     assert.equal(prisma.duels[0]!.status, 'CANCELLED');
+  });
+});
+
+// ── Hub summary ──────────────────────────────────────────────────────────────
+
+const card = (id: string, username: string) => ({
+  userId: id,
+  username,
+  avatarUrl: null,
+});
+
+const makeSummaryService = (
+  prisma: ReturnType<typeof makePrisma>,
+  opts: {
+    lists?: { friends: ReturnType<typeof card>[]; incoming: ReturnType<typeof card>[] };
+    settings?: Partial<{
+      leaguesEnabled: boolean;
+      duelsEnabled: boolean;
+      streaksEnabled: boolean;
+      raidsEnabled: boolean;
+    }>;
+    duels?: unknown;
+    streaks?: unknown;
+    squads?: unknown;
+    raids?: unknown;
+    league?: unknown;
+    week?: unknown;
+    eligible?: boolean;
+  } = {},
+) => {
+  const svc = makeService(prisma);
+  const appSettings = {
+    get: async () => ({
+      leaguesEnabled: true,
+      duelsEnabled: true,
+      streaksEnabled: true,
+      raidsEnabled: true,
+      ...opts.settings,
+    }),
+  };
+  const points = { getWeek: async () => opts.week ?? null };
+  const duels = {
+    list: async () => ({ active: [], incoming: [], outgoing: [], ...(opts.duels ?? {}) }),
+  };
+  const streaks = {
+    list: async () => ({ active: [], incoming: [], outgoing: [], ...(opts.streaks ?? {}) }),
+  };
+  const squads = { list: async () => ({ squads: [], invites: [], ...(opts.squads ?? {}) }) };
+  const raids = {
+    current: async () => ({ community: null, squads: [], ...(opts.raids ?? {}) }),
+  };
+  const leagues = { current: async () => opts.league ?? null };
+  const access = { isEligibleForLeagues: async () => opts.eligible ?? true };
+  const svc2 = new SocialService(
+    prisma as unknown as PrismaService,
+    (svc as unknown as { storage: StorageService }).storage,
+    (svc as unknown as { notifications: NotificationService }).notifications,
+    {},
+    appSettings as never,
+    points as never,
+    duels as never,
+    streaks as never,
+    squads as never,
+    raids as never,
+    leagues as never,
+    access as never,
+  );
+  // listFriends is covered by its own specs — the summary consumes its DTO.
+  const lists = {
+    friends: opts.lists?.friends ?? [],
+    incoming: opts.lists?.incoming ?? [],
+    outgoing: [],
+  };
+  svc2.listFriends = async () => lists;
+  return svc2;
+};
+
+const weekEntry = (userId: string, points = 50) => ({
+  userId,
+  weekKey: berlinWeekKey(new Date()),
+  dayKey: 'today',
+  points,
+});
+
+describe('SocialService.summary', () => {
+  it('badge counts friend requests plus every invite kind', async () => {
+    const prisma = makePrisma();
+    const svc = makeSummaryService(prisma, {
+      lists: { friends: [], incoming: [card('i1', 'i1'), card('i2', 'i2')] },
+      duels: { incoming: [{ id: 'd1', opponent: card('x', 'x'), createdAt: 'now' }] },
+      streaks: { incoming: [{ id: 's1', friend: card('y', 'y') }] },
+      squads: { invites: [{ id: 'q1', squadName: 'Crew', invitedBy: card('z', 'z') }] },
+    });
+    const res = await svc.summary('me');
+    assert.equal(res.badge, 5);
+    assert.equal(res.nextMove?.kind, 'FRIEND_REQUESTS');
+    assert.equal(res.nextMove?.kind === 'FRIEND_REQUESTS' && res.nextMove.count, 2);
+  });
+
+  it('friendsWeek counts >0 entries only, sorts desc then username, drops paused and blocked', async () => {
+    const prisma = makePrisma({
+      users: [
+        makeUser({ id: 'me', username: 'me' }),
+        makeUser({ id: 'f1', username: 'zoe' }),
+        makeUser({ id: 'f2', username: 'amy' }),
+        makeUser({ id: 'f3', username: 'paused', socialPaused: true }),
+        makeUser({ id: 'f4', username: 'blocked' }),
+      ],
+    });
+    prisma.blocks.add('f4|me');
+    prisma.entries.push(
+      weekEntry('f1'),
+      weekEntry('f1'),
+      weekEntry('f2'),
+      weekEntry('f2'),
+      weekEntry('f2', 0), // zero-point entry never counts
+      weekEntry('f3'),
+    );
+    const svc = makeSummaryService(prisma, {
+      lists: {
+        friends: [
+          card('f1', 'zoe'),
+          card('f2', 'amy'),
+          card('f3', 'paused'),
+          card('f4', 'blocked'),
+        ],
+        incoming: [],
+      },
+      week: { goal: { done: 2, target: 4 }, points: 300 },
+    });
+    const res = await svc.summary('me');
+    assert.deepEqual(
+      res.friendsWeek.map((f) => [f.card.username, f.workouts]),
+      [
+        ['amy', 2],
+        ['zoe', 2],
+      ],
+    );
+    assert.deepEqual(res.week, { workouts: 2, goal: 4, points: 300 });
+    // Me at 0 ledger workouts → the top friend (amy, tie-break by username) wins.
+    assert.deepEqual(res.nextMove, {
+      kind: 'FRIEND_AHEAD',
+      actor: card('f2', 'amy'),
+      them: 2,
+      you: 0,
+    });
+  });
+
+  it('next move picks friend ahead then duel behind', async () => {
+    const prisma = makePrisma({ users: [makeUser({ id: 'me', username: 'me' })] });
+    prisma.entries.push(weekEntry('f1'), weekEntry('f1'), weekEntry('f1'));
+    const svc = makeSummaryService(prisma, {
+      lists: { friends: [card('f1', 'f1')], incoming: [] },
+      week: { goal: { done: 1, target: 4 }, points: 10 },
+      duels: {
+        active: [{ id: 'd1', opponent: card('o', 'o'), you: 1, them: 4, daysLeft: 2 }],
+      },
+    });
+    const res = await svc.summary('me');
+    assert.deepEqual(res.nextMove, {
+      kind: 'FRIEND_AHEAD',
+      actor: card('f1', 'f1'),
+      them: 3,
+      you: 0, // "you" is the ledger count, not the week goal's done
+    });
+    // No friend ahead (me has 5) → duel behind surfaces.
+    const prisma2 = makePrisma({ users: [makeUser({ id: 'me', username: 'me' })] });
+    prisma2.entries.push(
+      weekEntry('me'),
+      weekEntry('me'),
+      weekEntry('me'),
+      weekEntry('me'),
+      weekEntry('me'),
+    );
+    const svc2 = makeSummaryService(prisma2, {
+      lists: { friends: [card('f1', 'f1')], incoming: [] },
+      week: { goal: { done: 5, target: 4 }, points: 10 },
+      duels: {
+        active: [{ id: 'd1', opponent: card('o', 'o'), you: 1, them: 4, daysLeft: 2 }],
+      },
+    });
+    const res2 = await svc2.summary('me');
+    assert.equal(res2.nextMove?.kind, 'DUEL_BEHIND');
+  });
+
+  it('kill switches drop their parts: no week, no invites, no demotion/raid', async () => {
+    const prisma = makePrisma();
+    const svc = makeSummaryService(prisma, {
+      settings: {
+        leaguesEnabled: false,
+        duelsEnabled: false,
+        streaksEnabled: false,
+        raidsEnabled: false,
+      },
+      lists: { friends: [], incoming: [] },
+      duels: { incoming: [{ id: 'd1' }] },
+      raids: { community: { status: 'ACTIVE', yourDamage: 0, bossSlug: 'mole' } },
+      league: { arena: 'GOLD', cohort: { members: [{ isSelf: true, zone: 'DEMOTE' }] } },
+      week: { goal: { done: 1, target: 4 }, points: 10 },
+    });
+    const res = await svc.summary('me');
+    assert.equal(res.badge, 0);
+    assert.equal(res.week, null);
+    assert.equal(res.nextMove, null);
+  });
+
+  it('league demotion and untouched raid feed the picker', async () => {
+    const prisma = makePrisma();
+    const svc = makeSummaryService(prisma, {
+      settings: { duelsEnabled: false, streaksEnabled: false },
+      lists: { friends: [], incoming: [] },
+      league: {
+        arena: 'GOLD',
+        cohort: { members: [{ isSelf: true, zone: 'DEMOTE' }] },
+      },
+      raids: { community: { status: 'ACTIVE', yourDamage: 0, bossSlug: 'mole' } },
+    });
+    const res = await svc.summary('me');
+    assert.equal(res.nextMove?.kind, 'LEAGUE_DEMOTION');
+
+    const svc2 = makeSummaryService(prisma, {
+      settings: { duelsEnabled: false, streaksEnabled: false },
+      lists: { friends: [], incoming: [] },
+      raids: { community: { status: 'ACTIVE', yourDamage: 0, bossSlug: 'mole' } },
+    });
+    const res2 = await svc2.summary('me');
+    assert.deepEqual(res2.nextMove, { kind: 'RAID_NO_DAMAGE', bossSlug: 'mole' });
   });
 });
