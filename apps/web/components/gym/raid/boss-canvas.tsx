@@ -427,7 +427,7 @@ export function BossCanvas({
       };
 
       const rand = (lo: number, hi: number) => lo + Math.random() * (hi - lo);
-      const clock = new THREE.Clock();
+      const timer = new THREE.Timer();
       let raf = 0;
 
       const setPhaseVisibility = (p: number) => {
@@ -442,8 +442,9 @@ export function BossCanvas({
         raf = requestAnimationFrame(tick);
         if (!visible || !pageVisible) return;
         const now = performance.now();
-        const dt = Math.min(0.05, clock.getDelta() || 0.016);
-        const t = clock.elapsedTime;
+        timer.update(now);
+        const dt = Math.min(0.05, timer.getDelta() || 0.016);
+        const t = timer.getElapsed();
         const { state, phase } = liveRef.current;
         frame();
 
@@ -606,6 +607,7 @@ export function BossCanvas({
 
       cleanup = () => {
         cancelAnimationFrame(raf);
+        timer.dispose();
         document.removeEventListener('visibilitychange', onVis);
         themeMq.removeEventListener('change', applyAuraBlending);
         io.disconnect();
