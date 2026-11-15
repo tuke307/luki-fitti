@@ -8,11 +8,11 @@ import {
   CloudOff,
   CloudUpload,
   History as HistoryIcon,
-  Library,
   RefreshCw,
   Sun,
   Timer,
   UserRound,
+  Users,
   Utensils,
 } from 'lucide-react';
 import { Button } from '@luki-fitti/ui/components/ui/button';
@@ -34,21 +34,25 @@ import { triggerWorkoutNotification } from '@/lib/notifications/notification-man
 import { SessionStatus } from '@luki-fitti/common/enums';
 import { resolveFocusedExerciseIndex } from '@luki-fitti/common/utils/client';
 import { HomeView } from './home-view';
-import { WorkoutsView } from './workouts-view';
+import { WorkoutsView, type WorkoutsSegment } from './workouts-view';
 import { ActiveSessionView } from './active-session-view';
 import { DiaryAnalyticsView } from './diary-analytics-view';
-import { ExercisesView } from './exercises-view';
-import { ProfileImportView } from './profile-import-view';
+import { SocialView, type SocialSection } from './social/social-view';
+import { UserAvatar } from './social/user-avatar';
+import { ProfileImportView, requestSettingsPage } from './profile-import-view';
 import { NutritionView } from './nutrition/nutrition-view';
 import { GlassIconButton } from './settings/settings-row';
 import { AI_KEY_NAVIGATE_EVENT } from '@/lib/ai/ai-key-required';
 import { migrateToAppOrigin, shouldMigrateToAppOrigin } from '@/lib/site/app-origin-migration';
 import { APP_ORIGIN, SITE_HOSTNAMES } from '@/lib/site/config';
+import { parseOpenParam } from '@/lib/social/deep-link';
+import { useSocialSummary } from '@/lib/social/use-social-summary';
 
 export type NavTab =
-  'home' | 'workouts' | 'session' | 'nutrition' | 'diary' | 'exercises' | 'profile';
+  'home' | 'workouts' | 'session' | 'nutrition' | 'diary' | 'social' | 'exercises' | 'profile';
 
-type TabId = Exclude<NavTab, 'session' | 'profile'>;
+// 'exercises' stays a valid NavTab for old deep links; it maps to workouts+library.
+type TabId = Exclude<NavTab, 'session' | 'profile' | 'exercises'>;
 
 const MD_UP_QUERY = '(min-width: 48rem)';
 const SESSION_TRANSITION_MS = 300;
@@ -81,6 +85,8 @@ function DumbbellHorizontal({
 
 export function PwaShell() {
   const [activeTab, setActiveTab] = useState<TabId>('home');
+  const [workoutsSegment, setWorkoutsSegment] = useState<WorkoutsSegment>('workouts');
+  const [socialSection, setSocialSection] = useState<SocialSection>(null);
   const [sessionOpen, setSessionOpen] = useState(false);
   const [sessionClosing, setSessionClosing] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -93,7 +99,7 @@ export function PwaShell() {
   const [sessionCovering, setSessionCovering] = useState(false);
   const isDesktop = useMediaQuery(MD_UP_QUERY);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, loading: authLoading } = useAuth();
   const { t, format, bcp47 } = useLocale();
   const {
     activeSession,
@@ -116,6 +122,12 @@ export function PwaShell() {
     : null;
 
   const [migrating, setMigrating] = useState(false);
+
+  // Social tab badge: actionable items (requests + invites) from /social/summary.
+  const { summary: socialSummary } = useSocialSummary(
+    isAuthenticated && Boolean(user?.social?.enabled),
+  );
+  const socialBadge = socialSummary?.badge ?? 0;
 
   const restartSessionTimer = (fn: () => void) => {
     if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current);
@@ -150,13 +162,44 @@ export function PwaShell() {
     requestAnimationFrame(() => window.scrollTo({ top: y }));
   }, [sessionCovering]);
 
-  const navigate = (tab: NavTab) => {
+  const navigate = (tab: NavTab, socialTarget?: SocialSection) => {
     if (tab === 'session') return openSession();
     if (tab === 'profile') return setProfileOpen(true);
     setProfileOpen(false);
-    setActiveTab(tab);
+    if (tab === 'exercises') {
+      // Deep link to the exercise library (now a segment of the Workouts tab).
+      setWorkoutsSegment('library');
+      setActiveTab('workouts');
+    } else {
+      setActiveTab(tab);
+      if (tab === 'social') setSocialSection(socialTarget ?? null);
+    }
     setTabBarCompact(false);
   };
+
+  // `?open=` deep link: the service worker rewrites notification taps to it.
+  useEffect(() => {
+    if (authLoading) return; // wait for /auth/me so social gating is known
+    const target = parseOpenParam(window.location.search);
+    if (!target) return;
+    if (target.tab === 'social' && user?.social?.enabled) {
+      queueMicrotask(() => {
+        setActiveTab('social');
+        setSocialSection(target.section);
+      });
+    }
+    if (target.tab === 'profile' && user) {
+      queueMicrotask(() => {
+        requestSettingsPage(target.page);
+        setProfileOpen(true);
+      });
+    }
+    // Strip the param so refreshes and shares land on the plain shell.
+    const url = new URL(window.location.href);
+    url.searchParams.delete('open');
+    window.history.replaceState(null, '', url);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading]);
 
   useEffect(
     () => () => {
@@ -316,7 +359,8 @@ export function PwaShell() {
     { id: 'workouts', label: t.nav.workouts, icon: DumbbellHorizontal },
     { id: 'nutrition', label: t.nutrition.navLabel, icon: Utensils },
     { id: 'diary', label: t.nav.diary, icon: HistoryIcon },
-    { id: 'exercises', label: t.nav.exercises, icon: Library },
+    // The social tab only exists for users the rollout covers; guests keep 4 tabs.
+    ...(user?.social?.enabled ? [{ id: 'social' as TabId, label: t.nav.social, icon: Users }] : []),
   ];
 
   // Plain-language status, always available to assistive tech. Visually, the indicator only
@@ -427,7 +471,9 @@ export function PwaShell() {
               : 'text-foreground'
         } ${showProfilePage ? 'ring-primary ring-offset-background ring-2 ring-offset-2' : ''}`}
       >
-        {isAuthenticated && initials ? (
+        {isAuthenticated && user?.social?.avatarUrl ? (
+          <UserAvatar avatarUrl={user.social.avatarUrl} name={user.name} className="size-9" />
+        ) : isAuthenticated && initials ? (
           initials
         ) : (
           <UserRound className="h-[20px] w-[20px]" strokeWidth={2.25} />
@@ -470,13 +516,21 @@ export function PwaShell() {
                     data-testid={`desktop-nav-${item.id}`}
                     aria-current={isCurrent ? 'page' : undefined}
                     onClick={() => navigate(item.id)}
-                    className={`h-9 rounded-full px-4 text-[0.9375rem] transition-colors duration-150 ${
+                    className={`relative h-9 rounded-full px-4 text-[0.9375rem] transition-colors duration-150 ${
                       isCurrent
                         ? 'bg-secondary text-foreground font-semibold'
                         : 'text-muted-foreground hover:text-foreground font-medium'
                     }`}
                   >
                     {item.label}
+                    {item.id === 'social' && socialBadge > 0 && (
+                      <span
+                        data-testid="desktop-social-tab-badge"
+                        className="bg-destructive text-destructive-foreground absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[0.625rem] font-bold"
+                      >
+                        {socialBadge > 99 ? '99+' : socialBadge}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -533,11 +587,17 @@ export function PwaShell() {
           ) : (
             <>
               {activeTab === 'home' && <HomeView onNavigate={navigate} />}
-              {activeTab === 'workouts' && <WorkoutsView onStartSessionNavigation={openSession} />}
+              {activeTab === 'workouts' && (
+                <WorkoutsView
+                  onStartSessionNavigation={openSession}
+                  segment={workoutsSegment}
+                  onSegmentChange={setWorkoutsSegment}
+                />
+              )}
               {activeTab === 'nutrition' && <NutritionView onNavigate={navigate} />}
               {activeTab === 'diary' && <DiaryAnalyticsView />}
-              {activeTab === 'exercises' && (
-                <ExercisesView onStartSessionNavigation={openSession} />
+              {activeTab === 'social' && user?.social?.enabled && (
+                <SocialView section={socialSection} />
               )}
             </>
           )}
@@ -589,7 +649,7 @@ export function PwaShell() {
               tabBarCompact ? 'max-w-[17.5rem]' : 'max-w-md'
             }`}
           >
-            <div className="grid grid-cols-5">
+            <div className={`grid ${navItems.length >= 5 ? 'grid-cols-5' : 'grid-cols-4'}`}>
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isCurrent = activeTab === item.id;
@@ -604,7 +664,17 @@ export function PwaShell() {
                       tabBarCompact ? 'h-11' : 'h-14'
                     } ${isCurrent ? 'bg-secondary text-primary' : 'text-muted-foreground'}`}
                   >
-                    <Icon className="h-[22px] w-[22px]" strokeWidth={isCurrent ? 2.5 : 2.25} />
+                    <span className="relative">
+                      <Icon className="h-[22px] w-[22px]" strokeWidth={isCurrent ? 2.5 : 2.25} />
+                      {item.id === 'social' && socialBadge > 0 && (
+                        <span
+                          data-testid="social-tab-badge"
+                          className="bg-destructive text-destructive-foreground absolute -top-1.5 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[0.625rem] font-bold"
+                        >
+                          {socialBadge > 99 ? '99+' : socialBadge}
+                        </span>
+                      )}
+                    </span>
                     <span className={tabBarCompact ? 'sr-only' : undefined}>{item.label}</span>
                   </button>
                 );

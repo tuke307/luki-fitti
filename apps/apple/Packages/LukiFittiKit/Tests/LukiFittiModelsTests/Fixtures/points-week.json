@@ -1,0 +1,28 @@
+{
+  "success": true,
+  "data": {
+    "weekKey": "2026-11-09",
+    "points": 420,
+    "rawPoints": 420,
+    "dailyCap": 600,
+    "days": [{ "dayKey": "2026-11-13", "points": 420, "capped": 420 }],
+    "sessions": [
+      {
+        "sessionId": "shot-session-1",
+        "workoutName": "Screenshot Workout",
+        "points": 420,
+        "breakdown": {
+          "prs": 0,
+          "sets": 3,
+          "warmups": 0,
+          "droppedSets": 0,
+          "finishBonus": 0,
+          "cardioMinutes": 0,
+          "stretchMinutes": 0
+        }
+      }
+    ],
+    "goal": { "target": 4, "done": 1, "bonus": 0, "available": 100 }
+  },
+  "error": null
+}

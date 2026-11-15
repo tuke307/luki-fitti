@@ -1,7 +1,9 @@
 import { Injectable, NotFoundException, ForbiddenException, Optional } from '@nestjs/common';
 import crypto from 'crypto';
+import { logger } from '@luki-fitti/logger';
 import { PrismaService } from '../database/prisma.service';
 import { WorkoutService } from '../workout/workout.service';
+import { PointsService } from '../points/points.service';
 import { resolveBodyWeightAt } from '../body-weight/body-weight.service';
 import {
   ExerciseType,
@@ -61,6 +63,7 @@ export class SessionService {
   constructor(
     private readonly prisma: PrismaService,
     @Optional() private readonly workoutService?: WorkoutService,
+    @Optional() private readonly pointsService?: PointsService,
   ) {}
 
   /**
@@ -757,6 +760,15 @@ export class SessionService {
       await this.workoutService.applyCompletedSessionToTemplate(userId, syncedDto, locale);
     }
 
+    // League effort points: every COMPLETED sync (re-syncs included), best-effort.
+    if (syncedDto.status === SessionStatus.COMPLETED && this.pointsService) {
+      try {
+        await this.pointsService.recordSession(userId, synced.id);
+      } catch (err) {
+        logger.warn(`effort points for session ${synced.id} failed: ${String(err)}`);
+      }
+    }
+
     return {
       session: syncedDto,
       conflictDetected: false,
@@ -842,6 +854,15 @@ export class SessionService {
     }
     if (session.userId !== userId) {
       throw new ForbiddenException('Access denied to this workout session');
+    }
+    // Read/delete the points entry before the session row goes (it cascades and
+    // would take the weekKey with it); deletion itself must not be blocked.
+    if (this.pointsService) {
+      try {
+        await this.pointsService.removeSession(userId, session.id);
+      } catch (err) {
+        logger.warn(`effort-point cleanup for session ${session.id} failed: ${String(err)}`);
+      }
     }
     await this.prisma.workoutSession.delete({ where: { id: session.id } });
     if (

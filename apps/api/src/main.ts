@@ -41,11 +41,33 @@ async function bootstrap() {
     }),
   );
 
-  // CORS configuration
-  app.enableCors({
-    origin: [FRONTEND_URL],
-    credentials: true,
-    optionsSuccessStatus: 200,
+  // CORS configuration: the public API (/api/v1) is open for bearer-token tools
+  // (keys are never sent implicitly, so credentials stay off); everything else
+  // keeps the app origin.
+  app.enableCors((req, callback) => {
+    const isPublicApi = (req.url?.split('?')[0] ?? '').startsWith('/api/v1/');
+    callback(
+      null,
+      isPublicApi
+        ? {
+            origin: '*',
+            credentials: false,
+            methods: ['GET', 'OPTIONS'],
+            allowedHeaders: ['Authorization'],
+            exposedHeaders: [
+              'X-RateLimit-Limit',
+              'X-RateLimit-Remaining',
+              'X-RateLimit-Reset',
+              'Retry-After',
+            ],
+            optionsSuccessStatus: 200,
+          }
+        : {
+            origin: [FRONTEND_URL],
+            credentials: true,
+            optionsSuccessStatus: 200,
+          },
+    );
   });
 
   // Trust proxy for X-Forwarded-For headers

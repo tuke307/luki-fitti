@@ -41,6 +41,12 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('Access token missing');
     }
 
+    // Personal API keys are only valid on the public /api/v1 routes (ApiKeyGuard);
+    // the app routes never accept them — separate code paths by design.
+    if (accessToken.startsWith('lf_pat_')) {
+      throw new UnauthorizedException('Invalid or expired access token');
+    }
+
     const authTransport: AuthTransport = bearerToken ? 'bearer' : 'cookie';
 
     try {

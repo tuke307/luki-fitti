@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "kind": "DUEL_WIN",
+        "refId": "3f2f3c92-a24d-4d07-99ea-3bdca2bfecb7",
+        "tier": null,
+        "createdAt": "2026-11-13T23:13:26.536Z"
+      }
+    ],
+    "counts": { "DUEL_WIN": 1 }
+  },
+  "error": null
+}

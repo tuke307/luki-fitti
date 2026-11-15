@@ -25,10 +25,38 @@ Calm, confident, encouraging. The voice is a good training partner: short senten
 no jargon, no shouting. Numbers carry the emotion (a new best, a full week), not exclamation marks
 or neon. The app should feel like it belongs on an iPhone next to Apple Fitness and Gentler Streak.
 
+### Social and competition (since 2.0)
+
+The Social tab (leagues, friends, duels, raid bosses) is allowed to be loud, in the spirit of
+Duolingo: promotions, duel wins and boss kills get full-screen celebrations, motion, sound and
+haptics, and the raid bosses are illustrated characters with personality. Two boundaries keep it
+from bleeding into the training partner:
+
+- **The workout flow stays calm.** No pop-ups, confetti or rank changes between sets. Points and
+  raid damage appear once, on the summary after a workout is finished.
+- **One celebration per moment.** Each result (promotion, duel, boss kill) is celebrated once and
+  then becomes a quiet entry in history.
+
+### Notification voice (since 2.0)
+
+Push notifications and the in-app inbox have their own voice: a mean friend who roasts you into
+training ("@fabi already did 2 workouts this week. You? 0. Loser."). It applies to everyone, in
+English and German, and light swearing is fine. The rules that keep it funny instead of hurtful:
+
+- **Mock the behaviour, never the person.** Laziness, excuses and the couch are fair game; body,
+  weight, food, looks, health and identity are not. No slurs.
+- **Only friends are named.** League and raid texts never mention other users; friends appear by
+  `@username`.
+- **Mean in the notification, calm in the app.** The voice stops at the push and the inbox
+  text; screens, the workout flow and the Watch keep the calm training-partner tone.
+- **Rare enough to stay funny.** At most 3 social pushes a day, every type can be switched off,
+  and lines rotate so the same joke doesn't repeat every week.
+
 ## Anti-references
 
 - Hacker / terminal dashboards: monospace everywhere, neon on near-black, ALL-CAPS labels.
-- "Bro" gym apps: aggressive gradients, flames, lightning bolts, achievement spam.
+- "Bro" gym apps: aggressive gradients, flames, lightning bolts, achievement spam outside the
+  Social tab.
 - SaaS analytics dashboards: KPI tile grids, jargon titles ("Avg. Session Load"), dense charts
   on the home screen.
 - Exposing implementation: sync badges that are always visible, version numbers, formula names

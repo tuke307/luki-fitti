@@ -24,7 +24,14 @@
         "AI_KEY_ENCRYPTION_KEY_PREVIOUS",
         "AI_KEY_ENCRYPTION_KEY_VERSION",
         "OPENROUTER_BASE_URL",
-        "OPENROUTER_TIMEOUT_MS"
+        "OPENROUTER_TIMEOUT_MS",
+        "APNS_KEY_P8_BASE64",
+        "APNS_KEY_ID",
+        "APNS_TEAM_ID",
+        "APNS_BUNDLE_ID",
+        "VAPID_PUBLIC_KEY",
+        "VAPID_PRIVATE_KEY",
+        "VAPID_SUBJECT"
       ]
     }
   }

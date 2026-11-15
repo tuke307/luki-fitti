@@ -2,6 +2,10 @@
     handle /api/* {
         reverse_proxy api:3001
     }
+    # Exactly /mcp: the Streamable HTTP transport serves only this path.
+    handle /mcp {
+        reverse_proxy mcp-server:3030
+    }
     handle {
         reverse_proxy web:3000
     }

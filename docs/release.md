@@ -1,20 +1,18 @@
 # Release flow
 
-```
-feature branch ──squash PR──▶ develop ──release PR (version bump)──▶ main
-                                                              │
-                                        tag.yaml on push to main ┘
-                                              │  creates tag v<x.y.z>
-                                              ▼
-                            publish a GitHub release from the tag
-                                              │
-                          ┌───────────────────┴───────────────────┐
-                          ▼                                       ▼
-                  production.yaml                          app-store.yaml
-             (builds + deploys to Coolify)          (archives + uploads to ASC)
+```mermaid
+flowchart TD
+    feature[feature branch] -->|squash PR| develop
+    develop -->|release PR: version bump| main
+    main --> tag["tag.yaml on push to main<br/>creates tag v&lt;x.y.z&gt;"]
+    tag --> gh[publish a GitHub release from the tag]
+    gh --> prod["production.yaml<br/>builds + deploys to Coolify"]
+    gh --> store["app-store.yaml<br/>archives + uploads to ASC"]
 ```
 
 - **Everyday work**: feature branches go into `develop` as squash PRs. Nothing deploys.
+  Stacked PRs that target another `feat/**`, `fix/**` or `release/**` branch run the same CI
+  (lint, tests, builds, e2e) as PRs into `develop`.
 - **Release**: a release PR `develop` → `main` (merge commit, not squash) carries the version
   bump. CI's `version` job requires the version to be higher than the newest `v*` tag and, for
   minor and major releases, marketing screenshots generated for that `x.y`.

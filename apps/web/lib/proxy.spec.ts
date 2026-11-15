@@ -45,7 +45,7 @@ test('site host: app paths 308 to APP_ORIGIN', async () => {
     const d = decision(res);
     if (path === '/site/en') continue; // internal path passes through
     assert.equal(d.kind, 'redirect', path);
-    assert.ok(d.dest?.startsWith('https://app.luki-fitti.tony-luke.de'), `${path}: ${d.dest}`);
+    assert.equal(new URL(d.dest!).origin, 'https://app.luki-fitti.tony-luke.de', path);
   }
 });
 
@@ -96,4 +96,52 @@ test('localhost dev: /site/* passes and ?site=1 rewrites', async () => {
   const preview = await proxy(req('localhost:3000', '/?site=1'));
   assert.equal(decision(preview).kind, 'rewrite');
   assert.match(decision(preview).dest ?? '', /\/site\/de$/);
+});
+
+test('docs host: / rewrites to the internal /docs tree', async () => {
+  const res = await proxy(req('docs.luki-fitti.tony-luke.de', '/'));
+  assert.deepEqual(decision(res), {
+    kind: 'rewrite',
+    dest: 'https://docs.luki-fitti.tony-luke.de/docs',
+  });
+});
+
+test('docs host: every path rewrites into /docs/*', async () => {
+  for (const [pub, internal] of [
+    ['/public-api', '/docs/public-api'],
+    ['/import-format', '/docs/import-format'],
+    ['/search-index', '/docs/search-index'],
+    ['/llms.txt', '/docs/llms.txt'],
+  ] as const) {
+    const res = await proxy(req('docs.luki-fitti.tony-luke.de', pub));
+    assert.equal(decision(res).dest, `https://docs.luki-fitti.tony-luke.de${internal}`, pub);
+  }
+});
+
+test('docs host: /docs prefix 308s to the canonical path', async () => {
+  const res = await proxy(req('docs.luki-fitti.tony-luke.de', '/docs/public-api'));
+  const d = decision(res);
+  assert.equal(d.kind, 'redirect');
+  assert.equal(d.dest, 'https://docs.luki-fitti.tony-luke.de/public-api');
+});
+
+test('docs host: robots and sitemap are docs-specific, other files pass through', async () => {
+  for (const [pub, internal] of [
+    ['/robots.txt', '/docs/robots.txt'],
+    ['/sitemap.xml', '/docs/sitemap.xml'],
+  ] as const) {
+    const res = await proxy(req('docs.luki-fitti.tony-luke.de', pub));
+    assert.equal(decision(res).dest, `https://docs.luki-fitti.tony-luke.de${internal}`, pub);
+  }
+  for (const path of ['/icon.svg', '/_next/static/chunk.js', '/screens/en/01.png', '/api/health']) {
+    const res = await proxy(req('docs.luki-fitti.tony-luke.de', path));
+    assert.equal(decision(res).kind, 'next', path);
+  }
+});
+
+test('app host: /docs* 308s to the docs host', async () => {
+  const res = await proxy(req('app.luki-fitti.tony-luke.de', '/docs/public-api'));
+  const d = decision(res);
+  assert.equal(d.kind, 'redirect');
+  assert.equal(d.dest, 'https://docs.luki-fitti.tony-luke.de/public-api');
 });

@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "data": {
+    "weekKey": "2026-11-09",
+    "points": 0,
+    "rawPoints": 0,
+    "dailyCap": 600,
+    "days": [],
+    "sessions": [],
+    "goal": { "target": 4, "done": 0, "bonus": 0, "available": 100 }
+  },
+  "error": null
+}

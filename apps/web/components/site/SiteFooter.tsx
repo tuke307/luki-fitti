@@ -1,6 +1,6 @@
 import { SiGithub } from '@icons-pack/react-simple-icons';
 
-import { GITHUB_URL, type SiteLocale } from '@/lib/site/config';
+import { DOCS_ORIGIN, GITHUB_URL, type SiteLocale } from '@/lib/site/config';
 import type { getSiteCopy } from '@/lib/site/content';
 
 export function SiteFooter({
@@ -47,6 +47,14 @@ export function SiteFooter({
           >
             <SiGithub size={14} aria-hidden />
             GitHub
+          </a>
+          <a
+            href={DOCS_ORIGIN}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground transition-colors"
+          >
+            Docs
           </a>
           {legal.map(([href, label]) => (
             <a key={href} href={href} className="hover:text-foreground transition-colors">

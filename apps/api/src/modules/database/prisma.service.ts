@@ -30,6 +30,14 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return prisma.$transaction.bind(prisma);
   }
 
+  get $queryRaw(): typeof prisma.$queryRaw {
+    return prisma.$queryRaw.bind(prisma);
+  }
+
+  get $executeRaw(): typeof prisma.$executeRaw {
+    return prisma.$executeRaw.bind(prisma);
+  }
+
   get user(): typeof prisma.user {
     return prisma.user;
   }
@@ -102,6 +110,10 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return prisma.appSettings;
   }
 
+  get apiKey(): typeof prisma.apiKey {
+    return prisma.apiKey;
+  }
+
   get aiRun(): typeof prisma.aiRun {
     return prisma.aiRun;
   }
@@ -149,5 +161,85 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
 
   get importJob(): typeof prisma.importJob {
     return prisma.importJob;
+  }
+
+  get friendship(): typeof prisma.friendship {
+    return prisma.friendship;
+  }
+
+  get friendInvite(): typeof prisma.friendInvite {
+    return prisma.friendInvite;
+  }
+
+  get userBlock(): typeof prisma.userBlock {
+    return prisma.userBlock;
+  }
+
+  get userReport(): typeof prisma.userReport {
+    return prisma.userReport;
+  }
+
+  get pushDevice(): typeof prisma.pushDevice {
+    return prisma.pushDevice;
+  }
+
+  get notification(): typeof prisma.notification {
+    return prisma.notification;
+  }
+
+  get effortPointEntry(): typeof prisma.effortPointEntry {
+    return prisma.effortPointEntry;
+  }
+
+  get weeklyScore(): typeof prisma.weeklyScore {
+    return prisma.weeklyScore;
+  }
+
+  get leagueWeek(): typeof prisma.leagueWeek {
+    return prisma.leagueWeek;
+  }
+
+  get leagueCohort(): typeof prisma.leagueCohort {
+    return prisma.leagueCohort;
+  }
+
+  get leagueMembership(): typeof prisma.leagueMembership {
+    return prisma.leagueMembership;
+  }
+
+  get duel(): typeof prisma.duel {
+    return prisma.duel;
+  }
+
+  get friendStreak(): typeof prisma.friendStreak {
+    return prisma.friendStreak;
+  }
+
+  get raid(): typeof prisma.raid {
+    return prisma.raid;
+  }
+
+  get raidHit(): typeof prisma.raidHit {
+    return prisma.raidHit;
+  }
+
+  get raidParticipantSeen(): typeof prisma.raidParticipantSeen {
+    return prisma.raidParticipantSeen;
+  }
+
+  get squad(): typeof prisma.squad {
+    return prisma.squad;
+  }
+
+  get squadMember(): typeof prisma.squadMember {
+    return prisma.squadMember;
+  }
+
+  get squadInvite(): typeof prisma.squadInvite {
+    return prisma.squadInvite;
+  }
+
+  get trophy(): typeof prisma.trophy {
+    return prisma.trophy;
   }
 }

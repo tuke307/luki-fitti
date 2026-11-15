@@ -5,7 +5,15 @@
 import { expect, type Page } from '@playwright/test';
 
 export type ShellTab =
-  'home' | 'workouts' | 'session' | 'nutrition' | 'diary' | 'exercises' | 'profile';
+  | 'home'
+  | 'workouts'
+  | 'session'
+  | 'nutrition'
+  | 'diary'
+  /** The exercise library is a segment of the Workouts tab since the Social tab replaced it. */
+  | 'exercises'
+  | 'social'
+  | 'profile';
 
 /**
  * Navigate to a main PWA tab, automatically picking the desktop horizontal nav
@@ -34,14 +42,22 @@ export async function navigateToTab(page: Page, tab: ShellTab): Promise<void> {
     return;
   }
 
-  const desktopBtn = page.getByTestId(`desktop-nav-${tab}`);
-  const mobileBtn = page.getByTestId(`mobile-nav-${tab}`);
+  const navTab = tab === 'exercises' ? 'workouts' : tab;
+  const desktopBtn = page.getByTestId(`desktop-nav-${navTab}`);
+  const mobileBtn = page.getByTestId(`mobile-nav-${navTab}`);
 
-  if (await desktopBtn.isVisible()) {
-    await desktopBtn.click();
-  } else {
-    await expect(mobileBtn).toBeVisible({ timeout: 10_000 });
-    await mobileBtn.click();
+  // Both nav variants render in the DOM (the other is CSS-hidden), so pick by
+  // viewport: `md:` breakpoint at 768px. Tabs can appear a beat after /auth/me
+  // resolves (gated features), hence the visibility wait.
+  const isDesktop = (page.viewportSize()?.width ?? 0) >= 768;
+  const btn = isDesktop ? desktopBtn : mobileBtn;
+  await expect(btn).toBeVisible({ timeout: 10_000 });
+  await btn.click();
+
+  if (tab === 'exercises') {
+    const librarySegment = page.getByTestId('workouts-segment-library');
+    await expect(librarySegment).toBeVisible({ timeout: 10_000 });
+    await librarySegment.click();
   }
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "@luki-fitti/api",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "author": "Tony Meissner",
@@ -17,6 +17,38 @@
     "./services/prisma.service": {
       "types": "./src/modules/database/prisma.service.ts",
       "default": "./dist/src/modules/database/prisma.service.js"
+    },
+    "./services/push-sender.service": {
+      "types": "./src/modules/push/push-sender.service.ts",
+      "default": "./dist/src/modules/push/push-sender.service.js"
+    },
+    "./services/league.service": {
+      "types": "./src/modules/league/league.service.ts",
+      "default": "./dist/src/modules/league/league.service.js"
+    },
+    "./services/social-access.service": {
+      "types": "./src/modules/social/social-access.service.ts",
+      "default": "./dist/src/modules/social/social-access.service.js"
+    },
+    "./services/notification.service": {
+      "types": "./src/modules/notifications/notification.service.ts",
+      "default": "./dist/src/modules/notifications/notification.service.js"
+    },
+    "./services/app-settings.service": {
+      "types": "./src/modules/app-settings/app-settings.service.ts",
+      "default": "./dist/src/modules/app-settings/app-settings.service.js"
+    },
+    "./services/duel.service": {
+      "types": "./src/modules/battle/duel.service.ts",
+      "default": "./dist/src/modules/battle/duel.service.js"
+    },
+    "./services/streak.service": {
+      "types": "./src/modules/battle/streak.service.ts",
+      "default": "./dist/src/modules/battle/streak.service.js"
+    },
+    "./services/trophy.service": {
+      "types": "./src/modules/battle/trophy.service.ts",
+      "default": "./dist/src/modules/battle/trophy.service.js"
     }
   },
   "scripts": {
@@ -25,60 +57,61 @@
     "dev": "nestgo start --watch --env-file .env.local",
     "lint": "tsc --noEmit && eslint . --max-warnings 0",
     "test": "node --import tsx --test 'src/**/*.spec.ts'",
-    "openapi:export": "tsx src/openapi-export.ts",
+    "openapi:export": "nestgo build && node dist/src/openapi-export.js",
     "start:debug": "nestgo start --watch --debug",
     "start": "dotenv -e .env.local -- node dist/src/main.js",
     "start:prod": "node dist/src/main.js"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "3.1155.0",
+    "@aws-sdk/client-s3": "3.1164.0",
     "@luki-fitti/common": "*",
     "@luki-fitti/database": "*",
     "@luki-fitti/logger": "*",
-    "@nestjs/common": "^12.1.2",
-    "@nestjs/config": "^12.0.1",
-    "@nestjs/core": "^12.1.2",
-    "@nestjs/platform-express": "^12.1.2",
-    "@nestjs/swagger": "^12.0.2",
+    "@nestjs/common": "^12.4.0",
+    "@nestjs/config": "^12.1.1",
+    "@nestjs/core": "^12.4.0",
+    "@nestjs/platform-express": "^12.4.0",
+    "@nestjs/swagger": "^12.1.1",
     "@nestjs/throttler": "^6.7.1",
     "archiver": "^8.0.0",
     "bcrypt": "^6.0.0",
-    "bullmq": "^6.3.11",
+    "bullmq": "^6.7.2",
     "cookie-parser": "^1.4.7",
     "date-fns": "^4.4.0",
-    "express": "^5.2.1",
+    "express": "^5.3.0",
     "handlebars": "^4.7.10",
     "helmet": "^8.3.0",
     "ioredis": "^6.0.0",
     "jsonwebtoken": "^9.0.3",
-    "juice": "^12.2.0",
+    "juice": "^12.2.1",
     "mjml": "^5.4.1",
-    "multer": "^2.4.0",
-    "nodemailer": "^10.0.15",
+    "multer": "^2.5.0",
+    "nodemailer": "^10.4.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "sharp": "0.35.5",
-    "zod": "^4.6.5"
+    "web-push": "4.0.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@bull-board/express": "^9.10.4",
-    "@bull-board/ui": "^9.10.4",
+    "@bull-board/express": "^9.12.0",
+    "@bull-board/ui": "^9.12.0",
     "@luki-fitti/eslint-config": "*",
     "@luki-fitti/typescript-config": "*",
-    "@nestjs/cli": "^12.0.8",
-    "@nestjs/schematics": "^12.0.6",
-    "@nestjs/testing": "^12.1.2",
-    "@swc/cli": "^0.8.1",
-    "@swc/core": "^1.16.13",
+    "@nestjs/cli": "^12.0.12",
+    "@nestjs/schematics": "^12.0.13",
+    "@nestjs/testing": "^12.4.0",
+    "@swc/cli": "^0.8.2",
+    "@swc/core": "^1.16.22",
     "@types/archiver": "^8.0.0",
     "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/mjml": "^5.0.0",
+    "@types/mjml": "^5.4.2",
     "@types/multer": "^2.3.0",
-    "@types/node": "^26.6.4",
-    "eslint": "^10.12.0",
+    "@types/node": "^26.6.6",
+    "eslint": "^10.14.0",
     "nestgo": "^0.0.7",
     "tsconfig-paths": "^4.2.0",
     "typescript": "6.0.3",

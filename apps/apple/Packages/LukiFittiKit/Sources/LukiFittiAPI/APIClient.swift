@@ -587,7 +587,7 @@ public actor APIClient {
         try await send(path: path, method: "GET", body: nil, contentType: nil)
     }
 
-    private static func pathComponent(_ raw: String) -> String {
+    static func pathComponent(_ raw: String) -> String {
         raw.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed.subtracting(CharacterSet(charactersIn: "/"))) ?? raw
     }
 
