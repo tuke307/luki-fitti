@@ -9,6 +9,7 @@ import {
   enableSocialForE2e,
   seedCommunityRaidForE2e,
   seedFriendshipForE2e,
+  seedFriendRequestForE2e,
   seedGlobalCohortForE2e,
   seedPointsWeekForE2e,
   seedSocialUser,
@@ -80,6 +81,7 @@ test.describe('Social: friends, requests and invites', () => {
     await signInSeededUser(page, userB);
     await navigateToTab(page, 'social');
     await dismissOnboardingIfShown(page);
+    await page.getByTestId('social-friends-btn').click();
     await page.getByTestId('social-search-input').fill(usernameA);
     const addBtn = page.getByTestId(`search-add-${userA.id}`);
     await expect(addBtn).toBeVisible({ timeout: 10_000 });
@@ -89,6 +91,7 @@ test.describe('Social: friends, requests and invites', () => {
     // ── User A accepts the incoming request ──
     await signInSeededUser(page, userA);
     await navigateToTab(page, 'social');
+    await page.getByTestId('social-friends-btn').click();
     const acceptBtn = page.getByTestId(`friend-accept-${userB.id}`);
     await expect(acceptBtn).toBeVisible({ timeout: 10_000 });
     await acceptBtn.click();
@@ -117,6 +120,7 @@ test.describe('Social: friends, requests and invites', () => {
     // social tab and then strips from the URL.
     await expect(page).toHaveURL(/\/(\?open=%2Fsocial)?$/, { timeout: 10_000 });
     await expect(page.getByTestId('social-view')).toBeVisible({ timeout: 10_000 });
+    await page.getByTestId('social-friends-btn').click();
     await expect(page.getByTestId(`friend-row-${userA.id}`)).toBeVisible();
   });
 });
@@ -148,11 +152,12 @@ test.describe('Social: leagues and effort points', () => {
     await navigateToTab(page, 'social');
     await dismissOnboardingIfShown(page);
 
-    // This-week card shows the seeded EP.
-    await expect(page.getByTestId('this-week-card')).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByTestId('this-week-card')).toContainText('120');
+    // The hub's This-week card shows the seeded EP.
+    await expect(page.getByTestId('social-week-line')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('social-week-line')).toContainText('120');
 
-    // The GLOBAL cohort lists both users, ranked by weekly EP.
+    // The GLOBAL cohort on the League page lists both users, ranked by weekly EP.
+    await page.getByTestId('hub-league-card').click();
     await expect(page.getByTestId('league-cohort')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByTestId(`league-row-${userB.id}`)).toBeVisible();
     await expect(page.getByTestId(`league-row-${userA.id}`)).toBeVisible();
@@ -192,9 +197,13 @@ test.describe('Social: duels', () => {
     await signInSeededUser(page, userA);
     await navigateToTab(page, 'social');
     await dismissOnboardingIfShown(page);
+    await page.getByTestId('social-friends-btn').click();
     await expect(page.getByTestId(`friend-row-${userB.id}`)).toBeVisible({ timeout: 10_000 });
-    await page.getByTestId(`friend-menu-${userB.id}`).click();
+    await page.getByTestId(`friend-row-${userB.id}`).click();
     await page.getByTestId(`friend-challenge-${userB.id}`).click();
+    // Back from the Friends page to the hub, then into the Duels page.
+    await page.getByTestId('social-page-back').click();
+    await page.getByTestId('hub-duels-card').click();
     await expect(page.getByTestId('duels-outgoing')).toContainText(`@duelbob_${unique}`, {
       timeout: 10_000,
     });
@@ -204,6 +213,7 @@ test.describe('Social: duels', () => {
     await signInSeededUser(page, userB);
     await navigateToTab(page, 'social');
     await dismissOnboardingIfShown(page);
+    await page.getByTestId('hub-duels-card').click();
     const acceptBtn = page.getByTestId(/^duel-accept-/);
     await expect(acceptBtn).toBeVisible({ timeout: 10_000 });
     await acceptBtn.click();
@@ -215,6 +225,7 @@ test.describe('Social: duels', () => {
     await signInSeededUser(page, userA);
     await navigateToTab(page, 'social');
     await dismissOnboardingIfShown(page);
+    await page.getByTestId('hub-duels-card').click();
     const duelRow = page.getByTestId(/^duel-row-/);
     await expect(duelRow).toBeVisible({ timeout: 10_000 });
     await expect(duelRow).toContainText(`@duelbob_${unique}`);
@@ -253,7 +264,8 @@ test.describe('Social: raids', () => {
     await navigateToTab(page, 'social');
     await dismissOnboardingIfShown(page);
 
-    // The raid card shows the user's damage against the weekly boss.
+    // The raid card on the Raids page shows the user's damage against the weekly boss.
+    await page.getByTestId('hub-raids-card').click();
     const card = page.getByTestId('raid-card');
     await expect(card).toBeVisible({ timeout: 10_000 });
     await expect(card).toContainText('1,900');
@@ -301,5 +313,73 @@ test.describe('Social: per-kind push settings', () => {
       'false',
       { timeout: 10_000 },
     );
+  });
+});
+
+test.describe('Social: hub navigation', () => {
+  test.describe.configure({ mode: 'serial' });
+
+  test.beforeAll(async () => {
+    await enableSocialForE2e();
+  });
+
+  test('hub shows This week, the people icon opens Friends, back returns to the hub', async ({
+    page,
+  }) => {
+    const unique = Date.now().toString(36);
+    const user = await seedSocialUser('hubber', undefined, `hubber_${unique}`);
+
+    await resetOfflineStore(page);
+    await signInSeededUser(page, user);
+    await navigateToTab(page, 'social');
+    await dismissOnboardingIfShown(page);
+
+    // Hub: This-week card renders.
+    await expect(page.getByTestId('social-week-card')).toBeVisible({ timeout: 10_000 });
+
+    // People icon opens the Friends page.
+    await page.getByTestId('social-friends-btn').click();
+    await expect(page.getByTestId('friends-list')).toBeVisible({ timeout: 10_000 });
+
+    // The in-app back chevron returns to the hub …
+    await page.getByTestId('social-page-back').click();
+    await expect(page.getByTestId('social-week-card')).toBeVisible({ timeout: 10_000 });
+
+    // … and so does browser back after a second navigation.
+    await page.getByTestId('social-friends-btn').click();
+    await expect(page.getByTestId('friends-list')).toBeVisible({ timeout: 10_000 });
+    await page.goBack();
+    await expect(page.getByTestId('social-week-card')).toBeVisible({ timeout: 10_000 });
+  });
+
+  test('deep link /?open=/social/duels opens the Duels page', async ({ page }) => {
+    const unique = Date.now().toString(36);
+    const user = await seedSocialUser('deepl', undefined, `deepl_${unique}`);
+
+    await resetOfflineStore(page);
+    await signInSeededUser(page, user);
+    await page.goto('/?open=%2Fsocial%2Fduels');
+    await expect(page.getByTestId('duels-card')).toBeVisible({ timeout: 15_000 });
+  });
+
+  test('the social tab badge shows an incoming friend request', async ({ page }) => {
+    const unique = Date.now().toString(36);
+    const [userA, userB] = await Promise.all([
+      seedSocialUser('badgea', undefined, `badgea_${unique}`),
+      seedSocialUser('badgeb', undefined, `badgeb_${unique}`),
+    ]);
+    await seedFriendRequestForE2e(userB.id, userA.id);
+
+    await resetOfflineStore(page);
+    await signInSeededUser(page, userA);
+    await navigateToTab(page, 'social');
+    await dismissOnboardingIfShown(page);
+    // The badge lives on the mobile tab bar and the desktop nav — exactly one is visible.
+    await expect(
+      page.locator(
+        '[data-testid="social-tab-badge"]:visible, [data-testid="desktop-social-tab-badge"]:visible',
+      ),
+    ).toHaveText('1', { timeout: 15_000 });
+    await expect(page.getByTestId('social-friends-badge')).toBeVisible();
   });
 });

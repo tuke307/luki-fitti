@@ -8,7 +8,7 @@ import { ARENA_STYLE } from '@luki-fitti/common/league';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { ArenaBadge } from './arena-badge';
-import { arenaName } from './league-card';
+import { arenaName } from '@/lib/social/arena-name';
 import { leagueApi } from '@/lib/social/social-api';
 import { toast } from '@luki-fitti/ui/components/ui/sonner';
 

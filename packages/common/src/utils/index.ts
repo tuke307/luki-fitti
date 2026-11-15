@@ -27,3 +27,4 @@ export * from './social.util';
 export * from './league-time.util';
 export * from './effort-points.util';
 export * from './api-key.util';
+export * from './next-move.util';

@@ -115,7 +115,10 @@ describe('renderNotification', () => {
 
   /** One payload per sub-variant so every copy set is exercised. */
   const subVariantPayloads: Record<string, Record<string, unknown>> = {
-    [`${NotificationKind.LEAGUE_ENDING}.promotion`]: { inDemotionZone: false, placesToPromotion: 2 },
+    [`${NotificationKind.LEAGUE_ENDING}.promotion`]: {
+      inDemotionZone: false,
+      placesToPromotion: 2,
+    },
     [`${NotificationKind.LEAGUE_ENDING}.demotion`]: { inDemotionZone: true },
     [`${NotificationKind.DUEL_STANDINGS}.leading`]: {
       leading: true,
@@ -152,9 +155,8 @@ describe('renderNotification', () => {
     for (const locale of ['en', 'de']) {
       it(`has exactly 3 seeded variants for ${subKey} (${locale})`, () => {
         const seen = new Set(
-          SEEDS.map(
-            (seed) =>
-              JSON.stringify(renderNotification(kind, payload, 'fabi', locale, seed)),
+          SEEDS.map((seed) =>
+            JSON.stringify(renderNotification(kind, payload, 'fabi', locale, seed)),
           ),
         );
         assert.equal(seen.size, 3, `${subKey} ${locale} should render all 3 variants`);
@@ -172,8 +174,7 @@ describe('renderNotification', () => {
     assert.deepEqual(again, first);
     const distinct = new Set(
       SEEDS.map(
-        (seed) =>
-          renderNotification(NotificationKind.FRIEND_REQUEST, {}, 'fabi', 'en', seed).title,
+        (seed) => renderNotification(NotificationKind.FRIEND_REQUEST, {}, 'fabi', 'en', seed).title,
       ),
     );
     assert.equal(distinct.size, 3);

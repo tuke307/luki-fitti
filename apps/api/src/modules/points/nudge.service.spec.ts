@@ -245,7 +245,11 @@ describe('NudgeService.afterEntry', () => {
   it('does not nudge when A only catches up without passing', async () => {
     const state = makeState();
     addFriends(state, 'A', 'F');
-    state.entries.push(entry('A'), entry('F', 50, WEEK, YESTERDAY), entry('F', 50, WEEK, YESTERDAY)); // A: 1, F: 2
+    state.entries.push(
+      entry('A'),
+      entry('F', 50, WEEK, YESTERDAY),
+      entry('F', 50, WEEK, YESTERDAY),
+    ); // A: 1, F: 2
     const { svc, notified } = makeDeps(state);
     await svc.afterEntry('A', WEEK, NOW);
     assert.equal(notified.length, 0);

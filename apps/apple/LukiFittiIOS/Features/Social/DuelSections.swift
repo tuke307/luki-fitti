@@ -327,12 +327,26 @@ struct TrophyShelfView: View {
     }
 }
 
-/// Friend sheet: the card plus their trophy shelf.
+/// Friend sheet: the card, the actions that used to live in the row ⋯ menu
+/// (duel challenge, streak invite/accept/end, remove, block, report — the
+/// destructive ones confirm) and their trophy shelf.
 struct FriendSheet: View {
     let friend: SocialCardDto
-    let social: SocialStore
+    @Bindable var social: SocialStore
+    let onReport: (SocialCardDto) -> Void
     @Environment(\.lukiLocale) private var tr
     @Environment(\.dismiss) private var dismiss
+    @State private var confirmRemove = false
+    @State private var confirmBlock = false
+    @State private var confirmStreakEnd = false
+
+    private var isFriend: Bool {
+        social.friends.friends.contains { $0.userId == friend.userId }
+    }
+
+    private var streak: FriendStreakDto? {
+        social.streaks?.streak(with: friend.userId)
+    }
 
     var body: some View {
         List {
@@ -350,6 +364,68 @@ struct FriendSheet: View {
                 }
                 .padding(.vertical, 2)
             }
+
+            if isFriend {
+                Section {
+                    if social.duels != nil {
+                        let blocked = social.openDuel(with: friend.userId) != nil
+                            ? tr("A duel with @%@ is already open", friend.username)
+                            : social.openDuelCount >= 3 ? tr("You already have 3 open duels") : nil
+                        Button {
+                            dismiss()
+                            Task { await social.challengeDuel(opponentId: friend.userId) }
+                        } label: {
+                            Label(blocked ?? tr("Challenge to a duel"), systemImage: "figure.fencing")
+                        }
+                        .disabled(blocked != nil)
+                        .accessibilityIdentifier("ios.duel.challenge.\(friend.userId)")
+                    }
+                    if let streaks = social.streaks {
+                        if streak == nil {
+                            Button {
+                                dismiss()
+                                Task { await social.inviteStreak(friendId: friend.userId) }
+                            } label: {
+                                Label(tr("Start streak"), systemImage: "flame")
+                            }
+                            .accessibilityIdentifier("ios.streak.invite.\(friend.userId)")
+                        } else if let streak, streak.status == .PENDING,
+                                  streaks.incoming.contains(where: { $0.id == streak.id }) {
+                            Button {
+                                dismiss()
+                                Task { await social.acceptStreak(streakId: streak.id) }
+                            } label: {
+                                Label(tr("Accept streak"), systemImage: "flame")
+                            }
+                            .accessibilityIdentifier("ios.streak.accept.\(friend.userId)")
+                        } else if streak?.status == .ACTIVE {
+                            Button(role: .destructive) { confirmStreakEnd = true } label: {
+                                Label(tr("End streak"), systemImage: "flame")
+                            }
+                            .accessibilityIdentifier("ios.streak.end.\(friend.userId)")
+                        }
+                    }
+                    Button(role: .destructive) { confirmRemove = true } label: {
+                        Label(tr("Remove friend"), systemImage: "person.badge.minus")
+                    }
+                    .accessibilityIdentifier("ios.social.remove.\(friend.userId)")
+                    Button(role: .destructive) { confirmBlock = true } label: {
+                        Label(tr("Block"), systemImage: "hand.raised")
+                    }
+                    .accessibilityIdentifier("ios.social.block.\(friend.userId)")
+                }
+            }
+
+            Section {
+                Button {
+                    dismiss()
+                    onReport(friend)
+                } label: {
+                    Label(tr("Report"), systemImage: "flag")
+                }
+                .accessibilityIdentifier("ios.social.report.\(friend.userId)")
+            }
+
             Section {
                 TrophyShelfView(userId: friend.userId, social: social)
                     .padding(.vertical, 4)
@@ -361,6 +437,47 @@ struct FriendSheet: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Button(tr("Done")) { dismiss() }
             }
+        }
+        .confirmationDialog(
+            tr("Remove @%@ as a friend?", friend.username),
+            isPresented: $confirmRemove,
+            titleVisibility: .visible
+        ) {
+            Button(tr("Remove friend"), role: .destructive) {
+                dismiss()
+                Task { await social.remove(friend.userId) }
+            }
+            Button(tr("Cancel"), role: .cancel) {}
+        } message: {
+            Text(tr("You can send a new request any time."))
+        }
+        .confirmationDialog(
+            tr("Block @%@?", friend.username),
+            isPresented: $confirmBlock,
+            titleVisibility: .visible
+        ) {
+            Button(tr("Block"), role: .destructive) {
+                dismiss()
+                Task { await social.block(friend.userId) }
+            }
+            Button(tr("Cancel"), role: .cancel) {}
+        } message: {
+            Text(tr("They can no longer find you or send you requests."))
+        }
+        .confirmationDialog(
+            tr("End the streak with @%@?", friend.username),
+            isPresented: $confirmStreakEnd,
+            titleVisibility: .visible
+        ) {
+            Button(tr("End streak"), role: .destructive) {
+                if let streak {
+                    dismiss()
+                    Task { await social.endStreak(streakId: streak.id) }
+                }
+            }
+            Button(tr("Cancel"), role: .cancel) {}
+        } message: {
+            Text(tr("The count resets and you can start again any time."))
         }
         .accessibilityIdentifier("ios.friend.sheet")
     }

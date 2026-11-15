@@ -49,6 +49,11 @@ extension APIClient {
         try await request(path: "/api/social/friends", method: "GET")
     }
 
+    /// Hub summary: weekly counts, badge, next move and the friends-week strip.
+    public func fetchSocialSummary() async throws -> SocialSummaryDto {
+        try await request(path: "/api/social/summary", method: "GET")
+    }
+
     public func sendFriendRequest(userId: String) async throws -> SocialUserDto {
         struct Body: Encodable { let userId: String }
         struct Resp: Decodable { let relation: SocialRelation }

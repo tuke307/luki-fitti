@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { NotificationKind, PushPlatform, ReportReason, ReportStatus } from '../enums';
+import { Arena, NotificationKind, PushPlatform, ReportReason, ReportStatus } from '../enums';
 import { USERNAME_REGEX, isWebPushEndpointAllowed } from '../utils/social.util';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -50,6 +50,46 @@ export interface FriendListsDto {
   friends: SocialCardDto[];
   incoming: SocialCardDto[];
   outgoing: SocialCardDto[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Social hub summary (GET /social/summary)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** One actionable line on the hub — clients only render, the server picks. */
+export type NextMoveDto =
+  | { kind: 'FRIEND_REQUESTS'; count: number }
+  | { kind: 'DUEL_INVITE'; duelId: string; actor: SocialCardDto }
+  | { kind: 'STREAK_INVITE'; streakId: string; actor: SocialCardDto }
+  | { kind: 'SQUAD_INVITE'; squadName: string; actor: SocialCardDto }
+  | { kind: 'FRIEND_AHEAD'; actor: SocialCardDto; them: number; you: number }
+  | {
+      kind: 'DUEL_BEHIND';
+      duelId: string;
+      actor: SocialCardDto;
+      you: number;
+      them: number;
+      daysLeft: number;
+    }
+  | { kind: 'LEAGUE_DEMOTION'; arena: Arena }
+  | { kind: 'RAID_NO_DAMAGE'; bossSlug: string };
+
+export interface FriendWeekDto {
+  card: SocialCardDto;
+  workouts: number;
+}
+
+export interface SocialSummaryDto {
+  /** null when points are off (leagues, duels and streaks all disabled). */
+  week: { workouts: number; goal: number; points: number } | null;
+  /** Actionable items: incoming friend requests + duel, streak and squad invites (only features that are on). */
+  badge: number;
+  nextMove: NextMoveDto | null;
+  /**
+   * Accepted friends, not paused, not blocked either way; sorted by workouts
+   * desc, then username; max 30.
+   */
+  friendsWeek: FriendWeekDto[];
 }
 
 export const FriendRequestSchema = z.object({

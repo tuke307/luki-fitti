@@ -56,6 +56,8 @@ struct SocialPersonRow<Actions: View>: View {
     let person: SocialCardDto
     let social: SocialStore
     var streak: FriendStreakDto? = nil
+    /// Workouts this week → "%d× this week" under the name.
+    var weekCount: Int? = nil
     @ViewBuilder var actions: () -> Actions
     @Environment(\.lukiLocale) private var tr
 
@@ -102,6 +104,11 @@ struct SocialPersonRow<Actions: View>: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier("ios.streak.week.\(person.userId)")
+                } else if let weekCount {
+                    Text(tr("%d× this week", weekCount))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("ios.social.weekCount.\(person.userId)")
                 }
             }
             Spacer()

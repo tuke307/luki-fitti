@@ -4,7 +4,10 @@
  * section); anything else or malformed input falls back to home.
  */
 export type OpenTarget =
-  | { tab: 'social'; section: 'friends' | 'requests' | 'inbox' | 'duels' | 'raids' | null }
+  | {
+      tab: 'social';
+      section: 'friends' | 'requests' | 'inbox' | 'duels' | 'raids' | 'league' | null;
+    }
   | { tab: 'profile'; page: 'apiKeys' }
   | { tab: 'home' };
 
@@ -28,6 +31,8 @@ export function parseOpenParam(search: string): OpenTarget | null {
         return { tab: 'social', section: 'duels' };
       case 'raids':
         return { tab: 'social', section: 'raids' };
+      case 'league':
+        return { tab: 'social', section: 'league' };
       default:
         return { tab: 'social', section: null };
     }

@@ -56,6 +56,7 @@ public enum SocialDeepLink {
         case "inbox": return .social(.inbox)
         case "duels": return .social(.duels)
         case "raids": return .social(.raids)
+        case "league": return .social(.league)
         default: return .social(nil)
         }
     }
@@ -72,4 +73,5 @@ public enum SocialSectionTarget: String, Sendable, Equatable {
     case inbox
     case duels
     case raids
+    case league
 }
