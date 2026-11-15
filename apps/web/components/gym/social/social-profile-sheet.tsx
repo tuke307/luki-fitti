@@ -74,9 +74,13 @@ export function SocialProfileSheet({
   };
 
   const uploadAvatar = async (file: File) => {
-    const jpeg = await prepareImageForUpload(file);
-    const res = await socialApi.uploadAvatar(jpeg);
-    if (res.success) onSaved();
+    try {
+      const jpeg = await prepareImageForUpload(file);
+      const res = await socialApi.uploadAvatar(jpeg);
+      if (res.success) onSaved();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '');
+    }
   };
 
   const canSave =

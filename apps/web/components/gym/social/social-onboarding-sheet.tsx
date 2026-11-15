@@ -76,9 +76,13 @@ export function SocialOnboardingSheet({
   };
 
   const uploadAvatar = async (file: File) => {
-    const jpeg = await prepareImageForUpload(file);
-    const res = await socialApi.uploadAvatar(jpeg);
-    if (res.success) setAvatarUrl(res.data?.avatarUrl ?? avatarUrl);
+    try {
+      const jpeg = await prepareImageForUpload(file);
+      const res = await socialApi.uploadAvatar(jpeg);
+      if (res.success) setAvatarUrl(res.data?.avatarUrl ?? avatarUrl);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '');
+    }
   };
 
   const enablePush = async () => {
