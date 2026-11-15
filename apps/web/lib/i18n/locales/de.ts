@@ -1186,6 +1186,7 @@ export const de = {
     invitedBy: 'Eingeladen von {handle}',
     startRaid: 'Raid starten',
     pickBoss: 'Boss wählen',
+    member: '{count} Mitglied',
     members: '{count} Mitglieder',
     leave: 'Verlassen',
     kick: 'Entfernen',
