@@ -244,3 +244,41 @@ export function renderPushMessage(message: PushMessage, vars: Record<string, str
   }
   return { title, body };
 }
+
+/**
+ * Full render pipeline for one notification: variant dispatch (LEAGUE_ENDING,
+ * DUEL_STANDINGS, DUEL_RESULT pick a body by payload), placeholder substitution
+ * and the actor fallback. Shared by push delivery (per device locale) and the
+ * inbox list, so both surfaces show the same text.
+ */
+export function renderNotification(
+  kind: NotificationKind,
+  payload: Record<string, unknown>,
+  actorUsername: string | null,
+  locale: string | null | undefined,
+): PushMessage {
+  const template =
+    kind === NotificationKind.LEAGUE_ENDING
+      ? leagueEndingMessage(payload.inDemotionZone === true, locale)
+      : kind === NotificationKind.DUEL_STANDINGS
+        ? duelStandingsMessage(payload.leading === true, locale)
+        : kind === NotificationKind.DUEL_RESULT
+          ? duelResultMessage(
+              payload.outcome === 'WON' ? 'WON' : payload.outcome === 'TIE' ? 'TIE' : 'LOST',
+              locale,
+            )
+          : pushMessageFor(kind, locale);
+  return renderPushMessage(template, {
+    actor: actorUsername ? `@${actorUsername}` : anonymousActorName(locale),
+    arena: arenaName(String(payload.toArena ?? payload.fromArena ?? ''), locale),
+    rank: String(payload.rank ?? ''),
+    places: String(payload.placesToPromotion ?? ''),
+    you: String(payload.you ?? ''),
+    them: String(payload.them ?? ''),
+    days: String(payload.daysLeft ?? ''),
+    count: String(payload.count ?? ''),
+    boss: raidBossName(String(payload.bossSlug ?? ''), locale),
+    squad: String(payload.squadName ?? ''),
+    percent: String(payload.percent ?? ''),
+  });
+}

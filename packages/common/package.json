@@ -47,6 +47,10 @@
       "types": "./dist/push-messages.d.ts",
       "default": "./dist/push-messages.js"
     },
+    "./notification-categories": {
+      "types": "./dist/notification-categories.d.ts",
+      "default": "./dist/notification-categories.js"
+    },
     "./utils/crypto": {
       "types": "./dist/utils/crypto.util.d.ts",
       "default": "./dist/utils/crypto.util.js"
@@ -59,10 +63,12 @@
   "scripts": {
     "build": "tsc --build && tsc-alias -p tsconfig.json -f -fe .js",
     "lint": "eslint . --max-warnings 0",
-    "test": "yarn raid:check && node --import tsx --test 'src/**/*.spec.ts'",
+    "test": "yarn raid:check && yarn categories:check && node --import tsx --test 'src/**/*.spec.ts'",
     "catalog:import": "tsx scripts/import-catalog.ts",
     "raid:export": "node scripts/export-raid-bosses.mjs",
-    "raid:check": "node scripts/export-raid-bosses.mjs --check"
+    "raid:check": "node scripts/export-raid-bosses.mjs --check",
+    "categories:export": "node scripts/export-notification-categories.mjs",
+    "categories:check": "node scripts/export-notification-categories.mjs --check"
   },
   "dependencies": {
     "date-fns": "^4.4.0",
