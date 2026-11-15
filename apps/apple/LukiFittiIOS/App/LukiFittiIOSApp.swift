@@ -1771,7 +1771,7 @@ public struct AppShellView: View {
                                profile.avatarUrl != nil {
                                 SocialAvatarView(
                                     userId: user.id,
-                                    handle: profile.handle ?? "",
+                                    username: profile.username ?? "",
                                     name: profile.name ?? user.name,
                                     avatarUrl: profile.avatarUrl,
                                     social: viewModel.social,
