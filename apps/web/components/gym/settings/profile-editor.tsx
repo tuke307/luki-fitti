@@ -1,37 +1,28 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Button } from '@luki-fitti/ui/components/ui/button';
 import { Input } from '@luki-fitti/ui/components/ui/input';
-import { Switch } from '@luki-fitti/ui/components/ui/switch';
 import { toast } from '@luki-fitti/ui/components/ui/sonner';
 import { useLocale } from '@/providers/i18n/locale-context';
+import { useAuth } from '@/providers/auth/auth-context';
 import type { SocialProfileDto } from '@luki-fitti/common/schemas';
 import { normalizeHandle } from '@luki-fitti/common/utils';
 import { socialApi } from '@/lib/social/social-api';
 import { prepareImageForUpload } from '@/lib/images/prepare-image';
-import { MobileSheet } from '../mobile-sheet';
-import { UserAvatar } from './user-avatar';
-import { TrophyShelf } from './trophy-shelf';
-import { HandleField, type HandleStatus } from './handle-field';
-import { useAuth } from '@/providers/auth/auth-context';
+import { UserAvatar } from '../social/user-avatar';
+import { HandleField, type HandleStatus } from '../social/handle-field';
+import { SettingsSection, SettingsSwitchRow } from './settings-row';
 
 /**
- * Full social profile editor: handle (live availability, 30-day cooldown),
- * display name, avatar upload/remove, find-me-by-email, pause.
+ * Inline social profile editor on Settings → account: avatar (upload/remove),
+ * handle (live availability, 30-day cooldown), display name, find-me-by-email, pause.
+ * Saves through `updateMe`, so the display name here is `user.name`.
  */
-export function SocialProfileSheet({
-  open,
-  onOpenChange,
-  profile,
-  onSaved,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  profile: SocialProfileDto | null;
-  onSaved: () => void;
-}) {
+export function ProfileEditor() {
   const { t } = useLocale();
-  const { user } = useAuth();
+  const { refreshUser } = useAuth();
+  const [profile, setProfile] = useState<SocialProfileDto | null>(null);
   const [handle, setHandle] = useState('');
   const [name, setName] = useState('');
   const [emailLookup, setEmailLookup] = useState(true);
@@ -39,18 +30,30 @@ export function SocialProfileSheet({
   const [status, setStatus] = useState<HandleStatus>({ state: 'idle' });
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const initialized = useRef(false);
 
-  const [prevOpen, setPrevOpen] = useState(open);
-  if (open !== prevOpen) {
-    setPrevOpen(open);
-    if (open) {
-      setHandle(profile?.handle ?? '');
-      setName(profile?.name ?? '');
-      setEmailLookup(profile?.discoverableByEmail ?? true);
-      setPaused(profile?.socialPaused ?? false);
-      setStatus({ state: 'idle' });
-    }
-  }
+  const refresh = useCallback(async () => {
+    const res = await socialApi.me();
+    if (res.data) setProfile(res.data);
+  }, []);
+
+  useEffect(() => {
+    void refresh().catch(() => undefined);
+  }, [refresh]);
+
+  useEffect(() => {
+    if (!profile || initialized.current) return;
+    initialized.current = true;
+    setHandle(profile.handle ?? '');
+    setName(profile.name ?? '');
+    setEmailLookup(profile.discoverableByEmail ?? true);
+    setPaused(profile.socialPaused ?? false);
+  }, [profile]);
+
+  const onChanged = () => {
+    void refresh().catch(() => undefined);
+    void refreshUser();
+  };
 
   const save = async () => {
     const normalized = normalizeHandle(handle);
@@ -62,10 +65,7 @@ export function SocialProfileSheet({
         discoverableByEmail: emailLookup,
         socialPaused: paused,
       });
-      if (res.success) {
-        onSaved();
-        onOpenChange(false);
-      }
+      if (res.success) onChanged();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '');
     } finally {
@@ -77,7 +77,7 @@ export function SocialProfileSheet({
     try {
       const jpeg = await prepareImageForUpload(file);
       const res = await socialApi.uploadAvatar(jpeg);
-      if (res.success) onSaved();
+      if (res.success) onChanged();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '');
     }
@@ -89,19 +89,8 @@ export function SocialProfileSheet({
     (normalizeHandle(handle) !== '' || Boolean(profile?.handle));
 
   return (
-    <MobileSheet
-      open={open}
-      onOpenChange={onOpenChange}
-      title={t.social.editProfileTitle}
-      confirm={{
-        label: t.common.save,
-        onConfirm: () => void save(),
-        disabled: !canSave,
-        loading: saving,
-      }}
-      data-testid="social-profile-sheet"
-    >
-      <div className="space-y-5">
+    <SettingsSection title={t.social.editProfileTitle}>
+      <li className="space-y-4 px-4 py-3.5">
         <div className="flex items-center gap-4">
           <UserAvatar
             avatarUrl={profile?.avatarUrl}
@@ -134,7 +123,12 @@ export function SocialProfileSheet({
               <button
                 type="button"
                 className="text-destructive text-[0.9375rem]"
-                onClick={() => void socialApi.removeAvatar().then((r) => r.success && onSaved())}
+                onClick={() =>
+                  void socialApi
+                    .removeAvatar()
+                    .then((r) => r.success && onChanged())
+                    .catch((err) => toast.error(err instanceof Error ? err.message : ''))
+                }
                 data-testid="avatar-remove"
               >
                 {t.social.avatarRemove}
@@ -167,32 +161,29 @@ export function SocialProfileSheet({
           />
         </div>
 
-        <label className="flex items-start justify-between gap-4">
-          <span>
-            <span className="block text-[0.9375rem]">{t.social.emailLookupLabel}</span>
-            <span className="text-muted-foreground block text-[0.8125rem]">
-              {t.social.emailLookupHint}
-            </span>
-          </span>
-          <Switch
-            checked={emailLookup}
-            onCheckedChange={setEmailLookup}
-            data-testid="email-lookup-switch"
-          />
-        </label>
-
-        <label className="flex items-start justify-between gap-4">
-          <span>
-            <span className="block text-[0.9375rem]">{t.social.pauseLabel}</span>
-            <span className="text-muted-foreground block text-[0.8125rem]">
-              {t.social.pauseHint}
-            </span>
-          </span>
-          <Switch checked={paused} onCheckedChange={setPaused} data-testid="social-pause-switch" />
-        </label>
-
-        <TrophyShelf userId={user?.id ?? null} />
-      </div>
-    </MobileSheet>
+        <Button
+          type="button"
+          className="w-full"
+          disabled={!canSave || saving}
+          onClick={() => void save()}
+        >
+          {t.common.save}
+        </Button>
+      </li>
+      <SettingsSwitchRow
+        title={t.social.emailLookupLabel}
+        subtitle={t.social.emailLookupHint}
+        checked={emailLookup}
+        onCheckedChange={setEmailLookup}
+        data-testid="email-lookup-switch"
+      />
+      <SettingsSwitchRow
+        title={t.social.pauseLabel}
+        subtitle={t.social.pauseHint}
+        checked={paused}
+        onCheckedChange={setPaused}
+        data-testid="social-pause-switch"
+      />
+    </SettingsSection>
   );
 }

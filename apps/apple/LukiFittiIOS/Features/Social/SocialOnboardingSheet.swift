@@ -79,7 +79,7 @@ struct SocialOnboardingSheet: View {
                             pickedPhoto = nil
                             Task {
                                 if let data = try? await item.loadTransferable(type: Data.self) {
-                                    pendingAvatar = SocialProfileSheet.downscaledJpeg(data)
+                                    pendingAvatar = SocialImageUpload.downscaledJpeg(data)
                                 }
                             }
                         }

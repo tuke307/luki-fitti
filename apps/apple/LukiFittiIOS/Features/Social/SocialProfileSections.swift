@@ -4,13 +4,12 @@ import LukiFittiModels
 import LukiFittiDesign
 import LukiFittiStore
 
-/// Edit social profile: avatar (PhotosPicker, downscaled to ≤512 px JPEG), handle with live
-/// availability, display name, "find me by email" and pause. Shared by the edit sheet and
-/// (read-only fields) the onboarding sheet.
-struct SocialProfileSheet: View {
+/// Edit social profile as plain List/Form sections for Settings → Profile & account:
+/// avatar (PhotosPicker, downscaled to ≤512 px JPEG), handle with live availability,
+/// display name, "find me by email" and pause.
+struct SocialProfileSections: View {
     @Bindable var viewModel: LukiAppViewModel
     @Environment(\.lukiLocale) private var tr
-    @Environment(\.dismiss) private var dismiss
 
     @State private var handle: String
     @State private var name: String
@@ -45,91 +44,76 @@ struct SocialProfileSheet: View {
     }
 
     var body: some View {
-        Form {
-            avatarSection
+        avatarSection
 
-            Section {
-                TextField(tr("Username"), text: $handle)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .disabled(handleLocked)
-                    .accessibilityIdentifier("ios.social.handleField")
-                    .onChange(of: handle) { _, value in
-                        availability = nil
-                        handleCheckTask?.cancel()
-                        let normalized = value.lowercased()
-                        guard normalized.count >= 3, handleChanged else { return }
-                        handleCheckTask = Task {
-                            checkingHandle = true
-                            defer { checkingHandle = false }
-                            try? await Task.sleep(nanoseconds: 400_000_000)
-                            guard !Task.isCancelled else { return }
-                            availability = try? await viewModel.store.apiClient.handleAvailability(normalized)
-                        }
-                    }
-                handleStatus
-            } footer: {
-                if handleLocked, let lockedUntil {
-                    Text(tr("You can change your username again on %@.", lockedUntil.formatted(date: .abbreviated, time: .omitted)))
-                } else {
-                    Text(tr("3–20 characters: a–z, 0–9, underscore."))
-                }
-            }
-
-            Section {
-                TextField(tr("Name"), text: $name)
-                    .accessibilityIdentifier("ios.social.nameField")
-            }
-
-            Section {
-                Toggle(isOn: $discoverableByEmail) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(tr("Find me by email"))
-                        Text(tr("Friends who saved your email address can find you this way."))
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
+        Section {
+            TextField(tr("Username"), text: $handle)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .disabled(handleLocked)
+                .accessibilityIdentifier("ios.social.handleField")
+                .onChange(of: handle) { _, value in
+                    availability = nil
+                    handleCheckTask?.cancel()
+                    let normalized = value.lowercased()
+                    guard normalized.count >= 3, handleChanged else { return }
+                    handleCheckTask = Task {
+                        checkingHandle = true
+                        defer { checkingHandle = false }
+                        try? await Task.sleep(nanoseconds: 400_000_000)
+                        guard !Task.isCancelled else { return }
+                        availability = try? await viewModel.store.apiClient.handleAvailability(normalized)
                     }
                 }
-                .tint(LukiColors.accent)
-                .accessibilityIdentifier("ios.social.emailLookupToggle")
+            handleStatus
+        } footer: {
+            if handleLocked, let lockedUntil {
+                Text(tr("You can change your username again on %@.", lockedUntil.formatted(date: .abbreviated, time: .omitted)))
+            } else {
+                Text(tr("3–20 characters: a–z, 0–9, underscore."))
+            }
+        }
 
-                Toggle(isOn: $socialPaused) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(tr("Pause friends features"))
-                        Text(tr("You disappear from search and leagues while paused."))
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
+        Section {
+            TextField(tr("Name"), text: $name)
+                .accessibilityIdentifier("ios.social.nameField")
+        }
+
+        Section {
+            Toggle(isOn: $discoverableByEmail) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(tr("Find me by email"))
+                    Text(tr("Friends who saved your email address can find you this way."))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
-                .tint(LukiColors.accent)
-                .accessibilityIdentifier("ios.social.pauseToggle")
             }
+            .tint(LukiColors.accent)
+            .accessibilityIdentifier("ios.social.emailLookupToggle")
 
-            Section {
-                TrophyShelfView(
-                    userId: viewModel.store.currentUser?.id ?? "me",
-                    social: viewModel.social
-                )
-                .padding(.vertical, 4)
+            Toggle(isOn: $socialPaused) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(tr("Pause friends features"))
+                    Text(tr("You disappear from search and leagues while paused."))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
+            .tint(LukiColors.accent)
+            .accessibilityIdentifier("ios.social.pauseToggle")
+        }
 
+        Section {
+            Button { Task { await save() } } label: {
+                Text(tr("Save"))
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
+            .disabled(!canSave)
+            .accessibilityIdentifier("ios.social.saveProfileButton")
             if let error {
-                Section { Text(error).foregroundStyle(LukiColors.destructive).font(.footnote) }
+                Text(error).foregroundStyle(LukiColors.destructive).font(.footnote)
             }
         }
-        .navigationTitle(tr("Profile"))
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button(tr("Cancel")) { dismiss() }
-            }
-            ToolbarItem(placement: .confirmationAction) {
-                Button(tr("Save")) { Task { await save() } }
-                    .disabled(!canSave)
-                    .accessibilityIdentifier("ios.social.saveProfileButton")
-            }
-        }
-        .tint(LukiColors.accent)
     }
 
     @ViewBuilder
@@ -186,26 +170,13 @@ struct SocialProfileSheet: View {
                 pickedPhoto = nil
                 Task {
                     if let data = try? await item.loadTransferable(type: Data.self),
-                       let jpeg = Self.downscaledJpeg(data) {
+                       let jpeg = SocialImageUpload.downscaledJpeg(data) {
                         _ = try? await viewModel.store.apiClient.uploadAvatar(jpeg: jpeg)
                         await social.fetchProfile()
                     }
                 }
             }
         }
-    }
-
-    /// ≤ 512 px JPEG — the server re-encodes anyway, this just keeps the upload small.
-    static func downscaledJpeg(_ data: Data, maxSide: CGFloat = 512) -> Data? {
-        guard let source = UIImage(data: data) else { return nil }
-        let side = max(source.size.width, source.size.height)
-        guard side > maxSide else { return source.jpegData(compressionQuality: 0.85) }
-        let scale = maxSide / side
-        let size = CGSize(width: source.size.width * scale, height: source.size.height * scale)
-        let rendered = UIGraphicsImageRenderer(size: size).image { _ in
-            source.draw(in: CGRect(origin: .zero, size: size))
-        }
-        return rendered.jpegData(compressionQuality: 0.85)
     }
 
     private func save() async {
@@ -223,9 +194,24 @@ struct SocialProfileSheet: View {
         do {
             _ = try await viewModel.store.apiClient.updateSocialMe(dto)
             await social.fetchProfile()
-            dismiss()
         } catch {
             self.error = error.localizedDescription
         }
+    }
+}
+
+/// Shared image prep for social avatars.
+enum SocialImageUpload {
+    /// ≤ 512 px JPEG — the server re-encodes anyway, this just keeps the upload small.
+    static func downscaledJpeg(_ data: Data, maxSide: CGFloat = 512) -> Data? {
+        guard let source = UIImage(data: data) else { return nil }
+        let side = max(source.size.width, source.size.height)
+        guard side > maxSide else { return source.jpegData(compressionQuality: 0.85) }
+        let scale = maxSide / side
+        let size = CGSize(width: source.size.width * scale, height: source.size.height * scale)
+        let rendered = UIGraphicsImageRenderer(size: size).image { _ in
+            source.draw(in: CGRect(origin: .zero, size: size))
+        }
+        return rendered.jpegData(compressionQuality: 0.85)
     }
 }

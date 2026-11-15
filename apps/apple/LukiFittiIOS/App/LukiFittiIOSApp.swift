@@ -57,6 +57,8 @@ public final class LukiAppViewModel {
     public var pendingTemplateId: String?
     /// Pushes the weight screen on the Today tab (card, deep link, reminder tap).
     public var isWeightPresented = false
+    /// Pushes the account settings page onto the profile sheet's stack (e.g. from Social).
+    public var isAccountSettingsPresented = false
     /// Legacy `exercises` tab selections land here: the Workouts tab opens its Library segment.
     public var workoutsShowLibrary = false
     /// Invite token from an `/invite/<token>` universal link, consumed by InviteAcceptSheet.
@@ -749,6 +751,12 @@ public final class LukiAppViewModel {
         guard await center.notificationSettings().authorizationStatus == .notDetermined else { return }
         _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
         rescheduleWeighInReminders()
+    }
+
+    /// Opens the profile sheet and pushes Profile & account (Social "Edit profile" button).
+    public func openAccountSettings() {
+        selectedTab = .profile
+        isAccountSettingsPresented = true
     }
 
     /// Opens the Social tab on a specific section (push tap / deep link), like the web

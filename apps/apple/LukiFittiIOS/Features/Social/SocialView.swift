@@ -14,7 +14,6 @@ public struct SocialView: View {
     @Environment(\.lukiLocale) private var tr
     @Environment(\.scenePhase) private var scenePhase
 
-    @State private var showProfileSheet = false
     @State private var showOnboarding = false
     @State private var showInbox = false
     @State private var showContactsConsent = false
@@ -91,9 +90,6 @@ public struct SocialView: View {
             social.requestedSection = nil
             if section == .inbox { showInbox = true }
             // friends/requests are the default list sections — no extra navigation needed.
-        }
-        .sheet(isPresented: $showProfileSheet) {
-            NavigationStack { SocialProfileSheet(viewModel: viewModel) }
         }
         .sheet(isPresented: $showOnboarding) {
             SocialOnboardingSheet(viewModel: viewModel, isPresented: $showOnboarding)
@@ -248,15 +244,24 @@ public struct SocialView: View {
                         }
                     }
                     Spacer()
-                    Button(tr("Edit profile")) { showProfileSheet = true }
-                        .font(.subheadline)
-                        .accessibilityIdentifier("ios.social.editProfileButton")
+                    Button(tr("Edit profile")) {
+                        if profile.handle != nil { viewModel.openAccountSettings() } else { showOnboarding = true }
+                    }
+                    .font(.subheadline)
+                    .accessibilityIdentifier("ios.social.editProfileButton")
                 } else {
                     ProgressView()
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
             .padding(.vertical, 2)
+        }
+        Section {
+            TrophyShelfView(
+                userId: viewModel.store.currentUser?.id ?? "me",
+                social: social
+            )
+            .padding(.vertical, 4)
         }
         if social.profile?.socialPaused == true {
             Section {
