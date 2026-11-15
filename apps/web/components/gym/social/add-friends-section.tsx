@@ -38,10 +38,11 @@ export function contactsSupported(): boolean {
  */
 export function AddFriendsSection({
   onChanged,
-  onReport,
+  onOpenSheet,
 }: {
   onChanged: () => void;
-  onReport: (user: SocialCardDto) => void;
+  /** Tap on a found user opens the (report-capable) user sheet. */
+  onOpenSheet?: (user: SocialCardDto) => void;
 }) {
   const { t } = useLocale();
   const [query, setQuery] = useState('');
@@ -196,7 +197,7 @@ export function AddFriendsSection({
               </li>
             ) : (
               results.map((u) => (
-                <FriendRow key={u.userId} user={u} actions={actionFor(u)} onReport={onReport} />
+                <FriendRow key={u.userId} user={u} actions={actionFor(u)} onView={onOpenSheet} />
               ))
             )}
           </ul>
@@ -271,7 +272,7 @@ export function AddFriendsSection({
               </li>
             ) : (
               contactMatches.map((u) => (
-                <FriendRow key={u.userId} user={u} actions={actionFor(u)} onReport={onReport} />
+                <FriendRow key={u.userId} user={u} actions={actionFor(u)} onView={onOpenSheet} />
               ))
             )}
           </ul>

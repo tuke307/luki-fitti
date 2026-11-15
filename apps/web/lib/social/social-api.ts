@@ -31,6 +31,7 @@ import type {
   ResolveReportDto,
   SquadListDto,
   SocialProfileDto,
+  SocialSummaryDto,
   SocialSettingsDto,
   SocialUserDto,
   StreakListDto,
@@ -59,6 +60,7 @@ export const socialApi = {
     fetchClient<SocialUserDto>(`/social/users/${encodeURIComponent(username)}`),
   search: (q: string) => fetchClient<SocialUserDto[]>(`/social/search?q=${encodeURIComponent(q)}`),
   friends: () => fetchClient<FriendListsDto>('/social/friends'),
+  summary: () => fetchClient<SocialSummaryDto>('/social/summary'),
   sendRequest: (userId: string) =>
     fetchClient('/social/friends/requests', {
       method: 'POST',

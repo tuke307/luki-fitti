@@ -46,6 +46,7 @@ import { AI_KEY_NAVIGATE_EVENT } from '@/lib/ai/ai-key-required';
 import { migrateToAppOrigin, shouldMigrateToAppOrigin } from '@/lib/site/app-origin-migration';
 import { APP_ORIGIN, SITE_HOSTNAMES } from '@/lib/site/config';
 import { parseOpenParam } from '@/lib/social/deep-link';
+import { useSocialSummary } from '@/lib/social/use-social-summary';
 
 export type NavTab =
   'home' | 'workouts' | 'session' | 'nutrition' | 'diary' | 'social' | 'exercises' | 'profile';
@@ -122,6 +123,12 @@ export function PwaShell() {
 
   const [migrating, setMigrating] = useState(false);
 
+  // Social tab badge: actionable items (requests + invites) from /social/summary.
+  const { summary: socialSummary } = useSocialSummary(
+    isAuthenticated && Boolean(user?.social?.enabled),
+  );
+  const socialBadge = socialSummary?.badge ?? 0;
+
   const restartSessionTimer = (fn: () => void) => {
     if (closeTimerRef.current !== null) window.clearTimeout(closeTimerRef.current);
     closeTimerRef.current = window.setTimeout(fn, SESSION_TRANSITION_MS);
@@ -155,7 +162,7 @@ export function PwaShell() {
     requestAnimationFrame(() => window.scrollTo({ top: y }));
   }, [sessionCovering]);
 
-  const navigate = (tab: NavTab) => {
+  const navigate = (tab: NavTab, socialTarget?: SocialSection) => {
     if (tab === 'session') return openSession();
     if (tab === 'profile') return setProfileOpen(true);
     setProfileOpen(false);
@@ -165,6 +172,7 @@ export function PwaShell() {
       setActiveTab('workouts');
     } else {
       setActiveTab(tab);
+      if (tab === 'social') setSocialSection(socialTarget ?? null);
     }
     setTabBarCompact(false);
   };
@@ -508,13 +516,21 @@ export function PwaShell() {
                     data-testid={`desktop-nav-${item.id}`}
                     aria-current={isCurrent ? 'page' : undefined}
                     onClick={() => navigate(item.id)}
-                    className={`h-9 rounded-full px-4 text-[0.9375rem] transition-colors duration-150 ${
+                    className={`relative h-9 rounded-full px-4 text-[0.9375rem] transition-colors duration-150 ${
                       isCurrent
                         ? 'bg-secondary text-foreground font-semibold'
                         : 'text-muted-foreground hover:text-foreground font-medium'
                     }`}
                   >
                     {item.label}
+                    {item.id === 'social' && socialBadge > 0 && (
+                      <span
+                        data-testid="desktop-social-tab-badge"
+                        className="bg-destructive text-destructive-foreground absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[0.625rem] font-bold"
+                      >
+                        {socialBadge > 99 ? '99+' : socialBadge}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -648,7 +664,17 @@ export function PwaShell() {
                       tabBarCompact ? 'h-11' : 'h-14'
                     } ${isCurrent ? 'bg-secondary text-primary' : 'text-muted-foreground'}`}
                   >
-                    <Icon className="h-[22px] w-[22px]" strokeWidth={isCurrent ? 2.5 : 2.25} />
+                    <span className="relative">
+                      <Icon className="h-[22px] w-[22px]" strokeWidth={isCurrent ? 2.5 : 2.25} />
+                      {item.id === 'social' && socialBadge > 0 && (
+                        <span
+                          data-testid="social-tab-badge"
+                          className="bg-destructive text-destructive-foreground absolute -top-1.5 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[0.625rem] font-bold"
+                        >
+                          {socialBadge > 99 ? '99+' : socialBadge}
+                        </span>
+                      )}
+                    </span>
                     <span className={tabBarCompact ? 'sr-only' : undefined}>{item.label}</span>
                   </button>
                 );

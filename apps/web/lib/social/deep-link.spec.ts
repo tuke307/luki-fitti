@@ -26,6 +26,10 @@ describe('parseOpenParam', () => {
       tab: 'social',
       section: 'raids',
     });
+    assert.deepEqual(parseOpenParam('?open=%2Fsocial%2Fleague'), {
+      tab: 'social',
+      section: 'league',
+    });
   });
 
   it('maps /profile/api-keys to the profile settings page', () => {

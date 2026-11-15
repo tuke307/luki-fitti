@@ -2,13 +2,15 @@
 
 import React, { useState } from 'react';
 import { Swords } from 'lucide-react';
-import type { DuelItemDto, DuelListDto } from '@luki-fitti/common/schemas';
+import type { DuelItemDto, DuelListDto, SocialCardDto } from '@luki-fitti/common/schemas';
 import { berlinDayKey } from '@luki-fitti/common/utils';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { duelsApi } from '@/lib/social/social-api';
 import { UserAvatar } from './user-avatar';
 import { DuelDetailSheet } from './duel-detail-sheet';
+import { FriendRow } from './friend-row';
+import { MobileSheet } from '../mobile-sheet';
 import type { MyProfile } from './duel-celebration';
 
 /** Two-sided horizontal bar: you fill from the left, them from the right. */
@@ -112,15 +114,24 @@ function ActiveDuelRow({
 export function DuelsCard({
   data,
   me,
+  friends,
   onAction,
 }: {
   data: DuelListDto;
   me: MyProfile;
+  /** Friends the challenge picker offers (open duels filtered out). */
+  friends?: SocialCardDto[];
   onAction: (fn: () => Promise<unknown>) => void;
 }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const bcp47 = locale === 'de' ? 'de-DE' : 'en-GB';
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [challengeOpen, setChallengeOpen] = useState(false);
   const hasOpen = data.active.length + data.incoming.length + data.outgoing.length > 0;
+  const openOpponents = new Set(
+    [...data.active, ...data.incoming, ...data.outgoing].map((d) => d.opponent.userId),
+  );
+  const challengable = (friends ?? []).filter((f) => !openOpponents.has(f.userId));
 
   return (
     <section className="bg-card rounded-[1.25rem]" data-testid="duels-card">
@@ -209,6 +220,73 @@ export function DuelsCard({
           </ul>
         </>
       )}
+
+      {data.recent.length > 0 && (
+        <>
+          <p className="text-muted-foreground px-4 pt-2 pb-1 text-[0.75rem] font-medium uppercase">
+            {t.battle.recentHeader}
+          </p>
+          <ul className="divide-border/60 divide-y" data-testid="duels-recent">
+            {data.recent.map((duel) => (
+              <li key={duel.id}>
+                <button
+                  type="button"
+                  onClick={() => setDetailId(duel.id)}
+                  data-testid={`duel-recent-${duel.id}`}
+                  className="hover:bg-secondary/40 flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors"
+                >
+                  <UserAvatar
+                    avatarUrl={duel.opponent.avatarUrl}
+                    name={duel.opponent.name}
+                    username={duel.opponent.username}
+                  />
+                  <p className="min-w-0 flex-1 truncate text-[0.9375rem] font-medium">
+                    @{duel.opponent.username}
+                  </p>
+                  <span className="text-muted-foreground text-[0.8125rem] tabular-nums">
+                    {duel.you.toLocaleString(bcp47)}–{duel.them.toLocaleString(bcp47)}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {challengable.length > 0 && (
+        <div className="px-4 pt-2 pb-4">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            data-testid="duels-challenge-btn"
+            onClick={() => setChallengeOpen(true)}
+          >
+            {t.battle.challenge}
+          </Button>
+        </div>
+      )}
+
+      <MobileSheet
+        open={challengeOpen}
+        onOpenChange={setChallengeOpen}
+        title={t.battle.challenge}
+        hideCancel
+        data-testid="duel-challenge-sheet"
+      >
+        <ul className="divide-border/60 divide-y" data-testid="duel-challenge-list">
+          {challengable.map((f) => (
+            <FriendRow
+              key={f.userId}
+              user={f}
+              onView={() => {
+                setChallengeOpen(false);
+                onAction(() => duelsApi.challenge(f.userId));
+              }}
+            />
+          ))}
+        </ul>
+      </MobileSheet>
 
       <DuelDetailSheet
         duelId={detailId}

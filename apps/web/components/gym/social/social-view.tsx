@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Bell } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Bell, Users } from 'lucide-react';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
@@ -9,11 +9,14 @@ import type {
   DuelItemDto,
   DuelListDto,
   FriendListsDto,
+  LeagueCurrentDto,
+  LeagueFriendRowDto,
   LeaguePendingResultDto,
   RaidListDto,
   RaidResultDto,
   SocialCardDto,
   SocialProfileDto,
+  SocialSummaryDto,
   SquadListDto,
   StreakListDto,
 } from '@luki-fitti/common/schemas';
@@ -24,11 +27,20 @@ import {
   streaksApi,
   raidsApi,
   squadsApi,
+  leagueApi,
 } from '@/lib/social/social-api';
 import { PageTitle } from '../page-title';
-import { FriendRow } from './friend-row';
-import { AddFriendsSection } from './add-friends-section';
-import { ThisWeekCard } from './this-week-card';
+import { SocialWeekCard } from './social-week-card';
+import { FriendsWeekStrip } from './friends-week-strip';
+import {
+  DuelsCompactCard,
+  LeagueCompactCard,
+  RaidsCompactCard,
+  StreaksCompactCard,
+  TrophyRow,
+} from './hub-cards';
+import { SocialPageHeader } from './social-page-header';
+import { FriendsPage } from './friends-page';
 import { LeagueCard } from './league-card';
 import { LeagueCelebration, dismissLeagueResult, useLeagueResult } from './league-celebration';
 import { DuelCelebration, dismissDuelResult, useDuelResult } from './duel-celebration';
@@ -37,36 +49,50 @@ import { RaidCard } from '../raid/raid-card';
 import { RaidPage } from '../raid/raid-page';
 import { SquadsCard } from '../raid/squads-card';
 import { RaidCelebration, useRaidResult } from '../raid/raid-celebration';
-import { FriendSheet } from './friend-sheet';
+import { FriendSheet, type FriendActions } from './friend-sheet';
 import { InboxSheet } from './inbox-sheet';
 import { SocialOnboardingSheet } from './social-onboarding-sheet';
 import { TrophyShelf } from './trophy-shelf';
 import { ReportSheet } from './report-sheet';
 
-export type SocialSection = 'friends' | 'requests' | 'inbox' | 'duels' | 'raids' | null;
+export type SocialPage = 'hub' | 'league' | 'duels' | 'raids' | 'friends' | 'trophies';
+export type SocialSection = 'friends' | 'requests' | 'inbox' | 'duels' | 'raids' | 'league' | null;
 
 const ONBOARDING_DISMISSED_KEY = 'luki.social.onboardingDismissed';
 const UNREAD_POLL_MS = 60_000;
 
+const PAGE_FOR_SECTION: Record<NonNullable<SocialSection>, SocialPage> = {
+  friends: 'friends',
+  requests: 'friends',
+  inbox: 'hub',
+  duels: 'duels',
+  raids: 'raids',
+  league: 'league',
+};
+
 /**
- * The Social tab. Sections are stacked so league/points cards (PR 2) can slot
- * in above Friends without restructuring.
+ * The Social tab. The hub carries the weekly summary, the friends strip and
+ * compact cards; every card opens a detail page. Browser back returns to the
+ * hub via pushState/popstate.
  */
 export function SocialView({ section = null }: { section?: SocialSection }) {
   const { t, format } = useLocale();
   const { isAuthenticated, user } = useAuth();
-  // Deep-linked section — also driven from inside the tab (inbox row taps), so
-  // it lives in state and the prop only seeds/syncs it.
-  const [activeSection, setActiveSection] = useState<SocialSection>(section);
+  const [page, setPage] = useState<SocialPage>(section ? PAGE_FOR_SECTION[section] : 'hub');
+  const [requestsFocus, setRequestsFocus] = useState(section === 'requests');
   const [inboxOpen, setInboxOpen] = useState(section === 'inbox');
   const [prevSection, setPrevSection] = useState(section);
   if (section !== prevSection) {
     setPrevSection(section);
-    setActiveSection(section);
+    if (section) setPage(PAGE_FOR_SECTION[section]);
+    setRequestsFocus(section === 'requests');
     if (section === 'inbox') setInboxOpen(true);
   }
   const [profile, setProfile] = useState<SocialProfileDto | null>(null);
   const [lists, setLists] = useState<FriendListsDto | null>(null);
+  const [summary, setSummary] = useState<SocialSummaryDto | null>(null);
+  const [league, setLeague] = useState<LeagueCurrentDto | null>(null);
+  const [leagueFriends, setLeagueFriends] = useState<LeagueFriendRowDto[] | null>(null);
   const [unread, setUnread] = useState(0);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [reportTarget, setReportTarget] = useState<SocialCardDto | null>(null);
@@ -82,20 +108,33 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
   const [raidOverlay, setRaidOverlay] = useState<RaidResultDto | null>(null);
   const [raidPage, setRaidPage] = useState<string | null>(null);
   const [friendSheet, setFriendSheet] = useState<SocialCardDto | null>(null);
-  const friendsAnchor = useRef<HTMLDivElement>(null);
-  const duelsAnchor = useRef<HTMLDivElement>(null);
-  const raidsAnchor = useRef<HTMLDivElement>(null);
-  const onboardingPrompted = useRef(false);
+  const onboardingPrompted = React.useRef(false);
+  // History entries this view pushed — the back chevron must not leave the app
+  // when it deep-linked straight into a page.
+  const pushedPages = React.useRef(0);
 
   useLeagueResult(pendingResult, setResultOverlay);
   useDuelResult(duelPending, setDuelOverlay);
   useRaidResult(raidPending, setRaidOverlay);
 
   const refresh = useCallback(async () => {
-    const [meRes, friendsRes, duelsRes, streaksRes, raidsRes, squadsRes] = await Promise.all([
+    const [
+      meRes,
+      friendsRes,
+      summaryRes,
+      leagueRes,
+      leagueFrRes,
+      duelsRes,
+      streaksRes,
+      raidsRes,
+      squadsRes,
+    ] = await Promise.all([
       socialApi.me(),
       socialApi.friends(),
-      // Duels/streaks/raids 403 while their feature switch is off — the sections hide.
+      socialApi.summary().catch(() => null),
+      // League/duels/streaks/raids 403 while their feature switch is off — the cards hide.
+      leagueApi.current().catch(() => null),
+      leagueApi.friends().catch(() => null),
       duelsApi.list().catch(() => null),
       streaksApi.list().catch(() => null),
       raidsApi.current().catch(() => null),
@@ -103,6 +142,10 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
     ]);
     if (meRes.data) setProfile(meRes.data);
     if (friendsRes.data) setLists(friendsRes.data);
+    if (summaryRes?.data) setSummary(summaryRes.data);
+    setLeague(leagueRes?.data ?? null);
+    setLeagueFriends(leagueFrRes?.data?.entries ?? null);
+    if (leagueRes?.data) setPendingResult(leagueRes.data.pendingResult);
     setDuels(duelsRes?.data ?? null);
     setStreaks(streaksRes?.data ?? null);
     setDuelPending(duelsRes?.data?.pendingResult ?? null);
@@ -116,6 +159,29 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
       queueMicrotask(() => void refresh().catch(() => undefined));
     }
   }, [isAuthenticated, refresh]);
+
+  // Browser back from a detail page returns to the hub.
+  useEffect(() => {
+    const onPop = () => {
+      pushedPages.current = Math.max(0, pushedPages.current - 1);
+      setPage('hub');
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  const openPage = useCallback(
+    (target: SocialPage) => {
+      if (target === page) return;
+      if (target !== 'hub') {
+        window.history.pushState({ lukiSocialPage: target }, '');
+        pushedPages.current += 1;
+      }
+      setPage(target);
+      window.scrollTo({ top: 0 });
+    },
+    [page],
+  );
 
   // Unread badge: poll on visibility/focus and every 60 s while visible.
   useEffect(() => {
@@ -154,23 +220,17 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
     queueMicrotask(() => setOnboardingOpen(true));
   }, [profile]);
 
-  useEffect(() => {
-    if (activeSection === 'friends' || activeSection === 'requests') {
-      friendsAnchor.current?.scrollIntoView({ block: 'start' });
-    } else if (activeSection === 'duels') {
-      duelsAnchor.current?.scrollIntoView({ block: 'start' });
-    } else if (activeSection === 'raids') {
-      raidsAnchor.current?.scrollIntoView({ block: 'start' });
-    }
-  }, [activeSection]);
-
-  const navigateToSection = useCallback((target: SocialSection) => {
-    if (target === 'inbox') {
-      setInboxOpen(true);
-      return;
-    }
-    setActiveSection(target);
-  }, []);
+  const navigateToSection = useCallback(
+    (target: SocialSection) => {
+      if (target === 'inbox') {
+        setInboxOpen(true);
+        return;
+      }
+      if (target) openPage(PAGE_FOR_SECTION[target]);
+      setRequestsFocus(target === 'requests');
+    },
+    [openPage],
+  );
 
   if (!isAuthenticated) {
     return (
@@ -187,6 +247,11 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
   }
 
   const username = user?.social?.username ?? profile?.username ?? null;
+  const me = {
+    username,
+    name: profile?.name ?? null,
+    avatarUrl: profile?.avatarUrl ?? null,
+  };
 
   const run = async (fn: () => Promise<unknown>) => {
     try {
@@ -197,34 +262,108 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
     }
   };
 
+  const friendActions = (card: SocialCardDto): FriendActions => {
+    // Non-friends (search/contact results) only get Report in the sheet.
+    if (!lists?.friends.some((f) => f.userId === card.userId)) {
+      return { onReport: setReportTarget };
+    }
+    const streak = streaks?.active.find((s) => s.friend.userId === card.userId) ?? null;
+    const streakIncoming = streaks?.incoming.find((s) => s.friend.userId === card.userId) ?? null;
+    const streakOutgoing = streaks?.outgoing.find((s) => s.friend.userId === card.userId) ?? null;
+    const openDuel = duels
+      ? [...duels.active, ...duels.incoming, ...duels.outgoing].find(
+          (d) => d.opponent.userId === card.userId,
+        )
+      : null;
+    const openCount = duels
+      ? duels.active.length + duels.incoming.length + duels.outgoing.length
+      : 0;
+    const duelBlockedReason = openDuel
+      ? format(t.battle.challengeExists, { username: `@${card.username}` })
+      : openCount >= 3
+        ? t.battle.challengeLimit
+        : null;
+    return {
+      streak: streak ?? streakIncoming ?? streakOutgoing,
+      streakPending: streakIncoming ? 'incoming' : streakOutgoing ? 'outgoing' : null,
+      duelBlockedReason: duels ? duelBlockedReason : null,
+      onChallenge: duels ? (id) => void run(() => duelsApi.challenge(id)) : undefined,
+      onStreakInvite: streaks ? (id) => void run(() => streaksApi.invite(id)) : undefined,
+      onStreakAccept: streaks ? (id) => void run(() => streaksApi.accept(id)) : undefined,
+      onStreakEnd: streaks ? (id) => void run(() => streaksApi.end(id)) : undefined,
+      onRemove: (id) => void run(() => socialApi.removeFriend(id)),
+      onBlock: (id) => void run(() => socialApi.block({ userId: id })),
+      onReport: setReportTarget,
+    };
+  };
+
+  const goBack = () => {
+    if (pushedPages.current > 0) {
+      pushedPages.current -= 1;
+      window.history.back();
+    } else {
+      setPage('hub');
+    }
+  };
+
+  const pageTitle: Record<SocialPage, string> = {
+    hub: t.social.title,
+    league: t.league.leagueTitle,
+    duels: t.battle.duelsTitle,
+    raids: t.social.raidsTitle,
+    friends: t.social.sectionFriends,
+    trophies: t.battle.trophiesTitle,
+  };
+
   return (
     <div className="pt-4" data-testid="social-view">
-      <PageTitle
-        title={t.social.title}
-        actions={
-          <>
-            <button
-              type="button"
-              onClick={() => setInboxOpen(true)}
-              data-testid="social-inbox-btn"
-              aria-label={t.social.inboxAria}
-              className="relative flex size-9 items-center justify-center rounded-full"
-            >
-              <Bell className="h-5 w-5" />
-              {unread > 0 && (
-                <span
-                  data-testid="social-unread-badge"
-                  className="bg-destructive text-destructive-foreground absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[0.625rem] font-bold"
-                >
-                  {unread > 99 ? '99+' : unread}
-                </span>
-              )}
-            </button>
-          </>
-        }
-      />
+      {page === 'hub' ? (
+        <PageTitle
+          title={t.social.title}
+          actions={
+            <>
+              <button
+                type="button"
+                onClick={() => openPage('friends')}
+                data-testid="social-friends-btn"
+                aria-label={t.social.sectionFriends}
+                className="relative flex size-9 items-center justify-center rounded-full"
+              >
+                <Users className="h-5 w-5" />
+                {(lists?.incoming.length ?? 0) > 0 && (
+                  <span
+                    data-testid="social-friends-badge"
+                    className="bg-destructive text-destructive-foreground absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[0.625rem] font-bold"
+                  >
+                    {lists!.incoming.length > 99 ? '99+' : lists!.incoming.length}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setInboxOpen(true)}
+                data-testid="social-inbox-btn"
+                aria-label={t.social.inboxAria}
+                className="relative flex size-9 items-center justify-center rounded-full"
+              >
+                <Bell className="h-5 w-5" />
+                {unread > 0 && (
+                  <span
+                    data-testid="social-unread-badge"
+                    className="bg-destructive text-destructive-foreground absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[0.625rem] font-bold"
+                  >
+                    {unread > 99 ? '99+' : unread}
+                  </span>
+                )}
+              </button>
+            </>
+          }
+        />
+      ) : (
+        <SocialPageHeader title={pageTitle[page]} onBack={goBack} />
+      )}
 
-      {profile && !username && (
+      {page === 'hub' && profile && !username && (
         <div className="bg-card mt-4 flex items-center gap-3 rounded-[1.25rem] p-4">
           <p className="text-muted-foreground min-w-0 flex-1 text-[0.9375rem]">
             {t.social.onboardingBody}
@@ -241,19 +380,66 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
         </div>
       )}
 
-      <div className="mt-4">
-        <TrophyShelf userId={user?.id ?? null} />
-      </div>
+      {page === 'hub' && (
+        <div className="mt-4 space-y-4">
+          <SocialWeekCard
+            week={summary?.week}
+            nextMove={summary?.nextMove}
+            onNextMove={(target) => openPage(target)}
+          />
+          {summary && lists && (
+            <FriendsWeekStrip
+              friendsWeek={summary.friendsWeek}
+              hasFriends={lists.friends.length > 0}
+              onOpenFriend={setFriendSheet}
+              onSeeAll={() => openPage('friends')}
+            />
+          )}
+          {league && (
+            <LeagueCompactCard
+              current={league}
+              friendsEntries={leagueFriends}
+              onOpen={() => openPage('league')}
+            />
+          )}
+          {duels && (
+            <DuelsCompactCard
+              data={duels}
+              onOpen={() => openPage('duels')}
+              onChallenge={() => openPage('friends')}
+            />
+          )}
+          {raids && raids.community && (
+            <RaidsCompactCard raids={raids} onOpen={() => openPage('raids')} />
+          )}
+          {streaks && <StreaksCompactCard streaks={streaks} onOpen={() => openPage('friends')} />}
+          {user?.id && <TrophyRow userId={user.id} onOpen={() => openPage('trophies')} />}
+        </div>
+      )}
 
-      {/* PR 2: weekly EP + league cards. PR 3: Duels. PR 4: Raids above Duels. */}
-      <div className="mt-4 space-y-4">
-        <ThisWeekCard />
-        <LeagueCard onPendingResult={setPendingResult} />
-        <div ref={raidsAnchor} className="scroll-mt-20 space-y-4">
+      {page === 'league' && (
+        <div className="mt-4">
+          <LeagueCard onPendingResult={setPendingResult} />
+        </div>
+      )}
+
+      {page === 'duels' && duels && (
+        <div className="mt-4">
+          <DuelsCard
+            data={duels}
+            me={me}
+            friends={lists?.friends}
+            onAction={(fn) => void run(fn)}
+          />
+        </div>
+      )}
+
+      {page === 'raids' && (
+        <div className="mt-4 space-y-4">
           {raids?.community && (
             <RaidCard
               raid={raids.community}
-              yourDamage={raids.community!.yourDamage}
+              yourDamage={raids.community.yourDamage}
               onOpen={() => setRaidPage(raids.community!.id)}
             />
           )}
@@ -265,141 +451,31 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
               onOpen={() => setRaidPage(r.id)}
             />
           ))}
+          {raids && !raids.community && raids.squads.length === 0 && (
+            <p className="text-muted-foreground bg-card rounded-[1.25rem] px-4 py-6 text-center text-[0.9375rem]">
+              {t.raid.notStarted}
+            </p>
+          )}
           {squads && <SquadsCard data={squads} friends={lists} onAction={(fn) => void run(fn)} />}
         </div>
-        <div ref={duelsAnchor} className="scroll-mt-20">
-          {duels && (
-            <DuelsCard
-              data={duels}
-              me={{
-                username,
-                name: profile?.name ?? null,
-                avatarUrl: profile?.avatarUrl ?? null,
-              }}
-              onAction={(fn) => void run(fn)}
-            />
-          )}
+      )}
+
+      {page === 'friends' && lists && (
+        <FriendsPage
+          lists={lists}
+          friendsWeek={summary?.friendsWeek ?? []}
+          streaks={streaks}
+          focusRequests={requestsFocus}
+          onAction={(fn) => void run(fn)}
+          onOpenFriend={setFriendSheet}
+        />
+      )}
+
+      {page === 'trophies' && (
+        <div className="mt-4">
+          <TrophyShelf userId={user?.id ?? null} />
         </div>
-      </div>
-
-      <div ref={friendsAnchor} className="mt-6 scroll-mt-20">
-        <h2 className="text-muted-foreground px-1 pb-1 text-[0.8125rem] font-medium tracking-wide uppercase">
-          {t.social.sectionFriends}
-        </h2>
-        <ul
-          className="bg-card divide-border/60 divide-y rounded-[1.25rem]"
-          data-testid="friends-list"
-        >
-          {lists?.incoming.length ? (
-            <>
-              <li className="text-muted-foreground px-4 pt-3 pb-1 text-[0.75rem] font-medium uppercase">
-                {t.social.sectionRequests}
-              </li>
-              {lists.incoming.map((u) => (
-                <FriendRow
-                  key={u.userId}
-                  user={u}
-                  actions={
-                    <div className="flex gap-1">
-                      <Button
-                        size="sm"
-                        data-testid={`friend-accept-${u.userId}`}
-                        onClick={() => void run(() => socialApi.acceptRequest(u.userId))}
-                      >
-                        {t.social.accept}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        data-testid={`friend-decline-${u.userId}`}
-                        onClick={() => void run(() => socialApi.declineRequest(u.userId))}
-                      >
-                        {t.social.decline}
-                      </Button>
-                    </div>
-                  }
-                  onBlock={(id) => void run(() => socialApi.block({ userId: id }))}
-                  onReport={setReportTarget}
-                />
-              ))}
-            </>
-          ) : null}
-          {lists?.outgoing.length ? (
-            <>
-              <li className="text-muted-foreground px-4 pt-3 pb-1 text-[0.75rem] font-medium uppercase">
-                {t.social.sectionSent}
-              </li>
-              {lists.outgoing.map((u) => (
-                <FriendRow
-                  key={u.userId}
-                  user={u}
-                  actions={
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      data-testid={`friend-withdraw-${u.userId}`}
-                      onClick={() => void run(() => socialApi.removeFriend(u.userId))}
-                    >
-                      {t.social.withdraw}
-                    </Button>
-                  }
-                  onBlock={(id) => void run(() => socialApi.block({ userId: id }))}
-                  onReport={setReportTarget}
-                />
-              ))}
-            </>
-          ) : null}
-          {lists?.friends.length ? (
-            lists.friends.map((u) => {
-              const streak = streaks?.active.find((s) => s.friend.userId === u.userId) ?? null;
-              const streakIncoming =
-                streaks?.incoming.find((s) => s.friend.userId === u.userId) ?? null;
-              const streakOutgoing =
-                streaks?.outgoing.find((s) => s.friend.userId === u.userId) ?? null;
-              const openDuel = duels
-                ? [...duels.active, ...duels.incoming, ...duels.outgoing].find(
-                    (d) => d.opponent.userId === u.userId,
-                  )
-                : null;
-              const openCount = duels
-                ? duels.active.length + duels.incoming.length + duels.outgoing.length
-                : 0;
-              const duelBlockedReason = openDuel
-                ? format(t.battle.challengeExists, { username: `@${u.username}` })
-                : openCount >= 3
-                  ? t.battle.challengeLimit
-                  : null;
-              return (
-                <FriendRow
-                  key={u.userId}
-                  user={u}
-                  streak={streak ?? streakIncoming ?? streakOutgoing}
-                  streakPending={streakIncoming ? 'incoming' : streakOutgoing ? 'outgoing' : null}
-                  duelBlockedReason={duels ? duelBlockedReason : null}
-                  onChallenge={duels ? (id) => void run(() => duelsApi.challenge(id)) : undefined}
-                  onStreakInvite={
-                    streaks ? (id) => void run(() => streaksApi.invite(id)) : undefined
-                  }
-                  onStreakAccept={
-                    streaks ? (id) => void run(() => streaksApi.accept(id)) : undefined
-                  }
-                  onStreakEnd={streaks ? (id) => void run(() => streaksApi.end(id)) : undefined}
-                  onView={setFriendSheet}
-                  onRemove={(id) => void run(() => socialApi.removeFriend(id))}
-                  onBlock={(id) => void run(() => socialApi.block({ userId: id }))}
-                  onReport={setReportTarget}
-                />
-              );
-            })
-          ) : lists && !lists.incoming.length && !lists.outgoing.length ? (
-            <li className="text-muted-foreground px-4 py-6 text-center text-[0.9375rem]">
-              {t.social.friendsEmpty}
-            </li>
-          ) : null}
-        </ul>
-      </div>
-
-      <AddFriendsSection onChanged={() => void refresh()} onReport={setReportTarget} />
+      )}
 
       <InboxSheet
         open={inboxOpen}
@@ -422,7 +498,11 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
         profile={profile}
       />
       <ReportSheet user={reportTarget} onOpenChange={(open) => !open && setReportTarget(null)} />
-      <FriendSheet user={friendSheet} onOpenChange={(open) => !open && setFriendSheet(null)} />
+      <FriendSheet
+        user={friendSheet}
+        onOpenChange={(open) => !open && setFriendSheet(null)}
+        actions={friendSheet ? friendActions(friendSheet) : undefined}
+      />
       {resultOverlay && (
         <LeagueCelebration
           result={resultOverlay}

@@ -138,6 +138,19 @@ export async function seedFriendshipForE2e(userAId: string, userBId: string): Pr
   });
 }
 
+/** PENDING request from `fromId` → `toId` (the recipient sees it as incoming). */
+export async function seedFriendRequestForE2e(fromId: string, toId: string): Promise<void> {
+  const [a, b] = fromId < toId ? [fromId, toId] : [toId, fromId];
+  await prisma.friendship.create({
+    data: {
+      userAId: a,
+      userBId: b,
+      requestedById: fromId,
+      status: 'PENDING',
+    },
+  });
+}
+
 /**
  * Completes the ACTIVE duel between two users the way `duels-tick` would:
  * rescored from the EP ledger (per-day cap), winner + trophy writes. There is
