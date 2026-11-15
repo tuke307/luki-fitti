@@ -12,19 +12,19 @@
     "seed": "tsx packages/database/src/seed.ts"
   },
   "dependencies": {
-    "@prisma/client": "7.10.0"
+    "@prisma/client": "7.10.1"
   },
   "devDependencies": {
-    "@commitlint/cli": "^21.2.3",
-    "@commitlint/config-conventional": "^21.2.3",
-    "@types/node": "^26.6.4",
-    "baseline-browser-mapping": "^2.11.27",
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "@types/node": "^26.6.6",
+    "baseline-browser-mapping": "^2.11.35",
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
-    "prettier": "^3.9.9",
-    "tsc-alias": "^1.9.7",
+    "prettier": "^3.9.10",
+    "tsc-alias": "^1.9.10",
     "typescript": "6.0.3",
-    "turbo": "^2.11.7"
+    "turbo": "^2.11.10"
   },
   "scripts": {
     "build": "turbo run build",

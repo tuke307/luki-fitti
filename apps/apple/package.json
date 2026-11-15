@@ -21,6 +21,6 @@
   "devDependencies": {
     "@luki-fitti/common": "*",
     "tsx": "4.23.15",
-    "prettier": "^3.9.9"
+    "prettier": "^3.9.10"
   }
 }

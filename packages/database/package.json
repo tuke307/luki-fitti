@@ -26,10 +26,10 @@
     "lint": "eslint . --max-warnings 0"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "7.10.0",
-    "@prisma/client": "7.10.0",
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
     "jsonc-parser": "^3.3.1",
-    "prisma": "7.10.0",
+    "prisma": "7.10.1",
     "prisma-extension-pagination": "^0.7.6"
   },
   "devDependencies": {
@@ -37,12 +37,12 @@
     "@luki-fitti/eslint-config": "*",
     "@luki-fitti/logger": "*",
     "@luki-fitti/typescript-config": "*",
-    "@types/node": "^26.6.4",
+    "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
-    "dotenv-cli": "^11.0.0",
-    "eslint": "^10.12.0",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
+    "dotenv-cli": "^11.1.0",
+    "eslint": "^10.14.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "ts-node": "^10.9.2",
     "tsx": "4.23.15",
     "typescript": "6.0.3"
