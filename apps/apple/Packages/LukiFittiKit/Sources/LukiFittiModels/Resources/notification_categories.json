@@ -10,6 +10,13 @@
       ]
     },
     {
+      "id": "nudges",
+      "pref": "pushNudges",
+      "kinds": [
+        "FRIEND_PULLED_AHEAD"
+      ]
+    },
+    {
       "id": "leagues",
       "pref": "pushLeagues",
       "kinds": [
@@ -139,6 +146,10 @@
     {
       "kind": "SQUAD_RAID_STARTED",
       "key": null
+    },
+    {
+      "kind": "FRIEND_PULLED_AHEAD",
+      "key": "pulled-ahead:W1"
     }
   ]
 }

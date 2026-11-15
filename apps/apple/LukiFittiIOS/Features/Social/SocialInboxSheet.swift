@@ -105,6 +105,7 @@ struct SocialInboxSheet: View {
         guard let kind = SocialNotificationKind(rawValue: kind) else { return "bell.fill" }
         switch NotificationCategories.category(of: kind).id {
         case .friends: return "person.2.fill"
+        case .nudges: return "chart.line.uptrend.xyaxis"
         case .leagues: return "trophy.fill"
         case .duels: return "person.line.dotted.person.fill"
         case .streaks: return "flame.fill"

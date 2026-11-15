@@ -48,6 +48,7 @@ public enum SocialNotificationKind: String, Codable, Sendable, Equatable, Hashab
     case RAID_ESCAPED
     case SQUAD_INVITE
     case SQUAD_RAID_STARTED
+    case FRIEND_PULLED_AHEAD
 }
 
 /// The `social` block of `GET /auth/me` — gates the Social tab and push features.
@@ -182,6 +183,8 @@ public struct PushPreferencesDto: Codable, Sendable, Equatable {
     public var duels: Bool
     public var streaks: Bool
     public var raids: Bool
+    /// Friend-pulls-ahead nudges; defaults true when the server omits it.
+    public var nudges: Bool
     /// Kinds muted individually inside an enabled category.
     public var disabledKinds: [String]
 
@@ -192,6 +195,7 @@ public struct PushPreferencesDto: Codable, Sendable, Equatable {
         duels = try c.decodeIfPresent(Bool.self, forKey: .duels) ?? true
         streaks = try c.decodeIfPresent(Bool.self, forKey: .streaks) ?? true
         raids = try c.decodeIfPresent(Bool.self, forKey: .raids) ?? true
+        nudges = try c.decodeIfPresent(Bool.self, forKey: .nudges) ?? true
         disabledKinds = try c.decodeIfPresent([String].self, forKey: .disabledKinds) ?? []
     }
 
@@ -201,6 +205,7 @@ public struct PushPreferencesDto: Codable, Sendable, Equatable {
         duels: Bool = true,
         streaks: Bool = true,
         raids: Bool = true,
+        nudges: Bool = true,
         disabledKinds: [String] = []
     ) {
         self.friends = friends
@@ -208,6 +213,7 @@ public struct PushPreferencesDto: Codable, Sendable, Equatable {
         self.duels = duels
         self.streaks = streaks
         self.raids = raids
+        self.nudges = nudges
         self.disabledKinds = disabledKinds
     }
 }
@@ -218,6 +224,7 @@ public struct UpdatePushPreferencesDto: Encodable, Sendable {
     public var duels: Bool?
     public var streaks: Bool?
     public var raids: Bool?
+    public var nudges: Bool?
     public var disabledKinds: [String]?
     public init(
         friends: Bool? = nil,
@@ -225,6 +232,7 @@ public struct UpdatePushPreferencesDto: Encodable, Sendable {
         duels: Bool? = nil,
         streaks: Bool? = nil,
         raids: Bool? = nil,
+        nudges: Bool? = nil,
         disabledKinds: [String]? = nil
     ) {
         self.friends = friends
@@ -232,6 +240,7 @@ public struct UpdatePushPreferencesDto: Encodable, Sendable {
         self.duels = duels
         self.streaks = streaks
         self.raids = raids
+        self.nudges = nudges
         self.disabledKinds = disabledKinds
     }
 }

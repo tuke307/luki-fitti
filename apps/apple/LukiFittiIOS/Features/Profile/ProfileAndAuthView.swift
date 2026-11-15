@@ -944,6 +944,7 @@ private struct NotificationSettingsPage: View {
     private func categoryTitle(_ id: NotificationCategoryId) -> String {
         switch id {
         case .friends: return "Friends"
+        case .nudges: return "Friend nudges"
         case .leagues: return "Leagues"
         case .duels: return "Duels"
         case .streaks: return "Streaks"
@@ -954,6 +955,7 @@ private struct NotificationSettingsPage: View {
     private func categorySubtitle(_ id: NotificationCategoryId) -> String {
         switch id {
         case .friends: return "Friend requests and accepted requests."
+        case .nudges: return "When a friend pulls ahead of you this week."
         case .leagues: return "Promotion, demotion and end-of-week reminders."
         case .duels: return "Challenges, standings and results."
         case .streaks: return "Streak invites, freezes and broken streaks."
@@ -981,6 +983,7 @@ private struct PushCategorySettingsView: View {
     private var masterOn: Bool {
         switch category.pref {
         case .pushFriends: return prefs.friends
+        case .pushNudges: return prefs.nudges
         case .pushLeagues: return prefs.leagues
         case .pushDuels: return prefs.duels
         case .pushStreaks: return prefs.streaks
@@ -1019,6 +1022,7 @@ private struct PushCategorySettingsView: View {
         var dto = UpdatePushPreferencesDto()
         switch category.pref {
         case .pushFriends: dto.friends = enabled; prefs.friends = enabled
+        case .pushNudges: dto.nudges = enabled; prefs.nudges = enabled
         case .pushLeagues: dto.leagues = enabled; prefs.leagues = enabled
         case .pushDuels: dto.duels = enabled; prefs.duels = enabled
         case .pushStreaks: dto.streaks = enabled; prefs.streaks = enabled
@@ -1043,6 +1047,7 @@ private struct PushCategorySettingsView: View {
     private static func categoryTitle(_ id: NotificationCategoryId) -> String {
         switch id {
         case .friends: return "Friends"
+        case .nudges: return "Friend nudges"
         case .leagues: return "Leagues"
         case .duels: return "Duels"
         case .streaks: return "Streaks"
@@ -1074,6 +1079,7 @@ private struct PushCategorySettingsView: View {
         case .RAID_ESCAPED: return "Boss escaped"
         case .SQUAD_INVITE: return "Squad invites"
         case .SQUAD_RAID_STARTED: return "Squad raid started"
+        case .FRIEND_PULLED_AHEAD: return "Friend pulled ahead"
         }
     }
 }
