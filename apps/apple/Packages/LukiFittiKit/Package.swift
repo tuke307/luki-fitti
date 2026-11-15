@@ -40,6 +40,7 @@ let package = Package(
                 .process("Resources/exercise_search.json"),
                 .process("Resources/raid_bosses.json"),
                 .process("Resources/raid_boss_vectors.json"),
+                .process("Resources/notification_categories.json"),
             ]
         ),
         .target(

@@ -523,6 +523,7 @@ export class RaidService {
       for (const userId of participants) {
         await this.notify(userId, NotificationKind.RAID_PHASE, null, {
           ...bossPayload(bossSlug),
+          raidId,
           percent,
           url: '/social/raids',
         });

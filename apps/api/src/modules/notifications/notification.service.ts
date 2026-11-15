@@ -5,6 +5,12 @@ import type {
   NotificationDto,
   NotificationListDto,
 } from '@luki-fitti/common/schemas';
+import {
+  PUSH_CAP_EXEMPT_KINDS,
+  PUSH_DAILY_CAP,
+  notificationCategoryOf,
+} from '@luki-fitti/common/notification-categories';
+import { renderNotification } from '@luki-fitti/common/push-messages';
 import type { Prisma } from '@luki-fitti/database';
 import { PrismaService } from '../database/prisma.service';
 import { BullMQService } from '../bullmq/bullmq.service';
@@ -12,34 +18,24 @@ import { SocialAccessService } from '../social/social-access.service';
 import { avatarUrlFor } from '../social/relation.util';
 import { quietHoursDelayMs } from './quiet-hours.util';
 
-/** NotificationKind → UserPreferences push toggle that gates the push job. */
-const KIND_PREF: Record<
-  NotificationKind,
-  'pushFriends' | 'pushLeagues' | 'pushDuels' | 'pushStreaks' | 'pushRaids'
-> = {
-  [NotificationKind.FRIEND_REQUEST]: 'pushFriends',
-  [NotificationKind.FRIEND_ACCEPTED]: 'pushFriends',
-  [NotificationKind.LEAGUE_PROMOTED]: 'pushLeagues',
-  [NotificationKind.LEAGUE_DEMOTED]: 'pushLeagues',
-  [NotificationKind.LEAGUE_ENDING]: 'pushLeagues',
-  [NotificationKind.DUEL_INVITE]: 'pushDuels',
-  [NotificationKind.DUEL_ACCEPTED]: 'pushDuels',
-  [NotificationKind.DUEL_STANDINGS]: 'pushDuels',
-  [NotificationKind.DUEL_RESULT]: 'pushDuels',
-  [NotificationKind.STREAK_INVITE]: 'pushStreaks',
-  [NotificationKind.STREAK_STARTED]: 'pushStreaks',
-  [NotificationKind.STREAK_REMINDER]: 'pushStreaks',
-  [NotificationKind.STREAK_FROZEN]: 'pushStreaks',
-  [NotificationKind.STREAK_BROKEN]: 'pushStreaks',
-  [NotificationKind.RAID_SPAWNED]: 'pushRaids',
-  [NotificationKind.RAID_PHASE]: 'pushRaids',
-  [NotificationKind.RAID_DEFEATED]: 'pushRaids',
-  [NotificationKind.RAID_ESCAPED]: 'pushRaids',
-  [NotificationKind.SQUAD_INVITE]: 'pushRaids',
-  [NotificationKind.SQUAD_RAID_STARTED]: 'pushRaids',
-};
-
 const PAIR = (a: string, b: string) => (a < b ? ([a, b] as const) : ([b, a] as const));
+
+/** Fallback time zone for the daily-cap day key when no device is registered. */
+const DEFAULT_TIME_ZONE = 'Europe/Berlin';
+
+/** `YYYY-MM-DD` of `date` in `timeZone`; invalid zones fall back to Berlin. */
+function localDayKey(date: Date, timeZone: string): string {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date);
+  } catch {
+    return localDayKey(date, DEFAULT_TIME_ZONE);
+  }
+}
 
 @Injectable()
 export class NotificationService {
@@ -50,9 +46,11 @@ export class NotificationService {
   ) {}
 
   /**
-   * In-app inbox entry, then — when the user's push category allows it — a BullMQ
-   * push job (delayed to the end of local quiet hours when needed). Paused users
-   * and users outside the social rollout get the inbox row but no push.
+   * In-app inbox entry, then — when the user's push preferences allow it — a
+   * BullMQ push job (delayed to the end of local quiet hours when needed).
+   * Paused users and users outside the social rollout get the inbox row but no
+   * push. Non-exempt kinds share a daily cap per local delivery day; over the
+   * cap the row stays inbox-only.
    */
   async notify(
     userId: string,
@@ -60,33 +58,73 @@ export class NotificationService {
     actorId: string | null,
     payload: Record<string, unknown>,
   ): Promise<void> {
-    const notification = await this.prisma.notification.create({
-      data: { userId, kind, actorId, payload: payload as Prisma.InputJsonValue },
-    });
-
+    const prefKey = notificationCategoryOf(kind).pref;
     const [user, prefs, rolloutAllowed] = await Promise.all([
       this.prisma.user.findUnique({ where: { id: userId }, select: { socialPaused: true } }),
       this.prisma.userPreferences.findUnique({
         where: { userId },
-        select: { [KIND_PREF[kind]]: true },
+        select: {
+          [prefKey]: true,
+          pushDisabledKinds: true,
+        } as unknown as Prisma.UserPreferencesSelect,
       }),
       this.socialAccess.isEnabledFor(userId),
     ]);
-    if (user?.socialPaused || !rolloutAllowed) return;
-    const allowed = (prefs as Record<string, boolean> | null)?.[KIND_PREF[kind]] ?? true;
-    if (!allowed) return;
 
-    // Quiet hours use the most recently seen device's time zone.
-    const device = await this.prisma.pushDevice.findFirst({
-      where: { userId },
-      orderBy: { lastSeenAt: 'desc' },
-      select: { timeZone: true },
+    const exempt = PUSH_CAP_EXEMPT_KINDS.has(kind);
+    let pushDayKey: string | null = null;
+    let delayMs = 0;
+    const disabledKinds = (prefs as { pushDisabledKinds?: NotificationKind[] } | null)
+      ?.pushDisabledKinds;
+    const enqueue =
+      !user?.socialPaused &&
+      rolloutAllowed &&
+      ((prefs as Record<string, boolean> | null)?.[prefKey] ?? true) &&
+      !(disabledKinds ?? []).includes(kind);
+
+    if (enqueue) {
+      // Quiet hours use the most recently seen device's time zone; the cap counts
+      // by the local delivery day (after the quiet-hours delay).
+      const device = await this.prisma.pushDevice.findFirst({
+        where: { userId },
+        orderBy: { lastSeenAt: 'desc' },
+        select: { timeZone: true },
+      });
+      delayMs = quietHoursDelayMs(new Date(), device?.timeZone);
+      if (!exempt) {
+        pushDayKey = localDayKey(
+          new Date(Date.now() + delayMs),
+          device?.timeZone ?? DEFAULT_TIME_ZONE,
+        );
+        // Best-effort count: races can overshoot the cap by one — acceptable.
+        const sentToday = await this.prisma.notification.count({
+          where: { userId, pushDayKey },
+        });
+        if (sentToday >= PUSH_DAILY_CAP) pushDayKey = null;
+      }
+    }
+
+    const notification = await this.prisma.notification.create({
+      data: {
+        userId,
+        kind,
+        actorId,
+        payload: payload as Prisma.InputJsonValue,
+        // Only rows that actually get a push carry the day key, so the count is
+        // "pushes delivered that day" — inbox-only rows and exempt kinds stay null.
+        pushDayKey: enqueue && !exempt ? pushDayKey : null,
+      },
     });
-    const delayMs = quietHoursDelayMs(new Date(), device?.timeZone);
+    if (!enqueue || (!exempt && pushDayKey === null)) return;
     await this.bullmq.addPushJob(notification.id, delayMs);
   }
 
-  async list(userId: string, cursor?: string, limit = 20): Promise<NotificationListDto> {
+  async list(
+    userId: string,
+    cursor?: string,
+    limit = 20,
+    locale?: 'en' | 'de',
+  ): Promise<NotificationListDto> {
     const cursorRow = cursor
       ? await this.prisma.notification.findUnique({ where: { id: cursor } })
       : null;
@@ -109,12 +147,13 @@ export class NotificationService {
       },
     });
 
-    const [unreadCount, blocks] = await Promise.all([
+    const [unreadCount, blocks, resolvedLocale] = await Promise.all([
       this.prisma.notification.count({ where: { userId, readAt: null } }),
       this.prisma.userBlock.findMany({
         where: { OR: [{ blockerId: userId }, { blockedId: userId }] },
         select: { blockerId: true, blockedId: true },
       }),
+      this.inboxLocale(userId, locale),
     ]);
     const blockedWith = new Set(
       blocks.map((b) => (b.blockerId === userId ? b.blockedId : b.blockerId)),
@@ -124,17 +163,27 @@ export class NotificationService {
     for (const n of rows.slice(0, limit)) {
       // BLOCKED actors are dropped entirely — deny by default.
       if (n.actorId && blockedWith.has(n.actorId)) continue;
+      const actorUsername = n.actor?.username ?? null;
+      const payloadJson = (n.payload ?? {}) as Record<string, unknown>;
+      const message = renderNotification(
+        n.kind as NotificationKind,
+        payloadJson,
+        actorUsername,
+        resolvedLocale,
+      );
       items.push({
         id: n.id,
         kind: n.kind as NotificationKind,
-        actor: n.actor?.username
+        title: message.title,
+        body: message.body,
+        actor: actorUsername
           ? {
-              userId: n.actor.id,
-              username: n.actor.username,
-              avatarUrl: avatarUrlFor(n.actor),
+              userId: n.actor!.id,
+              username: actorUsername,
+              avatarUrl: avatarUrlFor(n.actor!),
             }
           : null,
-        payload: (n.payload ?? {}) as Record<string, unknown>,
+        payload: payloadJson,
         readAt: n.readAt?.toISOString() ?? null,
         createdAt: n.createdAt.toISOString(),
       });
@@ -142,6 +191,25 @@ export class NotificationService {
 
     const nextCursor = rows.length > limit ? (rows[limit - 1]?.id ?? null) : null;
     return { items, unreadCount, nextCursor };
+  }
+
+  /**
+   * Inbox text locale: explicit query param, else the profile language when it
+   * is en/de, else the most recently seen device locale, else English.
+   */
+  private async inboxLocale(userId: string, locale?: 'en' | 'de'): Promise<string> {
+    if (locale) return locale;
+    const prefs = await this.prisma.userPreferences.findUnique({
+      where: { userId },
+      select: { language: true },
+    });
+    if (prefs?.language === 'en' || prefs?.language === 'de') return prefs.language;
+    const device = await this.prisma.pushDevice.findFirst({
+      where: { userId },
+      orderBy: { lastSeenAt: 'desc' },
+      select: { locale: true },
+    });
+    return device?.locale ?? 'en';
   }
 
   async markRead(userId: string, dto: MarkNotificationsReadDto): Promise<{ updated: number }> {

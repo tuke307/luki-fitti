@@ -26,7 +26,7 @@ export class NotificationsController {
     @CurrentUser() user: AuthenticatedUser,
     @Query(new ZodValidationPipe(NotificationsQuerySchema)) query: NotificationsQueryDto,
   ): Promise<NotificationListDto> {
-    return this.notifications.list(user.id, query.cursor, query.limit);
+    return this.notifications.list(user.id, query.cursor, query.limit, query.locale);
   }
 
   @Post('read')

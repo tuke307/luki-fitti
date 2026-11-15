@@ -861,10 +861,7 @@ private struct NotificationSettingsPage: View {
     @Bindable var viewModel: LukiAppViewModel
     let autosave: PreferencesAutosaver
     @State private var notificationStatus: String?
-    @State private var pushPrefsLoaded = false
-    @State private var friendsPush = false
-    @State private var leaguesPush = false
-    @State private var raidsPush = false
+    @State private var pushPrefs: PushPreferencesDto?
     @Environment(\.lukiLocale) private var tr
 
     var body: some View {
@@ -887,69 +884,26 @@ private struct NotificationSettingsPage: View {
                     .accessibilityIdentifier("ios.profile.restTimerSoundToggle")
 
                 if viewModel.socialEnabled {
-                    Toggle(isOn: $friendsPush) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(tr("Friends"))
-                            Text(tr("Friend requests and accepted requests."))
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
+                    ForEach(NotificationCategories.all, id: \.id) { category in
+                        NavigationLink {
+                            if let prefs = pushPrefs {
+                                PushCategorySettingsView(
+                                    viewModel: viewModel,
+                                    category: category,
+                                    prefs: prefs
+                                )
+                            } else {
+                                ProgressView()
+                            }
+                        } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(tr(categoryTitle(category.id)))
+                                Text(tr(categorySubtitle(category.id)))
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
-                    }
-                    .tint(LukiColors.accent)
-                    .disabled(!pushPrefsLoaded)
-                    .accessibilityIdentifier("ios.profile.friendsPushToggle")
-                    .task {
-                        if let prefs = try? await viewModel.store.apiClient.fetchPushPreferences() {
-                            friendsPush = prefs.friends
-                            leaguesPush = prefs.leagues
-                            raidsPush = prefs.raids
-                            pushPrefsLoaded = true
-                        }
-                    }
-                    .onChange(of: friendsPush) { _, enabled in
-                        guard pushPrefsLoaded else { return }
-                        Task {
-                            _ = try? await viewModel.store.apiClient
-                                .updatePushPreferences(UpdatePushPreferencesDto(friends: enabled))
-                        }
-                    }
-
-                    Toggle(isOn: $leaguesPush) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(tr("Leagues"))
-                            Text(tr("Promotion, demotion and end-of-week reminders."))
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .tint(LukiColors.accent)
-                    .disabled(!pushPrefsLoaded)
-                    .accessibilityIdentifier("ios.profile.leaguesPushToggle")
-                    .onChange(of: leaguesPush) { _, enabled in
-                        guard pushPrefsLoaded else { return }
-                        Task {
-                            _ = try? await viewModel.store.apiClient
-                                .updatePushPreferences(UpdatePushPreferencesDto(leagues: enabled))
-                        }
-                    }
-
-                    Toggle(isOn: $raidsPush) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(tr("Raids"))
-                            Text(tr("Boss enrages, defeats and squad raid starts."))
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .tint(LukiColors.accent)
-                    .disabled(!pushPrefsLoaded)
-                    .accessibilityIdentifier("ios.profile.raidsPushToggle")
-                    .onChange(of: raidsPush) { _, enabled in
-                        guard pushPrefsLoaded else { return }
-                        Task {
-                            _ = try? await viewModel.store.apiClient
-                                .updatePushPreferences(UpdatePushPreferencesDto(raids: enabled))
-                        }
+                        .accessibilityIdentifier("ios.profile.\(category.id.rawValue)PushRow")
                     }
                 }
 
@@ -980,6 +934,147 @@ private struct NotificationSettingsPage: View {
         .navigationTitle(tr("Notifications"))
         .navigationBarTitleDisplayMode(.inline)
         .modifier(PopOnDeepLink(viewModel: viewModel))
+        .task {
+            if viewModel.socialEnabled, pushPrefs == nil {
+                pushPrefs = try? await viewModel.store.apiClient.fetchPushPreferences()
+            }
+        }
+    }
+
+    private func categoryTitle(_ id: NotificationCategoryId) -> String {
+        switch id {
+        case .friends: return "Friends"
+        case .leagues: return "Leagues"
+        case .duels: return "Duels"
+        case .streaks: return "Streaks"
+        case .raids: return "Raids"
+        }
+    }
+
+    private func categorySubtitle(_ id: NotificationCategoryId) -> String {
+        switch id {
+        case .friends: return "Friend requests and accepted requests."
+        case .leagues: return "Promotion, demotion and end-of-week reminders."
+        case .duels: return "Challenges, standings and results."
+        case .streaks: return "Streak invites, freezes and broken streaks."
+        case .raids: return "Boss phases, defeats and squad invites."
+        }
+    }
+}
+
+/// Drill-in for one push category: the master toggle mirrors the
+/// `push<Friends|Leagues|…>` preference, kind toggles write `disabledKinds`
+/// and are disabled while the category is off. Same model as the web
+/// push-settings card; category order comes from `NotificationCategories`.
+private struct PushCategorySettingsView: View {
+    @Bindable var viewModel: LukiAppViewModel
+    let category: NotificationCategory
+    @State private var prefs: PushPreferencesDto
+    @Environment(\.lukiLocale) private var tr
+
+    init(viewModel: LukiAppViewModel, category: NotificationCategory, prefs: PushPreferencesDto) {
+        self.viewModel = viewModel
+        self.category = category
+        _prefs = State(initialValue: prefs)
+    }
+
+    private var masterOn: Bool {
+        switch category.pref {
+        case .pushFriends: return prefs.friends
+        case .pushLeagues: return prefs.leagues
+        case .pushDuels: return prefs.duels
+        case .pushStreaks: return prefs.streaks
+        case .pushRaids: return prefs.raids
+        }
+    }
+
+    var body: some View {
+        List {
+            Section {
+                Toggle(tr("Allow Notifications"), isOn: Binding(
+                    get: { masterOn },
+                    set: { enabled in setMaster(enabled) }
+                ))
+                .tint(LukiColors.accent)
+                .accessibilityIdentifier("ios.profile.pushCategory.\(category.id.rawValue).master")
+            }
+            Section {
+                ForEach(category.kinds, id: \.self) { kind in
+                    Toggle(tr(Self.kindLabel(kind)), isOn: Binding(
+                        get: { masterOn && !prefs.disabledKinds.contains(kind.rawValue) },
+                        set: { enabled in toggleKind(kind, enabled: enabled) }
+                    ))
+                    .tint(LukiColors.accent)
+                    .disabled(!masterOn)
+                    .accessibilityIdentifier("ios.profile.pushKind.\(kind.rawValue)")
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle(tr(Self.categoryTitle(category.id)))
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func setMaster(_ enabled: Bool) {
+        var dto = UpdatePushPreferencesDto()
+        switch category.pref {
+        case .pushFriends: dto.friends = enabled; prefs.friends = enabled
+        case .pushLeagues: dto.leagues = enabled; prefs.leagues = enabled
+        case .pushDuels: dto.duels = enabled; prefs.duels = enabled
+        case .pushStreaks: dto.streaks = enabled; prefs.streaks = enabled
+        case .pushRaids: dto.raids = enabled; prefs.raids = enabled
+        }
+        Task { await send(dto) }
+    }
+
+    private func toggleKind(_ kind: SocialNotificationKind, enabled: Bool) {
+        var disabled = prefs.disabledKinds.filter { $0 != kind.rawValue }
+        if !enabled { disabled.append(kind.rawValue) }
+        prefs.disabledKinds = disabled
+        Task { await send(UpdatePushPreferencesDto(disabledKinds: disabled)) }
+    }
+
+    private func send(_ dto: UpdatePushPreferencesDto) async {
+        if let updated = try? await viewModel.store.apiClient.updatePushPreferences(dto) {
+            prefs = updated
+        }
+    }
+
+    private static func categoryTitle(_ id: NotificationCategoryId) -> String {
+        switch id {
+        case .friends: return "Friends"
+        case .leagues: return "Leagues"
+        case .duels: return "Duels"
+        case .streaks: return "Streaks"
+        case .raids: return "Raids"
+        }
+    }
+
+    /// English keys translated via `LukiStrings.german` — same labels as the
+    /// web `social.pushKinds` table.
+    static func kindLabel(_ kind: SocialNotificationKind) -> String {
+        switch kind {
+        case .FRIEND_REQUEST: return "Friend requests"
+        case .FRIEND_ACCEPTED: return "Accepted requests"
+        case .LEAGUE_PROMOTED: return "Promotions"
+        case .LEAGUE_DEMOTED: return "Demotions"
+        case .LEAGUE_ENDING: return "Week ending reminder"
+        case .DUEL_INVITE: return "Challenges"
+        case .DUEL_ACCEPTED: return "Accepted challenges"
+        case .DUEL_STANDINGS: return "Daily standings"
+        case .DUEL_RESULT: return "Results"
+        case .STREAK_INVITE: return "Streak invites"
+        case .STREAK_STARTED: return "Streak started"
+        case .STREAK_REMINDER: return "Sunday reminder"
+        case .STREAK_FROZEN: return "Freeze used"
+        case .STREAK_BROKEN: return "Streak reset"
+        case .RAID_SPAWNED: return "New boss"
+        case .RAID_PHASE: return "Boss enraged"
+        case .RAID_DEFEATED: return "Boss defeated"
+        case .RAID_ESCAPED: return "Boss escaped"
+        case .SQUAD_INVITE: return "Squad invites"
+        case .SQUAD_RAID_STARTED: return "Squad raid started"
+        }
     }
 }
 

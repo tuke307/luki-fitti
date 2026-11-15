@@ -1,6 +1,15 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
+import { ChevronRight } from 'lucide-react';
+import { Switch } from '@luki-fitti/ui/components/ui/switch';
+import type { NotificationKind } from '@luki-fitti/common/enums';
+import type { PushPreferencesDto } from '@luki-fitti/common/schemas';
+import {
+  NOTIFICATION_CATEGORIES,
+  type NotificationCategory,
+  type NotificationCategoryId,
+} from '@luki-fitti/common/notification-categories';
 import { pushApi } from '@/lib/social/social-api';
 import {
   enablePushOnThisDevice,
@@ -10,20 +19,33 @@ import {
   thisDeviceEndpoint,
 } from '@/lib/push/web-push';
 import { useLocale } from '@/providers/i18n/locale-context';
-import { SettingsButtonRow, SettingsSwitchRow } from '@/components/gym/settings/settings-row';
+import { SettingsButtonRow } from '@/components/gym/settings/settings-row';
+import { MobileSheet } from '../mobile-sheet';
+
+const CATEGORY_COPY: Record<
+  NotificationCategoryId,
+  {
+    label: (t: ReturnType<typeof useLocale>['t']) => string;
+    sub: (t: ReturnType<typeof useLocale>['t']) => string;
+  }
+> = {
+  friends: { label: (t) => t.social.pushFriendsLabel, sub: (t) => t.social.pushFriendsSub },
+  leagues: { label: (t) => t.social.pushLeaguesLabel, sub: (t) => t.social.pushLeaguesSub },
+  duels: { label: (t) => t.battle.pushDuelsLabel, sub: (t) => t.battle.pushDuelsSub },
+  streaks: { label: (t) => t.battle.pushStreaksLabel, sub: (t) => t.battle.pushStreaksSub },
+  raids: { label: (t) => t.raid.pushRaidsLabel, sub: (t) => t.raid.pushRaidsSub },
+};
 
 /**
- * Settings → Notifications: friend-push toggle plus the per-device Web Push
- * opt-in. The device button only appears when the API exposes a VAPID key and
- * the browser supports PushManager.
+ * Settings → Notifications: one row per notification category. The row's
+ * switch is the category master toggle; tapping the row body drills into a
+ * sheet with one toggle per kind (disabled while the category is off).
+ * Below sits the per-device Web Push opt-in.
  */
 export function PushSettingsCard() {
   const { t } = useLocale();
-  const [friends, setFriends] = useState<boolean | null>(null);
-  const [leagues, setLeagues] = useState<boolean | null>(null);
-  const [duels, setDuels] = useState<boolean | null>(null);
-  const [streaks, setStreaks] = useState<boolean | null>(null);
-  const [raids, setRaids] = useState<boolean | null>(null);
+  const [prefs, setPrefs] = useState<PushPreferencesDto | null>(null);
+  const [openCat, setOpenCat] = useState<NotificationCategory | null>(null);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [deviceEnabled, setDeviceEnabled] = useState(
     () => isWebPushSupported() && thisDeviceEndpoint() !== null,
@@ -33,13 +55,7 @@ export function PushSettingsCard() {
   useEffect(() => {
     let cancelled = false;
     void pushApi.preferences().then((res) => {
-      if (!cancelled && res.data) {
-        setFriends(res.data.friends);
-        setLeagues(res.data.leagues);
-        setDuels(res.data.duels);
-        setStreaks(res.data.streaks);
-        setRaids(res.data.raids);
-      }
+      if (!cancelled && res.data) setPrefs(res.data);
     });
     if (isWebPushSupported()) {
       void fetchPushConfig().then((config) => {
@@ -51,73 +67,63 @@ export function PushSettingsCard() {
     };
   }, []);
 
+  const setCategory = async (cat: NotificationCategory, enabled: boolean) => {
+    const key = cat.pref.replace('push', '').toLowerCase() as
+      'friends' | 'leagues' | 'duels' | 'streaks' | 'raids';
+    setPrefs((p) => (p ? { ...p, [key]: enabled } : p));
+    const res = await pushApi.updatePreferences({ [key]: enabled });
+    if (res.data) setPrefs(res.data);
+  };
+
+  const toggleKind = async (kind: NotificationKind, enabled: boolean) => {
+    if (!prefs) return;
+    const disabled = enabled
+      ? prefs.disabledKinds.filter((k) => k !== kind)
+      : [...new Set([...prefs.disabledKinds, kind])];
+    setPrefs({ ...prefs, disabledKinds: disabled });
+    const res = await pushApi.updatePreferences({ disabledKinds: disabled });
+    if (res.data) setPrefs(res.data);
+  };
+
   return (
     <>
-      {friends !== null && (
-        <SettingsSwitchRow
-          title={t.social.pushFriendsLabel}
-          subtitle={t.social.pushFriendsSub}
-          checked={friends}
-          onCheckedChange={async (enabled) => {
-            setFriends(enabled);
-            const res = await pushApi.updatePreferences({ friends: enabled });
-            if (res.data) setFriends(res.data.friends);
-          }}
-          data-testid="push-friends-switch"
-        />
-      )}
-      {leagues !== null && (
-        <SettingsSwitchRow
-          title={t.social.pushLeaguesLabel}
-          subtitle={t.social.pushLeaguesSub}
-          checked={leagues}
-          onCheckedChange={async (enabled) => {
-            setLeagues(enabled);
-            const res = await pushApi.updatePreferences({ leagues: enabled });
-            if (res.data) setLeagues(res.data.leagues);
-          }}
-          data-testid="push-leagues-switch"
-        />
-      )}
-      {duels !== null && (
-        <SettingsSwitchRow
-          title={t.battle.pushDuelsLabel}
-          subtitle={t.battle.pushDuelsSub}
-          checked={duels}
-          onCheckedChange={async (enabled) => {
-            setDuels(enabled);
-            const res = await pushApi.updatePreferences({ duels: enabled });
-            if (res.data) setDuels(res.data.duels);
-          }}
-          data-testid="push-duels-switch"
-        />
-      )}
-      {streaks !== null && (
-        <SettingsSwitchRow
-          title={t.battle.pushStreaksLabel}
-          subtitle={t.battle.pushStreaksSub}
-          checked={streaks}
-          onCheckedChange={async (enabled) => {
-            setStreaks(enabled);
-            const res = await pushApi.updatePreferences({ streaks: enabled });
-            if (res.data) setStreaks(res.data.streaks);
-          }}
-          data-testid="push-streaks-switch"
-        />
-      )}
-      {raids !== null && (
-        <SettingsSwitchRow
-          title={t.raid.pushRaidsLabel}
-          subtitle={t.raid.pushRaidsSub}
-          checked={raids}
-          onCheckedChange={async (enabled) => {
-            setRaids(enabled);
-            const res = await pushApi.updatePreferences({ raids: enabled });
-            if (res.data) setRaids(res.data.raids);
-          }}
-          data-testid="push-raids-switch"
-        />
-      )}
+      {prefs &&
+        NOTIFICATION_CATEGORIES.map((cat) => (
+          <CategoryRow
+            key={cat.id}
+            cat={cat}
+            title={CATEGORY_COPY[cat.id].label(t)}
+            subtitle={CATEGORY_COPY[cat.id].sub(t)}
+            enabled={prefs[cat.id]}
+            onOpen={() => setOpenCat(cat)}
+            onToggle={(enabled) => void setCategory(cat, enabled)}
+          />
+        ))}
+      <MobileSheet
+        open={openCat !== null}
+        onOpenChange={(open) => {
+          if (!open) setOpenCat(null);
+        }}
+        title={openCat ? CATEGORY_COPY[openCat.id].label(t) : ''}
+        hideCancel
+        confirm={{ label: t.common.done, onConfirm: () => setOpenCat(null) }}
+        data-testid="push-category-sheet"
+      >
+        {openCat && prefs && (
+          <ul className="divide-border/60 divide-y" data-testid="push-kind-list">
+            {openCat.kinds.map((kind) => (
+              <KindRow
+                key={kind}
+                kind={kind}
+                label={t.social.pushKinds[kind]}
+                checked={prefs[openCat.id] && !prefs.disabledKinds.includes(kind)}
+                disabled={!prefs[openCat.id]}
+                onToggle={(enabled) => void toggleKind(kind, enabled)}
+              />
+            ))}
+          </ul>
+        )}
+      </MobileSheet>
       {isWebPushSupported() && publicKey && !isIosStandaloneRequired() && !deviceEnabled && (
         <SettingsButtonRow
           title={busy ? '…' : t.social.pushEnable}
@@ -136,5 +142,80 @@ export function PushSettingsCard() {
         <p className="text-muted-foreground px-4 py-3 text-[0.8125rem]">{t.social.pushIosHint}</p>
       )}
     </>
+  );
+}
+
+/** Category row: the body drills into the kind sheet, the switch is the master toggle. */
+function CategoryRow({
+  cat,
+  title,
+  subtitle,
+  enabled,
+  onOpen,
+  onToggle,
+}: {
+  cat: NotificationCategory;
+  title: string;
+  subtitle: string;
+  enabled: boolean;
+  onOpen: () => void;
+  onToggle: (enabled: boolean) => void;
+}) {
+  const labelId = useId();
+  return (
+    <li className="before:bg-border relative not-first:before:absolute not-first:before:top-0 not-first:before:right-0 not-first:before:h-px not-first:before:left-4">
+      <div className="flex min-h-11 w-full items-center gap-3 px-4 py-2">
+        <button
+          type="button"
+          onClick={onOpen}
+          id={labelId}
+          className="focus-visible:ring-ring flex min-w-0 flex-1 items-center gap-3 rounded-md py-1 text-left text-[1.0625rem] leading-snug focus-visible:ring-2 focus-visible:outline-none"
+          data-testid={`push-${cat.id}-row`}
+        >
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-1">{title}</span>
+            <span className="text-muted-foreground block text-[0.8125rem]">{subtitle}</span>
+          </span>
+          <ChevronRight className="text-muted-foreground/70 h-4 w-4 shrink-0" aria-hidden="true" />
+        </button>
+        <Switch
+          checked={enabled}
+          onCheckedChange={onToggle}
+          aria-labelledby={labelId}
+          data-testid={`push-${cat.id}-switch`}
+        />
+      </div>
+    </li>
+  );
+}
+
+/** One notification-kind toggle inside a category sheet. */
+function KindRow({
+  kind,
+  label,
+  checked,
+  disabled,
+  onToggle,
+}: {
+  kind: NotificationKind;
+  label: string;
+  checked: boolean;
+  disabled: boolean;
+  onToggle: (enabled: boolean) => void;
+}) {
+  const labelId = useId();
+  return (
+    <li className="flex min-h-11 items-center gap-3 py-2">
+      <span id={labelId} className="min-w-0 flex-1 text-[0.9375rem]">
+        {label}
+      </span>
+      <Switch
+        checked={checked}
+        disabled={disabled}
+        onCheckedChange={onToggle}
+        aria-labelledby={labelId}
+        data-testid={`push-kind-${kind}`}
+      />
+    </li>
   );
 }

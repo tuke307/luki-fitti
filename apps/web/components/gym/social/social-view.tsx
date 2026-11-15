@@ -55,10 +55,19 @@ const UNREAD_POLL_MS = 60_000;
 export function SocialView({ section = null }: { section?: SocialSection }) {
   const { t, format } = useLocale();
   const { isAuthenticated, user } = useAuth();
+  // Deep-linked section — also driven from inside the tab (inbox row taps), so
+  // it lives in state and the prop only seeds/syncs it.
+  const [activeSection, setActiveSection] = useState<SocialSection>(section);
+  const [inboxOpen, setInboxOpen] = useState(section === 'inbox');
+  const [prevSection, setPrevSection] = useState(section);
+  if (section !== prevSection) {
+    setPrevSection(section);
+    setActiveSection(section);
+    if (section === 'inbox') setInboxOpen(true);
+  }
   const [profile, setProfile] = useState<SocialProfileDto | null>(null);
   const [lists, setLists] = useState<FriendListsDto | null>(null);
   const [unread, setUnread] = useState(0);
-  const [inboxOpen, setInboxOpen] = useState(section === 'inbox');
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [reportTarget, setReportTarget] = useState<SocialCardDto | null>(null);
   const [pendingResult, setPendingResult] = useState<LeaguePendingResultDto | null>(null);
@@ -146,14 +155,22 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
   }, [profile]);
 
   useEffect(() => {
-    if (section === 'friends' || section === 'requests') {
+    if (activeSection === 'friends' || activeSection === 'requests') {
       friendsAnchor.current?.scrollIntoView({ block: 'start' });
-    } else if (section === 'duels') {
+    } else if (activeSection === 'duels') {
       duelsAnchor.current?.scrollIntoView({ block: 'start' });
-    } else if (section === 'raids') {
+    } else if (activeSection === 'raids') {
       raidsAnchor.current?.scrollIntoView({ block: 'start' });
     }
-  }, [section]);
+  }, [activeSection]);
+
+  const navigateToSection = useCallback((target: SocialSection) => {
+    if (target === 'inbox') {
+      setInboxOpen(true);
+      return;
+    }
+    setActiveSection(target);
+  }, []);
 
   if (!isAuthenticated) {
     return (
@@ -390,6 +407,7 @@ export function SocialView({ section = null }: { section?: SocialSection }) {
           setInboxOpen(open);
           if (!open) setUnread(0);
         }}
+        onNavigate={navigateToSection}
       />
       <SocialOnboardingSheet
         open={onboardingOpen}

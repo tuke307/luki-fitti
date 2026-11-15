@@ -1,0 +1,132 @@
+{
+  "dailyCap": 3,
+  "categories": [
+    {
+      "id": "friends",
+      "pref": "pushFriends",
+      "kinds": ["FRIEND_REQUEST", "FRIEND_ACCEPTED"]
+    },
+    {
+      "id": "leagues",
+      "pref": "pushLeagues",
+      "kinds": ["LEAGUE_PROMOTED", "LEAGUE_DEMOTED", "LEAGUE_ENDING"]
+    },
+    {
+      "id": "duels",
+      "pref": "pushDuels",
+      "kinds": ["DUEL_INVITE", "DUEL_ACCEPTED", "DUEL_STANDINGS", "DUEL_RESULT"]
+    },
+    {
+      "id": "streaks",
+      "pref": "pushStreaks",
+      "kinds": [
+        "STREAK_INVITE",
+        "STREAK_STARTED",
+        "STREAK_REMINDER",
+        "STREAK_FROZEN",
+        "STREAK_BROKEN"
+      ]
+    },
+    {
+      "id": "raids",
+      "pref": "pushRaids",
+      "kinds": [
+        "RAID_SPAWNED",
+        "RAID_PHASE",
+        "RAID_DEFEATED",
+        "RAID_ESCAPED",
+        "SQUAD_INVITE",
+        "SQUAD_RAID_STARTED"
+      ]
+    }
+  ],
+  "capExemptKinds": [
+    "DUEL_INVITE",
+    "FRIEND_ACCEPTED",
+    "FRIEND_REQUEST",
+    "SQUAD_INVITE",
+    "STREAK_INVITE"
+  ],
+  "collapseKeys": [
+    {
+      "kind": "FRIEND_REQUEST",
+      "key": null
+    },
+    {
+      "kind": "FRIEND_ACCEPTED",
+      "key": null
+    },
+    {
+      "kind": "LEAGUE_PROMOTED",
+      "key": null
+    },
+    {
+      "kind": "LEAGUE_DEMOTED",
+      "key": null
+    },
+    {
+      "kind": "LEAGUE_ENDING",
+      "key": "league-ending:W1"
+    },
+    {
+      "kind": "DUEL_INVITE",
+      "key": null
+    },
+    {
+      "kind": "DUEL_ACCEPTED",
+      "key": null
+    },
+    {
+      "kind": "DUEL_STANDINGS",
+      "key": "duel-standings:D1"
+    },
+    {
+      "kind": "DUEL_RESULT",
+      "key": null
+    },
+    {
+      "kind": "STREAK_INVITE",
+      "key": null
+    },
+    {
+      "kind": "STREAK_STARTED",
+      "key": null
+    },
+    {
+      "kind": "STREAK_REMINDER",
+      "key": null
+    },
+    {
+      "kind": "STREAK_FROZEN",
+      "key": null
+    },
+    {
+      "kind": "STREAK_BROKEN",
+      "key": null
+    },
+    {
+      "kind": "RAID_SPAWNED",
+      "key": null
+    },
+    {
+      "kind": "RAID_PHASE",
+      "key": "raid-phase:R1"
+    },
+    {
+      "kind": "RAID_DEFEATED",
+      "key": null
+    },
+    {
+      "kind": "RAID_ESCAPED",
+      "key": null
+    },
+    {
+      "kind": "SQUAD_INVITE",
+      "key": null
+    },
+    {
+      "kind": "SQUAD_RAID_STARTED",
+      "key": null
+    }
+  ]
+}

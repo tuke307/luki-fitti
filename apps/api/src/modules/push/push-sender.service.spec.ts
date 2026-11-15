@@ -13,15 +13,19 @@ interface Device {
   locale: string;
 }
 
-function makePrisma(devices: Device[]) {
+function makePrisma(
+  devices: Device[],
+  kind = 'FRIEND_REQUEST',
+  notificationPayload: Record<string, unknown> = { url: '/social/friends' },
+) {
   const deleted: string[] = [];
   const prisma = {
     deleted,
     notification: {
       findUnique: async () => ({
         id: 'n1',
-        kind: 'FRIEND_REQUEST',
-        payload: { url: '/social/friends' },
+        kind,
+        payload: notificationPayload,
         actor: { username: 'lukas', name: 'Lukas Meier' },
         user: { pushDevices: devices },
       }),
@@ -40,7 +44,11 @@ function sender(
   deps: {
     apnsConfigured?: boolean;
     webPushConfigured?: boolean;
-    apnsSend?: (args: { token: string }) => Promise<ApnsResult>;
+    apnsSend?: (args: {
+      token: string;
+      body: string;
+      collapseKey: string | null;
+    }) => Promise<ApnsResult>;
     webPushSend?: (args: { endpoint: string; payload: string }) => Promise<void>;
   },
 ) {
@@ -191,6 +199,61 @@ describe('PushSenderService dead-token cleanup', () => {
     await svc.sendNotification('n1');
     assert.match(sentBody, /@lukas/);
     assert.doesNotMatch(sentBody, /Lukas Meier/);
+  });
+
+  it('sets aps thread-id to the category and apns-collapse-id to the collapse key', async () => {
+    const prisma = makePrisma([apnsDevice('d1')], 'DUEL_STANDINGS', {
+      duelId: 'd-42',
+      you: 1,
+      them: 2,
+      daysLeft: 3,
+      leading: false,
+    });
+    let seen: { body: string; collapseKey: string | null } | null = null;
+    const svc = sender(prisma, {
+      apnsConfigured: true,
+      apnsSend: async (args: { body: string; collapseKey: string | null }) => {
+        seen = args;
+        return { status: 200 };
+      },
+    });
+    await svc.sendNotification('n1');
+    const aps = (JSON.parse(seen!.body) as { aps: Record<string, unknown> }).aps;
+    assert.equal(aps['thread-id'], 'duels');
+    assert.equal(seen!.collapseKey, 'duel-standings:d-42');
+  });
+
+  it('sends no collapse id for kinds that never collapse', async () => {
+    const prisma = makePrisma([apnsDevice('d1')]);
+    let seen: { body: string; collapseKey: string | null } | null = null;
+    const svc = sender(prisma, {
+      apnsConfigured: true,
+      apnsSend: async (args: { body: string; collapseKey: string | null }) => {
+        seen = args;
+        return { status: 200 };
+      },
+    });
+    await svc.sendNotification('n1');
+    const aps = (JSON.parse(seen!.body) as { aps: Record<string, unknown> }).aps;
+    assert.equal(aps['thread-id'], 'friends');
+    assert.equal(seen!.collapseKey, null);
+  });
+
+  it('carries collapseKey in the Web Push payload when set', async () => {
+    const prisma = makePrisma([webDevice('d1')], 'RAID_PHASE', {
+      raidId: 'r-7',
+      bossSlug: 'core-kraken',
+      percent: 50,
+    });
+    let sent = '';
+    const svc = sender(prisma, {
+      webPushConfigured: true,
+      webPushSend: async ({ payload }) => {
+        sent = payload;
+      },
+    });
+    await svc.sendNotification('n1');
+    assert.equal((JSON.parse(sent) as { collapseKey?: string }).collapseKey, 'raid-phase:r-7');
   });
 
   it('deletes web devices missing keys without calling the transport', async () => {

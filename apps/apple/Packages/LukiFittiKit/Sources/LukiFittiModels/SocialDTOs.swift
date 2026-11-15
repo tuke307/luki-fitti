@@ -25,9 +25,29 @@ public enum ReportReason: String, Codable, Sendable, CaseIterable, Equatable, Ha
     case OTHER
 }
 
-public enum SocialNotificationKind: String, Codable, Sendable, Equatable, Hashable {
+/// Every `NotificationKind` the API can emit, in the server's enum order
+/// (mirrors `NOTIFICATION_CATEGORIES` in `@luki-fitti/common`).
+public enum SocialNotificationKind: String, Codable, Sendable, Equatable, Hashable, CaseIterable {
     case FRIEND_REQUEST
     case FRIEND_ACCEPTED
+    case LEAGUE_PROMOTED
+    case LEAGUE_DEMOTED
+    case LEAGUE_ENDING
+    case DUEL_INVITE
+    case DUEL_ACCEPTED
+    case DUEL_STANDINGS
+    case DUEL_RESULT
+    case STREAK_INVITE
+    case STREAK_STARTED
+    case STREAK_REMINDER
+    case STREAK_FROZEN
+    case STREAK_BROKEN
+    case RAID_SPAWNED
+    case RAID_PHASE
+    case RAID_DEFEATED
+    case RAID_ESCAPED
+    case SQUAD_INVITE
+    case SQUAD_RAID_STARTED
 }
 
 /// The `social` block of `GET /auth/me` — gates the Social tab and push features.
@@ -162,6 +182,8 @@ public struct PushPreferencesDto: Codable, Sendable, Equatable {
     public var duels: Bool
     public var streaks: Bool
     public var raids: Bool
+    /// Kinds muted individually inside an enabled category.
+    public var disabledKinds: [String]
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -170,14 +192,23 @@ public struct PushPreferencesDto: Codable, Sendable, Equatable {
         duels = try c.decodeIfPresent(Bool.self, forKey: .duels) ?? true
         streaks = try c.decodeIfPresent(Bool.self, forKey: .streaks) ?? true
         raids = try c.decodeIfPresent(Bool.self, forKey: .raids) ?? true
+        disabledKinds = try c.decodeIfPresent([String].self, forKey: .disabledKinds) ?? []
     }
 
-    public init(friends: Bool, leagues: Bool = true, duels: Bool = true, streaks: Bool = true, raids: Bool = true) {
+    public init(
+        friends: Bool,
+        leagues: Bool = true,
+        duels: Bool = true,
+        streaks: Bool = true,
+        raids: Bool = true,
+        disabledKinds: [String] = []
+    ) {
         self.friends = friends
         self.leagues = leagues
         self.duels = duels
         self.streaks = streaks
         self.raids = raids
+        self.disabledKinds = disabledKinds
     }
 }
 
@@ -187,12 +218,21 @@ public struct UpdatePushPreferencesDto: Encodable, Sendable {
     public var duels: Bool?
     public var streaks: Bool?
     public var raids: Bool?
-    public init(friends: Bool? = nil, leagues: Bool? = nil, duels: Bool? = nil, streaks: Bool? = nil, raids: Bool? = nil) {
+    public var disabledKinds: [String]?
+    public init(
+        friends: Bool? = nil,
+        leagues: Bool? = nil,
+        duels: Bool? = nil,
+        streaks: Bool? = nil,
+        raids: Bool? = nil,
+        disabledKinds: [String]? = nil
+    ) {
         self.friends = friends
         self.leagues = leagues
         self.duels = duels
         self.streaks = streaks
         self.raids = raids
+        self.disabledKinds = disabledKinds
     }
 }
 
@@ -221,6 +261,10 @@ public struct SocialNotificationDto: Codable, Sendable, Equatable, Identifiable 
     public var actor: SocialCardDto?
     /// String-valued payload entries only (`url` today); non-string values are dropped.
     public var payload: [String: String]
+    /// Server-rendered copy in the requested UI locale (falls back to the kind
+    /// when servers predate the fields).
+    public var title: String
+    public var body: String
     public var readAt: String?
     public var createdAt: String
 
@@ -229,6 +273,8 @@ public struct SocialNotificationDto: Codable, Sendable, Equatable, Identifiable 
         id = try c.decode(String.self, forKey: .id)
         kind = try c.decode(String.self, forKey: .kind)
         actor = try c.decodeIfPresent(SocialCardDto.self, forKey: .actor)
+        title = try c.decodeIfPresent(String.self, forKey: .title) ?? kind
+        body = try c.decodeIfPresent(String.self, forKey: .body) ?? ""
         readAt = try c.decodeIfPresent(String.self, forKey: .readAt)
         createdAt = try c.decode(String.self, forKey: .createdAt)
         let raw = try c.decodeIfPresent([String: JSONValue].self, forKey: .payload) ?? [:]

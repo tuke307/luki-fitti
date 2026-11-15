@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import type { NotificationKind } from '@luki-fitti/common/enums';
 import type {
   DeletePushDeviceDto,
   PushConfigDto,
@@ -83,6 +84,7 @@ export class PushService {
         pushDuels: true,
         pushStreaks: true,
         pushRaids: true,
+        pushDisabledKinds: true,
       },
     });
     return {
@@ -91,6 +93,7 @@ export class PushService {
       duels: prefs?.pushDuels ?? true,
       streaks: prefs?.pushStreaks ?? true,
       raids: prefs?.pushRaids ?? true,
+      disabledKinds: (prefs?.pushDisabledKinds ?? []) as unknown as NotificationKind[],
     };
   }
 
@@ -98,6 +101,8 @@ export class PushService {
     userId: string,
     dto: UpdatePushPreferencesDto,
   ): Promise<PushPreferencesDto> {
+    // Dedupe server-side: the array is a set of muted kinds, order is irrelevant.
+    const disabledKinds = dto.disabledKinds ? [...new Set(dto.disabledKinds)] : undefined;
     const prefs = await this.prisma.userPreferences.upsert({
       where: { userId },
       create: {
@@ -107,6 +112,7 @@ export class PushService {
         ...(dto.duels !== undefined ? { pushDuels: dto.duels } : {}),
         ...(dto.streaks !== undefined ? { pushStreaks: dto.streaks } : {}),
         ...(dto.raids !== undefined ? { pushRaids: dto.raids } : {}),
+        ...(disabledKinds !== undefined ? { pushDisabledKinds: disabledKinds } : {}),
       },
       update: {
         ...(dto.friends !== undefined ? { pushFriends: dto.friends } : {}),
@@ -114,6 +120,7 @@ export class PushService {
         ...(dto.duels !== undefined ? { pushDuels: dto.duels } : {}),
         ...(dto.streaks !== undefined ? { pushStreaks: dto.streaks } : {}),
         ...(dto.raids !== undefined ? { pushRaids: dto.raids } : {}),
+        ...(disabledKinds !== undefined ? { pushDisabledKinds: disabledKinds } : {}),
       },
       select: {
         pushFriends: true,
@@ -121,6 +128,7 @@ export class PushService {
         pushDuels: true,
         pushStreaks: true,
         pushRaids: true,
+        pushDisabledKinds: true,
       },
     });
     return {
@@ -129,6 +137,7 @@ export class PushService {
       duels: prefs.pushDuels,
       streaks: prefs.pushStreaks,
       raids: prefs.pushRaids,
+      disabledKinds: prefs.pushDisabledKinds as unknown as NotificationKind[],
     };
   }
 }

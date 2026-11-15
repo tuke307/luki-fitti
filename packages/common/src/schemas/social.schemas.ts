@@ -143,6 +143,8 @@ export const UpdatePushPreferencesSchema = z.object({
   duels: z.boolean().optional(),
   streaks: z.boolean().optional(),
   raids: z.boolean().optional(),
+  /** Kinds muted individually inside an enabled category (deduped server-side). */
+  disabledKinds: z.array(z.enum(NotificationKind)).max(50).optional(),
 });
 export type UpdatePushPreferencesDto = z.infer<typeof UpdatePushPreferencesSchema>;
 
@@ -152,6 +154,7 @@ export interface PushPreferencesDto {
   duels: boolean;
   streaks: boolean;
   raids: boolean;
+  disabledKinds: NotificationKind[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -161,12 +164,17 @@ export interface PushPreferencesDto {
 export const NotificationsQuerySchema = z.object({
   cursor: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
+  /** UI locale for the server-rendered title/body; falls back to the profile/device locale. */
+  locale: z.enum(['en', 'de']).optional(),
 });
 export type NotificationsQueryDto = z.infer<typeof NotificationsQuerySchema>;
 
 export interface NotificationDto {
   id: string;
   kind: NotificationKind;
+  /** Server-rendered text (same renderer as push) in the requested locale. */
+  title: string;
+  body: string;
   /** Resolved actor card; null for system notifications or blocked/deleted actors. */
   actor: SocialCardDto | null;
   payload: Record<string, unknown>;

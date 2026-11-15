@@ -35,8 +35,22 @@ from bleeding into the training partner:
 - **The workout flow stays calm.** No pop-ups, confetti or rank changes between sets. Points and
   raid damage appear once, on the summary after a workout is finished.
 - **One celebration per moment.** Each result (promotion, duel, boss kill) is celebrated once and
-  then becomes a quiet entry in history. Streaks and nudges never shame ("You lost your streak")
-  — they invite ("Train today to keep your 5-week streak with Anna").
+  then becomes a quiet entry in history.
+
+### Notification voice (since 2.0)
+
+Push notifications and the in-app inbox have their own voice: a mean friend who roasts you into
+training ("@fabi already did 2 workouts this week. You? 0. Loser."). It applies to everyone, in
+English and German, and light swearing is fine. The rules that keep it funny instead of hurtful:
+
+- **Mock the behaviour, never the person.** Laziness, excuses and the couch are fair game; body,
+  weight, food, looks, health and identity are not. No slurs.
+- **Only friends are named.** League and raid texts never mention other users; friends appear by
+  `@username`.
+- **Mean in the notification, calm in the app.** The voice stops at the push and the inbox
+  text; screens, the workout flow and the Watch keep the calm training-partner tone.
+- **Rare enough to stay funny.** At most 3 social pushes a day, every type can be switched off,
+  and lines rotate so the same joke doesn't repeat every week.
 
 ## Anti-references
 
