@@ -18,9 +18,6 @@ struct RaidsSection: View {
     var body: some View {
         if social.raids != nil {
             Group {
-                Label(tr("Raids"), systemImage: "bolt.shield")
-                    .font(.subheadline.weight(.semibold))
-                    .padding(.top, 4)
                 ForEach(social.shownRaids) { raid in
                     Button { detailRaid = raid } label: {
                         RaidCardView(raid: raid, reducedMotion: reduceMotion)
@@ -186,7 +183,7 @@ struct RaidCardView: View {
                     }
                     Spacer()
                     if raid.yourDamage > 0 {
-                        Text(tr("You dealt %@", formatDamage(raid.yourDamage)))
+                        Text(tr("You dealt %@ damage", formatDamage(raid.yourDamage)))
                             .font(.caption.weight(.medium))
                             .foregroundStyle(LukiColors.accent)
                     }
@@ -336,7 +333,7 @@ struct RaidDetailView: View {
     @ViewBuilder
     private func ownStanding(_ detail: RaidDetailDto) -> some View {
         HStack {
-            Text(tr("You dealt %@ · #%d", formatNumber(detail.you.damage), detail.you.rank ?? 0))
+            Text(tr("You dealt %@ damage · #%d", formatNumber(detail.you.damage), detail.you.rank ?? 0))
                 .font(.subheadline.weight(.semibold))
             Spacer()
         }
@@ -708,8 +705,8 @@ struct RaidCelebrationOverlay: View {
                     .multilineTextAlignment(.center)
                     Text(
                         result.crownRank != nil
-                            ? tr("You dealt %@ · #%d", formatNumber(result.you), result.crownRank!)
-                            : tr("You dealt %@", formatNumber(result.you))
+                            ? tr("You dealt %@ damage · #%d", formatNumber(result.you), result.crownRank!)
+                            : tr("You dealt %@ damage", formatNumber(result.you))
                     )
                     .font(.title3.monospacedDigit())
                     .foregroundStyle(.secondary)
