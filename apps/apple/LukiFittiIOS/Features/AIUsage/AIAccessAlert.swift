@@ -1,4 +1,5 @@
 import SwiftUI
+import LukiFittiModels
 import LukiFittiDesign
 
 /// Shared "AI needs setup" alert. Signed in without a key → "Add key" (OpenRouter copy);

@@ -254,8 +254,9 @@ public struct CheckInEditorView: View {
                         } label: { Label(tr("Remove photo"), systemImage: "trash") }
                     }
                     HStack(spacing: 10) {
+                        let pickTitle = photo == nil ? tr("Add photo") : tr("Replace photo")
                         PhotosPicker(selection: $photoPick, matching: .images) {
-                            Label(photo == nil ? tr("Add photo") : tr("Replace photo"), systemImage: "photo")
+                            Label(pickTitle, systemImage: "photo")
                         }
                         .buttonStyle(.bordered)
                         .accessibilityIdentifier("ios.progress.addPhoto.\(pickPose.rawValue)")

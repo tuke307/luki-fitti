@@ -137,15 +137,16 @@ describe('NotificationService.notify daily cap', () => {
       pushDayKey: new Date().toISOString().slice(0, 10),
       createdAt: new Date(),
     }));
-    // The fake day key must match the computed one: same local day in Berlin.
+    // The fake day key must match the computed one: the Berlin day the push lands,
+    // which during quiet hours is the next morning.
     const { svc, rows, jobs } = makeDeps({
       existing,
       device: { timeZone: 'Europe/Berlin' },
     });
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(
-      new Date(),
+    const deliveryDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(
+      new Date(Date.now() + quietHoursDelayMs(new Date(), 'Europe/Berlin')),
     );
-    for (const r of rows) r.pushDayKey = today;
+    for (const r of rows) r.pushDayKey = deliveryDay;
     await svc.notify('u1', NotificationKind.RAID_DEFEATED, null, {});
     assert.equal(jobs.length, 0);
     assert.equal(rows.length, PUSH_DAILY_CAP + 1);
