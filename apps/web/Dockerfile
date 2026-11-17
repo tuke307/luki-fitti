@@ -21,6 +21,12 @@ RUN yarn install
 
 COPY --from=prepare /app/out/full/ .
 
+# The docs site stages repo markdown at build time (apps/web `prebuild`), but the
+# pruned tree has no root docs/, README.md or CONTRIBUTING.md — copy them in.
+# .dockerignore excludes .git, so prepare-docs falls back to no commit dates.
+COPY --from=prepare /app/docs ./docs
+COPY --from=prepare /app/README.md /app/CONTRIBUTING.md ./
+
 ARG NEXT_PUBLIC_SITE_URL
 ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 

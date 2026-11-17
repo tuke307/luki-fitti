@@ -39,9 +39,16 @@ export class ApiResponseInterceptor<T> implements NestInterceptor<
   ApiResponse<T> | StreamableFile
 > {
   intercept(
-    _context: ExecutionContext,
+    context: ExecutionContext,
     next: CallHandler<T>,
   ): Observable<ApiResponse<T> | StreamableFile> {
+    // The public API (/api/v1) returns raw DTOs and its own error contract —
+    // no { success, data, error } envelope.
+    const request = context.switchToHttp().getRequest<{ originalUrl?: string }>();
+    if (request.originalUrl?.startsWith('/api/v1/')) {
+      return next.handle() as Observable<ApiResponse<T> | StreamableFile>;
+    }
+
     return next.handle().pipe(
       map((data) => {
         // Binary file streams (downloads) must bypass the JSON response envelope

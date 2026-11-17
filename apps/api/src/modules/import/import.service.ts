@@ -293,17 +293,23 @@ export class ImportService {
       file.sessions.map((s) => s.key),
     );
 
+    // Files produced by the app's own export carry the original row ids as keys, so a
+    // re-import must match on those raw keys as well as the deterministic import ids.
+    const customKeys = file.customExercises.map((e) => e.key);
+    const folderKeys = file.folders.map((f) => f.key);
+    const templateKeys = file.templates.map((t) => t.key);
+    const sessionKeys = file.sessions.map((s) => s.key);
     const [existingCustom, existingFolders, existingTemplates, existingSessions] =
       await Promise.all([
         this.existingIds(
           (ids) =>
             db.exercise.findMany({ where: { id: { in: ids }, userId }, select: { id: true } }),
-          customIds,
+          [...customIds, ...customKeys],
         ),
         this.existingIds(
           (ids) =>
             db.workoutFolder.findMany({ where: { id: { in: ids }, userId }, select: { id: true } }),
-          folderIds,
+          [...folderIds, ...folderKeys],
         ),
         this.existingIds(
           (ids) =>
@@ -311,7 +317,7 @@ export class ImportService {
               where: { id: { in: ids }, userId },
               select: { id: true },
             }),
-          templateIds,
+          [...templateIds, ...templateKeys],
         ),
         this.existingIds(
           (ids) =>
@@ -319,7 +325,7 @@ export class ImportService {
               where: { id: { in: ids }, userId },
               select: { id: true },
             }),
-          sessionIds,
+          [...sessionIds, ...sessionKeys],
         ),
       ]);
 
@@ -333,13 +339,15 @@ export class ImportService {
         primaryMuscleGroup: e.primaryMuscleGroup,
         exerciseType: e.exerciseType,
       });
-      if (!existingCustom.has(id)) newCustomExerciseKeys.add(e.key);
+      if (!existingCustom.has(id) && !existingCustom.has(e.key)) newCustomExerciseKeys.add(e.key);
     });
 
     const warnings: ImportWarningDto[] = [];
     const folderIdByKey = new Map<string, string>();
     const newFolderKeys = new Set<string>();
-    const candidateFolders = file.folders.filter((_, i) => !existingFolders.has(folderIds[i]!));
+    const candidateFolders = file.folders.filter(
+      (_, i) => !existingFolders.has(folderIds[i]!) && !existingFolders.has(file.folders[i]!.key),
+    );
     const sameName = candidateFolders.length
       ? await db.workoutFolder.findMany({
           where: { userId, name: { in: candidateFolders.map((f) => f.name) } },
@@ -348,7 +356,7 @@ export class ImportService {
       : [];
     const folderByName = new Map(sameName.map((f) => [f.name, f.id]));
     file.folders.forEach((f, i) => {
-      const id = folderIds[i]!;
+      const id = existingFolders.has(f.key) ? f.key : folderIds[i]!;
       const reused = existingFolders.has(id) ? undefined : folderByName.get(f.name);
       folderIdByKey.set(f.key, reused ?? id);
       if (reused) warnings.push({ code: 'FOLDER_NAME_REUSED', key: f.key, name: f.name });
@@ -356,9 +364,18 @@ export class ImportService {
     });
 
     const newTemplateKeys = new Set(
-      file.templates.filter((_, i) => !existingTemplates.has(templateIds[i]!)).map((t) => t.key),
+      file.templates
+        .filter(
+          (_, i) =>
+            !existingTemplates.has(templateIds[i]!) &&
+            !existingTemplates.has(file.templates[i]!.key),
+        )
+        .map((t) => t.key),
     );
-    const newSessions = file.sessions.filter((_, i) => !existingSessions.has(sessionIds[i]!));
+    const newSessions = file.sessions.filter(
+      (_, i) =>
+        !existingSessions.has(sessionIds[i]!) && !existingSessions.has(file.sessions[i]!.key),
+    );
     const newSessionKeys = new Set(newSessions.map((s) => s.key));
 
     const countSets = (sessions: ImportFile['sessions']) =>

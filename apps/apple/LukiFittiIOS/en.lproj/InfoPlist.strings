@@ -1,0 +1,2 @@
+/* Localized permission prompt (English, same wording as Info.plist). */
+"NSContactsUsageDescription" = "LukiFitti hashes the email addresses of your contacts on this device to find friends who already use the app. Only the hashes are sent — your contacts stay private.";

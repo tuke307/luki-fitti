@@ -21,9 +21,11 @@ import { bigVolume, formatVolume, unitLabel } from '@/lib/format/weight';
 import { PageTitle } from './page-title';
 import { WeightHomeCard } from './weight/weight-home-card';
 import { WeightView } from './weight/weight-view';
+import { SocialHomeCard } from './social/social-home-card';
+import type { SocialSection } from './social/social-view';
 
 interface HomeViewProps {
-  onNavigate: (tab: NavTab) => void;
+  onNavigate: (tab: NavTab, socialSection?: SocialSection) => void;
 }
 
 const MUSCLE_WEEK_OPTIONS = [4, 12] as const;
@@ -242,6 +244,11 @@ export function HomeView({ onNavigate }: HomeViewProps) {
       <WeightHomeCard
         onLogWeight={() => openWeightPage(true)}
         onOpen={() => openWeightPage(false)}
+      />
+
+      <SocialHomeCard
+        enabled={Boolean(user?.social?.enabled)}
+        onNavigate={(section) => onNavigate('social', section)}
       />
 
       <section

@@ -56,6 +56,7 @@ public struct HomeDashboardView: View {
                     .buttonStyle(.plain)
                 }
                 weekCard
+                socialCard
                 weeklyVolumeCard
                 musclesCard
             }
@@ -363,6 +364,58 @@ public struct HomeDashboardView: View {
             Text(tr("12 weeks")).tag(12)
         }
         .pickerStyle(.segmented)
+    }
+
+    // MARK: Social
+
+    /// Calm Social card: this week's line plus the next move — opens the Social
+    /// tab at the matching page, or the hub when there is no next move.
+    @ViewBuilder
+    private var socialCard: some View {
+        if viewModel.socialEnabled, let summary = viewModel.social.summary {
+            Button {
+                viewModel.openSocial(section: summary.nextMove.map(nextMoveSection))
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "person.2")
+                        .foregroundStyle(LukiColors.accent)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(tr("Social"))
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        if let week = summary.week {
+                            Text(tr("%d of %d workouts · %d EP", week.workouts, week.goal, week.points))
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.primary)
+                        }
+                        if let move = summary.nextMove {
+                            Text(nextMoveText(move, tr))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(14)
+            }
+            .buttonStyle(.plain)
+            .background(cardShape)
+            .accessibilityIdentifier("ios.home.socialCard")
+        }
+    }
+
+    /// Same mapping as the hub's `nextMoveRoute`, as deep-link targets.
+    private func nextMoveSection(_ move: NextMoveDto) -> SocialSectionTarget {
+        switch nextMoveRoute(move) {
+        case .friends: return .friends
+        case .duels: return .duels
+        case .raids: return .raids
+        case .league: return .league
+        case .trophies: return .friends
+        }
     }
 
     // MARK: Helpers

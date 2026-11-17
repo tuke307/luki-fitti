@@ -10,3 +10,5 @@ export const SERVER_API_URL = (
 
 export const DIRECT_API_URL = process.env.NEXT_PUBLIC_DIRECT_API_URL;
 export const JWT_SECRET = process.env.JWT_SECRET;
+/** Comma-separated Apple app ids (`TEAMID.bundleid`) for the AASA route handler. */
+export const APPLE_APP_IDS = process.env.APPLE_APP_IDS;

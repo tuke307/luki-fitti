@@ -124,3 +124,26 @@ describe('resolveActiveFeatures', () => {
     assert.equal(effectiveKeySource([]), null);
   });
 });
+
+describe('AuthGuard vs API keys', () => {
+  it('rejects lf_pat_ tokens before JWT verification', async () => {
+    const { AuthGuard } = await import('./auth.guard');
+    const prisma = {} as never;
+    const guard = new AuthGuard(prisma);
+    const ctx = {
+      switchToHttp: () => ({
+        getRequest: () => ({
+          headers: {
+            authorization: 'Bearer lf_pat_abc234de_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+          },
+          cookies: {},
+        }),
+      }),
+    } as unknown as ExecutionContext;
+    await assert.rejects(guard.canActivate(ctx), (e: unknown) => {
+      assert.ok(e instanceof Error);
+      assert.match((e as Error).message, /access token/i);
+      return true;
+    });
+  });
+});

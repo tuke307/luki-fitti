@@ -77,6 +77,8 @@ public struct WatchContextPayload: Codable, Sendable, Equatable {
     /// Workouts deleted on the iPhone, so a Watch that missed the delete message still drops them.
     /// Optional so payloads from older app versions still decode.
     public var deletedSessionIds: [String]?
+    /// League snapshot for the Watch home row; optional for older app versions.
+    public var social: SocialWatchSnapshot?
 
     public init(
         catalog: [ExerciseDto] = [],
@@ -90,7 +92,8 @@ public struct WatchContextPayload: Codable, Sendable, Equatable {
         authHandoffId: String? = nil,
         activeSession: WorkoutSessionDto? = nil,
         latestCompletedSession: WorkoutSessionDto? = nil,
-        deletedSessionIds: [String] = []
+        deletedSessionIds: [String] = [],
+        social: SocialWatchSnapshot? = nil
     ) {
         self.catalog = catalog
         self.folders = folders
@@ -104,6 +107,7 @@ public struct WatchContextPayload: Codable, Sendable, Equatable {
         self.activeSession = activeSession
         self.latestCompletedSession = latestCompletedSession
         self.deletedSessionIds = deletedSessionIds
+        self.social = social
     }
 }
 
@@ -114,17 +118,21 @@ public struct WatchAuthPayload: Codable, Sendable, Equatable {
     public var currentUser: UserDto?
     public var authTokens: AuthTokensDto?
     public var authHandoffId: String?
+    /// League snapshot for the Watch home row (PR 2); nil when social is off or unloaded.
+    public var social: SocialWatchSnapshot?
 
     public init(
         preferences: UserPreferencesDto,
         currentUser: UserDto? = nil,
         authTokens: AuthTokensDto? = nil,
-        authHandoffId: String? = nil
+        authHandoffId: String? = nil,
+        social: SocialWatchSnapshot? = nil
     ) {
         self.preferences = preferences
         self.currentUser = currentUser
         self.authTokens = authTokens
         self.authHandoffId = authHandoffId
+        self.social = social
     }
 }
 
@@ -351,7 +359,8 @@ public final class WatchSyncCoordinator: NSObject {
         authTokens: AuthTokensDto? = nil,
         authHandoffId: String? = nil,
         activeSession: WorkoutSessionDto? = nil,
-        deletedSessionIds: [String] = []
+        deletedSessionIds: [String] = [],
+        social: SocialWatchSnapshot? = nil
     ) {
         lastSyncedContextAt = Date()
         let payload = WatchContextPayload(
@@ -365,7 +374,8 @@ public final class WatchSyncCoordinator: NSObject {
             authTokens: authTokens,
             authHandoffId: authHandoffId,
             activeSession: activeSession,
-            deletedSessionIds: deletedSessionIds
+            deletedSessionIds: deletedSessionIds,
+            social: social
         )
 
         if let bridgeURL = Self.simulatorBridgeURL,
@@ -389,7 +399,8 @@ public final class WatchSyncCoordinator: NSObject {
             preferences: preferences,
             currentUser: currentUser,
             authTokens: authTokens,
-            authHandoffId: authHandoffId
+            authHandoffId: authHandoffId,
+            social: social
         )
         if let authData = try? JSONEncoder().encode(auth) {
             do {

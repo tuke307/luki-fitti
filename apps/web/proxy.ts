@@ -1,4 +1,10 @@
-import { APP_ORIGIN, SITE_HOSTNAMES, SITE_ORIGIN } from '@/lib/site/config';
+import {
+  APP_ORIGIN,
+  DOCS_HOSTNAMES,
+  DOCS_ORIGIN,
+  SITE_HOSTNAMES,
+  SITE_ORIGIN,
+} from '@/lib/site/config';
 import { NextResponse, type NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 import { JWT_SECRET, NODE_ENV } from './lib/config/env.config';
@@ -17,7 +23,10 @@ const SITE_PATHS: Record<string, string> = {
 
 const PUBLIC_FILE =
   /^\/(favicon\.ico|icon(-\d+)?\.svg|manifest\.(webmanifest|json)|sw\.js|robots\.txt|sitemap\.xml|workbox-.*\.js)$/;
-const PUBLIC_PREFIX = /^\/(_next|api|screens|images|fonts|og)\//;
+const PUBLIC_PREFIX = /^\/(_next|api|screens|images|fonts|og|openapi|\.well-known)\//;
+/** Shared public files on the docs host — robots.txt/sitemap.xml are docs-specific. */
+const DOCS_PUBLIC_FILE =
+  /^\/(favicon\.ico|icon(-\d+)?\.svg|manifest\.(webmanifest|json)|sw\.js|workbox-.*\.js)$/;
 
 function hostOf(req: NextRequest): string {
   return (
@@ -28,6 +37,10 @@ function hostOf(req: NextRequest): string {
 
 function isSiteHost(host: string): boolean {
   return SITE_HOSTNAMES.includes(host);
+}
+
+function isDocsHost(host: string): boolean {
+  return DOCS_HOSTNAMES.includes(host);
 }
 
 function isLocalDev(host: string): boolean {
@@ -53,8 +66,10 @@ async function hasValidAccessToken(token: string | undefined): Promise<boolean> 
 
 /**
  * Host router. `SITE_HOSTNAMES` (default luki-fitti.tony-luke.de) serves only the marketing
- * site via rewrites to /site/*; app paths there 308 to APP_ORIGIN. The app host serves the PWA
- * (noindex), keeps /admin auth, and redirects legal/site paths to the site host.
+ * site via rewrites to /site/*; app paths there 308 to APP_ORIGIN. `DOCS_HOSTNAMES`
+ * (docs.luki-fitti.tony-luke.de) serves the docs site by rewriting every path to the internal
+ * /docs tree; the internal tree on other hosts 308s to the docs origin. The app host serves
+ * the PWA (noindex), keeps /admin auth, and redirects legal/site paths to the site host.
  */
 const isProd = process.env.NODE_ENV === 'production';
 const REDIRECT_STATUS = isProd ? 308 : 307;
@@ -62,6 +77,21 @@ const REDIRECT_STATUS = isProd ? 308 : 307;
 export async function proxy(req: NextRequest) {
   const host = hostOf(req);
   const { pathname } = req.nextUrl;
+
+  if (isDocsHost(host)) {
+    // Canonical URLs have no /docs prefix — strip it if it appears.
+    if (pathname === '/docs' || pathname.startsWith('/docs/')) {
+      return NextResponse.redirect(new URL(pathname.slice(5) || '/', req.url), REDIRECT_STATUS);
+    }
+    // Shared assets (_next, images, icons…) pass through; robots.txt/sitemap.xml are
+    // docs-specific and route into the docs tree like every other path.
+    if (PUBLIC_PREFIX.test(pathname) || DOCS_PUBLIC_FILE.test(pathname)) {
+      return NextResponse.next();
+    }
+    const url = req.nextUrl.clone();
+    url.pathname = `/docs${pathname === '/' ? '' : pathname}`;
+    return NextResponse.rewrite(url);
+  }
 
   if (PUBLIC_PREFIX.test(pathname) || PUBLIC_FILE.test(pathname)) {
     return NextResponse.next();
@@ -90,6 +120,10 @@ export async function proxy(req: NextRequest) {
   }
 
   // App host (and everything else, e.g. localhost dev).
+  if (pathname === '/docs' || pathname.startsWith('/docs/')) {
+    return NextResponse.redirect(new URL(pathname.slice(5) || '/', DOCS_ORIGIN), REDIRECT_STATUS);
+  }
+
   if (pathname.startsWith('/site')) {
     // Dev: /site/* is directly reachable; in prod it only exists on the site host.
     if (isLocalDev(host)) return NextResponse.next();

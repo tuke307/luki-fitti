@@ -12,6 +12,10 @@ public struct ActiveSessionView: View {
     @State private var guideTargetId: String?
     @State private var showingAddExerciseSheet = false
     @State private var showingDiscardConfirmation = false
+    /// Server-computed EP for the finished session; replaces the local estimate once synced.
+    @State private var summaryServerEP: Int?
+    /// Active community raid for the "+N damage" summary line (PR 4).
+    @State private var summaryCommunityRaid: RaidDto?
     @ScaledMetric(relativeTo: .body) private var restIconSize: CGFloat = 30
 
     public init(viewModel: LukiAppViewModel) {
@@ -151,6 +155,17 @@ public struct ActiveSessionView: View {
             ) {
                 summaryStats(session)
             }
+            .task(id: session.id) {
+                guard viewModel.socialEnabled else { return }
+                if let week = try? await viewModel.store.apiClient.fetchPointsWeek(),
+                   let entry = week.sessions.first(where: { $0.sessionId == session.id })
+                {
+                    summaryServerEP = entry.points
+                }
+                if let raids = try? await viewModel.store.apiClient.fetchRaids() {
+                    summaryCommunityRaid = raids.community
+                }
+            }
 
             Button {
                 viewModel.showSummaryInHistory()
@@ -182,6 +197,34 @@ public struct ActiveSessionView: View {
         if let avgHr = session.avgHeartRateBpm {
             statPill(label: tr("Avg heart rate"), value: "\(avgHr) bpm")
         }
+        if viewModel.socialEnabled {
+            let points = EffortPoints.compute(session: session.effortPointsInput)
+            let ep = summaryServerEP ?? points.total
+            if ep > 0 {
+                statPill(label: tr("Effort points"), value: "+\(ep) EP")
+                    .accessibilityIdentifier("ios.session.summary.ep")
+            }
+            // "+N damage to <boss>": optimistic via the shared formula + the
+            // boss's weakTo, shown only while a community raid is active.
+            if let raid = summaryCommunityRaid, raid.status == .ACTIVE,
+               let boss = RaidBossCatalog.boss(slug: raid.bossSlug), ep > 0
+            {
+                let damage = RaidBossMath.raidDamage(
+                    points: ep, pointsByWeakSpot: points.pointsByWeakSpot, boss: boss)
+                let weakBonus = damage - ep
+                statPill(
+                    label: tr("Raid damage"),
+                    value: weakBonus > 0
+                        ? tr("%d dmg · %@ · 2× weak", damage, bossName(boss))
+                        : tr("%d dmg · %@", damage, bossName(boss))
+                )
+                .accessibilityIdentifier("ios.session.summary.raidDamage")
+            }
+        }
+    }
+
+    private func bossName(_ boss: RaidBossRecipe) -> String {
+        tr == .de ? boss.name.de : boss.name.en
     }
 
     private func statPill(label: String, value: String) -> some View {

@@ -31,6 +31,11 @@ export type {
   User,
   UserPreferences,
   RefreshToken,
+  Friendship,
+  FriendInvite,
+  Duel,
+  FriendStreak,
+  Trophy,
   Exercise,
   ExerciseMuscleGroup,
   ExerciseAlternative,
@@ -51,6 +56,7 @@ export type {
   MealEntry,
   MealItem,
   MealPhoto,
+  ApiKey,
 } from './generated/prisma/client';
 
 export {
@@ -72,4 +78,11 @@ export {
   MealType,
   FoodItemSource,
   MealAmountUnit,
+  Arena,
+  LeagueStage,
+  LeagueStageMode,
+  LeagueOutcome,
+  DuelStatus,
+  FriendStreakStatus,
+  TrophyKind,
 } from './generated/prisma/client';

@@ -469,6 +469,15 @@ public struct ProfileAndAuthView: View {
                 SettingsRow(tr("Data sources"), systemImage: "books.vertical", tint: LukiColors.accent)
             }
             .accessibilityIdentifier("ios.profile.row.dataSources")
+
+            if viewModel.store.currentUser != nil {
+                NavigationLink {
+                    ApiKeysView(viewModel: viewModel)
+                } label: {
+                    SettingsRow(tr("API keys"), systemImage: "key.horizontal", tint: LukiColors.setStretch)
+                }
+                .accessibilityIdentifier("ios.profile.row.apiKeys")
+            }
         } header: {
             Text(tr("Data"))
         }
@@ -521,7 +530,13 @@ private struct AccountSettingsPage: View {
     @Environment(\.lukiLocale) private var tr
     @Environment(\.dismiss) private var dismiss
 
+    /// Removes this device's APNs registration before tokens are cleared locally.
+    private func unregisterPush() async {
+        await viewModel.unregisterPushDevice()
+    }
+
     private func signOutLocally() {
+        viewModel.social.clearSignedInState()
         viewModel.store.clearAllLocalData()
         viewModel.nutrition.clear()
         viewModel.clearBodyWeightData()
@@ -529,6 +544,12 @@ private struct AccountSettingsPage: View {
 
     var body: some View {
         List {
+            if viewModel.socialEnabled {
+                // Re-init the field state once the social profile lands (it may still be
+                // loading when this page opens before the Social tab was visited).
+                SocialProfileSections(viewModel: viewModel)
+                    .id(viewModel.social.profile == nil)
+            }
             if let user = viewModel.store.currentUser {
                 Section {
                     VStack(alignment: .leading, spacing: 2) {
@@ -549,6 +570,7 @@ private struct AccountSettingsPage: View {
 
                     Button(tr("Sign Out"), role: .destructive) {
                         Task {
+                            await unregisterPush()
                             await viewModel.store.apiClient.logout()
                             signOutLocally()
                         }
@@ -566,6 +588,7 @@ private struct AccountSettingsPage: View {
                     ) {
                         Button(tr("Sign out of all devices"), role: .destructive) {
                             Task {
+                                await unregisterPush()
                                 await viewModel.store.apiClient.logoutAllDevices()
                                 signOutLocally()
                             }
@@ -615,6 +638,11 @@ private struct AccountSettingsPage: View {
         .listStyle(.insetGrouped)
         .navigationTitle(tr("Profile & account"))
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            if viewModel.socialEnabled, viewModel.social.profile == nil {
+                await viewModel.social.fetchProfile()
+            }
+        }
         .modifier(PopOnDeepLink(viewModel: viewModel))
         .onChange(of: viewModel.store.currentUser == nil) { _, signedOut in
             if signedOut { dismiss() }
@@ -833,6 +861,7 @@ private struct NotificationSettingsPage: View {
     @Bindable var viewModel: LukiAppViewModel
     let autosave: PreferencesAutosaver
     @State private var notificationStatus: String?
+    @State private var pushPrefs: PushPreferencesDto?
     @Environment(\.lukiLocale) private var tr
 
     var body: some View {
@@ -853,6 +882,30 @@ private struct NotificationSettingsPage: View {
                 Toggle(tr("Rest timer sound"), isOn: $store.preferences.restTimerSound)
                     .tint(LukiColors.accent)
                     .accessibilityIdentifier("ios.profile.restTimerSoundToggle")
+
+                if viewModel.socialEnabled {
+                    ForEach(NotificationCategories.all, id: \.id) { category in
+                        NavigationLink {
+                            if let prefs = pushPrefs {
+                                PushCategorySettingsView(
+                                    viewModel: viewModel,
+                                    category: category,
+                                    prefs: prefs
+                                )
+                            } else {
+                                ProgressView()
+                            }
+                        } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(tr(categoryTitle(category.id)))
+                                Text(tr(categorySubtitle(category.id)))
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .accessibilityIdentifier("ios.profile.\(category.id.rawValue)PushRow")
+                    }
+                }
 
                 Button {
                     Task {
@@ -881,6 +934,153 @@ private struct NotificationSettingsPage: View {
         .navigationTitle(tr("Notifications"))
         .navigationBarTitleDisplayMode(.inline)
         .modifier(PopOnDeepLink(viewModel: viewModel))
+        .task {
+            if viewModel.socialEnabled, pushPrefs == nil {
+                pushPrefs = try? await viewModel.store.apiClient.fetchPushPreferences()
+            }
+        }
+    }
+
+    private func categoryTitle(_ id: NotificationCategoryId) -> String {
+        switch id {
+        case .friends: return "Friends"
+        case .nudges: return "Friend nudges"
+        case .leagues: return "Leagues"
+        case .duels: return "Duels"
+        case .streaks: return "Streaks"
+        case .raids: return "Raids"
+        }
+    }
+
+    private func categorySubtitle(_ id: NotificationCategoryId) -> String {
+        switch id {
+        case .friends: return "Friend requests and accepted requests."
+        case .nudges: return "When a friend pulls ahead of you this week."
+        case .leagues: return "Promotion, demotion and end-of-week reminders."
+        case .duels: return "Challenges, standings and results."
+        case .streaks: return "Streak invites, freezes and broken streaks."
+        case .raids: return "Boss phases, defeats and squad invites."
+        }
+    }
+}
+
+/// Drill-in for one push category: the master toggle mirrors the
+/// `push<Friends|Leagues|…>` preference, kind toggles write `disabledKinds`
+/// and are disabled while the category is off. Same model as the web
+/// push-settings card; category order comes from `NotificationCategories`.
+private struct PushCategorySettingsView: View {
+    @Bindable var viewModel: LukiAppViewModel
+    let category: NotificationCategory
+    @State private var prefs: PushPreferencesDto
+    @Environment(\.lukiLocale) private var tr
+
+    init(viewModel: LukiAppViewModel, category: NotificationCategory, prefs: PushPreferencesDto) {
+        self.viewModel = viewModel
+        self.category = category
+        _prefs = State(initialValue: prefs)
+    }
+
+    private var masterOn: Bool {
+        switch category.pref {
+        case .pushFriends: return prefs.friends
+        case .pushNudges: return prefs.nudges
+        case .pushLeagues: return prefs.leagues
+        case .pushDuels: return prefs.duels
+        case .pushStreaks: return prefs.streaks
+        case .pushRaids: return prefs.raids
+        }
+    }
+
+    var body: some View {
+        List {
+            Section {
+                Toggle(tr("Allow Notifications"), isOn: Binding(
+                    get: { masterOn },
+                    set: { enabled in setMaster(enabled) }
+                ))
+                .tint(LukiColors.accent)
+                .accessibilityIdentifier("ios.profile.pushCategory.\(category.id.rawValue).master")
+            }
+            Section {
+                ForEach(category.kinds, id: \.self) { kind in
+                    Toggle(tr(Self.kindLabel(kind)), isOn: Binding(
+                        get: { masterOn && !prefs.disabledKinds.contains(kind.rawValue) },
+                        set: { enabled in toggleKind(kind, enabled: enabled) }
+                    ))
+                    .tint(LukiColors.accent)
+                    .disabled(!masterOn)
+                    .accessibilityIdentifier("ios.profile.pushKind.\(kind.rawValue)")
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle(tr(Self.categoryTitle(category.id)))
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func setMaster(_ enabled: Bool) {
+        var dto = UpdatePushPreferencesDto()
+        switch category.pref {
+        case .pushFriends: dto.friends = enabled; prefs.friends = enabled
+        case .pushNudges: dto.nudges = enabled; prefs.nudges = enabled
+        case .pushLeagues: dto.leagues = enabled; prefs.leagues = enabled
+        case .pushDuels: dto.duels = enabled; prefs.duels = enabled
+        case .pushStreaks: dto.streaks = enabled; prefs.streaks = enabled
+        case .pushRaids: dto.raids = enabled; prefs.raids = enabled
+        }
+        Task { await send(dto) }
+    }
+
+    private func toggleKind(_ kind: SocialNotificationKind, enabled: Bool) {
+        var disabled = prefs.disabledKinds.filter { $0 != kind.rawValue }
+        if !enabled { disabled.append(kind.rawValue) }
+        prefs.disabledKinds = disabled
+        Task { await send(UpdatePushPreferencesDto(disabledKinds: disabled)) }
+    }
+
+    private func send(_ dto: UpdatePushPreferencesDto) async {
+        if let updated = try? await viewModel.store.apiClient.updatePushPreferences(dto) {
+            prefs = updated
+        }
+    }
+
+    private static func categoryTitle(_ id: NotificationCategoryId) -> String {
+        switch id {
+        case .friends: return "Friends"
+        case .nudges: return "Friend nudges"
+        case .leagues: return "Leagues"
+        case .duels: return "Duels"
+        case .streaks: return "Streaks"
+        case .raids: return "Raids"
+        }
+    }
+
+    /// English keys translated via `LukiStrings.german` — same labels as the
+    /// web `social.pushKinds` table.
+    static func kindLabel(_ kind: SocialNotificationKind) -> String {
+        switch kind {
+        case .FRIEND_REQUEST: return "Friend requests"
+        case .FRIEND_ACCEPTED: return "Accepted requests"
+        case .LEAGUE_PROMOTED: return "Promotions"
+        case .LEAGUE_DEMOTED: return "Demotions"
+        case .LEAGUE_ENDING: return "Week ending reminder"
+        case .DUEL_INVITE: return "Challenges"
+        case .DUEL_ACCEPTED: return "Accepted challenges"
+        case .DUEL_STANDINGS: return "Daily standings"
+        case .DUEL_RESULT: return "Results"
+        case .STREAK_INVITE: return "Streak invites"
+        case .STREAK_STARTED: return "Streak started"
+        case .STREAK_REMINDER: return "Sunday reminder"
+        case .STREAK_FROZEN: return "Freeze used"
+        case .STREAK_BROKEN: return "Streak reset"
+        case .RAID_SPAWNED: return "New boss"
+        case .RAID_PHASE: return "Boss enraged"
+        case .RAID_DEFEATED: return "Boss defeated"
+        case .RAID_ESCAPED: return "Boss escaped"
+        case .SQUAD_INVITE: return "Squad invites"
+        case .SQUAD_RAID_STARTED: return "Squad raid started"
+        case .FRIEND_PULLED_AHEAD: return "Friend pulled ahead"
+        }
     }
 }
 

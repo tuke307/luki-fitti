@@ -2,9 +2,14 @@ name: CI
 
 on:
   pull_request:
+    # Stacked feature PRs (e.g. feat/social-2-leagues → feat/social-2.0) get the same
+    # lint, test, build and e2e gates as PRs into develop.
     branches:
       - develop
       - main
+      - 'feat/**'
+      - 'fix/**'
+      - 'release/**'
   workflow_dispatch:
 
 permissions:
@@ -22,7 +27,7 @@ jobs:
     if: github.base_ref == 'main'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -62,9 +67,9 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: yarn
@@ -82,16 +87,17 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: yarn
 
       - run: yarn install --frozen-lockfile
 
-      - run: yarn turbo run build --filter='./packages/*'
+      # The API build lets app.module.boot.spec.ts check the full DI graph instead of skipping.
+      - run: yarn turbo run build --filter='./packages/*' --filter=@luki-fitti/api
 
       - run: yarn turbo run test --filter='!@luki-fitti/apple'
 
@@ -133,9 +139,9 @@ jobs:
     env:
       CI: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: yarn
@@ -146,6 +152,7 @@ jobs:
         run: |
           JWT_SECRET_VALUE="$(openssl rand -hex 32)"
           JWT_REFRESH_SECRET_VALUE="$(openssl rand -hex 32)"
+          API_KEY_PEPPER_VALUE="$(openssl rand -hex 32)"
 
           cat > apps/api/.env.local <<EOF
           API_PORT=3001
@@ -156,6 +163,7 @@ jobs:
           ACCESS_TOKEN_EXPIRY_MS=900000
           REFRESH_TOKEN_EXPIRY_MS=7776000000
           REFRESH_TOKEN_REUSE_GRACE_MS=30000
+          API_KEY_PEPPER=${API_KEY_PEPPER_VALUE}
           DATABASE_URL=postgresql://postgres:postgres@localhost:5432/luki_fitti
           FRONTEND_URL=http://localhost:3000
           REDIS_URL=redis://localhost:6379
@@ -184,6 +192,11 @@ jobs:
           NEXT_PUBLIC_SITE_URL=http://localhost:3000
           JWT_SECRET=${JWT_SECRET_VALUE}
           MAILPIT_URL=http://localhost:8025
+          NEXT_PUBLIC_SITE_HOSTNAMES=site.localhost:3000
+          NEXT_PUBLIC_DOCS_HOSTNAMES=docs.localhost:3000
+          NEXT_PUBLIC_SITE_ORIGIN=http://site.localhost:3000
+          NEXT_PUBLIC_DOCS_ORIGIN=http://docs.localhost:3000
+          NEXT_PUBLIC_APP_ORIGIN=http://localhost:3000
           EOF
 
           cat > apps/email-worker/.env.local <<EOF
@@ -265,7 +278,7 @@ jobs:
 
       - name: Upload Playwright artifacts
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: |
@@ -276,7 +289,7 @@ jobs:
   apple:
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - run: swift build --package-path apps/apple/Packages/LukiFittiKit
 

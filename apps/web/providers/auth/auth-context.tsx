@@ -4,6 +4,7 @@ import React, { createContext, useState, useEffect, ReactNode, useContext } from
 import { api, ApiClientError } from '@/lib/api';
 import { trackEvent } from '@/lib/analytics/track';
 import { clearAllLocalData } from '@/lib/offline/offline-store';
+import { disablePushOnThisDevice } from '@/lib/push/web-push';
 import type { RegisterDto, UpdatePreferencesDto, UserDto } from '@luki-fitti/common/schemas';
 import {
   GUEST_USER_ID,
@@ -247,6 +248,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const clearSignedInState = async () => {
+    await disablePushOnThisDevice().catch(() => undefined);
     await clearAllLocalData().catch(() => undefined);
     localStorage.removeItem('luki_cached_user_profile');
     setUser(loadGuestUser());

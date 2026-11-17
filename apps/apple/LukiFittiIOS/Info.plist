@@ -25,6 +25,8 @@
     <string>LukiFitti reads your live Heart Rate and Active Energy Burned during workouts to track set recovery and training load, reads your body weight so weigh-ins from your scale appear in your weight trend and improve calorie estimates, and reads workouts and active energy from other apps (e.g. Strava, Garmin) to include them in your calories burned.</string>
     <key>NSHealthUpdateUsageDescription</key>
     <string>LukiFitti saves your completed strength and stretching workouts to Apple Health to close your Move and Exercise rings, and saves the weigh-ins you log in LukiFitti as body weight.</string>
+    <key>NSContactsUsageDescription</key>
+    <string>LukiFitti hashes the email addresses of your contacts on this device to find friends who already use the app. Only the hashes are sent — your contacts stay private.</string>
     <key>NSCameraUsageDescription</key>
     <string>LukiFitti uses the camera when you photograph a meal so it can estimate the foods and calories.</string>
     <key>UILaunchScreen</key>

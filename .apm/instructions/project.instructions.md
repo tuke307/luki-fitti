@@ -9,6 +9,8 @@ description: 'Project orientation for luki-fitti — what the product is, monore
 
 Offline-first workout tracker (`luki-fitti`) for Web (PWA), iPhone and Apple Watch: workouts with a rest timer and progression suggestions, stretching routines, a training diary, calorie tracking with opt-in AI (OpenRouter), an admin portal, and data import (`luki-fitti-import@1`, GymLife / Alpha Progression converters).
 
+This codebase is yours: what it's for and how it's built are your call, and you'll keep building on it.
+
 ## Monorepo map
 
 - `apps/api` (`@luki-fitti/api`) — NestJS 12 REST API (Express 5). Domain modules under `src/modules/` (`activity`, `admin`, `ai`, `analytics`, `app-settings`, `auth`, `body-weight`, `bullmq`, `database`, `email`, `email-template`, `exercise`, `health`, `import`, `nutrition`, `session`, `storage`, `stretching`, `web-analytics`, `workout`). Listens on port 3001.
@@ -82,6 +84,32 @@ Offline-first workout tracker (`luki-fitti`) for Web (PWA), iPhone and Apple Wat
   - `LukiFittiDesign/LukiStrings.swift` is a dictionary literal, so a duplicate key crashes the app at runtime. Grep for a key before adding it. `LukiStringsTests` checks that each German string keeps the same `%d`/`%@` placeholders as its English key.
   - Parallel builds or tests need separate `--scratch-path` (SwiftPM) and `-derivedDataPath` (xcodebuild) directories.
   - `LukiFittiStoreTests.BodyWeightStoreTests.testGuestWeighInsStayLocalQueueAndPersist` already fails on `main`, and its crash stops the rest of that suite. Run `--filter LukiFittiDomainTests` to check domain changes.
+
+## Documentation conventions
+
+- Lasting decisions become an ADR in `docs/adr/` (short MADR, indexed in `docs/adr/README.md`).
+- Branch plans and specs go in `docs/plans/`; delete them before opening the PR into `develop`.
+
+## Pitfalls
+
+- Squash merges of stacked PRs cause conflicts in the next PR. After a squash, verify the
+  squashed tree equals the old head (`git diff <old-head> <squash>` is empty), merge the new
+  base in with `--no-ff`, resolve with `--ours`, then check the merge added nothing
+  unexpected. Never force-push.
+- Always use the repo's own `node_modules/.bin/prettier`; a globally resolved prettier may
+  format differently and fail `format:check`. Run `yarn turbo run lint --continue` to see
+  every failing workspace, not just the first.
+- NestJS DI: never `import type` a class that gets injected — it compiles but crashes at
+  boot, or a `@Optional()` dependency silently becomes `undefined`. Tool classes in
+  `apps/mcp-server` need explicit `@Inject(...)`, because tsx drops `design:paramtypes`.
+- `next build` typechecks `*.spec.ts` files — implicit `any` there breaks the web build.
+- `gh pr create` bodies with apostrophes inside `$(cat <<'EOF')` break bash parsing; write
+  the body to a file and use `--body-file`.
+- SceneKit `eulerAngles` composes in the opposite order from three.js `XYZ`; use matrices
+  and parity tests for geometry shared across platforms.
+- `POST /auth/login` allows 10 requests per 10 minutes per IP and the counter is in memory;
+  e2e specs sign seeded users in through a minted session helper, never through repeated
+  real logins, and never relax the throttle.
 
 ## Agent Instructions (APM)
 

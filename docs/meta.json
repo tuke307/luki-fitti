@@ -1,0 +1,23 @@
+{
+  "title": "LukiFitti",
+  "pages": [
+    "index",
+    "---Guides---",
+    "import-format",
+    "training-data-import",
+    "gymlife-import",
+    "alpha-progression-import",
+    "mci-import",
+    "public-api",
+    "api-reference",
+    "---App & platform---",
+    "pwa-setup-and-architecture",
+    "exercise-catalog",
+    "admin-ai-nutrition",
+    "app-store-release",
+    "release",
+    "---Project---",
+    "contributing",
+    "adr"
+  ]
+}

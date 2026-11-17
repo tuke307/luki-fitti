@@ -1,6 +1,6 @@
 lockfile_version: '1'
-generated_at: '2026-11-08T16:22:57.937764+00:00'
-apm_version: 0.35.0
+generated_at: '2026-11-15T17:53:35.666287+00:00'
+apm_version: 0.35.1
 dependencies:
 - repo_url: dickwu/apple-design-skill
   name: apple-design
@@ -1141,7 +1141,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:d38b90d9da6f2fdad998275c03126f6a90d30b20682ffc8e51cf220b7d4efc44
+  content_hash: sha256:bde6573ccdd35b46e15dbfd7172b81ad8a9d98f890f7981fbf603bc8f74ab0aa
 - kind: project-relative
   target: claude
   value: .claude/rules/reactjs.md
@@ -3192,7 +3192,6 @@ deployments:
   scope: project
   owners:
   - nextlevelbuilder/ui-ux-pro-max-skill/.claude/skills/ui-ux-pro-max
-  - .
   active_owner: nextlevelbuilder/ui-ux-pro-max-skill/.claude/skills/ui-ux-pro-max
   content_hash: null
 - kind: project-relative
@@ -5569,7 +5568,6 @@ deployments:
   scope: project
   owners:
   - nextlevelbuilder/ui-ux-pro-max-skill/.claude/skills/ui-ux-pro-max
-  - .
   active_owner: nextlevelbuilder/ui-ux-pro-max-skill/.claude/skills/ui-ux-pro-max
   content_hash: null
 - kind: project-relative
@@ -5976,7 +5974,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:82c191a40fca2d17eea7c6c118b2a6bbf253b907ea6d88146cae9227c24480d7
+  content_hash: sha256:ee74745d2bec0ecee300472ff43c8388972aa72d5ae745e7506c356bb0b60eba
 - kind: project-relative
   target: copilot
   value: .github/instructions/reactjs.instructions.md
@@ -6037,7 +6035,7 @@ local_deployed_file_hashes:
   .claude/rules/nestjs.md: sha256:a3b8e1e322128e42c4df55405ffa9215ec4393cc0623770648f48b70c8382e96
   .claude/rules/nextjs-tailwind.md: sha256:3c141570a0895c9844d5c45fdbb6afce9b550c2d04b70f9818e6f8b1da45bf6a
   .claude/rules/nextjs.md: sha256:77dc7629c26081f27bba0bef3ee2c4667e852578403208215a0b40244f24c1d2
-  .claude/rules/project.md: sha256:d38b90d9da6f2fdad998275c03126f6a90d30b20682ffc8e51cf220b7d4efc44
+  .claude/rules/project.md: sha256:bde6573ccdd35b46e15dbfd7172b81ad8a9d98f890f7981fbf603bc8f74ab0aa
   .claude/rules/reactjs.md: sha256:a38734c67a5ffe359c740136cb430e9e3897dc4327c8d192840f27fadd94fab6
   .claude/rules/security-and-owasp.md: sha256:70d89a747d26467aebd9ee57011d5474d92eef11763feacb75bca078d430b73b
   .claude/rules/typescript-5-es2022.md: sha256:608a027d3c1d31fd67ca62dda97472d79c504bca31cfbc46d20bd41c3f6e294c
@@ -6046,7 +6044,7 @@ local_deployed_file_hashes:
   .github/instructions/nestjs.instructions.md: sha256:8920c88accf66d889e955271e1cfb2faa5b4cf0cadd926521959758c7eac407d
   .github/instructions/nextjs-tailwind.instructions.md: sha256:f664aed1749ff7f5c220c3222dc9766c16903d02a7a4c07f152095b88c6f89b2
   .github/instructions/nextjs.instructions.md: sha256:3f4ae9da04edb5467de9d2ac18dac4440dc608de2a492f44c115b1ee3915cfba
-  .github/instructions/project.instructions.md: sha256:82c191a40fca2d17eea7c6c118b2a6bbf253b907ea6d88146cae9227c24480d7
+  .github/instructions/project.instructions.md: sha256:ee74745d2bec0ecee300472ff43c8388972aa72d5ae745e7506c356bb0b60eba
   .github/instructions/reactjs.instructions.md: sha256:0b435067818457b041ba5851c2193d4cac3b34e74125013edae139428a97da97
   .github/instructions/security-and-owasp.instructions.md: sha256:bac0e3e3d77ade85d3dac02bb69a59ac827f5a728a7befaad245412f6ed0ec85
   .github/instructions/typescript-5-es2022.instructions.md: sha256:393392a9a1637b4651e2f3dee767b91548bba68dc93fbaab069018fff559fd9a
