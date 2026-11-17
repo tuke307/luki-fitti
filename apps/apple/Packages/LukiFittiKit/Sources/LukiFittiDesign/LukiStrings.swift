@@ -1187,8 +1187,8 @@ public enum LukiStrings {
         "Start this week's raid": "Raid dieser Woche starten",
         "Invite a friend first": "Lade zuerst einen Freund ein",
         "Top damage dealers": "Top-Schadensmacher",
-        "You dealt %@": "Du hast %@ verursacht",
-        "You dealt %@ · #%d": "Du hast %@ verursacht · #%d",
+        "You dealt %@ damage": "Du hast %@ Schaden verursacht",
+        "You dealt %@ damage · #%d": "Du hast %@ Schaden verursacht · #%d",
         "from @%@": "von @%@",
         "owner": "Owner",
 
