@@ -355,7 +355,7 @@ public struct ProgressTargetFlowView: View {
             step = .consent
             return
         }
-        guard let photo = refPhoto, let goal, let horizon else { return }
+        guard refPhoto != nil, let goal, let horizon else { return }
         if refImage == nil { await loadRef() }
         guard let refImage,
               let jpeg = downscaledJpeg(refImage) else {

@@ -151,10 +151,8 @@ struct SocialProfileSections: View {
                     social: social,
                     size: 52
                 )
-                PhotosPicker(selection: $pickedPhoto, matching: .images) {
-                    Text(tr("Change photo"))
-                }
-                .accessibilityIdentifier("ios.social.changePhotoButton")
+                PhotosPicker(tr("Change photo"), selection: $pickedPhoto, matching: .images)
+                    .accessibilityIdentifier("ios.social.changePhotoButton")
                 if social.profile?.avatarUrl != nil {
                     Button(tr("Remove photo"), role: .destructive) {
                         Task {

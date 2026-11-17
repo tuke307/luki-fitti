@@ -1,4 +1,5 @@
 import SwiftUI
+import LukiFittiModels
 import LukiFittiDesign
 import LukiFittiDomain
 
