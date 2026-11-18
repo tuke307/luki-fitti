@@ -1211,6 +1211,8 @@ export const en = {
     defeatSubNoRank: 'You dealt {points} damage',
     crownBadge: 'Top {tier}',
     finalBlowBadge: 'Final blow',
+    enraged: 'Enraged!',
+    finalBlow: 'Final blow!',
     difficultyLabel: 'Difficulty',
     diffNORMAL: 'Normal',
     diffHARD: 'Hard',

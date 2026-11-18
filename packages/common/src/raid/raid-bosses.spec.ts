@@ -5,6 +5,7 @@ import {
   RAID_BOSSES,
   bossBounds,
   bossForWeek,
+  raidHitMoment,
   raidPhaseFor,
   validateBossRecipe,
   type RaidBoss,
@@ -141,5 +142,106 @@ describe('raidPhaseFor', () => {
     assert.equal(raidPhaseFor(1600, 2000), 3);
     assert.equal(raidPhaseFor(2000, 2000), 3);
     assert.equal(raidPhaseFor(0, 0), 0); // degenerate input
+  });
+});
+
+describe('raidHitMoment', () => {
+  it('adds the hit on top when not yet applied', () => {
+    const m = raidHitMoment({
+      raidDamage: 500,
+      maxHp: 1000,
+      hit: 100,
+      weakBonus: 0,
+      alreadyApplied: false,
+    });
+    assert.equal(m.beforeDamage, 500);
+    assert.equal(m.afterDamage, 600);
+    assert.equal(m.hit, 100);
+    assert.equal(m.weakBonus, 0);
+  });
+
+  it('subtracts the hit when already applied', () => {
+    const m = raidHitMoment({
+      raidDamage: 500,
+      maxHp: 1000,
+      hit: 100,
+      weakBonus: 0,
+      alreadyApplied: true,
+    });
+    assert.equal(m.beforeDamage, 400);
+    assert.equal(m.afterDamage, 500);
+  });
+
+  it('clamps the before damage at 0 when already applied', () => {
+    const m = raidHitMoment({
+      raidDamage: 50,
+      maxHp: 1000,
+      hit: 100,
+      weakBonus: 0,
+      alreadyApplied: true,
+    });
+    assert.equal(m.beforeDamage, 0);
+    assert.equal(m.afterDamage, 50);
+  });
+
+  it('clamps the after damage at maxHp', () => {
+    const m = raidHitMoment({
+      raidDamage: 950,
+      maxHp: 1000,
+      hit: 100,
+      weakBonus: 0,
+      alreadyApplied: false,
+    });
+    assert.equal(m.beforeDamage, 950);
+    assert.equal(m.afterDamage, 1000);
+    assert.equal(m.finishes, true);
+  });
+
+  it('clamps the before damage at maxHp', () => {
+    const m = raidHitMoment({
+      raidDamage: 1200,
+      maxHp: 1000,
+      hit: 100,
+      weakBonus: 0,
+      alreadyApplied: false,
+    });
+    assert.equal(m.beforeDamage, 1000);
+    assert.equal(m.afterDamage, 1000);
+    assert.equal(m.finishes, false);
+  });
+
+  it('reports the enrage phase crossing', () => {
+    // 200/1000 → 80 % left (phase 0); 300/1000 → 70 % left (phase 1).
+    const m = raidHitMoment({
+      raidDamage: 200,
+      maxHp: 1000,
+      hit: 100,
+      weakBonus: 0,
+      alreadyApplied: false,
+    });
+    assert.equal(m.beforePhase, 0);
+    assert.equal(m.afterPhase, 1);
+  });
+
+  it('finishes only when the boss was alive before', () => {
+    const finishing = raidHitMoment({
+      raidDamage: 900,
+      maxHp: 1000,
+      hit: 200,
+      weakBonus: 0,
+      alreadyApplied: false,
+    });
+    assert.equal(finishing.finishes, true);
+    // Overkill damage already applied: the boss was dead before this hit.
+    const overkill = raidHitMoment({
+      raidDamage: 1050,
+      maxHp: 1000,
+      hit: 40,
+      weakBonus: 0,
+      alreadyApplied: true,
+    });
+    assert.equal(overkill.beforeDamage, 1010);
+    assert.equal(overkill.afterDamage, 1000);
+    assert.equal(overkill.finishes, false);
   });
 });

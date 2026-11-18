@@ -86,6 +86,31 @@ public struct RaidBossBounds: Sendable, Equatable {
     public var halfHeight: Double
 }
 
+/// One workout's hit against a raid boss, split into the pre-hit and post-hit
+/// damage totals the summary animation plays between (see `RaidBossMath.hitMoment`).
+public struct RaidHitMoment: Equatable, Sendable {
+    public let beforeDamage: Int
+    public let afterDamage: Int
+    public let maxHp: Int
+    /// This session's damage (base points + weak-spot bonus).
+    public let hit: Int
+    /// The weak-spot part of `hit` (doubled points).
+    public let weakBonus: Int
+
+    public init(beforeDamage: Int, afterDamage: Int, maxHp: Int, hit: Int, weakBonus: Int) {
+        self.beforeDamage = beforeDamage
+        self.afterDamage = afterDamage
+        self.maxHp = maxHp
+        self.hit = hit
+        self.weakBonus = weakBonus
+    }
+
+    public var beforePhase: Int { RaidBossMath.raidPhaseFor(damage: beforeDamage, maxHp: maxHp) }
+    public var afterPhase: Int { RaidBossMath.raidPhaseFor(damage: afterDamage, maxHp: maxHp) }
+    /// The hit crossed maxHp — only when the boss was still alive before.
+    public var finishes: Bool { afterDamage >= maxHp && beforeDamage < maxHp }
+}
+
 public enum RaidBossMath {
     private static func partRadius(_ p: RaidBossRecipe.Part) -> Double {
         0.5 * (p.size.x * p.size.x + p.size.y * p.size.y + p.size.z * p.size.z).squareRoot()
@@ -145,6 +170,36 @@ public enum RaidBossMath {
         if left <= 0.5 { return 2 }
         if left <= 0.75 { return 1 }
         return 0
+    }
+
+    /// Before/after damage for the summary "boss moment": `raidDamage` is the
+    /// raid's current damage total, `hit` this session's damage. When the hit
+    /// was already applied server-side (`alreadyApplied`), `raidDamage`
+    /// includes it; otherwise the hit is applied optimistically on top. The
+    /// daily cap is ignored — same approximation as the summary line.
+    public static func hitMoment(
+        raidDamage: Int,
+        maxHp: Int,
+        hit: Int,
+        weakBonus: Int,
+        alreadyApplied: Bool
+    ) -> RaidHitMoment {
+        let before: Int
+        let after: Int
+        if alreadyApplied {
+            before = max(0, raidDamage - hit)
+            after = min(maxHp, raidDamage)
+        } else {
+            before = min(maxHp, raidDamage)
+            after = min(maxHp, raidDamage + hit)
+        }
+        return RaidHitMoment(
+            beforeDamage: before,
+            afterDamage: after,
+            maxHp: maxHp,
+            hit: hit,
+            weakBonus: weakBonus
+        )
     }
 
     // MARK: - Recipe geometry math (mirrors packages/common/src/raid/raid-bosses.ts)
