@@ -1,0 +1,19 @@
+info:
+  name: decline-invite
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/squads/:id/invites/decline"
+  params:
+    - name: id
+      value: "SQUAD-ID"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

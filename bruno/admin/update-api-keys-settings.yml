@@ -1,0 +1,22 @@
+info:
+  name: update-api-keys-settings
+  type: http
+  seq: 18
+
+http:
+  method: PUT
+  url: "{{API_URL}}:{{API_PORT}}/api/admin/settings/api-keys"
+  body:
+    type: json
+    data: |-
+      {
+        "apiKeysEnabled": true,
+        "mcpEnabled": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

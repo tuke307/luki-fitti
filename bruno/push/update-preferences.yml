@@ -1,0 +1,29 @@
+info:
+  name: update-preferences
+  type: http
+  seq: 5
+
+http:
+  method: PATCH
+  url: "{{API_URL}}:{{API_PORT}}/api/push/preferences"
+  body:
+    type: json
+    data: |-
+      {
+        "friends": true,
+        "nudges": true,
+        "leagues": true,
+        "duels": true,
+        "streaks": true,
+        "raids": true,
+        "disabledKinds": [
+          "STREAK_REMINDER"
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

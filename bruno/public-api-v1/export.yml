@@ -1,0 +1,18 @@
+info:
+  name: export
+  type: http
+  seq: 14
+
+http:
+  method: GET
+  url: "{{API_URL}}:{{API_PORT}}/api/v1/export"
+  headers:
+    - name: Authorization
+      value: Bearer {{LUKIFITTI_API_KEY}}
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,7 @@
+info:
+  name: public-api-v1
+  type: folder
+  seq: 15
+
+request:
+  auth: none

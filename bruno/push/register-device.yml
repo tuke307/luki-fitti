@@ -1,0 +1,26 @@
+info:
+  name: register-device
+  type: http
+  seq: 2
+
+http:
+  method: PUT
+  url: "{{API_URL}}:{{API_PORT}}/api/push/devices"
+  body:
+    type: json
+    data: |-
+      {
+        "platform": "WEBPUSH",
+        "token": "https://fcm.googleapis.com/fcm/send/FAKE-PUSH-ENDPOINT",
+        "p256dh": "FAKE-P256DH-KEY",
+        "auth": "FAKE-AUTH-SECRET",
+        "locale": "en",
+        "timeZone": "Europe/Berlin"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

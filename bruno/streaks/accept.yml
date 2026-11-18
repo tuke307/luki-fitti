@@ -1,0 +1,19 @@
+info:
+  name: accept
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/streaks/:id/accept"
+  params:
+    - name: id
+      value: "STREAK-ID"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

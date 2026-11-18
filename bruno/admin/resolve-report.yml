@@ -1,0 +1,26 @@
+info:
+  name: resolve-report
+  type: http
+  seq: 16
+
+http:
+  method: PATCH
+  url: "{{API_URL}}:{{API_PORT}}/api/admin/reports/:id"
+  params:
+    - name: id
+      value: "123e4567-e89b-42d3-a456-426614174000"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "status": "RESOLVED",
+        "action": "CLEAR_AVATAR"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

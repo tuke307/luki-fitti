@@ -1,0 +1,7 @@
+info:
+  name: points
+  type: folder
+  seq: 21
+
+request:
+  auth: inherit

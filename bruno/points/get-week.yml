@@ -1,0 +1,20 @@
+info:
+  name: get-week
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{API_URL}}:{{API_PORT}}/api/points/week"
+  params:
+    - name: weekKey
+      value: "2026-01-05"
+      type: query
+      disabled: true
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

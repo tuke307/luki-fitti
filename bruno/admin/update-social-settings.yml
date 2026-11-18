@@ -1,0 +1,22 @@
+info:
+  name: update-social-settings
+  type: http
+  seq: 13
+
+http:
+  method: PUT
+  url: "{{API_URL}}:{{API_PORT}}/api/admin/settings/social"
+  body:
+    type: json
+    data: |-
+      {
+        "socialEnabled": true,
+        "socialBetaUserIds": []
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
