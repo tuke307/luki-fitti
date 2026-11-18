@@ -35,7 +35,16 @@ export function effectivePhase(raid: { damage: number; maxHp: number; phase: num
 }
 
 /** HP bar with tick marks at the 75/50/25 % enrage thresholds. */
-export function RaidHpBar({ damage, maxHp }: { damage: number; maxHp: number }) {
+export function RaidHpBar({
+  damage,
+  maxHp,
+  fillClassName = 'bg-destructive h-full rounded-full transition-[width] duration-500',
+}: {
+  damage: number;
+  maxHp: number;
+  /** Override for the fill bar (e.g. a slower drain for the hit animation). */
+  fillClassName?: string;
+}) {
   const left = Math.max(0, maxHp - damage);
   const pct = maxHp > 0 ? (left / maxHp) * 100 : 0;
   return (
@@ -46,10 +55,7 @@ export function RaidHpBar({ damage, maxHp }: { damage: number; maxHp: number }) 
       aria-valuemin={0}
       aria-valuemax={100}
     >
-      <div
-        className="bg-destructive h-full rounded-full transition-[width] duration-500"
-        style={{ width: `${pct}%` }}
-      />
+      <div className={fillClassName} style={{ width: `${pct}%` }} />
       {[75, 50, 25].map((tick) => (
         <div
           key={tick}
