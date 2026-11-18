@@ -1,0 +1,23 @@
+info:
+  name: create-report
+  type: http
+  seq: 22
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/social/reports"
+  body:
+    type: json
+    data: |-
+      {
+        "userId": "123e4567-e89b-42d3-a456-426614174000",
+        "reason": "SPAM",
+        "details": "FAKE report details"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

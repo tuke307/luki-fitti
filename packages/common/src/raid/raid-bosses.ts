@@ -2219,6 +2219,51 @@ export function raidPhaseFor(damage: number, maxHp: number): number {
   return 0;
 }
 
+/**
+ * One workout's hit against a raid boss, split into the pre-hit and post-hit
+ * damage totals the summary "boss moment" animation plays between.
+ * `raidDamage` is the raid's current damage total, `hit` this session's
+ * damage. When the hit was already applied server-side (`alreadyApplied`),
+ * `raidDamage` includes it; otherwise the hit is applied optimistically on
+ * top. The daily cap is ignored — same approximation as the summary line.
+ * Mirrors `RaidBossMath.hitMoment` in the iOS app.
+ */
+export interface RaidHitMoment {
+  beforeDamage: number;
+  afterDamage: number;
+  maxHp: number;
+  /** This session's damage (base points + weak-spot bonus). */
+  hit: number;
+  /** The weak-spot part of `hit` (doubled points). */
+  weakBonus: number;
+  beforePhase: number;
+  afterPhase: number;
+  /** The hit crossed maxHp — only when the boss was still alive before. */
+  finishes: boolean;
+}
+
+export function raidHitMoment(args: {
+  raidDamage: number;
+  maxHp: number;
+  hit: number;
+  weakBonus: number;
+  alreadyApplied: boolean;
+}): RaidHitMoment {
+  const { raidDamage, maxHp, hit, weakBonus, alreadyApplied } = args;
+  const before = alreadyApplied ? Math.max(0, raidDamage - hit) : Math.min(maxHp, raidDamage);
+  const after = alreadyApplied ? Math.min(maxHp, raidDamage) : Math.min(maxHp, raidDamage + hit);
+  return {
+    beforeDamage: before,
+    afterDamage: after,
+    maxHp,
+    hit,
+    weakBonus,
+    beforePhase: raidPhaseFor(before, maxHp),
+    afterPhase: raidPhaseFor(after, maxHp),
+    finishes: after >= maxHp && before < maxHp,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Shared recipe geometry math (pure — no three/SceneKit dependencies)
 

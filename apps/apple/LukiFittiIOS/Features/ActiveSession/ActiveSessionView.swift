@@ -14,8 +14,11 @@ public struct ActiveSessionView: View {
     @State private var showingDiscardConfirmation = false
     /// Server-computed EP for the finished session; replaces the local estimate once synced.
     @State private var summaryServerEP: Int?
-    /// Active community raid for the "+N damage" summary line (PR 4).
-    @State private var summaryCommunityRaid: RaidDto?
+    /// Raid the summary "boss moment" plays on (first active raid, or a raid
+    /// this session landed the final blow on).
+    @State private var summaryRaid: RaidDto?
+    /// Whether the server has already applied this session's hit to `summaryRaid`.
+    @State private var summaryRaidHitApplied = false
     @ScaledMetric(relativeTo: .body) private var restIconSize: CGFloat = 30
 
     public init(viewModel: LukiAppViewModel) {
@@ -163,7 +166,47 @@ public struct ActiveSessionView: View {
                     summaryServerEP = entry.points
                 }
                 if let raids = try? await viewModel.store.apiClient.fetchRaids() {
-                    summaryCommunityRaid = raids.community
+                    let myId = viewModel.store.currentUser?.id
+                    let candidates = [raids.community].compactMap { $0 } + raids.squads
+                    for raid in candidates {
+                        if raid.status == .ACTIVE {
+                            summaryRaid = raid
+                            summaryRaidHitApplied = summaryServerEP != nil
+                            break
+                        }
+                        if raid.status == .DEFEATED,
+                           raid.finalBlow?.userId == myId,
+                           let defeatedAt = Self.isoDate(raid.defeatedAt),
+                           let completedAt = Self.isoDate(session.completedAt),
+                           defeatedAt >= completedAt
+                        {
+                            summaryRaid = raid
+                            summaryRaidHitApplied = true
+                            break
+                        }
+                    }
+                }
+            }
+
+            if viewModel.socialEnabled, let raid = summaryRaid,
+               let boss = RaidBossCatalog.boss(slug: raid.bossSlug)
+            {
+                let points = EffortPoints.compute(session: session.effortPointsInput)
+                let ep = summaryServerEP ?? points.total
+                if ep > 0 {
+                    let hit = RaidBossMath.raidDamage(
+                        points: ep, pointsByWeakSpot: points.pointsByWeakSpot, boss: boss)
+                    RaidHitMomentView(
+                        boss: boss,
+                        raid: raid,
+                        moment: RaidBossMath.hitMoment(
+                            raidDamage: raid.damage,
+                            maxHp: raid.maxHp,
+                            hit: hit,
+                            weakBonus: hit - ep,
+                            alreadyApplied: summaryRaidHitApplied
+                        )
+                    )
                 }
             }
 
@@ -204,27 +247,16 @@ public struct ActiveSessionView: View {
                 statPill(label: tr("Effort points"), value: "+\(ep) EP")
                     .accessibilityIdentifier("ios.session.summary.ep")
             }
-            // "+N damage to <boss>": optimistic via the shared formula + the
-            // boss's weakTo, shown only while a community raid is active.
-            if let raid = summaryCommunityRaid, raid.status == .ACTIVE,
-               let boss = RaidBossCatalog.boss(slug: raid.bossSlug), ep > 0
-            {
-                let damage = RaidBossMath.raidDamage(
-                    points: ep, pointsByWeakSpot: points.pointsByWeakSpot, boss: boss)
-                let weakBonus = damage - ep
-                statPill(
-                    label: tr("Raid damage"),
-                    value: weakBonus > 0
-                        ? tr("%d dmg · %@ · 2× weak", damage, bossName(boss))
-                        : tr("%d dmg · %@", damage, bossName(boss))
-                )
-                .accessibilityIdentifier("ios.session.summary.raidDamage")
-            }
         }
     }
 
-    private func bossName(_ boss: RaidBossRecipe) -> String {
-        tr == .de ? boss.name.de : boss.name.en
+    /// ISO-8601 dates, with or without fractional seconds.
+    private static func isoDate(_ string: String?) -> Date? {
+        guard let string else { return nil }
+        let withFraction = ISO8601DateFormatter()
+        withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return withFraction.date(from: string)
+            ?? ISO8601DateFormatter().date(from: string)
     }
 
     private func statPill(label: String, value: String) -> some View {

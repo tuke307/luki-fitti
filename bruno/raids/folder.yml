@@ -1,0 +1,7 @@
+info:
+  name: raids
+  type: folder
+  seq: 27
+
+request:
+  auth: inherit

@@ -58,9 +58,10 @@ import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { computeRemainingRestSeconds } from '@/lib/offline/offline-store';
 import { computeSessionEffortPoints } from '@luki-fitti/common/utils';
-import { RAID_BOSSES, raidDamage } from '@luki-fitti/common/raid';
-import type { RaidDto } from '@luki-fitti/common/schemas';
+import { RAID_BOSSES, raidDamage, raidHitMoment } from '@luki-fitti/common/raid';
+import type { RaidDto, RaidListDto } from '@luki-fitti/common/schemas';
 import { pointsApi, raidsApi } from '@/lib/social/social-api';
+import { RaidHitMoment } from '@/components/gym/raid/raid-hit-moment';
 import { triggerWorkoutNotification } from '@/lib/notifications/notification-manager';
 import {
   computeExerciseProgression,
@@ -126,7 +127,7 @@ export function ActiveSessionView({
     focusedExerciseId,
     setFocusedExercise,
   } = useGym();
-  const { t, format, locale, muscleLabel, equipmentLabel } = useLocale();
+  const { t, format, muscleLabel, equipmentLabel } = useLocale();
 
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const [showSubstituteFor, setShowSubstituteFor] = useState<string | null>(null);
@@ -177,32 +178,24 @@ export function ActiveSessionView({
     return total > 0 ? total : null;
   }, [completedSummary, user?.social?.enabled]);
 
-  // "+N damage to <boss>" line: optimistic via the shared formula + the boss's
-  // weakTo, shown only while a community raid is active.
-  const [communityRaid, setCommunityRaid] = useState<RaidDto | null>(null);
+  // Summary "boss moment": the first raid this session hit — an active one
+  // (community or squad), or a defeated one where this session landed the
+  // final blow. Hit damage uses the shared formula + the boss's weakTo;
+  // whether the server already applied it follows the points-week sync.
+  const [raidList, setRaidList] = useState<RaidListDto | null>(null);
   useEffect(() => {
     if (!completedSummary || !user?.social?.enabled) return;
     let cancelled = false;
     void raidsApi
       .current()
       .then((res) => {
-        if (!cancelled) setCommunityRaid(res.data?.community ?? null);
+        if (!cancelled) setRaidList(res.data ?? null);
       })
       .catch(() => undefined);
     return () => {
       cancelled = true;
     };
   }, [completedSummary, user?.social?.enabled]);
-  const raidHit = useMemo(() => {
-    if (!completedSummary || !communityRaid || communityRaid.status !== 'ACTIVE') return null;
-    const boss = RAID_BOSSES.find((b) => b.slug === communityRaid.bossSlug);
-    if (!boss) return null;
-    const ep = computeSessionEffortPoints(completedSummary);
-    const damage = raidDamage(ep.total, ep.pointsByWeakSpot, boss);
-    if (damage <= 0) return null;
-    const weak = boss.weakTo.reduce((sum, w) => sum + (ep.pointsByWeakSpot[w] ?? 0), 0);
-    return { boss, damage, weak };
-  }, [completedSummary, communityRaid]);
   useEffect(() => {
     if (!completedSummary || !user?.social?.enabled) return;
     let cancelled = false;
@@ -216,6 +209,53 @@ export function ActiveSessionView({
     };
   }, [completedSummary, user?.social?.enabled]);
   const completedEp = serverEp === undefined ? optimisticEp : serverEp;
+
+  const raidMoment = useMemo(() => {
+    // Wait for /points/week too: it decides `alreadyApplied`, and a late answer
+    // would otherwise change the numbers mid-animation.
+    if (!completedSummary || !raidList || serverEp === undefined || !user?.social?.enabled) {
+      return null;
+    }
+    let raid: RaidDto | null = null;
+    let alreadyApplied = false;
+    for (const candidate of [raidList.community, ...raidList.squads]) {
+      if (!candidate) continue;
+      if (candidate.status === 'ACTIVE') {
+        raid = candidate;
+        alreadyApplied = typeof serverEp === 'number';
+        break;
+      }
+      if (
+        candidate.status === 'DEFEATED' &&
+        candidate.finalBlow?.userId === user?.id &&
+        candidate.defeatedAt &&
+        completedSummary.completedAt &&
+        Date.parse(candidate.defeatedAt) >= Date.parse(completedSummary.completedAt)
+      ) {
+        raid = candidate;
+        alreadyApplied = true;
+        break;
+      }
+    }
+    if (!raid) return null;
+    const boss = RAID_BOSSES.find((b) => b.slug === raid.bossSlug);
+    if (!boss) return null;
+    const effort = computeSessionEffortPoints(completedSummary);
+    const ep = serverEp ?? effort.total;
+    if (ep <= 0) return null;
+    const hit = raidDamage(ep, effort.pointsByWeakSpot, boss);
+    return {
+      boss,
+      raid,
+      moment: raidHitMoment({
+        raidDamage: raid.damage,
+        maxHp: raid.maxHp,
+        hit,
+        weakBonus: hit - ep,
+        alreadyApplied,
+      }),
+    };
+  }, [completedSummary, raidList, serverEp, user?.id, user?.social?.enabled]);
 
   if (completedSummary) {
     const showStretchTime =
@@ -257,18 +297,6 @@ export function ActiveSessionView({
               {format(t.league.epEarned, { points: completedEp.toLocaleString() })}
             </p>
           )}
-          {raidHit && (
-            <p
-              data-testid="session-finish-raid"
-              className="mt-1 text-[0.9375rem] font-semibold text-orange-500 tabular-nums"
-            >
-              {format(t.raid.workoutDamage, {
-                points: raidHit.damage.toLocaleString(),
-                boss: locale === 'de' ? raidHit.boss.name.de : raidHit.boss.name.en,
-                weak: raidHit.weak > 0 ? t.raid.weakBonus : '',
-              })}
-            </p>
-          )}
         </div>
 
         <dl className="bg-card grid grid-cols-3 divide-x divide-border/60 rounded-[1.25rem] py-4">
@@ -281,6 +309,15 @@ export function ActiveSessionView({
             </div>
           ))}
         </dl>
+
+        {raidMoment && (
+          <RaidHitMoment
+            key={`${completedSummary.id}:${raidMoment.raid.id}`}
+            boss={raidMoment.boss}
+            raid={raidMoment.raid}
+            moment={raidMoment.moment}
+          />
+        )}
 
         <Button
           type="button"

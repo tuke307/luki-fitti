@@ -115,6 +115,42 @@ final class UserRefreshAfterAuthTests: XCTestCase {
         XCTAssertEqual(server.meCalls, 1)
     }
 
+    /// Enabling social on the server must reach users who signed in while it was off,
+    /// without requiring a sign-out/sign-in.
+    @MainActor
+    func testRefreshFromServerAfterAuthPicksUpSocialEnabled() async throws {
+        var user = UserDto(id: "u1", email: "me@example.com")
+        user.social = UserSocialDto(enabled: false)
+
+        let meJson = Data(#"""
+        {"success":true,"data":{"id":"u1","email":"me@example.com","social":{"enabled":true,"username":"luki"}}}
+        """#.utf8)
+        let server = FakeMeServer(meBody: meJson)
+        let store = makeStore(server: server, user: user)
+
+        await store.refreshFromServerAfterAuth()
+
+        XCTAssertEqual(store.currentUser?.social?.enabled, true)
+        XCTAssertEqual(store.currentUser?.social?.username, "luki")
+    }
+
+    /// Older servers omit `social`; the refresh must keep the cached block instead of wiping it.
+    @MainActor
+    func testRefreshFromServerAfterAuthKeepsCachedSocialWhenServerOmitsIt() async throws {
+        var user = UserDto(id: "u1", email: "me@example.com")
+        user.social = UserSocialDto(enabled: true, username: "luki")
+
+        let meJson = Data(#"""
+        {"success":true,"data":{"id":"u1","email":"me@example.com"}}
+        """#.utf8)
+        let server = FakeMeServer(meBody: meJson)
+        let store = makeStore(server: server, user: user)
+
+        await store.refreshFromServerAfterAuth()
+
+        XCTAssertEqual(store.currentUser?.social, UserSocialDto(enabled: true, username: "luki"))
+    }
+
     /// A `me` for a different account must never overwrite the cached user.
     @MainActor
     func testRefreshFromServerAfterAuthIgnoresMismatchedUserId() async throws {

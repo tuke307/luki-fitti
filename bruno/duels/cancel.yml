@@ -1,0 +1,19 @@
+info:
+  name: cancel
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/duels/:id/cancel"
+  params:
+    - name: id
+      value: "DUEL-ID"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -12,46 +12,36 @@ struct RaidsSection: View {
     let myUserId: String
     @Environment(\.lukiLocale) private var tr
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var detailRaid: RaidDto?
-    @State private var showSquads = false
+    /// Owned by the hosting page: a `.sheet` on rows inside a `List` is copied onto
+    /// every row and gets torn down when the rows re-render (e.g. a raids refresh
+    /// landing), which dismissed the detail sheet right after the first tap.
+    @Binding var detailRaid: RaidDto?
+    @Binding var showSquads: Bool
 
     var body: some View {
         if social.raids != nil {
-            Group {
-                Label(tr("Raids"), systemImage: "bolt.shield")
-                    .font(.subheadline.weight(.semibold))
-                    .padding(.top, 4)
-                ForEach(social.shownRaids) { raid in
-                    Button { detailRaid = raid } label: {
-                        RaidCardView(raid: raid, reducedMotion: reduceMotion)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("ios.raid.card.\(raid.id)")
-                }
-                if social.shownRaids.isEmpty {
-                    Text(tr("No raid this week — check back Monday."))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                Button { showSquads = true } label: {
-                    Label(tr("Squads"), systemImage: "person.3")
-                        .font(.subheadline.weight(.semibold))
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+            ForEach(social.shownRaids) { raid in
+                Button { detailRaid = raid } label: {
+                    RaidCardView(raid: raid, reducedMotion: reduceMotion)
                 }
                 .buttonStyle(.plain)
-                .accessibilityIdentifier("ios.raid.squadsButton")
+                .accessibilityIdentifier("ios.raid.card.\(raid.id)")
             }
-            .sheet(item: $detailRaid) { raid in
-                NavigationStack {
-                    RaidDetailView(raidId: raid.id, social: social)
-                }
+            if social.shownRaids.isEmpty {
+                Text(tr("No raid this week — check back Monday."))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
-            .sheet(isPresented: $showSquads) {
-                NavigationStack { SquadsView(social: social, myUserId: myUserId) }
+            Button { showSquads = true } label: {
+                Label(tr("Squads"), systemImage: "person.3")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("ios.raid.squadsButton")
         }
     }
 
@@ -186,7 +176,7 @@ struct RaidCardView: View {
                     }
                     Spacer()
                     if raid.yourDamage > 0 {
-                        Text(tr("You dealt %@", formatDamage(raid.yourDamage)))
+                        Text(tr("You dealt %@ damage", formatDamage(raid.yourDamage)))
                             .font(.caption.weight(.medium))
                             .foregroundStyle(LukiColors.accent)
                     }
@@ -336,7 +326,7 @@ struct RaidDetailView: View {
     @ViewBuilder
     private func ownStanding(_ detail: RaidDetailDto) -> some View {
         HStack {
-            Text(tr("You dealt %@ · #%d", formatNumber(detail.you.damage), detail.you.rank ?? 0))
+            Text(tr("You dealt %@ damage · #%d", formatNumber(detail.you.damage), detail.you.rank ?? 0))
                 .font(.subheadline.weight(.semibold))
             Spacer()
         }
@@ -708,8 +698,8 @@ struct RaidCelebrationOverlay: View {
                     .multilineTextAlignment(.center)
                     Text(
                         result.crownRank != nil
-                            ? tr("You dealt %@ · #%d", formatNumber(result.you), result.crownRank!)
-                            : tr("You dealt %@", formatNumber(result.you))
+                            ? tr("You dealt %@ damage · #%d", formatNumber(result.you), result.crownRank!)
+                            : tr("You dealt %@ damage", formatNumber(result.you))
                     )
                     .font(.title3.monospacedDigit())
                     .foregroundStyle(.secondary)

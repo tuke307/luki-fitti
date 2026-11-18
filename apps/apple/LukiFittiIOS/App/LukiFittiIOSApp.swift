@@ -768,7 +768,7 @@ public final class LukiAppViewModel {
         #endif
         let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
         guard status == .authorized || status == .provisional || status == .ephemeral else { return }
-        await UIApplication.shared.registerForRemoteNotifications()
+        UIApplication.shared.registerForRemoteNotifications()
     }
 
     /// The only place that asks for push permission (onboarding button / settings toggle).
@@ -779,7 +779,7 @@ public final class LukiAppViewModel {
             return false
         }
         rescheduleWeighInReminders()
-        await UIApplication.shared.registerForRemoteNotifications()
+        UIApplication.shared.registerForRemoteNotifications()
         return true
     }
 

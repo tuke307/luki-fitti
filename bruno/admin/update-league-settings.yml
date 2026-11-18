@@ -1,0 +1,27 @@
+info:
+  name: update-league-settings
+  type: http
+  seq: 20
+
+http:
+  method: PUT
+  url: "{{API_URL}}:{{API_PORT}}/api/admin/settings/leagues"
+  body:
+    type: json
+    data: |-
+      {
+        "leaguesEnabled": true,
+        "leagueStageMode": "AUTO",
+        "leagueStage2MinUsers": 10,
+        "leagueStage3MinUsers": 30,
+        "leagueCohortSize": 30,
+        "epDailyCap": 100,
+        "epWeeklyGoalBonus": 50
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

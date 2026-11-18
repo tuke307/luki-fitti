@@ -1,0 +1,19 @@
+info:
+  name: mark-seen
+  type: http
+  seq: 7
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/duels/:id/seen"
+  params:
+    - name: id
+      value: "DUEL-ID"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

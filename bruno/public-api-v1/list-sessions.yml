@@ -1,0 +1,43 @@
+info:
+  name: list-sessions
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{API_URL}}:{{API_PORT}}/api/v1/sessions"
+  headers:
+    - name: Authorization
+      value: Bearer {{LUKIFITTI_API_KEY}}
+  params:
+    - name: limit
+      value: ""
+      type: query
+      disabled: true
+    - name: cursor
+      value: ""
+      type: query
+      disabled: true
+    - name: updatedSince
+      value: ""
+      type: query
+      disabled: true
+    - name: from
+      value: ""
+      type: query
+      disabled: true
+    - name: to
+      value: ""
+      type: query
+      disabled: true
+    - name: include
+      value: "exercises"
+      type: query
+      disabled: true
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,7 @@
+info:
+  name: squads
+  type: folder
+  seq: 26
+
+request:
+  auth: inherit

@@ -1,0 +1,15 @@
+info:
+  name: list-bosses
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{API_URL}}:{{API_PORT}}/api/raids/bosses"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

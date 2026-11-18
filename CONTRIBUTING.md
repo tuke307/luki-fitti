@@ -160,7 +160,10 @@ Allowed types: `feat`, `fix`, `refactor`, `style`, `perf`, `test`, `docs`, `buil
 The [`bruno/`](bruno) folder contains a [Bruno](https://www.usebruno.com/) collection
 (OpenCollection YAML) with a request for every API endpoint. Open the folder in Bruno, select the
 `local` environment, and run `auth/login` first. It stores the CSRF token that the other
-requests need.
+requests need. The `public-api-v1` and `mcp-server` folders are the exception: they use
+`auth: none` and authenticate with an `Authorization: Bearer {{LUKIFITTI_API_KEY}}` header, so
+set `LUKIFITTI_API_KEY` in the environment to an `lf_pat_…` key from Profile → Settings → API
+keys — no login or CSRF token required.
 
 ## Testing beta builds
 

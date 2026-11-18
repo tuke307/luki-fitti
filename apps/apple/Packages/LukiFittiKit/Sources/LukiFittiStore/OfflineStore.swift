@@ -532,6 +532,7 @@ public final class OfflineStore {
             user.permissions = me.permissions
             user.features = me.features
             user.aiKeyConfigured = me.aiKeyConfigured
+            user.social = me.social ?? cached.social
             saveAuthenticatedUser(user)
         }
         if let serverExercises = try? await apiClient.fetchExercises(), !serverExercises.isEmpty {

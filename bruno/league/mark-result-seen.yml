@@ -1,0 +1,19 @@
+info:
+  name: mark-result-seen
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/league/results/:weekKey/seen"
+  params:
+    - name: weekKey
+      value: "2026-01-05"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

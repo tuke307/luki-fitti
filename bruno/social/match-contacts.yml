@@ -1,0 +1,23 @@
+info:
+  name: match-contacts
+  type: http
+  seq: 18
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/social/contacts/match"
+  body:
+    type: json
+    data: |-
+      {
+        "hashes": [
+          "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

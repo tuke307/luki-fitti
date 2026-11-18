@@ -1,0 +1,21 @@
+info:
+  name: mark-read
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/notifications/read"
+  body:
+    type: json
+    data: |-
+      {
+        "all": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

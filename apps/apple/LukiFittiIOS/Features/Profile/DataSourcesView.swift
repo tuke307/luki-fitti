@@ -1,4 +1,5 @@
 import SwiftUI
+import LukiFittiModels
 import LukiFittiDesign
 
 /// Attribution for the bundled exercise catalog, mirroring the web "Data sources" page:

@@ -95,15 +95,17 @@ public enum BossSceneBuilder {
             shapes[part.id] = shape
 
             // inverted-hull outline: front-face culled, depth-tested, dark
-            let outline = SCNNode(geometry: geo.copy() as! SCNGeometry)
-            outline.geometry!.materials = [outlineMat]
+            let outlineGeo = geo.copy() as! SCNGeometry
+            outlineGeo.materials = [outlineMat]
+            let outline = SCNNode(geometry: outlineGeo)
             outline.scale = SCNVector3(
                 x: SCNFloat(outlineScale), y: SCNFloat(outlineScale), z: SCNFloat(outlineScale))
             outline.renderingOrder = -1
             shape.addChildNode(outline)
             // white hit flash hull
-            let flash = SCNNode(geometry: geo.copy() as! SCNGeometry)
-            flash.geometry!.materials = [flashMat]
+            let flashGeo = geo.copy() as! SCNGeometry
+            flashGeo.materials = [flashMat]
+            let flash = SCNNode(geometry: flashGeo)
             flash.scale = SCNVector3(
                 x: SCNFloat(outlineScale + 0.01),
                 y: SCNFloat(outlineScale + 0.01),

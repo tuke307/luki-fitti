@@ -71,9 +71,7 @@ struct SocialOnboardingSheet: View {
                                 .frame(width: 44, height: 44)
                                 .clipShape(Circle())
                         }
-                        PhotosPicker(selection: $pickedPhoto, matching: .images) {
-                            Text(tr("Change photo"))
-                        }
+                        PhotosPicker(tr("Change photo"), selection: $pickedPhoto, matching: .images)
                         .onChange(of: pickedPhoto) { _, item in
                             guard let item else { return }
                             pickedPhoto = nil

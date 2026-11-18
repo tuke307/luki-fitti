@@ -326,10 +326,22 @@ struct SocialRaidsPage: View {
     @Bindable var social: SocialStore
     let myUserId: String
     @Environment(\.lukiLocale) private var tr
+    @State private var detailRaid: RaidDto?
+    @State private var showSquads = false
 
     var body: some View {
         List {
-            RaidsSection(social: social, myUserId: myUserId)
+            RaidsSection(
+                social: social, myUserId: myUserId,
+                detailRaid: $detailRaid, showSquads: $showSquads)
+        }
+        .sheet(item: $detailRaid) { raid in
+            NavigationStack {
+                RaidDetailView(raidId: raid.id, social: social)
+            }
+        }
+        .sheet(isPresented: $showSquads) {
+            NavigationStack { SquadsView(social: social, myUserId: myUserId) }
         }
         .navigationTitle(tr("Raids"))
         .accessibilityIdentifier("ios.social.raidsPage")

@@ -1,0 +1,28 @@
+info:
+  name: list-reports
+  type: http
+  seq: 14
+
+http:
+  method: GET
+  url: "{{API_URL}}:{{API_PORT}}/api/admin/reports"
+  params:
+    - name: status
+      value: "OPEN"
+      type: query
+      disabled: true
+    - name: page
+      value: ""
+      type: query
+      disabled: true
+    - name: limit
+      value: ""
+      type: query
+      disabled: true
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

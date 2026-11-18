@@ -1,0 +1,22 @@
+info:
+  name: remove-member
+  type: http
+  seq: 7
+
+http:
+  method: DELETE
+  url: "{{API_URL}}:{{API_PORT}}/api/squads/:id/members/:userId"
+  params:
+    - name: id
+      value: "SQUAD-ID"
+      type: path
+    - name: userId
+      value: "123e4567-e89b-42d3-a456-426614174000"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -19,6 +19,7 @@ function fakeRepo(t) {
     'apps/api/package.json',
     'apps/apple/package.json',
     'apps/email-worker/package.json',
+    'apps/mcp-server/package.json',
     'apps/web/package.json',
     'packages/common/package.json',
     'packages/database/package.json',
