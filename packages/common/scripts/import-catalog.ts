@@ -212,13 +212,16 @@ function cleanName(name: string): string {
 
 /** wger descriptions are HTML: turn list items / paragraphs into plain steps. */
 function htmlToSteps(html: string): string[] {
-  return html
-    .replace(/<\/(li|p|br)\s*>|<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+  const ENTITIES: Record<string, string> = { nbsp: ' ', amp: '&', quot: '"', '#39': "'" };
+  let text = html.replace(/<\/(li|p|br)\s*>|<br\s*\/?>/gi, '\n');
+  let prev;
+  do {
+    prev = text;
+    text = text.replace(/<[^>]*>/g, '');
+  } while (text !== prev);
+  text = text.replace(/[<>]/g, '');
+  return text
+    .replace(/&(nbsp|amp|quot|#39);/g, (_, e: string) => ENTITIES[e])
     .split('\n')
     .map((s) => s.trim())
     .filter((s) => s.length > 2)

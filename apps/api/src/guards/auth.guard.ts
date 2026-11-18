@@ -19,7 +19,7 @@ export function extractBearerToken(request: Request): string | null {
   if (!authHeader) return null;
   const raw = Array.isArray(authHeader) ? authHeader[0] : authHeader;
   if (!raw) return null;
-  const match = /^Bearer\s+(.+)$/i.exec(raw.trim());
+  const match = /^Bearer\s(.*)$/i.exec(raw.trim());
   return match?.[1]?.trim() || null;
 }
 
