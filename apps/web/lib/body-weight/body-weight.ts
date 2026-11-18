@@ -6,6 +6,7 @@ import {
   movingAverageWeights,
   sortWeighIns,
 } from '@luki-fitti/common/utils/client';
+import { secureRandomUUID } from '../secure-id';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -20,9 +21,7 @@ const RANGE_MONTHS: Record<Exclude<WeightRange, 'all'>, number> = {
 };
 
 export function newWeightClientId(): string {
-  return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-    ? `weight-${crypto.randomUUID()}`
-    : `weight-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  return `weight-${secureRandomUUID()}`;
 }
 
 /** Builds the optimistic DTO shown while an upsert is pending or offline. */

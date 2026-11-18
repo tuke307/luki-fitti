@@ -18,6 +18,7 @@ import {
   type MealTextAnalysisResponseDto,
 } from '@luki-fitti/common/schemas';
 import { api } from '@/lib/api';
+import { secureRandomUUID } from '@/lib/secure-id';
 import { aiErrorMessage } from '@/lib/ai/ai-errors';
 import { isAiKeyRequiredError } from '@/lib/ai/ai-key-required';
 import { AiKeyRequiredDialog } from '../ai-key-required-dialog';
@@ -104,7 +105,7 @@ export function MealPhotoSection({
       .map((file) => {
         const previewUrl = URL.createObjectURL(file);
         objectUrls.current.add(previewUrl);
-        return { id: `${file.name}-${file.size}-${Math.random()}`, file, previewUrl };
+        return { id: `${file.name}-${file.size}-${secureRandomUUID()}`, file, previewUrl };
       });
     setPicked((list) => [...list, ...accepted]);
   };

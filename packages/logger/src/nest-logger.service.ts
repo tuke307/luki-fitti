@@ -4,7 +4,7 @@ import { winstonLogger } from './winston-logger';
  * Matches the multi-line stack traces Node produces (`"\n    at ..."`),
  * used to tell a stack string apart from a short Nest `context` string.
  */
-const STACK_PATTERN = /\n\s*at /;
+const STACK_PATTERN = /\n[ \t]*at /;
 
 /**
  * Structural mirror of Nest's `LoggerService` (from `@nestjs/common`).

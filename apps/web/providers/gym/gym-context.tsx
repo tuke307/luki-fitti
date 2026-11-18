@@ -11,6 +11,7 @@ import React, {
   type ReactNode,
 } from 'react';
 import { api, ApiClientError } from '@/lib/api';
+import { secureRandomUUID } from '@/lib/secure-id';
 import { countBucket, durationBucket, trackEvent } from '@/lib/analytics/track';
 import {
   computeRemainingRestSeconds,
@@ -1264,7 +1265,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
       const lastSet = ex.sets[ex.sets.length - 1];
       const newSet: SessionSetDto = {
         id: `set-${Date.now()}`,
-        clientSetId: `cset-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        clientSetId: `cset-${secureRandomUUID()}`,
         sessionExerciseId: ex.clientExerciseId,
         setNumber: ex.sets.length + 1,
         setType,
@@ -1325,7 +1326,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
 
     const defaultSets: SessionSetDto[] = Array.from({ length: isStretch ? 2 : 3 }, (_, idx) => ({
       id: `set-${Date.now()}-${idx}`,
-      clientSetId: `cset-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 6)}`,
+      clientSetId: `cset-${secureRandomUUID()}`,
       sessionExerciseId: clientExerciseId,
       setNumber: idx + 1,
       setType: isStretch ? SetType.STRETCH : SetType.WORKING,

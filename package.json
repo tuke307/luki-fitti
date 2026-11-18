@@ -60,6 +60,12 @@
     "eslint-plugin-react-hooks": "7.1.1",
     "sharp": "0.35.5",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.71.1"
+    "typescript-eslint": "8.71.1",
+    "glob": "14.0.4",
+    "**/readdir-glob/minimatch": "11.0.5",
+    "**/@typescript-eslint/typescript-estree/minimatch": "11.0.5",
+    "**/mjml-cli/minimatch": "11.0.5",
+    "**/editorconfig/minimatch": "11.0.5",
+    "**/@swc/cli/minimatch": "11.0.5"
   }
 }
