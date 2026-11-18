@@ -1,0 +1,27 @@
+info:
+  name: create
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/api-keys"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "Bruno test key",
+        "scopes": [
+          "read:profile",
+          "read:sessions"
+        ],
+        "expiresInDays": 90,
+        "currentPassword": "FAKE-PASSWORD"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

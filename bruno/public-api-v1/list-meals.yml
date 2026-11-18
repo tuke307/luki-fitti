@@ -1,0 +1,39 @@
+info:
+  name: list-meals
+  type: http
+  seq: 9
+
+http:
+  method: GET
+  url: "{{API_URL}}:{{API_PORT}}/api/v1/meals"
+  headers:
+    - name: Authorization
+      value: Bearer {{LUKIFITTI_API_KEY}}
+  params:
+    - name: limit
+      value: ""
+      type: query
+      disabled: true
+    - name: cursor
+      value: ""
+      type: query
+      disabled: true
+    - name: updatedSince
+      value: ""
+      type: query
+      disabled: true
+    - name: from
+      value: ""
+      type: query
+      disabled: true
+    - name: to
+      value: ""
+      type: query
+      disabled: true
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

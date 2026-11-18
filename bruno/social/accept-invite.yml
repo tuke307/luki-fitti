@@ -1,0 +1,19 @@
+info:
+  name: accept-invite
+  type: http
+  seq: 17
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/social/invites/:token/accept"
+  params:
+    - name: token
+      value: "INVITE-TOKEN"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

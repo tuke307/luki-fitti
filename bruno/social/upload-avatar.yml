@@ -1,0 +1,23 @@
+info:
+  name: upload-avatar
+  type: http
+  seq: 5
+
+http:
+  method: PUT
+  url: "{{API_URL}}:{{API_PORT}}/api/social/me/avatar"
+  body:
+    type: multipart-form
+    data:
+      - name: avatar
+        type: file
+        value:
+          - /path/to/avatar.jpg
+        contentType: image/jpeg
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

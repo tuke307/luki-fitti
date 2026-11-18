@@ -1,0 +1,22 @@
+info:
+  name: get-session
+  type: http
+  seq: 3
+
+http:
+  method: GET
+  url: "{{API_URL}}:{{API_PORT}}/api/v1/sessions/:id"
+  headers:
+    - name: Authorization
+      value: Bearer {{LUKIFITTI_API_KEY}}
+  params:
+    - name: id
+      value: "SESSION-ID"
+      type: path
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,35 @@
+info:
+  name: list-exercises
+  type: http
+  seq: 8
+
+http:
+  method: GET
+  url: "{{API_URL}}:{{API_PORT}}/api/v1/exercises"
+  headers:
+    - name: Authorization
+      value: Bearer {{LUKIFITTI_API_KEY}}
+  params:
+    - name: limit
+      value: ""
+      type: query
+      disabled: true
+    - name: cursor
+      value: ""
+      type: query
+      disabled: true
+    - name: updatedSince
+      value: ""
+      type: query
+      disabled: true
+    - name: custom
+      value: "true"
+      type: query
+      disabled: true
+  auth: none
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

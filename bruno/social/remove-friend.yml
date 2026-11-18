@@ -1,0 +1,19 @@
+info:
+  name: remove-friend
+  type: http
+  seq: 14
+
+http:
+  method: DELETE
+  url: "{{API_URL}}:{{API_PORT}}/api/social/friends/:userId"
+  params:
+    - name: userId
+      value: "123e4567-e89b-42d3-a456-426614174000"
+      type: path
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

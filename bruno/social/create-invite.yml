@@ -1,0 +1,15 @@
+info:
+  name: create-invite
+  type: http
+  seq: 15
+
+http:
+  method: POST
+  url: "{{API_URL}}:{{API_PORT}}/api/social/invites"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

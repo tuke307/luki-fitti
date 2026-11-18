@@ -1,0 +1,7 @@
+info:
+  name: duels
+  type: folder
+  seq: 23
+
+request:
+  auth: inherit
