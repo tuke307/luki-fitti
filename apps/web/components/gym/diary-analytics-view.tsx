@@ -80,6 +80,18 @@ function toLocalDateIso(dateInput: Date | string | number): string {
   return `${year}-${month}-${day}`;
 }
 
+/** Whole-minute x-axis ticks (0, 15, 30, 45 …) instead of one label per sample (9:56, 15:25 …). */
+function heartRateMinuteTicks(samples: { offsetSec: number }[]): number[] {
+  const offsets = samples.map((s) => s.offsetSec);
+  const start = Math.min(...offsets);
+  const end = Math.max(...offsets);
+  const minutes = (end - start) / 60;
+  const step = (minutes < 20 ? 5 : minutes < 45 ? 10 : minutes < 120 ? 15 : 30) * 60;
+  const ticks: number[] = [];
+  for (let t = Math.ceil(start / step) * step; t <= end; t += step) ticks.push(t);
+  return ticks;
+}
+
 export function DiaryAnalyticsView() {
   const { historySessions, catalog, weightUnit, updateHistoricalSession, deleteHistoricalSession } =
     useGym();
@@ -1145,10 +1157,7 @@ export function DiaryAnalyticsView() {
                       <div className="h-36 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                           <ComposedChart
-                            data={inspectingSession.heartRateSamples.map((pt) => ({
-                              minLabel: `${Math.floor(pt.offsetSec / 60)}:${String(pt.offsetSec % 60).padStart(2, '0')}`,
-                              bpm: pt.bpm,
-                            }))}
+                            data={inspectingSession.heartRateSamples}
                             margin={{ top: 4, right: 8, left: -20, bottom: 0 }}
                           >
                             <defs>
@@ -1167,7 +1176,11 @@ export function DiaryAnalyticsView() {
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
                             <XAxis
-                              dataKey="minLabel"
+                              dataKey="offsetSec"
+                              type="number"
+                              domain={['dataMin', 'dataMax']}
+                              ticks={heartRateMinuteTicks(inspectingSession.heartRateSamples)}
+                              tickFormatter={(sec: number) => `${Math.round(sec / 60)} min`}
                               tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
                               axisLine={false}
                               tickLine={false}
