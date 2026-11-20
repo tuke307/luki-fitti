@@ -8,6 +8,7 @@ import {
   Optional,
 } from '@nestjs/common';
 import crypto from 'crypto';
+import type { User, UserPreferences } from '@luki-fitti/database';
 import bcrypt from 'bcrypt';
 import {
   ACCOUNT_DELETION_EXPIRY_MS,
@@ -15,6 +16,7 @@ import {
   EMAIL_VERIFICATION_EXPIRY_MS,
   PASSWORD_RESET_EXPIRY_MS,
 } from '@/config/env.config';
+import { verifyPassword } from '@/utils/password.util';
 import { PrismaService } from '../database/prisma.service';
 import { EmailService } from '../email/email.service';
 import { AppSettingsService } from '../app-settings/app-settings.service';
@@ -98,34 +100,31 @@ export class AuthService {
     }
   }
 
-  async registerUser(dto: RegisterDto): Promise<RegisterResponseDto> {
-    const email = dto.email.trim().toLowerCase();
-    const existing = await this.prisma.user.findUnique({ where: { email } });
-    if (existing) {
-      throw new ConflictException('An account with this email already exists');
-    }
-
-    const passwordHash = await this.hashPassword(dto.password);
-    const rawVerificationToken = crypto.randomBytes(32).toString('hex');
-    const hashedVerificationToken = this.hashToken(rawVerificationToken);
-    const verificationExpires = new Date(Date.now() + EMAIL_VERIFICATION_EXPIRY_MS);
-
+  /** Creates the user plus the starter folders, templates and stretching routines. */
+  private async createUserWithStarterContent(input: {
+    email: string;
+    name: string;
+    passwordHash: string | null;
+    emailVerified: boolean;
+    verification?: { tokenHash: string; expires: Date };
+    weightUnit?: WeightUnit | `${WeightUnit}`;
+  }) {
     await this.ensureSystemCatalogSeeded();
 
-    const created = await this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
-          email,
-          emailLookupHash: await emailLookupHash(email),
-          name: dto.name?.trim() || email.split('@')[0] || 'Athlete',
-          passwordHash,
-          emailVerified: false,
-          emailVerificationToken: hashedVerificationToken,
-          emailVerificationExpires: verificationExpires,
+          email: input.email,
+          emailLookupHash: await emailLookupHash(input.email),
+          name: input.name,
+          passwordHash: input.passwordHash,
+          emailVerified: input.emailVerified,
+          emailVerificationToken: input.verification?.tokenHash ?? null,
+          emailVerificationExpires: input.verification?.expires ?? null,
           lastLoginAt: null,
           preferences: {
             create: {
-              weightUnit: dto.weightUnit ?? WeightUnit.KG,
+              weightUnit: input.weightUnit ?? WeightUnit.KG,
               defaultRestSeconds: 90,
               theme: 'system',
               language: 'system',
@@ -214,6 +213,42 @@ export class AuthService {
       }
 
       return user;
+    });
+  }
+
+  /** Account created through Google/Apple sign-in: email already verified by the provider, no password. */
+  async createOAuthUser(
+    email: string,
+    name: string | null,
+  ): Promise<User & { preferences: UserPreferences | null }> {
+    const normalized = email.trim().toLowerCase();
+    return this.createUserWithStarterContent({
+      email: normalized,
+      name: name?.trim() || normalized.split('@')[0] || 'Athlete',
+      passwordHash: null,
+      emailVerified: true,
+    });
+  }
+
+  async registerUser(dto: RegisterDto): Promise<RegisterResponseDto> {
+    const email = dto.email.trim().toLowerCase();
+    const existing = await this.prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      throw new ConflictException('An account with this email already exists');
+    }
+
+    const passwordHash = await this.hashPassword(dto.password);
+    const rawVerificationToken = crypto.randomBytes(32).toString('hex');
+    const hashedVerificationToken = this.hashToken(rawVerificationToken);
+    const verificationExpires = new Date(Date.now() + EMAIL_VERIFICATION_EXPIRY_MS);
+
+    const created = await this.createUserWithStarterContent({
+      email,
+      name: dto.name?.trim() || email.split('@')[0] || 'Athlete',
+      passwordHash,
+      emailVerified: false,
+      verification: { tokenHash: hashedVerificationToken, expires: verificationExpires },
+      weightUnit: dto.weightUnit,
     });
 
     if (this.emailService) {
@@ -377,7 +412,7 @@ export class AuthService {
       );
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    const isPasswordValid = await verifyPassword(password, user.passwordHash);
     if (!isPasswordValid) {
       const nextAttempts = user.failedLoginAttempts + 1;
       const lockedUntil =
@@ -540,12 +575,12 @@ export class AuthService {
       throw new NotFoundException('User not found');
     }
 
-    const isCurrentValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    const isCurrentValid = await verifyPassword(currentPassword, user.passwordHash);
     if (!isCurrentValid) {
       throw new UnauthorizedException('Current password is incorrect');
     }
 
-    const isSameAsCurrent = await bcrypt.compare(newPassword, user.passwordHash);
+    const isSameAsCurrent = await verifyPassword(newPassword, user.passwordHash);
     if (isSameAsCurrent) {
       throw new BadRequestException('New password must be different from current password');
     }
@@ -569,7 +604,7 @@ export class AuthService {
       throw new NotFoundException('User not found');
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    const isPasswordValid = await verifyPassword(password, user.passwordHash);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Current password is incorrect');
     }
@@ -763,7 +798,7 @@ export class AuthService {
   }
 
   /** Formats a user: enabled features (global switches) plus whether they have a usable key. */
-  private async toUserDto(user: Parameters<AuthService['formatUserDto']>[0]): Promise<UserDto> {
+  async toUserDto(user: Parameters<AuthService['formatUserDto']>[0]): Promise<UserDto> {
     const [features, aiKeyConfigured, settings] = this.appSettings
       ? await Promise.all([
           this.appSettings.enabledFeatures(),
