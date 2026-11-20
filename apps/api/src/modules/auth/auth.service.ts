@@ -481,6 +481,7 @@ export class AuthService {
               restTimerSound: prefFields.restTimerSound ?? true,
               notificationsEnabled: prefFields.notificationsEnabled ?? true,
               exerciseSuggestionsEnabled: prefFields.exerciseSuggestionsEnabled ?? true,
+              effortTrackingEnabled: prefFields.effortTrackingEnabled ?? true,
               weeklyGoalSessions: prefFields.weeklyGoalSessions ?? 4,
               progressPhotoCloudBackup: prefFields.progressPhotoCloudBackup ?? false,
               ...nullableFields,
@@ -506,6 +507,9 @@ export class AuthService {
                 : {}),
               ...(prefFields.exerciseSuggestionsEnabled !== undefined
                 ? { exerciseSuggestionsEnabled: prefFields.exerciseSuggestionsEnabled }
+                : {}),
+              ...(prefFields.effortTrackingEnabled !== undefined
+                ? { effortTrackingEnabled: prefFields.effortTrackingEnabled }
                 : {}),
               ...(prefFields.weeklyGoalSessions !== undefined
                 ? { weeklyGoalSessions: prefFields.weeklyGoalSessions }
@@ -655,6 +659,7 @@ export class AuthService {
         restTimerSound: boolean;
         notificationsEnabled?: boolean;
         exerciseSuggestionsEnabled?: boolean;
+        effortTrackingEnabled?: boolean;
         weeklyGoalSessions: number;
         bodyWeightKg?: number | null;
         heightCm?: number | null;
@@ -714,6 +719,7 @@ export class AuthService {
             restTimerSound: user.preferences.restTimerSound,
             notificationsEnabled: user.preferences.notificationsEnabled ?? true,
             exerciseSuggestionsEnabled: user.preferences.exerciseSuggestionsEnabled ?? true,
+            effortTrackingEnabled: user.preferences.effortTrackingEnabled ?? true,
             weeklyGoalSessions: user.preferences.weeklyGoalSessions,
             bodyWeightKg: user.preferences.bodyWeightKg ?? null,
             heightCm: user.preferences.heightCm ?? null,

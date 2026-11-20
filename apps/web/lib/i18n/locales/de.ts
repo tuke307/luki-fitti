@@ -687,6 +687,8 @@ export const de = {
     testNotificationBody: 'Mitteilungen sind aktiviert.',
     exerciseSuggestionsLabel: 'Übungsvorschläge',
     exerciseSuggestionsSub: 'Gelegentlich eine neue Übung vorschlagen',
+    effortRatingLabel: 'Anstrengung bewerten',
+    effortRatingSub: 'Nach jedem Satz fragen, wie anstrengend er war.',
     trainingGoalLabel: 'Trainingsziel',
     trainingGoalSub: 'Steuert Wiederholungsbereiche, Pausen und Progression',
     trainingGoalUnset: 'Nicht festgelegt',

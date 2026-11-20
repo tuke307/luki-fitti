@@ -624,6 +624,103 @@ public struct WatchActiveWorkoutView: View {
     }
 }
 
+/// "How did it feel?" — asked right after each completed set. Auto-dismisses after a few
+/// seconds without a rating so the rest timer never waits on it. Presented as a
+/// full-screen overlay from `WatchRootContainerView`.
+struct WatchEffortPromptView: View {
+    let viewModel: WatchWorkoutViewModel
+    let prompt: WatchWorkoutViewModel.WatchEffortPrompt
+    @Environment(\.lukiLocale) private var tr
+    /// Four seconds is too short to navigate the options with VoiceOver — keep it open.
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
+
+    private static let options: [(rpe: Double, identifier: String)] = [
+        (7.0, "watch.effort.option.easy"),
+        (8.0, "watch.effort.option.right"),
+        (ProgressionEngine.maxEffortRpe, "watch.effort.option.max"),
+    ]
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Text(tr("How did it feel?"))
+                .font(.headline)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                // Sits below the close button's row, so it gets the full width.
+                .padding(.top, 34)
+                // On the title, not the container: an identifier there would propagate
+                // and overwrite every child's.
+                .accessibilityIdentifier("watch.effort.prompt")
+
+            Text("\(tr("Set %d", prompt.setNumber)) · \(prompt.exerciseName)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.7)
+
+            // Top-aligned so a two-line label doesn't push its circle up.
+            HStack(alignment: .top, spacing: 6) {
+                ForEach(Self.options, id: \.identifier) { option in
+                    let level = LukiColors.effortLevel(rpe: option.rpe)
+                    let tint = LukiColors.effortColor(level: level)
+                    let label = LukiI18n.effortLabel(rpe: option.rpe, locale: tr)
+                    let selected = LukiColors.effortLevel(rpe: prompt.rpe) == level
+                    Button {
+                        viewModel.setEffort(
+                            rpe: option.rpe,
+                            clientExerciseId: prompt.clientExerciseId,
+                            clientSetId: prompt.clientSetId
+                        )
+                    } label: {
+                        VStack(spacing: 4) {
+                            EffortBars(level: level)
+                                .frame(width: 42, height: 42)
+                                .background(Circle().fill(tint.opacity(0.22)))
+                                .overlay(Circle().stroke(tint, lineWidth: selected ? 2 : 0))
+                            Text(label)
+                                .font(.caption2)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(label)
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                    .accessibilityIdentifier(option.identifier)
+                }
+            }
+        }
+        .padding(.horizontal, 4)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(alignment: .topLeading) {
+            // Dismisses without rating, like the system close button on a sheet.
+            Button {
+                viewModel.effortPrompt = nil
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.footnote.weight(.semibold))
+                    .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .accessibilityLabel(tr("Close"))
+            .accessibilityIdentifier("watch.effort.dismiss")
+        }
+        .accessibilityAddTraits(.isModal)
+        .task(id: prompt.id) {
+            guard !voiceOver else { return }
+            try? await Task.sleep(for: .seconds(4))
+            guard !Task.isCancelled else { return }
+            if viewModel.effortPrompt?.id == prompt.id {
+                viewModel.effortPrompt = nil
+            }
+        }
+    }
+}
+
 /// Filled dots for completed sets, an outlined dot for each remaining one.
 private struct SetDots: View {
     let total: Int

@@ -132,6 +132,7 @@ public struct ProfileAndAuthView: View {
         let weightUnit: WeightUnit
         let weeklyGoalSessions: Int
         let exerciseSuggestionsEnabled: Bool
+        let effortTrackingEnabled: Bool
         let notificationsEnabled: Bool
         let restTimerSound: Bool
         let defaultRestSeconds: Int
@@ -143,6 +144,7 @@ public struct ProfileAndAuthView: View {
             weightUnit = p.weightUnit
             weeklyGoalSessions = p.weeklyGoalSessions
             exerciseSuggestionsEnabled = p.exerciseSuggestionsEnabled
+            effortTrackingEnabled = p.effortTrackingEnabled
             notificationsEnabled = p.notificationsEnabled
             restTimerSound = p.restTimerSound
             defaultRestSeconds = p.defaultRestSeconds
@@ -170,6 +172,7 @@ public struct ProfileAndAuthView: View {
             restTimerSound: values.restTimerSound,
             notificationsEnabled: values.notificationsEnabled,
             exerciseSuggestionsEnabled: values.exerciseSuggestionsEnabled,
+            effortTrackingEnabled: values.effortTrackingEnabled,
             weeklyGoalSessions: values.weeklyGoalSessions
         )
         dto.weightUnit = values.weightUnit
@@ -709,6 +712,17 @@ private struct TrainingSettingsPage: View {
                 }
                 .tint(LukiColors.accent)
                 .accessibilityIdentifier("ios.profile.exerciseSuggestionsToggle")
+
+                Toggle(isOn: $store.preferences.effortTrackingEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(tr("Rate effort"))
+                        Text(tr("Ask how hard each set felt after completing it."))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .tint(LukiColors.accent)
+                .accessibilityIdentifier("ios.profile.effortTrackingToggle")
             } footer: {
                 AutosaveStatusView(status: autosave.status)
             }

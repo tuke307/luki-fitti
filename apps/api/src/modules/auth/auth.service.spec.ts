@@ -476,6 +476,20 @@ describe('AuthService.updatePreferences — weigh-in reminder & legacy body weig
     assert.equal('weighInReminderEnabled' in calls[1]!.update, false);
   });
 
+  it('persists and returns effortTrackingEnabled, defaulting to true', async () => {
+    const { prisma, calls } = createPreferencesPrisma();
+    const service = new AuthService(prisma);
+    const result = await service.updatePreferences('user-1', {
+      effortTrackingEnabled: false,
+    });
+    assert.equal(calls[0]!.update.effortTrackingEnabled, false);
+    assert.equal(result.preferences?.effortTrackingEnabled, false);
+
+    // Untouched field stays out of the update (older clients keep the stored value).
+    await service.updatePreferences('user-1', { weeklyGoalSessions: 3 });
+    assert.equal('effortTrackingEnabled' in calls[1]!.update, false);
+  });
+
   it('returns the body goal, horizon, backup and consent fields it stores', async () => {
     const { prisma } = createPreferencesPrisma();
     const service = new AuthService(prisma);

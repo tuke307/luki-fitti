@@ -1086,7 +1086,9 @@ public struct ActiveSessionView: View {
                         .padding(.leading, 4)
                         .accessibilityElement(children: .combine)
 
-                        effortButton(exercise: exercise, set: set, setNumber: n)
+                        if viewModel.store.preferences.effortTrackingEnabled {
+                            effortButton(exercise: exercise, set: set, setNumber: n)
+                        }
                     } else {
                         LukiValueStepper(
                             value: LukiFormat.weight(currentWeight),
@@ -1176,7 +1178,7 @@ public struct ActiveSessionView: View {
             viewModel.updateSet(
                 clientExerciseId: exercise.clientExerciseId,
                 clientSetId: set.clientSetId,
-                rpe: .some(nextCycleRpe(set.rpe))
+                rpe: .some(ProgressionEngine.nextEffortRpe(after: set.rpe))
             )
         } label: {
             EffortBars(level: level)
@@ -1253,13 +1255,6 @@ public struct ActiveSessionView: View {
     private func dismiss(_ suggestion: WorkoutExerciseSuggestion, in session: WorkoutSessionDto) {
         let next = dismissedSuggestions(session) + [ProgressionEngine.toDismissedSuggestion(suggestion)]
         viewModel.store.setDismissedSuggestions(next, clientSessionId: session.clientSessionId)
-    }
-
-    private func nextCycleRpe(_ rpe: Double?) -> Double? {
-        guard let rpe else { return 7.0 }
-        if rpe <= 7.5 { return 8.0 }
-        if rpe < ProgressionEngine.maxEffortRpe { return ProgressionEngine.maxEffortRpe }
-        return nil
     }
 
     // MARK: - Footer

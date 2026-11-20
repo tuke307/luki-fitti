@@ -131,6 +131,62 @@ public final class WatchWorkoutViewModel {
         Task { await flushSyncQueue() }
     }
 
+    /// The effort question shown right after a set is completed: which set, in which
+    /// exercise, so the rating lands on the right set even after the exercise advanced.
+    public struct WatchEffortPrompt: Identifiable, Equatable {
+        public var id: String { clientSetId }
+        public let clientExerciseId: String
+        public let clientSetId: String
+        public let exerciseName: String
+        /// 1-based position of the set within its exercise.
+        public let setNumber: Int
+        public let rpe: Double?
+    }
+
+    /// Shown as a full-screen overlay after each completed set; nil dismisses it again.
+    public var effortPrompt: WatchEffortPrompt?
+
+    /// Rates a completed set's effort by id — safe to call after `currentExerciseIndex`
+    /// has already advanced past the exercise the set belongs to.
+    public func setEffort(rpe: Double?, clientExerciseId: String, clientSetId: String) {
+        guard var session = store.activeSession,
+              let exIdx = session.exercises.firstIndex(where: { $0.clientExerciseId == clientExerciseId }),
+              let setIdx = session.exercises[exIdx].sets.firstIndex(where: { $0.clientSetId == clientSetId })
+        else { return }
+        var set = session.exercises[exIdx].sets[setIdx]
+        set.rpe = rpe
+        session.exercises[exIdx].sets[setIdx] = set
+        session.version += 1
+
+        let recalculated = SessionCalculator.recalculateSessionTotals(session)
+        store.saveActiveSession(recalculated)
+        store.enqueueSessionSync(recalculated)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(recalculated)
+        let saved = recalculated.exercises[exIdx].sets[setIdx]
+        // SessionMutationPacket can't carry "clear rpe" (nil = no change) — the snapshot
+        // broadcast above delivers the cleared value to the iPhone instead.
+        watchSyncCoordinator.broadcastSetMutation(
+            SessionMutationPacket(
+                clientSessionId: recalculated.clientSessionId,
+                clientExerciseId: recalculated.exercises[exIdx].clientExerciseId,
+                clientSetId: saved.clientSetId,
+                weight: saved.weight,
+                reps: saved.reps,
+                rpe: saved.rpe,
+                completed: saved.completed,
+                avgHeartRateBpm: saved.avgHeartRateBpm,
+                peakHeartRateBpm: saved.peakHeartRateBpm,
+                restEndHeartRateBpm: saved.restEndHeartRateBpm,
+                restTimerEndsAt: recalculated.restTimerEndsAt,
+                restTimerDurationSec: recalculated.restTimerDurationSec,
+                newVersion: recalculated.version
+            )
+        )
+        WKInterfaceDevice.current().play(.click)
+        effortPrompt = nil
+        Task { await flushSyncQueue() }
+    }
+
     /// Adds or removes rest time; at zero the rest ends.
     public func adjustRest(by deltaSeconds: Int) {
         guard var session = store.activeSession else { return }
@@ -528,6 +584,19 @@ public final class WatchWorkoutViewModel {
         )
         watchSyncCoordinator.broadcastSetMutation(packet)
 
+        // Ask for effort while the set is fresh — the exercise index may already have
+        // advanced, so the prompt carries ids instead of a position. Skipped entirely
+        // when the user turned effort rating off in settings.
+        if store.preferences.effortTrackingEnabled {
+            effortPrompt = WatchEffortPrompt(
+                clientExerciseId: session.exercises[exIdx].clientExerciseId,
+                clientSetId: set.clientSetId,
+                exerciseName: session.exercises[exIdx].exerciseNameSnapshot,
+                setNumber: nextSetIdx + 1,
+                rpe: set.rpe
+            )
+        }
+
         Task { await flushSyncQueue() }
     }
 
@@ -604,6 +673,9 @@ public final class WatchWorkoutViewModel {
         let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("LukiFittiWatchUITest-\(UUID().uuidString)", isDirectory: true)
         let store = OfflineStore(storageDirectory: tempDir, localDevice: .APPLE_WATCH)
+        if args.contains("--uitesting-effort-off") {
+            store.preferences.effortTrackingEnabled = false
+        }
         let vm = WatchWorkoutViewModel(store: store)
 
         if args.contains("--uitesting-seed-active-session") || args.contains("--uitesting-marketing"),
@@ -695,6 +767,16 @@ public struct WatchRootContainerView: View {
                 WatchHomeView(viewModel: viewModel)
             }
         }
+        // A .sheet from the paged TabView / active workout view never presented in
+        // testing, so the effort question is a full-screen overlay at the root instead.
+        .overlay {
+            if let prompt = viewModel.effortPrompt {
+                WatchEffortPromptView(viewModel: viewModel, prompt: prompt)
+                    .background(Color.black)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: viewModel.effortPrompt != nil)
         .onAppear {
             viewModel.syncNow(silent: true)
         }
