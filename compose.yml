@@ -1,6 +1,8 @@
+# Image digests (sha256:...) are set as Coolify env vars by .github/workflows/production.yaml
+# before each deploy — the compose file never points at a mutable tag like :latest.
 services:
   luki-fitti-db-migrate:
-    image: ghcr.io/tuke307/luki-fitti-db-migrate:latest
+    image: ghcr.io/tuke307/luki-fitti-db-migrate@${LUKI_FITTI_DB_MIGRATE_DIGEST:?LUKI_FITTI_DB_MIGRATE_DIGEST is not set}
     pull_policy: always
     restart: 'no'
     environment:
@@ -15,7 +17,7 @@ services:
       start_period: 10s
 
   luki-fitti-web:
-    image: ghcr.io/tuke307/luki-fitti-web:latest
+    image: ghcr.io/tuke307/luki-fitti-web@${LUKI_FITTI_WEB_DIGEST:?LUKI_FITTI_WEB_DIGEST is not set}
     pull_policy: always
     restart: always
     environment:
@@ -52,7 +54,7 @@ services:
       - 'app.service=web'
 
   luki-fitti-api:
-    image: ghcr.io/tuke307/luki-fitti-api:latest
+    image: ghcr.io/tuke307/luki-fitti-api@${LUKI_FITTI_API_DIGEST:?LUKI_FITTI_API_DIGEST is not set}
     pull_policy: always
     restart: always
     environment:
@@ -128,7 +130,7 @@ services:
       - 'app.service=api'
 
   luki-fitti-email-worker:
-    image: ghcr.io/tuke307/luki-fitti-email-worker:latest
+    image: ghcr.io/tuke307/luki-fitti-email-worker@${LUKI_FITTI_EMAIL_WORKER_DIGEST:?LUKI_FITTI_EMAIL_WORKER_DIGEST is not set}
     pull_policy: always
     restart: always
     environment:
@@ -175,7 +177,7 @@ services:
       start_period: 20s
 
   luki-fitti-mcp-server:
-    image: ghcr.io/tuke307/luki-fitti-mcp-server:latest
+    image: ghcr.io/tuke307/luki-fitti-mcp-server@${LUKI_FITTI_MCP_SERVER_DIGEST:?LUKI_FITTI_MCP_SERVER_DIGEST is not set}
     pull_policy: always
     restart: always
     environment:
