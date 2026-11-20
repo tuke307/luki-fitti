@@ -1259,5 +1259,10 @@ export const en = {
     goToFriends: 'Open Friends',
     signIn: 'Sign in',
     signUp: 'Create account',
+    usernameNeeded: 'Pick a username so your friend can find you, then the invite is accepted.',
+    chooseUsername: 'Choose username',
+    appHint: 'Have the LukiFitti app on your iPhone?',
+    openInApp: 'Open in the app',
+    getTheApp: 'Get the app',
   },
 };

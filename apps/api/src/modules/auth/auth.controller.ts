@@ -10,26 +10,21 @@ import {
   UnauthorizedException,
   ForbiddenException,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
-import { randomUUID } from 'crypto';
 import { AuthService } from './auth.service';
 import { RefreshTokenService } from './refresh-token.service';
+import { TwoFactorService } from './two-factor.service';
+import { issueSession, resolveDeviceLabel, type IssueSessionOptions } from './session.helper';
 import { CsrfGuard } from '@/guards/csrf.guard';
 import { AuthGuard, extractBearerToken } from '@/guards/auth.guard';
 import { CurrentUser, type AuthenticatedUser } from '@/decorators/current-user.decorator';
 import { ZodValidationPipe } from '@/pipes/zod-validation.pipe';
-import {
-  generateAccessToken,
-  generateCsrfToken,
-  generateRefreshToken,
-  verifyAccessToken,
-  verifyRefreshToken,
-} from '@/utils/jwt.util';
+import { generateMfaToken, verifyAccessToken, verifyRefreshToken } from '@/utils/jwt.util';
 import { getRedis } from '@/utils/redis.util';
-import { ACCESS_TOKEN_EXPIRY_MS, REFRESH_TOKEN_EXPIRY_MS } from '@/config/env.config';
 import {
   LoginSchema,
   RegisterSchema,
@@ -57,6 +52,7 @@ import {
   type RefreshTokenBodyDto,
   type DeviceSessionDto,
   type AuthTokensDto,
+  type MfaRequiredDto,
   type UserDto,
 } from '@luki-fitti/common/schemas';
 import {
@@ -72,6 +68,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly refreshTokenService: RefreshTokenService,
+    @Optional() private readonly twoFactor?: TwoFactorService,
   ) {}
 
   /** Overridable in tests (avoids a Redis connection). */
@@ -79,41 +76,16 @@ export class AuthController {
     await getRedis().set(`access_denylist:${jti}`, '1', 'EX', ttlSec);
   };
 
-  private async issueSessionCookies(
+  private issueSessionCookies(
     user: { id: string; email: string },
     res: Response,
-    opts: { familyId?: string; deviceLabel?: string | null; setCookies?: boolean } = {},
+    opts: IssueSessionOptions = {},
   ): Promise<AuthTokensDto> {
-    const familyId = opts.familyId ?? randomUUID();
-    const accessToken = generateAccessToken(user, familyId);
-    const refreshToken = generateRefreshToken(user, familyId);
-
-    await this.refreshTokenService.create({
-      token: refreshToken,
-      userId: user.id,
-      expiresAt: new Date(Date.now() + REFRESH_TOKEN_EXPIRY_MS),
-      familyId,
-      deviceLabel: opts.deviceLabel ?? null,
-    });
-
-    if (opts.setCookies ?? true) {
-      setCookie(res, 'accessToken', accessToken, accessTokenCookieOptions);
-      setCookie(res, 'refreshToken', refreshToken, refreshTokenCookieOptions);
-      setCookie(res, 'csrfToken', generateCsrfToken(), csrfCookieOptions);
-    }
-
-    return {
-      accessToken,
-      refreshToken,
-      expiresAt: new Date(Date.now() + ACCESS_TOKEN_EXPIRY_MS).toISOString(),
-    };
+    return issueSession(this.refreshTokenService, user, res, opts);
   }
 
   private resolveDeviceLabel(req: Request): string {
-    const raw = (req.header('x-device-label') ?? req.header('x-client-platform') ?? 'web')
-      .trim()
-      .toLowerCase();
-    return /^[a-z0-9-]{1,32}$/.test(raw) ? raw : 'unknown';
+    return resolveDeviceLabel(req);
   }
 
   private async denylistAccessToken(req: Request): Promise<{ sid?: string }> {
@@ -204,8 +176,11 @@ export class AuthController {
     @Body(new ZodValidationPipe(LoginSchema)) body: LoginDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<UserDto> {
+  ): Promise<UserDto | MfaRequiredDto> {
     const user = await this.authService.authenticateUser(body.email, body.password);
+    if (await this.twoFactor?.isEnabled(user.id)) {
+      return { mfaRequired: true, mfaToken: generateMfaToken(user.id) };
+    }
     const tokens = await this.issueSessionCookies(user, res, {
       deviceLabel: this.resolveDeviceLabel(req),
     });

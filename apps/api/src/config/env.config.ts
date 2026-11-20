@@ -68,6 +68,37 @@ export const DATABASE_URL =
 
 export const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 export const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || undefined;
+
+const csv = (value: string | undefined) =>
+  (value ?? '')
+    .split(',')
+    .map((v) => v.trim())
+    .filter(Boolean);
+
+// WebAuthn: the RP id must be a registrable suffix of the app host (passkeys are bound to it).
+export const WEBAUTHN_RP_ID = process.env.WEBAUTHN_RP_ID || new URL(FRONTEND_URL).hostname;
+export const WEBAUTHN_RP_NAME = process.env.WEBAUTHN_RP_NAME || 'LukiFitti';
+export const WEBAUTHN_ORIGINS = csv(process.env.WEBAUTHN_ORIGINS).length
+  ? csv(process.env.WEBAUTHN_ORIGINS)
+  : [new URL(FRONTEND_URL).origin];
+
+// OAuth client ids accepted as the `aud` of Google/Apple ID tokens (web + iOS ids, comma separated).
+export const GOOGLE_CLIENT_IDS = csv(process.env.GOOGLE_CLIENT_IDS);
+export const APPLE_CLIENT_IDS = csv(process.env.APPLE_CLIENT_IDS);
+
+export const MFA_TOKEN_EXPIRY_MS = Number(process.env.MFA_TOKEN_EXPIRY_MS) || 5 * 60 * 1000;
+
+let _twoFactorKey: string | undefined;
+/** Encrypts TOTP secrets at rest and keys the recovery-code hashes; same rules as the JWT secrets. */
+export function getTwoFactorKey(): string {
+  if (_twoFactorKey === undefined) {
+    _twoFactorKey = resolveJwtSecret(
+      process.env.TWO_FACTOR_ENCRYPTION_KEY,
+      'TWO_FACTOR_ENCRYPTION_KEY',
+    );
+  }
+  return _twoFactorKey;
+}
 export const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
 // Email & BullMQ Configuration

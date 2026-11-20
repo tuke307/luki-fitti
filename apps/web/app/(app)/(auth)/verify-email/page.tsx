@@ -8,6 +8,7 @@ import { Button } from '@luki-fitti/ui/components/ui/button';
 import { Card } from '@luki-fitti/ui/components/ui/card';
 import { Input } from '@luki-fitti/ui/components/ui/input';
 import { useAuth } from '@/providers/auth/auth-context';
+import { postAuthPath } from '@/lib/social/pending-invite';
 
 export default function VerifyEmailPage() {
   const router = useRouter();
@@ -64,7 +65,13 @@ export default function VerifyEmailPage() {
               Your LukiFitti account is now active and signed in. Your workouts, folders, and
               training diary will synchronize automatically across all your devices.
             </p>
-            <Button type="button" size="lg" onClick={() => router.push('/')} className="w-full">
+            <Button
+              type="button"
+              size="lg"
+              onClick={() => router.push(postAuthPath())}
+              className="w-full"
+              data-testid="verify-email-continue"
+            >
               Open LukiFitti Dashboard →
             </Button>
           </div>
