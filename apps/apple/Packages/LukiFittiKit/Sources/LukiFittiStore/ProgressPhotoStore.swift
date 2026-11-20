@@ -405,7 +405,11 @@ public final class ProgressPhotoStore {
 
     private func write<T: Encodable>(_ value: T, to file: String) {
         guard let data = try? JSONEncoder().encode(value) else { return }
+        #if os(macOS)
+        try? data.write(to: directory.appendingPathComponent(file), options: [.atomic])
+        #else
         try? data.write(to: directory.appendingPathComponent(file), options: [.atomic, .completeFileProtection])
+        #endif
     }
 
     /// JPEG bytes, EXIF-free, long edge ≤ 2048. `UIImage` re-encoding strips all metadata.
