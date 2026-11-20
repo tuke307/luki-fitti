@@ -7,6 +7,7 @@ import type { CreateEmailDto, UpdateEmailDto } from '@luki-fitti/common/schemas'
 import {
   ACCOUNT_DELETION_EXPIRY_MS,
   EMAIL_FROM,
+  EMAIL_REPLY_TO,
   FRONTEND_URL,
   NODE_ENV,
   PASSWORD_RESET_EXPIRY_MS,
@@ -16,6 +17,7 @@ import {
   SMTP_REJECT_UNAUTHORIZED,
   SMTP_USER,
 } from '../../config/env.config';
+import { htmlToText } from '../../utils/html-to-text.util';
 import { PrismaService } from '../database/prisma.service';
 import { BullMQService } from '../bullmq/bullmq.service';
 import { EmailTemplateService } from '../email-template/email-template.service';
@@ -267,7 +269,10 @@ export class EmailService {
         from: EMAIL_FROM,
         to: email.recipientEmail,
         subject: email.subject,
+        ...(EMAIL_REPLY_TO ? { replyTo: EMAIL_REPLY_TO } : {}),
         html: email.content,
+        text: htmlToText(email.content),
+        headers: { 'Auto-Submitted': 'auto-generated' },
       });
 
       await this.update(email.id, {
