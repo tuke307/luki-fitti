@@ -116,6 +116,10 @@ struct HistorySessionEditorSheet: View {
                 if samples.count > 1 {
                     let bpms = samples.map(\.bpm)
                     let domainMin = (bpms.min() ?? 40) - 10
+                    let offsets = samples.map(\.offsetSec)
+                    let xStart = offsets.min() ?? 0
+                    let xEnd = max(offsets.max() ?? 0, xStart + 1)
+                    let tickStep = Self.heartRateTickStep(durationSec: xEnd - xStart)
                     Chart(samples, id: \.offsetSec) { pt in
                         AreaMark(
                             x: .value("Time", pt.offsetSec),
@@ -133,14 +137,19 @@ struct HistorySessionEditorSheet: View {
                         )
                         .foregroundStyle(LukiColors.heartRate)
                     }
+                    .chartXScale(domain: xStart ... xEnd)
                     .chartYScale(domain: (bpms.min() ?? 40) - 10 ... (bpms.max() ?? 200) + 10)
                     .chartXAxis {
-                        AxisMarks { value in
+                        AxisMarks(values: Array(stride(
+                            from: (xStart + tickStep - 1) / tickStep * tickStep,
+                            through: xEnd,
+                            by: tickStep
+                        ))) { value in
                             AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [3, 3]))
                                 .foregroundStyle(.secondary.opacity(0.3))
                             AxisValueLabel {
                                 if let sec = value.as(Int.self) {
-                                    Text(LukiFormat.clock(sec))
+                                    Text("\(sec / 60) min")
                                         .font(.caption2)
                                         .foregroundStyle(.secondary)
                                 }
@@ -169,6 +178,18 @@ struct HistorySessionEditorSheet: View {
                             .strokeBorder(LukiColors.heartRate.opacity(0.3))
                     )
             )
+        }
+    }
+
+    /// Whole-minute tick spacing so the axis reads 0, 15, 30, 45 … instead of Swift Charts'
+    /// "nice" second values (2000 s = 33:20).
+    private static func heartRateTickStep(durationSec: Int) -> Int {
+        let minutes = durationSec / 60
+        switch minutes {
+        case ..<20: return 5 * 60
+        case ..<45: return 10 * 60
+        case ..<120: return 15 * 60
+        default: return 30 * 60
         }
     }
 
