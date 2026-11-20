@@ -244,13 +244,26 @@ jobs:
     steps:
       - name: Pin image digests and deploy on Coolify
         env:
-          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
-          COOLIFY_APP_UUID: ${{ secrets.COOLIFY_APP_UUID }}
+          COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
         run: |
           set -euo pipefail
 
-          for var in COOLIFY_URL COOLIFY_APP_UUID COOLIFY_TOKEN \
+          # The deploy webhook is https://<host>/api/v1/deploy?uuid=<app-uuid>[&force=…];
+          # the base URL and the application UUID are taken from it.
+          COOLIFY_URL="${COOLIFY_WEBHOOK%%/api/v1/*}"
+          COOLIFY_APP_UUID=""
+          if [[ "$COOLIFY_WEBHOOK" =~ [?\&]uuid=([^\&]+) ]]; then
+            COOLIFY_APP_UUID="${BASH_REMATCH[1]}"
+          fi
+          if [ -z "$COOLIFY_WEBHOOK" ] || [ "$COOLIFY_URL" = "$COOLIFY_WEBHOOK" ] || [ -z "$COOLIFY_APP_UUID" ]; then
+            echo "::error::COOLIFY_WEBHOOK must look like https://<host>/api/v1/deploy?uuid=<app-uuid>."
+            exit 1
+          fi
+          echo "::add-mask::$COOLIFY_URL"
+          echo "::add-mask::$COOLIFY_APP_UUID"
+
+          for var in COOLIFY_TOKEN \
             DB_MIGRATE_DIGEST WEB_DIGEST API_DIGEST EMAIL_WORKER_DIGEST MCP_SERVER_DIGEST; do
             if [ -z "${!var:-}" ]; then
               echo "::error::$var is empty — check the repo secrets and the build job outputs."
