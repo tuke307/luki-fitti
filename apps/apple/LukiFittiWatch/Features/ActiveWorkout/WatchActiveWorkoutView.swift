@@ -59,6 +59,41 @@ public struct WatchActiveWorkoutView: View {
 
     private var unit: WeightUnit { session?.weightUnit ?? .KG }
 
+    /// The set the effort control rates: the last completed one in the session (the current
+    /// exercise index has often already advanced past it).
+    private var lastCompletedSet: (setNumber: Int, rpe: Double?, restSeconds: Int)? {
+        guard let session, let ref = viewModel.lastCompletedSetRef,
+              session.exercises.indices.contains(ref.exerciseIndex),
+              session.exercises[ref.exerciseIndex].sets.indices.contains(ref.setIndex)
+        else { return nil }
+        let exercise = session.exercises[ref.exerciseIndex]
+        return (ref.setIndex + 1, exercise.sets[ref.setIndex].rpe, exercise.restSeconds)
+    }
+
+    /// 3-bar effort control for the last completed set — same look as the iOS set row.
+    private func effortButton(
+        setNumber n: Int,
+        rpe: Double?,
+        identifier: String,
+        compact: Bool = false
+    ) -> some View {
+        let level = LukiColors.effortLevel(rpe: rpe)
+        let size: CGFloat = compact ? 36 : 44
+        return Button {
+            viewModel.cycleEffortOfLastCompletedSet()
+        } label: {
+            EffortBars(level: level)
+                .scaleEffect(compact ? 0.8 : 1)
+                .frame(width: size, height: size)
+                .background(Circle().fill(level == 0 ? LukiColors.fill : LukiColors.effortColor(level: level).opacity(0.14)))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(tr("Effort, set %d: %@", n, LukiI18n.effortLabel(rpe: rpe, locale: tr)))
+        .accessibilityHint(tr("Change effort"))
+        .accessibilityIdentifier(identifier)
+    }
+
     // MARK: - Page 1: controls (Apple Workout style)
 
     private var controlsPage: some View {
@@ -258,6 +293,9 @@ public struct WatchActiveWorkoutView: View {
             .fixedSize()
             .accessibilityLabel(tr("Set %d of %d", current, total))
         let bpm = isLuminanceReduced ? nil : viewModel.healthCoordinator.currentHeartRateBpm
+        // Supersets skip the rest screen, so the effort chip moves here next to the set dots;
+        // it takes the heart-rate chip's slot when both don't fit.
+        let effort = lastCompletedSet.flatMap { $0.restSeconds == 0 ? $0 : nil }
 
         return ViewThatFits(in: .horizontal) {
             HStack(spacing: 6) {
@@ -271,6 +309,27 @@ public struct WatchActiveWorkoutView: View {
                         .labelStyle(.titleAndIcon)
                         .lineLimit(1)
                         .accessibilityLabel(tr("%d bpm", bpm))
+                }
+                if let effort {
+                    effortButton(
+                        setNumber: effort.setNumber,
+                        rpe: effort.rpe,
+                        identifier: "watch.execution.effort",
+                        compact: true
+                    )
+                }
+            }
+            HStack(spacing: 6) {
+                SetDots(total: total, completed: completed)
+                counter
+                Spacer(minLength: 0)
+                if let effort {
+                    effortButton(
+                        setNumber: effort.setNumber,
+                        rpe: effort.rpe,
+                        identifier: "watch.execution.effort",
+                        compact: true
+                    )
                 }
             }
             HStack(spacing: 6) {
@@ -406,27 +465,35 @@ public struct WatchActiveWorkoutView: View {
                 .foregroundStyle(LukiColors.accent)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            ZStack {
-                Circle()
-                    .stroke(LukiColors.fill, lineWidth: 7)
-                Circle()
-                    .trim(from: 0, to: max(0.02, min(1, progress)))
-                    .stroke(LukiColors.accent, style: StrokeStyle(lineWidth: 7, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                Group {
-                    if rest.isRunning, let endsAt, endsAt > Date() {
-                        Text(timerInterval: Date()...endsAt, countsDown: true)
-                    } else {
-                        Text(LukiFormat.clock(rest.remainingSeconds))
+            // The effort button shares the ring's row so the page still fits a 40 mm watch.
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .stroke(LukiColors.fill, lineWidth: 7)
+                    Circle()
+                        .trim(from: 0, to: max(0.02, min(1, progress)))
+                        .stroke(LukiColors.accent, style: StrokeStyle(lineWidth: 7, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                    Group {
+                        if rest.isRunning, let endsAt, endsAt > Date() {
+                            Text(timerInterval: Date()...endsAt, countsDown: true)
+                        } else {
+                            Text(LukiFormat.clock(rest.remainingSeconds))
+                        }
                     }
+                    .font(.system(.title3, design: .rounded).weight(.semibold).monospacedDigit())
+                    .multilineTextAlignment(.center)
                 }
-                .font(.system(.title3, design: .rounded).weight(.semibold).monospacedDigit())
-                .multilineTextAlignment(.center)
+                .frame(width: 64, height: 64)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(tr("Rest"))
+                .accessibilityValue(LukiFormat.clock(rest.remainingSeconds))
+
+                if !isLuminanceReduced, let last = lastCompletedSet {
+                    effortButton(setNumber: last.setNumber, rpe: last.rpe, identifier: "watch.rest.effort")
+                }
             }
-            .frame(width: 64, height: 64)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(tr("Rest"))
-            .accessibilityValue(LukiFormat.clock(rest.remainingSeconds))
+            .frame(maxWidth: .infinity)
 
             Spacer(minLength: 0)
 

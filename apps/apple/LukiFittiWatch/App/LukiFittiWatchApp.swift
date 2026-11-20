@@ -131,6 +131,67 @@ public final class WatchWorkoutViewModel {
         Task { await flushSyncQueue() }
     }
 
+    /// The completed set the effort button acts on: the one with the latest `completedAt`
+    /// across all exercises — after the last set of an exercise `currentExerciseIndex` has
+    /// already advanced. Sets without a timestamp fall back to the current exercise's last
+    /// completed set. Returns the exercise and set indices into `activeSession`.
+    public var lastCompletedSetRef: (exerciseIndex: Int, setIndex: Int)? {
+        guard let session = store.activeSession else { return nil }
+        var best: (exerciseIndex: Int, setIndex: Int, completedAt: String)?
+        for (exIdx, exercise) in session.exercises.enumerated() {
+            for (setIdx, set) in exercise.sets.enumerated() where set.completed {
+                if let completedAt = set.completedAt,
+                   best == nil || completedAt > best!.completedAt {
+                    best = (exIdx, setIdx, completedAt)
+                }
+            }
+        }
+        if let best { return (best.exerciseIndex, best.setIndex) }
+        let exIdx = min(max(0, currentExerciseIndex), session.exercises.count - 1)
+        guard !session.exercises.isEmpty,
+              let setIdx = session.exercises[exIdx].sets.lastIndex(where: \.completed)
+        else { return nil }
+        return (exIdx, setIdx)
+    }
+
+    /// Cycles the 3-bar effort rating (unrated → Easy → Just right → Max → unrated) on the
+    /// last completed set and syncs it like any other set change.
+    public func cycleEffortOfLastCompletedSet() {
+        guard var session = store.activeSession,
+              let ref = lastCompletedSetRef else { return }
+        var set = session.exercises[ref.exerciseIndex].sets[ref.setIndex]
+        set.rpe = ProgressionEngine.nextEffortRpe(after: set.rpe)
+        session.exercises[ref.exerciseIndex].sets[ref.setIndex] = set
+        session.version += 1
+
+        let recalculated = SessionCalculator.recalculateSessionTotals(session)
+        store.saveActiveSession(recalculated)
+        store.enqueueSessionSync(recalculated)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(recalculated)
+        let saved = recalculated.exercises[ref.exerciseIndex].sets[ref.setIndex]
+        // SessionMutationPacket can't carry "clear rpe" (nil = no change) — the snapshot
+        // broadcast above delivers the cleared value to the iPhone instead.
+        watchSyncCoordinator.broadcastSetMutation(
+            SessionMutationPacket(
+                clientSessionId: recalculated.clientSessionId,
+                clientExerciseId: recalculated.exercises[ref.exerciseIndex].clientExerciseId,
+                clientSetId: saved.clientSetId,
+                weight: saved.weight,
+                reps: saved.reps,
+                rpe: saved.rpe,
+                completed: saved.completed,
+                avgHeartRateBpm: saved.avgHeartRateBpm,
+                peakHeartRateBpm: saved.peakHeartRateBpm,
+                restEndHeartRateBpm: saved.restEndHeartRateBpm,
+                restTimerEndsAt: recalculated.restTimerEndsAt,
+                restTimerDurationSec: recalculated.restTimerDurationSec,
+                newVersion: recalculated.version
+            )
+        )
+        WKInterfaceDevice.current().play(.click)
+        Task { await flushSyncQueue() }
+    }
+
     /// Adds or removes rest time; at zero the rest ends.
     public func adjustRest(by deltaSeconds: Int) {
         guard var session = store.activeSession else { return }

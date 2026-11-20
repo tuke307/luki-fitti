@@ -25,4 +25,19 @@ final class WatchActiveWorkoutUITests: XCTestCase {
             XCTAssertTrue(ringButton.waitForExistence(timeout: 5))
         }
     }
+
+    func testRestScreenEffortButtonCyclesRpe() {
+        let app = WatchUITestHelpers.launchWatchApp(extraArguments: ["--uitesting-seed-active-session"])
+
+        // Complete a set to land on the rest screen.
+        let ringButton = app.buttons["watch.execution.ringButton"]
+        XCTAssertTrue(ringButton.waitForExistence(timeout: 10))
+        ringButton.tap()
+
+        let effortButton = app.buttons["watch.rest.effort"]
+        XCTAssertTrue(effortButton.waitForExistence(timeout: 5))
+        let labelBefore = effortButton.label
+        effortButton.tap()
+        XCTAssertNotEqual(effortButton.label, labelBefore)
+    }
 }
