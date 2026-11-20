@@ -659,7 +659,8 @@ struct WatchEffortPromptView: View {
                 .multilineTextAlignment(.center)
                 .minimumScaleFactor(0.7)
 
-            HStack(spacing: 6) {
+            // Top-aligned so a two-line label doesn't push its circle up.
+            HStack(alignment: .top, spacing: 6) {
                 ForEach(Self.options, id: \.identifier) { option in
                     let level = LukiColors.effortLevel(rpe: option.rpe)
                     let tint = LukiColors.effortColor(level: level)
