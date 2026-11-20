@@ -218,4 +218,96 @@ final class WatchCompanionSyncE2ETests: XCTestCase {
         XCTAssertEqual(watchStore.historySessions.first?.clientSessionId, finalized.clientSessionId)
         XCTAssertEqual(watchStore.historySessions.first?.status, .COMPLETED)
     }
+
+    /// Issue #178: the exercise open on one device is part of the session itself — newest
+    /// `focusedAt` wins, merged independently of `version`, and it survives stale snapshots.
+    @MainActor
+    func testFocusedExerciseRoundTripsBetweenWatchAndIPhone() throws {
+        let iPhoneDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LukiFittiIPhoneFocusE2E-\(UUID().uuidString)", isDirectory: true)
+        let watchDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LukiFittiWatchFocusE2E-\(UUID().uuidString)", isDirectory: true)
+        defer {
+            try? FileManager.default.removeItem(at: iPhoneDir)
+            try? FileManager.default.removeItem(at: watchDir)
+        }
+        let iPhoneStore = OfflineStore(storageDirectory: iPhoneDir)
+        let watchStore = OfflineStore(storageDirectory: watchDir)
+
+        var session = WorkoutSessionDto(
+            clientSessionId: "sess-focus-e2e",
+            workoutNameSnapshot: "Workout",
+            version: 3,
+            exercises: (0..<3).map { idx in
+                SessionExerciseDto(
+                    clientExerciseId: "ex-\(idx)",
+                    sessionId: "sess-focus-e2e",
+                    exerciseNameSnapshot: "Exercise \(idx)",
+                    primaryMuscleSnapshot: .CHEST,
+                    orderIndex: idx,
+                    sets: [SessionSetDto(sessionExerciseId: "ex-\(idx)", setNumber: 1)]
+                )
+            }
+        )
+        iPhoneStore.saveActiveSession(session)
+        watchStore.saveActiveSession(session)
+
+        // Watch focuses exercise 3 (a pure focus change — version stays put), snapshot arrives
+        // on the iPhone and merges like mergeIncomingWatchActiveSession.
+        let watchFocused = SessionCalculator.focusing(
+            session,
+            clientExerciseId: "ex-2",
+            now: Date(timeIntervalSince1970: 1_763_700_000)
+        )
+        watchStore.saveActiveSession(watchFocused)
+        let iPhoneIncoming = try XCTUnwrap(watchStore.activeSession)
+        let iPhoneCurrent = try XCTUnwrap(iPhoneStore.activeSession)
+        XCTAssertEqual(iPhoneIncoming.version, iPhoneCurrent.version)
+        iPhoneStore.saveActiveSession(
+            SessionCalculator.mergingFocus(into: iPhoneIncoming, from: iPhoneCurrent)
+        )
+        let mergedIPhone = try XCTUnwrap(iPhoneStore.activeSession)
+        XCTAssertEqual(
+            SessionCalculator.resolveFocusedExerciseIndex(
+                mergedIPhone.exercises,
+                rememberedClientExerciseId: mergedIPhone.focusedClientExerciseId
+            ),
+            2
+        )
+
+        // A stale-version snapshot with a newer focus still updates the focus.
+        var stale = session
+        stale.version = 1
+        stale = SessionCalculator.focusing(
+            stale,
+            clientExerciseId: "ex-0",
+            now: Date(timeIntervalSince1970: 1_763_800_000)
+        )
+        let local = try XCTUnwrap(iPhoneStore.activeSession)
+        XCTAssertGreaterThan(local.version, stale.version)
+        let focusMerged = SessionCalculator.mergingFocus(into: local, from: stale)
+        iPhoneStore.saveActiveSession(focusMerged)
+        XCTAssertEqual(iPhoneStore.activeSession?.focusedClientExerciseId, "ex-0")
+        XCTAssertEqual(iPhoneStore.activeSession?.version, local.version)
+
+        // iPhone focus change rides the snapshot back to the Watch.
+        let phoneFocused = SessionCalculator.focusing(
+            focusMerged,
+            clientExerciseId: "ex-1",
+            now: Date(timeIntervalSince1970: 1_763_900_000)
+        )
+        iPhoneStore.saveActiveSession(phoneFocused)
+        let watchCurrent = try XCTUnwrap(watchStore.activeSession)
+        watchStore.saveActiveSession(
+            SessionCalculator.mergingFocus(into: phoneFocused, from: watchCurrent)
+        )
+        let mergedWatch = try XCTUnwrap(watchStore.activeSession)
+        XCTAssertEqual(
+            SessionCalculator.resolveFocusedExerciseIndex(
+                mergedWatch.exercises,
+                rememberedClientExerciseId: mergedWatch.focusedClientExerciseId
+            ),
+            1
+        )
+    }
 }

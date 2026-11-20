@@ -114,6 +114,39 @@ public enum SessionCalculator {
         return finalized
     }
 
+    /// Exercise focus ("which exercise is the athlete looking at") is shared across devices and
+    /// merged independently of `version`: the newest parsable `focusedAt` wins; a missing or
+    /// invalid incoming timestamp never overwrites the local value. Local wins ties.
+    public static func mergingFocus(
+        into local: WorkoutSessionDto,
+        from incoming: WorkoutSessionDto
+    ) -> WorkoutSessionDto {
+        guard let incomingMs = incoming.focusedAt.flatMap(parseIsoDate)?.timeIntervalSince1970 else {
+            return local
+        }
+        let localMs = local.focusedAt.flatMap(parseIsoDate)?.timeIntervalSince1970 ?? -.infinity
+        guard incomingMs > localMs else { return local }
+        var merged = local
+        merged.focusedClientExerciseId = incoming.focusedClientExerciseId
+        merged.focusedAt = incoming.focusedAt
+        return merged
+    }
+
+    /// Returns `session` focused on `clientExerciseId`, stamped with `now` (fractional seconds
+    /// keep two quick consecutive changes ordered).
+    public static func focusing(
+        _ session: WorkoutSessionDto,
+        clientExerciseId: String,
+        now: Date = Date()
+    ) -> WorkoutSessionDto {
+        var focused = session
+        focused.focusedClientExerciseId = clientExerciseId
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        focused.focusedAt = formatter.string(from: now)
+        return focused
+    }
+
     private static func parseIsoDate(_ value: String) -> Date? {
         (try? Date.ISO8601FormatStyle(includingFractionalSeconds: true).parse(value))
             ?? (try? Date.ISO8601FormatStyle().parse(value))
