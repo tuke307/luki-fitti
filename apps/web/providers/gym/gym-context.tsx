@@ -183,7 +183,7 @@ interface GymContextValue {
    * with `resolveFocusedExerciseIndex`.
    */
   focusedExerciseId: string | null | undefined;
-  setFocusedExercise: (clientExerciseId: string) => void;
+  setFocusedExercise: (clientExerciseId: string, base?: WorkoutSessionDto) => void;
   refreshAllData: () => Promise<void>;
 }
 
@@ -292,11 +292,12 @@ export function GymProvider({ children }: { children: ReactNode }) {
   // Pure focus change: stamps the session (no version bump), saves locally and tells the
   // server when signed in; the fields also ride along on the next normal sync when offline.
   const setFocusedExercise = useCallback(
-    (clientExerciseId: string) => {
-      if (!activeSessionId || !activeSession) return;
+    (clientExerciseId: string, base?: WorkoutSessionDto) => {
+      const session = base ?? activeSession;
+      if (!activeSessionId || !session) return;
       setFocusedExerciseState({ sessionId: activeSessionId, exerciseId: clientExerciseId });
       void storeFocusedExercise(activeSessionId, clientExerciseId);
-      const focused = withSessionFocus(activeSession, clientExerciseId);
+      const focused = withSessionFocus(session, clientExerciseId);
       setActiveSession(focused);
       void saveLocalActiveSession(focused);
       if (isAuthenticated && navigator.onLine && focused.focusedAt) {
@@ -1421,11 +1422,11 @@ export function GymProvider({ children }: { children: ReactNode }) {
       sessionGoal,
     );
 
-    await persistSessionUpdate({
+    const updated = await persistSessionUpdate({
       ...activeSession,
       exercises: [...activeSession.exercises, newSessionEx],
     });
-    setFocusedExercise(clientExerciseId);
+    setFocusedExercise(clientExerciseId, updated);
   };
 
   const removeExerciseFromSession = async (clientExerciseId: string) => {
