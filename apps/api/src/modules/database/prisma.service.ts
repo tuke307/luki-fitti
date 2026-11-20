@@ -114,6 +114,22 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return prisma.apiKey;
   }
 
+  get oAuthAccount(): typeof prisma.oAuthAccount {
+    return prisma.oAuthAccount;
+  }
+
+  get passkey(): typeof prisma.passkey {
+    return prisma.passkey;
+  }
+
+  get twoFactor(): typeof prisma.twoFactor {
+    return prisma.twoFactor;
+  }
+
+  get recoveryCode(): typeof prisma.recoveryCode {
+    return prisma.recoveryCode;
+  }
+
   get aiRun(): typeof prisma.aiRun {
     return prisma.aiRun;
   }

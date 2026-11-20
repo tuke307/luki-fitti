@@ -191,7 +191,7 @@ describe('AuthService — Registration, Authentication & Brute-Force Protection'
     const dbUser = await prisma.user.findUnique({ where: { id: registered.id } });
     assert.ok(dbUser);
     assert.notEqual(dbUser.passwordHash, 'FAKE-PASSWORD-TEST-123');
-    const valid = await bcrypt.compare('FAKE-PASSWORD-TEST-123', dbUser.passwordHash);
+    const valid = await bcrypt.compare('FAKE-PASSWORD-TEST-123', dbUser.passwordHash!);
     assert.equal(valid, true);
   });
 

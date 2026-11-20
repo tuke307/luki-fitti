@@ -5,7 +5,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import bcrypt from 'bcrypt';
+import { verifyPassword } from '@/utils/password.util';
 import type { ApiKey } from '@luki-fitti/database';
 import { ApiKeyScope } from '@luki-fitti/common/enums';
 import type {
@@ -93,7 +93,7 @@ export class ApiKeysService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    const isCurrentValid = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+    const isCurrentValid = await verifyPassword(dto.currentPassword, user.passwordHash);
     if (!isCurrentValid) {
       throw new UnauthorizedException('Current password is incorrect');
     }
