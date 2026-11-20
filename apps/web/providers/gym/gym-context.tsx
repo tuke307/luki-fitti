@@ -71,6 +71,8 @@ import {
 } from '@luki-fitti/common/enums';
 import {
   applyExerciseHistoryToSessionExercise,
+  mergeSessionFocus,
+  withSessionFocus,
   buildTemplateExercisesFromSession,
   DEFAULT_FOLDER_COLOR,
   goalRepRange,
@@ -279,19 +281,34 @@ export function GymProvider({ children }: { children: ReactNode }) {
     };
   }, [activeSessionId]);
 
-  // `undefined` until the stored value for the current session has loaded.
+  // The session's shared focus (synced across devices) wins; the per-device IndexedDB value is
+  // a legacy fallback. `undefined` until the stored value for the current session has loaded.
   const focusedExerciseId =
-    activeSessionId && focusedExercise?.sessionId === activeSessionId
+    activeSession?.focusedClientExerciseId ??
+    (activeSessionId && focusedExercise?.sessionId === activeSessionId
       ? focusedExercise.exerciseId
-      : undefined;
+      : undefined);
 
+  // Pure focus change: stamps the session (no version bump), saves locally and tells the
+  // server when signed in; the fields also ride along on the next normal sync when offline.
   const setFocusedExercise = useCallback(
     (clientExerciseId: string) => {
-      if (!activeSessionId) return;
+      if (!activeSessionId || !activeSession) return;
       setFocusedExerciseState({ sessionId: activeSessionId, exerciseId: clientExerciseId });
       void storeFocusedExercise(activeSessionId, clientExerciseId);
+      const focused = withSessionFocus(activeSession, clientExerciseId);
+      setActiveSession(focused);
+      void saveLocalActiveSession(focused);
+      if (isAuthenticated && navigator.onLine && focused.focusedAt) {
+        void api.sessions
+          .updateFocus(activeSessionId, {
+            clientExerciseId,
+            focusedAt: focused.focusedAt,
+          })
+          .catch(() => undefined);
+      }
     },
-    [activeSessionId],
+    [activeSessionId, activeSession, isAuthenticated],
   );
 
   const dismissSuggestion = useCallback(
@@ -525,7 +542,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
     isRefreshingRef.current = true;
 
     try {
-      const [localCat, localWorkouts, localStretch, localActive, localHistory, queue, outbox] =
+      const [localCat, localWorkouts, localStretch, localActive0, localHistory, queue, outbox] =
         await Promise.all([
           getCachedCatalog(),
           getCachedWorkouts(),
@@ -535,6 +552,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
           getSyncQueue(),
           getWorkoutOutbox(),
         ]);
+      let localActive = localActive0;
 
       setCatalog(mergeMissingExercises(localCat, extendedExercisesRef.current));
       setFolders(localWorkouts.folders);
@@ -625,12 +643,28 @@ export function GymProvider({ children }: { children: ReactNode }) {
         );
       }
       // Reconcile active session across multiple devices (e.g., Mac + iPhone)
+      const localActiveSessionId = localActive?.clientSessionId;
       const hasPendingLocalActiveSync = Boolean(
-        localActive && queue.some((q) => q.clientSessionId === localActive.clientSessionId),
+        localActiveSessionId && queue.some((q) => q.clientSessionId === localActiveSessionId),
       );
 
       if (activeRes.success) {
-        const serverActive = activeRes.data;
+        let serverActive = activeRes.data;
+        // Exercise focus merges independently of version: the newest focusedAt wins whether or
+        // not the rest of the server session gets adopted below.
+        let focusChangedLocally = false;
+        if (
+          serverActive &&
+          localActive &&
+          serverActive.clientSessionId === localActive.clientSessionId
+        ) {
+          const focus = mergeSessionFocus(localActive, serverActive);
+          serverActive = { ...serverActive, ...focus };
+          focusChangedLocally =
+            focus.focusedAt !== (localActive.focusedAt ?? null) ||
+            focus.focusedClientExerciseId !== (localActive.focusedClientExerciseId ?? null);
+          localActive = { ...localActive, ...focus };
+        }
         if (
           serverActive &&
           !deletedSessionIdsRef.current.has(serverActive.clientSessionId) &&
@@ -650,6 +684,10 @@ export function GymProvider({ children }: { children: ReactNode }) {
           // Session was finished or abandoned on another device
           setActiveSession(null);
           await saveLocalActiveSession(null);
+        } else if (focusChangedLocally && localActive) {
+          // Server session not adopted, but its newer focus still applies to the local copy.
+          setActiveSession(localActive);
+          await saveLocalActiveSession(localActive);
         }
       }
 
@@ -1245,11 +1283,17 @@ export function GymProvider({ children }: { children: ReactNode }) {
               restTimerPausedRemSec: null,
             };
 
-    await persistSessionUpdate({
-      ...activeSession,
-      ...restUpdate,
-      exercises: nextExercises,
-    });
+    // Completing a set means the athlete is on that exercise — keep the shared focus with it.
+    await persistSessionUpdate(
+      withSessionFocus(
+        {
+          ...activeSession,
+          ...restUpdate,
+          exercises: nextExercises,
+        },
+        clientExerciseId,
+      ),
+    );
   };
 
   const addSetToExercise = async (

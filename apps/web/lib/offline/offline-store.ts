@@ -480,6 +480,8 @@ export function toSyncPayload(
     heartRateSamples: session.heartRateSamples ?? null,
     version: session.version,
     forceOverwrite,
+    focusedClientExerciseId: session.focusedClientExerciseId ?? null,
+    focusedAt: session.focusedAt ?? null,
     exercises: session.exercises.map((ex, idx) => ({
       id: ex.id,
       clientExerciseId: ex.clientExerciseId,

@@ -57,10 +57,12 @@ import type {
   StartSessionDto,
   StretchingRoutineDto,
   SyncSessionPayloadDto,
+  SessionFocusResponseDto,
   SyncSessionResponseDto,
   UpdateExerciseDto,
   UpdateFolderDto,
   UpdatePreferencesDto,
+  UpdateSessionFocusDto,
   UpdateStretchingRoutineDto,
   UpdateTemplateDto,
   UserDto,
@@ -264,6 +266,12 @@ export const sessions = {
   remove: (id: string) =>
     apiFetch<{ success: boolean }>(`/sessions/${id}`, {
       method: 'DELETE',
+    }),
+  /** Lightweight "which exercise is open" update; never bumps the session version. */
+  updateFocus: (clientSessionId: string, data: UpdateSessionFocusDto) =>
+    apiFetch<SessionFocusResponseDto>(`/sessions/${clientSessionId}/focus`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
     }),
 };
 
