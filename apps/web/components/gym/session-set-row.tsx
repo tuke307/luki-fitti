@@ -53,6 +53,8 @@ interface SessionSetRowProps {
   /** Shown above the inputs in superset rounds, e.g. "A · Shoulder Press". */
   contextLabel?: string;
   testId?: string;
+  /** Settings toggle: hides the effort (RPE) input when the user turned rating off. */
+  effortEnabled?: boolean;
 }
 
 export function SessionSetRow({
@@ -63,6 +65,7 @@ export function SessionSetRow({
   suggestion: setSuggestion,
   contextLabel,
   testId,
+  effortEnabled = true,
 }: SessionSetRowProps) {
   const { updateSet, toggleCompleteSet, removeSetFromExercise } = useGym();
   const { t, format, setTypeLabel } = useLocale();
@@ -283,7 +286,7 @@ export function SessionSetRow({
             </>
           )}
 
-          {set.completed && (
+          {set.completed && effortEnabled && (
             <button
               type="button"
               aria-label={format(t.a11y.setIntensity, { n, label: intensityMeta.label })}

@@ -256,6 +256,7 @@ model UserPreferences {
   restTimerSound             Boolean       @default(true)
   notificationsEnabled       Boolean       @default(true)
   exerciseSuggestionsEnabled Boolean       @default(true)
+  effortTrackingEnabled      Boolean       @default(true)
   weeklyGoalSessions         Int           @default(4)
   bodyWeightKg               Float?
   heightCm                   Float?

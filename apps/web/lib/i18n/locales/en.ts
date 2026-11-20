@@ -685,6 +685,8 @@ export const en = {
     testNotificationBody: 'Notifications are on.',
     exerciseSuggestionsLabel: 'Exercise suggestions',
     exerciseSuggestionsSub: 'Occasionally suggest a new exercise',
+    effortRatingLabel: 'Rate effort',
+    effortRatingSub: 'Ask how hard each set felt after completing it.',
     trainingGoalLabel: 'Training goal',
     trainingGoalSub: 'Drives rep ranges, rest and progression',
     trainingGoalUnset: 'Not set',

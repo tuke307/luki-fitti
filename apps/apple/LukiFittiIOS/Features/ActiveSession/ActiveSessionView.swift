@@ -1086,7 +1086,9 @@ public struct ActiveSessionView: View {
                         .padding(.leading, 4)
                         .accessibilityElement(children: .combine)
 
-                        effortButton(exercise: exercise, set: set, setNumber: n)
+                        if viewModel.store.preferences.effortTrackingEnabled {
+                            effortButton(exercise: exercise, set: set, setNumber: n)
+                        }
                     } else {
                         LukiValueStepper(
                             value: LukiFormat.weight(currentWeight),

@@ -585,14 +585,17 @@ public final class WatchWorkoutViewModel {
         watchSyncCoordinator.broadcastSetMutation(packet)
 
         // Ask for effort while the set is fresh — the exercise index may already have
-        // advanced, so the prompt carries ids instead of a position.
-        effortPrompt = WatchEffortPrompt(
-            clientExerciseId: session.exercises[exIdx].clientExerciseId,
-            clientSetId: set.clientSetId,
-            exerciseName: session.exercises[exIdx].exerciseNameSnapshot,
-            setNumber: nextSetIdx + 1,
-            rpe: set.rpe
-        )
+        // advanced, so the prompt carries ids instead of a position. Skipped entirely
+        // when the user turned effort rating off in settings.
+        if store.preferences.effortTrackingEnabled {
+            effortPrompt = WatchEffortPrompt(
+                clientExerciseId: session.exercises[exIdx].clientExerciseId,
+                clientSetId: set.clientSetId,
+                exerciseName: session.exercises[exIdx].exerciseNameSnapshot,
+                setNumber: nextSetIdx + 1,
+                rpe: set.rpe
+            )
+        }
 
         Task { await flushSyncQueue() }
     }
@@ -670,6 +673,9 @@ public final class WatchWorkoutViewModel {
         let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("LukiFittiWatchUITest-\(UUID().uuidString)", isDirectory: true)
         let store = OfflineStore(storageDirectory: tempDir, localDevice: .APPLE_WATCH)
+        if args.contains("--uitesting-effort-off") {
+            store.preferences.effortTrackingEnabled = false
+        }
         let vm = WatchWorkoutViewModel(store: store)
 
         if args.contains("--uitesting-seed-active-session") || args.contains("--uitesting-marketing"),

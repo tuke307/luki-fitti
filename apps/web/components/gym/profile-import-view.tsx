@@ -648,6 +648,15 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
               }
               data-testid="exercise-suggestions-switch"
             />
+            <SettingsSwitchRow
+              title={t.profile.effortRatingLabel}
+              subtitle={t.profile.effortRatingSub}
+              checked={user?.preferences?.effortTrackingEnabled ?? true}
+              onCheckedChange={(checked) =>
+                void updatePreferences({ effortTrackingEnabled: checked })
+              }
+              data-testid="effort-rating-switch"
+            />
           </SettingsSection>
         );
       case 'nutrition':

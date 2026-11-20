@@ -127,6 +127,8 @@ public enum LukiStrings {
         "Exercise": "Übung",
         "Exercise %d: %@. Change exercise": "Übung %d: %@. Übung ändern",
         "Exercise suggestions": "Übungsvorschläge",
+        "Rate effort": "Anstrengung bewerten",
+        "Ask how hard each set felt after completing it.": "Nach jedem Satz fragen, wie anstrengend er war.",
         "Exercises (%d)": "Übungen (%d)",
         "Expand All": "Alle aufklappen",
         "Expired": "Abgelaufen",

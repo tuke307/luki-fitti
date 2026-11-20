@@ -56,4 +56,18 @@ final class WatchActiveWorkoutUITests: XCTestCase {
         XCTAssertTrue(maxOption.waitForExistence(timeout: 5))
         XCTAssertTrue(maxOption.waitForNonExistence(timeout: 8))
     }
+
+    func testEffortPromptHiddenWhenRatingDisabled() {
+        let app = WatchUITestHelpers.launchWatchApp(extraArguments: [
+            "--uitesting-seed-active-session",
+            "--uitesting-effort-off",
+        ])
+        let ringButton = app.buttons["watch.execution.ringButton"]
+        XCTAssertTrue(ringButton.waitForExistence(timeout: 10))
+        ringButton.tap()
+
+        XCTAssertFalse(app.buttons["watch.effort.option.max"].waitForExistence(timeout: 3))
+        // Rest screen shows instead (the ring button becomes "tap to skip rest").
+        XCTAssertTrue(ringButton.waitForExistence(timeout: 10))
+    }
 }
