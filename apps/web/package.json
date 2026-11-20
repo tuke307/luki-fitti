@@ -84,6 +84,7 @@
     "eslint-config-next": "16.4.6",
     "globals": "^17.14.0",
     "jsonwebtoken": "9.0.3",
+    "jsqr": "1.4.0",
     "postcss": "^8.5.32",
     "tailwindcss": "^4.3.5",
     "typescript": "6.0.3"
