@@ -138,7 +138,10 @@ final class APIClientMailpitLifecycleTests: XCTestCase {
 
         // 4. Reset Password & Login with new password
         try await client.resetPassword(token: resetToken, newPassword: updatedPassword)
-        let loggedInUser = try await client.login(email: email, password: updatedPassword)
+        let loginResult = try await client.login(email: email, password: updatedPassword)
+        guard case .signedIn(let loggedInUser) = loginResult else {
+            return XCTFail("Expected a session, got \(loginResult)")
+        }
         XCTAssertEqual(loggedInUser.email, email)
         XCTAssertNotNil(tokenStore.loadTokens())
 

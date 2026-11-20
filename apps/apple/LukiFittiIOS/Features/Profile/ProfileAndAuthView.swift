@@ -1,4 +1,6 @@
 import SwiftUI
+import AuthenticationServices
+import LukiFittiAPI
 import LukiFittiModels
 import LukiFittiDesign
 import LukiFittiWatchSync
@@ -11,6 +13,11 @@ public struct ProfileAndAuthView: View {
     @State private var name: String = ""
     @State private var statusMessage: String?
     @State private var showsNoMailAlert = false
+    /// Set when the API answered `{mfaRequired: true}` — the form swaps to the code step.
+    @State private var mfaToken: String?
+    @State private var mfaCode: String = ""
+    /// Raw nonce for the current Apple sign-in attempt (set in onRequest).
+    @State private var appleRawNonce: String = ""
 
     @State private var newResetPassword: String = ""
     @State private var generalAutosave = PreferencesAutosaver()
@@ -312,72 +319,240 @@ public struct ProfileAndAuthView: View {
                 .accessibilityIdentifier("ios.profile.statusMessage")
         }
 
-        Button {
-            Task {
-                do {
-                    if authMode == "login" {
-                        do {
-                            let user = try await viewModel.store.apiClient.login(email: email, password: password)
-                            viewModel.analytics.event(.login, ["status": .string("success")])
-                            viewModel.store.saveAuthenticatedUser(user)
-                            await viewModel.store.refreshFromServerAfterAuth()
-                            #if DEBUG
-                            if ProcessInfo.processInfo.arguments.contains("--uitesting-review") {
-                                LukiAppViewModel.seedDemoMeal(vm: viewModel, store: viewModel.store)
-                            }
-                            #endif
-                            await viewModel.syncBodyWeight()
-                        } catch {
-                            viewModel.analytics.event(.login, ["status": .string("error")])
-                            throw error
-                        }
-                    } else {
-                        do {
-                            let user = try await viewModel.store.apiClient.register(
-                                email: email,
-                                password: password,
-                                name: name.isEmpty ? nil : name,
-                                weightUnit: viewModel.store.preferences.weightUnit
-                            )
-                            viewModel.analytics.event(.signup, ["status": .string(user.message == nil ? "success" : "pending_confirmation")])
-                            statusMessage = tr("Account created. Check your email to confirm it.")
-                            #if DEBUG
-                            viewModel.pollMailpitForReview(to: email, route: "verify-email")
-                            #endif
-                        } catch {
-                            viewModel.analytics.event(.signup, ["status": .string("error")])
-                            throw error
-                        }
-                    }
-                } catch {
-                    statusMessage = error.localizedDescription
-                }
-            }
-        } label: {
-            Text(authMode == "login" ? tr("Sign In") : tr("Create Account"))
-                .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
-        .listRowBackground(Color.clear)
-        .listRowInsets(EdgeInsets())
-        .accessibilityIdentifier("ios.profile.submitAuthButton")
-
-        if authMode == "login" {
-            Button(tr("Forgot password?")) {
+        if mfaToken != nil {
+            mfaStepRows
+        } else {
+            Button {
                 Task {
-                    viewModel.analytics.event(.passwordResetRequest)
                     do {
-                        try await viewModel.store.apiClient.forgotPassword(email: email)
-                        statusMessage = tr("If an account exists for this email, we’ve sent a reset link.")
+                        if authMode == "login" {
+                            await signInWithPassword()
+                        } else {
+                            do {
+                                let user = try await viewModel.store.apiClient.register(
+                                    email: email,
+                                    password: password,
+                                    name: name.isEmpty ? nil : name,
+                                    weightUnit: viewModel.store.preferences.weightUnit
+                                )
+                                viewModel.analytics.event(.signup, ["status": .string(user.message == nil ? "success" : "pending_confirmation")])
+                                statusMessage = tr("Account created. Check your email to confirm it.")
+                                #if DEBUG
+                                viewModel.pollMailpitForReview(to: email, route: "verify-email")
+                                #endif
+                            } catch {
+                                viewModel.analytics.event(.signup, ["status": .string("error")])
+                                throw error
+                            }
+                        }
                     } catch {
                         statusMessage = error.localizedDescription
                     }
                 }
+            } label: {
+                Text(authMode == "login" ? tr("Sign In") : tr("Create Account"))
+                    .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: .infinity)
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
             .listRowBackground(Color.clear)
-            .accessibilityIdentifier("ios.profile.forgotPasswordButton")
+            .listRowInsets(EdgeInsets())
+            .accessibilityIdentifier("ios.profile.submitAuthButton")
+
+            if authMode == "login" {
+                Button(tr("Forgot password?")) {
+                    Task {
+                        viewModel.analytics.event(.passwordResetRequest)
+                        do {
+                            try await viewModel.store.apiClient.forgotPassword(email: email)
+                            statusMessage = tr("If an account exists for this email, we’ve sent a reset link.")
+                        } catch {
+                            statusMessage = error.localizedDescription
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .listRowBackground(Color.clear)
+                .accessibilityIdentifier("ios.profile.forgotPasswordButton")
+            }
+
+            providerRows
+        }
+    }
+
+    /// Second factor after the API answered mfaRequired: TOTP or a recovery code.
+    @ViewBuilder
+    private var mfaStepRows: some View {
+        TextField(tr("Two-factor code"), text: $mfaCode)
+            .textContentType(.oneTimeCode)
+            .keyboardType(.numberPad)
+            .autocorrectionDisabled()
+            .listRowBackground(Color.clear)
+            .accessibilityIdentifier("ios.profile.mfaCodeField")
+        Text(tr("Enter the code from your authenticator app, or a recovery code."))
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .listRowBackground(Color.clear)
+
+        Button {
+            Task { await verifyMfaCode() }
+        } label: {
+            Text(tr("Verify"))
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+        .disabled(mfaCode.trimmingCharacters(in: .whitespaces).isEmpty)
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets())
+        .accessibilityIdentifier("ios.profile.mfaVerifyButton")
+
+        Button(tr("Back")) {
+            mfaToken = nil
+            mfaCode = ""
+        }
+        .frame(maxWidth: .infinity)
+        .listRowBackground(Color.clear)
+        .accessibilityIdentifier("ios.profile.mfaBackButton")
+    }
+
+    /// Apple (native button), Google (when configured) and passkey sign-in — they also register.
+    @ViewBuilder
+    private var providerRows: some View {
+        SignInWithAppleButton(.signIn) { request in
+            request.requestedScopes = [.fullName, .email]
+            // Apple hashes this into the id_token; the API accepts the raw value we keep.
+            appleRawNonce = OAuthNonce.makeRaw()
+            request.nonce = OAuthNonce.sha256Hex(appleRawNonce)
+        } onCompletion: { result in
+            Task { await finishAppleSignIn(result) }
+        }
+        .signInWithAppleButtonStyle(.black)
+        .frame(height: 44)
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets())
+        .accessibilityIdentifier("ios.profile.signInWithAppleButton")
+
+        if AuthSecurityCoordinator(apiClient: viewModel.store.apiClient).googleClientId != nil {
+            Button {
+                Task { await signInWithGoogle() }
+            } label: {
+                Text(tr("Continue with Google"))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets())
+            .accessibilityIdentifier("ios.profile.signInWithGoogleButton")
+        }
+
+        Button {
+            Task { await signInWithPasskey() }
+        } label: {
+            Text(tr("Sign in with a passkey"))
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets())
+        .accessibilityIdentifier("ios.profile.signInWithPasskeyButton")
+    }
+
+    // MARK: - Auth actions
+
+    /// Adopts a signed-in user or parks the MFA challenge; returns after the post-login refresh.
+    private func adoptLoginResult(_ result: LoginResult) async {
+        switch result {
+        case .signedIn(let user):
+            viewModel.analytics.event(.login, ["status": .string("success")])
+            viewModel.store.saveAuthenticatedUser(user)
+            await viewModel.store.refreshFromServerAfterAuth()
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--uitesting-review") {
+                LukiAppViewModel.seedDemoMeal(vm: viewModel, store: viewModel.store)
+            }
+            #endif
+            await viewModel.syncBodyWeight()
+        case .mfaRequired(let token):
+            viewModel.analytics.event(.login, ["status": .string("mfa_required")])
+            mfaCode = ""
+            mfaToken = token
+        }
+    }
+
+    private func signInWithPassword() async {
+        do {
+            let result = try await viewModel.store.apiClient.login(email: email, password: password)
+            await adoptLoginResult(result)
+        } catch {
+            viewModel.analytics.event(.login, ["status": .string("error")])
+            statusMessage = error.localizedDescription
+        }
+    }
+
+    private func verifyMfaCode() async {
+        guard let mfaToken else { return }
+        do {
+            let user = try await viewModel.store.apiClient.verifyTwoFactor(
+                mfaToken: mfaToken,
+                code: mfaCode.trimmingCharacters(in: .whitespaces)
+            )
+            self.mfaToken = nil
+            mfaCode = ""
+            await adoptLoginResult(.signedIn(user))
+        } catch {
+            statusMessage = error.localizedDescription
+        }
+    }
+
+    private func finishAppleSignIn(_ result: Result<ASAuthorization, Error>) async {
+        do {
+            let authorization = try result.get()
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                  let tokenData = credential.identityToken,
+                  let idToken = String(data: tokenData, encoding: .utf8) else {
+                return
+            }
+            let parts = [credential.fullName?.givenName, credential.fullName?.familyName]
+                .compactMap { $0?.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+            let loginResult = try await viewModel.store.apiClient.oauthSignIn(
+                provider: "apple",
+                idToken: idToken,
+                nonce: appleRawNonce,
+                name: parts.isEmpty ? nil : parts.joined(separator: " ")
+            )
+            await adoptLoginResult(loginResult)
+        } catch let error as ASAuthorizationError where error.code == .canceled {
+            // User dismissed the sheet — nothing to report.
+        } catch {
+            statusMessage = error.localizedDescription
+        }
+    }
+
+    private func signInWithGoogle() async {
+        do {
+            let result = try await AuthSecurityCoordinator(apiClient: viewModel.store.apiClient)
+                .signInWithGoogle()
+            await adoptLoginResult(result)
+        } catch AuthSecurityCoordinator.FlowError.cancelled {
+            // User dismissed the browser — nothing to report.
+        } catch {
+            statusMessage = error.localizedDescription
+        }
+    }
+
+    private func signInWithPasskey() async {
+        do {
+            let user = try await AuthSecurityCoordinator(apiClient: viewModel.store.apiClient)
+                .signInWithPasskey()
+            await adoptLoginResult(.signedIn(user))
+        } catch AuthSecurityCoordinator.FlowError.cancelled {
+            // User dismissed the prompt — nothing to report.
+        } catch {
+            statusMessage = error.localizedDescription
         }
     }
 
@@ -571,6 +746,17 @@ private struct AccountSettingsPage: View {
                     }
                     .padding(.vertical, 2)
 
+                    NavigationLink {
+                        SecuritySettingsPage(viewModel: viewModel)
+                    } label: {
+                        SettingsRow(
+                            tr("Sign-in & security"),
+                            systemImage: "lock.shield.fill",
+                            tint: LukiColors.accent
+                        )
+                    }
+                    .accessibilityIdentifier("ios.profile.securityRow")
+
                     Button(tr("Sign Out"), role: .destructive) {
                         Task {
                             await unregisterPush()
@@ -748,6 +934,8 @@ private struct ReauthenticateRows: View {
     @State private var password = ""
     @State private var signingIn = false
     @State private var message: String?
+    @State private var mfaToken: String?
+    @State private var mfaCode = ""
     @Environment(\.lukiLocale) private var tr
 
     var body: some View {
@@ -779,6 +967,28 @@ private struct ReauthenticateRows: View {
         .disabled(password.isEmpty || signingIn)
         .accessibilityIdentifier("ios.profile.reauthButton")
 
+        if mfaToken != nil {
+            TextField(tr("Two-factor code"), text: $mfaCode)
+                .textContentType(.oneTimeCode)
+                .keyboardType(.numberPad)
+                .submitLabel(.go)
+                .onSubmit { Task { await verifyMfa() } }
+                .accessibilityIdentifier("ios.profile.reauthMfaField")
+            Text(tr("Enter the code from your authenticator app, or a recovery code."))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            Button {
+                Task { await verifyMfa() }
+            } label: {
+                HStack {
+                    if signingIn { ProgressView() }
+                    Text(tr("Verify"))
+                }
+            }
+            .disabled(mfaCode.trimmingCharacters(in: .whitespaces).isEmpty || signingIn)
+            .accessibilityIdentifier("ios.profile.reauthMfaButton")
+        }
+
         if let message {
             Text(message)
                 .font(.footnote)
@@ -786,17 +996,42 @@ private struct ReauthenticateRows: View {
         }
     }
 
+    private func adopt(_ user: UserDto) async {
+        password = ""
+        mfaCode = ""
+        mfaToken = nil
+        message = nil
+        viewModel.store.saveAuthenticatedUser(user)
+        await viewModel.store.refreshFromServerAfterAuth()
+        await viewModel.syncBodyWeight()
+    }
+
     private func signIn() async {
         guard !password.isEmpty else { return }
         signingIn = true
         defer { signingIn = false }
         do {
-            let user = try await viewModel.store.apiClient.login(email: email, password: password)
-            password = ""
-            message = nil
-            viewModel.store.saveAuthenticatedUser(user)
-            await viewModel.store.refreshFromServerAfterAuth()
-            await viewModel.syncBodyWeight()
+            switch try await viewModel.store.apiClient.login(email: email, password: password) {
+            case .signedIn(let user):
+                await adopt(user)
+            case .mfaRequired(let token):
+                mfaToken = token
+            }
+        } catch {
+            message = error.localizedDescription
+        }
+    }
+
+    private func verifyMfa() async {
+        guard let mfaToken else { return }
+        signingIn = true
+        defer { signingIn = false }
+        do {
+            let user = try await viewModel.store.apiClient.verifyTwoFactor(
+                mfaToken: mfaToken,
+                code: mfaCode.trimmingCharacters(in: .whitespaces)
+            )
+            await adopt(user)
         } catch {
             message = error.localizedDescription
         }
