@@ -8,7 +8,7 @@ describe('buildAppleAppSiteAssociation', () => {
     assert.equal(buildAppleAppSiteAssociation(' , '), null);
   });
 
-  it('maps comma-separated app ids to the invite path', () => {
+  it('maps comma-separated app ids to the invite path and web credentials', () => {
     assert.deepEqual(buildAppleAppSiteAssociation('ABCDE12345.app.one, ABCDE12345.app.two'), {
       applinks: {
         details: [
@@ -18,6 +18,7 @@ describe('buildAppleAppSiteAssociation', () => {
           },
         ],
       },
+      webcredentials: { apps: ['ABCDE12345.app.one', 'ABCDE12345.app.two'] },
     });
   });
 });
