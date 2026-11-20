@@ -544,6 +544,9 @@ model WorkoutSession {
   heartRateSamplesJson  Json?
   version               Int                 @default(1)
   lastWriterDeviceId    String?
+  /// Exercise the athlete is looking at; shared across devices, merged by newest focusedAt.
+  focusedClientExerciseId String?
+  focusedAt             DateTime?
   lastSyncedAt          DateTime            @default(now())
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt

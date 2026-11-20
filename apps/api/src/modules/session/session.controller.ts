@@ -9,8 +9,10 @@ import { ZodValidationPipe } from '@/pipes/zod-validation.pipe';
 import {
   StartSessionSchema,
   SyncSessionPayloadSchema,
+  UpdateSessionFocusSchema,
   type StartSessionDto,
   type SyncSessionPayloadDto,
+  type UpdateSessionFocusDto,
 } from '@luki-fitti/common/schemas';
 import type { SessionStatus, SupportedLocale } from '@luki-fitti/common/enums';
 
@@ -65,6 +67,19 @@ export class SessionController {
     @RequestLocale() locale: SupportedLocale,
   ) {
     return this.sessionService.syncSession(user.id, body, locale);
+  }
+
+  @Put(':clientSessionId/focus')
+  @UseGuards(CsrfGuard)
+  @ApiOperation({
+    summary: 'Update which exercise the athlete is looking at (newest focusedAt wins)',
+  })
+  async updateFocus(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('clientSessionId') clientSessionId: string,
+    @Body(new ZodValidationPipe(UpdateSessionFocusSchema)) body: UpdateSessionFocusDto,
+  ) {
+    return this.sessionService.updateSessionFocus(user.id, clientSessionId, body);
   }
 
   @Put(':id')

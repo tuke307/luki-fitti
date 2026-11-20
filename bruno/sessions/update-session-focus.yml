@@ -1,0 +1,26 @@
+info:
+  name: update-session-focus
+  type: http
+  seq: 7
+
+http:
+  method: PUT
+  url: "{{API_URL}}:{{API_PORT}}/api/sessions/:clientSessionId/focus"
+  params:
+    - name: clientSessionId
+      value: "sess-demo-sync-001"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "clientExerciseId": "sex-demo-001",
+        "focusedAt": "2026-11-20T12:00:00.000Z"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

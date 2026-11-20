@@ -723,3 +723,167 @@ describe('SessionService — training goal snapshot', () => {
     }
   });
 });
+
+describe('SessionService — session focus (newest focusedAt wins)', () => {
+  const basePayload = (extra: Record<string, unknown> = {}) =>
+    ({
+      clientSessionId: 'sess-focus-1',
+      workoutNameSnapshot: 'Focus Test',
+      sessionType: 'STRENGTH',
+      status: SessionStatus.IN_PROGRESS,
+      startedAt: '2026-11-20T10:00:00.000Z',
+      activeDurationSeconds: 0,
+      weightUnit: WeightUnit.KG,
+      version: 1,
+      exercises: [],
+      ...extra,
+    }) as unknown as SyncSessionPayloadDto;
+
+  const seed = (
+    prisma: ReturnType<typeof createMockSessionPrisma>,
+    fields: Record<string, unknown>,
+  ) => {
+    prisma._sessions.set('db-sess-1', {
+      id: 'db-sess-1',
+      clientSessionId: 'sess-focus-1',
+      userId: 'u1',
+      workoutNameSnapshot: 'Focus Test',
+      sessionType: 'STRENGTH',
+      status: 'IN_PROGRESS',
+      startedAt: new Date('2026-11-20T10:00:00.000Z'),
+      activeDurationSeconds: 0,
+      weightUnit: 'KG',
+      version: 1,
+      lastSyncedAt: new Date('2026-11-20T10:00:00.000Z'),
+      ...fields,
+    });
+  };
+
+  it('stores payload focus on create', async () => {
+    const prisma = createMockSessionPrisma();
+    const service = new SessionService(prisma as unknown as PrismaService);
+    const res = await service.syncSession(
+      'u1',
+      basePayload({
+        focusedClientExerciseId: 'sex-3',
+        focusedAt: '2026-11-20T10:05:00.000Z',
+      }),
+    );
+    assert.equal(res.session.focusedClientExerciseId, 'sex-3');
+    assert.equal(res.session.focusedAt, '2026-11-20T10:05:00.000Z');
+  });
+
+  it('overwrites stored focus when the payload focusedAt is newer', async () => {
+    const prisma = createMockSessionPrisma();
+    seed(prisma, {
+      focusedClientExerciseId: 'sex-1',
+      focusedAt: new Date('2026-11-20T10:00:00.000Z'),
+    });
+    const service = new SessionService(prisma as unknown as PrismaService);
+    const res = await service.syncSession(
+      'u1',
+      basePayload({
+        focusedClientExerciseId: 'sex-2',
+        focusedAt: '2026-11-20T11:00:00.000Z',
+      }),
+    );
+    assert.equal(res.session.focusedClientExerciseId, 'sex-2');
+    assert.equal(res.session.focusedAt, '2026-11-20T11:00:00.000Z');
+  });
+
+  it('keeps stored focus when the payload focusedAt is older or missing', async () => {
+    const prisma = createMockSessionPrisma();
+    seed(prisma, {
+      focusedClientExerciseId: 'sex-1',
+      focusedAt: new Date('2026-11-20T11:00:00.000Z'),
+    });
+    const service = new SessionService(prisma as unknown as PrismaService);
+    const older = await service.syncSession(
+      'u1',
+      basePayload({
+        focusedClientExerciseId: 'sex-2',
+        focusedAt: '2026-11-20T10:00:00.000Z',
+      }),
+    );
+    assert.equal(older.session.focusedClientExerciseId, 'sex-1');
+    const missing = await service.syncSession('u1', basePayload());
+    assert.equal(missing.session.focusedClientExerciseId, 'sex-1');
+    assert.equal(missing.session.focusedAt, '2026-11-20T11:00:00.000Z');
+  });
+});
+
+describe('SessionService — PUT focus endpoint', () => {
+  function focusPrisma(existing: Record<string, unknown> | null) {
+    const updates: Array<Record<string, unknown>> = [];
+    const stored = existing ? { ...existing } : null;
+    const prisma = {
+      workoutSession: {
+        findUnique: async () => stored,
+        update: async ({ data }: { data: Record<string, unknown> }) => {
+          updates.push(data);
+          Object.assign(stored!, data);
+          return stored;
+        },
+      },
+    } as unknown as PrismaService;
+    return { prisma: prisma as PrismaService, updates, stored };
+  }
+
+  const row = (focus: Record<string, unknown> = {}) => ({
+    id: 'db-sess-1',
+    clientSessionId: 'sess-focus-1',
+    userId: 'u1',
+    version: 7,
+    lastWriterDeviceId: 'device-a',
+    ...focus,
+  });
+
+  it('applies a newer focus without touching version or lastWriterDeviceId', async () => {
+    const { prisma, updates } = focusPrisma(
+      row({ focusedClientExerciseId: 'sex-1', focusedAt: new Date('2026-11-20T10:00:00.000Z') }),
+    );
+    const service = new SessionService(prisma);
+    const res = await service.updateSessionFocus('u1', 'sess-focus-1', {
+      clientExerciseId: 'sex-2',
+      focusedAt: '2026-11-20T11:00:00.000Z',
+    });
+    assert.equal(res.applied, true);
+    assert.equal(res.focusedClientExerciseId, 'sex-2');
+    assert.deepEqual(Object.keys(updates[0]!).sort(), ['focusedAt', 'focusedClientExerciseId']);
+  });
+
+  it('rejects an older focusedAt and reports stored values', async () => {
+    const { prisma, updates } = focusPrisma(
+      row({ focusedClientExerciseId: 'sex-1', focusedAt: new Date('2026-11-20T11:00:00.000Z') }),
+    );
+    const service = new SessionService(prisma);
+    const res = await service.updateSessionFocus('u1', 'sess-focus-1', {
+      clientExerciseId: 'sex-2',
+      focusedAt: '2026-11-20T10:00:00.000Z',
+    });
+    assert.equal(res.applied, false);
+    assert.equal(res.focusedClientExerciseId, 'sex-1');
+    assert.equal(updates.length, 0);
+  });
+
+  it('returns NotFound for missing sessions and other users (no existence leak)', async () => {
+    const { prisma } = focusPrisma(row());
+    const service = new SessionService(prisma);
+    await assert.rejects(
+      service.updateSessionFocus('other-user', 'sess-focus-1', {
+        clientExerciseId: 'sex-2',
+        focusedAt: '2026-11-20T12:00:00.000Z',
+      }),
+      /not found/i,
+    );
+    const { prisma: empty } = focusPrisma(null);
+    const service2 = new SessionService(empty);
+    await assert.rejects(
+      service2.updateSessionFocus('u1', 'sess-gone', {
+        clientExerciseId: 'sex-2',
+        focusedAt: '2026-11-20T12:00:00.000Z',
+      }),
+      /not found/i,
+    );
+  });
+});
