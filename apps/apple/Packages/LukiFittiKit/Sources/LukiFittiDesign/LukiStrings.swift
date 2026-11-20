@@ -184,6 +184,7 @@ public enum LukiStrings {
         "History": "Verlauf",
         "How to do %@": "So geht %@",
         "How to do it": "So geht’s",
+        "How did it feel?": "Wie war’s?",
         "Start position": "Startposition",
         "Finish position": "Endposition",
         "If an account exists for this email, we’ve sent a reset link.": "Falls ein Konto mit dieser E-Mail existiert, haben wir einen Link zum Zurücksetzen gesendet.",

@@ -131,50 +131,44 @@ public final class WatchWorkoutViewModel {
         Task { await flushSyncQueue() }
     }
 
-    /// The completed set the effort button acts on: the one with the latest `completedAt`
-    /// across all exercises — after the last set of an exercise `currentExerciseIndex` has
-    /// already advanced. Sets without a timestamp fall back to the current exercise's last
-    /// completed set. Returns the exercise and set indices into `activeSession`.
-    public var lastCompletedSetRef: (exerciseIndex: Int, setIndex: Int)? {
-        guard let session = store.activeSession else { return nil }
-        var best: (exerciseIndex: Int, setIndex: Int, completedAt: String)?
-        for (exIdx, exercise) in session.exercises.enumerated() {
-            for (setIdx, set) in exercise.sets.enumerated() where set.completed {
-                if let completedAt = set.completedAt,
-                   best == nil || completedAt > best!.completedAt {
-                    best = (exIdx, setIdx, completedAt)
-                }
-            }
-        }
-        if let best { return (best.exerciseIndex, best.setIndex) }
-        let exIdx = min(max(0, currentExerciseIndex), session.exercises.count - 1)
-        guard !session.exercises.isEmpty,
-              let setIdx = session.exercises[exIdx].sets.lastIndex(where: \.completed)
-        else { return nil }
-        return (exIdx, setIdx)
+    /// The effort question shown right after a set is completed: which set, in which
+    /// exercise, so the rating lands on the right set even after the exercise advanced.
+    public struct WatchEffortPrompt: Identifiable, Equatable {
+        public var id: String { clientSetId }
+        public let clientExerciseId: String
+        public let clientSetId: String
+        public let exerciseName: String
+        /// 1-based position of the set within its exercise.
+        public let setNumber: Int
+        public let rpe: Double?
     }
 
-    /// Cycles the 3-bar effort rating (unrated → Easy → Just right → Max → unrated) on the
-    /// last completed set and syncs it like any other set change.
-    public func cycleEffortOfLastCompletedSet() {
+    /// Shown as a full-screen overlay after each completed set; nil dismisses it again.
+    public var effortPrompt: WatchEffortPrompt?
+
+    /// Rates a completed set's effort by id — safe to call after `currentExerciseIndex`
+    /// has already advanced past the exercise the set belongs to.
+    public func setEffort(rpe: Double?, clientExerciseId: String, clientSetId: String) {
         guard var session = store.activeSession,
-              let ref = lastCompletedSetRef else { return }
-        var set = session.exercises[ref.exerciseIndex].sets[ref.setIndex]
-        set.rpe = ProgressionEngine.nextEffortRpe(after: set.rpe)
-        session.exercises[ref.exerciseIndex].sets[ref.setIndex] = set
+              let exIdx = session.exercises.firstIndex(where: { $0.clientExerciseId == clientExerciseId }),
+              let setIdx = session.exercises[exIdx].sets.firstIndex(where: { $0.clientSetId == clientSetId })
+        else { return }
+        var set = session.exercises[exIdx].sets[setIdx]
+        set.rpe = rpe
+        session.exercises[exIdx].sets[setIdx] = set
         session.version += 1
 
         let recalculated = SessionCalculator.recalculateSessionTotals(session)
         store.saveActiveSession(recalculated)
         store.enqueueSessionSync(recalculated)
         watchSyncCoordinator.broadcastActiveSessionSnapshot(recalculated)
-        let saved = recalculated.exercises[ref.exerciseIndex].sets[ref.setIndex]
+        let saved = recalculated.exercises[exIdx].sets[setIdx]
         // SessionMutationPacket can't carry "clear rpe" (nil = no change) — the snapshot
         // broadcast above delivers the cleared value to the iPhone instead.
         watchSyncCoordinator.broadcastSetMutation(
             SessionMutationPacket(
                 clientSessionId: recalculated.clientSessionId,
-                clientExerciseId: recalculated.exercises[ref.exerciseIndex].clientExerciseId,
+                clientExerciseId: recalculated.exercises[exIdx].clientExerciseId,
                 clientSetId: saved.clientSetId,
                 weight: saved.weight,
                 reps: saved.reps,
@@ -189,6 +183,7 @@ public final class WatchWorkoutViewModel {
             )
         )
         WKInterfaceDevice.current().play(.click)
+        effortPrompt = nil
         Task { await flushSyncQueue() }
     }
 
@@ -589,6 +584,16 @@ public final class WatchWorkoutViewModel {
         )
         watchSyncCoordinator.broadcastSetMutation(packet)
 
+        // Ask for effort while the set is fresh — the exercise index may already have
+        // advanced, so the prompt carries ids instead of a position.
+        effortPrompt = WatchEffortPrompt(
+            clientExerciseId: session.exercises[exIdx].clientExerciseId,
+            clientSetId: set.clientSetId,
+            exerciseName: session.exercises[exIdx].exerciseNameSnapshot,
+            setNumber: nextSetIdx + 1,
+            rpe: set.rpe
+        )
+
         Task { await flushSyncQueue() }
     }
 
@@ -756,6 +761,16 @@ public struct WatchRootContainerView: View {
                 WatchHomeView(viewModel: viewModel)
             }
         }
+        // A .sheet from the paged TabView / active workout view never presented in
+        // testing, so the effort question is a full-screen overlay at the root instead.
+        .overlay {
+            if let prompt = viewModel.effortPrompt {
+                WatchEffortPromptView(viewModel: viewModel, prompt: prompt)
+                    .background(Color.black)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: viewModel.effortPrompt != nil)
         .onAppear {
             viewModel.syncNow(silent: true)
         }

@@ -59,41 +59,6 @@ public struct WatchActiveWorkoutView: View {
 
     private var unit: WeightUnit { session?.weightUnit ?? .KG }
 
-    /// The set the effort control rates: the last completed one in the session (the current
-    /// exercise index has often already advanced past it).
-    private var lastCompletedSet: (setNumber: Int, rpe: Double?, restSeconds: Int)? {
-        guard let session, let ref = viewModel.lastCompletedSetRef,
-              session.exercises.indices.contains(ref.exerciseIndex),
-              session.exercises[ref.exerciseIndex].sets.indices.contains(ref.setIndex)
-        else { return nil }
-        let exercise = session.exercises[ref.exerciseIndex]
-        return (ref.setIndex + 1, exercise.sets[ref.setIndex].rpe, exercise.restSeconds)
-    }
-
-    /// 3-bar effort control for the last completed set — same look as the iOS set row.
-    private func effortButton(
-        setNumber n: Int,
-        rpe: Double?,
-        identifier: String,
-        compact: Bool = false
-    ) -> some View {
-        let level = LukiColors.effortLevel(rpe: rpe)
-        let size: CGFloat = compact ? 36 : 44
-        return Button {
-            viewModel.cycleEffortOfLastCompletedSet()
-        } label: {
-            EffortBars(level: level)
-                .scaleEffect(compact ? 0.8 : 1)
-                .frame(width: size, height: size)
-                .background(Circle().fill(level == 0 ? LukiColors.fill : LukiColors.effortColor(level: level).opacity(0.14)))
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(tr("Effort, set %d: %@", n, LukiI18n.effortLabel(rpe: rpe, locale: tr)))
-        .accessibilityHint(tr("Change effort"))
-        .accessibilityIdentifier(identifier)
-    }
-
     // MARK: - Page 1: controls (Apple Workout style)
 
     private var controlsPage: some View {
@@ -293,9 +258,6 @@ public struct WatchActiveWorkoutView: View {
             .fixedSize()
             .accessibilityLabel(tr("Set %d of %d", current, total))
         let bpm = isLuminanceReduced ? nil : viewModel.healthCoordinator.currentHeartRateBpm
-        // Supersets skip the rest screen, so the effort chip moves here next to the set dots;
-        // it takes the heart-rate chip's slot when both don't fit.
-        let effort = lastCompletedSet.flatMap { $0.restSeconds == 0 ? $0 : nil }
 
         return ViewThatFits(in: .horizontal) {
             HStack(spacing: 6) {
@@ -309,27 +271,6 @@ public struct WatchActiveWorkoutView: View {
                         .labelStyle(.titleAndIcon)
                         .lineLimit(1)
                         .accessibilityLabel(tr("%d bpm", bpm))
-                }
-                if let effort {
-                    effortButton(
-                        setNumber: effort.setNumber,
-                        rpe: effort.rpe,
-                        identifier: "watch.execution.effort",
-                        compact: true
-                    )
-                }
-            }
-            HStack(spacing: 6) {
-                SetDots(total: total, completed: completed)
-                counter
-                Spacer(minLength: 0)
-                if let effort {
-                    effortButton(
-                        setNumber: effort.setNumber,
-                        rpe: effort.rpe,
-                        identifier: "watch.execution.effort",
-                        compact: true
-                    )
                 }
             }
             HStack(spacing: 6) {
@@ -465,35 +406,27 @@ public struct WatchActiveWorkoutView: View {
                 .foregroundStyle(LukiColors.accent)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            // The effort button shares the ring's row so the page still fits a 40 mm watch.
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .stroke(LukiColors.fill, lineWidth: 7)
-                    Circle()
-                        .trim(from: 0, to: max(0.02, min(1, progress)))
-                        .stroke(LukiColors.accent, style: StrokeStyle(lineWidth: 7, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                    Group {
-                        if rest.isRunning, let endsAt, endsAt > Date() {
-                            Text(timerInterval: Date()...endsAt, countsDown: true)
-                        } else {
-                            Text(LukiFormat.clock(rest.remainingSeconds))
-                        }
+            ZStack {
+                Circle()
+                    .stroke(LukiColors.fill, lineWidth: 7)
+                Circle()
+                    .trim(from: 0, to: max(0.02, min(1, progress)))
+                    .stroke(LukiColors.accent, style: StrokeStyle(lineWidth: 7, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                Group {
+                    if rest.isRunning, let endsAt, endsAt > Date() {
+                        Text(timerInterval: Date()...endsAt, countsDown: true)
+                    } else {
+                        Text(LukiFormat.clock(rest.remainingSeconds))
                     }
-                    .font(.system(.title3, design: .rounded).weight(.semibold).monospacedDigit())
-                    .multilineTextAlignment(.center)
                 }
-                .frame(width: 64, height: 64)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(tr("Rest"))
-                .accessibilityValue(LukiFormat.clock(rest.remainingSeconds))
-
-                if !isLuminanceReduced, let last = lastCompletedSet {
-                    effortButton(setNumber: last.setNumber, rpe: last.rpe, identifier: "watch.rest.effort")
-                }
+                .font(.system(.title3, design: .rounded).weight(.semibold).monospacedDigit())
+                .multilineTextAlignment(.center)
             }
-            .frame(maxWidth: .infinity)
+            .frame(width: 64, height: 64)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(tr("Rest"))
+            .accessibilityValue(LukiFormat.clock(rest.remainingSeconds))
 
             Spacer(minLength: 0)
 
@@ -687,6 +620,102 @@ public struct WatchActiveWorkoutView: View {
                 }
             }
             .navigationTitle(tr("Exercises"))
+        }
+    }
+}
+
+/// "How did it feel?" — asked right after each completed set. Auto-dismisses after a few
+/// seconds without a rating so the rest timer never waits on it. Presented as a
+/// full-screen overlay from `WatchRootContainerView`.
+struct WatchEffortPromptView: View {
+    let viewModel: WatchWorkoutViewModel
+    let prompt: WatchWorkoutViewModel.WatchEffortPrompt
+    @Environment(\.lukiLocale) private var tr
+    /// Four seconds is too short to navigate the options with VoiceOver — keep it open.
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
+
+    private static let options: [(rpe: Double, identifier: String)] = [
+        (7.0, "watch.effort.option.easy"),
+        (8.0, "watch.effort.option.right"),
+        (ProgressionEngine.maxEffortRpe, "watch.effort.option.max"),
+    ]
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Text(tr("How did it feel?"))
+                .font(.headline)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                // Sits below the close button's row, so it gets the full width.
+                .padding(.top, 34)
+                // On the title, not the container: an identifier there would propagate
+                // and overwrite every child's.
+                .accessibilityIdentifier("watch.effort.prompt")
+
+            Text("\(tr("Set %d", prompt.setNumber)) · \(prompt.exerciseName)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.7)
+
+            HStack(spacing: 6) {
+                ForEach(Self.options, id: \.identifier) { option in
+                    let level = LukiColors.effortLevel(rpe: option.rpe)
+                    let tint = LukiColors.effortColor(level: level)
+                    let label = LukiI18n.effortLabel(rpe: option.rpe, locale: tr)
+                    let selected = LukiColors.effortLevel(rpe: prompt.rpe) == level
+                    Button {
+                        viewModel.setEffort(
+                            rpe: option.rpe,
+                            clientExerciseId: prompt.clientExerciseId,
+                            clientSetId: prompt.clientSetId
+                        )
+                    } label: {
+                        VStack(spacing: 4) {
+                            EffortBars(level: level)
+                                .frame(width: 42, height: 42)
+                                .background(Circle().fill(tint.opacity(0.22)))
+                                .overlay(Circle().stroke(tint, lineWidth: selected ? 2 : 0))
+                            Text(label)
+                                .font(.caption2)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(label)
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                    .accessibilityIdentifier(option.identifier)
+                }
+            }
+        }
+        .padding(.horizontal, 4)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(alignment: .topLeading) {
+            // Dismisses without rating, like the system close button on a sheet.
+            Button {
+                viewModel.effortPrompt = nil
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.footnote.weight(.semibold))
+                    .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .accessibilityLabel(tr("Close"))
+            .accessibilityIdentifier("watch.effort.dismiss")
+        }
+        .accessibilityAddTraits(.isModal)
+        .task(id: prompt.id) {
+            guard !voiceOver else { return }
+            try? await Task.sleep(for: .seconds(4))
+            guard !Task.isCancelled else { return }
+            if viewModel.effortPrompt?.id == prompt.id {
+                viewModel.effortPrompt = nil
+            }
         }
     }
 }
