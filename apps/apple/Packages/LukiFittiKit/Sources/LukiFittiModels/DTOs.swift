@@ -886,6 +886,9 @@ public struct WorkoutSessionDto: Codable, Sendable, Equatable, Hashable, Identif
     public var maxHeartRateBpm: Int?
     public var minHeartRateBpm: Int?
     public var heartRateSamples: [HeartRateSampleDto]?
+    /// Exercise the athlete is looking at; shared across devices, merged by newest focusedAt.
+    public var focusedClientExerciseId: String? = nil
+    public var focusedAt: String? = nil
     public var version: Int
     public var lastSyncedAt: String
     /// Goal resolved at session start (template override ?? profile goal); nil = legacy.
@@ -922,6 +925,8 @@ public struct WorkoutSessionDto: Codable, Sendable, Equatable, Hashable, Identif
         maxHeartRateBpm: Int? = nil,
         minHeartRateBpm: Int? = nil,
         heartRateSamples: [HeartRateSampleDto]? = nil,
+        focusedClientExerciseId: String? = nil,
+        focusedAt: String? = nil,
         version: Int = 1,
         lastSyncedAt: String = ISO8601DateFormatter().string(from: Date()),
         trainingGoalSnapshot: TrainingGoal? = nil,
@@ -956,6 +961,8 @@ public struct WorkoutSessionDto: Codable, Sendable, Equatable, Hashable, Identif
         self.maxHeartRateBpm = maxHeartRateBpm
         self.minHeartRateBpm = minHeartRateBpm
         self.heartRateSamples = heartRateSamples
+        self.focusedClientExerciseId = focusedClientExerciseId
+        self.focusedAt = focusedAt
         self.version = version
         self.lastSyncedAt = lastSyncedAt
         self.trainingGoalSnapshot = trainingGoalSnapshot
@@ -995,6 +1002,9 @@ public struct SyncSessionPayloadDto: Codable, Sendable, Equatable, Hashable {
     /// Last server version this device acknowledged; used for optimistic concurrency.
     public var baseVersion: Int?
     public var forceOverwrite: Bool?
+    /// Exercise the athlete is looking at; merged server-side by newest focusedAt.
+    public var focusedClientExerciseId: String?
+    public var focusedAt: String?
     public var exercises: [SessionExerciseDto]
 
     public init(from session: WorkoutSessionDto, forceOverwrite: Bool = false) {
@@ -1025,8 +1035,27 @@ public struct SyncSessionPayloadDto: Codable, Sendable, Equatable, Hashable {
         self.version = session.version
         self.trainingGoalSnapshot = session.trainingGoalSnapshot
         self.forceOverwrite = forceOverwrite
+        self.focusedClientExerciseId = session.focusedClientExerciseId
+        self.focusedAt = session.focusedAt
         self.exercises = session.exercises
     }
+}
+
+/// `PUT /sessions/:clientSessionId/focus` body + response.
+public struct UpdateSessionFocusDto: Codable, Sendable, Equatable, Hashable {
+    public var clientExerciseId: String
+    public var focusedAt: String
+
+    public init(clientExerciseId: String, focusedAt: String) {
+        self.clientExerciseId = clientExerciseId
+        self.focusedAt = focusedAt
+    }
+}
+
+public struct SessionFocusResponseDto: Codable, Sendable, Equatable, Hashable {
+    public var focusedClientExerciseId: String?
+    public var focusedAt: String?
+    public var applied: Bool
 }
 
 public struct SyncSessionResponseDto: Codable, Sendable, Equatable, Hashable {

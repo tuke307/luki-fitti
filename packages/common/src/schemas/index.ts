@@ -625,7 +625,15 @@ export const SyncSessionPayloadSchema = z.object({
   /** Last server version this device has acknowledged; used for optimistic concurrency. */
   baseVersion: z.number().int().min(1).optional(),
   forceOverwrite: z.boolean().default(false).optional(),
+  /** Exercise the athlete is looking at; merged server-side by newest focusedAt. */
+  focusedClientExerciseId: z.string().min(1).nullable().optional(),
+  focusedAt: z.string().nullable().optional(),
   exercises: z.array(SessionExerciseSyncSchema).default([]),
+});
+
+export const UpdateSessionFocusSchema = z.object({
+  clientExerciseId: z.string().min(1),
+  focusedAt: z.string(),
 });
 
 export const StartSessionSchema = z.object({
@@ -642,6 +650,7 @@ export type SessionSetSyncDto = z.infer<typeof SessionSetSyncSchema>;
 export type SessionExerciseSyncDto = z.infer<typeof SessionExerciseSyncSchema>;
 export type SyncSessionPayloadDto = z.infer<typeof SyncSessionPayloadSchema>;
 export type StartSessionDto = z.infer<typeof StartSessionSchema>;
+export type UpdateSessionFocusDto = z.infer<typeof UpdateSessionFocusSchema>;
 
 export interface SessionSetDto {
   id: string;
@@ -723,6 +732,9 @@ export interface WorkoutSessionDto {
   maxHeartRateBpm?: number | null;
   minHeartRateBpm?: number | null;
   heartRateSamples?: HeartRateSampleDto[] | null;
+  /** Exercise the athlete is looking at; shared across devices, merged by newest focusedAt. */
+  focusedClientExerciseId?: string | null;
+  focusedAt?: string | null;
   version: number;
   lastSyncedAt: string;
   exercises: SessionExerciseDto[];
@@ -732,6 +744,13 @@ export interface SyncSessionResponseDto {
   session: WorkoutSessionDto;
   conflictDetected: boolean;
   serverVersion: number;
+}
+
+/** Result of `PUT /sessions/:clientSessionId/focus` — `applied` is false when an older focus won. */
+export interface SessionFocusResponseDto {
+  focusedClientExerciseId: string | null;
+  focusedAt: string | null;
+  applied: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

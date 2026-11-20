@@ -35,10 +35,12 @@ import type {
   ExerciseDto,
   HeartRateSampleDto,
   SessionExerciseSyncDto,
+  SessionFocusResponseDto,
   SessionSetSyncDto,
   StartSessionDto,
   SyncSessionPayloadDto,
   SyncSessionResponseDto,
+  UpdateSessionFocusDto,
   WorkoutSessionDto,
 } from '@luki-fitti/common/schemas';
 import type { Prisma, SessionExercise, SessionSet, WorkoutSession } from '@luki-fitti/database';
@@ -539,6 +541,20 @@ export class SessionService {
       validExerciseIds = new Set(foundExercises.map((e) => e.id));
     }
 
+    // Focus merges independently of version: write it only when the payload carries a
+    // strictly newer focusedAt; missing/null payload focus keeps the stored value.
+    const payloadFocusMs = payload.focusedAt != null ? Date.parse(payload.focusedAt) : null;
+    const existingFocusMs = existing?.focusedAt ? existing.focusedAt.getTime() : null;
+    const focusFields =
+      payloadFocusMs !== null &&
+      !Number.isNaN(payloadFocusMs) &&
+      (existingFocusMs === null || payloadFocusMs > existingFocusMs)
+        ? {
+            focusedClientExerciseId: payload.focusedClientExerciseId ?? null,
+            focusedAt: new Date(payloadFocusMs),
+          }
+        : undefined;
+
     const synced = await this.prisma.$transaction(async (tx) => {
       if (
         (payload.status === SessionStatus.IN_PROGRESS || payload.status === SessionStatus.PAUSED) &&
@@ -593,6 +609,7 @@ export class SessionService {
           version: nextVersion,
           lastWriterDeviceId,
           lastSyncedAt: new Date(),
+          ...(focusFields ?? {}),
         },
         create: {
           clientSessionId: payload.clientSessionId,
@@ -628,6 +645,7 @@ export class SessionService {
           version: nextVersion,
           lastWriterDeviceId,
           lastSyncedAt: new Date(),
+          ...(focusFields ?? {}),
         },
       });
 
@@ -776,6 +794,47 @@ export class SessionService {
     };
   }
 
+  /**
+   * Lightweight focus update (`PUT /sessions/:clientSessionId/focus`): newest focusedAt wins,
+   * independent of version — it never bumps version or touches lastWriterDeviceId.
+   */
+  async updateSessionFocus(
+    userId: string,
+    clientSessionId: string,
+    dto: UpdateSessionFocusDto,
+  ): Promise<SessionFocusResponseDto> {
+    const session = await this.prisma.workoutSession.findUnique({
+      where: { clientSessionId },
+    });
+    if (!session || session.userId !== userId) {
+      throw new NotFoundException('Session not found');
+    }
+
+    const incomingMs = Date.parse(dto.focusedAt);
+    const existingMs = session.focusedAt ? session.focusedAt.getTime() : null;
+    const applied = !Number.isNaN(incomingMs) && (existingMs === null || incomingMs > existingMs);
+
+    if (applied) {
+      await this.prisma.workoutSession.update({
+        where: { clientSessionId },
+        data: {
+          focusedClientExerciseId: dto.clientExerciseId,
+          focusedAt: new Date(incomingMs),
+        },
+      });
+      return {
+        focusedClientExerciseId: dto.clientExerciseId,
+        focusedAt: new Date(incomingMs).toISOString(),
+        applied: true,
+      };
+    }
+    return {
+      focusedClientExerciseId: session.focusedClientExerciseId ?? null,
+      focusedAt: toIsoStringOrNull(session.focusedAt),
+      applied: false,
+    };
+  }
+
   async getActiveSession(userId: string): Promise<WorkoutSessionDto | null> {
     const active = await this.prisma.workoutSession.findFirst({
       where: {
@@ -914,6 +973,8 @@ export class SessionService {
       heartRateSamples: Array.isArray(session.heartRateSamplesJson)
         ? (session.heartRateSamplesJson as HeartRateSampleDto[])
         : null,
+      focusedClientExerciseId: session.focusedClientExerciseId ?? null,
+      focusedAt: toIsoStringOrNull(session.focusedAt),
       version: session.version,
       lastSyncedAt: toIsoString(session.lastSyncedAt),
       exercises: (session.exercises ?? []).map((ex) => ({

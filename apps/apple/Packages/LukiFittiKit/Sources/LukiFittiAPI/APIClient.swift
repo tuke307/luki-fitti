@@ -330,6 +330,22 @@ public actor APIClient {
         try await request(path: "/api/sessions", method: "GET")
     }
 
+    public func fetchActiveSession() async throws -> WorkoutSessionDto? {
+        try await request(path: "/api/sessions/active", method: "GET")
+    }
+
+    /// Lightweight "which exercise is open" update; never bumps the session version.
+    public func updateSessionFocus(
+        clientSessionId: String,
+        _ body: UpdateSessionFocusDto
+    ) async throws -> SessionFocusResponseDto {
+        try await request(
+            path: "/api/sessions/\(Self.pathComponent(clientSessionId))/focus",
+            method: "PUT",
+            body: body
+        )
+    }
+
     public func deleteSession(sessionId: String) async throws {
         struct Resp: Decodable { let success: Bool? }
         let _: Resp = try await request(path: "/api/sessions/\(sessionId)", method: "DELETE")

@@ -77,10 +77,6 @@ public struct ActiveSessionView: View {
             }
         }
         .background(LukiColors.groupedBackground)
-        .onAppear { viewModel.pinFocusedExercise() }
-        .onChange(of: viewModel.store.activeSession?.exercises.map(\.clientExerciseId)) {
-            viewModel.pinFocusedExercise()
-        }
         .sheet(isPresented: Binding(
             get: { swapTargetId != nil },
             set: { if !$0 { swapTargetId = nil } }
