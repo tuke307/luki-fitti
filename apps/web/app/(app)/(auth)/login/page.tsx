@@ -11,6 +11,7 @@ import { Label } from '@luki-fitti/ui/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
+import { postAuthPath } from '@/lib/social/pending-invite';
 
 /** Only same-origin paths are accepted, so `?redirect=` can't send users to another site. */
 function safeRedirect(target: string | null): string {
@@ -21,11 +22,14 @@ function safeRedirect(target: string | null): string {
 
 export default function LoginPage() {
   const router = useRouter();
-  const redirectTo = safeRedirect(useSearchParams().get('redirect'));
+  const searchParams = useSearchParams();
+  const redirectParam = searchParams.get('redirect');
   const { login, register, resendConfirmation, continueOfflineLocal, error, infoMessage, loading } =
     useAuth();
   const { t, locale } = useLocale();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register'>(
+    searchParams.get('mode') === 'register' ? 'register' : 'login',
+  );
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -37,7 +41,7 @@ export default function LoginPage() {
         ? await login(email, password)
         : await register({ email, password, name: name || undefined });
     if (ok) {
-      router.push(redirectTo);
+      router.push(redirectParam ? safeRedirect(redirectParam) : postAuthPath());
     }
   };
 

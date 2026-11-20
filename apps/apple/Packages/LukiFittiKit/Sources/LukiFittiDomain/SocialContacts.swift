@@ -43,6 +43,26 @@ public enum InviteTokenValidator {
     }
 }
 
+/// Extracts the invite token from either `https://<app host>/invite/<token>` (universal link,
+/// what the QR code encodes) or `lukifitti://invite/<token>` (the web page's "Open in app").
+public enum InviteLink {
+    public static func token(from url: URL) -> String? {
+        let candidate: String?
+        switch url.scheme?.lowercased() {
+        case "https":
+            candidate = url.pathComponents.count == 3 && url.pathComponents[1] == "invite"
+                ? url.pathComponents[2] : nil
+        case "lukifitti":
+            candidate = url.host?.lowercased() == "invite" && url.pathComponents.count == 2
+                ? url.pathComponents[1] : nil
+        default:
+            candidate = nil
+        }
+        guard let candidate, InviteTokenValidator.isValid(candidate) else { return nil }
+        return candidate
+    }
+}
+
 /// Routes a `?open=`/push `url` deep link the same way the web `parseOpenParam` does:
 /// `/social/...` → social section, anything else → home.
 public enum SocialDeepLink {

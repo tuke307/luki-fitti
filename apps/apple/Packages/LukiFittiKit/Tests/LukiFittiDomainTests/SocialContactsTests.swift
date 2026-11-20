@@ -32,4 +32,22 @@ final class SocialContactsTests: XCTestCase {
     func testHashBatchesEmptyInput() {
         XCTAssertEqual(EmailLookup.hashBatches([]), [])
     }
+
+    func testInviteLinkParsesUniversalLinkAndCustomScheme() {
+        let token = String(repeating: "a", count: 43)
+        XCTAssertEqual(
+            InviteLink.token(from: URL(string: "https://app.luki-fitti.tony-luke.de/invite/\(token)")!),
+            token
+        )
+        XCTAssertEqual(InviteLink.token(from: URL(string: "lukifitti://invite/\(token)")!), token)
+    }
+
+    func testInviteLinkRejectsMalformedLinks() {
+        let token = String(repeating: "a", count: 43)
+        XCTAssertNil(InviteLink.token(from: URL(string: "https://app.example/invite/short")!))
+        XCTAssertNil(InviteLink.token(from: URL(string: "https://app.example/other/\(token)")!))
+        XCTAssertNil(InviteLink.token(from: URL(string: "https://app.example/invite/\(token)/x")!))
+        XCTAssertNil(InviteLink.token(from: URL(string: "lukifitti://social/\(token)")!))
+        XCTAssertNil(InviteLink.token(from: URL(string: "http://app.example/invite/\(token)")!))
+    }
 }
