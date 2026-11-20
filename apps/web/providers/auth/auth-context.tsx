@@ -5,7 +5,14 @@ import { api, ApiClientError } from '@/lib/api';
 import { trackEvent } from '@/lib/analytics/track';
 import { clearAllLocalData } from '@/lib/offline/offline-store';
 import { disablePushOnThisDevice } from '@/lib/push/web-push';
-import type { RegisterDto, UpdatePreferencesDto, UserDto } from '@luki-fitti/common/schemas';
+import type {
+  MfaRequiredDto,
+  OAuthLoginDto,
+  OAuthProviderName,
+  RegisterDto,
+  UpdatePreferencesDto,
+  UserDto,
+} from '@luki-fitti/common/schemas';
 import {
   GUEST_USER_ID,
   applyPreferencesPatch,
@@ -23,7 +30,18 @@ interface AuthContextProps {
   isAuthenticated: boolean;
   authMode: AuthMode;
   user: UserDto | null;
-  login: (email: string, password: string) => Promise<boolean>;
+  /** `'mfa'` means the first factor passed and a 2FA code is now required (`mfaPending`). */
+  login: (email: string, password: string) => Promise<'ok' | 'mfa' | 'error'>;
+  /** A first factor succeeded; the API waits for a TOTP/recovery code with this token. */
+  mfaPending: boolean;
+  verifyMfa: (code: string) => Promise<boolean>;
+  cancelMfa: () => void;
+  loginWithOAuth: (
+    provider: OAuthProviderName,
+    data: OAuthLoginDto,
+  ) => Promise<'ok' | 'mfa' | 'error'>;
+  /** Platform/passkey sign-in; `false` also covers a dismissed authenticator prompt. */
+  loginWithPasskey: () => Promise<boolean>;
   register: (data: RegisterDto) => Promise<boolean>;
   verifyEmail: (token: string) => Promise<boolean>;
   resendConfirmation: (email: string) => Promise<boolean>;
@@ -50,7 +68,12 @@ export const AuthContext = createContext<AuthContextProps>({
   isAuthenticated: false,
   authMode: 'UNAUTHENTICATED',
   user: null,
-  login: async () => false,
+  login: async () => 'error',
+  mfaPending: false,
+  verifyMfa: async () => false,
+  cancelMfa: () => {},
+  loginWithOAuth: async () => 'error',
+  loginWithPasskey: async () => false,
   register: async () => false,
   verifyEmail: async () => false,
   resendConfirmation: async () => false,
@@ -76,6 +99,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mfaToken, setMfaToken] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -154,23 +178,134 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('luki_cached_user_profile', JSON.stringify(next));
   };
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const isMfaRequired = (data: UserDto | MfaRequiredDto): data is MfaRequiredDto =>
+    (data as MfaRequiredDto).mfaRequired === true;
+
+  /** Shared tail of every sign-in: either adopt the user or park the MFA challenge. */
+  const finishSignIn = async (
+    data: UserDto | MfaRequiredDto,
+    method: string,
+  ): Promise<'ok' | 'mfa'> => {
+    if (isMfaRequired(data)) {
+      trackEvent('login', { status: 'mfa_required', method });
+      setMfaToken(data.mfaToken);
+      return 'mfa';
+    }
+    trackEvent('login', { status: 'success', method });
+    await adoptSignedInUser(data, 'fill');
+    return 'ok';
+  };
+
+  const login = async (email: string, password: string): Promise<'ok' | 'mfa' | 'error'> => {
     setLoading(true);
     setError(null);
     setInfoMessage(null);
+    setMfaToken(null);
     try {
       const response = await api.auth.login({ email, password });
       if (response.success && response.data) {
-        trackEvent('login', { status: 'success' });
+        return await finishSignIn(response.data, 'password');
+      }
+      trackEvent('login', { status: 'error', method: 'password' });
+      setError(response.error || 'Invalid email or password');
+      return 'error';
+    } catch (err) {
+      trackEvent('login', { status: 'error', method: 'password' });
+      setError(err instanceof Error ? err.message : 'Unable to sign in');
+      return 'error';
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /** Second factor after `login`/`loginWithOAuth` returned 'mfa'. */
+  const verifyMfa = async (code: string): Promise<boolean> => {
+    if (!mfaToken) {
+      setError('Sign-in expired. Please start again.');
+      return false;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.auth.verifyTwoFactor({ mfaToken, code });
+      if (response.success && response.data) {
+        trackEvent('login', { status: 'success', method: '2fa' });
+        setMfaToken(null);
         await adoptSignedInUser(response.data, 'fill');
         return true;
       }
-      trackEvent('login', { status: 'error' });
-      setError(response.error || 'Invalid email or password');
+      setError(response.error || 'Invalid code');
       return false;
     } catch (err) {
-      trackEvent('login', { status: 'error' });
+      setError(err instanceof Error ? err.message : 'Invalid code');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelMfa = () => {
+    setMfaToken(null);
+    setError(null);
+  };
+
+  const loginWithOAuth = async (
+    provider: OAuthProviderName,
+    data: OAuthLoginDto,
+  ): Promise<'ok' | 'mfa' | 'error'> => {
+    setLoading(true);
+    setError(null);
+    setInfoMessage(null);
+    setMfaToken(null);
+    try {
+      const response = await api.auth.oauth(provider, data);
+      if (response.success && response.data) {
+        return await finishSignIn(response.data, provider);
+      }
+      trackEvent('login', { status: 'error', method: provider });
+      setError(response.error || 'Unable to sign in');
+      return 'error';
+    } catch (err) {
+      trackEvent('login', { status: 'error', method: provider });
       setError(err instanceof Error ? err.message : 'Unable to sign in');
+      return 'error';
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginWithPasskey = async (): Promise<boolean> => {
+    setLoading(true);
+    setError(null);
+    setInfoMessage(null);
+    setMfaToken(null);
+    try {
+      const optionsRes = await api.auth.passkeyLoginOptions();
+      if (!optionsRes.success || !optionsRes.data) {
+        setError(optionsRes.error || 'Unable to start passkey sign-in');
+        return false;
+      }
+      const { startAuthentication } = await import('@simplewebauthn/browser');
+      const response = await startAuthentication({
+        optionsJSON: optionsRes.data.options as never,
+      });
+      const verifyRes = await api.auth.passkeyLoginVerify({
+        challengeId: optionsRes.data.challengeId,
+        response: response as unknown as Record<string, unknown>,
+      });
+      if (verifyRes.success && verifyRes.data) {
+        trackEvent('login', { status: 'success', method: 'passkey' });
+        await adoptSignedInUser(verifyRes.data, 'fill');
+        return true;
+      }
+      trackEvent('login', { status: 'error', method: 'passkey' });
+      setError(verifyRes.error || 'Passkey sign-in failed');
+      return false;
+    } catch (err) {
+      // A dismissed authenticator prompt is not an error worth showing.
+      if (err instanceof Error && err.name === 'NotAllowedError') return false;
+      trackEvent('login', { status: 'error', method: 'passkey' });
+      setError(err instanceof Error ? err.message : 'Passkey sign-in failed');
       return false;
     } finally {
       setLoading(false);
@@ -384,6 +519,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         authMode,
         user,
         login,
+        mfaPending: mfaToken !== null,
+        verifyMfa,
+        cancelMfa,
+        loginWithOAuth,
+        loginWithPasskey,
         register,
         verifyEmail,
         resendConfirmation,

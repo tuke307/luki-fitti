@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   BookOpen,
   FileText,
@@ -167,6 +168,7 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
   const { folders, unfiledTemplates, historySessions, catalog } = useGym();
   const { theme, setTheme } = useTheme();
   const { t, format, languagePreference, setLanguagePreference, locale } = useLocale();
+  const router = useRouter();
 
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
@@ -420,6 +422,11 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
               <KeyRound className="h-4 w-4" /> {t.profile.changePasswordBtn}
             </Link>
           </Button>
+          <Button type="button" variant="secondary" asChild>
+            <Link href="/security">
+              <ShieldCheck className="h-4 w-4" /> {t.security.pageTitle}
+            </Link>
+          </Button>
           <Button
             type="button"
             variant="secondary"
@@ -472,7 +479,9 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
         onSubmit={async (e) => {
           e.preventDefault();
           if (authTab === 'login') {
-            await login(email, password);
+            // 2FA accounts finish sign-in on the dedicated MFA step of /login.
+            const result = await login(email, password);
+            if (result === 'mfa') router.push('/login');
           } else {
             await register({ email, password, name: name || undefined });
           }

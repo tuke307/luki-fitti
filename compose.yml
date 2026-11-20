@@ -29,6 +29,10 @@ services:
       # Host routing in proxy.ts: SITE_HOSTNAMES serve the marketing site, APP_ORIGIN the app.
       - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-https://app.luki-fitti.tony-luke.de}
       - APPLE_APP_IDS=${APPLE_APP_IDS:-}
+      # Web sign-in providers (Google Identity Services / Sign in with Apple JS).
+      - GOOGLE_WEB_CLIENT_ID=${GOOGLE_WEB_CLIENT_ID:-}
+      - APPLE_WEB_SERVICES_ID=${APPLE_WEB_SERVICES_ID:-}
+      - APPLE_WEB_REDIRECT_URI=${APPLE_WEB_REDIRECT_URI:-}
     depends_on:
       luki-fitti-api:
         condition: service_healthy
