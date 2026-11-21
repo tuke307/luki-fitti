@@ -3,4 +3,8 @@ APP_GROUP_ID = group.$(LUKIFITTI_BUNDLE_ID_PREFIX).shared
 KEYCHAIN_ACCESS_GROUP = $(AppIdentifierPrefix)$(LUKIFITTI_BUNDLE_ID_PREFIX).shared
 SWIFT_VERSION = 6.0
 
+// Google iOS OAuth client id ("…apps.googleusercontent.com"). Empty = the
+// "Continue with Google" button is hidden.
+LUKIFITTI_GOOGLE_IOS_CLIENT_ID =
+
 #include? "Local.xcconfig"

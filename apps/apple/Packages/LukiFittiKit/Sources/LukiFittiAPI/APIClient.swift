@@ -126,18 +126,20 @@ public actor APIClient {
 
     // MARK: - Auth Endpoints
 
-    public func login(email: String, password: String) async throws -> UserDto {
+    /// May return `.mfaRequired` instead of a session when the account has 2FA on;
+    /// finish those logins with `verifyTwoFactor(mfaToken:code:)`.
+    public func login(email: String, password: String) async throws -> LoginResult {
         struct Body: Encodable { let email: String; let password: String }
-        let user: UserDto = try await request(
+        let response: LoginResponseDto = try await request(
             path: "/api/auth/login",
             method: "POST",
             body: Body(email: email, password: password),
             requiresAuth: false
         )
-        if let tokens = user.tokens {
+        if case .signedIn(let user) = response.result, let tokens = user.tokens {
             try? tokenStore.saveTokens(tokens, userId: user.id)
         }
-        return user
+        return response.result
     }
 
     public func register(email: String, password: String, name: String?, weightUnit: WeightUnit = .KG) async throws -> UserDto {

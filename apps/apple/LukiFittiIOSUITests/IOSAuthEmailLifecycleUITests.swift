@@ -55,6 +55,10 @@ final class IOSAuthEmailLifecycleUITests: XCTestCase {
         // 3. Sign out and request password reset email
         try await MailpitTestClient.clearMailbox(for: email)
         let signOutButton = app.buttons["ios.profile.signOutButton"]
+        // The button sits below the social profile rows — scroll the list until it materializes.
+        for _ in 0 ..< 5 where !signOutButton.exists {
+            app.swipeUp()
+        }
         XCTAssertTrue(signOutButton.waitForExistence(timeout: 5))
         signOutButton.tap()
 
@@ -96,6 +100,9 @@ final class IOSAuthEmailLifecycleUITests: XCTestCase {
         // 6. Request Account Deletion & confirm via Mailpit email deep link
         try await MailpitTestClient.clearMailbox(for: email)
         let deleteAccountBtn = app.buttons["ios.profile.deleteAccountButton"]
+        for _ in 0 ..< 5 where !deleteAccountBtn.exists {
+            app.swipeUp()
+        }
         XCTAssertTrue(deleteAccountBtn.waitForExistence(timeout: 5))
         deleteAccountBtn.tap()
 
