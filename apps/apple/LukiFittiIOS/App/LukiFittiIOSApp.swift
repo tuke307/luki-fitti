@@ -359,16 +359,18 @@ public final class LukiAppViewModel {
 #endif
 
     public func handleUniversalLink(_ url: URL) {
-        // `https://app.luki-fitti.tony-luke.de/invite/<token>` universal link.
+        // `https://app.luki-fitti.tony-luke.de/invite/<token>` universal link (the QR code) or
+        // `lukifitti://invite/<token>` (the web page's "Open in app" button).
+        if let token = InviteLink.token(from: url) {
+            pendingInviteToken = token
+            // Signed out → sign in first; AppShellView picks the token up after auth.
+            if store.currentUser == nil { selectedTab = .profile }
+            return
+        }
+        // A malformed `/invite/<junk>` link is dropped rather than parsed as another route.
         if url.scheme?.lowercased() == "https",
            url.pathComponents.count == 3,
            url.pathComponents[1] == "invite" {
-            let token = url.pathComponents[2]
-            if InviteTokenValidator.isValid(token) {
-                pendingInviteToken = token
-                // Signed out → sign in first; AppShellView picks the token up after auth.
-                if store.currentUser == nil { selectedTab = .profile }
-            }
             return
         }
         if url.scheme?.lowercased() == "lukifitti" {

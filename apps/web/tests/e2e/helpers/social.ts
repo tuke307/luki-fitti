@@ -65,6 +65,19 @@ export async function seedSocialUser(
   return { id: user.id, email, password, name: `E2E Social ${prefix}` };
 }
 
+/** Inserts a valid friend invite for `createdById` and returns its app path (`/invite/<token>`). */
+export async function seedInviteForE2e(createdById: string): Promise<string> {
+  const token = randomBytes(32).toString('base64url');
+  await prisma.friendInvite.create({
+    data: {
+      tokenHash: createHash('sha256').update(token, 'utf8').digest('hex'),
+      createdById,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    },
+  });
+  return `/invite/${token}`;
+}
+
 /** Forces the league stage mode (AUTO thresholds are impractical to seed for). */
 export async function setLeagueStageModeForE2e(
   mode: 'AUTO' | 'FRIENDS' | 'GLOBAL' | 'ARENAS',

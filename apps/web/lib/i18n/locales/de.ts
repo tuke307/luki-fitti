@@ -1280,6 +1280,12 @@ export const de = {
     goToFriends: 'Zu Freunde',
     signIn: 'Anmelden',
     signUp: 'Konto erstellen',
+    usernameNeeded:
+      'Wähle einen Benutzernamen, damit dein Freund dich findet. Danach wird die Einladung angenommen.',
+    chooseUsername: 'Benutzernamen wählen',
+    appHint: 'Du hast die LukiFitti-App auf dem iPhone?',
+    openInApp: 'In der App öffnen',
+    getTheApp: 'App laden',
   },
   security: {
     pageTitle: 'Anmeldung & Sicherheit',

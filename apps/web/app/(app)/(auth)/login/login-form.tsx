@@ -19,6 +19,7 @@ import { Label } from '@luki-fitti/ui/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
+import { postAuthPath } from '@/lib/social/pending-invite';
 import {
   appleUserName,
   generateOAuthNonce,
@@ -45,7 +46,10 @@ export default function LoginForm({
   appleRedirectUri,
 }: LoginFormProps) {
   const router = useRouter();
-  const redirectTo = safeRedirect(useSearchParams().get('redirect'));
+  const searchParams = useSearchParams();
+  const redirectParam = searchParams.get('redirect');
+  // Read at navigation time: a pending invite may have been stored after the first render.
+  const nextPath = () => (redirectParam ? safeRedirect(redirectParam) : postAuthPath());
   const {
     login,
     register,
@@ -61,7 +65,9 @@ export default function LoginForm({
     loading,
   } = useAuth();
   const { t, locale } = useLocale();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register'>(
+    searchParams.get('mode') === 'register' ? 'register' : 'login',
+  );
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -86,7 +92,7 @@ export default function LoginForm({
         idToken: response.credential,
         nonce: googleNonceRef.current,
       }).then((result) => {
-        if (result === 'ok') router.push(redirectTo);
+        if (result === 'ok') router.push(nextPath());
       });
     }).catch(() => {
       // GIS unavailable (offline/ad-blocker) — the password form still works.
@@ -103,7 +109,7 @@ export default function LoginForm({
           ? 'ok'
           : 'error';
     if (result === 'ok') {
-      router.push(redirectTo);
+      router.push(nextPath());
     }
     // 'mfa' → the MFA step below replaces the form (mfaPending from context).
   };
@@ -122,7 +128,7 @@ export default function LoginForm({
         nonce,
         name: appleUserName(response),
       });
-      if (result === 'ok') router.push(redirectTo);
+      if (result === 'ok') router.push(nextPath());
     } catch {
       // Popup dismissed or Apple JS unavailable — no error worth showing.
     }
@@ -130,13 +136,13 @@ export default function LoginForm({
 
   const handlePasskey = async () => {
     const ok = await loginWithPasskey();
-    if (ok) router.push(redirectTo);
+    if (ok) router.push(nextPath());
   };
 
   const handleMfaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const ok = await verifyMfa(mfaCode.trim());
-    if (ok) router.push(redirectTo);
+    if (ok) router.push(nextPath());
   };
 
   const errorBlock = error && (

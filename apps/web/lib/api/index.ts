@@ -132,7 +132,7 @@ export const auth = {
       retry: false,
     }),
   /** Sign in or up with a Google/Apple ID token; may return `MfaRequiredDto`. */
-  oauth: (provider: OAuthProviderName, data: OAuthLoginDto) =>
+  signInWithProvider: (provider: OAuthProviderName, data: OAuthLoginDto) =>
     apiFetch<UserDto | MfaRequiredDto>(`/auth/oauth/${provider}`, {
       method: 'POST',
       body: JSON.stringify(data),

@@ -23,6 +23,7 @@ import {
   writeGuestPreferences,
   type GuestMergeMode,
 } from '@/lib/auth/guest-preferences';
+import { PROFILE_CACHE_KEY, toCachedProfile } from '@/lib/auth/cached-profile';
 
 export type AuthMode = 'AUTHENTICATED' | 'OFFLINE_LOCAL' | 'UNAUTHENTICATED';
 
@@ -63,6 +64,30 @@ const loadGuestUser = (): UserDto => buildGuestUser(readGuestPreferences());
 /** A cached guest profile (older builds cached it) picks up the device's guest preferences. */
 const fromCache = (cached: UserDto): UserDto =>
   cached.id === GUEST_USER_ID ? loadGuestUser() : cached;
+
+/** Writes the profile cache without the sign-in tokens (HttpOnly cookies carry the session). */
+const writeProfileCache = (user: UserDto) => {
+  localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(toCachedProfile(user)));
+};
+
+/** Reads the profile cache; strips and rewrites it once if an older build left tokens in it. */
+const readProfileCache = (): UserDto | null => {
+  const raw = localStorage.getItem(PROFILE_CACHE_KEY);
+  if (!raw) return null;
+  let parsed: UserDto;
+  try {
+    parsed = JSON.parse(raw) as UserDto;
+  } catch {
+    localStorage.removeItem(PROFILE_CACHE_KEY);
+    return null;
+  }
+  if (parsed.tokens) {
+    const cleaned = toCachedProfile(parsed);
+    localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(cleaned));
+    return cleaned;
+  }
+  return parsed;
+};
 
 export const AuthContext = createContext<AuthContextProps>({
   isAuthenticated: false,
@@ -106,18 +131,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const res = await api.auth.me();
         if (res.success && res.data) {
-          setUser(res.data);
+          setUser(toCachedProfile(res.data));
           setAuthMode('AUTHENTICATED');
-          localStorage.setItem('luki_cached_user_profile', JSON.stringify(res.data));
+          writeProfileCache(res.data);
           setLoading(false);
           return;
         }
       } catch (err) {
         if (err instanceof ApiClientError && err.isNetworkError) {
-          const cached = localStorage.getItem('luki_cached_user_profile');
+          const cached = readProfileCache();
           if (cached) {
             try {
-              setUser(fromCache(JSON.parse(cached)));
+              setUser(fromCache(cached));
               setAuthMode('OFFLINE_LOCAL');
               setLoading(false);
               return;
@@ -129,9 +154,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // A rejected session signs the person out. Drop local data only when this device
           // actually belonged to a signed-in account — a guest's workouts, weigh-ins and
           // cached content are theirs and survive every reload.
-          if (localStorage.getItem('luki_cached_user_profile')) {
+          if (localStorage.getItem(PROFILE_CACHE_KEY)) {
             await clearAllLocalData().catch(() => undefined);
-            localStorage.removeItem('luki_cached_user_profile');
+            localStorage.removeItem(PROFILE_CACHE_KEY);
           }
           setUser(loadGuestUser());
           setAuthMode('OFFLINE_LOCAL');
@@ -140,10 +165,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
-      const cached = localStorage.getItem('luki_cached_user_profile');
+      const cached = readProfileCache();
       if (cached) {
         try {
-          setUser(fromCache(JSON.parse(cached)));
+          setUser(fromCache(cached));
           setAuthMode('OFFLINE_LOCAL');
           setLoading(false);
           return;
@@ -173,9 +198,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch {
       // Keep the guest preferences on this device; the next sign-in tries again.
     }
-    setUser(next);
+    setUser(toCachedProfile(next));
     setAuthMode('AUTHENTICATED');
-    localStorage.setItem('luki_cached_user_profile', JSON.stringify(next));
+    writeProfileCache(next);
   };
 
   const isMfaRequired = (data: UserDto | MfaRequiredDto): data is MfaRequiredDto =>
@@ -258,7 +283,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setInfoMessage(null);
     setMfaToken(null);
     try {
-      const response = await api.auth.oauth(provider, data);
+      const response = await api.auth.signInWithProvider(provider, data);
       if (response.success && response.data) {
         return await finishSignIn(response.data, provider);
       }
@@ -385,7 +410,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const clearSignedInState = async () => {
     await disablePushOnThisDevice().catch(() => undefined);
     await clearAllLocalData().catch(() => undefined);
-    localStorage.removeItem('luki_cached_user_profile');
+    localStorage.removeItem(PROFILE_CACHE_KEY);
     setUser(loadGuestUser());
     setAuthMode('OFFLINE_LOCAL');
   };
@@ -449,7 +474,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await api.auth.confirmAccountDeletion({ token });
       if (response.success) {
         await clearAllLocalData().catch(() => undefined);
-        localStorage.removeItem('luki_cached_user_profile');
+        localStorage.removeItem(PROFILE_CACHE_KEY);
         setUser(loadGuestUser());
         setAuthMode('OFFLINE_LOCAL');
         setInfoMessage(
@@ -473,8 +498,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const res = await api.auth.updatePreferences(data);
         if (res.success && res.data) {
-          setUser(res.data);
-          localStorage.setItem('luki_cached_user_profile', JSON.stringify(res.data));
+          setUser(toCachedProfile(res.data));
+          writeProfileCache(res.data);
           return;
         }
       } catch {
@@ -489,23 +514,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     const next = applyPreferencesPatch(user, data);
     setUser(next);
-    localStorage.setItem('luki_cached_user_profile', JSON.stringify(next));
+    writeProfileCache(next);
   };
 
   const continueOfflineLocal = () => {
     const guest = loadGuestUser();
     setUser(guest);
     setAuthMode('OFFLINE_LOCAL');
-    localStorage.setItem('luki_cached_user_profile', JSON.stringify(guest));
+    writeProfileCache(guest);
   };
 
   const refreshUser = async () => {
     try {
       const res = await api.auth.me();
       if (res.success && res.data) {
-        setUser(res.data);
+        setUser(toCachedProfile(res.data));
         setAuthMode('AUTHENTICATED');
-        localStorage.setItem('luki_cached_user_profile', JSON.stringify(res.data));
+        writeProfileCache(res.data);
       }
     } catch {
       // Keep existing state
