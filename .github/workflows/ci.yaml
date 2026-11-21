@@ -163,6 +163,7 @@ jobs:
           ACCESS_TOKEN_EXPIRY_MS=900000
           REFRESH_TOKEN_EXPIRY_MS=7776000000
           REFRESH_TOKEN_REUSE_GRACE_MS=30000
+          APP_SETTINGS_CACHE_TTL_MS=0
           API_KEY_PEPPER=${API_KEY_PEPPER_VALUE}
           DATABASE_URL=postgresql://postgres:postgres@localhost:5432/luki_fitti
           FRONTEND_URL=http://localhost:3000

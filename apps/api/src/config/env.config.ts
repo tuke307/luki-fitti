@@ -86,6 +86,11 @@ export const WEBAUTHN_ORIGINS = csv(process.env.WEBAUTHN_ORIGINS).length
 export const GOOGLE_CLIENT_IDS = csv(process.env.GOOGLE_CLIENT_IDS);
 export const APPLE_CLIENT_IDS = csv(process.env.APPLE_CLIENT_IDS);
 
+/** AppSettings read cache. e2e sets 0 so flags the tests write straight to the DB apply at once. */
+const appSettingsCacheTtl = Number(process.env.APP_SETTINGS_CACHE_TTL_MS ?? 10_000);
+export const APP_SETTINGS_CACHE_TTL_MS =
+  Number.isFinite(appSettingsCacheTtl) && appSettingsCacheTtl >= 0 ? appSettingsCacheTtl : 10_000;
+
 export const MFA_TOKEN_EXPIRY_MS = Number(process.env.MFA_TOKEN_EXPIRY_MS) || 5 * 60 * 1000;
 
 let _twoFactorKey: string | undefined;

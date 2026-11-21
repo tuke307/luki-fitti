@@ -5,10 +5,14 @@ import {
   extractAuthLinkFromEmail,
   waitForMailpitEmail,
 } from './helpers/mailpit.js';
-import { submitLoginPageForm } from './helpers/auth.js';
 import { resetOfflineStore } from './helpers/offline-store.js';
 import { navigateToTab } from './helpers/shell.js';
-import { enableSocialForE2e, seedInviteForE2e, seedSocialUser } from './helpers/social.js';
+import {
+  enableSocialForE2e,
+  seedInviteForE2e,
+  seedSocialUser,
+  signInSeededUser,
+} from './helpers/social.js';
 
 const INVITE_URL = /^https?:\/\/[^/]+\/invite\/[A-Za-z0-9_-]{43}$/;
 
@@ -23,8 +27,7 @@ test.describe('Invite QR code and new-user invite flow', () => {
     const unique = Date.now().toString(36);
     const inviter = await seedSocialUser('qr', undefined, `qr_${unique}`);
     await resetOfflineStore(page);
-    await submitLoginPageForm(page, inviter.email, inviter.password);
-    await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+    await signInSeededUser(page, inviter);
     await navigateToTab(page, 'social');
     await page.getByTestId('social-friends-btn').click();
     await page.getByTestId('invite-qr-btn').click();
