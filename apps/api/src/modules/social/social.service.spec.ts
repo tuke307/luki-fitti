@@ -402,8 +402,10 @@ describe('SocialService invites', () => {
       ],
     });
     const svc = makeService(prisma);
-    const { url } = await svc.createInvite('inviter');
+    const { url, expiresAt } = await svc.createInvite('inviter');
     const token = url.split('/invite/')[1]!;
+    const validForDays = (new Date(expiresAt).getTime() - Date.now()) / 86_400_000;
+    assert.ok(validForDays >= 29.9 && validForDays <= 30.1);
     assert.equal(prisma.invites.has(sha256Hex(token)), true);
     assert.equal(prisma.invites.has(token), false);
 

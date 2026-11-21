@@ -47,6 +47,7 @@ import { LeagueService } from '../league/league.service';
 import { FRONTEND_URL } from '@/config/env.config';
 import { detectImageType } from '@/utils/image.util';
 import { incrementUserCounter } from '@/utils/rate-limit.util';
+import { buildInviteUrl, INVITE_TTL_MS } from './invite.util';
 import { avatarUrlFor, cardFor, resolveRelation, type CardSource } from './relation.util';
 
 const DAY_SECONDS = 24 * 60 * 60;
@@ -56,7 +57,6 @@ const MAX_CONTACT_SYNCS_PER_DAY = 5;
 const MAX_REPORTS_PER_DAY = 10;
 const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
 const AVATAR_SIZE_PX = 512;
-const INVITE_TTL_MS = 7 * DAY_SECONDS * 1000;
 const MAX_AVATAR_INPUT_PIXELS = 50_000_000;
 
 const sha256Hex = (value: string) => createHash('sha256').update(value, 'utf8').digest('hex');
@@ -636,7 +636,7 @@ export class SocialService {
     await this.prisma.friendInvite.create({
       data: { tokenHash: sha256Hex(token), createdById: viewerId, expiresAt },
     });
-    return { url: `${FRONTEND_URL}/invite/${token}`, expiresAt: expiresAt.toISOString() };
+    return { url: buildInviteUrl(FRONTEND_URL, token), expiresAt: expiresAt.toISOString() };
   }
 
   private async findValidInvite(token: string) {
