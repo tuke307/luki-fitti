@@ -8,6 +8,8 @@ import LukiFittiWatchSync
 public struct ProfileAndAuthView: View {
     @Bindable public var viewModel: LukiAppViewModel
     @State private var authMode: String = "login"
+    /// Last email used to sign in — prefills the auth form (never passwords).
+    @AppStorage("lukifitti.lastSignInEmail") private var lastSignInEmail = ""
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var name: String = ""
@@ -238,6 +240,8 @@ public struct ProfileAndAuthView: View {
                         do {
                             try await viewModel.store.apiClient.confirmAccountDeletion(token: token)
                             viewModel.store.clearAllLocalData()
+                            lastSignInEmail = ""
+                            email = ""
                             viewModel.nutrition.clear()
                             viewModel.clearBodyWeightData()
                             viewModel.deepLinkTokenType = nil
@@ -281,6 +285,12 @@ public struct ProfileAndAuthView: View {
         Picker(tr("Mode"), selection: $authMode) {
             Text(tr("Sign In")).tag("login")
             Text(tr("Register Account")).tag("register")
+        }
+        .task { if email.isEmpty { email = lastSignInEmail } }
+        .onChange(of: authMode) { _, mode in
+            // The remembered email belongs to sign-in; registering a new account starts clean.
+            if mode == "register", email == lastSignInEmail { email = "" }
+            else if mode == "login", email.isEmpty { email = lastSignInEmail }
         }
         .pickerStyle(.segmented)
         .listRowBackground(Color.clear)
@@ -336,6 +346,7 @@ public struct ProfileAndAuthView: View {
                                     weightUnit: viewModel.store.preferences.weightUnit
                                 )
                                 viewModel.analytics.event(.signup, ["status": .string(user.message == nil ? "success" : "pending_confirmation")])
+                                lastSignInEmail = email
                                 statusMessage = tr("Account created. Check your email to confirm it.")
                                 #if DEBUG
                                 viewModel.pollMailpitForReview(to: email, route: "verify-email")
@@ -361,10 +372,15 @@ public struct ProfileAndAuthView: View {
 
             if authMode == "login" {
                 Button(tr("Forgot password?")) {
+                    let trimmed = email.trimmingCharacters(in: .whitespaces)
+                    guard Self.isPlausibleEmail(trimmed) else {
+                        statusMessage = tr("Enter a valid email address first.")
+                        return
+                    }
                     Task {
                         viewModel.analytics.event(.passwordResetRequest)
                         do {
-                            try await viewModel.store.apiClient.forgotPassword(email: email)
+                            try await viewModel.store.apiClient.forgotPassword(email: trimmed)
                             statusMessage = tr("If an account exists for this email, we’ve sent a reset link.")
                         } catch {
                             statusMessage = error.localizedDescription
@@ -462,11 +478,18 @@ public struct ProfileAndAuthView: View {
 
     // MARK: - Auth actions
 
+    /// Cheap client-side shape check — the server does the real validation.
+    private static func isPlausibleEmail(_ value: String) -> Bool {
+        let parts = value.split(separator: "@")
+        return parts.count == 2 && !parts[0].isEmpty && parts[1].contains(".")
+    }
+
     /// Adopts a signed-in user or parks the MFA challenge; returns after the post-login refresh.
     private func adoptLoginResult(_ result: LoginResult) async {
         switch result {
         case .signedIn(let user):
             viewModel.analytics.event(.login, ["status": .string("success")])
+            if !user.email.isEmpty { lastSignInEmail = user.email }
             viewModel.store.saveAuthenticatedUser(user)
             await viewModel.store.refreshFromServerAfterAuth()
             #if DEBUG

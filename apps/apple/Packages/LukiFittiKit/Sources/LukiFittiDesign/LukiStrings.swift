@@ -179,6 +179,7 @@ public enum LukiStrings {
         "Folder Details": "Ordner",
         "Folder Name (e.g. 4er Split)": "Ordnername (z. B. 4er Split)",
         "Forgot password?": "Passwort vergessen?",
+        "Enter a valid email address first.": "Gib zuerst eine gültige E-Mail-Adresse ein.",
         "Guest – saved on this device only": "Gast – nur auf diesem Gerät gespeichert",
         "Heart rate": "Herzfrequenz",
         "Hi, %@": "Hi, %@",
