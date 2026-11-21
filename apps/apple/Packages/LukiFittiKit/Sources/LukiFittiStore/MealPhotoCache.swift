@@ -39,7 +39,11 @@ public final class MealPhotoCache: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        #if os(macOS)
+        try? data.write(to: file, options: [.atomic])
+        #else
         try? data.write(to: file, options: [.atomic, .completeFileProtection])
+        #endif
     }
 
     public func load(_ photo: MealPhotoDto, api: APIClient) async throws(LoadError) -> Data {

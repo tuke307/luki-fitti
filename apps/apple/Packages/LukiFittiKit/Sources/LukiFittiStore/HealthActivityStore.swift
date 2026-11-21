@@ -168,6 +168,10 @@ public final class HealthActivityStore {
 
     private func write<T: Encodable>(_ value: T, _ name: String) {
         guard let data = try? JSONEncoder().encode(value) else { return }
+        #if os(macOS)
+        try? data.write(to: directory.appendingPathComponent(name), options: [.atomic])
+        #else
         try? data.write(to: directory.appendingPathComponent(name), options: [.atomic, .completeFileProtection])
+        #endif
     }
 }
