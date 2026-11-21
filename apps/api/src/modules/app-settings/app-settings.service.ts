@@ -13,13 +13,13 @@ import type {
 import type { LeagueStageMode } from '@luki-fitti/common/enums';
 import { PrismaService } from '../database/prisma.service';
 import {
+  APP_SETTINGS_CACHE_TTL_MS,
   getAiKeyEncryptionConfig,
   SEAWEEDFS_ACCESS_KEY_API,
   SEAWEEDFS_ENDPOINT,
 } from '../../config/env.config';
 
 const SETTINGS_ID = 1;
-const CACHE_TTL_MS = 10_000;
 
 export interface AppSettingsRecord {
   aiWorkoutBuilderEnabled: boolean;
@@ -123,7 +123,7 @@ export class AppSettingsService {
         where: { id: SETTINGS_ID },
       })) as AppSettingsRecord;
     }
-    this.cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
+    this.cache = { value, expiresAt: Date.now() + APP_SETTINGS_CACHE_TTL_MS };
     return value;
   }
 
@@ -177,7 +177,7 @@ export class AppSettingsService {
         userModelAllowlist: dedupe(dto.userModelAllowlist),
       },
     })) as AppSettingsRecord;
-    this.cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
+    this.cache = { value, expiresAt: Date.now() + APP_SETTINGS_CACHE_TTL_MS };
     return this.toDto(value);
   }
 
@@ -199,7 +199,7 @@ export class AppSettingsService {
         socialBetaUserIds: dto.socialBetaUserIds ? [...new Set(dto.socialBetaUserIds)] : undefined,
       },
     })) as AppSettingsRecord;
-    this.cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
+    this.cache = { value, expiresAt: Date.now() + APP_SETTINGS_CACHE_TTL_MS };
     return this.getSocialSettings();
   }
 
@@ -222,7 +222,7 @@ export class AppSettingsService {
       create: { id: SETTINGS_ID, ...dto },
       update: dto,
     })) as AppSettingsRecord;
-    this.cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
+    this.cache = { value, expiresAt: Date.now() + APP_SETTINGS_CACHE_TTL_MS };
     return this.getLeagueSettings();
   }
 
@@ -237,7 +237,7 @@ export class AppSettingsService {
       create: { id: SETTINGS_ID, ...dto },
       update: dto,
     })) as AppSettingsRecord;
-    this.cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
+    this.cache = { value, expiresAt: Date.now() + APP_SETTINGS_CACHE_TTL_MS };
     return this.getApiKeySettings();
   }
 

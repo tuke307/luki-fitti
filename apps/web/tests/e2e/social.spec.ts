@@ -1,6 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
 import { addBerlinDays, berlinDayKey } from '@luki-fitti/common/utils';
-import { submitLoginPageForm } from './helpers/auth.js';
 import { gotoProfileTab, resetOfflineStore } from './helpers/offline-store.js';
 import { navigateToTab } from './helpers/shell.js';
 import {
@@ -70,8 +69,7 @@ test.describe('Social: friends, requests and invites', () => {
     await resetOfflineStore(page);
 
     // ── User A signs in and picks a username in the onboarding sheet ──
-    await submitLoginPageForm(page, userA.email, userA.password);
-    await expect(page).toHaveURL(/\/$/, { timeout: 15_000 });
+    await signInSeededUser(page, userA);
     await navigateToTab(page, 'social');
     await completeOnboardingWithUsername(page, usernameA);
     await expect(page.getByTestId('social-finish-setup')).toHaveCount(0, { timeout: 10_000 });
