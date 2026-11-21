@@ -38,3 +38,51 @@ describe('AppSettingsService API key settings', () => {
     assert.deepEqual(dto, { apiKeysEnabled: false, mcpEnabled: true });
   });
 });
+
+describe('AppSettingsService.get', () => {
+  it('shares one load between concurrent callers on a cold cache', async () => {
+    let upserts = 0;
+    const prisma = {
+      appSettings: {
+        upsert: async () => {
+          upserts += 1;
+          await new Promise((resolve) => setTimeout(resolve, 5));
+          return record();
+        },
+      },
+    } as unknown as PrismaService;
+    const svc = new AppSettingsService(prisma);
+    const results = await Promise.all([svc.get(), svc.get(), svc.get()]);
+    assert.equal(upserts, 1);
+    assert.ok(results.every((r) => r.apiKeysEnabled === false));
+  });
+
+  it('re-reads the row when another process created it first (P2002)', async () => {
+    const prisma = {
+      appSettings: {
+        upsert: async () => {
+          throw Object.assign(new Error('Unique constraint failed'), { code: 'P2002' });
+        },
+        findUniqueOrThrow: async () => record({ mcpEnabled: true }),
+      },
+    } as unknown as PrismaService;
+    const svc = new AppSettingsService(prisma);
+    assert.equal((await svc.get()).mcpEnabled, true);
+  });
+
+  it('rethrows other errors and lets the next call retry', async () => {
+    let calls = 0;
+    const prisma = {
+      appSettings: {
+        upsert: async () => {
+          calls += 1;
+          if (calls === 1) throw new Error('connection lost');
+          return record();
+        },
+      },
+    } as unknown as PrismaService;
+    const svc = new AppSettingsService(prisma);
+    await assert.rejects(svc.get(), /connection lost/);
+    assert.equal((await svc.get()).apiKeysEnabled, false);
+  });
+});
