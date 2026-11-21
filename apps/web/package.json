@@ -36,6 +36,7 @@
     "@radix-ui/react-slot": "^1.5.0",
     "@radix-ui/react-tooltip": "^1.4.1",
     "@scalar/api-client-react": "2.0.64",
+    "@simplewebauthn/browser": "14.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "embla-carousel": "^8.6.0",
@@ -85,6 +86,7 @@
     "globals": "^17.14.0",
     "jsonwebtoken": "9.0.3",
     "jsqr": "1.4.0",
+    "otplib": "13.6.0",
     "postcss": "^8.5.32",
     "tailwindcss": "^4.3.5",
     "typescript": "6.0.3"

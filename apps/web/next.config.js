@@ -59,15 +59,19 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              `script-src 'self' 'unsafe-inline'${
+              // accounts.google.com/gsi/client = Google Identity Services,
+              // appleid.cdn-apple.com = Sign in with Apple JS
+              `script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client https://appleid.cdn-apple.com${
                 process.env.NODE_ENV === 'production' ? '' : " 'unsafe-eval'"
               }`,
-              "style-src 'self' 'unsafe-inline'",
+              "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
               // blob: = local previews of meal photos before upload (object URLs created in-page)
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
               // raw.githubusercontent.com = AI system prompts shown in the "How this works" dialog
-              "connect-src 'self' https://raw.githubusercontent.com",
+              "connect-src 'self' https://raw.githubusercontent.com https://accounts.google.com/gsi/",
+              // Google One Tap / button iframe
+              "frame-src 'self' https://accounts.google.com/gsi/",
               "frame-ancestors 'self'",
               "object-src 'none'",
               "base-uri 'self'",
