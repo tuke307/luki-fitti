@@ -234,7 +234,10 @@ export class AuthService {
     const email = dto.email.trim().toLowerCase();
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) {
-      throw new ConflictException('An account with this email already exists');
+      throw new ConflictException({
+        message: 'An account with this email already exists',
+        code: 'EMAIL_ALREADY_EXISTS',
+      });
     }
 
     const passwordHash = await this.hashPassword(dto.password);
@@ -402,14 +405,18 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new UnauthorizedException({
+        message: 'Invalid email or password',
+        code: 'INVALID_CREDENTIALS',
+      });
     }
 
     if (user.lockedUntil && user.lockedUntil > new Date()) {
       const minutesLeft = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000);
-      throw new ForbiddenException(
-        `Account temporarily locked due to repeated failed login attempts. Try again in ${minutesLeft} min.`,
-      );
+      throw new ForbiddenException({
+        message: `Account temporarily locked due to repeated failed login attempts. Try again in ${minutesLeft} min.`,
+        code: 'ACCOUNT_LOCKED',
+      });
     }
 
     const isPasswordValid = await verifyPassword(password, user.passwordHash);
@@ -426,13 +433,18 @@ export class AuthService {
         },
       });
 
-      throw new UnauthorizedException('Invalid email or password');
+      throw new UnauthorizedException({
+        message: 'Invalid email or password',
+        code: 'INVALID_CREDENTIALS',
+      });
     }
 
     if (user.emailVerified === false) {
-      throw new ForbiddenException(
-        'Please confirm your email address before signing in. Check your inbox for the activation link.',
-      );
+      throw new ForbiddenException({
+        message:
+          'Please confirm your email address before signing in. Check your inbox for the activation link.',
+        code: 'EMAIL_NOT_VERIFIED',
+      });
     }
 
     const updated = await this.prisma.user.update({

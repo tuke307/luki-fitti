@@ -245,7 +245,7 @@ public final class OfflineStore {
             } catch APIClientError.decodingError {
                 // 2xx with an unexpected body: the session is gone.
                 done.insert(id)
-            } catch APIClientError.serverError(let status, _) where status == 404 || status == 410 {
+            } catch APIClientError.serverError(let status, _, _) where status == 404 || status == 410 {
                 // Already gone (or never uploaded).
                 done.insert(id)
             } catch APIClientError.forbidden {

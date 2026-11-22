@@ -7,6 +7,7 @@ import { ReportReason } from '@luki-fitti/common/enums';
 import type { SocialCardDto } from '@luki-fitti/common/schemas';
 import { socialApi } from '@/lib/social/social-api';
 import { useLocale } from '@/providers/i18n/locale-context';
+import { apiErrorMessage } from '@/lib/api';
 import { MobileSheet } from '../mobile-sheet';
 
 const REASONS: Array<{ value: ReportReason; key: keyof ReasonsT }> = [
@@ -59,7 +60,7 @@ export function ReportSheet({
       toast.success(t.social.reportSent);
       onOpenChange(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '');
+      toast.error(apiErrorMessage(err, t.errors));
     } finally {
       setSending(false);
     }

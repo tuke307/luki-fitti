@@ -151,7 +151,7 @@ struct SocialOnboardingSheet: View {
             await social.fetchProfile()
             isPresented = false
         } catch {
-            social.lastError = error.localizedDescription
+            social.lastError = tr.errorMessage(error)
         }
     }
 }
