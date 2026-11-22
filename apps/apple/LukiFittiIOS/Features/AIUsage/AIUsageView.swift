@@ -176,6 +176,7 @@ struct AIUsageView: View {
         case "workout-builder": return tr("Workout builder")
         case "meal-analyzer": return tr("Meal photo")
         case "meal-text-analyzer": return tr("Meal description")
+        case "progress-target": return tr("AI progress target")
         default: return skill
         }
     }
