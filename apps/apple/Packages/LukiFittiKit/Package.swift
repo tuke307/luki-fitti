@@ -45,7 +45,7 @@ let package = Package(
         ),
         .target(
             name: "LukiFittiDesign",
-            dependencies: ["LukiFittiModels", "LukiFittiDomain"]
+            dependencies: ["LukiFittiModels", "LukiFittiDomain", "LukiFittiAPI"]
         ),
         .target(
             name: "LukiFittiDomain",
@@ -106,6 +106,7 @@ let package = Package(
                 "LukiFittiModels",
                 "LukiFittiDomain",
                 "LukiFittiAPI",
+                "LukiFittiDesign",
                 "LukiFittiStore",
                 "LukiFittiWatchSync",
             ]

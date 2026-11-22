@@ -25,8 +25,8 @@ enum MealPhotoSheet {
         switch error as? APIClientError {
         case .offline: return tr("You need to be online to estimate from photos.")
         case .forbidden: return tr("This feature isn’t turned on for your account.")
-        case .serverError(429, _): return tr("You’ve reached today’s limit. Try again tomorrow.")
-        case .serverError(400, let msg): return msg
+        case .serverError(429, _, _): return tr("You’ve reached today’s limit. Try again tomorrow.")
+        case .serverError(400, let msg, _): return msg
         default: return tr("The assistant isn’t available right now. Try again in a moment.")
         }
     }

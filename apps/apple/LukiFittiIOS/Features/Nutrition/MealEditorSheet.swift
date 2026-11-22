@@ -400,7 +400,7 @@ struct MealEditorSheet: View {
     private func deletePhoto(_ photo: MealPhotoDto) async -> Bool {
         do {
             try await viewModel.store.apiClient.deleteMealPhoto(id: photo.id)
-        } catch APIClientError.serverError(404, _) {
+        } catch APIClientError.serverError(404, _, _) {
             // Already gone (retention sweep): drop it locally too.
         } catch {
             self.error = MealPhotoSheet.message(for: error, tr)

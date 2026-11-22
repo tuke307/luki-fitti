@@ -115,7 +115,7 @@ struct SocialProfileSections: View {
             .disabled(!canSave)
             .accessibilityIdentifier("ios.social.saveProfileButton")
             if let error {
-                Text(error).foregroundStyle(LukiColors.destructive).font(.footnote)
+                ErrorMessageText(error)
             }
         }
     }
@@ -197,7 +197,7 @@ struct SocialProfileSections: View {
             _ = try await viewModel.store.apiClient.updateSocialMe(dto)
             await social.fetchProfile()
         } catch {
-            self.error = error.localizedDescription
+            self.error = tr.errorMessage(error)
         }
     }
 }

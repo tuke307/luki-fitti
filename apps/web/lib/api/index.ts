@@ -526,6 +526,7 @@ export const security = {
 };
 
 export * from './client';
+export * from './error-message';
 
 export const api = {
   auth,

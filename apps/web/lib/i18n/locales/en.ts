@@ -36,6 +36,18 @@ export const en = {
     stretch: 'Stretch',
     back: 'Back',
   },
+  errors: {
+    generic: 'Something went wrong. Please try again.',
+    network: 'You’re offline. Check your connection and try again.',
+    server: 'Something went wrong on our side. Please try again.',
+    rateLimited: 'Too many attempts. Wait a minute and try again.',
+    codes: {
+      EMAIL_ALREADY_EXISTS: 'An account with this email already exists.',
+      INVALID_CREDENTIALS: 'Invalid email or password.',
+      ACCOUNT_LOCKED: 'Account temporarily locked after too many failed attempts. Try again later.',
+      EMAIL_NOT_VERIFIED: 'Please confirm your email address first. Check your inbox for the link.',
+    },
+  },
   nav: {
     home: 'Today',
     workouts: 'Workouts',

@@ -210,7 +210,14 @@ describe('AuthService — Registration, Authentication & Brute-Force Protection'
           email: 'GYMBUDDY@example.com',
           password: 'FAKE-PASSWORD-TEST-456',
         }),
-      /already exists/i,
+      (err: unknown) => {
+        assert.match((err as Error).message, /already exists/i);
+        assert.equal(
+          (err as { getResponse(): { code?: string } }).getResponse().code,
+          'EMAIL_ALREADY_EXISTS',
+        );
+        return true;
+      },
     );
   });
 

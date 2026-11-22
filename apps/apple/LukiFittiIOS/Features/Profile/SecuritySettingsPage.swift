@@ -368,7 +368,7 @@ struct SecuritySettingsPage: View {
         do {
             status = try await viewModel.store.apiClient.securityStatus()
         } catch {
-            message = error.localizedDescription
+            message = tr.errorMessage(error)
         }
     }
 
@@ -383,7 +383,7 @@ struct SecuritySettingsPage: View {
         } catch AuthSecurityCoordinator.FlowError.cancelled {
             // User dismissed the prompt — nothing to report.
         } catch {
-            message = error.localizedDescription
+            message = tr.errorMessage(error)
         }
     }
 
@@ -456,9 +456,7 @@ private struct TwoFactorCodePrompt: View {
             }
             if let error {
                 Section {
-                    Text(error)
-                        .font(.footnote)
-                        .foregroundStyle(LukiColors.destructive)
+                    ErrorMessageText(error)
                 }
             }
             Section {
@@ -471,7 +469,7 @@ private struct TwoFactorCodePrompt: View {
                             onDone()
                             dismiss()
                         } catch {
-                            self.error = error.localizedDescription
+                            self.error = tr.errorMessage(error)
                         }
                     }
                 } label: {

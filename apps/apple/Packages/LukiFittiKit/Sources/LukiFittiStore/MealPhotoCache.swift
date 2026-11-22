@@ -53,7 +53,7 @@ public final class MealPhotoCache: @unchecked Sendable {
             let data = try await api.fetchData(path: path)
             store(data, for: photo.id)
             return data
-        } catch APIClientError.serverError(404, _) {
+        } catch APIClientError.serverError(404, _, _) {
             throw .unavailable
         } catch APIClientError.offline {
             throw .offline

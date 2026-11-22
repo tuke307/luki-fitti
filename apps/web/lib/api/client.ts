@@ -110,9 +110,14 @@ export async function fetchClient<T = null>(
     }
 
     const text = await response.text();
-    const responseData = text
-      ? (JSON.parse(text) as ApiResponse<T>)
-      : ({ success: true, data: null, error: null } as ApiResponse<T>);
+    let responseData: ApiResponse<T>;
+    try {
+      responseData = text
+        ? (JSON.parse(text) as ApiResponse<T>)
+        : ({ success: true, data: null, error: null } as ApiResponse<T>);
+    } catch {
+      throw new ApiClientError('', { status: response.status });
+    }
 
     if (!response.ok) {
       const details = (responseData as { details?: { code?: string } }).details;

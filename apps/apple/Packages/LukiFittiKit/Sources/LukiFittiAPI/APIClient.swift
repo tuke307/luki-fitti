@@ -4,48 +4,74 @@ import LukiFittiModels
 public enum APIClientError: Error, LocalizedError, Sendable, Equatable {
     case invalidURL
     case unauthorized
-    case forbidden(String)
+    case forbidden(String, code: String?)
     /// 403 with `AI_KEY_REQUIRED`: the feature is on but the user has no usable OpenRouter key.
     case aiKeyRequired
     case offline(String)
-    case serverError(Int, String)
+    case serverError(Int, String, code: String?)
     case decodingError(String)
+
+    /// Raw server bodies (HTML error pages, JSON blobs) are never user-facing.
+    private static func safeMessage(_ msg: String) -> String {
+        if msg.isEmpty || msg.hasPrefix("{") || msg.hasPrefix("<") || msg.count > 200 {
+            return "Something went wrong. Please try again."
+        }
+        return msg
+    }
 
     public var errorDescription: String? {
         switch self {
         case .invalidURL: return "Invalid API URL"
         case .unauthorized: return "Authentication required"
-        case .forbidden(let msg): return msg
+        case .forbidden(let msg, _): return Self.safeMessage(msg)
         case .aiKeyRequired: return "An OpenRouter API key is required"
-        case .offline(let msg): return msg
-        case .serverError(_, let msg): return msg
-        case .decodingError(let msg): return msg
+        case .offline: return "You’re offline. Check your connection and try again."
+        case .serverError(_, let msg, _): return Self.safeMessage(msg)
+        case .decodingError: return "Something went wrong. Please try again."
         }
     }
 }
 
-private struct APIErrorDetail: Decodable {
+/// Tolerates every error shape the API sends: `error` as a string, `error` as
+/// `{message: String}`, or a top-level `message`; `details.code` carries the error code.
+/// Never throws on a shape mismatch — every field is optional.
+private struct APIErrorBody: Decodable {
     let message: String?
-}
-
-private struct APIErrorDetails: Decodable {
     let code: String?
-}
 
-private struct APIErrorEnvelope: Decodable {
-    let message: String?
-    let error: APIErrorDetail?
-    let details: APIErrorDetails?
+    private enum CodingKeys: String, CodingKey {
+        case error, message, details
+    }
 
-    var messageText: String? { error?.message ?? message }
-    var isAiKeyRequired: Bool { details?.code == "AI_KEY_REQUIRED" }
+    private struct ErrorObject: Decodable {
+        let message: String?
+    }
+
+    private struct Details: Decodable {
+        let code: String?
+    }
+
+    init(from decoder: Decoder) throws {
+        guard let container = try? decoder.container(keyedBy: CodingKeys.self) else {
+            message = nil
+            code = nil
+            return
+        }
+        if let msg = try? container.decode(String.self, forKey: .error) {
+            message = msg
+        } else if let msg = (try? container.decode(ErrorObject.self, forKey: .error))?.message {
+            message = msg
+        } else {
+            message = try? container.decode(String.self, forKey: .message)
+        }
+        code = (try? container.decode(Details.self, forKey: .details))?.code
+    }
 }
 
 private struct APIEnvelope<T: Decodable>: Decodable {
     let success: Bool?
     let data: T?
     let message: String?
-    let error: APIErrorDetail?
 }
 
 private struct RefreshResponseDto: Decodable {
@@ -657,14 +683,13 @@ public actor APIClient {
         }
         guard (200...299).contains(http.statusCode) else {
             if let mapped = mapError?(http.statusCode, data) { throw mapped }
-            let msg = (try? JSONDecoder().decode(APIEnvelope<EmptyObject>.self, from: data))
-                .flatMap { $0.error?.message ?? $0.message } ?? "HTTP \(http.statusCode)"
+            let errBody = try? JSONDecoder().decode(APIErrorBody.self, from: data)
+            let msg = errBody?.message ?? ""
             if http.statusCode == 403 {
-                let env = try? JSONDecoder().decode(APIErrorEnvelope.self, from: data)
-                if env?.isAiKeyRequired == true { throw APIClientError.aiKeyRequired }
-                throw APIClientError.forbidden(msg)
+                if errBody?.code == "AI_KEY_REQUIRED" { throw APIClientError.aiKeyRequired }
+                throw APIClientError.forbidden(msg, code: errBody?.code)
             }
-            throw APIClientError.serverError(http.statusCode, msg)
+            throw APIClientError.serverError(http.statusCode, msg, code: errBody?.code)
         }
         return data
     }
@@ -721,31 +746,21 @@ public actor APIClient {
             )
         }
 
+        let errBody = try? JSONDecoder().decode(APIErrorBody.self, from: data)
         if http.statusCode == 401 {
-            if let errEnv = try? JSONDecoder().decode(APIEnvelope<EmptyObject>.self, from: data),
-               let msg = errEnv.error?.message ?? errEnv.message {
-                throw APIClientError.serverError(401, msg)
+            if let msg = errBody?.message {
+                throw APIClientError.serverError(401, msg, code: errBody?.code)
             }
             throw APIClientError.unauthorized
         }
         if http.statusCode == 403 {
-            if let errEnv = try? JSONDecoder().decode(APIErrorEnvelope.self, from: data),
-               errEnv.isAiKeyRequired {
+            if errBody?.code == "AI_KEY_REQUIRED" {
                 throw APIClientError.aiKeyRequired
             }
-            if let errEnv = try? JSONDecoder().decode(APIEnvelope<EmptyObject>.self, from: data),
-               let msg = errEnv.error?.message ?? errEnv.message {
-                throw APIClientError.forbidden(msg)
-            }
-            throw APIClientError.forbidden("Forbidden")
+            throw APIClientError.forbidden(errBody?.message ?? "Forbidden", code: errBody?.code)
         }
         if !(200...299).contains(http.statusCode) {
-            if let errEnv = try? JSONDecoder().decode(APIEnvelope<EmptyObject>.self, from: data),
-               let msg = errEnv.error?.message ?? errEnv.message {
-                throw APIClientError.serverError(http.statusCode, msg)
-            }
-            let rawMsg = String(data: data, encoding: .utf8) ?? "HTTP \(http.statusCode)"
-            throw APIClientError.serverError(http.statusCode, rawMsg)
+            throw APIClientError.serverError(http.statusCode, errBody?.message ?? "", code: errBody?.code)
         }
 
         let decoder = JSONDecoder()
@@ -825,8 +840,6 @@ public actor APIClient {
         return result
     }
 }
-
-private struct EmptyObject: Decodable {}
 
 /// Accepts any JSON object (or an envelope around one).
 private struct IgnoredResponse: Decodable {}

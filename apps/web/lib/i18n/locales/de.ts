@@ -37,6 +37,20 @@ export const de = {
     stretch: 'Dehnübung',
     back: 'Zurück',
   },
+  errors: {
+    generic: 'Etwas ist schiefgelaufen. Bitte versuche es erneut.',
+    network: 'Du bist offline. Prüfe deine Verbindung und versuche es erneut.',
+    server: 'Bei uns ist etwas schiefgelaufen. Bitte versuche es erneut.',
+    rateLimited: 'Zu viele Versuche. Warte eine Minute und versuche es erneut.',
+    codes: {
+      EMAIL_ALREADY_EXISTS: 'Mit dieser E-Mail-Adresse gibt es bereits ein Konto.',
+      INVALID_CREDENTIALS: 'E-Mail oder Passwort ist falsch.',
+      ACCOUNT_LOCKED:
+        'Konto nach zu vielen Fehlversuchen vorübergehend gesperrt. Versuche es später erneut.',
+      EMAIL_NOT_VERIFIED:
+        'Bitte bestätige zuerst deine E-Mail-Adresse. Den Link findest du in deinem Postfach.',
+    },
+  },
   nav: {
     home: 'Heute',
     workouts: 'Workouts',

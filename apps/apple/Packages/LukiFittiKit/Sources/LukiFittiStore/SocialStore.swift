@@ -121,7 +121,7 @@ public final class SocialStore {
 
     private func isForbidden(_ error: APIClientError) -> Bool {
         if case .forbidden = error { return true }
-        if case let .serverError(code, _) = error { return code == 403 }
+        if case let .serverError(code, _, _) = error { return code == 403 }
         return false
     }
 

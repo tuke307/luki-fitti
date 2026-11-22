@@ -336,7 +336,7 @@ extension OfflineStore {
 
     private static func status(of error: Error) -> Int? {
         switch error as? APIClientError {
-        case .serverError(let status, _): return status
+        case .serverError(let status, _, _): return status
         case .forbidden, .aiKeyRequired: return 403
         case .unauthorized: return 401
         default: return nil
