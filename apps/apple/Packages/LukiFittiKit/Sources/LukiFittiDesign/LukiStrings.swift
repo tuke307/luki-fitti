@@ -137,7 +137,7 @@ public enum LukiStrings {
         "Expires %@": "Läuft ab am %@",
         "Export Backup": "Backup exportieren",
         "Fewer reps": "Weniger Wiederholungen",
-        "Finish Workout": "Training beenden",
+        "Finish Workout": "Training abschließen",
         "First time doing this exercise": "Zum ersten Mal dabei",
         "Fix the set type, weight or reps, then save.": "Korrigiere Satzart, Gewicht oder Wiederholungen und speichere.",
         "Last used %@": "Zuletzt genutzt %@",
