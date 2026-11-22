@@ -13,7 +13,7 @@ import {
   AdminPermission,
 } from '@luki-fitti/common/enums';
 import type { AdminUserDto } from '@luki-fitti/common/schemas';
-import { api } from '@/lib/api';
+import { api, apiErrorMessage } from '@/lib/api';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { AdminState } from './admin-shell';
@@ -66,7 +66,7 @@ export function AdminUsers() {
       if (target.id === me?.id) void refreshUser();
     } catch (err) {
       setData(previous);
-      toast.error(err instanceof Error ? err.message : t.admin.error);
+      toast.error(apiErrorMessage(err, t.errors));
     } finally {
       setPending(null);
     }

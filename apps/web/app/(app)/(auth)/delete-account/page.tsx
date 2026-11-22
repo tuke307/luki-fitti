@@ -7,12 +7,15 @@ import { Dumbbell, Trash2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import { Card } from '@luki-fitti/ui/components/ui/card';
 import { useAuth } from '@/providers/auth/auth-context';
+import { useLocale } from '@/providers/i18n/locale-context';
+import { apiErrorMessage } from '@/lib/api';
 
 export default function DeleteAccountPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token') ?? '';
   const { confirmAccountDeletion, error, loading } = useAuth();
+  const { t } = useLocale();
 
   const [deletedSuccess, setDeletedSuccess] = useState(false);
 
@@ -91,7 +94,7 @@ export default function DeleteAccountPage() {
             {error && (
               <div className="border-destructive/40 bg-destructive/10 text-destructive flex items-start gap-2.5 rounded-2xl border p-3.5 text-xs">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                <span>{error}</span>
+                <span>{apiErrorMessage(error, t.errors)}</span>
               </div>
             )}
 

@@ -20,6 +20,7 @@ import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { postAuthPath } from '@/lib/social/pending-invite';
+import { apiErrorMessage } from '@/lib/api';
 import {
   appleUserName,
   generateOAuthNonce,
@@ -147,18 +148,22 @@ export default function LoginForm({
 
   const errorBlock = error && (
     <div className="space-y-2">
-      <p className="text-destructive text-xs">{error}</p>
-      {error.toLowerCase().includes('confirm your email') && email.trim() && (
-        <Button
-          type="button"
-          variant="secondary"
-          size="xs"
-          disabled={loading}
-          onClick={() => void resendConfirmation(email.trim())}
-        >
-          <MailCheck className="h-3.5 w-3.5" /> {t.profile.resendConfirmationBtn}
-        </Button>
-      )}
+      <p className="text-destructive text-xs" role="alert">
+        {apiErrorMessage(error, t.errors)}
+      </p>
+      {(error.code === 'EMAIL_NOT_VERIFIED' ||
+        error.message.toLowerCase().includes('confirm your email')) &&
+        email.trim() && (
+          <Button
+            type="button"
+            variant="secondary"
+            size="xs"
+            disabled={loading}
+            onClick={() => void resendConfirmation(email.trim())}
+          >
+            <MailCheck className="h-3.5 w-3.5" /> {t.profile.resendConfirmationBtn}
+          </Button>
+        )}
     </div>
   );
 

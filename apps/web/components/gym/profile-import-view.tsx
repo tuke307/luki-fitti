@@ -44,7 +44,7 @@ import { Label } from '@luki-fitti/ui/components/ui/label';
 import { toast } from '@luki-fitti/ui/components/ui/sonner';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useAuth } from '@/providers/auth/auth-context';
-import { api } from '@/lib/api';
+import { api, apiErrorMessage } from '@/lib/api';
 import { trackEvent } from '@/lib/analytics/track';
 import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
@@ -556,18 +556,22 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
 
         {authError && (
           <div className="space-y-2 px-4">
-            <p className="text-destructive text-[0.8125rem]">{authError}</p>
-            {authError.toLowerCase().includes('confirm your email') && email.trim() && (
-              <Button
-                type="button"
-                variant="secondary"
-                size="xs"
-                disabled={authLoading}
-                onClick={() => void resendConfirmation(email.trim())}
-              >
-                <MailCheck className="h-3.5 w-3.5" /> {t.profile.resendConfirmationBtn}
-              </Button>
-            )}
+            <p className="text-destructive text-[0.8125rem]" role="alert">
+              {apiErrorMessage(authError, t.errors)}
+            </p>
+            {(authError.code === 'EMAIL_NOT_VERIFIED' ||
+              authError.message.toLowerCase().includes('confirm your email')) &&
+              email.trim() && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="xs"
+                  disabled={authLoading}
+                  onClick={() => void resendConfirmation(email.trim())}
+                >
+                  <MailCheck className="h-3.5 w-3.5" /> {t.profile.resendConfirmationBtn}
+                </Button>
+              )}
           </div>
         )}
 
@@ -1111,7 +1115,9 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
             </div>
 
             {(deleteError || authError) && (
-              <p className="text-destructive text-xs">{deleteError || authError}</p>
+              <p className="text-destructive text-xs">
+                {deleteError || apiErrorMessage(authError, t.errors)}
+              </p>
             )}
 
             <DialogFooter>

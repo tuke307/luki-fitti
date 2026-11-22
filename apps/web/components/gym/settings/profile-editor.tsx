@@ -5,6 +5,7 @@ import { Button } from '@luki-fitti/ui/components/ui/button';
 import { Input } from '@luki-fitti/ui/components/ui/input';
 import { toast } from '@luki-fitti/ui/components/ui/sonner';
 import { useLocale } from '@/providers/i18n/locale-context';
+import { apiErrorMessage } from '@/lib/api';
 import { useAuth } from '@/providers/auth/auth-context';
 import type { SocialProfileDto } from '@luki-fitti/common/schemas';
 import { normalizeUsername } from '@luki-fitti/common/utils';
@@ -67,7 +68,7 @@ export function ProfileEditor() {
       });
       if (res.success) onChanged();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '');
+      toast.error(apiErrorMessage(err, t.errors));
     } finally {
       setSaving(false);
     }
@@ -79,7 +80,7 @@ export function ProfileEditor() {
       const res = await socialApi.uploadAvatar(jpeg);
       if (res.success) onChanged();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '');
+      toast.error(apiErrorMessage(err, t.errors));
     }
   };
 
@@ -127,7 +128,7 @@ export function ProfileEditor() {
                   void socialApi
                     .removeAvatar()
                     .then((r) => r.success && onChanged())
-                    .catch((err) => toast.error(err instanceof Error ? err.message : ''))
+                    .catch((err) => toast.error(apiErrorMessage(err, t.errors)))
                 }
                 data-testid="avatar-remove"
               >

@@ -20,7 +20,7 @@ import {
   type CreateTemplateDto,
   type WorkoutBuilderResponseDto,
 } from '@luki-fitti/common/schemas';
-import { api } from '@/lib/api';
+import { api, apiErrorMessage } from '@/lib/api';
 import { aiErrorMessage } from '@/lib/ai/ai-errors';
 import { isAiKeyRequiredError } from '@/lib/ai/ai-key-required';
 import { AiKeyRequiredDialog } from './ai-key-required-dialog';
@@ -138,7 +138,7 @@ export function AiWorkoutBuilderDialog({
       toast.success(t.aiBuilder.saved);
       close(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t.aiErrors.unavailable);
+      setError(apiErrorMessage(err, t.errors));
     } finally {
       setSaving(false);
     }

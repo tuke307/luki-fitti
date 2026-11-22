@@ -53,7 +53,7 @@ interface AuthContextProps {
   updatePreferences: (data: UpdatePreferencesDto) => Promise<void>;
   continueOfflineLocal: () => void;
   refreshUser: () => Promise<void>;
-  error: string | null;
+  error: ApiClientError | null;
   infoMessage: string | null;
   loading: boolean;
 }
@@ -121,7 +121,7 @@ export function useAuth() {
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserDto | null>(null);
   const [authMode, setAuthMode] = useState<AuthMode>('UNAUTHENTICATED');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiClientError | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [mfaToken, setMfaToken] = useState<string | null>(null);
@@ -232,11 +232,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return await finishSignIn(response.data, 'password');
       }
       trackEvent('login', { status: 'error', method: 'password' });
-      setError(response.error || 'Invalid email or password');
+      setError(new ApiClientError(response.error ?? ''));
       return 'error';
     } catch (err) {
       trackEvent('login', { status: 'error', method: 'password' });
-      setError(err instanceof Error ? err.message : 'Unable to sign in');
+      setError(err instanceof ApiClientError ? err : new ApiClientError(''));
       return 'error';
     } finally {
       setLoading(false);
@@ -246,7 +246,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   /** Second factor after `login`/`loginWithOAuth` returned 'mfa'. */
   const verifyMfa = async (code: string): Promise<boolean> => {
     if (!mfaToken) {
-      setError('Sign-in expired. Please start again.');
+      setError(new ApiClientError('Sign-in expired. Please start again.'));
       return false;
     }
     setLoading(true);
@@ -259,10 +259,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         await adoptSignedInUser(response.data, 'fill');
         return true;
       }
-      setError(response.error || 'Invalid code');
+      setError(new ApiClientError(response.error ?? 'Invalid code'));
       return false;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid code');
+      setError(err instanceof ApiClientError ? err : new ApiClientError(''));
       return false;
     } finally {
       setLoading(false);
@@ -288,11 +288,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return await finishSignIn(response.data, provider);
       }
       trackEvent('login', { status: 'error', method: provider });
-      setError(response.error || 'Unable to sign in');
+      setError(new ApiClientError(response.error ?? 'Unable to sign in'));
       return 'error';
     } catch (err) {
       trackEvent('login', { status: 'error', method: provider });
-      setError(err instanceof Error ? err.message : 'Unable to sign in');
+      setError(err instanceof ApiClientError ? err : new ApiClientError(''));
       return 'error';
     } finally {
       setLoading(false);
@@ -307,7 +307,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const optionsRes = await api.auth.passkeyLoginOptions();
       if (!optionsRes.success || !optionsRes.data) {
-        setError(optionsRes.error || 'Unable to start passkey sign-in');
+        setError(new ApiClientError(optionsRes.error ?? 'Unable to start passkey sign-in'));
         return false;
       }
       const { startAuthentication } = await import('@simplewebauthn/browser');
@@ -324,13 +324,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return true;
       }
       trackEvent('login', { status: 'error', method: 'passkey' });
-      setError(verifyRes.error || 'Passkey sign-in failed');
+      setError(new ApiClientError(verifyRes.error ?? 'Passkey sign-in failed'));
       return false;
     } catch (err) {
       // A dismissed authenticator prompt is not an error worth showing.
       if (err instanceof Error && err.name === 'NotAllowedError') return false;
       trackEvent('login', { status: 'error', method: 'passkey' });
-      setError(err instanceof Error ? err.message : 'Passkey sign-in failed');
+      setError(err instanceof ApiClientError ? err : new ApiClientError(''));
       return false;
     } finally {
       setLoading(false);
@@ -357,11 +357,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return true;
       }
       trackEvent('signup', { status: 'error' });
-      setError(response.error || 'Registration failed');
+      setError(new ApiClientError(response.error ?? 'Registration failed'));
       return false;
     } catch (err) {
       trackEvent('signup', { status: 'error' });
-      setError(err instanceof Error ? err.message : 'Unable to register account');
+      setError(err instanceof ApiClientError ? err : new ApiClientError(''));
       return false;
     } finally {
       setLoading(false);
@@ -378,10 +378,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         await adoptSignedInUser(response.data, 'replace');
         return true;
       }
-      setError(response.error || 'Email verification failed');
+      setError(new ApiClientError(response.error ?? 'Email verification failed'));
       return false;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid or expired verification link');
+      setError(err instanceof ApiClientError ? err : new ApiClientError(''));
       return false;
     } finally {
       setLoading(false);
@@ -397,10 +397,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setInfoMessage(response.data.message);
         return true;
       }
-      setError(response.error || 'Failed to resend confirmation email');
+      setError(new ApiClientError(response.error ?? 'Failed to resend confirmation email'));
       return false;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to resend confirmation email');
+      setError(err instanceof ApiClientError ? err : new ApiClientError(''));
       return false;
     } finally {
       setLoading(false);
@@ -456,10 +456,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         );
         return true;
       }
-      setError(response.error || 'Failed to request account deletion');
+      setError(new ApiClientError(response.error ?? 'Failed to request account deletion'));
       return false;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to request account deletion');
+      setError(err instanceof ApiClientError ? err : new ApiClientError(''));
       return false;
     } finally {
       setLoading(false);
@@ -483,10 +483,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         );
         return true;
       }
-      setError(response.error || 'Failed to confirm account deletion');
+      setError(new ApiClientError(response.error ?? 'Failed to confirm account deletion'));
       return false;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid or expired account deletion link');
+      setError(err instanceof ApiClientError ? err : new ApiClientError(''));
       return false;
     } finally {
       setLoading(false);

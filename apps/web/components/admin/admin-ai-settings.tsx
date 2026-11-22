@@ -11,7 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { toast } from '@luki-fitti/ui/components/ui/sonner';
 import { FEATURE_GRANT_LABELS, FeatureGrant } from '@luki-fitti/common/enums';
 import { UpdateAiSettingsSchema, type AiSettingsDto } from '@luki-fitti/common/schemas';
-import { api } from '@/lib/api';
+import { api, apiErrorMessage } from '@/lib/api';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { AdminState } from './admin-shell';
 import { useAdminResource } from './use-admin-resource';
@@ -118,7 +118,7 @@ function AiSettingsForm({
       if (res.data) onSaved(res.data);
       toast.success(t.admin.settingsSaved);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t.admin.error);
+      toast.error(apiErrorMessage(err, t.errors));
     } finally {
       setSaving(false);
     }

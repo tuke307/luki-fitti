@@ -8,6 +8,8 @@ import { Button } from '@luki-fitti/ui/components/ui/button';
 import { Card } from '@luki-fitti/ui/components/ui/card';
 import { Input } from '@luki-fitti/ui/components/ui/input';
 import { useAuth } from '@/providers/auth/auth-context';
+import { useLocale } from '@/providers/i18n/locale-context';
+import { apiErrorMessage } from '@/lib/api';
 import { postAuthPath } from '@/lib/social/pending-invite';
 
 export default function VerifyEmailPage() {
@@ -15,6 +17,7 @@ export default function VerifyEmailPage() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token') ?? '';
   const { verifyEmail, resendConfirmation, error, infoMessage, loading } = useAuth();
+  const { t } = useLocale();
 
   const [verifiedSuccess, setVerifiedSuccess] = useState(false);
   const [resendEmail, setResendEmail] = useState('');
@@ -82,7 +85,9 @@ export default function VerifyEmailPage() {
               <div>
                 <p className="font-bold">Confirmation Link Invalid or Expired</p>
                 <p className="mt-0.5 opacity-90">
-                  {error || 'No valid confirmation token was found in the URL.'}
+                  {error
+                    ? apiErrorMessage(error, t.errors)
+                    : 'No valid confirmation token was found in the URL.'}
                 </p>
               </div>
             </div>

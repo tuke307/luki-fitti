@@ -14,6 +14,7 @@ public struct ProfileAndAuthView: View {
     @State private var password: String = ""
     @State private var name: String = ""
     @State private var statusMessage: String?
+    @State private var errorMessage: String?
     @State private var showsNoMailAlert = false
     /// Set when the API answered `{mfaRequired: true}` — the form swaps to the code step.
     @State private var mfaToken: String?
@@ -46,7 +47,7 @@ public struct ProfileAndAuthView: View {
                         ReauthenticateRows(viewModel: viewModel, email: user.email)
                     }
                     NavigationLink {
-                        AccountSettingsPage(viewModel: viewModel, statusMessage: $statusMessage)
+                        AccountSettingsPage(viewModel: viewModel, statusMessage: $statusMessage, errorMessage: $errorMessage)
                     } label: {
                         SettingsRow(
                             tr("Profile & account"),
@@ -216,8 +217,10 @@ public struct ProfileAndAuthView: View {
                             newResetPassword = ""
                             authMode = "login"
                             statusMessage = tr("Your password has been reset. Sign in with the new one.")
+                            errorMessage = nil
                         } catch {
-                            statusMessage = error.localizedDescription
+                            statusMessage = nil
+                            errorMessage = tr.errorMessage(error)
                         }
                     }
                 } label: {
@@ -247,8 +250,10 @@ public struct ProfileAndAuthView: View {
                             viewModel.deepLinkTokenType = nil
                             viewModel.deepLinkToken = nil
                             statusMessage = tr("Your account has been deleted.")
+                            errorMessage = nil
                         } catch {
-                            statusMessage = error.localizedDescription
+                            statusMessage = nil
+                            errorMessage = tr.errorMessage(error)
                         }
                     }
                 } label: {
@@ -291,6 +296,8 @@ public struct ProfileAndAuthView: View {
             // The remembered email belongs to sign-in; registering a new account starts clean.
             if mode == "register", email == lastSignInEmail { email = "" }
             else if mode == "login", email.isEmpty { email = lastSignInEmail }
+            statusMessage = nil
+            errorMessage = nil
         }
         .pickerStyle(.segmented)
         .listRowBackground(Color.clear)
@@ -318,15 +325,20 @@ public struct ProfileAndAuthView: View {
                     ? .password
                     : .newPassword
             )
-            .listRowBackground(fieldRowBackground(bottom: statusMessage == nil))
+            .listRowBackground(fieldRowBackground(bottom: statusMessage == nil && errorMessage == nil))
             .accessibilityIdentifier("ios.profile.passwordField")
 
         if let statusMessage {
             Text(statusMessage)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-                .listRowBackground(fieldRowBackground(bottom: true))
+                .listRowBackground(fieldRowBackground(bottom: errorMessage == nil))
                 .accessibilityIdentifier("ios.profile.statusMessage")
+        }
+        if let errorMessage {
+            ErrorMessageText(errorMessage)
+                .listRowBackground(fieldRowBackground(bottom: true))
+                .accessibilityIdentifier("ios.profile.errorMessage")
         }
 
         if mfaToken != nil {
@@ -334,6 +346,8 @@ public struct ProfileAndAuthView: View {
         } else {
             Button {
                 Task {
+                    statusMessage = nil
+                    errorMessage = nil
                     do {
                         if authMode == "login" {
                             await signInWithPassword()
@@ -348,6 +362,7 @@ public struct ProfileAndAuthView: View {
                                 viewModel.analytics.event(.signup, ["status": .string(user.message == nil ? "success" : "pending_confirmation")])
                                 lastSignInEmail = email
                                 statusMessage = tr("Account created. Check your email to confirm it.")
+                                errorMessage = nil
                                 #if DEBUG
                                 viewModel.pollMailpitForReview(to: email, route: "verify-email")
                                 #endif
@@ -357,7 +372,8 @@ public struct ProfileAndAuthView: View {
                             }
                         }
                     } catch {
-                        statusMessage = error.localizedDescription
+                        statusMessage = nil
+                        errorMessage = tr.errorMessage(error)
                     }
                 }
             } label: {
@@ -374,7 +390,8 @@ public struct ProfileAndAuthView: View {
                 Button(tr("Forgot password?")) {
                     let trimmed = email.trimmingCharacters(in: .whitespaces)
                     guard Self.isPlausibleEmail(trimmed) else {
-                        statusMessage = tr("Enter a valid email address first.")
+                        statusMessage = nil
+                        errorMessage = tr("Enter a valid email address first.")
                         return
                     }
                     Task {
@@ -382,8 +399,10 @@ public struct ProfileAndAuthView: View {
                         do {
                             try await viewModel.store.apiClient.forgotPassword(email: trimmed)
                             statusMessage = tr("If an account exists for this email, we’ve sent a reset link.")
+                            errorMessage = nil
                         } catch {
-                            statusMessage = error.localizedDescription
+                            statusMessage = nil
+                            errorMessage = tr.errorMessage(error)
                         }
                     }
                 }
@@ -511,7 +530,8 @@ public struct ProfileAndAuthView: View {
             await adoptLoginResult(result)
         } catch {
             viewModel.analytics.event(.login, ["status": .string("error")])
-            statusMessage = error.localizedDescription
+            statusMessage = nil
+            errorMessage = tr.errorMessage(error)
         }
     }
 
@@ -526,7 +546,8 @@ public struct ProfileAndAuthView: View {
             mfaCode = ""
             await adoptLoginResult(.signedIn(user))
         } catch {
-            statusMessage = error.localizedDescription
+            statusMessage = nil
+            errorMessage = tr.errorMessage(error)
         }
     }
 
@@ -551,7 +572,8 @@ public struct ProfileAndAuthView: View {
         } catch let error as ASAuthorizationError where error.code == .canceled {
             // User dismissed the sheet — nothing to report.
         } catch {
-            statusMessage = error.localizedDescription
+            statusMessage = nil
+            errorMessage = tr.errorMessage(error)
         }
     }
 
@@ -563,7 +585,8 @@ public struct ProfileAndAuthView: View {
         } catch AuthSecurityCoordinator.FlowError.cancelled {
             // User dismissed the browser — nothing to report.
         } catch {
-            statusMessage = error.localizedDescription
+            statusMessage = nil
+            errorMessage = tr.errorMessage(error)
         }
     }
 
@@ -575,7 +598,8 @@ public struct ProfileAndAuthView: View {
         } catch AuthSecurityCoordinator.FlowError.cancelled {
             // User dismissed the prompt — nothing to report.
         } catch {
-            statusMessage = error.localizedDescription
+            statusMessage = nil
+            errorMessage = tr.errorMessage(error)
         }
     }
 
@@ -725,6 +749,7 @@ private struct PopOnDeepLink: ViewModifier {
 private struct AccountSettingsPage: View {
     @Bindable var viewModel: LukiAppViewModel
     @Binding var statusMessage: String?
+    @Binding var errorMessage: String?
     @State private var deleteAccountPassword: String = ""
     @State private var showingDeleteRequestField: Bool = false
     @State private var showingSignOutAllConfirmation = false
@@ -765,6 +790,10 @@ private struct AccountSettingsPage: View {
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                                 .accessibilityIdentifier("ios.profile.statusMessage")
+                        }
+                        if let errorMessage {
+                            ErrorMessageText(errorMessage)
+                                .accessibilityIdentifier("ios.profile.errorMessage")
                         }
                     }
                     .padding(.vertical, 2)
@@ -832,11 +861,13 @@ private struct AccountSettingsPage: View {
                                     showingDeleteRequestField = false
                                     deleteAccountPassword = ""
                                     statusMessage = tr("Check your email to confirm the deletion.")
+                                    errorMessage = nil
                                     #if DEBUG
                                     viewModel.pollMailpitForReview(to: user.email, route: "delete-account")
                                     #endif
                                 } catch {
-                                    statusMessage = error.localizedDescription
+                                    statusMessage = nil
+                                    errorMessage = tr.errorMessage(error)
                                 }
                             }
                         } label: {
@@ -1013,9 +1044,7 @@ private struct ReauthenticateRows: View {
         }
 
         if let message {
-            Text(message)
-                .font(.footnote)
-                .foregroundStyle(LukiColors.destructive)
+            ErrorMessageText(message)
         }
     }
 
@@ -1041,7 +1070,7 @@ private struct ReauthenticateRows: View {
                 mfaToken = token
             }
         } catch {
-            message = error.localizedDescription
+            message = tr.errorMessage(error)
         }
     }
 
@@ -1056,7 +1085,7 @@ private struct ReauthenticateRows: View {
             )
             await adopt(user)
         } catch {
-            message = error.localizedDescription
+            message = tr.errorMessage(error)
         }
     }
 }
