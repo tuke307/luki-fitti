@@ -171,6 +171,17 @@ public final class WatchWorkoutViewModel {
     /// Shown as a full-screen overlay after each completed set; nil dismisses it again.
     public var effortPrompt: WatchEffortPrompt?
 
+    /// Set by `completeFinalSetAndFinish`: once the effort question is dismissed the
+    /// workout finishes instead of returning to the set view.
+    @ObservationIgnored private var finishAfterEffortPrompt = false
+
+    /// True when the exercise on screen holds the only open set of the whole workout —
+    /// the primary button becomes "Finish Workout".
+    public var isFinalSet: Bool {
+        guard let session = store.activeSession else { return false }
+        return SessionCalculator.isFinalOpenSet(session: session, exerciseIndex: currentExerciseIndex)
+    }
+
     /// Rates a completed set's effort by id — safe to call after `currentExerciseIndex`
     /// has already advanced past the exercise the set belongs to.
     public func setEffort(rpe: Double?, clientExerciseId: String, clientSetId: String) {
@@ -208,8 +219,17 @@ public final class WatchWorkoutViewModel {
             )
         )
         WKInterfaceDevice.current().play(.click)
-        effortPrompt = nil
+        dismissEffortPrompt()
         Task { await flushSyncQueue() }
+    }
+
+    /// Dismisses the effort question; when the last set triggered it, the workout
+    /// finishes instead of returning to the set view.
+    public func dismissEffortPrompt() {
+        effortPrompt = nil
+        guard finishAfterEffortPrompt else { return }
+        finishAfterEffortPrompt = false
+        Task { await finishWorkout() }
     }
 
     /// Adds or removes rest time; at zero the rest ends.
@@ -560,6 +580,22 @@ public final class WatchWorkoutViewModel {
             return
         }
 
+        completeCurrentSet(startRest: true)
+    }
+
+    /// Completes the workout's last open set without starting a rest, then goes straight
+    /// to the summary — after answering the effort question when effort tracking is on.
+    public func completeFinalSetAndFinish() {
+        guard store.activeSession != nil else { return }
+        finishAfterEffortPrompt = store.preferences.effortTrackingEnabled
+        completeCurrentSet(startRest: false)
+        if !finishAfterEffortPrompt {
+            Task { await finishWorkout() }
+        }
+    }
+
+    private func completeCurrentSet(startRest: Bool) {
+        guard var session = store.activeSession else { return }
         let exIdx = min(max(0, currentExerciseIndex), max(0, session.exercises.count - 1))
         guard !session.exercises.isEmpty else { return }
         guard let nextSetIdx = session.exercises[exIdx].sets.firstIndex(where: { !$0.completed }) else {
@@ -585,8 +621,10 @@ public final class WatchWorkoutViewModel {
         // Stamp it on the copy being saved (not the setter, whose save would be overwritten).
         var focusIdx = exIdx
         let restSec = session.exercises[exIdx].restSeconds
+        // No rest timer when nothing is left to do — the workout is about to finish.
+        let anyOpenSets = session.exercises.contains { $0.sets.contains { !$0.completed } }
         WKInterfaceDevice.current().play(.success)
-        if restSec > 0 {
+        if startRest && anyOpenSets && restSec > 0 {
             session.restTimerDurationSec = restSec
             session.restTimerEndsAt = ISO8601DateFormatter().string(from: Date().addingTimeInterval(TimeInterval(restSec)))
             session.restTimerPausedRemSec = nil

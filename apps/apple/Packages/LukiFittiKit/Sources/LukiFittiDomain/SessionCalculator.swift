@@ -104,6 +104,21 @@ public enum SessionCalculator {
         }
     }
 
+    /// True when the exercise at `exerciseIndex` has exactly one open set left and no other
+    /// exercise has any open set — i.e. this is the last set of the whole workout.
+    public static func isFinalOpenSet(session: WorkoutSessionDto, exerciseIndex: Int) -> Bool {
+        guard session.exercises.indices.contains(exerciseIndex) else { return false }
+        for (idx, exercise) in session.exercises.enumerated() {
+            let openSets = exercise.sets.filter { !$0.completed }.count
+            if idx == exerciseIndex {
+                guard openSets == 1 else { return false }
+            } else if openSets > 0 {
+                return false
+            }
+        }
+        return true
+    }
+
     /// On finish, exercises with a logged set are done and the rest (unused variants, left out)
     /// are stored as skipped, matching the web app.
     public static func finalizeExerciseStatuses(_ session: WorkoutSessionDto) -> WorkoutSessionDto {
