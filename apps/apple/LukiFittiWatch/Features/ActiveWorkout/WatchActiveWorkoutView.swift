@@ -231,19 +231,33 @@ public struct WatchActiveWorkoutView: View {
             if !isLuminanceReduced {
                 Button {
                     lockWeight()
-                    viewModel.tapCompleteCurrentSetOrSkipRest()
+                    if viewModel.isFinalSet {
+                        viewModel.completeFinalSetAndFinish()
+                    } else {
+                        viewModel.tapCompleteCurrentSetOrSkipRest()
+                    }
                 } label: {
-                    Text(tr("Complete Set"))
-                        .font(.headline)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .frame(maxWidth: .infinity, minHeight: 44)
+                    if viewModel.isFinalSet {
+                        Label(tr("Finish Workout"), systemImage: "flag.checkered")
+                            .font(.headline)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    } else {
+                        Text(tr("Complete Set"))
+                            .font(.headline)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(LukiColors.accent)
                 .accessibilityIdentifier("watch.execution.ringButton")
 
-                nextUpLine
+                if !viewModel.isFinalSet {
+                    nextUpLine
+                }
             }
         }
     }
@@ -698,7 +712,7 @@ struct WatchEffortPromptView: View {
         .overlay(alignment: .topLeading) {
             // Dismisses without rating, like the system close button on a sheet.
             Button {
-                viewModel.effortPrompt = nil
+                viewModel.dismissEffortPrompt()
             } label: {
                 Image(systemName: "xmark")
                     .font(.footnote.weight(.semibold))
@@ -715,7 +729,7 @@ struct WatchEffortPromptView: View {
             try? await Task.sleep(for: .seconds(4))
             guard !Task.isCancelled else { return }
             if viewModel.effortPrompt?.id == prompt.id {
-                viewModel.effortPrompt = nil
+                viewModel.dismissEffortPrompt()
             }
         }
     }
