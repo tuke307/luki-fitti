@@ -377,7 +377,7 @@ function AiUsage() {
             <ul className="divide-border/60 divide-y text-[0.9375rem]">
               {data.bySkill.map((s) => (
                 <li key={s.skill} className="flex justify-between gap-3 py-2.5">
-                  <span>{s.skill}</span>
+                  <span>{(t.aiUsage.skills as Record<string, string>)[s.skill] ?? s.skill}</span>
                   <span className="text-muted-foreground tabular-nums">
                     {number.format(s.runs)} · {usd.format(s.costUsd)}
                   </span>
