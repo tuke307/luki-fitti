@@ -120,7 +120,12 @@ jobs:
         working-directory: apps/apple
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Google iOS OAuth client id (public). Empty hides "Continue with Google" in the app.
+          GOOGLE_IOS_CLIENT_ID: ${{ vars.GOOGLE_IOS_CLIENT_ID }}
         run: |
+          if [ -z "$GOOGLE_IOS_CLIENT_ID" ]; then
+            echo "::warning::GOOGLE_IOS_CLIENT_ID repo variable is not set — Google sign-in stays hidden in this build."
+          fi
           xcodebuild archive -quiet \
             -project LukiFitti.xcodeproj \
             -scheme LukiFittiIOS \
@@ -129,6 +134,7 @@ jobs:
             -archivePath "$RUNNER_TEMP/LukiFitti.xcarchive" \
             -xcconfig Config/AppStore.xcconfig \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            LUKIFITTI_GOOGLE_IOS_CLIENT_ID="$GOOGLE_IOS_CLIENT_ID" \
             CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER"
 
       - name: Export
