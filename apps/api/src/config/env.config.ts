@@ -158,6 +158,9 @@ export const UMAMI_ALLOWED_HOSTNAMES = (
 // AI (OpenRouter, OpenAI-compatible). There is no global provider key: every user brings their
 // own key (or gets one assigned by an admin). Keys are stored AES-256-GCM encrypted with this
 // 32-byte master key (base64 or hex; generate with `openssl rand -base64 32`).
+// The same master key also encrypts stored objects (photos, avatars, reports) before they are
+// uploaded to SeaweedFS — a storage-specific subkey is derived via HKDF, the raw key is never
+// used directly. Without it, photo/avatar uploads are refused rather than stored unencrypted.
 // TODO: Configure AI_KEY_ENCRYPTION_KEY (and optionally AI_KEY_ENCRYPTION_KEY_PREVIOUS during a
 // rotation) in your secret store. Without it, keys can't be stored and AI features stay off.
 function parseEncryptionKey(envValue: string | undefined, name: string): Buffer | null {
