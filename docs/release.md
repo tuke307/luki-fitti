@@ -14,8 +14,9 @@ flowchart TD
   Stacked PRs that target another `feat/**`, `fix/**` or `release/**` branch run the same CI
   (lint, tests, builds, e2e) as PRs into `develop`.
 - **Release**: a release PR `develop` → `main` (merge commit, not squash) carries the version
-  bump. CI's `version` job requires the version to be higher than the newest `v*` tag and, for
-  minor and major releases, marketing screenshots generated for that `x.y`.
+  bump. CI's `version` job requires the version to be higher than the newest `v*` tag. For
+  minor and major releases it warns (without failing) when the marketing screenshots weren't
+  generated for that `x.y`.
 - **Tag**: on every push to `main`, `.github/workflows/tag.yaml` creates the annotated tag
   `v<version>` (e.g. `v1.0.1`). The tag alone deploys nothing — GITHUB_TOKEN pushes trigger no
   other workflows.
