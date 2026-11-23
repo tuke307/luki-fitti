@@ -134,6 +134,13 @@ gh secret list --repo tuke307/luki-fitti
 
 Then move the files to a password manager and delete the folder.
 
+The Google iOS OAuth client id isn't secret, so it is a repository variable. Without it the build
+hides "Continue with Google":
+
+```bash
+gh variable set GOOGLE_IOS_CLIENT_ID --repo tuke307/luki-fitti --body "<id>.apps.googleusercontent.com"
+```
+
 ## Running the pipeline
 
 `.github/workflows/app-store.yaml` runs when a GitHub release is published — the run verifies
