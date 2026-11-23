@@ -74,6 +74,16 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - FRONTEND_URL=${FRONTEND_URL}
       - COOKIE_DOMAIN=${COOKIE_DOMAIN}
+      # Sign-in providers: accepted ID token audiences (web + iOS client ids, comma separated).
+      - GOOGLE_CLIENT_IDS=${GOOGLE_CLIENT_IDS:-}
+      - APPLE_CLIENT_IDS=${APPLE_CLIENT_IDS:-}
+      # Passkeys (empty = derived from FRONTEND_URL).
+      - WEBAUTHN_RP_ID=${WEBAUTHN_RP_ID:-}
+      - WEBAUTHN_RP_NAME=${WEBAUTHN_RP_NAME:-}
+      - WEBAUTHN_ORIGINS=${WEBAUTHN_ORIGINS:-}
+      # Encrypts TOTP secrets and keys recovery-code hashes, at least 32 characters
+      # (openssl rand -base64 32); set in the secret store.
+      - TWO_FACTOR_ENCRYPTION_KEY=${TWO_FACTOR_ENCRYPTION_KEY}
       - SMTP_HOST=${SMTP_HOST}
       - SMTP_PORT=${SMTP_PORT}
       - SMTP_USER=${SMTP_USER}
