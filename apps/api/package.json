@@ -60,7 +60,8 @@
     "openapi:export": "nestgo build && node dist/src/openapi-export.js",
     "start:debug": "nestgo start --watch --debug",
     "start": "dotenv -e .env.local -- node dist/src/main.js",
-    "start:prod": "node dist/src/main.js"
+    "start:prod": "node dist/src/main.js",
+    "storage:encrypt": "node --import tsx --env-file .env.local src/scripts/encrypt-storage-objects.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1170.0",

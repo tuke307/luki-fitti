@@ -86,7 +86,8 @@ services:
       - UMAMI_URL=${UMAMI_URL}
       - UMAMI_WEBSITE_ID=${UMAMI_WEBSITE_ID}
       - UMAMI_ALLOWED_HOSTNAMES=${UMAMI_ALLOWED_HOSTNAMES}
-      # Master key for per-user OpenRouter keys (openssl rand -base64 32); set in the secret store.
+      # Master key for per-user OpenRouter keys and stored objects (photos, avatars, reports —
+      # encrypted before upload to SeaweedFS). openssl rand -base64 32; set in the secret store.
       - AI_KEY_ENCRYPTION_KEY=${AI_KEY_ENCRYPTION_KEY}
       - AI_KEY_ENCRYPTION_KEY_PREVIOUS=${AI_KEY_ENCRYPTION_KEY_PREVIOUS:-}
       - AI_KEY_ENCRYPTION_KEY_VERSION=${AI_KEY_ENCRYPTION_KEY_VERSION:-1}
