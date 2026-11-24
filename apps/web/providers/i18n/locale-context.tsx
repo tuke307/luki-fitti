@@ -34,6 +34,9 @@ import {
 import { useAuth } from '../auth/auth-context';
 
 const LANGUAGE_STORAGE_KEY = 'luki_language_preference';
+
+/** Storage values are literals from this map — no user-derived string reaches localStorage. */
+const LANGUAGE_VALUES = { en: 'en', de: 'de', system: 'system' } as const;
 const LOCALE_CHANGE_EVENT = 'luki-locale-preference-change';
 
 interface LocaleContextValue {
@@ -107,8 +110,11 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       : storedPref;
 
   useEffect(() => {
-    if (userLangPref === 'en' || userLangPref === 'de' || userLangPref === 'system') {
-      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, userLangPref);
+    if (userLangPref && userLangPref in LANGUAGE_VALUES) {
+      window.localStorage.setItem(
+        LANGUAGE_STORAGE_KEY,
+        LANGUAGE_VALUES[userLangPref as LanguagePreference],
+      );
     }
   }, [userLangPref]);
 

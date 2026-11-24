@@ -49,6 +49,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
     env:
       GITHUB_REGISTRY: ghcr.io
       IMAGE_NAME: tuke307/luki-fitti-api
@@ -66,6 +68,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Push Image
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -75,7 +78,6 @@ jobs:
           cache-from: type=gha,scope=build-api
           cache-to: type=gha,mode=max,scope=build-api
           tags: |
-            ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.version }}
 
   build-web:
@@ -84,6 +86,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
     env:
       GITHUB_REGISTRY: ghcr.io
       IMAGE_NAME: tuke307/luki-fitti-web
@@ -101,6 +105,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Push Image
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -113,7 +118,6 @@ jobs:
             NEXT_PUBLIC_SITE_URL=${{ vars.NEXT_PUBLIC_SITE_URL }}
             GIT_SHA=${{ github.sha }}
           tags: |
-            ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.version }}
 
   build-email-worker:
@@ -122,6 +126,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
     env:
       GITHUB_REGISTRY: ghcr.io
       IMAGE_NAME: tuke307/luki-fitti-email-worker
@@ -139,6 +145,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Push Image
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -148,7 +155,6 @@ jobs:
           cache-from: type=gha,scope=build-email-worker
           cache-to: type=gha,mode=max,scope=build-email-worker
           tags: |
-            ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.version }}
 
   build-db-migrate:
@@ -157,6 +163,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
     env:
       GITHUB_REGISTRY: ghcr.io
       IMAGE_NAME: tuke307/luki-fitti-db-migrate
@@ -174,6 +182,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Push Image
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -183,7 +192,6 @@ jobs:
           cache-from: type=gha,scope=build-db-migrate
           cache-to: type=gha,mode=max,scope=build-db-migrate
           tags: |
-            ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.version }}
 
   build-mcp-server:
@@ -192,6 +200,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
     env:
       GITHUB_REGISTRY: ghcr.io
       IMAGE_NAME: tuke307/luki-fitti-mcp-server
@@ -209,6 +219,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Push Image
+        id: build
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -218,26 +229,111 @@ jobs:
           cache-from: type=gha,scope=build-mcp-server
           cache-to: type=gha,mode=max,scope=build-mcp-server
           tags: |
-            ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.version }}
 
   deploy:
     needs: [build-api, build-web, build-email-worker, build-db-migrate, build-mcp-server]
-    if: >-
-      always() && !cancelled() &&
-      !contains(needs.*.result, 'failure') &&
-      !contains(needs.*.result, 'cancelled') &&
-      contains(needs.*.result, 'success')
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DB_MIGRATE_DIGEST: ${{ needs.build-db-migrate.outputs.digest }}
+      WEB_DIGEST: ${{ needs.build-web.outputs.digest }}
+      API_DIGEST: ${{ needs.build-api.outputs.digest }}
+      EMAIL_WORKER_DIGEST: ${{ needs.build-email-worker.outputs.digest }}
+      MCP_SERVER_DIGEST: ${{ needs.build-mcp-server.outputs.digest }}
     steps:
-      - name: Deploy to Coolify
+      - name: Pin image digests and deploy on Coolify
         env:
           COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
         run: |
-          if [ -z "$COOLIFY_WEBHOOK" ]; then
-            echo "COOLIFY_WEBHOOK secret is not configured yet — skipping Coolify webhook trigger."
-            exit 0
+          set -euo pipefail
+
+          # The deploy webhook is https://<host>/api/v1/deploy?uuid=<app-uuid>[&force=…];
+          # the base URL and the application UUID are taken from it.
+          COOLIFY_URL="${COOLIFY_WEBHOOK%%/api/v1/*}"
+          COOLIFY_APP_UUID=""
+          if [[ "$COOLIFY_WEBHOOK" =~ [?\&]uuid=([^\&]+) ]]; then
+            COOLIFY_APP_UUID="${BASH_REMATCH[1]}"
           fi
-          curl --fail --request POST "$COOLIFY_WEBHOOK" \
-            --header "Authorization: Bearer $COOLIFY_TOKEN"
+          if [ -z "$COOLIFY_WEBHOOK" ] || [ "$COOLIFY_URL" = "$COOLIFY_WEBHOOK" ] || [ -z "$COOLIFY_APP_UUID" ]; then
+            echo "::error::COOLIFY_WEBHOOK must look like https://<host>/api/v1/deploy?uuid=<app-uuid>."
+            exit 1
+          fi
+          echo "::add-mask::$COOLIFY_URL"
+          echo "::add-mask::$COOLIFY_APP_UUID"
+
+          for var in COOLIFY_TOKEN \
+            DB_MIGRATE_DIGEST WEB_DIGEST API_DIGEST EMAIL_WORKER_DIGEST MCP_SERVER_DIGEST; do
+            if [ -z "${!var:-}" ]; then
+              echo "::error::$var is empty — check the repo secrets and the build job outputs."
+              exit 1
+            fi
+          done
+          for var in DB_MIGRATE_DIGEST WEB_DIGEST API_DIGEST EMAIL_WORKER_DIGEST MCP_SERVER_DIGEST; do
+            if [[ ! "${!var}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              echo "::error::$var is not a valid sha256 digest: ${!var}"
+              exit 1
+            fi
+          done
+
+          # Pin the digests as application env vars — compose.yml interpolates them into image:.
+          payload="$(jq -n '{data: [
+            {key: "LUKI_FITTI_DB_MIGRATE_DIGEST",   value: $db,   is_preview: false},
+            {key: "LUKI_FITTI_WEB_DIGEST",          value: $web,  is_preview: false},
+            {key: "LUKI_FITTI_API_DIGEST",          value: $api,  is_preview: false},
+            {key: "LUKI_FITTI_EMAIL_WORKER_DIGEST", value: $em,   is_preview: false},
+            {key: "LUKI_FITTI_MCP_SERVER_DIGEST",   value: $mcp,  is_preview: false}
+          ]}' --arg db "$DB_MIGRATE_DIGEST" --arg web "$WEB_DIGEST" --arg api "$API_DIGEST" \
+             --arg em "$EMAIL_WORKER_DIGEST" --arg mcp "$MCP_SERVER_DIGEST")"
+          status="$(curl --fail-with-body -sS -o /dev/null -w '%{http_code}' -X PATCH \
+            "$COOLIFY_URL/api/v1/applications/$COOLIFY_APP_UUID/envs/bulk" \
+            -H "Authorization: Bearer $COOLIFY_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$payload")"
+          echo "envs/bulk PATCH → HTTP $status ($(jq '.data | length' <<<"$payload") vars set)"
+
+          deploy_response="$(curl --fail-with-body -sS -X POST \
+            "$COOLIFY_URL/api/v1/deploy?uuid=$COOLIFY_APP_UUID" \
+            -H "Authorization: Bearer $COOLIFY_TOKEN")"
+          deployment_uuid="$(jq -r '.deployments[0].deployment_uuid // empty' <<<"$deploy_response")"
+          if [ -z "$deployment_uuid" ]; then
+            echo "::error::Coolify deploy response did not contain deployments[0].deployment_uuid"
+            exit 1
+          fi
+          echo "deployment queued: $deployment_uuid"
+
+          # Poll until the deployment reaches a terminal state.
+          while true; do
+            deployment="$(curl --fail-with-body -sS \
+              "$COOLIFY_URL/api/v1/deployments/$deployment_uuid" \
+              -H "Authorization: Bearer $COOLIFY_TOKEN")"
+            deploy_status="$(jq -r '.status // empty' <<<"$deployment")"
+            echo "deployment $deployment_uuid status: $deploy_status"
+            case "$deploy_status" in
+              finished)
+                break
+                ;;
+              failed | cancelled-by-user)
+                echo "::error::Coolify deployment ended with status: $deploy_status"
+                exit 1
+                ;;
+              '')
+                echo "::error::Could not read deployment status from Coolify response"
+                exit 1
+                ;;
+            esac
+            sleep 15
+          done
+
+          {
+            echo '### Deployed image digests'
+            echo
+            echo '| Service | Digest |'
+            echo '| --- | --- |'
+            echo "| luki-fitti-db-migrate | \`$DB_MIGRATE_DIGEST\` |"
+            echo "| luki-fitti-web | \`$WEB_DIGEST\` |"
+            echo "| luki-fitti-api | \`$API_DIGEST\` |"
+            echo "| luki-fitti-email-worker | \`$EMAIL_WORKER_DIGEST\` |"
+            echo "| luki-fitti-mcp-server | \`$MCP_SERVER_DIGEST\` |"
+          } >> "$GITHUB_STEP_SUMMARY"

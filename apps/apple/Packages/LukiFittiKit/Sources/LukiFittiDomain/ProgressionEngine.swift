@@ -153,6 +153,15 @@ public enum ProgressionEngine {
     /// RPE logged by the 3-bar "Max" effort level — nothing left in the tank.
     public static let maxEffortRpe: Double = 9.5
 
+    /// The 3-bar effort control's tap cycle: unrated → Easy (7) → Just right (8) → Max → unrated.
+    /// Shared by iOS and Watch so both rate completed sets the same way.
+    public static func nextEffortRpe(after rpe: Double?) -> Double? {
+        guard let rpe else { return 7.0 }
+        if rpe <= 7.5 { return 8.0 }
+        if rpe < maxEffortRpe { return maxEffortRpe }
+        return nil
+    }
+
     /// Stall detection thresholds. Mirrored 1:1 from `SUGGESTION_THRESHOLDS` in
     /// `packages/common/src/utils/progression.util.ts` — keep both in sync.
     public enum SuggestionThresholds {

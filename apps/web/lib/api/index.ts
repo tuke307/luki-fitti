@@ -57,10 +57,12 @@ import type {
   StartSessionDto,
   StretchingRoutineDto,
   SyncSessionPayloadDto,
+  SessionFocusResponseDto,
   SyncSessionResponseDto,
   UpdateExerciseDto,
   UpdateFolderDto,
   UpdatePreferencesDto,
+  UpdateSessionFocusDto,
   UpdateStretchingRoutineDto,
   UpdateTemplateDto,
   UserDto,
@@ -70,6 +72,19 @@ import type {
   WorkoutTemplateDto,
   ImportCommitResultDto,
   ImportPreviewDto,
+  MfaRequiredDto,
+  OAuthLoginDto,
+  OAuthProviderName,
+  PasskeyDto,
+  PasskeyLoginOptionsDto,
+  PasskeyLoginVerifyDto,
+  PasskeyRegisterVerifyDto,
+  PasskeyRenameDto,
+  RecoveryCodesDto,
+  SecurityStatusDto,
+  TwoFactorCodeDto,
+  TwoFactorSetupDto,
+  TwoFactorVerifyDto,
 } from '@luki-fitti/common/schemas';
 
 export const auth = {
@@ -104,7 +119,32 @@ export const auth = {
       retry: false,
     }),
   login: (data: LoginDto) =>
-    apiFetch<UserDto>('/auth/login', {
+    apiFetch<UserDto | MfaRequiredDto>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      retry: false,
+    }),
+  /** Second step of a login that returned `mfaRequired`: TOTP or recovery code. */
+  verifyTwoFactor: (data: TwoFactorVerifyDto) =>
+    apiFetch<UserDto>('/auth/2fa/verify', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      retry: false,
+    }),
+  /** Sign in or up with a Google/Apple ID token; may return `MfaRequiredDto`. */
+  signInWithProvider: (provider: OAuthProviderName, data: OAuthLoginDto) =>
+    apiFetch<UserDto | MfaRequiredDto>(`/auth/oauth/${provider}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      retry: false,
+    }),
+  passkeyLoginOptions: () =>
+    apiFetch<PasskeyLoginOptionsDto>('/auth/passkeys/login/options', {
+      method: 'POST',
+      retry: false,
+    }),
+  passkeyLoginVerify: (data: PasskeyLoginVerifyDto) =>
+    apiFetch<UserDto>('/auth/passkeys/login/verify', {
       method: 'POST',
       body: JSON.stringify(data),
       retry: false,
@@ -264,6 +304,12 @@ export const sessions = {
   remove: (id: string) =>
     apiFetch<{ success: boolean }>(`/sessions/${id}`, {
       method: 'DELETE',
+    }),
+  /** Lightweight "which exercise is open" update; never bumps the session version. */
+  updateFocus: (clientSessionId: string, data: UpdateSessionFocusDto) =>
+    apiFetch<SessionFocusResponseDto>(`/sessions/${clientSessionId}/focus`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
     }),
 };
 
@@ -435,7 +481,52 @@ export const importData = {
     apiFetch<ImportCommitResultDto>('/import/commit', { method: 'POST', body: fileText }),
 };
 
+/** Account security page: sign-in methods (password/Google/Apple), passkeys and optional 2FA. */
+export const security = {
+  status: () => apiFetch<SecurityStatusDto>('/auth/security'),
+  linkProvider: (provider: OAuthProviderName, data: OAuthLoginDto) =>
+    apiFetch<{ success: boolean }>(`/auth/oauth/${provider}/link`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  unlinkProvider: (provider: OAuthProviderName) =>
+    apiFetch<{ success: boolean }>(`/auth/oauth/${provider}`, { method: 'DELETE' }),
+  passkeyRegisterOptions: () =>
+    apiFetch<Record<string, unknown>>('/auth/passkeys/register/options', { method: 'POST' }),
+  passkeyRegisterVerify: (data: PasskeyRegisterVerifyDto) =>
+    apiFetch<PasskeyDto>('/auth/passkeys/register/verify', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  renamePasskey: (id: string, data: PasskeyRenameDto) =>
+    apiFetch<PasskeyDto>(`/auth/passkeys/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deletePasskey: (id: string) =>
+    apiFetch<{ success: boolean }>(`/auth/passkeys/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
+  twoFactorSetup: () => apiFetch<TwoFactorSetupDto>('/auth/2fa/setup', { method: 'POST' }),
+  twoFactorEnable: (data: TwoFactorCodeDto) =>
+    apiFetch<RecoveryCodesDto>('/auth/2fa/enable', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  twoFactorDisable: (data: TwoFactorCodeDto) =>
+    apiFetch<{ success: boolean }>('/auth/2fa/disable', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  regenerateRecoveryCodes: (data: TwoFactorCodeDto) =>
+    apiFetch<RecoveryCodesDto>('/auth/2fa/recovery-codes', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+};
+
 export * from './client';
+export * from './error-message';
 
 export const api = {
   auth,
@@ -453,4 +544,5 @@ export const api = {
   admin,
   apiKeys,
   importData,
+  security,
 };

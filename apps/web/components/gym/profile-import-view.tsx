@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   BookOpen,
   FileText,
@@ -43,7 +44,7 @@ import { Label } from '@luki-fitti/ui/components/ui/label';
 import { toast } from '@luki-fitti/ui/components/ui/sonner';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useAuth } from '@/providers/auth/auth-context';
-import { api } from '@/lib/api';
+import { api, apiErrorMessage } from '@/lib/api';
 import { trackEvent } from '@/lib/analytics/track';
 import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
@@ -167,6 +168,7 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
   const { folders, unfiledTemplates, historySessions, catalog } = useGym();
   const { theme, setTheme } = useTheme();
   const { t, format, languagePreference, setLanguagePreference, locale } = useLocale();
+  const router = useRouter();
 
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
@@ -420,6 +422,11 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
               <KeyRound className="h-4 w-4" /> {t.profile.changePasswordBtn}
             </Link>
           </Button>
+          <Button type="button" variant="secondary" asChild>
+            <Link href="/security">
+              <ShieldCheck className="h-4 w-4" /> {t.security.pageTitle}
+            </Link>
+          </Button>
           <Button
             type="button"
             variant="secondary"
@@ -472,7 +479,9 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
         onSubmit={async (e) => {
           e.preventDefault();
           if (authTab === 'login') {
-            await login(email, password);
+            // 2FA accounts finish sign-in on the dedicated MFA step of /login.
+            const result = await login(email, password);
+            if (result === 'mfa') router.push('/login');
           } else {
             await register({ email, password, name: name || undefined });
           }
@@ -547,18 +556,22 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
 
         {authError && (
           <div className="space-y-2 px-4">
-            <p className="text-destructive text-[0.8125rem]">{authError}</p>
-            {authError.toLowerCase().includes('confirm your email') && email.trim() && (
-              <Button
-                type="button"
-                variant="secondary"
-                size="xs"
-                disabled={authLoading}
-                onClick={() => void resendConfirmation(email.trim())}
-              >
-                <MailCheck className="h-3.5 w-3.5" /> {t.profile.resendConfirmationBtn}
-              </Button>
-            )}
+            <p className="text-destructive text-[0.8125rem]" role="alert">
+              {apiErrorMessage(authError, t.errors)}
+            </p>
+            {(authError.code === 'EMAIL_NOT_VERIFIED' ||
+              authError.message.toLowerCase().includes('confirm your email')) &&
+              email.trim() && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="xs"
+                  disabled={authLoading}
+                  onClick={() => void resendConfirmation(email.trim())}
+                >
+                  <MailCheck className="h-3.5 w-3.5" /> {t.profile.resendConfirmationBtn}
+                </Button>
+              )}
           </div>
         )}
 
@@ -647,6 +660,15 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
                 void updatePreferences({ exerciseSuggestionsEnabled: checked })
               }
               data-testid="exercise-suggestions-switch"
+            />
+            <SettingsSwitchRow
+              title={t.profile.effortRatingLabel}
+              subtitle={t.profile.effortRatingSub}
+              checked={user?.preferences?.effortTrackingEnabled ?? true}
+              onCheckedChange={(checked) =>
+                void updatePreferences({ effortTrackingEnabled: checked })
+              }
+              data-testid="effort-rating-switch"
             />
           </SettingsSection>
         );
@@ -1093,7 +1115,9 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
             </div>
 
             {(deleteError || authError) && (
-              <p className="text-destructive text-xs">{deleteError || authError}</p>
+              <p className="text-destructive text-xs">
+                {deleteError || apiErrorMessage(authError, t.errors)}
+              </p>
             )}
 
             <DialogFooter>

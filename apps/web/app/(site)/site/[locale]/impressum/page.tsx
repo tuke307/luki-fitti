@@ -45,8 +45,8 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
               [Anschrift folgt]
               <br />
               E-Mail:{' '}
-              <a href="mailto:tonymeissner70@gmail.com" className="text-primary underline">
-                tonymeissner70@gmail.com
+              <a href="mailto:apps@tony-luke.de" className="text-primary underline">
+                apps@tony-luke.de
               </a>
             </p>
           </section>
@@ -61,8 +61,8 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
               [Address to follow]
               <br />
               Email:{' '}
-              <a href="mailto:tonymeissner70@gmail.com" className="text-primary underline">
-                tonymeissner70@gmail.com
+              <a href="mailto:apps@tony-luke.de" className="text-primary underline">
+                apps@tony-luke.de
               </a>
             </p>
           </section>

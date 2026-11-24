@@ -163,7 +163,8 @@ model User {
   id                       String    @id @default(uuid())
   email                    String    @unique
   name                     String?
-  passwordHash             String
+  /// Null for accounts created through Google/Apple sign-in until a password is set via reset.
+  passwordHash             String?
   emailVerified            Boolean   @default(true)
   emailVerificationToken   String?   @unique
   emailVerificationExpires DateTime?
@@ -215,6 +216,10 @@ model User {
   apiKeys            ApiKey[]
   importJobs         ImportJob[]
   progressCheckIns   ProgressCheckIn[]
+  oauthAccounts      OAuthAccount[]
+  passkeys           Passkey[]
+  twoFactor          TwoFactor?
+  recoveryCodes      RecoveryCode[]
 
   friendshipsA        Friendship[]          @relation("FriendshipUserA")
   friendshipsB        Friendship[]          @relation("FriendshipUserB")
@@ -245,6 +250,70 @@ model User {
   squadInvitesSent    SquadInvite[]         @relation("SquadInviter")
 }
 
+enum OAuthProvider {
+  GOOGLE
+  APPLE
+}
+
+/// A Google/Apple identity linked to a user (`providerUserId` is the token `sub`).
+model OAuthAccount {
+  id             String        @id @default(uuid())
+  userId         String
+  provider       OAuthProvider
+  providerUserId String
+  email          String?
+  createdAt      DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+}
+
+/// WebAuthn credential; `credentialId` is base64url, `publicKey` the COSE key bytes.
+model Passkey {
+  id           String    @id @default(uuid())
+  userId       String
+  credentialId String    @unique
+  publicKey    Bytes
+  counter      BigInt    @default(0)
+  transports   String[]  @default([])
+  deviceType   String
+  backedUp     Boolean   @default(false)
+  name         String
+  createdAt    DateTime  @default(now())
+  lastUsedAt   DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Optional TOTP second factor. `secretEnc` is AES-256-GCM; `enabledAt` null = setup not confirmed.
+model TwoFactor {
+  userId    String    @id
+  secretEnc String
+  enabledAt DateTime?
+  /// Last accepted 30 s time step, so a code cannot be replayed.
+  lastStep  Int?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// One-time recovery code; only the keyed hash is stored.
+model RecoveryCode {
+  id        String    @id @default(uuid())
+  userId    String
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
 model UserPreferences {
   id                         String        @id @default(uuid())
   userId                     String        @unique
@@ -256,6 +325,7 @@ model UserPreferences {
   restTimerSound             Boolean       @default(true)
   notificationsEnabled       Boolean       @default(true)
   exerciseSuggestionsEnabled Boolean       @default(true)
+  effortTrackingEnabled      Boolean       @default(true)
   weeklyGoalSessions         Int           @default(4)
   bodyWeightKg               Float?
   heightCm                   Float?
@@ -543,6 +613,9 @@ model WorkoutSession {
   heartRateSamplesJson  Json?
   version               Int                 @default(1)
   lastWriterDeviceId    String?
+  /// Exercise the athlete is looking at; shared across devices, merged by newest focusedAt.
+  focusedClientExerciseId String?
+  focusedAt             DateTime?
   lastSyncedAt          DateTime            @default(now())
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt

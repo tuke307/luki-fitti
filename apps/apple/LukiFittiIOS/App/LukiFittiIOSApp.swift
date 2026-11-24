@@ -185,6 +185,7 @@ public final class LukiAppViewModel {
         Task {
             if store.currentUser != nil {
                 await store.refreshFromServerAfterAuth()
+                await mergeServerActiveSessionFocus()
             } else {
                 await store.flushSyncQueue()
             }
@@ -208,16 +209,36 @@ public final class LukiAppViewModel {
         await progress.setCloudBackup(enabled, deleteRemote: deleteRemote, isSignedIn: isSignedIn)
     }
 
+    /// Pulls the server's active session and merges ONLY its exercise focus into the local
+    /// copy (newest focusedAt wins) — nothing else is adopted. The Watch is told when it changed.
+    private func mergeServerActiveSessionFocus() async {
+        guard let local = store.activeSession,
+              let serverActive = try? await store.apiClient.fetchActiveSession(),
+              serverActive.clientSessionId == local.clientSessionId else { return }
+        let merged = SessionCalculator.mergingFocus(into: local, from: serverActive)
+        guard merged != local else { return }
+        store.saveActiveSession(merged)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(merged)
+    }
+
     private func mergeIncomingWatchActiveSession(_ incoming: WorkoutSessionDto?) {
         guard let incoming else { return }
-        if let current = store.activeSession,
-           current.clientSessionId == incoming.clientSessionId,
-           current.version > incoming.version {
+        let current = store.activeSession?.clientSessionId == incoming.clientSessionId
+            ? store.activeSession
+            : nil
+        if let current, current.version > incoming.version {
+            // Stale snapshot: session content stays, but a newer focus still applies.
+            let merged = SessionCalculator.mergingFocus(into: current, from: incoming)
+            if merged != current {
+                store.saveActiveSession(merged)
+                watchSyncCoordinator.broadcastActiveSessionSnapshot(merged)
+            }
             return
         }
-        store.saveActiveSession(incoming)
-        store.enqueueSessionSync(incoming)
-        syncRestAlerts(session: incoming)
+        let merged = current.map { SessionCalculator.mergingFocus(into: incoming, from: $0) } ?? incoming
+        store.saveActiveSession(merged)
+        store.enqueueSessionSync(merged)
+        syncRestAlerts(session: merged)
         Task { await store.flushSyncQueue() }
     }
 
@@ -338,16 +359,18 @@ public final class LukiAppViewModel {
 #endif
 
     public func handleUniversalLink(_ url: URL) {
-        // `https://app.luki-fitti.tony-luke.de/invite/<token>` universal link.
+        // `https://app.luki-fitti.tony-luke.de/invite/<token>` universal link (the QR code) or
+        // `lukifitti://invite/<token>` (the web page's "Open in app" button).
+        if let token = InviteLink.token(from: url) {
+            pendingInviteToken = token
+            // Signed out → sign in first; AppShellView picks the token up after auth.
+            if store.currentUser == nil { selectedTab = .profile }
+            return
+        }
+        // A malformed `/invite/<junk>` link is dropped rather than parsed as another route.
         if url.scheme?.lowercased() == "https",
            url.pathComponents.count == 3,
            url.pathComponents[1] == "invite" {
-            let token = url.pathComponents[2]
-            if InviteTokenValidator.isValid(token) {
-                pendingInviteToken = token
-                // Signed out → sign in first; AppShellView picks the token up after auth.
-                if store.currentUser == nil { selectedTab = .profile }
-            }
             return
         }
         if url.scheme?.lowercased() == "lukifitti" {
@@ -504,6 +527,8 @@ public final class LukiAppViewModel {
         session.exercises[exIdx].sets[setIdx] = set
         let allDone = session.exercises[exIdx].sets.allSatisfy(\.completed)
         session.exercises[exIdx].status = allDone ? .COMPLETED : .IN_PROGRESS
+        // Completing a set means the athlete is on that exercise — keep the shared focus with it.
+        session = SessionCalculator.focusing(session, clientExerciseId: clientExerciseId)
         session.version += 1
 
         let recalculated = SessionCalculator.recalculateSessionTotals(session)
@@ -908,31 +933,37 @@ public final class LukiAppViewModel {
         focusExercise(clientExerciseId: clientExId)
     }
 
-    /// Index of the exercise the active workout shows; survives tab switches and relaunches.
+    /// Index of the exercise the active workout shows; shared with the Watch via the
+    /// session's focus fields (the per-device file stays as a legacy fallback only).
     public var focusedExerciseIndex: Int {
         guard let session = store.activeSession else { return 0 }
         return SessionCalculator.resolveFocusedExerciseIndex(
             session.exercises,
-            rememberedClientExerciseId: store.focusedExerciseIds[session.clientSessionId]
+            rememberedClientExerciseId: session.focusedClientExerciseId
+                ?? store.focusedExerciseIds[session.clientSessionId]
         )
     }
 
+    /// Pure focus change: saves the stamped session without a version bump, broadcasts it to the
+    /// Watch and tells the server when signed in (offline is fine — the fields ride the next sync).
     public func focusExercise(clientExerciseId: String) {
         guard let session = store.activeSession else { return }
-        store.setFocusedExerciseId(clientExerciseId, clientSessionId: session.clientSessionId)
+        let focused = SessionCalculator.focusing(session, clientExerciseId: clientExerciseId)
+        store.saveActiveSession(focused)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(focused)
+        if store.currentUser != nil, let focusedAt = focused.focusedAt {
+            Task {
+                _ = try? await store.apiClient.updateSessionFocus(
+                    clientSessionId: focused.clientSessionId,
+                    UpdateSessionFocusDto(clientExerciseId: clientExerciseId, focusedAt: focusedAt)
+                )
+            }
+        }
     }
 
     public func focusExercise(at index: Int) {
         guard let exercises = store.activeSession?.exercises, exercises.indices.contains(index) else { return }
         focusExercise(clientExerciseId: exercises[index].clientExerciseId)
-    }
-
-    /// Pins the exercise shown on open, so finishing its last set doesn't jump to the next one.
-    public func pinFocusedExercise() {
-        guard let session = store.activeSession, !session.exercises.isEmpty else { return }
-        let remembered = store.focusedExerciseIds[session.clientSessionId]
-        guard !session.exercises.contains(where: { $0.clientExerciseId == remembered }) else { return }
-        focusExercise(at: focusedExerciseIndex)
     }
 
     /// Replaces an exercise in the active session, keeping its slot and pre-filling the

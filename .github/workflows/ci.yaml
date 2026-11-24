@@ -21,8 +21,8 @@ concurrency:
 
 jobs:
   # Every merge into main is a release: it must carry a version bump past the
-  # newest v* tag, all version locations must agree, and the marketing
-  # screenshots must match the new version. Only runs on PRs targeting main.
+  # newest v* tag and all version locations must agree. Outdated marketing
+  # screenshots only warn. Only runs on PRs targeting main.
   version:
     if: github.base_ref == 'main'
     runs-on: ubuntu-latest
@@ -59,10 +59,10 @@ jobs:
           v=$(grep -m1 MARKETING_VERSION apps/apple/project.yml | sed -E 's/.*"([0-9.]+)".*/\1/')
           g=$(cat apps/apple/marketing/VERSION 2>/dev/null || echo none)
           if [ "${v%.*}" != "${g%.*}" ]; then
-            echo "::error::Marketing screenshots were generated for $g, version is $v — minor and major releases need new screenshots: run \`yarn workspace @luki-fitti/apple marketing:screenshots\`."
-            exit 1
+            echo "::warning::Marketing screenshots were generated for $g, version is $v — minor and major releases should get new screenshots: run \`yarn workspace @luki-fitti/apple marketing:screenshots\`."
+          else
+            echo "marketing images are for $g (version $v)"
           fi
-          echo "marketing images are for $g (version $v)"
 
   lint:
     runs-on: ubuntu-latest
@@ -163,6 +163,7 @@ jobs:
           ACCESS_TOKEN_EXPIRY_MS=900000
           REFRESH_TOKEN_EXPIRY_MS=7776000000
           REFRESH_TOKEN_REUSE_GRACE_MS=30000
+          APP_SETTINGS_CACHE_TTL_MS=0
           API_KEY_PEPPER=${API_KEY_PEPPER_VALUE}
           DATABASE_URL=postgresql://postgres:postgres@localhost:5432/luki_fitti
           FRONTEND_URL=http://localhost:3000

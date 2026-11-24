@@ -191,7 +191,7 @@ describe('AuthService — Registration, Authentication & Brute-Force Protection'
     const dbUser = await prisma.user.findUnique({ where: { id: registered.id } });
     assert.ok(dbUser);
     assert.notEqual(dbUser.passwordHash, 'FAKE-PASSWORD-TEST-123');
-    const valid = await bcrypt.compare('FAKE-PASSWORD-TEST-123', dbUser.passwordHash);
+    const valid = await bcrypt.compare('FAKE-PASSWORD-TEST-123', dbUser.passwordHash!);
     assert.equal(valid, true);
   });
 
@@ -210,7 +210,14 @@ describe('AuthService — Registration, Authentication & Brute-Force Protection'
           email: 'GYMBUDDY@example.com',
           password: 'FAKE-PASSWORD-TEST-456',
         }),
-      /already exists/i,
+      (err: unknown) => {
+        assert.match((err as Error).message, /already exists/i);
+        assert.equal(
+          (err as { getResponse(): { code?: string } }).getResponse().code,
+          'EMAIL_ALREADY_EXISTS',
+        );
+        return true;
+      },
     );
   });
 
@@ -474,6 +481,20 @@ describe('AuthService.updatePreferences — weigh-in reminder & legacy body weig
     // Untouched fields stay out of the update.
     await service.updatePreferences('user-1', { weeklyGoalSessions: 3 });
     assert.equal('weighInReminderEnabled' in calls[1]!.update, false);
+  });
+
+  it('persists and returns effortTrackingEnabled, defaulting to true', async () => {
+    const { prisma, calls } = createPreferencesPrisma();
+    const service = new AuthService(prisma);
+    const result = await service.updatePreferences('user-1', {
+      effortTrackingEnabled: false,
+    });
+    assert.equal(calls[0]!.update.effortTrackingEnabled, false);
+    assert.equal(result.preferences?.effortTrackingEnabled, false);
+
+    // Untouched field stays out of the update (older clients keep the stored value).
+    await service.updatePreferences('user-1', { weeklyGoalSessions: 3 });
+    assert.equal('effortTrackingEnabled' in calls[1]!.update, false);
   });
 
   it('returns the body goal, horizon, backup and consent fields it stores', async () => {

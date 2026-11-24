@@ -1,7 +1,7 @@
 {
   "name": "luki-fitti",
   "private": true,
-  "version": "2.0.1",
+  "version": "2.1.0",
   "license": "AGPL-3.0-only",
   "workspaces": [
     "apps/*",
@@ -18,9 +18,9 @@
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.4",
     "@types/node": "^26.6.6",
-    "baseline-browser-mapping": "^2.11.35",
+    "baseline-browser-mapping": "^2.11.37",
     "husky": "^9.1.7",
-    "lint-staged": "^17.6.0",
+    "lint-staged": "^17.6.1",
     "prettier": "^3.9.10",
     "tsc-alias": "^1.9.10",
     "typescript": "6.0.3",
@@ -60,6 +60,12 @@
     "eslint-plugin-react-hooks": "7.1.1",
     "sharp": "0.35.5",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.71.1"
+    "typescript-eslint": "8.71.1",
+    "glob": "14.0.4",
+    "**/readdir-glob/minimatch": "11.0.5",
+    "**/@typescript-eslint/typescript-estree/minimatch": "11.0.5",
+    "**/mjml-cli/minimatch": "11.0.5",
+    "**/editorconfig/minimatch": "11.0.5",
+    "**/@swc/cli/minimatch": "11.0.5"
   }
 }

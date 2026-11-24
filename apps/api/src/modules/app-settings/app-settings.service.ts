@@ -13,13 +13,13 @@ import type {
 import type { LeagueStageMode } from '@luki-fitti/common/enums';
 import { PrismaService } from '../database/prisma.service';
 import {
+  APP_SETTINGS_CACHE_TTL_MS,
   getAiKeyEncryptionConfig,
   SEAWEEDFS_ACCESS_KEY_API,
   SEAWEEDFS_ENDPOINT,
 } from '../../config/env.config';
 
 const SETTINGS_ID = 1;
-const CACHE_TTL_MS = 10_000;
 
 export interface AppSettingsRecord {
   aiWorkoutBuilderEnabled: boolean;
@@ -86,6 +86,8 @@ export function effectiveKeySource(slots: readonly string[]): AiKeySlot | null {
 @Injectable()
 export class AppSettingsService {
   private cache: { value: AppSettingsRecord; expiresAt: number } | null = null;
+  /** Shared by concurrent callers so a cold cache issues one read instead of N racing upserts. */
+  private loading: Promise<AppSettingsRecord> | null = null;
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -100,12 +102,28 @@ export class AppSettingsService {
 
   async get(): Promise<AppSettingsRecord> {
     if (this.cache && this.cache.expiresAt > Date.now()) return this.cache.value;
-    const value = (await this.prisma.appSettings.upsert({
-      where: { id: SETTINGS_ID },
-      update: {},
-      create: { id: SETTINGS_ID },
-    })) as AppSettingsRecord;
-    this.cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
+    this.loading ??= this.load().finally(() => {
+      this.loading = null;
+    });
+    return this.loading;
+  }
+
+  private async load(): Promise<AppSettingsRecord> {
+    let value: AppSettingsRecord;
+    try {
+      value = (await this.prisma.appSettings.upsert({
+        where: { id: SETTINGS_ID },
+        update: {},
+        create: { id: SETTINGS_ID },
+      })) as AppSettingsRecord;
+    } catch (err) {
+      // Another process created the singleton row between Prisma's read and insert.
+      if ((err as { code?: unknown }).code !== 'P2002') throw err;
+      value = (await this.prisma.appSettings.findUniqueOrThrow({
+        where: { id: SETTINGS_ID },
+      })) as AppSettingsRecord;
+    }
+    this.cache = { value, expiresAt: Date.now() + APP_SETTINGS_CACHE_TTL_MS };
     return value;
   }
 
@@ -159,7 +177,7 @@ export class AppSettingsService {
         userModelAllowlist: dedupe(dto.userModelAllowlist),
       },
     })) as AppSettingsRecord;
-    this.cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
+    this.cache = { value, expiresAt: Date.now() + APP_SETTINGS_CACHE_TTL_MS };
     return this.toDto(value);
   }
 
@@ -181,7 +199,7 @@ export class AppSettingsService {
         socialBetaUserIds: dto.socialBetaUserIds ? [...new Set(dto.socialBetaUserIds)] : undefined,
       },
     })) as AppSettingsRecord;
-    this.cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
+    this.cache = { value, expiresAt: Date.now() + APP_SETTINGS_CACHE_TTL_MS };
     return this.getSocialSettings();
   }
 
@@ -204,7 +222,7 @@ export class AppSettingsService {
       create: { id: SETTINGS_ID, ...dto },
       update: dto,
     })) as AppSettingsRecord;
-    this.cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
+    this.cache = { value, expiresAt: Date.now() + APP_SETTINGS_CACHE_TTL_MS };
     return this.getLeagueSettings();
   }
 
@@ -219,7 +237,7 @@ export class AppSettingsService {
       create: { id: SETTINGS_ID, ...dto },
       update: dto,
     })) as AppSettingsRecord;
-    this.cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
+    this.cache = { value, expiresAt: Date.now() + APP_SETTINGS_CACHE_TTL_MS };
     return this.getApiKeySettings();
   }
 

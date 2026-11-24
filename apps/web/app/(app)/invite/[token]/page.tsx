@@ -10,20 +10,51 @@ import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { socialApi } from '@/lib/social/social-api';
 import { isValidInviteToken } from '@/lib/social/invite-token';
+import {
+  clearPendingInvite,
+  getPendingInvite,
+  setPendingInvite,
+} from '@/lib/social/pending-invite';
+import { APP_STORE_URL } from '@/lib/site/config';
 import { UserAvatar } from '@/components/gym/social/user-avatar';
+import { SocialOnboardingSheet } from '@/components/gym/social/social-onboarding-sheet';
+import type { SocialProfileDto } from '@luki-fitti/common/schemas';
 
-const PENDING_INVITE_KEY = 'luki.social.pendingInvite';
+/** Fallback for visitors whose phone did not open the app via the universal link. */
+function OpenInApp({ token }: { token: string }) {
+  const { t } = useLocale();
+  if (!isValidInviteToken(token)) return null;
+  return (
+    <div className="border-border/60 space-y-2 border-t pt-4" data-testid="invite-open-in-app">
+      <p className="text-muted-foreground text-[0.8125rem]">{t.invite.appHint}</p>
+      <div className="flex flex-col gap-2">
+        <Button asChild variant="outline" size="sm">
+          <a href={`lukifitti://invite/${token}`} data-testid="invite-open-app-link">
+            {t.invite.openInApp}
+          </a>
+        </Button>
+        <Button asChild variant="ghost" size="sm">
+          <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer">
+            {t.invite.getTheApp}
+          </a>
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 type PageState =
   | { kind: 'loading' }
   | { kind: 'invalid' }
+  | { kind: 'username' }
   | { kind: 'preview'; inviter: { username: string; avatarUrl: string | null } }
   | { kind: 'accepted' };
 
 /**
  * `/invite/:token` — signed-in users see the inviter card + Accept; signed-out
- * users get a sign-in/up page (the token is kept in sessionStorage and the
- * login redirect comes back here to finish the accept).
+ * users get a sign-in/up page (the token is kept in localStorage and the
+ * login redirect comes back here to finish the accept). New accounts without
+ * a username pick one first, then the invite is accepted.
  */
 export default function InvitePage() {
   const { t, format } = useLocale();
@@ -35,37 +66,63 @@ export default function InvitePage() {
   const [state, setState] = useState<PageState>({ kind: 'loading' });
   const [accepting, setAccepting] = useState(false);
   const autoAccepted = useRef(false);
+  const onboardingPrompted = useRef(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [onboardingProfile, setOnboardingProfile] = useState<SocialProfileDto | null>(null);
 
   // Signed out: stash the token so a sign-in elsewhere can still accept it.
   useEffect(() => {
     if (!loading && !isAuthenticated && tokenValid) {
-      sessionStorage.setItem(PENDING_INVITE_KEY, token);
+      setPendingInvite(token);
     }
   }, [loading, isAuthenticated, token, tokenValid]);
 
+  // Accepting needs a username of your own; a freshly registered user has none yet.
   useEffect(() => {
     if (loading || !isAuthenticated || !tokenValid) return;
     let cancelled = false;
-    socialApi
-      .invitePreview(token)
-      .then((res) => {
+    void (async () => {
+      try {
+        const me = await socialApi.me();
+        if (cancelled) return;
+        if (me.data && me.data.username === null) {
+          setState({ kind: 'username' });
+          if (!onboardingPrompted.current) {
+            onboardingPrompted.current = true;
+            setOnboardingProfile(me.data);
+            setOnboardingOpen(true);
+          }
+          return;
+        }
+        const res = await socialApi.invitePreview(token);
         if (cancelled) return;
         setState(res.data?.username ? { kind: 'preview', inviter: res.data } : { kind: 'invalid' });
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) setState({ kind: 'invalid' });
-      });
+      }
+    })();
     return () => {
       cancelled = true;
     };
-  }, [token, isAuthenticated, loading, tokenValid]);
+  }, [token, isAuthenticated, loading, tokenValid, reloadKey]);
+
+  const onOnboardingOpenChange = async (open: boolean) => {
+    setOnboardingOpen(open);
+    if (open) return;
+    const me = await socialApi.me().catch(() => null);
+    if (me?.data?.username) {
+      setState({ kind: 'loading' });
+      setReloadKey((k) => k + 1);
+    }
+  };
 
   const accept = async () => {
     setAccepting(true);
     try {
       const res = await socialApi.acceptInvite(token);
       if (res.success) {
-        sessionStorage.removeItem(PENDING_INVITE_KEY);
+        clearPendingInvite();
         setState({ kind: 'accepted' });
         router.replace('/?open=/social');
       } else {
@@ -82,11 +139,12 @@ export default function InvitePage() {
   // A stored pending invite + a fresh sign-in: accept without another tap.
   useEffect(() => {
     if (!isAuthenticated || loading || autoAccepted.current || !tokenValid) return;
-    if (sessionStorage.getItem(PENDING_INVITE_KEY) === token) {
+    if (state.kind !== 'preview') return;
+    if (getPendingInvite() === token) {
       autoAccepted.current = true;
       queueMicrotask(() => void acceptStable());
     }
-  }, [isAuthenticated, loading, token, tokenValid]);
+  }, [isAuthenticated, loading, token, tokenValid, state.kind]);
 
   if (loading || (isAuthenticated && tokenValid && state.kind === 'loading')) {
     return (
@@ -110,12 +168,41 @@ export default function InvitePage() {
               </Link>
             </Button>
             <Button asChild variant="secondary">
-              <Link href={`/login?redirect=${encodeURIComponent(`/invite/${token}`)}`}>
+              <Link
+                href={`/login?mode=register&redirect=${encodeURIComponent(`/invite/${token}`)}`}
+                data-testid="invite-sign-up"
+              >
                 {t.invite.signUp}
               </Link>
             </Button>
           </div>
+          <OpenInApp token={token} />
         </div>
+      </div>
+    );
+  }
+
+  if (tokenValid && state.kind === 'username') {
+    return (
+      <div className="bg-background flex min-h-dvh items-center justify-center p-4">
+        <div className="bg-card w-full max-w-sm space-y-4 rounded-[1.25rem] p-6 text-center">
+          <UserPlus className="text-primary mx-auto h-8 w-8" />
+          <p className="text-[0.9375rem]" data-testid="invite-needs-username">
+            {t.invite.usernameNeeded}
+          </p>
+          <Button
+            className="w-full"
+            onClick={() => void onOnboardingOpenChange(true)}
+            data-testid="invite-choose-username"
+          >
+            {t.invite.chooseUsername}
+          </Button>
+        </div>
+        <SocialOnboardingSheet
+          open={onboardingOpen}
+          onOpenChange={(open) => void onOnboardingOpenChange(open)}
+          profile={onboardingProfile}
+        />
       </div>
     );
   }
@@ -140,6 +227,7 @@ export default function InvitePage() {
           >
             {accepting ? t.invite.accepting : t.invite.accept}
           </Button>
+          <OpenInApp token={token} />
         </div>
       </div>
     );

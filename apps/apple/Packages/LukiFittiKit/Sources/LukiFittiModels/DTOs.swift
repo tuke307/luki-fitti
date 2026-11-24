@@ -25,6 +25,8 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
     public var restTimerSound: Bool
     public var notificationsEnabled: Bool
     public var exerciseSuggestionsEnabled: Bool
+    /// When false, effort (RPE) inputs are hidden; logged values stay stored.
+    public var effortTrackingEnabled: Bool
     public var weeklyGoalSessions: Int
     public var bodyWeightKg: Double? = nil
     public var heightCm: Double? = nil
@@ -67,6 +69,7 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
         restTimerSound: Bool = true,
         notificationsEnabled: Bool = true,
         exerciseSuggestionsEnabled: Bool = true,
+        effortTrackingEnabled: Bool = true,
         weeklyGoalSessions: Int = 4
     ) {
         self.id = id
@@ -79,12 +82,14 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
         self.restTimerSound = restTimerSound
         self.notificationsEnabled = notificationsEnabled
         self.exerciseSuggestionsEnabled = exerciseSuggestionsEnabled
+        self.effortTrackingEnabled = effortTrackingEnabled
         self.weeklyGoalSessions = weeklyGoalSessions
     }
 
     enum CodingKeys: String, CodingKey {
         case id, userId, weightUnit, distanceUnit, defaultRestSeconds, theme, language
         case restTimerSound, notificationsEnabled, exerciseSuggestionsEnabled, weeklyGoalSessions
+        case effortTrackingEnabled
         case bodyWeightKg, heightCm, birthYear, sex, bodyFatPct, activityLevel
         case dailyKcalGoal, proteinGoalG, carbsGoalG, fatGoalG
         case weighInReminderEnabled, weighInReminderWeekday, weighInReminderMinutes
@@ -105,6 +110,7 @@ public struct UserPreferencesDto: Codable, Sendable, Equatable, Hashable {
         self.restTimerSound = try c.decodeIfPresent(Bool.self, forKey: .restTimerSound) ?? true
         self.notificationsEnabled = try c.decodeIfPresent(Bool.self, forKey: .notificationsEnabled) ?? true
         self.exerciseSuggestionsEnabled = try c.decodeIfPresent(Bool.self, forKey: .exerciseSuggestionsEnabled) ?? true
+        self.effortTrackingEnabled = try c.decodeIfPresent(Bool.self, forKey: .effortTrackingEnabled) ?? true
         self.weeklyGoalSessions = try c.decodeIfPresent(Int.self, forKey: .weeklyGoalSessions) ?? 4
         self.bodyWeightKg = try c.decodeIfPresent(Double.self, forKey: .bodyWeightKg)
         self.heightCm = try c.decodeIfPresent(Double.self, forKey: .heightCm)
@@ -208,6 +214,7 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
     public var restTimerSound: Bool?
     public var notificationsEnabled: Bool?
     public var exerciseSuggestionsEnabled: Bool?
+    public var effortTrackingEnabled: Bool?
     public var weeklyGoalSessions: Int?
     public var bodyWeightKg: Double? = nil
     public var heightCm: Double? = nil
@@ -242,6 +249,7 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
         restTimerSound: Bool? = nil,
         notificationsEnabled: Bool? = nil,
         exerciseSuggestionsEnabled: Bool? = nil,
+        effortTrackingEnabled: Bool? = nil,
         weeklyGoalSessions: Int? = nil
     ) {
         self.name = name
@@ -253,12 +261,14 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
         self.restTimerSound = restTimerSound
         self.notificationsEnabled = notificationsEnabled
         self.exerciseSuggestionsEnabled = exerciseSuggestionsEnabled
+        self.effortTrackingEnabled = effortTrackingEnabled
         self.weeklyGoalSessions = weeklyGoalSessions
     }
 
     public enum CodingKeys: String, CodingKey, Sendable, Hashable {
         case name, weightUnit, distanceUnit, defaultRestSeconds, theme, language
         case restTimerSound, notificationsEnabled, exerciseSuggestionsEnabled, weeklyGoalSessions
+        case effortTrackingEnabled
         case bodyWeightKg, heightCm, birthYear, sex, bodyFatPct, activityLevel
         case dailyKcalGoal, proteinGoalG, carbsGoalG, fatGoalG
         case weighInReminderEnabled, weighInReminderWeekday, weighInReminderMinutes
@@ -283,6 +293,7 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
         restTimerSound = try c.decodeIfPresent(Bool.self, forKey: .restTimerSound)
         notificationsEnabled = try c.decodeIfPresent(Bool.self, forKey: .notificationsEnabled)
         exerciseSuggestionsEnabled = try c.decodeIfPresent(Bool.self, forKey: .exerciseSuggestionsEnabled)
+        effortTrackingEnabled = try c.decodeIfPresent(Bool.self, forKey: .effortTrackingEnabled)
         weeklyGoalSessions = try c.decodeIfPresent(Int.self, forKey: .weeklyGoalSessions)
         bodyWeightKg = try c.decodeIfPresent(Double.self, forKey: .bodyWeightKg)
         heightCm = try c.decodeIfPresent(Double.self, forKey: .heightCm)
@@ -318,6 +329,7 @@ public struct UpdatePreferencesDto: Codable, Sendable, Equatable, Hashable {
         try put(restTimerSound, forKey: .restTimerSound)
         try put(notificationsEnabled, forKey: .notificationsEnabled)
         try put(exerciseSuggestionsEnabled, forKey: .exerciseSuggestionsEnabled)
+        try put(effortTrackingEnabled, forKey: .effortTrackingEnabled)
         try put(weeklyGoalSessions, forKey: .weeklyGoalSessions)
         try put(bodyWeightKg, forKey: .bodyWeightKg)
         try put(heightCm, forKey: .heightCm)
@@ -874,6 +886,9 @@ public struct WorkoutSessionDto: Codable, Sendable, Equatable, Hashable, Identif
     public var maxHeartRateBpm: Int?
     public var minHeartRateBpm: Int?
     public var heartRateSamples: [HeartRateSampleDto]?
+    /// Exercise the athlete is looking at; shared across devices, merged by newest focusedAt.
+    public var focusedClientExerciseId: String? = nil
+    public var focusedAt: String? = nil
     public var version: Int
     public var lastSyncedAt: String
     /// Goal resolved at session start (template override ?? profile goal); nil = legacy.
@@ -910,6 +925,8 @@ public struct WorkoutSessionDto: Codable, Sendable, Equatable, Hashable, Identif
         maxHeartRateBpm: Int? = nil,
         minHeartRateBpm: Int? = nil,
         heartRateSamples: [HeartRateSampleDto]? = nil,
+        focusedClientExerciseId: String? = nil,
+        focusedAt: String? = nil,
         version: Int = 1,
         lastSyncedAt: String = ISO8601DateFormatter().string(from: Date()),
         trainingGoalSnapshot: TrainingGoal? = nil,
@@ -944,6 +961,8 @@ public struct WorkoutSessionDto: Codable, Sendable, Equatable, Hashable, Identif
         self.maxHeartRateBpm = maxHeartRateBpm
         self.minHeartRateBpm = minHeartRateBpm
         self.heartRateSamples = heartRateSamples
+        self.focusedClientExerciseId = focusedClientExerciseId
+        self.focusedAt = focusedAt
         self.version = version
         self.lastSyncedAt = lastSyncedAt
         self.trainingGoalSnapshot = trainingGoalSnapshot
@@ -983,6 +1002,9 @@ public struct SyncSessionPayloadDto: Codable, Sendable, Equatable, Hashable {
     /// Last server version this device acknowledged; used for optimistic concurrency.
     public var baseVersion: Int?
     public var forceOverwrite: Bool?
+    /// Exercise the athlete is looking at; merged server-side by newest focusedAt.
+    public var focusedClientExerciseId: String?
+    public var focusedAt: String?
     public var exercises: [SessionExerciseDto]
 
     public init(from session: WorkoutSessionDto, forceOverwrite: Bool = false) {
@@ -1013,8 +1035,27 @@ public struct SyncSessionPayloadDto: Codable, Sendable, Equatable, Hashable {
         self.version = session.version
         self.trainingGoalSnapshot = session.trainingGoalSnapshot
         self.forceOverwrite = forceOverwrite
+        self.focusedClientExerciseId = session.focusedClientExerciseId
+        self.focusedAt = session.focusedAt
         self.exercises = session.exercises
     }
+}
+
+/// `PUT /sessions/:clientSessionId/focus` body + response.
+public struct UpdateSessionFocusDto: Codable, Sendable, Equatable, Hashable {
+    public var clientExerciseId: String
+    public var focusedAt: String
+
+    public init(clientExerciseId: String, focusedAt: String) {
+        self.clientExerciseId = clientExerciseId
+        self.focusedAt = focusedAt
+    }
+}
+
+public struct SessionFocusResponseDto: Codable, Sendable, Equatable, Hashable {
+    public var focusedClientExerciseId: String?
+    public var focusedAt: String?
+    public var applied: Bool
 }
 
 public struct SyncSessionResponseDto: Codable, Sendable, Equatable, Hashable {

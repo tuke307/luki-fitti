@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Switch } from '@luki-fitti/ui/components/ui/switch';
 import { toast } from '@luki-fitti/ui/components/ui/sonner';
 import { useLocale } from '@/providers/i18n/locale-context';
+import { apiErrorMessage } from '@/lib/api';
 import type { SocialProfileDto } from '@luki-fitti/common/schemas';
 import { normalizeUsername } from '@luki-fitti/common/utils';
 import { socialApi } from '@/lib/social/social-api';
@@ -69,7 +70,7 @@ export function SocialOnboardingSheet({
       });
       if (res.success) onOpenChange(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '');
+      toast.error(apiErrorMessage(err, t.errors));
     } finally {
       setSaving(false);
     }
@@ -81,7 +82,7 @@ export function SocialOnboardingSheet({
       const res = await socialApi.uploadAvatar(jpeg);
       if (res.success) setAvatarUrl(res.data?.avatarUrl ?? avatarUrl);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : '');
+      toast.error(apiErrorMessage(err, t.errors));
     }
   };
 

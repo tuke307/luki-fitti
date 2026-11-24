@@ -16,7 +16,40 @@ public final class WatchWorkoutViewModel {
     public let healthCoordinator: HealthKitWorkoutCoordinator
     public let watchSyncCoordinator: WatchSyncCoordinator
 
-    public var currentExerciseIndex: Int = 0
+    /// The exercise the workout screen shows, kept in sync with the iPhone: it lives on the
+    /// session itself (newest focusedAt wins), so it also survives relaunches. Setting it is a
+    /// pure focus change — saved without a version bump, broadcast to the iPhone and sent to
+    /// the server when signed in.
+    public var currentExerciseIndex: Int {
+        get {
+            guard let session = store.activeSession else { return 0 }
+            return SessionCalculator.resolveFocusedExerciseIndex(
+                session.exercises,
+                rememberedClientExerciseId: session.focusedClientExerciseId
+            )
+        }
+        set {
+            guard let session = store.activeSession,
+                  session.exercises.indices.contains(newValue) else { return }
+            let focused = SessionCalculator.focusing(
+                session,
+                clientExerciseId: session.exercises[newValue].clientExerciseId
+            )
+            store.saveActiveSession(focused)
+            watchSyncCoordinator.broadcastActiveSessionSnapshot(focused)
+            if store.currentUser != nil, let focusedAt = focused.focusedAt {
+                Task {
+                    _ = try? await store.apiClient.updateSessionFocus(
+                        clientSessionId: focused.clientSessionId,
+                        UpdateSessionFocusDto(
+                            clientExerciseId: session.exercises[newValue].clientExerciseId,
+                            focusedAt: focusedAt
+                        )
+                    )
+                }
+            }
+        }
+    }
     public var activePageTab: Int = 2 // Defaults to Page 2 (Center) when a workout starts
     public var completedSummarySession: WorkoutSessionDto?
     /// Latest league snapshot pushed by the iPhone; nil while social is off or unloaded.
@@ -60,14 +93,6 @@ public final class WatchWorkoutViewModel {
                 lastAppliedTimestamps: &self.watchSyncCoordinator.lastAppliedTimestamps
             )
             self.store.saveActiveSession(merged)
-            let followed = SessionCalculator.followedExerciseIndex(
-                previous: active,
-                incoming: merged,
-                currentIndex: self.currentExerciseIndex
-            )
-            if followed != self.currentExerciseIndex {
-                self.currentExerciseIndex = followed
-            }
             self.scheduleRestEndHaptic(endsAt: merged.restTimerEndsAt)
         }
         self.watchSyncCoordinator.onCompletedSessionReceived = { [weak self] completed in
@@ -129,6 +154,82 @@ public final class WatchWorkoutViewModel {
             )
         )
         Task { await flushSyncQueue() }
+    }
+
+    /// The effort question shown right after a set is completed: which set, in which
+    /// exercise, so the rating lands on the right set even after the exercise advanced.
+    public struct WatchEffortPrompt: Identifiable, Equatable {
+        public var id: String { clientSetId }
+        public let clientExerciseId: String
+        public let clientSetId: String
+        public let exerciseName: String
+        /// 1-based position of the set within its exercise.
+        public let setNumber: Int
+        public let rpe: Double?
+    }
+
+    /// Shown as a full-screen overlay after each completed set; nil dismisses it again.
+    public var effortPrompt: WatchEffortPrompt?
+
+    /// Set by `completeFinalSetAndFinish`: once the effort question is dismissed the
+    /// workout finishes instead of returning to the set view.
+    @ObservationIgnored private var finishAfterEffortPrompt = false
+
+    /// True when the exercise on screen holds the only open set of the whole workout —
+    /// the primary button becomes "Finish Workout".
+    public var isFinalSet: Bool {
+        guard let session = store.activeSession else { return false }
+        return SessionCalculator.isFinalOpenSet(session: session, exerciseIndex: currentExerciseIndex)
+    }
+
+    /// Rates a completed set's effort by id — safe to call after `currentExerciseIndex`
+    /// has already advanced past the exercise the set belongs to.
+    public func setEffort(rpe: Double?, clientExerciseId: String, clientSetId: String) {
+        guard var session = store.activeSession,
+              let exIdx = session.exercises.firstIndex(where: { $0.clientExerciseId == clientExerciseId }),
+              let setIdx = session.exercises[exIdx].sets.firstIndex(where: { $0.clientSetId == clientSetId })
+        else { return }
+        var set = session.exercises[exIdx].sets[setIdx]
+        set.rpe = rpe
+        session.exercises[exIdx].sets[setIdx] = set
+        session.version += 1
+
+        let recalculated = SessionCalculator.recalculateSessionTotals(session)
+        store.saveActiveSession(recalculated)
+        store.enqueueSessionSync(recalculated)
+        watchSyncCoordinator.broadcastActiveSessionSnapshot(recalculated)
+        let saved = recalculated.exercises[exIdx].sets[setIdx]
+        // SessionMutationPacket can't carry "clear rpe" (nil = no change) — the snapshot
+        // broadcast above delivers the cleared value to the iPhone instead.
+        watchSyncCoordinator.broadcastSetMutation(
+            SessionMutationPacket(
+                clientSessionId: recalculated.clientSessionId,
+                clientExerciseId: recalculated.exercises[exIdx].clientExerciseId,
+                clientSetId: saved.clientSetId,
+                weight: saved.weight,
+                reps: saved.reps,
+                rpe: saved.rpe,
+                completed: saved.completed,
+                avgHeartRateBpm: saved.avgHeartRateBpm,
+                peakHeartRateBpm: saved.peakHeartRateBpm,
+                restEndHeartRateBpm: saved.restEndHeartRateBpm,
+                restTimerEndsAt: recalculated.restTimerEndsAt,
+                restTimerDurationSec: recalculated.restTimerDurationSec,
+                newVersion: recalculated.version
+            )
+        )
+        WKInterfaceDevice.current().play(.click)
+        dismissEffortPrompt()
+        Task { await flushSyncQueue() }
+    }
+
+    /// Dismisses the effort question; when the last set triggered it, the workout
+    /// finishes instead of returning to the set view.
+    public func dismissEffortPrompt() {
+        effortPrompt = nil
+        guard finishAfterEffortPrompt else { return }
+        finishAfterEffortPrompt = false
+        Task { await finishWorkout() }
     }
 
     /// Adds or removes rest time; at zero the rest ends.
@@ -239,25 +340,37 @@ public final class WatchWorkoutViewModel {
             }
             return
         }
-        if let current = store.activeSession,
-           current.clientSessionId == incoming.clientSessionId,
-           current.version > incoming.version {
-            return
-        }
         let previous = store.activeSession?.clientSessionId == incoming.clientSessionId
             ? store.activeSession
             : nil
-        store.saveActiveSession(incoming)
-        let followed = SessionCalculator.followedExerciseIndex(
-            previous: previous,
-            incoming: incoming,
-            currentIndex: currentExerciseIndex
-        )
-        if followed != currentExerciseIndex {
-            currentExerciseIndex = followed
+        var merged = incoming
+        if let previous {
+            if previous.version > incoming.version {
+                // Stale snapshot: session content stays, but a newer focus still applies.
+                let focusMerged = SessionCalculator.mergingFocus(into: previous, from: incoming)
+                if focusMerged != previous { store.saveActiveSession(focusMerged) }
+                return
+            }
+            merged = SessionCalculator.mergingFocus(into: incoming, from: previous)
         }
-        syncHealthSession(with: incoming, previousStatus: previous?.status)
-        scheduleRestEndHaptic(endsAt: incoming.restTimerEndsAt)
+        if incoming.focusedClientExerciseId == nil && incoming.focusedAt == nil {
+            // Older iPhone build: the snapshot carries no focus, so derive it the way the
+            // mirror always did (locally only — nothing to send back).
+            let followed = SessionCalculator.followedExerciseIndex(
+                previous: previous,
+                incoming: merged,
+                currentIndex: currentExerciseIndex
+            )
+            if followed != currentExerciseIndex, merged.exercises.indices.contains(followed) {
+                merged = SessionCalculator.focusing(
+                    merged,
+                    clientExerciseId: merged.exercises[followed].clientExerciseId
+                )
+            }
+        }
+        store.saveActiveSession(merged)
+        syncHealthSession(with: merged, previousStatus: previous?.status)
+        scheduleRestEndHaptic(endsAt: merged.restTimerEndsAt)
     }
 
     /// The iPhone finished the shared workout: drop the mirror (which lands the UI back on Home,
@@ -398,7 +511,7 @@ public final class WatchWorkoutViewModel {
     }
 
     public func startWorkout(from template: WorkoutTemplateDto) {
-        let session = SessionCalculator.createOfflineSessionFromTemplate(
+        var session = SessionCalculator.createOfflineSessionFromTemplate(
             template: template,
             catalog: store.catalog,
             userId: store.currentUser?.id ?? "local-user",
@@ -408,8 +521,10 @@ public final class WatchWorkoutViewModel {
             profileGoal: store.preferences.trainingGoal
         )
         completedSummarySession = nil
-        currentExerciseIndex = 0
         activePageTab = 2
+        if let first = session.exercises.first {
+            session = SessionCalculator.focusing(session, clientExerciseId: first.clientExerciseId)
+        }
         store.saveActiveSession(session)
         store.enqueueSessionSync(session)
         watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
@@ -421,7 +536,7 @@ public final class WatchWorkoutViewModel {
     }
 
     public func startStretchingWorkout(from routine: StretchingRoutineDto) {
-        let session = SessionCalculator.createOfflineSessionFromStretchingRoutine(
+        var session = SessionCalculator.createOfflineSessionFromStretchingRoutine(
             routine: routine,
             catalog: store.catalog,
             userId: store.currentUser?.id ?? "local-user",
@@ -429,8 +544,10 @@ public final class WatchWorkoutViewModel {
             sourceDevice: .APPLE_WATCH
         )
         completedSummarySession = nil
-        currentExerciseIndex = 0
         activePageTab = 2
+        if let first = session.exercises.first {
+            session = SessionCalculator.focusing(session, clientExerciseId: first.clientExerciseId)
+        }
         store.saveActiveSession(session)
         store.enqueueSessionSync(session)
         watchSyncCoordinator.broadcastActiveSessionSnapshot(session)
@@ -463,6 +580,22 @@ public final class WatchWorkoutViewModel {
             return
         }
 
+        completeCurrentSet(startRest: true)
+    }
+
+    /// Completes the workout's last open set without starting a rest, then goes straight
+    /// to the summary — after answering the effort question when effort tracking is on.
+    public func completeFinalSetAndFinish() {
+        guard store.activeSession != nil else { return }
+        finishAfterEffortPrompt = store.preferences.effortTrackingEnabled
+        completeCurrentSet(startRest: false)
+        if !finishAfterEffortPrompt {
+            Task { await finishWorkout() }
+        }
+    }
+
+    private func completeCurrentSet(startRest: Bool) {
+        guard var session = store.activeSession else { return }
         let exIdx = min(max(0, currentExerciseIndex), max(0, session.exercises.count - 1))
         guard !session.exercises.isEmpty else { return }
         guard let nextSetIdx = session.exercises[exIdx].sets.firstIndex(where: { !$0.completed }) else {
@@ -484,9 +617,14 @@ public final class WatchWorkoutViewModel {
         let allDone = session.exercises[exIdx].sets.allSatisfy(\.completed)
         session.exercises[exIdx].status = allDone ? .COMPLETED : .IN_PROGRESS
 
+        // Focus follows the set just completed — and the exercise the Watch advances to.
+        // Stamp it on the copy being saved (not the setter, whose save would be overwritten).
+        var focusIdx = exIdx
         let restSec = session.exercises[exIdx].restSeconds
+        // No rest timer when nothing is left to do — the workout is about to finish.
+        let anyOpenSets = session.exercises.contains { $0.sets.contains { !$0.completed } }
         WKInterfaceDevice.current().play(.success)
-        if restSec > 0 {
+        if startRest && anyOpenSets && restSec > 0 {
             session.restTimerDurationSec = restSec
             session.restTimerEndsAt = ISO8601DateFormatter().string(from: Date().addingTimeInterval(TimeInterval(restSec)))
             session.restTimerPausedRemSec = nil
@@ -497,14 +635,20 @@ public final class WatchWorkoutViewModel {
             session.restTimerDurationSec = nil
             session.restTimerPausedRemSec = nil
             if currentExerciseIndex + 1 < session.exercises.count {
-                currentExerciseIndex += 1
+                focusIdx = currentExerciseIndex + 1
             }
         }
 
         if allDone && restSec > 0 && currentExerciseIndex + 1 < session.exercises.count {
-            currentExerciseIndex += 1
+            focusIdx = currentExerciseIndex + 1
         }
 
+        if session.exercises.indices.contains(focusIdx) {
+            session = SessionCalculator.focusing(
+                session,
+                clientExerciseId: session.exercises[focusIdx].clientExerciseId
+            )
+        }
         session.version += 1
         let recalculated = SessionCalculator.recalculateSessionTotals(session)
         store.saveActiveSession(recalculated)
@@ -527,6 +671,19 @@ public final class WatchWorkoutViewModel {
             newVersion: recalculated.version
         )
         watchSyncCoordinator.broadcastSetMutation(packet)
+
+        // Ask for effort while the set is fresh — the exercise index may already have
+        // advanced, so the prompt carries ids instead of a position. Skipped entirely
+        // when the user turned effort rating off in settings.
+        if store.preferences.effortTrackingEnabled {
+            effortPrompt = WatchEffortPrompt(
+                clientExerciseId: session.exercises[exIdx].clientExerciseId,
+                clientSetId: set.clientSetId,
+                exerciseName: session.exercises[exIdx].exerciseNameSnapshot,
+                setNumber: nextSetIdx + 1,
+                rpe: set.rpe
+            )
+        }
 
         Task { await flushSyncQueue() }
     }
@@ -604,6 +761,9 @@ public final class WatchWorkoutViewModel {
         let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("LukiFittiWatchUITest-\(UUID().uuidString)", isDirectory: true)
         let store = OfflineStore(storageDirectory: tempDir, localDevice: .APPLE_WATCH)
+        if args.contains("--uitesting-effort-off") {
+            store.preferences.effortTrackingEnabled = false
+        }
         let vm = WatchWorkoutViewModel(store: store)
 
         if args.contains("--uitesting-seed-active-session") || args.contains("--uitesting-marketing"),
@@ -695,6 +855,16 @@ public struct WatchRootContainerView: View {
                 WatchHomeView(viewModel: viewModel)
             }
         }
+        // A .sheet from the paged TabView / active workout view never presented in
+        // testing, so the effort question is a full-screen overlay at the root instead.
+        .overlay {
+            if let prompt = viewModel.effortPrompt {
+                WatchEffortPromptView(viewModel: viewModel, prompt: prompt)
+                    .background(Color.black)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: viewModel.effortPrompt != nil)
         .onAppear {
             viewModel.syncNow(silent: true)
         }

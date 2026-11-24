@@ -30,6 +30,7 @@ const DEFAULT_PREFERENCES = {
   restTimerSound: true,
   notificationsEnabled: true,
   exerciseSuggestionsEnabled: true,
+  effortTrackingEnabled: true,
   weeklyGoalSessions: 4,
 } satisfies Partial<UserPreferencesDto>;
 

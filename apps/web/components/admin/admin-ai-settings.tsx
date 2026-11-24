@@ -11,7 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { toast } from '@luki-fitti/ui/components/ui/sonner';
 import { FEATURE_GRANT_LABELS, FeatureGrant } from '@luki-fitti/common/enums';
 import { UpdateAiSettingsSchema, type AiSettingsDto } from '@luki-fitti/common/schemas';
-import { api } from '@/lib/api';
+import { api, apiErrorMessage } from '@/lib/api';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { AdminState } from './admin-shell';
 import { useAdminResource } from './use-admin-resource';
@@ -118,7 +118,7 @@ function AiSettingsForm({
       if (res.data) onSaved(res.data);
       toast.success(t.admin.settingsSaved);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t.admin.error);
+      toast.error(apiErrorMessage(err, t.errors));
     } finally {
       setSaving(false);
     }
@@ -377,7 +377,7 @@ function AiUsage() {
             <ul className="divide-border/60 divide-y text-[0.9375rem]">
               {data.bySkill.map((s) => (
                 <li key={s.skill} className="flex justify-between gap-3 py-2.5">
-                  <span>{s.skill}</span>
+                  <span>{(t.aiUsage.skills as Record<string, string>)[s.skill] ?? s.skill}</span>
                   <span className="text-muted-foreground tabular-nums">
                     {number.format(s.runs)} · {usd.format(s.costUsd)}
                   </span>

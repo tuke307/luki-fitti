@@ -6,7 +6,7 @@ import { REFRESH_TOKEN_REUSE_GRACE_MS } from '@/config/env.config';
 import type { PrismaService } from '../database/prisma.service';
 import { ForbiddenException } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { DeviceSessionSchema } from '@luki-fitti/common/schemas';
+import { DeviceSessionSchema, type UserDto } from '@luki-fitti/common/schemas';
 import { AuthController } from './auth.controller';
 import type { AuthService } from './auth.service';
 import { generateAccessToken, verifyAccessToken } from '@/utils/jwt.util';
@@ -222,7 +222,7 @@ describe('AuthController sessions', () => {
       createReq({ headers: { 'x-device-label': label } }),
       createRes().res,
     );
-    return result.tokens!;
+    return (result as UserDto).tokens!;
   }
 
   const sidOf = (token: string) => verifyAccessToken(token).sid!;
@@ -346,6 +346,21 @@ describe('AuthController sessions', () => {
     const row = db.rows().find((r) => r.token === hash(result.tokens.refreshToken));
     assert.equal(row?.deviceLabel, 'watchos');
     assert.equal(row?.familyId, sidOf(result.tokens.accessToken));
+  });
+
+  it('login returns mfaRequired without a session when the user has 2FA enabled', async () => {
+    const { controller, db } = createController();
+    (controller as unknown as { twoFactor: unknown }).twoFactor = {
+      isEnabled: async () => true,
+    };
+    const result = await controller.login(
+      { email: user.email, password: 'x' },
+      createReq(),
+      createRes().res,
+    );
+    assert.equal((result as { mfaRequired?: boolean }).mfaRequired, true);
+    assert.ok((result as { mfaToken?: string }).mfaToken);
+    assert.equal(db.rows().length, 0);
   });
 
   it('validates device-session labels', () => {

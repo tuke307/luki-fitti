@@ -97,6 +97,20 @@ yarn dev
 | `yarn db:migrate -- <name>`          | Create and apply a new Prisma migration                                           |
 | `yarn --cwd apps/api openapi:export` | Export Swagger OpenAPI spec to `apps/apple`                                       |
 
+### Storage encryption & backfill
+
+Stored objects (photos, avatars, reports) are encrypted with AES-256-GCM in the API before
+upload to SeaweedFS, so nobody with access to the storage server can view them. Rollout:
+
+1. Ensure `AI_KEY_ENCRYPTION_KEY` is set — uploads are refused without it.
+2. Deploy the API.
+3. Encrypt existing objects: `yarn --cwd apps/api storage:encrypt -- --dry-run` first, then the
+   real run. In the production container:
+   `node dist/src/scripts/encrypt-storage-objects.js`.
+4. Rerun the script after a key rotation (`AI_KEY_ENCRYPTION_KEY_PREVIOUS` +
+   `AI_KEY_ENCRYPTION_KEY_VERSION`) to re-encrypt stale objects. It is idempotent and logs
+   only counts and object keys.
+
 Releasing: see [docs/release.md](docs/release.md).
 
 ---
@@ -178,7 +192,7 @@ reach the [App Store](https://apps.apple.com/app/lukifitti/id6831508360).
 
 If you want to get closer to the project, for example to help shape the roadmap, review pull
 requests, or work on features over a longer period, you can be added as a contributor. Just write
-an email to [tonymeissner70@gmail.com](mailto:tonymeissner70@gmail.com) and tell me a bit about
+an email to [apps@tony-luke.de](mailto:apps@tony-luke.de) and tell me a bit about
 yourself and what you would like to work on.
 
 As a contributor you also get access to:

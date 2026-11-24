@@ -174,9 +174,9 @@ struct AIKeySettingsPage: View {
 
     private func errorText(_ error: Error) -> String {
         switch error as? APIClientError {
-        case .serverError(400, _): return tr("OpenRouter rejected this key. Check it and try again.")
-        case .serverError(429, _): return tr("Too many attempts. Wait a minute and try again.")
-        case .serverError(503, _): return tr("Saving keys isn’t available on this server right now.")
+        case .serverError(400, _, _): return tr("OpenRouter rejected this key. Check it and try again.")
+        case .serverError(429, _, _): return tr("Too many attempts. Wait a minute and try again.")
+        case .serverError(503, _, _): return tr("Saving keys isn’t available on this server right now.")
         default: return tr("Couldn’t save the key. Try again.")
         }
     }

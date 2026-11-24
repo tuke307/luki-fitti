@@ -35,7 +35,7 @@ import {
   toDisplayAmount,
   type MealAmountDisplayUnit,
 } from '@luki-fitti/common/utils/client';
-import { api } from '@/lib/api';
+import { api, apiErrorMessage } from '@/lib/api';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { mealTypeForTime, newClientId } from '@/lib/nutrition/nutrition-day';
 import { MobileSheet } from '../mobile-sheet';
@@ -412,7 +412,7 @@ function MealEditorBody({
       setUnsavedEstimate(false);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t.admin.error);
+      setError(apiErrorMessage(err, t.errors));
     } finally {
       setSaving(false);
     }

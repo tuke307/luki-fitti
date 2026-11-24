@@ -18,5 +18,5 @@ export async function submitLoginPageForm(
   await expect(page.locator('#email')).toBeVisible({ timeout: 10_000 });
   await page.locator('#email').fill(email);
   await page.locator('#password').fill(password);
-  await page.getByRole('button', { name: /Sign In|Anmelden/i }).click();
+  await page.getByRole('button', { name: /^Sign In$|^Anmelden$/i }).click();
 }

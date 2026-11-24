@@ -41,6 +41,7 @@ import type {
   WorkoutTemplateDto,
 } from '@luki-fitti/common/schemas';
 import type { WorkoutOutboxOp } from './workout-outbox';
+import { secureRandomUUID } from '../secure-id';
 
 export type SyncState =
   'SYNCED' | 'SAVED_LOCALLY' | 'SYNCING' | 'CONFLICT' | 'AUTH_EXPIRED' | 'OFFLINE';
@@ -479,6 +480,8 @@ export function toSyncPayload(
     heartRateSamples: session.heartRateSamples ?? null,
     version: session.version,
     forceOverwrite,
+    focusedClientExerciseId: session.focusedClientExerciseId ?? null,
+    focusedAt: session.focusedAt ?? null,
     exercises: session.exercises.map((ex, idx) => ({
       id: ex.id,
       clientExerciseId: ex.clientExerciseId,
@@ -653,10 +656,7 @@ export async function clearAllLocalData(): Promise<void> {
 // Pure Offline Session Builders & Mutations
 // ─────────────────────────────────────────────────────────────────────────────
 function generateId(prefix = 'loc'): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return `${prefix}-${crypto.randomUUID()}`;
-  }
-  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+  return `${prefix}-${secureRandomUUID()}`;
 }
 
 export function createOfflineSessionFromTemplate(

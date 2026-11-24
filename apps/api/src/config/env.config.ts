@@ -68,6 +68,42 @@ export const DATABASE_URL =
 
 export const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 export const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || undefined;
+
+const csv = (value: string | undefined) =>
+  (value ?? '')
+    .split(',')
+    .map((v) => v.trim())
+    .filter(Boolean);
+
+// WebAuthn: the RP id must be a registrable suffix of the app host (passkeys are bound to it).
+export const WEBAUTHN_RP_ID = process.env.WEBAUTHN_RP_ID || new URL(FRONTEND_URL).hostname;
+export const WEBAUTHN_RP_NAME = process.env.WEBAUTHN_RP_NAME || 'LukiFitti';
+export const WEBAUTHN_ORIGINS = csv(process.env.WEBAUTHN_ORIGINS).length
+  ? csv(process.env.WEBAUTHN_ORIGINS)
+  : [new URL(FRONTEND_URL).origin];
+
+// OAuth client ids accepted as the `aud` of Google/Apple ID tokens (web + iOS ids, comma separated).
+export const GOOGLE_CLIENT_IDS = csv(process.env.GOOGLE_CLIENT_IDS);
+export const APPLE_CLIENT_IDS = csv(process.env.APPLE_CLIENT_IDS);
+
+/** AppSettings read cache. e2e sets 0 so flags the tests write straight to the DB apply at once. */
+const appSettingsCacheTtl = Number(process.env.APP_SETTINGS_CACHE_TTL_MS ?? 10_000);
+export const APP_SETTINGS_CACHE_TTL_MS =
+  Number.isFinite(appSettingsCacheTtl) && appSettingsCacheTtl >= 0 ? appSettingsCacheTtl : 10_000;
+
+export const MFA_TOKEN_EXPIRY_MS = Number(process.env.MFA_TOKEN_EXPIRY_MS) || 5 * 60 * 1000;
+
+let _twoFactorKey: string | undefined;
+/** Encrypts TOTP secrets at rest and keys the recovery-code hashes; same rules as the JWT secrets. */
+export function getTwoFactorKey(): string {
+  if (_twoFactorKey === undefined) {
+    _twoFactorKey = resolveJwtSecret(
+      process.env.TWO_FACTOR_ENCRYPTION_KEY,
+      'TWO_FACTOR_ENCRYPTION_KEY',
+    );
+  }
+  return _twoFactorKey;
+}
 export const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 
 // Email & BullMQ Configuration
@@ -76,7 +112,8 @@ export const SMTP_PORT = Number(process.env.SMTP_PORT) || 1025;
 export const SMTP_USER = process.env.SMTP_USER || '';
 export const SMTP_PASS = process.env.SMTP_PASS || '';
 export const SMTP_REJECT_UNAUTHORIZED = process.env.SMTP_REJECT_UNAUTHORIZED !== 'false';
-export const EMAIL_FROM = process.env.EMAIL_FROM || 'noreply@lukifitti.app';
+export const EMAIL_FROM = process.env.EMAIL_FROM || 'apps@tony-luke.de';
+export const EMAIL_REPLY_TO = process.env.EMAIL_REPLY_TO || undefined;
 export const EMAIL_MAX_ATTEMPTS = Number(process.env.EMAIL_MAX_ATTEMPTS) || 3;
 export const EMAIL_RETRY_DELAY_MS = Number(process.env.EMAIL_RETRY_DELAY_MS) || 5000;
 
@@ -121,6 +158,9 @@ export const UMAMI_ALLOWED_HOSTNAMES = (
 // AI (OpenRouter, OpenAI-compatible). There is no global provider key: every user brings their
 // own key (or gets one assigned by an admin). Keys are stored AES-256-GCM encrypted with this
 // 32-byte master key (base64 or hex; generate with `openssl rand -base64 32`).
+// The same master key also encrypts stored objects (photos, avatars, reports) before they are
+// uploaded to SeaweedFS — a storage-specific subkey is derived via HKDF, the raw key is never
+// used directly. Without it, photo/avatar uploads are refused rather than stored unencrypted.
 // TODO: Configure AI_KEY_ENCRYPTION_KEY (and optionally AI_KEY_ENCRYPTION_KEY_PREVIOUS during a
 // rotation) in your secret store. Without it, keys can't be stored and AI features stay off.
 function parseEncryptionKey(envValue: string | undefined, name: string): Buffer | null {
@@ -216,5 +256,4 @@ export const APNS_TEAM_ID = (process.env.APNS_TEAM_ID ?? '').trim();
 export const APNS_BUNDLE_ID = (process.env.APNS_BUNDLE_ID ?? '').trim();
 export const VAPID_PUBLIC_KEY = (process.env.VAPID_PUBLIC_KEY ?? '').trim();
 export const VAPID_PRIVATE_KEY = (process.env.VAPID_PRIVATE_KEY ?? '').trim();
-export const VAPID_SUBJECT =
-  (process.env.VAPID_SUBJECT ?? '').trim() || 'mailto:noreply@lukifitti.app';
+export const VAPID_SUBJECT = (process.env.VAPID_SUBJECT ?? '').trim() || 'mailto:apps@tony-luke.de';

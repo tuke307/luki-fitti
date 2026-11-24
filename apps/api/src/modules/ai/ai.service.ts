@@ -163,7 +163,8 @@ export class AiService {
     dto: MealAnalysisRequestDto,
     files: Array<{ buffer: Buffer }>,
   ): Promise<MealAnalysisResponseDto> {
-    if (files.length === 0) throw new BadRequestException('Add at least one photo');
+    if (!Array.isArray(files) || files.length === 0)
+      throw new BadRequestException('Add at least one photo');
     if (files.length > MEAL_PHOTO_MAX_COUNT) {
       throw new BadRequestException(`At most ${MEAL_PHOTO_MAX_COUNT} photos per meal`);
     }

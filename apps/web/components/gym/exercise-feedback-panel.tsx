@@ -8,6 +8,7 @@ import { toast } from '@luki-fitti/ui/components/ui/sonner';
 import { api } from '@/lib/api';
 import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
+import { apiErrorMessage } from '@/lib/api';
 
 const VERDICTS = Object.values(ExerciseFeedbackVerdict);
 let cache: Map<string, ExerciseFeedbackDto> | null = null;
@@ -51,7 +52,7 @@ export function ExerciseFeedbackPanel({ exerciseId }: { exerciseId: string }) {
       }
       toast.success(t.feedback.saved);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t.aiErrors.unavailable);
+      toast.error(apiErrorMessage(err, t.errors));
     } finally {
       setBusy(false);
     }

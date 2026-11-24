@@ -7,7 +7,7 @@ final class FeedbackMailTests: XCTestCase {
             FeedbackMail.featureRequestURL(locale: "en", appVersion: "1.0.0 (1)", os: "iOS 26.1")
         )
         let s = url.absoluteString
-        XCTAssertTrue(s.hasPrefix("mailto:tonymeissner70@gmail.com?"))
+        XCTAssertTrue(s.hasPrefix("mailto:apps@tony-luke.de?"))
         XCTAssertTrue(s.contains("subject=LukiFitti%20%E2%80%93%20Feature%20request"))
         XCTAssertFalse(s.contains("+"))
         XCTAssertTrue(s.contains("What%20would%20you%20like%3F"))

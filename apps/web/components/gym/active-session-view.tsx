@@ -144,6 +144,7 @@ export function ActiveSessionView({
   const [guideFor, setGuideFor] = useState<string | null>(null);
 
   const suggestionsEnabled = user?.preferences?.exerciseSuggestionsEnabled ?? true;
+  const effortEnabled = user?.preferences?.effortTrackingEnabled ?? true;
 
   useEffect(() => {
     const id = window.setInterval(() => setNowMs(Date.now()), 500);
@@ -715,6 +716,7 @@ export function ActiveSessionView({
               setIndex={sIdx}
               badgeLabel={labels[sIdx] ?? String(sIdx + 1)}
               suggestion={suggestions[sIdx] ?? null}
+              effortEnabled={effortEnabled}
             />
           ))}
         </div>
@@ -856,6 +858,7 @@ export function ActiveSessionView({
                       setIndex={r}
                       badgeLabel={labels[r] ?? String(r + 1)}
                       suggestion={suggestions[r] ?? null}
+                      effortEnabled={effortEnabled}
                       contextLabel={contextLabel}
                       testId={`superset-set-row-${letter}${r + 1}`}
                     />

@@ -8,6 +8,7 @@ final class WatchSummaryAndStretchingUITests: XCTestCase {
         let ringButton = app.buttons["watch.execution.ringButton"]
         XCTAssertTrue(ringButton.waitForExistence(timeout: 10))
         ringButton.tap()
+        XCTAssertTrue(WatchUITestHelpers.dismissEffortPrompt(in: app))
 
         // Swipe right to Page 1 (Action Grid) and tap Finish
         app.swipeRight()

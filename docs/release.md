@@ -14,17 +14,26 @@ flowchart TD
   Stacked PRs that target another `feat/**`, `fix/**` or `release/**` branch run the same CI
   (lint, tests, builds, e2e) as PRs into `develop`.
 - **Release**: a release PR `develop` → `main` (merge commit, not squash) carries the version
-  bump. CI's `version` job requires the version to be higher than the newest `v*` tag and, for
-  minor and major releases, marketing screenshots generated for that `x.y`.
+  bump. CI's `version` job requires the version to be higher than the newest `v*` tag. For
+  minor and major releases it warns (without failing) when the marketing screenshots weren't
+  generated for that `x.y`.
 - **Tag**: on every push to `main`, `.github/workflows/tag.yaml` creates the annotated tag
   `v<version>` (e.g. `v1.0.1`). The tag alone deploys nothing — GITHUB_TOKEN pushes trigger no
   other workflows.
 - **Deploy**: publishing a GitHub release from the tag (Releases → Draft new release → choose
   the existing tag → "Generate release notes" → Publish) starts `production.yaml` (web, API,
-  email worker, db-migrate images → Coolify) and `app-store.yaml` (archive + upload to App
-  Store Connect). Database migrations run in the `luki-fitti-db-migrate` container before the
-  API starts. `workflow_dispatch` runs of either workflow work the same way when started from
-  a tag — that is how you redeploy an old version: run `production.yaml` against the old tag.
+  email worker, db-migrate, mcp-server images → Coolify) and `app-store.yaml` (archive +
+  upload to App Store Connect). The images are deployed by digest: `compose.yml` pins each
+  `image:` to `@sha256:…` and `production.yaml` writes the five `LUKI_FITTI_*_DIGEST` values
+  as Coolify application env vars via the API, then triggers the deploy and waits for it to
+  finish. Required secrets: `COOLIFY_WEBHOOK` (the app's deploy webhook,
+  `https://<host>/api/v1/deploy?uuid=<app-uuid>`; host and UUID are read from it) and
+  `COOLIFY_TOKEN` (token abilities: `write`, `deploy`, `read`). Coolify's own "Auto
+  Deploy" on push must stay off — deploys only come from this workflow. Database migrations
+  run in the `luki-fitti-db-migrate` container before the API starts. `workflow_dispatch`
+  runs of either workflow work the same way when started from a tag — that is how you roll
+  back: run `production.yaml` against an old tag, which rebuilds that tag's images and pins
+  their digests.
 - **TestFlight builds between releases**: `app-store.yaml` can also be run by hand from
   `develop` (`gh workflow run app-store.yaml --ref develop`) to push the next unreleased
   version to TestFlight.

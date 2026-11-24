@@ -14,6 +14,7 @@ import {
   type MacroValues,
   type WeighIn,
 } from '@luki-fitti/common/utils/client';
+import { secureRandomUUID } from '../secure-id';
 
 /** Local calendar day key (YYYY-MM-DD) in the device time zone. */
 export function dayKey(date: Date | string | number): string {
@@ -319,7 +320,5 @@ export function mealTypeForTime(date: Date): MealType {
 }
 
 export function newClientId(): string {
-  return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-    ? `meal-${crypto.randomUUID()}`
-    : `meal-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  return `meal-${secureRandomUUID()}`;
 }
