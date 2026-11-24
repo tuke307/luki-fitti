@@ -40,8 +40,8 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
             <h2>Verantwortlicher</h2>
             <p>
               Tony Meißner, E-Mail:{' '}
-              <a href="mailto:tonymeissner70@gmail.com" className="text-primary underline">
-                tonymeissner70@gmail.com
+              <a href="mailto:apps@tony-luke.de" className="text-primary underline">
+                apps@tony-luke.de
               </a>
             </p>
           </section>
@@ -120,8 +120,8 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
             <h2>Controller</h2>
             <p>
               Tony Meißner, email:{' '}
-              <a href="mailto:tonymeissner70@gmail.com" className="text-primary underline">
-                tonymeissner70@gmail.com
+              <a href="mailto:apps@tony-luke.de" className="text-primary underline">
+                apps@tony-luke.de
               </a>
             </p>
           </section>

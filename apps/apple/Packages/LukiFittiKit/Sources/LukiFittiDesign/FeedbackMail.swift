@@ -2,7 +2,7 @@ import Foundation
 
 /// "Request a feature" mail link — same template as `buildFeatureRequestMailto` on the web.
 public enum FeedbackMail {
-    public static let feedbackEmail = "tonymeissner70@gmail.com"
+    public static let feedbackEmail = "apps@tony-luke.de"
 
     public static func featureRequestURL(locale: String, appVersion: String, os: String? = nil) -> URL? {
         let isGerman = locale.hasPrefix("de")

@@ -4,4 +4,4 @@ export const SMTP_HOST = process.env.SMTP_HOST || 'localhost';
 export const SMTP_PORT = Number(process.env.SMTP_PORT) || 1025;
 export const SMTP_USER = process.env.SMTP_USER;
 export const SMTP_PASS = process.env.SMTP_PASS;
-export const EMAIL_FROM = process.env.EMAIL_FROM || 'noreply@lukifitti.app';
+export const EMAIL_FROM = process.env.EMAIL_FROM || 'apps@tony-luke.de';
