@@ -88,14 +88,21 @@ export default function LoginForm({
     const container = googleButtonRef.current;
     if (!googleClientId || !container) return;
     googleNonceRef.current = generateOAuthNonce();
-    renderGoogleButton(container, googleClientId, googleNonceRef.current, (response) => {
-      void loginWithOAuth('google', {
-        idToken: response.credential,
-        nonce: googleNonceRef.current,
-      }).then((result) => {
-        if (result === 'ok') router.push(nextPath());
-      });
-    }).catch(() => {
+    renderGoogleButton(
+      container,
+      googleClientId,
+      googleNonceRef.current,
+      (response) => {
+        void loginWithOAuth('google', {
+          idToken: response.credential,
+          nonce: googleNonceRef.current,
+        }).then((result) => {
+          if (result === 'ok') router.push(nextPath());
+        });
+      },
+      // Fill the card on small phones; GIS only accepts 200–400px.
+      { width: Math.min(400, Math.max(200, container.clientWidth)), locale },
+    ).catch(() => {
       // GIS unavailable (offline/ad-blocker) — the password form still works.
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
