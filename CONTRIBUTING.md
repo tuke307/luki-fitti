@@ -192,7 +192,7 @@ reach the [App Store](https://apps.apple.com/app/lukifitti/id6831508360).
 
 If you want to get closer to the project, for example to help shape the roadmap, review pull
 requests, or work on features over a longer period, you can be added as a contributor. Just write
-an email to [tonymeissner70@gmail.com](mailto:tonymeissner70@gmail.com) and tell me a bit about
+an email to [apps@tony-luke.de](mailto:apps@tony-luke.de) and tell me a bit about
 yourself and what you would like to work on.
 
 As a contributor you also get access to:

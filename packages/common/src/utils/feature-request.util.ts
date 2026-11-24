@@ -1,5 +1,5 @@
 /** Where feature request emails go. */
-export const FEEDBACK_EMAIL = 'tonymeissner70@gmail.com';
+export const FEEDBACK_EMAIL = 'apps@tony-luke.de';
 
 const SUBJECTS = { en: 'LukiFitti – Feature request', de: 'LukiFitti – Feature-Wunsch' } as const;
 const BODIES = {

@@ -112,7 +112,7 @@ export const SMTP_PORT = Number(process.env.SMTP_PORT) || 1025;
 export const SMTP_USER = process.env.SMTP_USER || '';
 export const SMTP_PASS = process.env.SMTP_PASS || '';
 export const SMTP_REJECT_UNAUTHORIZED = process.env.SMTP_REJECT_UNAUTHORIZED !== 'false';
-export const EMAIL_FROM = process.env.EMAIL_FROM || 'noreply@lukifitti.app';
+export const EMAIL_FROM = process.env.EMAIL_FROM || 'apps@tony-luke.de';
 export const EMAIL_REPLY_TO = process.env.EMAIL_REPLY_TO || undefined;
 export const EMAIL_MAX_ATTEMPTS = Number(process.env.EMAIL_MAX_ATTEMPTS) || 3;
 export const EMAIL_RETRY_DELAY_MS = Number(process.env.EMAIL_RETRY_DELAY_MS) || 5000;
@@ -256,5 +256,4 @@ export const APNS_TEAM_ID = (process.env.APNS_TEAM_ID ?? '').trim();
 export const APNS_BUNDLE_ID = (process.env.APNS_BUNDLE_ID ?? '').trim();
 export const VAPID_PUBLIC_KEY = (process.env.VAPID_PUBLIC_KEY ?? '').trim();
 export const VAPID_PRIVATE_KEY = (process.env.VAPID_PRIVATE_KEY ?? '').trim();
-export const VAPID_SUBJECT =
-  (process.env.VAPID_SUBJECT ?? '').trim() || 'mailto:noreply@lukifitti.app';
+export const VAPID_SUBJECT = (process.env.VAPID_SUBJECT ?? '').trim() || 'mailto:apps@tony-luke.de';
