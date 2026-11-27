@@ -1,17 +1,9 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import {
-  Apple,
-  Dumbbell,
-  Fingerprint,
-  LogIn,
-  MailCheck,
-  ShieldCheck,
-  UserPlus,
-} from 'lucide-react';
+import { Dumbbell, LogIn, MailCheck, ShieldCheck, UserPlus } from 'lucide-react';
 import { Button } from '@luki-fitti/ui/components/ui/button';
 import { Card } from '@luki-fitti/ui/components/ui/card';
 import { Input } from '@luki-fitti/ui/components/ui/input';
@@ -21,12 +13,7 @@ import { useAuth } from '@/providers/auth/auth-context';
 import { useLocale } from '@/providers/i18n/locale-context';
 import { postAuthPath } from '@/lib/social/pending-invite';
 import { apiErrorMessage } from '@/lib/api';
-import {
-  appleUserName,
-  generateOAuthNonce,
-  renderGoogleButton,
-  signInWithApple,
-} from '@/lib/auth/oauth-providers';
+import ProviderSignInButtons from '@/components/auth/provider-sign-in-buttons';
 
 /** Only same-origin paths are accepted, so `?redirect=` can't send users to another site. */
 function safeRedirect(target: string | null): string {
@@ -58,8 +45,6 @@ export default function LoginForm({
     continueOfflineLocal,
     verifyMfa,
     cancelMfa,
-    loginWithOAuth,
-    loginWithPasskey,
     mfaPending,
     error,
     infoMessage,
@@ -73,40 +58,6 @@ export default function LoginForm({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mfaCode, setMfaCode] = useState('');
-  const webAuthnSupported = useSyncExternalStore(
-    () => () => {},
-    () => typeof window.PublicKeyCredential !== 'undefined',
-    () => false,
-  );
-  const googleButtonRef = useRef<HTMLDivElement>(null);
-  const googleNonceRef = useRef('');
-
-  const hasProviderButtons = Boolean(googleClientId || appleServicesId) || webAuthnSupported;
-
-  // Render the official Google button once (a fresh nonce per render binds the ID token).
-  useEffect(() => {
-    const container = googleButtonRef.current;
-    if (!googleClientId || !container) return;
-    googleNonceRef.current = generateOAuthNonce();
-    renderGoogleButton(
-      container,
-      googleClientId,
-      googleNonceRef.current,
-      (response) => {
-        void loginWithOAuth('google', {
-          idToken: response.credential,
-          nonce: googleNonceRef.current,
-        }).then((result) => {
-          if (result === 'ok') router.push(nextPath());
-        });
-      },
-      // Fill the card on small phones; GIS only accepts 200–400px.
-      { width: Math.min(400, Math.max(200, container.clientWidth)), locale },
-    ).catch(() => {
-      // GIS unavailable (offline/ad-blocker) — the password form still works.
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [googleClientId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,32 +71,6 @@ export default function LoginForm({
       router.push(nextPath());
     }
     // 'mfa' → the MFA step below replaces the form (mfaPending from context).
-  };
-
-  const handleApple = async () => {
-    if (!appleServicesId || !appleRedirectUri) return;
-    try {
-      const nonce = generateOAuthNonce();
-      const response = await signInWithApple({
-        clientId: appleServicesId,
-        redirectURI: appleRedirectUri,
-        nonce,
-      });
-      const result = await loginWithOAuth('apple', {
-        idToken: response.authorization.id_token,
-        nonce,
-        name: appleUserName(response),
-        authorizationCode: response.authorization.code,
-      });
-      if (result === 'ok') router.push(nextPath());
-    } catch {
-      // Popup dismissed or Apple JS unavailable — no error worth showing.
-    }
-  };
-
-  const handlePasskey = async () => {
-    const ok = await loginWithPasskey();
-    if (ok) router.push(nextPath());
   };
 
   const handleMfaSubmit = async (e: React.FormEvent) => {
@@ -332,47 +257,12 @@ export default function LoginForm({
               </Button>
             </form>
 
-            {hasProviderButtons && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="bg-border h-px flex-1" />
-                  <span className="text-muted-foreground text-xs">{t.auth.orDivider}</span>
-                  <div className="bg-border h-px flex-1" />
-                </div>
-
-                {googleClientId && (
-                  <div
-                    ref={googleButtonRef}
-                    aria-label={t.auth.continueWithGoogle}
-                    className="flex justify-center"
-                  />
-                )}
-
-                {appleServicesId && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={loading}
-                    onClick={() => void handleApple()}
-                    className="w-full"
-                  >
-                    <Apple className="h-4 w-4" /> {t.auth.continueWithApple}
-                  </Button>
-                )}
-
-                {webAuthnSupported && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={loading}
-                    onClick={() => void handlePasskey()}
-                    className="w-full"
-                  >
-                    <Fingerprint className="h-4 w-4" /> {t.auth.passkeySignInBtn}
-                  </Button>
-                )}
-              </div>
-            )}
+            <ProviderSignInButtons
+              googleClientId={googleClientId}
+              appleServicesId={appleServicesId}
+              appleRedirectUri={appleRedirectUri}
+              onResult={(r) => r === 'ok' && router.push(nextPath())}
+            />
           </>
         )}
 

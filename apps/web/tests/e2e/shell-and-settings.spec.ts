@@ -128,6 +128,40 @@ test.describe('PWA Shell, Navigation & Preferences', () => {
     }
   });
 
+  test('shows provider sign-in buttons in the guest block when configured', async ({ page }) => {
+    await page.route('**/auth-providers', (route) =>
+      route.fulfill({
+        json: {
+          googleClientId: 'FAKE-GOOGLE-CLIENT-ID.apps.googleusercontent.com',
+          appleServicesId: 'com.example.fake.services',
+          appleRedirectUri: 'http://localhost:3000/login',
+        },
+      }),
+    );
+    // Deterministic: the GIS script must not load in tests.
+    await page.route('**/accounts.google.com/**', (route) => route.abort());
+    await gotoProfileTab(page);
+    const account = page.getByTestId('guest-account-block');
+    // The container mounts even though the GIS script itself is blocked above.
+    await expect(account.getByTestId('google-signin-button')).toBeAttached();
+    await expect(account.getByRole('button', { name: 'Continue with Apple' })).toBeVisible();
+    await expect(account.getByRole('button', { name: 'Sign in with a passkey' })).toBeVisible();
+  });
+
+  test('hides provider buttons in the guest block when ids are not configured', async ({
+    page,
+  }) => {
+    await page.route('**/auth-providers', (route) =>
+      route.fulfill({
+        json: { googleClientId: null, appleServicesId: null, appleRedirectUri: null },
+      }),
+    );
+    await gotoProfileTab(page);
+    const account = page.getByTestId('guest-account-block');
+    await expect(account.getByRole('button', { name: 'Continue with Apple' })).toHaveCount(0);
+    await expect(account.getByTestId('google-signin-button')).toHaveCount(0);
+  });
+
   test('shows the unified data section for guests', async ({ page }) => {
     await gotoProfileTab(page);
     for (const row of ['import', 'export', 'sources']) {
