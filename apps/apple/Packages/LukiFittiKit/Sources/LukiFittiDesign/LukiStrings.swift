@@ -206,7 +206,6 @@ public enum LukiStrings {
         "Language": "Sprache",
         "Last %@": "Zuletzt %@",
         "Last 12 months": "Letzte 12 Monate",
-        "Last 30 days": "Letzte 30 Tage",
         "Last 7 days": "Letzte 7 Tage",
         "Last 8 weeks": "Letzte 8 Wochen",
         "Last time (%@)": "Letztes Mal (%@)",

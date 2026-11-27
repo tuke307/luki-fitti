@@ -493,7 +493,6 @@ export const en = {
     stretchingMobilitySub: 'Time spent',
     thisWeekTitle: 'This week',
     last7DaysTitle: 'Last 7 days',
-    last30DaysTitle: 'Last 30 days',
     last12MonthsTitle: 'Last 12 months',
     allTimeYearlyTitle: 'By year',
     strengthLegend: 'Strength',

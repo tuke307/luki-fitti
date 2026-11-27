@@ -496,7 +496,6 @@ export const de = {
     stretchingMobilitySub: 'Gesamtzeit',
     thisWeekTitle: 'Diese Woche',
     last7DaysTitle: 'Letzte 7 Tage',
-    last30DaysTitle: 'Letzte 30 Tage',
     last12MonthsTitle: 'Letzte 12 Monate',
     allTimeYearlyTitle: 'Nach Jahr',
     strengthLegend: 'Kraft',

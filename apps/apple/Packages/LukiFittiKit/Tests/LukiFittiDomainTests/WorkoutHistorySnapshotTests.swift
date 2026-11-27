@@ -43,7 +43,7 @@ final class WorkoutHistorySnapshotTests: XCTestCase {
         [
             session("today", "2026-10-28T07:00:00.123Z"),
             session("today-stretch", "2026-10-28T09:00:00Z", type: .STRETCHING, muscle: .HAMSTRINGS, volume: 0),
-            session("week", "2026-10-25T07:00:00Z", muscle: .BACK, volume: 2000),
+            session("week", "2026-10-26T07:00:00Z", muscle: .BACK, volume: 2000),
             session("month", "2026-10-10T07:00:00Z"),
             session("year", "2026-03-10T07:00:00Z", volume: 500),
             session("old", "2024-03-10T07:00:00Z"),
