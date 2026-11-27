@@ -18,6 +18,12 @@ final class AuthSecurityCoordinator: NSObject {
 
     let apiClient: APIClient
 
+    /// `ASAuthorizationController.delegate` is weak — the delegate (which holds the
+    /// controller) must be retained here for the duration of the ceremony.
+    private var inFlightAuthorization: AuthorizationDelegate?
+    /// `ASWebAuthenticationSession` must be retained while it runs or it dies instantly.
+    private var inFlightWebSession: ASWebAuthenticationSession?
+
     init(apiClient: APIClient) {
         self.apiClient = apiClient
     }
@@ -178,20 +184,25 @@ final class AuthSecurityCoordinator: NSObject {
                 url: url,
                 callbackURLScheme: callbackScheme
             ) { callbackURL, error in
-                if let error = error as? ASWebAuthenticationSessionError,
-                   error.code == .canceledLogin {
-                    continuation.resume(throwing: FlowError.cancelled)
-                } else if let error {
-                    continuation.resume(throwing: error)
-                } else if let callbackURL {
-                    continuation.resume(returning: callbackURL)
-                } else {
-                    continuation.resume(throwing: FlowError.missingCredential)
+                Task { @MainActor in
+                    self.inFlightWebSession = nil
+                    if let error = error as? ASWebAuthenticationSessionError,
+                       error.code == .canceledLogin {
+                        continuation.resume(throwing: FlowError.cancelled)
+                    } else if let error {
+                        continuation.resume(throwing: error)
+                    } else if let callbackURL {
+                        continuation.resume(returning: callbackURL)
+                    } else {
+                        continuation.resume(throwing: FlowError.missingCredential)
+                    }
                 }
             }
             session.presentationContextProvider = provider
             session.prefersEphemeralWebBrowserSession = false
+            inFlightWebSession = session
             if !session.start() {
+                inFlightWebSession = nil
                 continuation.resume(throwing: FlowError.missingCredential)
             }
         }
@@ -200,15 +211,20 @@ final class AuthSecurityCoordinator: NSObject {
     private func performAuthorization(
         _ request: ASAuthorizationRequest
     ) async throws -> ASAuthorization {
+        guard inFlightAuthorization == nil else { throw FlowError.cancelled }
         let provider = PresentationAnchorProvider.shared
         return try await withCheckedThrowingContinuation { continuation in
             let delegate = AuthorizationDelegate { result in
-                continuation.resume(with: result)
+                Task { @MainActor in
+                    self.inFlightAuthorization = nil
+                    continuation.resume(with: result)
+                }
             }
             let controller = ASAuthorizationController(authorizationRequests: [request])
             controller.delegate = delegate
             controller.presentationContextProvider = provider
-            delegate.retainUntilDone = controller
+            delegate.controller = controller
+            inFlightAuthorization = delegate
             controller.performRequests()
         }
     }
@@ -216,7 +232,7 @@ final class AuthSecurityCoordinator: NSObject {
 
 /// Continuation bridge for `ASAuthorizationControllerDelegate`; kept alive until done.
 private final class AuthorizationDelegate: NSObject, ASAuthorizationControllerDelegate, @unchecked Sendable {
-    var retainUntilDone: AnyObject?
+    var controller: ASAuthorizationController?
     private let completion: (Result<ASAuthorization, Error>) -> Void
     private var didComplete = false
 
@@ -240,7 +256,7 @@ private final class AuthorizationDelegate: NSObject, ASAuthorizationControllerDe
         guard !didComplete else { return }
         didComplete = true
         completion(result)
-        retainUntilDone = nil
+        controller = nil
     }
 }
 
