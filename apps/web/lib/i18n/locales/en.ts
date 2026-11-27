@@ -742,6 +742,8 @@ export const en = {
       'Enter your password and we’ll email you a link to confirm. Nothing is deleted until you open that link.',
     currentPasswordLabel: 'Current Password',
     currentPasswordPlaceholder: 'Enter your current password',
+    twoFactorCodeLabel: 'Two-factor or recovery code',
+    twoFactorCodePlaceholder: '123456 or xxxxx-xxxxx',
     sendDeletionLinkBtn: 'Send Deletion Confirmation Email',
     sendingBtn: 'Sending…',
     dataSectionTitle: 'Data',

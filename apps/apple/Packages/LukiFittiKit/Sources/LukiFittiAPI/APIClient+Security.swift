@@ -38,25 +38,26 @@ extension APIClient {
     // MARK: - Google / Apple
 
     /// Sign in or up with a provider `idToken` + the raw nonce used for the request.
-    public func oauthSignIn(provider: String, idToken: String, nonce: String, name: String? = nil) async throws -> LoginResult {
-        struct Body: Encodable { let idToken: String; let nonce: String; let name: String? }
+    /// Apple's `authorizationCode` lets the API fetch a revocable refresh token.
+    public func oauthSignIn(provider: String, idToken: String, nonce: String, name: String? = nil, authorizationCode: String? = nil) async throws -> LoginResult {
+        struct Body: Encodable { let idToken: String; let nonce: String; let name: String?; let authorizationCode: String? }
         let response: LoginResponseDto = try await request(
             path: "/api/auth/oauth/\(provider)",
             method: "POST",
-            body: Body(idToken: idToken, nonce: nonce, name: name),
+            body: Body(idToken: idToken, nonce: nonce, name: name, authorizationCode: authorizationCode),
             requiresAuth: false
         )
         return adopt(response)
     }
 
     /// Links a provider account to the signed-in user (same credential fields as sign-in).
-    public func linkProvider(provider: String, idToken: String, nonce: String, name: String? = nil) async throws {
-        struct Body: Encodable { let idToken: String; let nonce: String; let name: String? }
+    public func linkProvider(provider: String, idToken: String, nonce: String, name: String? = nil, authorizationCode: String? = nil) async throws {
+        struct Body: Encodable { let idToken: String; let nonce: String; let name: String?; let authorizationCode: String? }
         struct Resp: Decodable { let success: Bool? }
         let _: Resp = try await request(
             path: "/api/auth/oauth/\(provider)/link",
             method: "POST",
-            body: Body(idToken: idToken, nonce: nonce, name: name)
+            body: Body(idToken: idToken, nonce: nonce, name: name, authorizationCode: authorizationCode)
         )
     }
 

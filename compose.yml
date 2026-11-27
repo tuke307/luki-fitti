@@ -77,6 +77,10 @@ services:
       # Sign-in providers: accepted ID token audiences (web + iOS client ids, comma separated).
       - GOOGLE_CLIENT_IDS=${GOOGLE_CLIENT_IDS:-}
       - APPLE_CLIENT_IDS=${APPLE_CLIENT_IDS:-}
+      # Sign in with Apple token revocation (empty = feature off).
+      - APPLE_TEAM_ID=${APPLE_TEAM_ID:-}
+      - APPLE_SIGN_IN_KEY_ID=${APPLE_SIGN_IN_KEY_ID:-}
+      - APPLE_SIGN_IN_KEY_P8_BASE64=${APPLE_SIGN_IN_KEY_P8_BASE64:-}
       # Passkeys (empty = derived from FRONTEND_URL).
       - WEBAUTHN_RP_ID=${WEBAUTHN_RP_ID:-}
       - WEBAUTHN_RP_NAME=${WEBAUTHN_RP_NAME:-}

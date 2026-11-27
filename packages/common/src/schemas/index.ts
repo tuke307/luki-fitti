@@ -28,6 +28,7 @@ import {
   WeightUnit,
 } from '../enums';
 import { AiModelChoicesSchema } from './ai-models.schemas';
+import { SecondFactorCodeSchema } from './security.schemas';
 
 export const PASSWORD_RULES = {
   minLength: 8,
@@ -83,7 +84,10 @@ export const ResetPasswordSchema = z.object({
 });
 
 export const RequestAccountDeletionSchema = z.object({
-  password: z.string().min(1, 'Current password is required to request account deletion'),
+  /** Required when the account has a password; optional for OAuth-only accounts. */
+  password: z.string().min(1).optional(),
+  /** TOTP or recovery code — required on passwordless accounts when 2FA is enabled. */
+  code: SecondFactorCodeSchema.optional(),
 });
 
 export const ConfirmAccountDeletionSchema = z.object({

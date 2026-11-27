@@ -177,7 +177,13 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
   const [exportStatus, setExportStatus] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
+  const [deleteCode, setDeleteCode] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  // Decides password vs 2FA-code field; null = not loaded yet (password fallback).
+  const [deleteSecurity, setDeleteSecurity] = useState<{
+    hasPassword: boolean;
+    twoFactorEnabled: boolean;
+  } | null>(null);
   const [logoutAllDialogOpen, setLogoutAllDialogOpen] = useState(false);
   const [activeApiKeyCount, setActiveApiKeyCount] = useState(0);
   const navigatorOs =
@@ -450,6 +456,9 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
               setDeletePassword('');
               setDeleteError(null);
               setDeleteDialogOpen(true);
+              void api.security.status().then((res) => {
+                if (res.success && res.data) setDeleteSecurity(res.data);
+              });
             }}
             className="w-fit"
           >
@@ -1087,32 +1096,61 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
             onSubmit={async (e) => {
               e.preventDefault();
               setDeleteError(null);
-              if (!deletePassword.trim()) {
+              const needsPassword = deleteSecurity?.hasPassword ?? true;
+              const needsCode =
+                !(deleteSecurity?.hasPassword ?? true) &&
+                (deleteSecurity?.twoFactorEnabled ?? false);
+              if (needsPassword && !deletePassword.trim()) {
                 setDeleteError(t.profile.currentPasswordPlaceholder);
                 return;
               }
-              const ok = await requestAccountDeletion(deletePassword);
+              if (needsCode && !deleteCode.trim()) {
+                setDeleteError(t.profile.twoFactorCodePlaceholder);
+                return;
+              }
+              const ok = await requestAccountDeletion({
+                password: needsPassword ? deletePassword : undefined,
+                code: needsCode ? deleteCode : undefined,
+              });
               if (ok) {
                 setDeletePassword('');
+                setDeleteCode('');
                 setDeleteDialogOpen(false);
               }
             }}
             className="space-y-4"
           >
-            <div className="space-y-1.5">
-              <Label htmlFor="delete-account-password" className="text-xs font-semibold">
-                {t.profile.currentPasswordLabel}
-              </Label>
-              <Input
-                id="delete-account-password"
-                type="password"
-                required
-                value={deletePassword}
-                onChange={(e) => setDeletePassword(e.target.value)}
-                placeholder={t.profile.currentPasswordPlaceholder}
-                className="h-10 text-xs"
-              />
-            </div>
+            {(deleteSecurity?.hasPassword ?? true) ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="delete-account-password" className="text-xs font-semibold">
+                  {t.profile.currentPasswordLabel}
+                </Label>
+                <Input
+                  id="delete-account-password"
+                  type="password"
+                  required
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  placeholder={t.profile.currentPasswordPlaceholder}
+                  className="h-10 text-xs"
+                />
+              </div>
+            ) : deleteSecurity?.twoFactorEnabled ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="delete-account-code" className="text-xs font-semibold">
+                  {t.profile.twoFactorCodeLabel}
+                </Label>
+                <Input
+                  id="delete-account-code"
+                  type="text"
+                  required
+                  value={deleteCode}
+                  onChange={(e) => setDeleteCode(e.target.value)}
+                  placeholder={t.profile.twoFactorCodePlaceholder}
+                  className="h-10 text-xs"
+                />
+              </div>
+            ) : null}
 
             {(deleteError || authError) && (
               <p className="text-destructive text-xs">

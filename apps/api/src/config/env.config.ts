@@ -86,6 +86,12 @@ export const WEBAUTHN_ORIGINS = csv(process.env.WEBAUTHN_ORIGINS).length
 export const GOOGLE_CLIENT_IDS = csv(process.env.GOOGLE_CLIENT_IDS);
 export const APPLE_CLIENT_IDS = csv(process.env.APPLE_CLIENT_IDS);
 
+// Sign in with Apple token revocation (#209): the .p8 key signs a client-secret JWT for
+// Apple's auth/token + auth/revoke endpoints. Feature off unless all three are set.
+export const APPLE_TEAM_ID = (process.env.APPLE_TEAM_ID ?? '').trim();
+export const APPLE_SIGN_IN_KEY_ID = (process.env.APPLE_SIGN_IN_KEY_ID ?? '').trim();
+export const APPLE_SIGN_IN_KEY_P8_BASE64 = (process.env.APPLE_SIGN_IN_KEY_P8_BASE64 ?? '').trim();
+
 /** AppSettings read cache. e2e sets 0 so flags the tests write straight to the DB apply at once. */
 const appSettingsCacheTtl = Number(process.env.APP_SETTINGS_CACHE_TTL_MS ?? 10_000);
 export const APP_SETTINGS_CACHE_TTL_MS =

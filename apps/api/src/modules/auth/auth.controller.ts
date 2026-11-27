@@ -228,7 +228,7 @@ export class AuthController {
     @CurrentUser() currentUser: AuthenticatedUser,
     @Body(new ZodValidationPipe(RequestAccountDeletionSchema)) body: RequestAccountDeletionDto,
   ) {
-    return this.authService.requestAccountDeletion(currentUser.id, body.password);
+    return this.authService.requestAccountDeletion(currentUser.id, body);
   }
 
   @Post('confirm-delete-account')

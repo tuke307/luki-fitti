@@ -135,6 +135,7 @@ export default function LoginForm({
         idToken: response.authorization.id_token,
         nonce,
         name: appleUserName(response),
+        authorizationCode: response.authorization.code,
       });
       if (result === 'ok') router.push(nextPath());
     } catch {

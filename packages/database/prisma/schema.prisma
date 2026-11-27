@@ -257,12 +257,17 @@ enum OAuthProvider {
 
 /// A Google/Apple identity linked to a user (`providerUserId` is the token `sub`).
 model OAuthAccount {
-  id             String        @id @default(uuid())
-  userId         String
-  provider       OAuthProvider
-  providerUserId String
-  email          String?
-  createdAt      DateTime      @default(now())
+  id              String        @id @default(uuid())
+  userId          String
+  provider        OAuthProvider
+  providerUserId  String
+  email           String?
+  /// Sign in with Apple refresh token (AES-256-GCM via secret-box), for auth/revoke on
+  /// unlink/account deletion. Null for Google and for Apple links that never sent a code.
+  refreshTokenEnc String?
+  /// The `aud` (client id) the token was issued to — Apple needs it to sign revoke calls.
+  tokenClientId   String?
+  createdAt       DateTime      @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
