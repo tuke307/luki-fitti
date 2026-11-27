@@ -32,15 +32,23 @@ final class HistoryCalendarGridTests: XCTestCase {
         XCTAssertEqual(HistoryCalendarGrid.isoWeekdayIndex(of: grid.days[0], calendar: cal), 0)
     }
 
-    func testMonthSpansMonthBoundaryWithLeadingBlanks() {
+    func testMonthSpansCalendarMonthWithLeadingBlanks() {
         let cal = calendar(firstWeekday: 2)
-        // Thu 5 Nov 2026 → 30 days start on Wed 7 Oct 2026, two blanks (Mon, Tue) before it.
+        // Thu 5 Nov 2026 → all of November; Nov 1 2026 is a Sunday → 6 blanks (Mon–Sat).
         let grid = HistoryCalendarGrid(span: .month, today: day(2026, 11, 5, in: cal), calendar: cal)
         XCTAssertEqual(grid.days.count, 30)
-        XCTAssertEqual(grid.leadingBlanks, 2)
-        XCTAssertEqual(cal.dateComponents([.month, .day], from: grid.days.first!), DateComponents(month: 10, day: 7))
-        XCTAssertEqual(cal.dateComponents([.month, .day], from: grid.days.last!), DateComponents(month: 11, day: 5))
-        XCTAssertEqual(dayNumbers(grid, cal)[24...26], [31, 1, 2])
+        XCTAssertEqual(grid.leadingBlanks, 6)
+        XCTAssertEqual(cal.dateComponents([.month, .day], from: grid.days.first!), DateComponents(month: 11, day: 1))
+        XCTAssertEqual(cal.dateComponents([.month, .day], from: grid.days.last!), DateComponents(month: 11, day: 30))
+    }
+
+    func testMonthFebruaryHasTwentyEightDays() {
+        let cal = calendar(firstWeekday: 2)
+        // Feb 2026 has 28 days; Feb 1 2026 is a Sunday → 6 blanks.
+        let grid = HistoryCalendarGrid(span: .month, today: day(2026, 2, 10, in: cal), calendar: cal)
+        XCTAssertEqual(grid.days.count, 28)
+        XCTAssertEqual(grid.leadingBlanks, 6)
+        XCTAssertEqual(cal.dateComponents([.month, .day], from: grid.days.last!), DateComponents(month: 2, day: 28))
     }
 
     func testUSFirstWeekdayStillLaysOutMondayFirst() {
@@ -48,10 +56,10 @@ final class HistoryCalendarGridTests: XCTestCase {
         // Sunday 8 Nov 2026: a Sunday-first calendar would start a new week here.
         let week = HistoryCalendarGrid(span: .week, today: day(2026, 11, 8, in: us), calendar: us)
         XCTAssertEqual(dayNumbers(week, us), [2, 3, 4, 5, 6, 7, 8])
-        // 30 days ending Sun 8 Nov start on Sat 10 Oct → five blanks (Mon–Fri).
+        // Nov 1 2026 is a Sunday → 6 blanks even with firstWeekday = 1.
         let month = HistoryCalendarGrid(span: .month, today: day(2026, 11, 8, in: us), calendar: us)
-        XCTAssertEqual(month.leadingBlanks, 5)
-        XCTAssertEqual(cal(us, month.days.first!), DateComponents(month: 10, day: 10))
+        XCTAssertEqual(month.leadingBlanks, 6)
+        XCTAssertEqual(cal(us, month.days.first!), DateComponents(month: 11, day: 1))
     }
 
     func testWeekdaySymbolsAreMondayFirst() {

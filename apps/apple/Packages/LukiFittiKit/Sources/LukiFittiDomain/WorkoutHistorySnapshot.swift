@@ -4,12 +4,21 @@ import LukiFittiModels
 public enum HistoryPeriod: String, CaseIterable, Sendable {
     case week, month, year, all
 
-    public func cutoff(now: Date) -> Date? {
+    public func cutoff(now: Date, calendar: Calendar = .current) -> Date? {
         switch self {
-        case .week: now.addingTimeInterval(-7 * 86_400)
-        case .month: now.addingTimeInterval(-30 * 86_400)
-        case .year: now.addingTimeInterval(-365 * 86_400)
-        case .all: nil
+        case .week:
+            let today = calendar.startOfDay(for: now)
+            return calendar.date(
+                byAdding: .day,
+                value: -HistoryCalendarGrid.isoWeekdayIndex(of: today, calendar: calendar),
+                to: today
+            )
+        case .month:
+            return calendar.date(from: calendar.dateComponents([.year, .month], from: now))
+        case .year:
+            return now.addingTimeInterval(-365 * 86_400)
+        case .all:
+            return nil
         }
     }
 }
@@ -88,7 +97,7 @@ public struct WorkoutHistorySnapshot: Sendable {
         now: Date = Date(),
         calendar: Calendar = .current
     ) {
-        let cutoff = period.cutoff(now: now)
+        let cutoff = period.cutoff(now: now, calendar: calendar)
         var items: [Item] = []
         var byDay: [Date: [WorkoutSessionDto]] = [:]
         var byMonth: [DateComponents: Bucket] = [:]
