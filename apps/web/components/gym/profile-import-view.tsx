@@ -45,6 +45,8 @@ import { toast } from '@luki-fitti/ui/components/ui/sonner';
 import { Tabs, TabsList, TabsTrigger } from '@luki-fitti/ui/components/ui/tabs';
 import { useAuth } from '@/providers/auth/auth-context';
 import { api, apiErrorMessage } from '@/lib/api';
+import ProviderSignInButtons from '@/components/auth/provider-sign-in-buttons';
+import type { ProviderIds } from '@/lib/auth/provider-config';
 import { trackEvent } from '@/lib/analytics/track';
 import { useGym } from '@/providers/gym/gym-context';
 import { useLocale } from '@/providers/i18n/locale-context';
@@ -184,6 +186,8 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
     hasPassword: boolean;
     twoFactorEnabled: boolean;
   } | null>(null);
+  // OAuth client ids for the guest sign-in buttons; null ids hide each button (#212).
+  const [providerIds, setProviderIds] = useState<ProviderIds | null>(null);
   const [logoutAllDialogOpen, setLogoutAllDialogOpen] = useState(false);
   const [activeApiKeyCount, setActiveApiKeyCount] = useState(0);
   const navigatorOs =
@@ -469,6 +473,16 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
     </Card>
   );
 
+  useEffect(() => {
+    if (isAuthenticated || providerIds !== null) return;
+    fetch('/auth-providers')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((ids) => setProviderIds(ids))
+      .catch(() => {
+        // Offline/unreachable: no provider buttons — the password form still works.
+      });
+  }, [isAuthenticated, providerIds]);
+
   const fieldClass =
     'h-11 rounded-none border-0 bg-transparent px-4 text-[1.0625rem] shadow-none focus-visible:ring-0 dark:bg-transparent';
   const fieldItemClass =
@@ -599,6 +613,17 @@ export function ProfileImportView({ variant = 'page', onClose }: ProfileImportVi
           </div>
         )}
       </form>
+      {providerIds && (
+        <ProviderSignInButtons
+          googleClientId={providerIds.googleClientId ?? undefined}
+          appleServicesId={providerIds.appleServicesId ?? undefined}
+          appleRedirectUri={providerIds.appleRedirectUri ?? undefined}
+          onResult={(result) => {
+            // 'ok' switches to the signed-in block by itself; 2FA finishes on /login.
+            if (result === 'mfa') router.push('/login');
+          }}
+        />
+      )}
       <p className="text-muted-foreground px-4 text-[0.8125rem]">{t.profile.guestDesc}</p>
     </section>
   );
