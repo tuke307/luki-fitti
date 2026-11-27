@@ -33,11 +33,12 @@ jobs:
     # Releases ship from their tag; manual runs may also build the next
     # unreleased version from develop (TestFlight).
     if: github.ref_type == 'tag' || github.ref == 'refs/heads/develop'
-    runs-on: macos-26
+    # App Store Connect requires the iOS 27 SDK from April 2027; Xcode 27 only ships on xcode-27.
+    runs-on: xcode-27
     timeout-minutes: 60
     environment: app-store
     env:
-      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
     # Secrets are passed per step, so that only the steps that need them can read them.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

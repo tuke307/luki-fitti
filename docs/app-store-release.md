@@ -252,8 +252,10 @@ The API key doesn't expire. Revoke and replace it when someone with access to it
 
 ## Xcode version
 
-The workflow pins Xcode through `DEVELOPER_DIR` on the `macos-26` runner. When Apple requires a newer
-SDK, update that path and, if needed, `runs-on`. The installed versions are listed in the
+The workflow pins Xcode 27.2 (iOS 27.2 SDK) through `DEVELOPER_DIR` on the `xcode-27` runner. Since
+Xcode 27, GitHub ships one image per Xcode major version, so the `macos-26` image only has Xcode 26.
+When Apple requires a newer SDK, update that path and `runs-on` in `app-store.yaml` and in the
+`apple` job of `ci.yaml`. The installed versions are listed in the
 [runner image readme](https://github.com/actions/runner-images/tree/main/images/macos).
 
 Archiving on your own Mac requires the watchOS platform (Xcode → Settings → Components). Without it,
