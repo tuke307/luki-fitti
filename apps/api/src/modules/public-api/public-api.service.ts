@@ -482,6 +482,7 @@ export class PublicApiService {
       pausedAt: iso(s.pausedAt),
       completedAt: iso(s.completedAt),
       activeDurationSeconds: s.activeDurationSeconds,
+      pausedDurationSeconds: s.pausedDurationSeconds,
       totalVolumeKg: s.totalVolumeKg,
       totalSetsCompleted: s.totalSetsCompleted,
       totalRepsCompleted: s.totalRepsCompleted,

@@ -21,12 +21,20 @@ interface GoogleIdConfiguration {
   use_fedcm_for_prompt?: boolean;
 }
 
+export interface GoogleButtonOptions {
+  type?: 'standard' | 'icon';
+  theme?: 'outline' | 'filled_blue' | 'filled_black';
+  size?: 'large' | 'medium' | 'small';
+  shape?: 'rectangular' | 'pill' | 'circle' | 'square';
+  text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin';
+  /** Pixels, 200–400 per GIS. Omit to size the button to its label. */
+  width?: number;
+  locale?: string;
+}
+
 interface GoogleAccountsId {
   initialize: (config: GoogleIdConfiguration) => void;
-  renderButton: (
-    parent: HTMLElement,
-    options: { type?: string; theme?: string; size?: string; width?: number; text?: string },
-  ) => void;
+  renderButton: (parent: HTMLElement, options: GoogleButtonOptions) => void;
 }
 
 export interface AppleSignInResponse {
@@ -102,6 +110,7 @@ export async function renderGoogleButton(
   clientId: string,
   nonce: string,
   onCredential: (response: GoogleCredentialResponse) => void,
+  options: GoogleButtonOptions = {},
 ): Promise<void> {
   await loadScript(GIS_SCRIPT_SRC);
   const id = window.google?.accounts.id;
@@ -113,7 +122,7 @@ export async function renderGoogleButton(
     use_fedcm_for_prompt: true,
   });
   container.replaceChildren();
-  id.renderButton(container, { type: 'standard', size: 'large', width: 320 });
+  id.renderButton(container, { type: 'standard', size: 'large', ...options });
 }
 
 /** Resolves with Apple's authorization payload (`id_token`, optional profile on first consent). */

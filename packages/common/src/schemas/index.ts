@@ -28,6 +28,7 @@ import {
   WeightUnit,
 } from '../enums';
 import { AiModelChoicesSchema } from './ai-models.schemas';
+import { SecondFactorCodeSchema } from './security.schemas';
 
 export const PASSWORD_RULES = {
   minLength: 8,
@@ -83,7 +84,10 @@ export const ResetPasswordSchema = z.object({
 });
 
 export const RequestAccountDeletionSchema = z.object({
-  password: z.string().min(1, 'Current password is required to request account deletion'),
+  /** Required when the account has a password; optional for OAuth-only accounts. */
+  password: z.string().min(1).optional(),
+  /** TOTP or recovery code — required on passwordless accounts when 2FA is enabled. */
+  code: SecondFactorCodeSchema.optional(),
 });
 
 export const ConfirmAccountDeletionSchema = z.object({
@@ -606,6 +610,8 @@ export const SyncSessionPayloadSchema = z.object({
   pausedAt: z.string().nullable().optional(),
   completedAt: z.string().nullable().optional(),
   activeDurationSeconds: z.number().int().min(0).default(0),
+  /** Seconds spent in completed pauses; omitted by older clients (server keeps stored value). */
+  pausedDurationSeconds: z.number().int().min(0).optional(),
   weightUnit: z.enum(WeightUnit).default(WeightUnit.KG),
   notes: z.string().max(2000).nullable().optional(),
   restTimerEndsAt: z.string().nullable().optional(),
@@ -713,6 +719,7 @@ export interface WorkoutSessionDto {
   pausedAt: string | null;
   completedAt: string | null;
   activeDurationSeconds: number;
+  pausedDurationSeconds: number;
   weightUnit: WeightUnit;
   totalVolumeKg: number;
   totalSetsCompleted: number;

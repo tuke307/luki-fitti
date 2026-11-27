@@ -133,15 +133,22 @@ export default function SecurityView({
     const container = googleLinkRef.current;
     if (!googleClientId || !container || status?.providers.includes('google')) return;
     linkNonceRef.current = generateOAuthNonce();
-    renderGoogleButton(container, googleClientId, linkNonceRef.current, (response) => {
-      void run(async () => {
-        const res = await api.security.linkProvider('google', {
-          idToken: response.credential,
-          nonce: linkNonceRef.current,
+    renderGoogleButton(
+      container,
+      googleClientId,
+      linkNonceRef.current,
+      (response) => {
+        void run(async () => {
+          const res = await api.security.linkProvider('google', {
+            idToken: response.credential,
+            nonce: linkNonceRef.current,
+          });
+          if (!res.success) throw new Error(res.error || 'Link failed');
         });
-        if (!res.success) throw new Error(res.error || 'Link failed');
-      });
-    }).catch(() => {
+      },
+      // Compact, label-sized pill so it fits the row next to "Google" like Apple's Link button.
+      { size: 'medium', shape: 'pill', text: 'signin', locale },
+    ).catch(() => {
       // GIS unavailable — the Link button simply doesn't render.
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -173,6 +180,7 @@ export default function SecurityView({
         idToken: response.authorization.id_token,
         nonce,
         name: appleUserName(response),
+        authorizationCode: response.authorization.code,
       });
       if (!res.success) throw new Error(res.error || 'Link failed');
     });
@@ -305,7 +313,11 @@ export default function SecurityView({
               </Button>
             </>
           ) : provider === 'google' ? (
-            <div ref={googleLinkRef} aria-label={t.security.linkBtn} />
+            <div
+              ref={googleLinkRef}
+              aria-label={t.security.linkBtn}
+              className="max-w-full shrink-0"
+            />
           ) : canLink ? (
             <Button type="button" variant="secondary" size="sm" disabled={busy} onClick={linkApple}>
               {t.security.linkBtn}

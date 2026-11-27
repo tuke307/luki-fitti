@@ -585,6 +585,10 @@ export class SessionService {
           pausedAt: payload.pausedAt ? new Date(payload.pausedAt) : null,
           completedAt: payload.completedAt ? new Date(payload.completedAt) : null,
           activeDurationSeconds: payload.activeDurationSeconds,
+          // Older clients omit the field: keep the stored value on update.
+          ...(payload.pausedDurationSeconds !== undefined
+            ? { pausedDurationSeconds: payload.pausedDurationSeconds }
+            : {}),
           weightUnit: payload.weightUnit,
           totalVolumeKg: metrics.totalVolumeKg,
           totalSetsCompleted: metrics.totalSetsCompleted,
@@ -624,6 +628,7 @@ export class SessionService {
           pausedAt: payload.pausedAt ? new Date(payload.pausedAt) : null,
           completedAt: payload.completedAt ? new Date(payload.completedAt) : null,
           activeDurationSeconds: payload.activeDurationSeconds,
+          pausedDurationSeconds: payload.pausedDurationSeconds ?? 0,
           weightUnit: payload.weightUnit,
           totalVolumeKg: metrics.totalVolumeKg,
           totalSetsCompleted: metrics.totalSetsCompleted,
@@ -953,6 +958,7 @@ export class SessionService {
       pausedAt: toIsoStringOrNull(session.pausedAt),
       completedAt: toIsoStringOrNull(session.completedAt),
       activeDurationSeconds: session.activeDurationSeconds,
+      pausedDurationSeconds: session.pausedDurationSeconds,
       weightUnit: session.weightUnit as WeightUnit,
       totalVolumeKg: session.totalVolumeKg,
       totalSetsCompleted: session.totalSetsCompleted,

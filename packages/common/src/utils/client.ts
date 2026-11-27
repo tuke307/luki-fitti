@@ -14,6 +14,7 @@ export * from './training-goal.util';
 // Per-set template plans and session → template write-back (client-safe)
 export * from './template-sets.util';
 export * from './active-session.util';
+export * from './session-duration.util';
 export * from './session-focus.util';
 export * from './exercise-alternatives.util';
 export * from './exercise-history.util';

@@ -867,6 +867,8 @@ public struct WorkoutSessionDto: Codable, Sendable, Equatable, Hashable, Identif
     public var pausedAt: String?
     public var completedAt: String?
     public var activeDurationSeconds: Int
+    /// Seconds spent in completed pauses; missing on server responses from older data -> 0.
+    public var pausedDurationSeconds: Int
     public var weightUnit: WeightUnit
     public var totalVolumeKg: Double
     public var totalSetsCompleted: Int
@@ -908,6 +910,7 @@ public struct WorkoutSessionDto: Codable, Sendable, Equatable, Hashable, Identif
         pausedAt: String? = nil,
         completedAt: String? = nil,
         activeDurationSeconds: Int = 0,
+        pausedDurationSeconds: Int = 0,
         weightUnit: WeightUnit = .KG,
         totalVolumeKg: Double = 0,
         totalSetsCompleted: Int = 0,
@@ -944,6 +947,7 @@ public struct WorkoutSessionDto: Codable, Sendable, Equatable, Hashable, Identif
         self.pausedAt = pausedAt
         self.completedAt = completedAt
         self.activeDurationSeconds = activeDurationSeconds
+        self.pausedDurationSeconds = pausedDurationSeconds
         self.weightUnit = weightUnit
         self.totalVolumeKg = totalVolumeKg
         self.totalSetsCompleted = totalSetsCompleted
@@ -968,6 +972,47 @@ public struct WorkoutSessionDto: Codable, Sendable, Equatable, Hashable, Identif
         self.trainingGoalSnapshot = trainingGoalSnapshot
         self.exercises = exercises
     }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.clientSessionId = try c.decode(String.self, forKey: .clientSessionId)
+        self.userId = try c.decode(String.self, forKey: .userId)
+        self.templateId = try c.decodeIfPresent(String.self, forKey: .templateId)
+        self.stretchingRoutineId = try c.decodeIfPresent(String.self, forKey: .stretchingRoutineId)
+        self.sessionType = try c.decode(SessionType.self, forKey: .sessionType)
+        self.workoutNameSnapshot = try c.decode(String.self, forKey: .workoutNameSnapshot)
+        self.status = try c.decode(SessionStatus.self, forKey: .status)
+        self.startedAt = try c.decode(String.self, forKey: .startedAt)
+        self.pausedAt = try c.decodeIfPresent(String.self, forKey: .pausedAt)
+        self.completedAt = try c.decodeIfPresent(String.self, forKey: .completedAt)
+        self.activeDurationSeconds = try c.decode(Int.self, forKey: .activeDurationSeconds)
+        self.pausedDurationSeconds = try c.decodeIfPresent(Int.self, forKey: .pausedDurationSeconds) ?? 0
+        self.weightUnit = try c.decode(WeightUnit.self, forKey: .weightUnit)
+        self.totalVolumeKg = try c.decode(Double.self, forKey: .totalVolumeKg)
+        self.totalSetsCompleted = try c.decode(Int.self, forKey: .totalSetsCompleted)
+        self.totalRepsCompleted = try c.decode(Int.self, forKey: .totalRepsCompleted)
+        self.totalStretchSeconds = try c.decode(Int.self, forKey: .totalStretchSeconds)
+        self.notes = try c.decodeIfPresent(String.self, forKey: .notes)
+        self.restTimerEndsAt = try c.decodeIfPresent(String.self, forKey: .restTimerEndsAt)
+        self.restTimerDurationSec = try c.decodeIfPresent(Int.self, forKey: .restTimerDurationSec)
+        self.restTimerPausedRemSec = try c.decodeIfPresent(Int.self, forKey: .restTimerPausedRemSec)
+        self.sourceDevice = try c.decodeIfPresent(SessionSourceDevice.self, forKey: .sourceDevice)
+        self.healthKitWorkoutUuid = try c.decodeIfPresent(String.self, forKey: .healthKitWorkoutUuid)
+        self.activeCaloriesKcal = try c.decodeIfPresent(Double.self, forKey: .activeCaloriesKcal)
+        self.totalCaloriesKcal = try c.decodeIfPresent(Double.self, forKey: .totalCaloriesKcal)
+        self.estimatedCaloriesKcal = try c.decodeIfPresent(Double.self, forKey: .estimatedCaloriesKcal)
+        self.avgHeartRateBpm = try c.decodeIfPresent(Int.self, forKey: .avgHeartRateBpm)
+        self.maxHeartRateBpm = try c.decodeIfPresent(Int.self, forKey: .maxHeartRateBpm)
+        self.minHeartRateBpm = try c.decodeIfPresent(Int.self, forKey: .minHeartRateBpm)
+        self.heartRateSamples = try c.decodeIfPresent([HeartRateSampleDto].self, forKey: .heartRateSamples)
+        self.focusedClientExerciseId = try c.decodeIfPresent(String.self, forKey: .focusedClientExerciseId)
+        self.focusedAt = try c.decodeIfPresent(String.self, forKey: .focusedAt)
+        self.version = try c.decode(Int.self, forKey: .version)
+        self.lastSyncedAt = try c.decode(String.self, forKey: .lastSyncedAt)
+        self.trainingGoalSnapshot = try c.decodeIfPresent(TrainingGoal.self, forKey: .trainingGoalSnapshot)
+        self.exercises = try c.decode([SessionExerciseDto].self, forKey: .exercises)
+    }
 }
 
 public struct SyncSessionPayloadDto: Codable, Sendable, Equatable, Hashable {
@@ -982,6 +1027,7 @@ public struct SyncSessionPayloadDto: Codable, Sendable, Equatable, Hashable {
     public var pausedAt: String?
     public var completedAt: String?
     public var activeDurationSeconds: Int
+    public var pausedDurationSeconds: Int?
     public var weightUnit: WeightUnit
     public var notes: String?
     public var restTimerEndsAt: String?
@@ -1019,6 +1065,7 @@ public struct SyncSessionPayloadDto: Codable, Sendable, Equatable, Hashable {
         self.pausedAt = session.pausedAt
         self.completedAt = session.completedAt
         self.activeDurationSeconds = session.activeDurationSeconds
+        self.pausedDurationSeconds = session.pausedDurationSeconds
         self.weightUnit = session.weightUnit
         self.notes = session.notes
         self.restTimerEndsAt = session.restTimerEndsAt

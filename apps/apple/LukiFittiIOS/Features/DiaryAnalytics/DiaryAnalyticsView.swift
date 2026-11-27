@@ -194,7 +194,7 @@ public struct DiaryAnalyticsView: View {
     private func periodActivityCard(_ snapshot: WorkoutHistorySnapshot) -> some View {
         let title: String = switch selectedPeriod {
         case .week: tr("This week")
-        case .month: tr("Last 30 days")
+        case .month: monthTitle()
         case .year: tr("Last 12 months")
         case .all: tr("By year")
         }
@@ -523,6 +523,14 @@ public struct DiaryAnalyticsView: View {
         .padding(16)
         .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(LukiColors.cardBackground))
         .accessibilityIdentifier("ios.diary.musclesCard")
+    }
+
+    /// Localized month name for the current calendar month, e.g. "November" / "November".
+    private func monthTitle() -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: tr.rawValue)
+        formatter.setLocalizedDateFormatFromTemplate("LLLL")
+        return formatter.string(from: Date())
     }
 
     /// "18. Dez." in the app language; the year is appended when it isn't the current one.

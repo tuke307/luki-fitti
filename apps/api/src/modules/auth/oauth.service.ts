@@ -2,6 +2,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Optional,
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -12,6 +13,7 @@ import { constantTimeEqual } from '@luki-fitti/common/utils/crypto';
 import { APPLE_CLIENT_IDS, GOOGLE_CLIENT_IDS } from '@/config/env.config';
 import { PrismaService } from '../database/prisma.service';
 import { AuthService } from './auth.service';
+import { AppleTokenService } from './apple-token.service';
 
 type OAuthProvider = 'GOOGLE' | 'APPLE';
 
@@ -45,6 +47,8 @@ export interface OAuthClaims {
   email: string | null;
   emailVerified: boolean;
   name: string | null;
+  /** The verified audience entry — the client id Apple token calls are signed for. */
+  aud: string;
 }
 
 const remoteKeySets = new Map<OAuthProviderName, JWTVerifyGetKey>();
@@ -56,6 +60,7 @@ export class OAuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
+    @Optional() private readonly appleTokens?: AppleTokenService,
   ) {}
 
   /** Signing keys of the provider; overridden in tests so no network is needed. */
@@ -100,11 +105,14 @@ export class OAuthService {
         throw new Error('nonce mismatch');
       }
       if (typeof payload.sub !== 'string' || !payload.sub) throw new Error('missing subject');
+      const audList = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+      const aud = audList.find((a): a is string => typeof a === 'string' && audience.includes(a));
       return {
         sub: payload.sub,
         email: typeof payload.email === 'string' ? payload.email.trim().toLowerCase() : null,
         emailVerified: payload.email_verified === true || payload.email_verified === 'true',
         name: typeof payload.name === 'string' ? payload.name : (dto.name ?? null),
+        aud: aud ?? '',
       };
     } catch {
       throw new UnauthorizedException(`Invalid ${config.label} sign-in`);
@@ -156,6 +164,12 @@ export class OAuthService {
       });
     }
 
+    await this.storeAppleRefreshToken(provider, dto, claims, {
+      userId: user.id,
+      provider: enumValue,
+      providerUserId: claims.sub,
+    });
+
     if (user.lockedUntil && user.lockedUntil > new Date()) {
       throw new ForbiddenException('Account temporarily locked. Try again later.');
     }
@@ -188,9 +202,12 @@ export class OAuthService {
     });
     if (sameProvider > 0)
       throw new ConflictException(`A ${PROVIDERS[provider].label} account is already linked`);
-    await this.prisma.oAuthAccount.create({
+    const account = await this.prisma.oAuthAccount.create({
       data: { userId, provider: enumValue, providerUserId: claims.sub, email: claims.email },
     });
+    if (provider === 'apple' && dto.authorizationCode && this.appleTokens?.isConfigured()) {
+      await this.appleTokens.storeFromCode(account.id, dto.authorizationCode, claims.aud);
+    }
   }
 
   /** Refuses to remove the last way to sign in. */
@@ -206,6 +223,33 @@ export class OAuthService {
     if (!user?.passwordHash && passkeys === 0 && accounts.length === 1) {
       throw new ConflictException('Set a password or add a passkey before unlinking');
     }
+    if (enumValue === 'APPLE') await this.appleTokens?.revokeFor(target);
     await this.prisma.oAuthAccount.delete({ where: { id: target.id } });
+  }
+
+  /**
+   * Apple only: exchanges the authorization code for a refresh token on the linked row.
+   * Skipped silently for Google, when no code was sent, or when the .p8 key isn't configured.
+   */
+  private async storeAppleRefreshToken(
+    provider: OAuthProviderName,
+    dto: OAuthLoginDto,
+    claims: OAuthClaims,
+    where: { userId: string; provider: 'GOOGLE' | 'APPLE'; providerUserId: string },
+  ): Promise<void> {
+    if (provider !== 'apple' || !dto.authorizationCode || !this.appleTokens?.isConfigured()) {
+      return;
+    }
+    const account = await this.prisma.oAuthAccount.findUnique({
+      where: {
+        provider_providerUserId: {
+          provider: where.provider,
+          providerUserId: where.providerUserId,
+        },
+      },
+      select: { id: true },
+    });
+    if (account)
+      await this.appleTokens.storeFromCode(account.id, dto.authorizationCode, claims.aud);
   }
 }

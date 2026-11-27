@@ -26,6 +26,7 @@ public struct ProfileAndAuthView: View {
     @State private var generalAutosave = PreferencesAutosaver()
     @Environment(\.lukiLocale) private var tr
     @Environment(\.openURL) private var openURL
+    @Environment(\.colorScheme) private var colorScheme
 
     public init(viewModel: LukiAppViewModel) {
         self.viewModel = viewModel
@@ -302,6 +303,7 @@ public struct ProfileAndAuthView: View {
         .pickerStyle(.segmented)
         .listRowBackground(Color.clear)
         .listRowInsets(EdgeInsets())
+        .listRowSeparator(.hidden)
 
         if authMode == "register" {
             TextField(tr("Your name"), text: $name)
@@ -383,7 +385,8 @@ public struct ProfileAndAuthView: View {
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
             .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets())
+            .listRowInsets(EdgeInsets(top: 12, leading: 0, bottom: 0, trailing: 0))
+            .listRowSeparator(.hidden)
             .accessibilityIdentifier("ios.profile.submitAuthButton")
 
             if authMode == "login" {
@@ -408,8 +411,20 @@ public struct ProfileAndAuthView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
                 .accessibilityIdentifier("ios.profile.forgotPasswordButton")
             }
+
+            HStack {
+                VStack { Divider() }
+                Text(tr("or"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                VStack { Divider() }
+            }
+            .padding(.vertical, 4)
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
 
             providerRows
         }
@@ -452,47 +467,57 @@ public struct ProfileAndAuthView: View {
     }
 
     /// Apple (native button), Google (when configured) and passkey sign-in — they also register.
+    /// One row keeps the three provider pills together without stray list separators.
     @ViewBuilder
     private var providerRows: some View {
-        SignInWithAppleButton(.signIn) { request in
-            request.requestedScopes = [.fullName, .email]
-            // Apple hashes this into the id_token; the API accepts the raw value we keep.
-            appleRawNonce = OAuthNonce.makeRaw()
-            request.nonce = OAuthNonce.sha256Hex(appleRawNonce)
-        } onCompletion: { result in
-            Task { await finishAppleSignIn(result) }
-        }
-        .signInWithAppleButtonStyle(.black)
-        .frame(height: 44)
-        .listRowBackground(Color.clear)
-        .listRowInsets(EdgeInsets())
-        .accessibilityIdentifier("ios.profile.signInWithAppleButton")
-
-        if AuthSecurityCoordinator(apiClient: viewModel.store.apiClient).googleClientId != nil {
-            Button {
-                Task { await signInWithGoogle() }
-            } label: {
-                Text(tr("Continue with Google"))
-                    .frame(maxWidth: .infinity)
+        VStack(spacing: 12) {
+            SignInWithAppleButton(.continue) { request in
+                request.requestedScopes = [.fullName, .email]
+                // Apple hashes this into the id_token; the API accepts the raw value we keep.
+                appleRawNonce = OAuthNonce.makeRaw()
+                request.nonce = OAuthNonce.sha256Hex(appleRawNonce)
+            } onCompletion: { result in
+                Task { await finishAppleSignIn(result) }
             }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets())
-            .accessibilityIdentifier("ios.profile.signInWithGoogleButton")
-        }
+            .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+            .frame(height: 50)
+            .clipShape(Capsule())
+            .accessibilityIdentifier("ios.profile.signInWithAppleButton")
 
-        Button {
-            Task { await signInWithPasskey() }
-        } label: {
-            Text(tr("Sign in with a passkey"))
-                .frame(maxWidth: .infinity)
+            if AuthSecurityCoordinator(apiClient: viewModel.store.apiClient).googleClientId != nil {
+                Button {
+                    Task { await signInWithGoogle() }
+                } label: {
+                    HStack(spacing: 10) {
+                        Image("GoogleG")
+                            .resizable()
+                            .frame(width: 18, height: 18)
+                        Text(tr("Continue with Google"))
+                            .fontWeight(.medium)
+                    }
+                }
+                .buttonStyle(.plain)
+                .lukiProviderButton(colorScheme: colorScheme)
+                .accessibilityIdentifier("ios.profile.signInWithGoogleButton")
+            }
+
+            Button {
+                Task { await signInWithPasskey() }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "key.fill")
+                    Text(tr("Continue with a passkey"))
+                        .fontWeight(.medium)
+                }
+            }
+            .buttonStyle(.plain)
+            .lukiProviderButton(colorScheme: colorScheme)
+            .accessibilityIdentifier("ios.profile.signInWithPasskeyButton")
         }
-        .buttonStyle(.bordered)
-        .controlSize(.large)
+        .padding(.vertical, 4)
         .listRowBackground(Color.clear)
         .listRowInsets(EdgeInsets())
-        .accessibilityIdentifier("ios.profile.signInWithPasskeyButton")
+        .listRowSeparator(.hidden)
     }
 
     // MARK: - Auth actions
@@ -562,11 +587,15 @@ public struct ProfileAndAuthView: View {
             let parts = [credential.fullName?.givenName, credential.fullName?.familyName]
                 .compactMap { $0?.trimmingCharacters(in: .whitespaces) }
                 .filter { !$0.isEmpty }
+            let authorizationCode = credential.authorizationCode.flatMap {
+                String(data: $0, encoding: .utf8)
+            }
             let loginResult = try await viewModel.store.apiClient.oauthSignIn(
                 provider: "apple",
                 idToken: idToken,
                 nonce: appleRawNonce,
-                name: parts.isEmpty ? nil : parts.joined(separator: " ")
+                name: parts.isEmpty ? nil : parts.joined(separator: " "),
+                authorizationCode: authorizationCode
             )
             await adoptLoginResult(loginResult)
         } catch let error as ASAuthorizationError where error.code == .canceled {
@@ -751,10 +780,23 @@ private struct AccountSettingsPage: View {
     @Binding var statusMessage: String?
     @Binding var errorMessage: String?
     @State private var deleteAccountPassword: String = ""
+    @State private var deleteAccountCode: String = ""
+    @State private var deleteSecurityStatus: SecurityStatusDto?
     @State private var showingDeleteRequestField: Bool = false
     @State private var showingSignOutAllConfirmation = false
     @Environment(\.lukiLocale) private var tr
     @Environment(\.dismiss) private var dismiss
+
+    /// Falls back to the password field when the security status could not be loaded.
+    private var deleteNeedsPassword: Bool { deleteSecurityStatus?.hasPassword ?? true }
+    private var deleteNeedsCode: Bool {
+        !(deleteSecurityStatus?.hasPassword ?? true) && (deleteSecurityStatus?.twoFactorEnabled ?? false)
+    }
+    private var deleteCanSubmit: Bool {
+        if deleteNeedsPassword { return !deleteAccountPassword.isEmpty }
+        if deleteNeedsCode { return !deleteAccountCode.isEmpty }
+        return true
+    }
 
     /// Removes this device's APNs registration before tokens are cleared locally.
     private func unregisterPush() async {
@@ -848,18 +890,27 @@ private struct AccountSettingsPage: View {
                     .accessibilityIdentifier("ios.profile.deleteAccountButton")
 
                     if showingDeleteRequestField {
-                        SecureField(tr("Current Password"), text: $deleteAccountPassword)
-                            .accessibilityIdentifier("ios.profile.deletePasswordField")
+                        // Passwordless accounts verify with their TOTP/recovery code instead (#209).
+                        if deleteNeedsPassword {
+                            SecureField(tr("Current Password"), text: $deleteAccountPassword)
+                                .accessibilityIdentifier("ios.profile.deletePasswordField")
+                        } else if deleteNeedsCode {
+                            TextField(tr("Two-factor or recovery code"), text: $deleteAccountCode)
+                                .textContentType(.oneTimeCode)
+                                .accessibilityIdentifier("ios.profile.deleteCodeField")
+                        }
 
                         Button(role: .destructive) {
                             Task {
                                 viewModel.analytics.event(.accountDeleteRequest)
                                 do {
                                     try await viewModel.store.apiClient.requestAccountDeletion(
-                                        password: deleteAccountPassword
+                                        password: deleteNeedsPassword ? deleteAccountPassword : nil,
+                                        code: deleteNeedsCode ? deleteAccountCode : nil
                                     )
                                     showingDeleteRequestField = false
                                     deleteAccountPassword = ""
+                                    deleteAccountCode = ""
                                     statusMessage = tr("Check your email to confirm the deletion.")
                                     errorMessage = nil
                                     #if DEBUG
@@ -873,6 +924,7 @@ private struct AccountSettingsPage: View {
                         } label: {
                             Text(tr("Email Me a Confirmation Link"))
                         }
+                        .disabled(!deleteCanSubmit)
                         .accessibilityIdentifier("ios.profile.sendDeleteEmailButton")
                     }
                 }
@@ -885,6 +937,8 @@ private struct AccountSettingsPage: View {
             if viewModel.socialEnabled, viewModel.social.profile == nil {
                 await viewModel.social.fetchProfile()
             }
+            // Decides password vs 2FA-code field on Delete Account; nil = password fallback.
+            deleteSecurityStatus = try? await viewModel.store.apiClient.securityStatus()
         }
         .modifier(PopOnDeepLink(viewModel: viewModel))
         .onChange(of: viewModel.store.currentUser == nil) { _, signedOut in
@@ -1432,5 +1486,22 @@ private struct LanguageUnitsSettingsPage: View {
         .navigationTitle(tr("Language & units"))
         .navigationBarTitleDisplayMode(.inline)
         .modifier(PopOnDeepLink(viewModel: viewModel))
+    }
+}
+
+private extension View {
+    /// Neutral capsule for the Google/passkey provider buttons — white with a light
+    /// border in light mode, dark grey (#131314) in dark mode per Google's sign-in
+    /// branding. Height and shape match `SignInWithAppleButton` (.frame 50, Capsule).
+    func lukiProviderButton(colorScheme: ColorScheme) -> some View {
+        self
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .foregroundStyle(colorScheme == .dark ? Color.white : Color(white: 0.12))
+            .background(colorScheme == .dark
+                ? Color(red: 0.075, green: 0.075, blue: 0.078)
+                : Color.white)
+            .clipShape(Capsule())
+            .overlay(Capsule().strokeBorder(Color.primary.opacity(0.15)))
     }
 }

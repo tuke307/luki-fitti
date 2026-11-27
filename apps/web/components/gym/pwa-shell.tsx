@@ -32,7 +32,7 @@ import { useLocale } from '@/providers/i18n/locale-context';
 import { computeRemainingRestSeconds } from '@/lib/offline/offline-store';
 import { triggerWorkoutNotification } from '@/lib/notifications/notification-manager';
 import { SessionStatus } from '@luki-fitti/common/enums';
-import { resolveFocusedExerciseIndex } from '@luki-fitti/common/utils/client';
+import { activeElapsedSeconds, resolveFocusedExerciseIndex } from '@luki-fitti/common/utils/client';
 import { HomeView } from './home-view';
 import { WorkoutsView, type WorkoutsSegment } from './workouts-view';
 import { ActiveSessionView } from './active-session-view';
@@ -344,11 +344,7 @@ export function PwaShell() {
   const isRestVisible = restInfo.isRunning || restInfo.isPaused;
   const isOffline = !isOnline || syncState === 'OFFLINE';
 
-  const sessionElapsedSeconds = activeSession
-    ? activeSession.status === SessionStatus.PAUSED
-      ? activeSession.activeDurationSeconds
-      : Math.max(0, Math.floor((nowMs - Date.parse(activeSession.startedAt)) / 1000))
-    : 0;
+  const sessionElapsedSeconds = activeSession ? activeElapsedSeconds(activeSession, nowMs) : 0;
 
   const navItems: Array<{
     id: TabId;

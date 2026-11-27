@@ -186,6 +186,7 @@ describe('Offline Workout Engine — Recovery, Rest Timers & Exercise Substituti
       pausedAt: null,
       completedAt: '2026-10-10T18:00:00.000Z',
       activeDurationSeconds: 3600,
+      pausedDurationSeconds: 0,
       weightUnit: WeightUnit.KG,
       totalVolumeKg: 2880,
       totalSetsCompleted: 3,

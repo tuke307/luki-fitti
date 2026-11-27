@@ -7,7 +7,7 @@ public struct HistoryCalendarGrid: Sendable, Equatable {
     public enum Span: Sendable, Equatable {
         /// The current ISO week, Monday through Sunday (days after today included).
         case week
-        /// The 30 days ending today.
+        /// The current calendar month, 1st through last day (days after today included).
         case month
     }
 
@@ -25,8 +25,8 @@ public struct HistoryCalendarGrid: Sendable, Equatable {
             first = calendar.date(byAdding: .day, value: -Self.isoWeekdayIndex(of: today, calendar: calendar), to: today) ?? today
             count = 7
         case .month:
-            first = calendar.date(byAdding: .day, value: -29, to: today) ?? today
-            count = 30
+            first = calendar.date(from: calendar.dateComponents([.year, .month], from: today)) ?? today
+            count = calendar.range(of: .day, in: .month, for: today)?.count ?? 30
         }
         leadingBlanks = span == .week ? 0 : Self.isoWeekdayIndex(of: first, calendar: calendar)
         days = (0..<count).compactMap { calendar.date(byAdding: .day, value: $0, to: first) }

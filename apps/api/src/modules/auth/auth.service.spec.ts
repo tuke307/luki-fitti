@@ -10,13 +10,15 @@ import type { PrismaService } from '../database/prisma.service';
 import type { EmailService } from '../email/email.service';
 import type { BodyWeightService } from '../body-weight/body-weight.service';
 import { EmailTemplateService } from '../email-template/email-template.service';
+import type { TwoFactorService } from './two-factor.service';
+import type { AppleTokenService } from './apple-token.service';
 import { BodyGoal, DistanceUnit, EmailTemplateType, WeightUnit } from '@luki-fitti/common/enums';
 
 interface MockUserRecord {
   id: string;
   email: string;
   name: string | null;
-  passwordHash: string;
+  passwordHash: string | null;
   emailVerified: boolean;
   emailVerificationToken: string | null;
   emailVerificationExpires: Date | null;
@@ -29,6 +31,7 @@ interface MockUserRecord {
   lastLoginAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  twoFactor: { enabledAt: Date | null } | null;
   preferences: {
     id: string;
     userId: string;
@@ -44,6 +47,15 @@ interface MockUserRecord {
 function createMockPrisma() {
   const users = new Map<string, MockUserRecord>();
   const refreshTokens: unknown[] = [];
+  const oAuthAccounts: {
+    id: string;
+    userId: string;
+    provider: 'GOOGLE' | 'APPLE';
+    providerUserId: string;
+    email: string | null;
+    refreshTokenEnc: string | null;
+    tokenClientId: string | null;
+  }[] = [];
 
   const prisma = {
     exercise: {
@@ -87,7 +99,7 @@ function createMockPrisma() {
         data: {
           email: string;
           name?: string | null;
-          passwordHash: string;
+          passwordHash: string | null;
           emailVerified?: boolean;
           emailVerificationToken?: string | null;
           emailVerificationExpires?: Date | null;
@@ -115,6 +127,7 @@ function createMockPrisma() {
           lastLoginAt: data.lastLoginAt ?? new Date(),
           createdAt: new Date(),
           updatedAt: new Date(),
+          twoFactor: null,
           preferences: {
             id: `pref-${id}`,
             userId: id,
@@ -160,6 +173,24 @@ function createMockPrisma() {
     refreshToken: {
       deleteMany: async () => ({ count: refreshTokens.length }),
     },
+    oAuthAccount: {
+      findMany: async ({
+        where,
+      }: {
+        where: { userId: string; provider?: 'GOOGLE' | 'APPLE'; refreshTokenEnc?: { not: null } };
+      }) =>
+        oAuthAccounts.filter(
+          (a) =>
+            a.userId === where.userId &&
+            (where.provider === undefined || a.provider === where.provider) &&
+            (where.refreshTokenEnc === undefined || a.refreshTokenEnc !== null),
+        ),
+      delete: async ({ where }: { where: { id: string } }) => {
+        const i = oAuthAccounts.findIndex((a) => a.id === where.id);
+        const [row] = i >= 0 ? oAuthAccounts.splice(i, 1) : [null];
+        return row;
+      },
+    },
     progressPhoto: {
       findMany: async () => [],
     },
@@ -167,9 +198,12 @@ function createMockPrisma() {
       findMany: async () => [],
     },
     $transaction: async <T>(fn: (tx: unknown) => Promise<T>) => fn(prisma),
+    _oAuthAccounts: oAuthAccounts,
   };
 
-  return prisma as unknown as PrismaService;
+  return prisma as unknown as PrismaService & {
+    _oAuthAccounts: typeof oAuthAccounts;
+  };
 }
 
 describe('AuthService — Registration, Authentication & Brute-Force Protection', () => {
@@ -329,12 +363,20 @@ describe('AuthService — Registration, Authentication & Brute-Force Protection'
 
     // Reject account deletion request with wrong password
     await assert.rejects(
-      () => service.requestAccountDeletion(registered.id, 'WRONG-PASSWORD-999'),
+      () => service.requestAccountDeletion(registered.id, { password: 'WRONG-PASSWORD-999' }),
+      /Current password is incorrect/i,
+    );
+
+    // Missing password is rejected the same way for password accounts
+    await assert.rejects(
+      () => service.requestAccountDeletion(registered.id, {}),
       /Current password is incorrect/i,
     );
 
     // Request account deletion with valid password -> sends email with token, does NOT delete yet
-    const requested = await service.requestAccountDeletion(registered.id, 'FAKE-PASSWORD-TEST-123');
+    const requested = await service.requestAccountDeletion(registered.id, {
+      password: 'FAKE-PASSWORD-TEST-123',
+    });
     assert.equal(requested.success, true);
     assert.equal(deletionEmailRecipient, 'delete-me@lukifitti.de');
     assert.equal(capturedDeletionToken.length > 20, true);
@@ -362,6 +404,108 @@ describe('AuthService — Registration, Authentication & Brute-Force Protection'
     const previewHtml = await templateService.getPreviewHtml(EmailTemplateType.ACCOUNT_DELETION);
     assert.equal(previewHtml.includes('Confirm Account Deletion'), true);
     assert.equal(previewHtml.includes('/delete-account?token='), true);
+  });
+
+  it('requests deletion without a password for OAuth-only accounts', async () => {
+    const prisma = createMockPrisma();
+    const service = new AuthService(prisma);
+
+    const registered = await service.registerUser({
+      email: 'oauth-only@lukifitti.de',
+      password: 'FAKE-PASSWORD-TEST-123',
+      name: 'OAuthOnly',
+    });
+    // Simulate an OAuth-only account: no password hash on the row.
+    const dbUser = (await prisma.user.findUnique({
+      where: { id: registered.id },
+    })) as unknown as MockUserRecord;
+    dbUser.passwordHash = null;
+
+    const requested = await service.requestAccountDeletion(registered.id, {});
+    assert.equal(requested.success, true);
+  });
+
+  it('requires a valid 2FA code for passwordless accounts with 2FA enabled', async () => {
+    const prisma = createMockPrisma();
+    const verifiedCodes: string[] = [];
+    const twoFactor = {
+      verify: async (_userId: string, code: string) => {
+        verifiedCodes.push(code);
+        return code === '123456';
+      },
+    } as unknown as TwoFactorService;
+    const service = new AuthService(prisma, undefined, undefined, undefined, undefined, twoFactor);
+
+    const registered = await service.registerUser({
+      email: 'oauth-2fa@lukifitti.de',
+      password: 'FAKE-PASSWORD-TEST-123',
+      name: 'OAuth2FA',
+    });
+    const dbUser = (await prisma.user.findUnique({
+      where: { id: registered.id },
+    })) as unknown as MockUserRecord;
+    dbUser.passwordHash = null;
+    dbUser.twoFactor = { enabledAt: new Date() };
+
+    await assert.rejects(() => service.requestAccountDeletion(registered.id, {}), /Invalid code/i);
+    await assert.rejects(
+      () => service.requestAccountDeletion(registered.id, { code: '000000' }),
+      /Invalid code/i,
+    );
+
+    const requested = await service.requestAccountDeletion(registered.id, { code: '123456' });
+    assert.equal(requested.success, true);
+    assert.deepEqual(verifiedCodes, ['000000', '123456']);
+  });
+
+  it('revokes stored Apple refresh tokens during confirmed deletion, still deletes on revoke failure', async () => {
+    const prisma = createMockPrisma();
+    const revoked: string[] = [];
+    const appleTokens = {
+      isConfigured: () => true,
+      revokeFor: async (account: { id: string }) => {
+        revoked.push(account.id);
+        throw new Error('apple unreachable');
+      },
+    } as unknown as AppleTokenService;
+    let capturedToken = '';
+    const mockEmailService = {
+      enqueueAccountConfirmationEmail: async () => undefined,
+      enqueueAccountDeletionEmail: async (_user: unknown, rawToken: string) => {
+        capturedToken = rawToken;
+      },
+    } as unknown as EmailService;
+    const service = new AuthService(
+      prisma,
+      mockEmailService,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      appleTokens,
+    );
+
+    const registered = await service.registerUser({
+      email: 'apple-user@lukifitti.de',
+      password: 'FAKE-PASSWORD-TEST-123',
+      name: 'AppleUser',
+    });
+    prisma._oAuthAccounts.push({
+      id: 'oauth-apple-1',
+      userId: registered.id,
+      provider: 'APPLE',
+      providerUserId: 'apple-sub-1',
+      email: registered.email,
+      refreshTokenEnc: 'v1.fake',
+      tokenClientId: 'com.lukifitti.ios',
+    });
+
+    await service.requestAccountDeletion(registered.id, { password: 'FAKE-PASSWORD-TEST-123' });
+    const confirmed = await service.confirmAccountDeletion(capturedToken);
+
+    assert.equal(confirmed.success, true);
+    assert.deepEqual(revoked, ['oauth-apple-1']);
+    assert.equal(await service.getUserById(registered.id), null);
   });
 
   it('supports Authorization: Bearer tokens in AuthGuard and bypasses CsrfGuard only for Bearer transport', async () => {

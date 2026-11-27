@@ -113,6 +113,7 @@ const completedSession: WorkoutSessionDto = {
   pausedAt: null,
   completedAt: '2026-01-02T11:00:00.000Z',
   activeDurationSeconds: 3600,
+  pausedDurationSeconds: 0,
   weightUnit: WeightUnit.KG,
   totalVolumeKg: 480,
   totalSetsCompleted: 2,

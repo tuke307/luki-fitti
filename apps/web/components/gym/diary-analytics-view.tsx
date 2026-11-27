@@ -157,11 +157,12 @@ export function DiaryAnalyticsView() {
   };
 
   const filteredSessions = useMemo(() => {
+    const now = new Date(nowMs);
     const cutoffMs =
       period === 'week'
         ? startOfIsoWeek(nowMs).getTime()
         : period === 'month'
-          ? nowMs - 30 * 86400000
+          ? new Date(now.getFullYear(), now.getMonth(), 1).getTime()
           : period === 'year'
             ? nowMs - 365 * 86400000
             : 0;
@@ -356,10 +357,11 @@ export function DiaryAnalyticsView() {
         dayNum: number;
         sessions: WorkoutSessionDto[];
       }> = [];
-      const firstDay = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - 29);
-      const leadingEmptyDays = (firstDay.getDay() + 6) % 7;
-      for (let i = 29; i >= 0; i--) {
-        const d = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - i);
+      const firstOfMonth = new Date(nowDate.getFullYear(), nowDate.getMonth(), 1);
+      const daysInMonth = new Date(nowDate.getFullYear(), nowDate.getMonth() + 1, 0).getDate();
+      const leadingEmptyDays = (firstOfMonth.getDay() + 6) % 7;
+      for (let i = 1; i <= daysInMonth; i++) {
+        const d = new Date(nowDate.getFullYear(), nowDate.getMonth(), i);
         const iso = toLocalDateIso(d);
         days.push({
           iso,
@@ -370,7 +372,7 @@ export function DiaryAnalyticsView() {
       }
       return {
         mode: 'days' as const,
-        title: t.diary.last30DaysTitle,
+        title: nowDate.toLocaleDateString(bcp47, { month: 'long' }),
         leadingEmptyDays,
         items: days,
       };

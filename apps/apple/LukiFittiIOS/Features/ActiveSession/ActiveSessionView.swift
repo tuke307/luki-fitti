@@ -1303,7 +1303,8 @@ private struct SessionElapsedTime: View {
         if session.status == .PAUSED {
             Text(LukiFormat.clock(session.activeDurationSeconds))
         } else if let started = LukiDate.parseISO(session.startedAt) {
-            Text(timerInterval: started...Date.distantFuture, countsDown: false)
+            // Shift the start forward by completed pause time so the ticker shows active time.
+            Text(timerInterval: started.addingTimeInterval(TimeInterval(session.pausedDurationSeconds))...Date.distantFuture, countsDown: false)
         } else {
             Text(LukiFormat.clock(0))
         }
@@ -1343,10 +1344,7 @@ private struct LiveStatsRow: View {
 
     /// Live MET estimate used while no measured energy streams in from the Watch.
     private var estimatedKcalText: String? {
-        guard let started = LukiDate.parseISO(session.startedAt) else { return nil }
-        let elapsed = session.status == .PAUSED
-            ? session.activeDurationSeconds
-            : max(0, Int(Date().timeIntervalSince(started)))
+        let elapsed = SessionDuration.activeElapsedSeconds(session)
         let estimate = NutritionMath.liveBurnedKcalEstimate(
             for: session,
             elapsedSeconds: elapsed,
