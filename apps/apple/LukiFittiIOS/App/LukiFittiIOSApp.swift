@@ -984,18 +984,12 @@ public final class LukiAppViewModel {
 
     public func togglePauseActiveSession() {
         guard var session = store.activeSession else { return }
+        let nowIso = ISO8601DateFormatter().string(from: Date())
         if session.status == .PAUSED {
-            session.status = .IN_PROGRESS
-            session.pausedAt = nil
+            SessionDuration.resume(&session, nowIso: nowIso)
             healthCoordinator.resumeWorkout()
         } else {
-            session.status = .PAUSED
-            session.pausedAt = ISO8601DateFormatter().string(from: Date())
-            let started = LukiDate.parseISO(session.startedAt) ?? Date()
-            session.activeDurationSeconds = max(
-                session.activeDurationSeconds,
-                Int(Date().timeIntervalSince(started))
-            )
+            SessionDuration.pause(&session, nowIso: nowIso)
             healthCoordinator.pauseWorkout()
         }
         session.version += 1
@@ -1013,13 +1007,13 @@ public final class LukiAppViewModel {
         session.restTimerDurationSec = nil
         session.restTimerPausedRemSec = nil
         restAlertGate.reset()
-        let started = LukiDate.parseISO(session.startedAt) ?? Date()
-        session.activeDurationSeconds = max(
-            60,
-            session.activeDurationSeconds > 0
-                ? session.activeDurationSeconds
-                : Int(Date().timeIntervalSince(started))
-        )
+        // Fold a still-open pause in (status is already COMPLETED above), then the
+        // pause-aware elapsed with the kept 60s floor.
+        if session.pausedAt != nil {
+            SessionDuration.resume(&session, nowIso: nowIso)
+            session.status = .COMPLETED
+        }
+        session.activeDurationSeconds = max(60, SessionDuration.activeElapsedSeconds(session))
 
         // Tell the Watch right away that the workout ended — the HealthKit finish below can take
         // a moment, and transferUserInfo alone queues in the background. The finalized copy with
@@ -2078,8 +2072,7 @@ struct SessionAccessoryView: View {
 
     private func subtitle(session: WorkoutSessionDto?, rest: RestTimerStatus, now: Date) -> String {
         guard let session else { return tr("Done") }
-        let started = ISO8601DateFormatter.lukiParse(session.startedAt) ?? now
-        let elapsed = session.status == .PAUSED ? session.activeDurationSeconds : max(0, Int(now.timeIntervalSince(started)))
+        let elapsed = SessionDuration.activeElapsedSeconds(session, now: now)
         var text = LukiFormat.clock(elapsed)
         if rest.isRunning || rest.isPaused {
             text += " · " + tr("Rest %@", LukiFormat.clock(rest.remainingSeconds))

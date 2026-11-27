@@ -8,6 +8,7 @@ export * from './progression.util';
 export * from './folder-color.util';
 export * from './template-sets.util';
 export * from './active-session.util';
+export * from './session-duration.util';
 export * from './session-focus.util';
 export * from './exercise-alternatives.util';
 export * from './exercise-history.util';

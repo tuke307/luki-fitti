@@ -80,6 +80,9 @@ import {
   orderWarmupsFirst,
   summarizeTemplateSets,
   toDismissedSuggestion,
+  activeElapsedSeconds,
+  pauseSession as pauseSessionPatch,
+  resumeSession as resumeSessionPatch,
   type DismissedWorkoutSuggestion,
   type WorkoutExerciseSuggestion,
 } from '@luki-fitti/common/utils/client';
@@ -1195,6 +1198,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
       pausedAt: null,
       completedAt: null,
       activeDurationSeconds: 0,
+      pausedDurationSeconds: 0,
       weightUnit,
       totalVolumeKg: 0,
       totalSetsCompleted: 0,
@@ -1521,15 +1525,9 @@ export function GymProvider({ children }: { children: ReactNode }) {
 
   const pauseSession = async () => {
     if (!activeSession) return;
-    const elapsedSec = Math.max(
-      activeSession.activeDurationSeconds,
-      Math.floor((Date.now() - Date.parse(activeSession.startedAt)) / 1000),
-    );
     await persistSessionUpdate({
       ...activeSession,
-      status: SessionStatus.PAUSED,
-      pausedAt: new Date().toISOString(),
-      activeDurationSeconds: elapsedSec,
+      ...pauseSessionPatch(activeSession, new Date().toISOString()),
     });
   };
 
@@ -1537,8 +1535,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
     if (!activeSession) return;
     await persistSessionUpdate({
       ...activeSession,
-      status: SessionStatus.IN_PROGRESS,
-      pausedAt: null,
+      ...resumeSessionPatch(activeSession, new Date().toISOString()),
     });
   };
 
@@ -1549,14 +1546,15 @@ export function GymProvider({ children }: { children: ReactNode }) {
       syncTimerRef.current = null;
     }
     const nowIso = new Date().toISOString();
-    const elapsedSec = Math.max(
-      60,
-      activeSession.activeDurationSeconds ||
-        Math.floor((Date.now() - Date.parse(activeSession.startedAt)) / 1000),
-    );
+    // Fold a still-open pause into pausedDurationSeconds so it survives on the finished
+    // record; floor of 60s kept from before.
+    const unfolded = activeSession.pausedAt
+      ? { ...activeSession, ...resumeSessionPatch(activeSession, nowIso) }
+      : activeSession;
+    const elapsedSec = Math.max(60, activeElapsedSeconds(unfolded, Date.now()));
 
     const finalized = recalculateSessionTotals({
-      ...activeSession,
+      ...unfolded,
       status: SessionStatus.COMPLETED,
       completedAt: nowIso,
       activeDurationSeconds: elapsedSec,

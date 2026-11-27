@@ -592,6 +592,8 @@ model WorkoutSession {
   pausedAt              DateTime?
   completedAt           DateTime?
   activeDurationSeconds Int                 @default(0)
+  /// Total seconds spent in *completed* pauses; subtracted from wall-clock elapsed (#119).
+  pausedDurationSeconds Int                 @default(0)
   weightUnit            WeightUnit          @default(KG)
   totalVolumeKg         Float               @default(0)
   totalSetsCompleted    Int                 @default(0)

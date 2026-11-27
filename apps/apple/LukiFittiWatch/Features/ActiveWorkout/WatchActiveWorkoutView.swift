@@ -114,7 +114,8 @@ public struct WatchActiveWorkoutView: View {
         if let session, session.status == .PAUSED {
             Text(LukiFormat.clock(session.activeDurationSeconds))
         } else if let started = session.flatMap({ LukiISODate.parse($0.startedAt) }) {
-            Text(timerInterval: started...Date.distantFuture, countsDown: false)
+            // Shift the start forward by completed pause time so the ticker shows active time.
+            Text(timerInterval: started.addingTimeInterval(TimeInterval(session?.pausedDurationSeconds ?? 0))...Date.distantFuture, countsDown: false)
         } else {
             Text(LukiFormat.clock(0))
         }
