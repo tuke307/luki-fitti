@@ -15,7 +15,6 @@ struct SecuritySettingsPage: View {
     @State private var message: String?
     @State private var busy = false
 
-    @State private var passkeyName = ""
     @State private var passkeyPendingDelete: PasskeyDto?
     @State private var passkeyPendingRename: PasskeyDto?
     @State private var renameText = ""
@@ -154,17 +153,12 @@ struct SecuritySettingsPage: View {
     private func providerRow(_ provider: String, label: String, canLink: Bool = true) -> some View {
         let linked = status?.providers.contains(provider) == true
         HStack {
+            providerIcon(provider)
             Text(label)
             Spacer()
             if linked {
-                Label(tr("Linked"), systemImage: "checkmark.circle.fill")
-                    .font(.footnote)
-                    .foregroundStyle(LukiColors.success)
-                Button(tr("Unlink"), role: .destructive) {
-                    providerPendingUnlink = provider
-                }
-                .buttonStyle(.borderless)
-                .accessibilityIdentifier("ios.security.unlink.\(provider)")
+                Text(tr("Linked"))
+                    .foregroundStyle(.secondary)
             } else if canLink {
                 Button(tr("Link")) {
                     Task { await linkProvider(provider) }
@@ -177,7 +171,36 @@ struct SecuritySettingsPage: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if linked { providerPendingUnlink = provider }
+        }
+        .swipeActions {
+            if linked {
+                Button(tr("Unlink"), role: .destructive) {
+                    providerPendingUnlink = provider
+                }
+                .accessibilityIdentifier("ios.security.unlink.\(provider)")
+            }
+        }
+        .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
         .accessibilityIdentifier("ios.security.provider.\(provider)")
+    }
+
+    @ViewBuilder
+    private func providerIcon(_ provider: String) -> some View {
+        switch provider {
+        case "apple":
+            Image(systemName: "apple.logo")
+                .frame(width: 20)
+        case "google":
+            Image("GoogleG")
+                .resizable()
+                .frame(width: 16, height: 16)
+                .frame(width: 20)
+        default:
+            EmptyView()
+        }
     }
 
     private var passkeysSection: some View {
@@ -206,20 +229,32 @@ struct SecuritySettingsPage: View {
                         passkeyPendingDelete = passkey
                     }
                 }
+                .contextMenu {
+                    Button {
+                        renameText = passkey.name
+                        passkeyPendingRename = passkey
+                    } label: {
+                        Label(tr("Rename"), systemImage: "pencil")
+                    }
+                    Button(role: .destructive) {
+                        passkeyPendingDelete = passkey
+                    } label: {
+                        Label(tr("Remove"), systemImage: "trash")
+                    }
+                }
+                .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
                 .accessibilityIdentifier("ios.security.passkey.\(passkey.id)")
             }
 
-            HStack {
-                TextField(tr("Passkey name (optional)"), text: $passkeyName)
-                    .autocorrectionDisabled()
-                Button {
-                    Task { await addPasskey() }
-                } label: {
-                    Label(tr("Add passkey"), systemImage: "key.fill")
-                }
-                .disabled(busy)
-                .accessibilityIdentifier("ios.security.addPasskey")
+            Button {
+                Task { await addPasskey() }
+            } label: {
+                Label(tr("Add passkey"), systemImage: "key.fill")
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .disabled(busy)
+            .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+            .accessibilityIdentifier("ios.security.addPasskey")
         }
         .disabled(busy)
     }
@@ -235,23 +270,28 @@ struct SecuritySettingsPage: View {
                 .accessibilityIdentifier("ios.security.recoveryCodesAck")
             } else if status?.twoFactorEnabled == true {
                 LabeledContent(tr("Status")) {
-                    Label(tr("On"), systemImage: "checkmark.shield.fill")
-                        .foregroundStyle(LukiColors.success)
+                    Text(tr("On"))
+                        .foregroundStyle(.secondary)
                 }
+                .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
                 LabeledContent(tr("Recovery codes left")) {
                     Text("\(status?.recoveryCodesRemaining ?? 0)")
                         .monospacedDigit()
                 }
                 Button(tr("Regenerate recovery codes")) { codePrompt = .regenerate }
+                    .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
                     .accessibilityIdentifier("ios.security.regenerateCodes")
                 Button(tr("Turn off"), role: .destructive) { codePrompt = .disable }
+                    .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
                     .accessibilityIdentifier("ios.security.disable2fa")
             } else if let totpSetup {
                 totpSetupRows(totpSetup)
             } else {
-                Text(tr("2FA adds a code from an authenticator app when you sign in."))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                LabeledContent(tr("Status")) {
+                    Text(tr("Off"))
+                        .foregroundStyle(.secondary)
+                }
+                .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
                 Button(tr("Turn on")) {
                     Task {
                         await run {
@@ -259,10 +299,13 @@ struct SecuritySettingsPage: View {
                         }
                     }
                 }
+                .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
                 .accessibilityIdentifier("ios.security.setup2fa")
             }
         } header: {
-            Text(tr("Two-factor authentication (optional)"))
+            Text(tr("Two-factor authentication"))
+        } footer: {
+            Text(tr("Optional") + " — " + tr("2FA adds a code from an authenticator app when you sign in."))
         }
         .disabled(busy)
     }
@@ -399,10 +442,7 @@ struct SecuritySettingsPage: View {
 
     private func addPasskey() async {
         await run {
-            _ = try await coordinator.registerPasskey(
-                name: passkeyName.isEmpty ? nil : passkeyName
-            )
-            passkeyName = ""
+            _ = try await coordinator.registerPasskey(name: nil)
         }
     }
 
@@ -415,8 +455,7 @@ struct SecuritySettingsPage: View {
     }
 
     private static func shortDate(_ iso: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: iso) else { return iso }
+        guard let date = LukiDate.parseISO(iso) else { return iso }
         return date.formatted(date: .abbreviated, time: .omitted)
     }
 
