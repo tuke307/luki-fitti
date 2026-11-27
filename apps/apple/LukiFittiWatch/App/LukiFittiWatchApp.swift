@@ -690,19 +690,13 @@ public final class WatchWorkoutViewModel {
 
     public func togglePause() {
         guard var session = store.activeSession else { return }
+        let nowIso = ISO8601DateFormatter().string(from: Date())
         if session.status == .PAUSED {
-            session.status = .IN_PROGRESS
-            session.pausedAt = nil
+            SessionDuration.resume(&session, nowIso: nowIso)
             healthCoordinator.resumeWorkout()
             WKInterfaceDevice.current().play(.start)
         } else {
-            session.status = .PAUSED
-            session.pausedAt = ISO8601DateFormatter().string(from: Date())
-            let started = LukiDate.parseISO(session.startedAt) ?? Date()
-            session.activeDurationSeconds = max(
-                session.activeDurationSeconds,
-                Int(Date().timeIntervalSince(started))
-            )
+            SessionDuration.pause(&session, nowIso: nowIso)
             healthCoordinator.pauseWorkout()
             WKInterfaceDevice.current().play(.stop)
         }
@@ -723,13 +717,12 @@ public final class WatchWorkoutViewModel {
         session.restTimerDurationSec = nil
         session.restTimerPausedRemSec = nil
         restAlertGate.reset()
-        let started = LukiDate.parseISO(session.startedAt) ?? Date()
-        session.activeDurationSeconds = max(
-            60,
-            session.activeDurationSeconds > 0
-                ? session.activeDurationSeconds
-                : Int(Date().timeIntervalSince(started))
-        )
+        // Fold a still-open pause in (status is already COMPLETED above), kept 60s floor.
+        if session.pausedAt != nil {
+            SessionDuration.resume(&session, nowIso: nowIso)
+            session.status = .COMPLETED
+        }
+        session.activeDurationSeconds = max(60, SessionDuration.activeElapsedSeconds(session))
 
         let hkMetrics = await healthCoordinator.finishWorkout(clientSessionId: session.clientSessionId)
         session.healthKitWorkoutUuid = hkMetrics.healthKitWorkoutUuid

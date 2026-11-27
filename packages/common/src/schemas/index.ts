@@ -610,6 +610,8 @@ export const SyncSessionPayloadSchema = z.object({
   pausedAt: z.string().nullable().optional(),
   completedAt: z.string().nullable().optional(),
   activeDurationSeconds: z.number().int().min(0).default(0),
+  /** Seconds spent in completed pauses; omitted by older clients (server keeps stored value). */
+  pausedDurationSeconds: z.number().int().min(0).optional(),
   weightUnit: z.enum(WeightUnit).default(WeightUnit.KG),
   notes: z.string().max(2000).nullable().optional(),
   restTimerEndsAt: z.string().nullable().optional(),
@@ -717,6 +719,7 @@ export interface WorkoutSessionDto {
   pausedAt: string | null;
   completedAt: string | null;
   activeDurationSeconds: number;
+  pausedDurationSeconds: number;
   weightUnit: WeightUnit;
   totalVolumeKg: number;
   totalSetsCompleted: number;

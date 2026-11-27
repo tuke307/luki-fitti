@@ -64,6 +64,7 @@ import { pointsApi, raidsApi } from '@/lib/social/social-api';
 import { RaidHitMoment } from '@/components/gym/raid/raid-hit-moment';
 import { triggerWorkoutNotification } from '@/lib/notifications/notification-manager';
 import {
+  activeElapsedSeconds,
   computeExerciseProgression,
   computeWorkoutExerciseSuggestion,
   formatRestDurationMinSec,
@@ -342,10 +343,7 @@ export function ActiveSessionView({
   // ───────────────────────────────────────────────────────────────────────────
   // Active Session HUD & Calculations
   // ───────────────────────────────────────────────────────────────────────────
-  const elapsedSeconds =
-    activeSession.status === SessionStatus.PAUSED
-      ? activeSession.activeDurationSeconds
-      : Math.max(0, Math.floor((nowMs - Date.parse(activeSession.startedAt)) / 1000));
+  const elapsedSeconds = activeElapsedSeconds(activeSession, nowMs);
 
   const formatTimer = (sec: number) => {
     const hrs = Math.floor(sec / 3600);

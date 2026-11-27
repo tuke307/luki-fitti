@@ -179,7 +179,9 @@ public final class WorkoutLiveActivityController {
             liveHeartRateBpm: heartRate,
             restTimerEndsAt: rest.isRunning ? Date().addingTimeInterval(TimeInterval(rest.remainingSeconds)) : nil,
             restPausedRemainingSeconds: rest.isPaused ? rest.remainingSeconds : nil,
-            workoutStartedAt: parse(session.startedAt) ?? Date()
+            // Shift forward by completed pauses so the timerInterval clock shows active time.
+            workoutStartedAt: (parse(session.startedAt) ?? Date())
+                .addingTimeInterval(TimeInterval(session.pausedDurationSeconds))
         )
     }
 

@@ -561,6 +561,39 @@ describe('SessionService — Offline Sync Idempotency, Conflict Detection & Volu
     );
     assert.equal(legacy.session.estimatedCaloriesKcal, mid);
   });
+
+  it('keeps stored pausedDurationSeconds when old clients omit it, updates it when present', async () => {
+    const prisma = createMockSessionPrisma();
+    const service = new SessionService(prisma as unknown as PrismaService);
+    const stored = () =>
+      Array.from(
+        (prisma as { _sessions: Map<string, Record<string, unknown>> })._sessions.values(),
+      )[0]!;
+
+    const base = {
+      clientSessionId: 'client-pause-1',
+      sessionType: SessionType.STRENGTH,
+      workoutNameSnapshot: 'Pause Test',
+      status: SessionStatus.IN_PROGRESS,
+      startedAt: '2026-11-27T10:00:00Z',
+      activeDurationSeconds: 600,
+      weightUnit: WeightUnit.KG,
+      version: 1,
+      exercises: [],
+    };
+
+    // Older client: field omitted entirely.
+    await service.syncSession('user-1', base);
+    assert.equal(stored().pausedDurationSeconds, 0); // create default
+
+    // New client reports pause time.
+    await service.syncSession('user-1', { ...base, version: 2, pausedDurationSeconds: 300 });
+    assert.equal(stored().pausedDurationSeconds, 300);
+
+    // Older client syncs again: the stored value survives.
+    await service.syncSession('user-1', { ...base, version: 3 });
+    assert.equal(stored().pausedDurationSeconds, 300);
+  });
 });
 
 describe('SessionService — running workouts on other devices', () => {

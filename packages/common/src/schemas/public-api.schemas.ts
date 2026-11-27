@@ -165,6 +165,7 @@ export const PublicSessionSchema = z.object({
   pausedAt: z.string().nullable(),
   completedAt: z.string().nullable(),
   activeDurationSeconds: z.number(),
+  pausedDurationSeconds: z.number(),
   totalVolumeKg: z.number(),
   totalSetsCompleted: z.number().int(),
   totalRepsCompleted: z.number().int(),
