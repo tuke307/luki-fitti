@@ -180,6 +180,7 @@ export default function SecurityView({
         idToken: response.authorization.id_token,
         nonce,
         name: appleUserName(response),
+        authorizationCode: response.authorization.code,
       });
       if (!res.success) throw new Error(res.error || 'Link failed');
     });

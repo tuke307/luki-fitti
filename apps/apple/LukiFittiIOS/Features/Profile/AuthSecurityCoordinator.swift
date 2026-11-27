@@ -64,7 +64,7 @@ final class AuthSecurityCoordinator: NSObject {
 
     // MARK: - Apple
 
-    private func appleIDToken() async throws -> (idToken: String, nonce: String, name: String?) {
+    private func appleIDToken() async throws -> (idToken: String, nonce: String, name: String?, authorizationCode: String?) {
         let rawNonce = OAuthNonce.makeRaw()
         let provider = ASAuthorizationAppleIDProvider()
         let request = provider.createRequest()
@@ -81,7 +81,12 @@ final class AuthSecurityCoordinator: NSObject {
         let parts = [credential.fullName?.givenName, credential.fullName?.familyName]
             .compactMap { $0?.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
-        return (idToken, rawNonce, parts.isEmpty ? nil : parts.joined(separator: " "))
+        // The authorization code is single-use; the API exchanges it for a revocable
+        // refresh token so Sign in with Apple can be revoked on unlink/deletion (#209).
+        let authorizationCode = credential.authorizationCode.flatMap {
+            String(data: $0, encoding: .utf8)
+        }
+        return (idToken, rawNonce, parts.isEmpty ? nil : parts.joined(separator: " "), authorizationCode)
     }
 
     func signInWithApple() async throws -> LoginResult {
@@ -90,7 +95,8 @@ final class AuthSecurityCoordinator: NSObject {
             provider: "apple",
             idToken: credential.idToken,
             nonce: credential.nonce,
-            name: credential.name
+            name: credential.name,
+            authorizationCode: credential.authorizationCode
         )
     }
 
@@ -100,7 +106,8 @@ final class AuthSecurityCoordinator: NSObject {
             provider: "apple",
             idToken: credential.idToken,
             nonce: credential.nonce,
-            name: credential.name
+            name: credential.name,
+            authorizationCode: credential.authorizationCode
         )
     }
 

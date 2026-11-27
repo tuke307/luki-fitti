@@ -6,6 +6,7 @@ import {
   ConflictException,
   ForbiddenException,
   Optional,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import crypto from 'crypto';
 import type { User, UserPreferences } from '@luki-fitti/database';
@@ -22,6 +23,8 @@ import { EmailService } from '../email/email.service';
 import { AppSettingsService } from '../app-settings/app-settings.service';
 import { BodyWeightService } from '../body-weight/body-weight.service';
 import { StorageService } from '../storage/storage.service';
+import { AppleTokenService } from './apple-token.service';
+import { TwoFactorService } from './two-factor.service';
 import {
   DEFAULT_STARTER_FOLDERS,
   DEFAULT_STARTER_TEMPLATES,
@@ -64,6 +67,8 @@ export class AuthService {
     @Optional() private readonly appSettings?: AppSettingsService,
     @Optional() private readonly bodyWeight?: BodyWeightService,
     @Optional() private readonly storage?: StorageService,
+    @Optional() private readonly twoFactor?: TwoFactorService,
+    @Optional() private readonly appleTokens?: AppleTokenService,
   ) {}
 
   private hashToken(rawToken: string): string {
@@ -609,16 +614,33 @@ export class AuthService {
 
   async requestAccountDeletion(
     userId: string,
-    password: string,
+    input: { password?: string; code?: string },
   ): Promise<{ success: boolean; message: string }> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { twoFactor: { select: { enabledAt: true } } },
+    });
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    const isPasswordValid = await verifyPassword(password, user.passwordHash);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Current password is incorrect');
+    if (user.passwordHash) {
+      // Accounts with a password keep the old check — missing or wrong fails alike.
+      const isPasswordValid = input.password
+        ? await verifyPassword(input.password, user.passwordHash)
+        : false;
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('Current password is incorrect');
+      }
+    } else if (user.twoFactor?.enabledAt) {
+      // Passwordless account with 2FA: a valid second factor stands in for the password.
+      if (!this.twoFactor) {
+        throw new ServiceUnavailableException('Two-factor verification is unavailable');
+      }
+      const codeOk = input.code ? await this.twoFactor.verify(userId, input.code) : false;
+      if (!codeOk) {
+        throw new UnauthorizedException('Invalid code');
+      }
     }
 
     const rawToken = crypto.randomBytes(32).toString('hex');
@@ -676,6 +698,17 @@ export class AuthService {
       ...reportKeys,
       ...(user.avatarKey ? [user.avatarKey] : []),
     ];
+
+    // Revoke Sign in with Apple refresh tokens first so the app leaves the user's
+    // Apple ID settings — best-effort, deletion proceeds even when revoke fails.
+    if (this.appleTokens?.isConfigured()) {
+      const appleAccounts = await this.prisma.oAuthAccount.findMany({
+        where: { userId: user.id, provider: 'APPLE', refreshTokenEnc: { not: null } },
+      });
+      await Promise.all(appleAccounts.map((a) => this.appleTokens!.revokeFor(a))).catch(
+        () => undefined,
+      );
+    }
 
     await this.prisma.user.delete({ where: { id: user.id } });
     await this.storage?.deleteMany(storageKeys);

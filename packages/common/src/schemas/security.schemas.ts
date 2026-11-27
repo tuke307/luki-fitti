@@ -14,6 +14,8 @@ export const OAuthLoginSchema = z.object({
   nonce: z.string().min(8).max(256),
   /** Apple only sends the name on the very first sign-in, and only to the client. */
   name: z.string().trim().min(1).max(80).optional(),
+  /** Apple's authorization code — exchanged for a revocable refresh token server-side. */
+  authorizationCode: z.string().min(1).max(4096).optional(),
 });
 export type OAuthLoginDto = z.infer<typeof OAuthLoginSchema>;
 

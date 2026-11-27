@@ -223,13 +223,14 @@ public actor APIClient {
         )
     }
 
-    public func requestAccountDeletion(password: String) async throws {
-        struct Body: Encodable { let password: String }
+    /// Passwordless accounts send no `password` (a 2FA `code` is required when enabled).
+    public func requestAccountDeletion(password: String? = nil, code: String? = nil) async throws {
+        struct Body: Encodable { let password: String?; let code: String? }
         struct EmptyResp: Decodable {}
         let _: EmptyResp = try await request(
             path: "/api/auth/request-delete-account",
             method: "POST",
-            body: Body(password: password)
+            body: Body(password: password, code: code)
         )
     }
 

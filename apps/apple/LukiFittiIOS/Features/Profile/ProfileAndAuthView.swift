@@ -562,11 +562,15 @@ public struct ProfileAndAuthView: View {
             let parts = [credential.fullName?.givenName, credential.fullName?.familyName]
                 .compactMap { $0?.trimmingCharacters(in: .whitespaces) }
                 .filter { !$0.isEmpty }
+            let authorizationCode = credential.authorizationCode.flatMap {
+                String(data: $0, encoding: .utf8)
+            }
             let loginResult = try await viewModel.store.apiClient.oauthSignIn(
                 provider: "apple",
                 idToken: idToken,
                 nonce: appleRawNonce,
-                name: parts.isEmpty ? nil : parts.joined(separator: " ")
+                name: parts.isEmpty ? nil : parts.joined(separator: " "),
+                authorizationCode: authorizationCode
             )
             await adoptLoginResult(loginResult)
         } catch let error as ASAuthorizationError where error.code == .canceled {
@@ -751,10 +755,23 @@ private struct AccountSettingsPage: View {
     @Binding var statusMessage: String?
     @Binding var errorMessage: String?
     @State private var deleteAccountPassword: String = ""
+    @State private var deleteAccountCode: String = ""
+    @State private var deleteSecurityStatus: SecurityStatusDto?
     @State private var showingDeleteRequestField: Bool = false
     @State private var showingSignOutAllConfirmation = false
     @Environment(\.lukiLocale) private var tr
     @Environment(\.dismiss) private var dismiss
+
+    /// Falls back to the password field when the security status could not be loaded.
+    private var deleteNeedsPassword: Bool { deleteSecurityStatus?.hasPassword ?? true }
+    private var deleteNeedsCode: Bool {
+        !(deleteSecurityStatus?.hasPassword ?? true) && (deleteSecurityStatus?.twoFactorEnabled ?? false)
+    }
+    private var deleteCanSubmit: Bool {
+        if deleteNeedsPassword { return !deleteAccountPassword.isEmpty }
+        if deleteNeedsCode { return !deleteAccountCode.isEmpty }
+        return true
+    }
 
     /// Removes this device's APNs registration before tokens are cleared locally.
     private func unregisterPush() async {
@@ -848,18 +865,27 @@ private struct AccountSettingsPage: View {
                     .accessibilityIdentifier("ios.profile.deleteAccountButton")
 
                     if showingDeleteRequestField {
-                        SecureField(tr("Current Password"), text: $deleteAccountPassword)
-                            .accessibilityIdentifier("ios.profile.deletePasswordField")
+                        // Passwordless accounts verify with their TOTP/recovery code instead (#209).
+                        if deleteNeedsPassword {
+                            SecureField(tr("Current Password"), text: $deleteAccountPassword)
+                                .accessibilityIdentifier("ios.profile.deletePasswordField")
+                        } else if deleteNeedsCode {
+                            TextField(tr("Two-factor or recovery code"), text: $deleteAccountCode)
+                                .textContentType(.oneTimeCode)
+                                .accessibilityIdentifier("ios.profile.deleteCodeField")
+                        }
 
                         Button(role: .destructive) {
                             Task {
                                 viewModel.analytics.event(.accountDeleteRequest)
                                 do {
                                     try await viewModel.store.apiClient.requestAccountDeletion(
-                                        password: deleteAccountPassword
+                                        password: deleteNeedsPassword ? deleteAccountPassword : nil,
+                                        code: deleteNeedsCode ? deleteAccountCode : nil
                                     )
                                     showingDeleteRequestField = false
                                     deleteAccountPassword = ""
+                                    deleteAccountCode = ""
                                     statusMessage = tr("Check your email to confirm the deletion.")
                                     errorMessage = nil
                                     #if DEBUG
@@ -873,6 +899,7 @@ private struct AccountSettingsPage: View {
                         } label: {
                             Text(tr("Email Me a Confirmation Link"))
                         }
+                        .disabled(!deleteCanSubmit)
                         .accessibilityIdentifier("ios.profile.sendDeleteEmailButton")
                     }
                 }
@@ -885,6 +912,8 @@ private struct AccountSettingsPage: View {
             if viewModel.socialEnabled, viewModel.social.profile == nil {
                 await viewModel.social.fetchProfile()
             }
+            // Decides password vs 2FA-code field on Delete Account; nil = password fallback.
+            deleteSecurityStatus = try? await viewModel.store.apiClient.securityStatus()
         }
         .modifier(PopOnDeepLink(viewModel: viewModel))
         .onChange(of: viewModel.store.currentUser == nil) { _, signedOut in

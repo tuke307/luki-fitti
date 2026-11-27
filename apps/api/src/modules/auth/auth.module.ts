@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AppleTokenService } from './apple-token.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { OAuthService } from './oauth.service';
@@ -12,7 +13,14 @@ import { BodyWeightModule } from '../body-weight/body-weight.module';
 @Module({
   imports: [EmailModule, BodyWeightModule],
   controllers: [AuthController, SecurityController],
-  providers: [AuthService, RefreshTokenService, TwoFactorService, PasskeyService, OAuthService],
+  providers: [
+    AuthService,
+    RefreshTokenService,
+    TwoFactorService,
+    PasskeyService,
+    OAuthService,
+    AppleTokenService,
+  ],
   exports: [AuthService, RefreshTokenService],
 })
 export class AuthModule {}

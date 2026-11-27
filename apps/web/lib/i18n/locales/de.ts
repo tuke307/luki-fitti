@@ -747,6 +747,8 @@ export const de = {
       'Gib dein Passwort ein und wir senden dir einen Bestätigungslink. Erst wenn du ihn öffnest, wird etwas gelöscht.',
     currentPasswordLabel: 'Aktuelles Passwort',
     currentPasswordPlaceholder: 'Aktuelles Passwort eingeben',
+    twoFactorCodeLabel: 'Zwei-Faktor- oder Recovery-Code',
+    twoFactorCodePlaceholder: '123456 oder xxxxx-xxxxx',
     sendDeletionLinkBtn: 'Lösch-Bestätigungslink senden',
     sendingBtn: 'Wird gesendet …',
     dataSectionTitle: 'Daten',

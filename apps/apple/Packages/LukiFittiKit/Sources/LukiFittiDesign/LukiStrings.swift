@@ -96,6 +96,7 @@ public enum LukiStrings {
         "Created %@": "Erstellt am %@",
         "Current": "Aktuell",
         "Current Password": "Aktuelles Passwort",
+        "Two-factor or recovery code": "Zwei-Faktor- oder Recovery-Code",
         "Decrease %@": "%@ verringern",
         "Decrease reps, set %d": "Wiederholungen verringern, Satz %d",
         "Decrease weight by %@, set %d": "Gewicht um %@ verringern, Satz %d",

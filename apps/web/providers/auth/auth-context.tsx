@@ -46,7 +46,7 @@ interface AuthContextProps {
   register: (data: RegisterDto) => Promise<boolean>;
   verifyEmail: (token: string) => Promise<boolean>;
   resendConfirmation: (email: string) => Promise<boolean>;
-  requestAccountDeletion: (password: string) => Promise<boolean>;
+  requestAccountDeletion: (input: { password?: string; code?: string }) => Promise<boolean>;
   confirmAccountDeletion: (token: string) => Promise<boolean>;
   logout: () => Promise<void>;
   logoutAll: () => Promise<boolean>;
@@ -442,12 +442,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const requestAccountDeletion = async (password: string): Promise<boolean> => {
+  const requestAccountDeletion = async (input: {
+    password?: string;
+    code?: string;
+  }): Promise<boolean> => {
     setLoading(true);
     setError(null);
     setInfoMessage(null);
     try {
-      const response = await api.auth.requestAccountDeletion({ password });
+      const response = await api.auth.requestAccountDeletion(input);
       if (response.success) {
         trackEvent('account_delete_request');
         setInfoMessage(
