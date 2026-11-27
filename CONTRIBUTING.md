@@ -43,7 +43,7 @@ luki-fitti/
 
 - **Node.js** `>= 22` and **Yarn** `1.22+`
 - **PostgreSQL** and **Redis** (for API & email worker)
-- **Xcode 26+ / Swift 6.2+** (optional, for building `apps/apple`)
+- **Xcode 27+ / Swift 6.4+** (optional, for building `apps/apple`)
 
 ### 2. Environment Setup
 
